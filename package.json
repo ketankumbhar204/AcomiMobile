@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@react-native/new-app-screen": "0.85.3",
+    "@react-navigation/bottom-tabs": "^7.17.0",
     "@react-navigation/native": "^7.2.5",
     "@react-navigation/native-stack": "^7.16.0",
     "axios": "^1.17.0",
@@ -20,6 +21,7 @@
     "react-native-reanimated": "^4.4.1",
     "react-native-safe-area-context": "^5.8.0",
     "react-native-screens": "^4.25.2",
+    "react-native-worklets": "^0.9.1",
     "zustand": "^5.0.14"
   },
   "devDependencies": {
