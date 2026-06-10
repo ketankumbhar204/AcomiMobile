@@ -1,0 +1,136 @@
+{
+  "common": {
+    "appName": "CountIn",
+    "ok": "OK",
+    "cancel": "Cancel",
+    "user": "User",
+    "errors": {
+      "generic": "Something went wrong. Please try again.",
+      "network": "Unable to connect. Check your internet connection.",
+      "authRequired": "Session not found. Please log in again.",
+      "loadSpaces": "Failed to load spaces. Please try again.",
+      "createSpace": "Failed to create space. Please try again.",
+      "sendOtp": "Unable to send OTP. Check your connection and try again.",
+      "incorrectOtp": "Incorrect OTP. Please try again.",
+      "accountDisabled": "Your account has been disabled. Please contact support."
+    }
+  },
+  "navigation": {
+    "mySpaces": "My Spaces",
+    "profile": "Profile",
+    "createSpace": "Create Space",
+    "inviteMember": "Invite Member",
+    "verifyOtp": "Verify OTP",
+    "dashboard": "Dashboard",
+    "members": "Members",
+    "rooms": "Rooms",
+    "meals": "Meals",
+    "payments": "Payments",
+    "complaints": "Complaints"
+  },
+  "auth": {
+    "login": {
+      "heading": "Welcome back",
+      "subheading": "Enter your mobile number to receive a one-time password.",
+      "mobilePlaceholder": "9876543210",
+      "sendOtp": "Send OTP",
+      "disclaimer": "New to CountIn? Your account will be created automatically.",
+      "mobileRequired": "Mobile number is required.",
+      "mobileInvalid": "Enter a valid 10-digit Indian mobile number."
+    },
+    "otp": {
+      "eyebrow": "Verification",
+      "heading": "Enter OTP",
+      "subheading": "We sent a code to",
+      "verifyContinue": "Verify & Continue",
+      "devHint": "Dev: Use OTP 123456",
+      "wrongNumber": "Wrong number?",
+      "changeIt": "Change it"
+    }
+  },
+  "spaces": {
+    "mySpaces": {
+      "eyebrow": "Your properties",
+      "heading": "Select a space",
+      "subheading": "Open a space to view dashboard, members, meals, and more.",
+      "emptyTitle": "No spaces yet",
+      "emptyDescription": "Create your first PG, Rental, Mess, or Hostel space to get started.",
+      "createFab": "Create new space",
+      "openProfile": "Open profile and settings"
+    },
+    "createSpace": {
+      "eyebrow": "New property",
+      "heading": "Create a Space",
+      "subheading": "Fill in the details below. You can update them later.",
+      "nameLabel": "Space Name",
+      "namePlaceholder": "e.g. Sunrise PG",
+      "addressLabel": "Address",
+      "addressPlaceholder": "e.g. Baner, Pune (optional)",
+      "contactLabel": "Contact Number",
+      "contactPlaceholder": "e.g. 9876543210 (optional)",
+      "save": "Save Space",
+      "cancel": "Cancel",
+      "nameRequired": "Space name is required.",
+      "typeRequired": "Please select a space type.",
+      "successTitle": "Space created",
+      "successMessage": "\"{{name}}\" was created successfully."
+    },
+    "types": {
+      "label": "Space Type",
+      "pg": {
+        "label": "PG",
+        "description": "Paying Guest"
+      },
+      "mess": {
+        "label": "Mess",
+        "description": "Mess / Canteen"
+      },
+      "hostel": {
+        "label": "Hostel",
+        "description": "Hostel"
+      },
+      "coLiving": {
+        "label": "Co-living",
+        "description": "Co-living Space"
+      },
+      "rental": {
+        "label": "Rental",
+        "description": "Flats / Rooms"
+      }
+    }
+  },
+  "dashboard": {
+    "overview": "Overview",
+    "occupancy": "Occupancy",
+    "todaysMeals": "Today's meals",
+    "mealsHint": "↓ 18% less waste vs last week",
+    "rentCollected": "Rent collected (May)",
+    "rentHint": "78% of expected collection",
+    "sectionComingSoon": "The {{section}} section is being set up. Check back soon."
+  },
+  "settings": {
+    "profile": {
+      "eyebrow": "Account",
+      "heading": "Profile & Settings",
+      "subheading": "Manage your account and sign out securely.",
+      "sessionTitle": "Session",
+      "sessionBody": "Logging out clears your session on this device. You can sign in again with your mobile number.",
+      "logout": "Log out",
+      "logoutTitle": "Log out",
+      "logoutMessage": "Are you sure you want to log out of CountIn?",
+      "logoutConfirm": "Log out"
+    },
+    "language": {
+      "title": "Language",
+      "description": "Choose your preferred app language.",
+      "names": {
+        "en": "English",
+        "hi": "हिन्दी",
+        "mr": "मराठी",
+        "kn": "ಕನ್ನಡ",
+        "te": "తెలుగు",
+        "ta": "தமிழ்"
+      }
+    }
+  }
+}

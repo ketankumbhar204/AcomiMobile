@@ -6,6 +6,8 @@ import axios, {
 import { env } from '../config/env';
 import { ApiError, ApiErrorBody } from './types';
 
+const LOG_TAG = '[CountIn API]';
+
 let authToken: string | null = null;
 
 export function setAuthToken(token: string | null): void {
@@ -14,6 +16,61 @@ export function setAuthToken(token: string | null): void {
 
 export function getAuthToken(): string | null {
   return authToken;
+}
+
+function logRequest(config: InternalAxiosRequestConfig): void {
+  if (!__DEV__) {
+    return;
+  }
+
+  const method = config.method?.toUpperCase() ?? 'GET';
+  const url = `${config.baseURL ?? ''}${config.url ?? ''}`;
+
+  console.log(`${LOG_TAG} → ${method} ${url}`);
+
+  if (config.params) {
+    console.log(`${LOG_TAG}   Params:`, JSON.stringify(config.params, null, 2));
+  }
+
+  if (config.data) {
+    console.log(`${LOG_TAG}   Request body:`, JSON.stringify(config.data, null, 2));
+  }
+}
+
+function logResponse(
+  status: number,
+  method: string | undefined,
+  url: string | undefined,
+  data: unknown,
+): void {
+  if (!__DEV__) {
+    return;
+  }
+
+  console.log(
+    `${LOG_TAG} ← ${status} ${method?.toUpperCase() ?? 'GET'} ${url ?? ''}`,
+  );
+  console.log(`${LOG_TAG}   Response:`, JSON.stringify(data, null, 2));
+}
+
+function logError(error: AxiosError<ApiErrorBody>): void {
+  if (!__DEV__) {
+    return;
+  }
+
+  const method = error.config?.method?.toUpperCase() ?? 'GET';
+  const url = `${error.config?.baseURL ?? ''}${error.config?.url ?? ''}`;
+
+  if (error.response) {
+    console.error(`${LOG_TAG} ✗ ${error.response.status} ${method} ${url}`);
+    console.error(
+      `${LOG_TAG}   Error body:`,
+      JSON.stringify(error.response.data, null, 2),
+    );
+  } else {
+    console.error(`${LOG_TAG} ✗ Network error ${method} ${url}`);
+    console.error(`${LOG_TAG}   Message:`, error.message);
+  }
 }
 
 function attachAuthHeader(
@@ -55,13 +112,30 @@ const apiClient: AxiosInstance = axios.create({
 });
 
 apiClient.interceptors.request.use(
-  config => attachAuthHeader(config),
-  error => Promise.reject(error),
+  config => {
+    logRequest(config);
+    return attachAuthHeader(config);
+  },
+  error => {
+    if (__DEV__) {
+      console.error(`${LOG_TAG} ✗ Request setup error:`, error);
+    }
+    return Promise.reject(error);
+  },
 );
 
 apiClient.interceptors.response.use(
-  response => response,
+  response => {
+    logResponse(
+      response.status,
+      response.config.method,
+      `${response.config.baseURL ?? ''}${response.config.url ?? ''}`,
+      response.data,
+    );
+    return response;
+  },
   (error: AxiosError<ApiErrorBody>) => {
+    logError(error);
     const apiError = normalizeApiError(error);
 
     if (apiError.status === 401) {

@@ -1,4 +1,4 @@
-import { useLayoutEffect } from 'react';
+import React, { useLayoutEffect } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { HeaderBackButton } from '../components/ui/HeaderBackButton';
 
@@ -12,7 +12,7 @@ export function useScreenBackButton(enabled = true) {
 
     navigation.setOptions({
       headerBackVisible: false,
-      headerLeft: () => <HeaderBackButton />,
+      headerLeft: () => React.createElement(HeaderBackButton),
     });
   }, [navigation, enabled]);
 }

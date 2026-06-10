@@ -1,24 +1,16 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useLayoutEffect } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
+import { formatSpaceType, spaceTypeIconLabel } from '../api';
 import type { Space } from '../api/types';
-import { ListCard, Screen, SkeletonCard } from '../components/ui';
+import { EmptyState, FAB, ListCard, Screen, SkeletonCard } from '../components/ui';
+import { useMySpaces } from '../hooks/useMySpaces';
+import { useAuthenticatedUser } from '../hooks/useAuth';
 import type { MainStackParamList } from '../navigation/types';
 import { useSpaceStore } from '../store/spaceStore';
 import { colors, spacing, typography } from '../theme';
-
-const DEMO_SPACE: Space = {
-  id: '00000000-0000-0000-0000-000000000001',
-  ownerId: '00000000-0000-0000-0000-000000000002',
-  name: 'Demo Space',
-  type: 'PG',
-  address: null,
-  contactNumber: null,
-  isActive: true,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-};
 
 type MySpacesNavigation = NativeStackNavigationProp<
   MainStackParamList,
@@ -26,9 +18,37 @@ type MySpacesNavigation = NativeStackNavigationProp<
 >;
 
 export function MySpacesScreen() {
+  const { t, i18n } = useTranslation();
   const navigation = useNavigation<MySpacesNavigation>();
   const setSelectedSpace = useSpaceStore(state => state.setSelectedSpace);
-  const [isLoading] = React.useState(false);
+  const user = useAuthenticatedUser();
+  const { spaces, isLoading, error, refetch } = useMySpaces();
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: t('navigation.mySpaces'),
+      headerRight: () => (
+        <Pressable
+          onPress={() => navigation.navigate('Profile')}
+          style={({ pressed }) => [
+            styles.profileButton,
+            pressed && styles.profileButtonPressed,
+          ]}
+          hitSlop={8}
+          accessibilityLabel={t('spaces.mySpaces.openProfile')}>
+          <Text style={styles.profileButtonText}>
+            {(user?.fullName ?? 'U').charAt(0).toUpperCase()}
+          </Text>
+        </Pressable>
+      ),
+    });
+  }, [navigation, t, i18n.language, user?.fullName]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      refetch();
+    }, [refetch]),
+  );
 
   const openSpace = (space: Space) => {
     setSelectedSpace(space);
@@ -36,29 +56,58 @@ export function MySpacesScreen() {
   };
 
   return (
-    <Screen>
-      <View style={styles.heroAccent} />
-      <Text style={styles.eyebrow}>Your properties</Text>
-      <Text style={styles.heading}>Select a space</Text>
-      <Text style={styles.subheading}>
-        Open a space to view dashboard, members, meals, and more.
-      </Text>
+    <View style={styles.root}>
+      <Screen contentStyle={styles.content}>
+        <View style={styles.heroAccent} />
+        <Text style={styles.eyebrow}>{t('spaces.mySpaces.eyebrow')}</Text>
+        <Text style={styles.heading}>{t('spaces.mySpaces.heading')}</Text>
+        <Text style={styles.subheading}>{t('spaces.mySpaces.subheading')}</Text>
 
-      {isLoading ? (
-        <SkeletonCard />
-      ) : (
-        <ListCard
-          title={DEMO_SPACE.name}
-          subtitle={DEMO_SPACE.type}
-          iconLabel="PG"
-          onPress={() => openSpace(DEMO_SPACE)}
-        />
-      )}
-    </Screen>
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+        {isLoading ? (
+          <>
+            <SkeletonCard />
+            <View style={styles.skeletonGap} />
+            <SkeletonCard />
+          </>
+        ) : spaces.length === 0 ? (
+          <EmptyState
+            title={t('spaces.mySpaces.emptyTitle')}
+            description={t('spaces.mySpaces.emptyDescription')}
+            icon="🏠"
+          />
+        ) : (
+          <View style={styles.list}>
+            {spaces.map(space => (
+              <ListCard
+                key={space.id}
+                title={space.name}
+                subtitle={formatSpaceType(space.type)}
+                iconLabel={spaceTypeIconLabel(space.type)}
+                onPress={() => openSpace(space)}
+              />
+            ))}
+          </View>
+        )}
+      </Screen>
+
+      <FAB
+        onPress={() => navigation.navigate('CreateSpace')}
+        accessibilityLabel={t('spaces.mySpaces.createFab')}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  content: {
+    paddingBottom: 96,
+  },
   heroAccent: {
     position: 'absolute',
     top: -40,
@@ -79,5 +128,36 @@ const styles = StyleSheet.create({
   subheading: {
     ...typography.body,
     marginBottom: spacing.xxl,
+  },
+  errorText: {
+    ...typography.body,
+    color: colors.primaryDark,
+    marginBottom: spacing.lg,
+  },
+  list: {
+    gap: spacing.md,
+  },
+  skeletonGap: {
+    height: spacing.md,
+  },
+  profileButton: {
+    marginRight: spacing.sm,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.lightGreen,
+    borderWidth: 1,
+    borderColor: `${colors.primary}33`,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileButtonPressed: {
+    backgroundColor: colors.surface,
+  },
+  profileButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.primaryDark,
+    includeFontPadding: false,
   },
 });

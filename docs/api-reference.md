@@ -77,7 +77,7 @@ Validation errors (`400`) may include field errors in `data`:
 
 Use exact string values in request bodies and when parsing responses.
 
-**SpaceType:** `PG` | `MESS` | `HOSTEL` | `CO_LIVING`
+**SpaceType:** `PG` | `MESS` | `HOSTEL` | `CO_LIVING` | `RENTAL`
 
 **MembershipRole:** `OWNER` | `MANAGER` | `TENANT` | `CUSTOMER` | `STAFF`
 
@@ -105,7 +105,7 @@ Use exact string values in request bodies and when parsing responses.
   "type": "PG",
   "address": "Pune",
   "contactNumber": "9876543210",
-  "ownerId": "550e8400-e29b-41d4-a716-446655440000"
+  "ownerId": "92743bf1-4658-4f7d-880b-e8eb1fed4e69"
 }
 ```
 
@@ -327,7 +327,7 @@ Insert users in PostgreSQL before calling space APIs:
 ```sql
 INSERT INTO users (id, mobile_number, full_name, is_active, created_at, updated_at)
 VALUES
-  ('550e8400-e29b-41d4-a716-446655440000', '9876543210', 'Ketan', true, NOW(), NOW()),
+  ('92743bf1-4658-4f7d-880b-e8eb1fed4e69', '9876543210', 'Ketan', true, NOW(), NOW()),
   ('550e8400-e29b-41d4-a716-446655440001', '9123456789', 'Rahul', true, NOW(), NOW());
 ```
 
@@ -352,15 +352,15 @@ VALUES
 # Create space
 curl -X POST http://localhost:8080/api/v1/spaces \
   -H "Content-Type: application/json" \
-  -d '{"name":"PG-A","type":"PG","address":"Pune","contactNumber":"9876543210","ownerId":"550e8400-e29b-41d4-a716-446655440000"}'
+  -d '{"name":"PG-A","type":"PG","address":"Pune","contactNumber":"9876543210","ownerId":"92743bf1-4658-4f7d-880b-e8eb1fed4e69"}'
 
 # Get user spaces
-curl http://localhost:8080/api/v1/spaces/user/550e8400-e29b-41d4-a716-446655440000
+curl http://localhost:8080/api/v1/spaces/user/92743bf1-4658-4f7d-880b-e8eb1fed4e69
 
 # Create invitation
 curl -X POST http://localhost:8080/api/v1/invitations \
   -H "Content-Type: application/json" \
-  -d '{"spaceId":"<SPACE_UUID>","invitedByUserId":"550e8400-e29b-41d4-a716-446655440000","mobileNumber":"9123456789","role":"TENANT"}'
+  -d '{"spaceId":"<SPACE_UUID>","invitedByUserId":"92743bf1-4658-4f7d-880b-e8eb1fed4e69","mobileNumber":"9123456789","role":"TENANT"}'
 
 # Accept invitation
 curl -X POST http://localhost:8080/api/v1/invitations/<INVITATION_UUID>/accept \
@@ -380,7 +380,7 @@ export interface ApiResponse<T> {
   timestamp?: string;
 }
 
-export type SpaceType = 'PG' | 'MESS' | 'HOSTEL' | 'CO_LIVING';
+export type SpaceType = 'PG' | 'MESS' | 'HOSTEL' | 'CO_LIVING' | 'RENTAL';
 export type MembershipRole = 'OWNER' | 'MANAGER' | 'TENANT' | 'CUSTOMER' | 'STAFF';
 export type MembershipStatus =
   | 'INVITATION_SENT' | 'ACCEPTED' | 'ACTIVE' | 'INACTIVE' | 'REMOVED' | 'VACATED';

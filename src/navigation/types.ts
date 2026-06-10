@@ -1,4 +1,3 @@
-import type { NavigatorScreenParams } from '@react-navigation/native';
 import type { UUID } from '../api/types';
 
 export type AuthStackParamList = {
@@ -19,12 +18,16 @@ export type SpaceTabParamList = {
 
 export type MainStackParamList = {
   MySpaces: undefined;
-  SpaceTabs: NavigatorScreenParams<SpaceTabParamList> & { spaceId: UUID };
+  Profile: undefined;
+  CreateSpace: undefined;
+  SpaceTabs: { spaceId: UUID };
+  InviteMembers: { spaceId: UUID };
 };
 
 export type RootStackParamList = {
-  Auth: NavigatorScreenParams<AuthStackParamList>;
-  Main: NavigatorScreenParams<MainStackParamList>;
+  Bootstrap: undefined;
+  Auth: undefined;
+  Main: undefined;
 };
 
 declare global {

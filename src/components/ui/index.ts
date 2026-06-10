@@ -1,5 +1,10 @@
 export { ChevronLeftIcon } from './icons/ChevronLeftIcon';
 export { Badge } from './Badge';
+export { FAB } from './FAB';
+export { OtpInput } from './OtpInput';
+export { FormInput } from './FormInput';
+export { RolePicker } from './RolePicker';
+export { SpaceTypePicker } from './SpaceTypePicker';
 export { Button } from './Button';
 export { Card } from './Card';
 export { EmptyState } from './EmptyState';

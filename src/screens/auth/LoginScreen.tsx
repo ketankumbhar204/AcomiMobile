@@ -1,0 +1,220 @@
+import React, { useState } from 'react';
+import {
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableWithoutFeedback,
+  View,
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
+import { Button, FormInput } from '../../components/ui';
+import { useSendOtp } from '../../hooks/useAuth';
+import type { AuthStackParamList } from '../../navigation/types';
+import { colors, spacing, typography } from '../../theme';
+
+const MOBILE_REGEX = /^[6-9]\d{9}$/;
+
+type LoginNav = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
+
+export function LoginScreen() {
+  const { t } = useTranslation();
+  const navigation = useNavigation<LoginNav>();
+  const { sendOtp, isLoading, error, clearError } = useSendOtp();
+
+  const [mobileNumber, setMobileNumber] = useState('');
+  const [mobileError, setMobileError] = useState<string | null>(null);
+
+  const isValid = MOBILE_REGEX.test(mobileNumber);
+
+  function validateMobile(value: string): string | null {
+    if (!value.trim()) {
+      return t('auth.login.mobileRequired');
+    }
+    if (!MOBILE_REGEX.test(value)) {
+      return t('auth.login.mobileInvalid');
+    }
+    return null;
+  }
+
+  async function handleSendOtp() {
+    Keyboard.dismiss();
+    clearError();
+
+    const validationError = validateMobile(mobileNumber);
+    if (validationError) {
+      setMobileError(validationError);
+      return;
+    }
+
+    const success = await sendOtp(mobileNumber);
+    if (success) {
+      navigation.navigate('OtpVerification', { mobileNumber });
+    }
+  }
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.flex}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+
+          <View style={styles.brandSection}>
+            <View style={styles.logoWrap}>
+              <Text style={styles.logoText}>C</Text>
+            </View>
+            <Text style={styles.appName}>{t('common.appName')}</Text>
+          </View>
+
+          <Text style={styles.heading}>{t('auth.login.heading')}</Text>
+          <Text style={styles.subheading}>{t('auth.login.subheading')}</Text>
+
+          {error ? (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorBannerText}>{error}</Text>
+            </View>
+          ) : null}
+
+          <View style={styles.inputRow}>
+            <View style={styles.prefix}>
+              <Text style={styles.prefixText}>+91</Text>
+            </View>
+            <View style={styles.inputWrap}>
+              <FormInput
+                label=""
+                placeholder={t('auth.login.mobilePlaceholder')}
+                value={mobileNumber}
+                onChangeText={text => {
+                  const digits = text.replace(/\D/g, '').slice(0, 10);
+                  setMobileNumber(digits);
+                  if (mobileError) {
+                    setMobileError(null);
+                  }
+                  if (error) {
+                    clearError();
+                  }
+                }}
+                error={mobileError}
+                keyboardType="phone-pad"
+                returnKeyType="done"
+                maxLength={10}
+                onSubmitEditing={handleSendOtp}
+              />
+            </View>
+          </View>
+
+          <Button
+            label={t('auth.login.sendOtp')}
+            onPress={handleSendOtp}
+            loading={isLoading}
+            disabled={isLoading || !isValid}
+            style={styles.button}
+          />
+
+          <Text style={styles.disclaimer}>{t('auth.login.disclaimer')}</Text>
+        </ScrollView>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  scroll: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  content: {
+    flexGrow: 1,
+    padding: spacing.xxl,
+    justifyContent: 'center',
+  },
+  brandSection: {
+    alignItems: 'center',
+    marginBottom: spacing.section,
+  },
+  logoWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  logoText: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: colors.white,
+  },
+  appName: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  heading: {
+    ...typography.h1,
+    marginBottom: spacing.sm,
+  },
+  subheading: {
+    ...typography.body,
+    marginBottom: spacing.xxl,
+  },
+  errorBanner: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 12,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  errorBannerText: {
+    ...typography.body,
+    color: '#DC2626',
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  prefix: {
+    height: 48,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 0,
+  },
+  prefixText: {
+    ...typography.bodyStrong,
+    color: colors.textSecondary,
+  },
+  inputWrap: {
+    flex: 1,
+  },
+  button: {
+    marginTop: spacing.sm,
+  },
+  disclaimer: {
+    ...typography.caption,
+    textAlign: 'center',
+    marginTop: spacing.xl,
+    color: colors.textSecondary,
+  },
+});

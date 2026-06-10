@@ -1,19 +1,11 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { HeaderBackButton } from '../components/ui';
+import { LoginScreen } from '../screens/auth/LoginScreen';
+import { OtpScreen } from '../screens/auth/OtpScreen';
 import { stackHeaderOptions } from '../theme';
-import { ScreenPlaceholder } from './ScreenPlaceholder';
 import type { AuthStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
-
-function LoginScreen() {
-  return <ScreenPlaceholder title="Login" />;
-}
-
-function OtpVerificationScreen() {
-  return <ScreenPlaceholder title="OTP Verification" />;
-}
 
 export function AuthNavigator() {
   return (
@@ -25,11 +17,10 @@ export function AuthNavigator() {
       />
       <Stack.Screen
         name="OtpVerification"
-        component={OtpVerificationScreen}
+        component={OtpScreen}
         options={{
           title: 'Verify OTP',
           headerBackVisible: false,
-          headerLeft: () => <HeaderBackButton />,
         }}
       />
     </Stack.Navigator>

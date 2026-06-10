@@ -1,6 +1,8 @@
 import React, { useLayoutEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
+import { formatSpaceType } from '../api';
 import {
   Badge,
   EmptyState,
@@ -9,15 +11,18 @@ import {
   MetricCardProgress,
 } from '../components/ui';
 import { Screen } from '../components/ui/Screen';
-import { spacing, typography } from '../theme';
+import { useSpaceStore } from '../store/spaceStore';
+import { colors, spacing, typography } from '../theme';
 
 type ScreenPlaceholderProps = {
   title: string;
 };
 
 export function ScreenPlaceholder({ title }: ScreenPlaceholderProps) {
+  const { t } = useTranslation();
   const route = useRoute();
   const navigation = useNavigation();
+  const selectedSpace = useSpaceStore(state => state.selectedSpace);
   const isDashboard = route.name === 'Dashboard';
 
   useLayoutEffect(() => {
@@ -30,26 +35,32 @@ export function ScreenPlaceholder({ title }: ScreenPlaceholderProps) {
   if (isDashboard) {
     return (
       <Screen scrollable contentStyle={styles.dashboardContent}>
-        <Badge label="CountIn" />
-        <Text style={styles.dashboardTitle}>Overview</Text>
+        {selectedSpace ? (
+          <View style={styles.spaceDetails}>
+            <Text style={styles.spaceName}>{selectedSpace.name}</Text>
+            <Text style={styles.spaceType}>{formatSpaceType(selectedSpace.type)}</Text>
+          </View>
+        ) : null}
+        <Badge label={t('common.appName')} />
+        <Text style={styles.dashboardTitle}>{t('dashboard.overview')}</Text>
         <View style={styles.metricsRow}>
           <MetricCard
-            label="Occupancy"
+            label={t('dashboard.occupancy')}
             value="94%"
             style={styles.metricHalf}
           />
           <MetricCard
-            label="Today's meals"
+            label={t('dashboard.todaysMeals')}
             value="42"
-            hint="↓ 18% less waste vs last week"
+            hint={t('dashboard.mealsHint')}
             hintPositive
             style={styles.metricHalf}
           />
         </View>
         <MetricCard
-          label="Rent collected (May)"
+          label={t('dashboard.rentCollected')}
           value="₹ 4,28,500"
-          hint="78% of expected collection"
+          hint={t('dashboard.rentHint')}
           hintPositive>
           <MetricCardProgress percent={78} />
         </MetricCard>
@@ -60,12 +71,23 @@ export function ScreenPlaceholder({ title }: ScreenPlaceholderProps) {
   return (
     <EmptyState
       title={title}
-      description={`The ${route.name} section is being set up. Check back soon.`}
+      description={t('dashboard.sectionComingSoon', { section: title })}
     />
   );
 }
 
 const styles = StyleSheet.create({
+  spaceDetails: {
+    marginBottom: spacing.lg,
+  },
+  spaceName: {
+    ...typography.h2,
+    marginBottom: spacing.xs,
+  },
+  spaceType: {
+    ...typography.body,
+    color: colors.muted,
+  },
   dashboardContent: {
     paddingBottom: spacing.section,
   },

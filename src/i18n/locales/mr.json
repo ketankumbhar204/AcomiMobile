@@ -1,0 +1,136 @@
+{
+  "common": {
+    "appName": "CountIn",
+    "ok": "ठीक आहे",
+    "cancel": "रद्द करा",
+    "user": "वापरकर्ता",
+    "errors": {
+      "generic": "काहीतरी चुकीचे झाले. कृपया पुन्हा प्रयत्न करा.",
+      "network": "कनेक्ट होऊ शकले नाही. तुमचे इंटरनेट कनेक्शन तपासा.",
+      "authRequired": "सत्र सापडले नाही. कृपया पुन्हा लॉग इन करा.",
+      "loadSpaces": "स्पेस लोड करण्यात अयशस्वी. कृपया पुन्हा प्रयत्न करा.",
+      "createSpace": "स्पेस तयार करण्यात अयशस्वी. कृपया पुन्हा प्रयत्न करा.",
+      "sendOtp": "OTP पाठवू शकलो नाही. कनेक्शन तपासा आणि पुन्हा प्रयत्न करा.",
+      "incorrectOtp": "चुकीचा OTP. कृपया पुन्हा प्रयत्न करा.",
+      "accountDisabled": "तुमचे खाते निष्क्रिय केले आहे. कृपया सहाय्याशी संपर्क साधा."
+    }
+  },
+  "navigation": {
+    "mySpaces": "माझे स्पेस",
+    "profile": "प्रोफाइल",
+    "createSpace": "स्पेस तयार करा",
+    "inviteMember": "सदस्य आमंत्रित करा",
+    "verifyOtp": "OTP सत्यापित करा",
+    "dashboard": "डॅशबोर्ड",
+    "members": "सदस्य",
+    "rooms": "खोल्या",
+    "meals": "जेवण",
+    "payments": "पेमेंट",
+    "complaints": "तक्रारी"
+  },
+  "auth": {
+    "login": {
+      "heading": "पुन्हा स्वागत आहे",
+      "subheading": "एकवेळचा पासवर्ड मिळवण्यासाठी तुमचा मोबाइल नंबर प्रविष्ट करा.",
+      "mobilePlaceholder": "9876543210",
+      "sendOtp": "OTP पाठवा",
+      "disclaimer": "CountIn मध्ये नवीन आहात? तुमचे खाते आपोआप तयार होईल.",
+      "mobileRequired": "मोबाइल नंबर आवश्यक आहे.",
+      "mobileInvalid": "वैध 10-अंकी भारतीय मोबाइल नंबर प्रविष्ट करा."
+    },
+    "otp": {
+      "eyebrow": "सत्यापन",
+      "heading": "OTP प्रविष्ट करा",
+      "subheading": "आम्ही कोड पाठवला आहे",
+      "verifyContinue": "सत्यापित करा आणि पुढे जा",
+      "devHint": "डेव: OTP 123456 वापरा",
+      "wrongNumber": "चुकीचा नंबर?",
+      "changeIt": "बदला"
+    }
+  },
+  "spaces": {
+    "mySpaces": {
+      "eyebrow": "तुमच्या मालमत्ता",
+      "heading": "स्पेस निवडा",
+      "subheading": "डॅशबोर्ड, सदस्य, जेवण आणि अधिक पाहण्यासाठी स्पेस उघडा.",
+      "emptyTitle": "अद्याप स्पेस नाहीत",
+      "emptyDescription": "सुरुवात करण्यासाठी तुमचा पहिला PG, Rental, Mess किंवा Hostel स्पेस तयार करा.",
+      "createFab": "नवीन स्पेस तयार करा",
+      "openProfile": "प्रोफाइल आणि सेटिंग्ज उघडा"
+    },
+    "createSpace": {
+      "eyebrow": "नवीन मालमत्ता",
+      "heading": "स्पेस तयार करा",
+      "subheading": "खाली तपशील भरा. तुम्ही नंतर अपडेट करू शकता.",
+      "nameLabel": "स्पेसचे नाव",
+      "namePlaceholder": "उदा. Sunrise PG",
+      "addressLabel": "पत्ता",
+      "addressPlaceholder": "उदा. बानेर, पुणे (पर्यायी)",
+      "contactLabel": "संपर्क नंबर",
+      "contactPlaceholder": "उदा. 9876543210 (पर्यायी)",
+      "save": "स्पेस जतन करा",
+      "cancel": "रद्द करा",
+      "nameRequired": "स्पेसचे नाव आवश्यक आहे.",
+      "typeRequired": "कृपया स्पेस प्रकार निवडा.",
+      "successTitle": "स्पेस तयार झाला",
+      "successMessage": "\"{{name}}\" यशस्वीरित्या तयार झाला."
+    },
+    "types": {
+      "label": "स्पेस प्रकार",
+      "pg": {
+        "label": "PG",
+        "description": "पेइंग गेस्ट"
+      },
+      "mess": {
+        "label": "Mess",
+        "description": "मेस / कॅन्टीन"
+      },
+      "hostel": {
+        "label": "Hostel",
+        "description": "वसतिगृह"
+      },
+      "coLiving": {
+        "label": "Co-living",
+        "description": "सह-निवास स्पेस"
+      },
+      "rental": {
+        "label": "Rental",
+        "description": "फ्लॅट / खोल्या"
+      }
+    }
+  },
+  "dashboard": {
+    "overview": "आढावा",
+    "occupancy": "व्याप्ती",
+    "todaysMeals": "आजचे जेवण",
+    "mealsHint": "↓ मागील आठवड्याच्या तुलनेत 18% कमी वाया",
+    "rentCollected": "भाडे गोळा (मे)",
+    "rentHint": "अपेक्षित गोळ्याचे 78%",
+    "sectionComingSoon": "{{section}} विभाग तयार केला जात आहे. लवकर परत तपासा."
+  },
+  "settings": {
+    "profile": {
+      "eyebrow": "खाते",
+      "heading": "प्रोफाइल आणि सेटिंग्ज",
+      "subheading": "तुमचे खाते व्यवस्थापित करा आणि सुरक्षितपणे साइन आउट करा.",
+      "sessionTitle": "सत्र",
+      "sessionBody": "लॉग आउट केल्याने या डिव्हाइसवरील सत्र साफ होते. तुम्ही मोबाइल नंबरने पुन्हा साइन इन करू शकता.",
+      "logout": "लॉग आउट",
+      "logoutTitle": "लॉग आउट",
+      "logoutMessage": "तुम्हाला खात्री आहे की CountIn मधून लॉग आउट करायचे आहे?",
+      "logoutConfirm": "लॉग आउट"
+    },
+    "language": {
+      "title": "भाषा",
+      "description": "तुमची पसंतीची अॅप भाषा निवडा.",
+      "names": {
+        "en": "English",
+        "hi": "हिन्दी",
+        "mr": "मराठी",
+        "kn": "ಕನ್ನಡ",
+        "te": "తెలుగు",
+        "ta": "தமிழ்"
+      }
+    }
+  }
+}
