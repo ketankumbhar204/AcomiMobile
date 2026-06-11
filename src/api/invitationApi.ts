@@ -1,32 +1,20 @@
-import { unwrapApiResponse } from './apiRequest';
-import apiClient from './client';
+import { memberApi } from './memberApi';
 import {
   AcceptInvitationRequest,
-  ApiResponse,
   CreateInvitationRequest,
   InvitationResponse,
   SpaceMembershipResponse,
   UUID,
 } from './types';
 
+/** @deprecated Use memberApi */
 export const invitationApi = {
-  create: async (
-    payload: CreateInvitationRequest,
-  ): Promise<InvitationResponse> => {
-    return unwrapApiResponse(
-      apiClient.post<ApiResponse<InvitationResponse>>('/invitations', payload),
-    );
-  },
+  create: (payload: CreateInvitationRequest): Promise<InvitationResponse> =>
+    memberApi.createInvitation(payload),
 
-  accept: async (
+  accept: (
     invitationId: UUID,
     payload: AcceptInvitationRequest,
-  ): Promise<SpaceMembershipResponse> => {
-    return unwrapApiResponse(
-      apiClient.post<ApiResponse<SpaceMembershipResponse>>(
-        `/invitations/${invitationId}/accept`,
-        payload,
-      ),
-    );
-  },
+  ): Promise<SpaceMembershipResponse> =>
+    memberApi.acceptInvitation(invitationId, payload),
 };

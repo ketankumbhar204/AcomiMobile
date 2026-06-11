@@ -1,13 +1,20 @@
-import React, { useLayoutEffect } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { formatSpaceType, spaceTypeIconLabel } from '../api';
-import type { Space } from '../api/types';
-import { EmptyState, FAB, ListCard, Screen, SkeletonCard } from '../components/ui';
-import { useMySpaces } from '../hooks/useMySpaces';
-import { useAuthenticatedUser } from '../hooks/useAuth';
+import type { MembershipRole, MySpaceResponse } from '../api/types';
+import {
+  Badge,
+  EmptyState,
+  FAB,
+  FormInput,
+  ListCard,
+  ProfileHeaderButton,
+  SkeletonCard,
+} from '../components/ui';
+import { resetToDashboard } from '../navigation/navigationRef';
 import type { MainStackParamList } from '../navigation/types';
 import { useSpaceStore } from '../store/spaceStore';
 import { colors, spacing, typography } from '../theme';
@@ -17,80 +24,154 @@ type MySpacesNavigation = NativeStackNavigationProp<
   'MySpaces'
 >;
 
+const SEARCH_DEBOUNCE_MS = 300;
+
+function formatRoleLabel(
+  role: MembershipRole,
+  t: (key: string) => string,
+): string {
+  return t(`spaces.roles.${role}`);
+}
+
 export function MySpacesScreen() {
   const { t, i18n } = useTranslation();
   const navigation = useNavigation<MySpacesNavigation>();
-  const setSelectedSpace = useSpaceStore(state => state.setSelectedSpace);
-  const user = useAuthenticatedUser();
-  const { spaces, isLoading, error, refetch } = useMySpaces();
+  const mySpaces = useSpaceStore(state => state.mySpaces);
+  const loading = useSpaceStore(state => state.loading);
+  const searching = useSpaceStore(state => state.searching);
+  const error = useSpaceStore(state => state.error);
+  const loadMySpaces = useSpaceStore(state => state.loadMySpaces);
+  const searchSpaces = useSpaceStore(state => state.searchSpaces);
+  const searchQuery = useSpaceStore(state => state.searchQuery);
+  const setSearchQuery = useSpaceStore(state => state.setSearchQuery);
+  const switchSpace = useSpaceStore(state => state.switchSpace);
+  const refresh = useSpaceStore(state => state.refresh);
+
+  const [search, setSearch] = useState(searchQuery);
+  const [refreshing, setRefreshing] = useState(false);
 
   useLayoutEffect(() => {
     navigation.setOptions({
       title: t('navigation.mySpaces'),
-      headerRight: () => (
-        <Pressable
-          onPress={() => navigation.navigate('Profile')}
-          style={({ pressed }) => [
-            styles.profileButton,
-            pressed && styles.profileButtonPressed,
-          ]}
-          hitSlop={8}
-          accessibilityLabel={t('spaces.mySpaces.openProfile')}>
-          <Text style={styles.profileButtonText}>
-            {(user?.fullName ?? 'U').charAt(0).toUpperCase()}
-          </Text>
-        </Pressable>
-      ),
+      headerRight: () => <ProfileHeaderButton />,
     });
-  }, [navigation, t, i18n.language, user?.fullName]);
+  }, [navigation, t, i18n.language]);
 
   useFocusEffect(
-    React.useCallback(() => {
-      refetch();
-    }, [refetch]),
+    useCallback(() => {
+      console.log('[MySpaces] screen focused');
+      if (searchQuery.trim()) {
+        searchSpaces(searchQuery);
+      } else {
+        loadMySpaces();
+      }
+    }, [loadMySpaces, searchQuery, searchSpaces]),
   );
 
-  const openSpace = (space: Space) => {
-    setSelectedSpace(space);
-    navigation.navigate('SpaceTabs', { spaceId: space.id });
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(search);
+      searchSpaces(search);
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => clearTimeout(timer);
+  }, [search, searchSpaces, setSearchQuery]);
+
+  const onRefresh = useCallback(async () => {
+    console.log('[MySpaces] pull to refresh');
+    setRefreshing(true);
+    await refresh();
+    setRefreshing(false);
+  }, [refresh]);
+
+  const openSpace = async (space: MySpaceResponse) => {
+    console.log('[MySpaces] open space → dashboard', space.spaceId);
+    const success = await switchSpace(space.spaceId);
+    if (success) {
+      resetToDashboard(space.spaceId);
+    }
   };
+
+  const buildSubtitle = (space: MySpaceResponse) => {
+    const typeLabel = formatSpaceType(space.spaceType);
+    const roleLabel = formatRoleLabel(space.membershipRole, t);
+    return `${typeLabel} · ${roleLabel}`;
+  };
+
+  const isSearching = search.trim().length > 0;
+  const showLoading = (loading || searching) && mySpaces.length === 0;
 
   return (
     <View style={styles.root}>
-      <Screen contentStyle={styles.content}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }>
         <View style={styles.heroAccent} />
         <Text style={styles.eyebrow}>{t('spaces.mySpaces.eyebrow')}</Text>
         <Text style={styles.heading}>{t('spaces.mySpaces.heading')}</Text>
         <Text style={styles.subheading}>{t('spaces.mySpaces.subheading')}</Text>
 
+        <FormInput
+          label={t('spaces.mySpaces.searchLabel')}
+          placeholder={t('spaces.mySpaces.searchPlaceholder')}
+          value={search}
+          onChangeText={setSearch}
+          returnKeyType="search"
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        {isLoading ? (
+        {showLoading ? (
           <>
             <SkeletonCard />
             <View style={styles.skeletonGap} />
             <SkeletonCard />
           </>
-        ) : spaces.length === 0 ? (
+        ) : mySpaces.length === 0 ? (
           <EmptyState
-            title={t('spaces.mySpaces.emptyTitle')}
-            description={t('spaces.mySpaces.emptyDescription')}
+            title={
+              isSearching
+                ? t('spaces.mySpaces.searchEmptyTitle')
+                : t('spaces.mySpaces.emptyTitle')
+            }
+            description={
+              isSearching
+                ? t('spaces.mySpaces.searchEmptyDescription')
+                : t('spaces.mySpaces.emptyDescription')
+            }
             icon="🏠"
           />
         ) : (
           <View style={styles.list}>
-            {spaces.map(space => (
-              <ListCard
-                key={space.id}
-                title={space.name}
-                subtitle={formatSpaceType(space.type)}
-                iconLabel={spaceTypeIconLabel(space.type)}
-                onPress={() => openSpace(space)}
-              />
+            {mySpaces.map(space => (
+              <View key={space.spaceId} style={styles.listItem}>
+                {space.isDefault ? (
+                  <View style={styles.defaultBadge}>
+                    <Badge label={t('spaces.mySpaces.defaultBadge')} />
+                  </View>
+                ) : null}
+                <ListCard
+                  title={space.spaceName}
+                  subtitle={buildSubtitle(space)}
+                  iconLabel={spaceTypeIconLabel(space.spaceType)}
+                  onPress={() => openSpace(space)}
+                />
+              </View>
             ))}
           </View>
         )}
-      </Screen>
+      </ScrollView>
 
       <FAB
         onPress={() => navigation.navigate('CreateSpace')}
@@ -105,7 +186,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  scroll: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   content: {
+    padding: spacing.xxl,
     paddingBottom: 96,
   },
   heroAccent: {
@@ -137,27 +223,13 @@ const styles = StyleSheet.create({
   list: {
     gap: spacing.md,
   },
+  listItem: {
+    gap: spacing.xs,
+  },
+  defaultBadge: {
+    marginBottom: spacing.xs,
+  },
   skeletonGap: {
     height: spacing.md,
-  },
-  profileButton: {
-    marginRight: spacing.sm,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.lightGreen,
-    borderWidth: 1,
-    borderColor: `${colors.primary}33`,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  profileButtonPressed: {
-    backgroundColor: colors.surface,
-  },
-  profileButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.primaryDark,
-    includeFontPadding: false,
   },
 });

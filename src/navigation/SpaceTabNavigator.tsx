@@ -1,13 +1,11 @@
-import React, { useLayoutEffect } from 'react';
-import { Text, View } from 'react-native';
+import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { useNavigation } from '@react-navigation/native';
+import { RouteProp, useRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { formatSpaceType } from '../api';
-import { HeaderBackButton } from '../components/ui';
+import { SpaceTabBackButton } from '../components/ui';
+import { useSpaceTabHeader } from '../hooks/useSpaceTabHeader';
 import { MembersScreen } from '../screens/MembersScreen';
-import { useSpaceStore } from '../store/spaceStore';
-import { colors, tabBarOptions, tabHeaderOptions, typography } from '../theme';
+import { tabBarOptions, tabHeaderOptions } from '../theme';
 import { ScreenPlaceholder } from './ScreenPlaceholder';
 import type { SpaceTabParamList } from './types';
 
@@ -28,62 +26,23 @@ const TAB_TITLE_KEYS: Record<TabRouteName, string> = {
   Complaints: 'navigation.complaints',
 };
 
-function createTabScreen(routeName: TabRouteName) {
+function createTabScreen(
+  routeName: TabRouteName,
+  options?: { showProfileAndMenu?: boolean },
+) {
   return function TabScreen() {
-    const { t, i18n } = useTranslation();
-    const navigation = useNavigation();
+    const { t } = useTranslation();
+    const route = useRoute<RouteProp<SpaceTabParamList, typeof routeName>>();
+    const { spaceId } = route.params;
     const title = t(TAB_TITLE_KEYS[routeName]);
 
-    useLayoutEffect(() => {
-      navigation.setOptions({
-        title,
-        headerBackVisible: false,
-        headerLeft: () => <HeaderBackButton />,
-      });
-    }, [navigation, title, t, i18n.language]);
+    useSpaceTabHeader(spaceId, options);
 
     return <ScreenPlaceholder title={title} />;
   };
 }
 
-function DashboardScreen() {
-  const { t, i18n } = useTranslation();
-  const navigation = useNavigation();
-  const selectedSpace = useSpaceStore(state => state.selectedSpace);
-
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerTitle: () =>
-        selectedSpace ? (
-          <View>
-            <Text style={dashboardHeaderStyles.title}>{selectedSpace.name}</Text>
-            <Text style={dashboardHeaderStyles.subtitle}>
-              {formatSpaceType(selectedSpace.type)}
-            </Text>
-          </View>
-        ) : (
-          <Text style={dashboardHeaderStyles.title}>{t('navigation.dashboard')}</Text>
-        ),
-      headerBackVisible: false,
-      headerLeft: () => <HeaderBackButton />,
-    });
-  }, [navigation, selectedSpace, t, i18n.language]);
-
-  return <ScreenPlaceholder title={t('navigation.dashboard')} />;
-}
-
-const dashboardHeaderStyles = {
-  title: {
-    ...typography.bodyStrong,
-    fontSize: 16,
-    color: colors.textPrimary,
-  },
-  subtitle: {
-    ...typography.caption,
-    color: colors.muted,
-  },
-};
-
+const DashboardScreen = createTabScreen('Dashboard', { showProfileAndMenu: true });
 const RoomsScreen = createTabScreen('Rooms');
 const MealsScreen = createTabScreen('Meals');
 const PaymentsScreen = createTabScreen('Payments');
@@ -93,7 +52,7 @@ const tabScreenOptions = {
   ...tabHeaderOptions,
   ...tabBarOptions,
   headerBackVisible: false as const,
-  headerLeft: () => <HeaderBackButton />,
+  headerLeft: () => <SpaceTabBackButton />,
 };
 
 export function SpaceTabNavigator({ spaceId }: SpaceTabNavigatorProps) {

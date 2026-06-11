@@ -20,8 +20,13 @@ export type MainStackParamList = {
   MySpaces: undefined;
   Profile: undefined;
   CreateSpace: undefined;
+  SpaceDetails: { spaceId: UUID };
+  EditSpace: { spaceId: UUID };
   SpaceTabs: { spaceId: UUID };
   InviteMembers: { spaceId: UUID };
+  AddMember: { spaceId: UUID };
+  MemberDetails: { spaceId: UUID; memberId: UUID };
+  EditMember: { spaceId: UUID; memberId: UUID };
 };
 
 export type RootStackParamList = {

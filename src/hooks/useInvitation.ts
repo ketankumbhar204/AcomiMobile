@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { ApiError, invitationApi } from '../api';
+import { ApiError, memberApi } from '../api';
 import type {
   CreateInvitationRequest,
   InvitationResponse,
@@ -38,7 +38,7 @@ export function useCreateInvitation(): UseCreateInvitationResult {
       setError(null);
 
       try {
-        return await invitationApi.create({
+        return await memberApi.createInvitation({
           ...payload,
           invitedByUserId: userId,
         });
@@ -84,7 +84,7 @@ export function useAcceptInvitation(): UseAcceptInvitationResult {
       setError(null);
 
       try {
-        return await invitationApi.accept(invitationId, { userId });
+        return await memberApi.acceptInvitation(invitationId, { userId });
       } catch (err) {
         const message =
           err instanceof ApiError

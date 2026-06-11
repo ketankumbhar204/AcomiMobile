@@ -31,7 +31,7 @@ export function useCreateSpace(): UseCreateSpaceResult {
       setError(null);
 
       try {
-        const response = await spaceApi.create({
+        const response = await spaceApi.createSpace({
           ...payload,
           ownerId: userId,
         });

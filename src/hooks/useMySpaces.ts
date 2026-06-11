@@ -1,12 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
-import {
-  ApiError,
-  spaceApi,
-  userSpaceResponseToSpace,
-} from '../api';
+import { useCallback, useEffect } from 'react';
+import { mySpaceResponseToSpace } from '../api';
 import type { Space } from '../api/types';
-import { i18n } from '../i18n';
-import { getAuthRequiredMessage, useAuthenticatedUserId } from './useAuth';
+import { useSpaceStore } from '../store/spaceStore';
 
 type UseMySpacesResult = {
   spaces: Space[];
@@ -15,42 +10,26 @@ type UseMySpacesResult = {
   refetch: () => Promise<void>;
 };
 
+/** @deprecated Prefer useSpaceStore directly */
 export function useMySpaces(): UseMySpacesResult {
-  const userId = useAuthenticatedUserId();
+  const mySpaces = useSpaceStore(state => state.mySpaces);
+  const isLoading = useSpaceStore(state => state.loading);
+  const error = useSpaceStore(state => state.error);
+  const loadMySpaces = useSpaceStore(state => state.loadMySpaces);
+  const refresh = useSpaceStore(state => state.refresh);
 
-  const [spaces, setSpaces] = useState<Space[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchSpaces = useCallback(async () => {
-    if (!userId) {
-      setSpaces([]);
-      setError(getAuthRequiredMessage());
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await spaceApi.getUserSpaces(userId);
-      setSpaces(response.map(userSpaceResponseToSpace));
-    } catch (err) {
-      const message =
-        err instanceof ApiError
-          ? err.message
-          : i18n.t('common.errors.loadSpaces');
-      setError(message);
-      setSpaces([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [userId]);
+  const refetch = useCallback(async () => {
+    await refresh();
+  }, [refresh]);
 
   useEffect(() => {
-    fetchSpaces();
-  }, [fetchSpaces]);
+    loadMySpaces();
+  }, [loadMySpaces]);
 
-  return { spaces, isLoading, error, refetch: fetchSpaces };
+  return {
+    spaces: mySpaces.map(mySpaceResponseToSpace),
+    isLoading,
+    error,
+    refetch,
+  };
 }

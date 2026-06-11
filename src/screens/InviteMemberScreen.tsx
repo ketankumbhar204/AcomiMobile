@@ -1,6 +1,5 @@
 import React, { useLayoutEffect, useState } from 'react';
 import {
-  Alert,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -10,17 +9,18 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import type { MembershipRole } from '../api/types';
 import { Button, FormInput, RolePicker } from '../components/ui';
 import { HeaderBackButton } from '../components/ui/HeaderBackButton';
-import { useCreateInvitation } from '../hooks/useInvitation';
 import type { MainStackParamList } from '../navigation/types';
+import { useMemberStore } from '../store/memberStore';
+import { useToastStore } from '../store/toastStore';
 import { colors, spacing, typography } from '../theme';
 
 type InviteMembersNav = NativeStackNavigationProp<MainStackParamList, 'InviteMembers'>;
-type InviteMembersRoute = NativeStackScreenProps<MainStackParamList, 'InviteMembers'>['route'];
 
 type FieldErrors = {
   mobileNumber?: string;
@@ -28,11 +28,13 @@ type FieldErrors = {
 };
 
 export function InviteMemberScreen() {
+  const { t, i18n } = useTranslation();
   const navigation = useNavigation<InviteMembersNav>();
-  const route = useRoute<InviteMembersRoute>();
-  const { spaceId } = route.params;
-
-  const { createInvitation, isSubmitting, error, clearError } = useCreateInvitation();
+  const inviteMember = useMemberStore(state => state.inviteMember);
+  const loadPendingInvitations = useMemberStore(state => state.loadPendingInvitations);
+  const storeError = useMemberStore(state => state.error);
+  const loading = useMemberStore(state => state.loading);
+  const showToast = useToastStore(state => state.showToast);
 
   const [mobileNumber, setMobileNumber] = useState('');
   const [role, setRole] = useState<MembershipRole | null>(null);
@@ -40,23 +42,24 @@ export function InviteMemberScreen() {
 
   useLayoutEffect(() => {
     navigation.setOptions({
+      title: t('navigation.inviteMember'),
       headerLeft: () => <HeaderBackButton />,
       headerBackVisible: false,
     });
-  }, [navigation]);
+  }, [navigation, t, i18n.language]);
 
   function validate(): boolean {
     const errors: FieldErrors = {};
-
     const digits = mobileNumber.replace(/\D/g, '');
+
     if (!mobileNumber.trim()) {
-      errors.mobileNumber = 'Mobile number is required.';
+      errors.mobileNumber = t('membership.invite.mobileRequired');
     } else if (digits.length < 10) {
-      errors.mobileNumber = 'Enter a valid 10-digit mobile number.';
+      errors.mobileNumber = t('membership.invite.mobileInvalid');
     }
 
     if (!role) {
-      errors.role = 'Please select a role for this member.';
+      errors.role = t('membership.invite.roleRequired');
     }
 
     setFieldErrors(errors);
@@ -65,25 +68,21 @@ export function InviteMemberScreen() {
 
   async function handleSend() {
     Keyboard.dismiss();
-    clearError();
 
     if (!validate()) {
       return;
     }
 
-    const invitation = await createInvitation({
-      spaceId,
+    const invitation = await inviteMember({
       mobileNumber: mobileNumber.trim(),
       role: role!,
     });
 
     if (invitation) {
-      console.log('[InviteMember] Invitation sent:', JSON.stringify(invitation, null, 2));
-      Alert.alert(
-        'Invitation sent',
-        `Invitation sent to ${invitation.mobileNumber} as ${invitation.role}.\nExpires: ${new Date(invitation.expiresAt).toLocaleDateString()}.`,
-        [{ text: 'OK', onPress: () => navigation.goBack() }],
-      );
+      console.log('[InviteMember] success', invitation.id);
+      await loadPendingInvitations();
+      showToast(t('membership.invite.successToast'));
+      navigation.goBack();
     }
   }
 
@@ -97,22 +96,19 @@ export function InviteMemberScreen() {
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
+          <Text style={styles.eyebrow}>{t('membership.invite.eyebrow')}</Text>
+          <Text style={styles.heading}>{t('membership.invite.heading')}</Text>
+          <Text style={styles.subheading}>{t('membership.invite.subheading')}</Text>
 
-          <Text style={styles.eyebrow}>Members</Text>
-          <Text style={styles.heading}>Invite a Member</Text>
-          <Text style={styles.subheading}>
-            Enter their mobile number and assign a role. They will receive an invitation.
-          </Text>
-
-          {error ? (
+          {storeError ? (
             <View style={styles.errorBanner}>
-              <Text style={styles.errorBannerText}>{error}</Text>
+              <Text style={styles.errorBannerText}>{storeError}</Text>
             </View>
           ) : null}
 
           <FormInput
-            label="Mobile Number"
-            placeholder="e.g. 9876543210"
+            label={t('membership.invite.mobileLabel')}
+            placeholder={t('membership.invite.mobilePlaceholder')}
             value={mobileNumber}
             onChangeText={text => {
               setMobileNumber(text);
@@ -139,16 +135,16 @@ export function InviteMemberScreen() {
 
           <View style={styles.footer}>
             <Button
-              label="Send Invitation"
+              label={t('membership.invite.send')}
               onPress={handleSend}
-              loading={isSubmitting}
-              disabled={isSubmitting}
+              loading={loading}
+              disabled={loading}
             />
             <Button
-              label="Cancel"
+              label={t('common.cancel')}
               variant="ghost"
               onPress={() => navigation.goBack()}
-              disabled={isSubmitting}
+              disabled={loading}
               style={styles.cancelButton}
             />
           </View>

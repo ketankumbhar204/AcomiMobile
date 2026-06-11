@@ -3,6 +3,7 @@
     "appName": "CountIn",
     "ok": "OK",
     "cancel": "Cancel",
+    "save": "Save",
     "user": "User",
     "errors": {
       "generic": "Something went wrong. Please try again.",
@@ -19,7 +20,12 @@
     "mySpaces": "My Spaces",
     "profile": "Profile",
     "createSpace": "Create Space",
+    "spaceDetails": "Space Details",
+    "editSpace": "Edit Space",
     "inviteMember": "Invite Member",
+    "addMember": "Add Member",
+    "memberDetails": "Member Details",
+    "editMember": "Edit Member",
     "verifyOtp": "Verify OTP",
     "dashboard": "Dashboard",
     "members": "Members",
@@ -56,7 +62,17 @@
       "emptyTitle": "No spaces yet",
       "emptyDescription": "Create your first PG, Rental, Mess, or Hostel space to get started.",
       "createFab": "Create new space",
-      "openProfile": "Open profile and settings"
+      "openProfile": "Open profile and settings",
+      "searchLabel": "Search spaces",
+      "searchPlaceholder": "Search by space name",
+      "searchEmptyTitle": "No spaces found",
+      "searchEmptyDescription": "Try a different search term.",
+      "defaultBadge": "Default",
+      "loading": "Loading spaces..."
+    },
+    "switcher": {
+      "open": "Switch space",
+      "dismiss": "Dismiss space switcher"
     },
     "createSpace": {
       "eyebrow": "New property",
@@ -97,6 +113,245 @@
         "label": "Rental",
         "description": "Flats / Rooms"
       }
+    },
+    "roles": {
+      "OWNER": "Owner",
+      "MANAGER": "Manager",
+      "TENANT": "Tenant",
+      "CUSTOMER": "Customer",
+      "STAFF": "Staff"
+    },
+    "details": {
+      "eyebrow": "Space",
+      "heading": "Space Details",
+      "name": "Name",
+      "type": "Type",
+      "address": "Address",
+      "contact": "Contact Number",
+      "createdAt": "Created",
+      "owner": "Owner",
+      "notProvided": "—",
+      "edit": "Edit Space",
+      "deactivate": "Deactivate Space",
+      "openDashboard": "Open Dashboard",
+      "deactivateTitle": "Deactivate space?",
+      "deactivateMessage": "This will deactivate \"{{name}}\". It will no longer appear in your spaces list.",
+      "deactivateConfirm": "Deactivate"
+    },
+    "editSpace": {
+      "eyebrow": "Edit",
+      "heading": "Edit Space",
+      "subheading": "Update space details. Type and owner cannot be changed.",
+      "typeLabel": "Space Type",
+      "ownerLabel": "Owner",
+      "save": "Save Changes",
+      "nameRequired": "Space name is required.",
+      "successTitle": "Space updated",
+      "successMessage": "Changes saved successfully."
+    },
+    "menu": {
+      "open": "Open space menu"
+    },
+    "errors": {
+      "unauthorized": "Your session has expired. Please log in again.",
+      "forbidden": "You do not have permission to perform this action.",
+      "notFound": "Space not found or unavailable.",
+      "server": "Server error. Please try again later.",
+      "loadDetails": "Failed to load space details.",
+      "update": "Failed to update space.",
+      "deactivate": "Failed to deactivate space."
+    }
+  },
+  "membership": {
+    "tabs": {
+      "members": "Members",
+      "pending": "Pending Invitations"
+    },
+    "members": {
+      "emptyTitle": "No members yet",
+      "emptyDescription": "Add your first tenant, customer, or staff member to this space.",
+      "appUser": "App User",
+      "notUsingApp": "Not Using App",
+      "mobile": "Mobile: {{value}}",
+      "created": "Added: {{date}}",
+      "remove": "Remove Member"
+    },
+    "add": {
+      "fab": "Add member",
+      "eyebrow": "Members",
+      "heading": "Add a Member",
+      "subheading": "Create a business record directly. They do not need the CountIn app.",
+      "fullNameLabel": "Full Name",
+      "fullNamePlaceholder": "e.g. Rahul Sharma",
+      "fullNameRequired": "Full name is required.",
+      "save": "Add Member",
+      "successToast": "Member added successfully."
+    },
+    "details": {
+      "eyebrow": "Member",
+      "mobile": "Mobile Number",
+      "role": "Role",
+      "appStatus": "App Status",
+      "created": "Created",
+      "updated": "Updated",
+      "edit": "Edit Member"
+    },
+    "edit": {
+      "eyebrow": "Edit",
+      "heading": "Edit Member",
+      "subheading": "Update member details. Owner role cannot be changed.",
+      "save": "Save Changes",
+      "successToast": "Member updated successfully."
+    },
+    "pending": {
+      "emptyTitle": "No pending invitations",
+      "emptyDescription": "Invitations you send will appear here until they are accepted.",
+      "invitedBy": "Invited by: {{name}}",
+      "created": "Sent: {{date}}",
+      "cancel": "Cancel Invitation"
+    },
+    "invite": {
+      "headerAction": "Invite",
+      "eyebrow": "Members",
+      "heading": "Invite a Member",
+      "subheading": "Invite someone to use the CountIn app. They will receive an invitation to join this space.",
+      "mobileLabel": "Mobile Number",
+      "mobilePlaceholder": "e.g. 9876543210",
+      "mobileRequired": "Mobile number is required.",
+      "mobileInvalid": "Enter a valid 10-digit mobile number.",
+      "roleRequired": "Please select a role for this member.",
+      "send": "Send Invitation",
+      "successToast": "Invitation sent successfully."
+    },
+    "cancel": {
+      "title": "Cancel invitation?",
+      "message": "Cancel this invitation?",
+      "confirm": "Cancel Invitation"
+    },
+    "remove": {
+      "title": "Remove member?",
+      "message": "Are you sure you want to remove this member?",
+      "confirm": "Remove Member"
+    },
+    "detailTabs": {
+      "profile": "Profile",
+      "deposit": "Deposit",
+      "documents": "Documents",
+      "notes": "Notes",
+      "history": "History"
+    },
+    "status": {
+      "label": "Status",
+      "ACTIVE": "Active",
+      "VACATED": "Vacated",
+      "SUSPENDED": "Suspended",
+      "BLACKLISTED": "Blacklisted",
+      "change": "Change Status",
+      "required": "Please select a status.",
+      "updatedAt": "Status Updated",
+      "successToast": "Member status updated."
+    },
+    "emergency": {
+      "heading": "Emergency Contact",
+      "name": "Contact Name",
+      "relation": "Relation",
+      "mobile": "Mobile Number",
+      "edit": "Edit Emergency Contact",
+      "namePlaceholder": "e.g. Priya Sharma",
+      "relationPlaceholder": "e.g. Mother",
+      "mobilePlaceholder": "e.g. 9876543210",
+      "nameRequired": "Contact name is required.",
+      "relationRequired": "Relation is required.",
+      "mobileRequired": "Mobile number is required.",
+      "successToast": "Emergency contact updated."
+    },
+    "deposit": {
+      "amount": "Deposit Amount",
+      "paid": "Amount Paid",
+      "refunded": "Amount Refunded",
+      "balance": "Balance",
+      "edit": "Edit Deposit",
+      "successToast": "Deposit updated.",
+      "errors": {
+        "negative": "Amounts cannot be negative.",
+        "paidExceedsAmount": "Paid amount cannot exceed deposit amount.",
+        "refundedExceedsPaid": "Refunded amount cannot exceed paid amount."
+      }
+    },
+    "documents": {
+      "add": "Add Document",
+      "typeLabel": "Document Type",
+      "numberLabel": "Document Number",
+      "numberPlaceholder": "e.g. XXXX-XXXX-1234",
+      "number": "Number: {{value}}",
+      "fileUrl": "File: {{value}}",
+      "pendingUpload": "File upload pending",
+      "uploadedAt": "Uploaded: {{date}}",
+      "typeRequired": "Please select a document type.",
+      "numberRequired": "Document number is required.",
+      "emptyTitle": "No documents",
+      "emptyDescription": "Add identity documents for this member.",
+      "successToast": "Document added.",
+      "deleteTitle": "Delete document?",
+      "deleteMessage": "Remove this document record?",
+      "deleteConfirm": "Delete",
+      "verification": {
+        "PENDING": "Pending",
+        "VERIFIED": "Verified",
+        "REJECTED": "Rejected"
+      },
+      "types": {
+        "AADHAAR": "Aadhaar",
+        "PAN": "PAN",
+        "PASSPORT": "Passport",
+        "DRIVING_LICENSE": "Driving License",
+        "STUDENT_ID": "Student ID",
+        "OTHER": "Other"
+      }
+    },
+    "notes": {
+      "add": "Add Note",
+      "addLabel": "Note",
+      "placeholder": "Write a note about this member…",
+      "required": "Note cannot be empty.",
+      "emptyTitle": "No notes",
+      "emptyDescription": "Notes you add will appear here.",
+      "successToast": "Note added.",
+      "meta": "{{name}} · {{date}}"
+    },
+    "history": {
+      "emptyTitle": "No history",
+      "emptyDescription": "Status, deposit, and emergency contact changes appear here.",
+      "meta": "{{name}} · {{date}}",
+      "actions": {
+        "statusChanged": "Status changed",
+        "depositUpdated": "Deposit updated",
+        "emergencyContactUpdated": "Emergency contact updated"
+      }
+    },
+    "errors": {
+      "generic": "Something went wrong. Please try again.",
+      "forbidden": "You do not have permission to perform this action.",
+      "notFound": "The requested item was not found. Try refreshing.",
+      "conflict": "This person is already a member of this space.",
+      "loadMembers": "Failed to load members. Please try again.",
+      "loadDetails": "Failed to load member details. Please try again.",
+      "loadInvitations": "Failed to load invitations. Please try again.",
+      "loadDocuments": "Failed to load documents. Please try again.",
+      "loadNotes": "Failed to load notes. Please try again.",
+      "loadHistory": "Failed to load history. Please try again.",
+      "add": "Failed to add member. Please try again.",
+      "update": "Failed to update member. Please try again.",
+      "updateStatus": "Failed to update status. Please try again.",
+      "updateEmergencyContact": "Failed to update emergency contact. Please try again.",
+      "updateDeposit": "Failed to update deposit. Please try again.",
+      "addDocument": "Failed to add document. Please try again.",
+      "deleteDocument": "Failed to delete document. Please try again.",
+      "addNote": "Failed to add note. Please try again.",
+      "invite": "Failed to send invitation. Please try again.",
+      "cancel": "Failed to cancel invitation. Please try again.",
+      "remove": "Failed to remove member. Please try again.",
+      "accept": "Failed to accept invitation. Please try again."
     }
   },
   "dashboard": {

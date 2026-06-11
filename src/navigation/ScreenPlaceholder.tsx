@@ -1,12 +1,11 @@
-import React, { useLayoutEffect } from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { formatSpaceType } from '../api';
 import {
   Badge,
   EmptyState,
-  HeaderBackButton,
   MetricCard,
   MetricCardProgress,
 } from '../components/ui';
@@ -21,16 +20,15 @@ type ScreenPlaceholderProps = {
 export function ScreenPlaceholder({ title }: ScreenPlaceholderProps) {
   const { t } = useTranslation();
   const route = useRoute();
-  const navigation = useNavigation();
+  const currentSpace = useSpaceStore(state => state.currentSpace);
   const selectedSpace = useSpaceStore(state => state.selectedSpace);
   const isDashboard = route.name === 'Dashboard';
 
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerBackVisible: false,
-      headerLeft: () => <HeaderBackButton />,
-    });
-  }, [navigation]);
+  useEffect(() => {
+    if (isDashboard) {
+      console.log('[Dashboard] loaded', currentSpace?.spaceId, currentSpace?.spaceName);
+    }
+  }, [currentSpace?.spaceId, currentSpace?.spaceName, isDashboard]);
 
   if (isDashboard) {
     return (

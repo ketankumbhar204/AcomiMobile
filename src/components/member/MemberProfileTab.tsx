@@ -1,0 +1,372 @@
+import React, { useState } from 'react';
+import { Alert, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
+import type { MemberDetailsResponse, MemberStatus } from '../../api/types';
+import { Button, Card, FormInput } from '../ui';
+import type { MainStackParamList } from '../../navigation/types';
+import { useMemberStore } from '../../store/memberStore';
+import { useToastStore } from '../../store/toastStore';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { StatusPicker } from './StatusPicker';
+
+type MemberProfileNav = NativeStackNavigationProp<MainStackParamList>;
+
+type MemberProfileTabProps = {
+  spaceId: string;
+  member: MemberDetailsResponse;
+  canEdit: boolean;
+  canRemove: boolean;
+};
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.detailRow}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={styles.detailValue}>{value}</Text>
+    </View>
+  );
+}
+
+function formatDate(value?: string | null): string {
+  if (!value) {
+    return '—';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleDateString();
+}
+
+export function MemberProfileTab({
+  spaceId,
+  member,
+  canEdit,
+  canRemove,
+}: MemberProfileTabProps) {
+  const { t } = useTranslation();
+  const navigation = useNavigation<MemberProfileNav>();
+  const showToast = useToastStore(state => state.showToast);
+  const loading = useMemberStore(state => state.loading);
+  const updateStatus = useMemberStore(state => state.updateStatus);
+  const updateEmergencyContact = useMemberStore(state => state.updateEmergencyContact);
+  const removeMember = useMemberStore(state => state.removeMember);
+
+  const [statusModalVisible, setStatusModalVisible] = useState(false);
+  const [emergencyModalVisible, setEmergencyModalVisible] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<MemberStatus>(member.status);
+  const [emergencyName, setEmergencyName] = useState(member.emergencyContactName ?? '');
+  const [emergencyRelation, setEmergencyRelation] = useState(
+    member.emergencyContactRelation ?? '',
+  );
+  const [emergencyMobile, setEmergencyMobile] = useState(
+    member.emergencyContactMobile ?? '',
+  );
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [emergencyError, setEmergencyError] = useState<string | null>(null);
+
+  const appStatusLabel = member.linkedUser
+    ? t('membership.members.appUser')
+    : t('membership.members.notUsingApp');
+
+  const handleSaveStatus = async () => {
+    if (!selectedStatus) {
+      setStatusError(t('membership.status.required'));
+      return;
+    }
+
+    console.log('[MemberProfileTab] update status', selectedStatus);
+    const updated = await updateStatus(member.memberId, { status: selectedStatus });
+    if (updated) {
+      showToast(t('membership.status.successToast'));
+      setStatusModalVisible(false);
+      setStatusError(null);
+    }
+  };
+
+  const handleSaveEmergency = async () => {
+    if (!emergencyName.trim()) {
+      setEmergencyError(t('membership.emergency.nameRequired'));
+      return;
+    }
+    if (!emergencyRelation.trim()) {
+      setEmergencyError(t('membership.emergency.relationRequired'));
+      return;
+    }
+    if (!emergencyMobile.trim()) {
+      setEmergencyError(t('membership.emergency.mobileRequired'));
+      return;
+    }
+
+    console.log('[MemberProfileTab] update emergency contact');
+    const updated = await updateEmergencyContact(member.memberId, {
+      emergencyContactName: emergencyName.trim(),
+      emergencyContactRelation: emergencyRelation.trim(),
+      emergencyContactMobile: emergencyMobile.trim(),
+    });
+    if (updated) {
+      showToast(t('membership.emergency.successToast'));
+      setEmergencyModalVisible(false);
+      setEmergencyError(null);
+    }
+  };
+
+  const confirmRemove = () => {
+    Alert.alert(
+      t('membership.remove.title'),
+      t('membership.remove.message'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('membership.remove.confirm'),
+          style: 'destructive',
+          onPress: async () => {
+            console.log('[MemberProfileTab] remove member', member.memberId);
+            const success = await removeMember(member.memberId);
+            if (success) {
+              navigation.goBack();
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const openStatusModal = () => {
+    setSelectedStatus(member.status);
+    setStatusError(null);
+    setStatusModalVisible(true);
+  };
+
+  const openEmergencyModal = () => {
+    setEmergencyName(member.emergencyContactName ?? '');
+    setEmergencyRelation(member.emergencyContactRelation ?? '');
+    setEmergencyMobile(member.emergencyContactMobile ?? '');
+    setEmergencyError(null);
+    setEmergencyModalVisible(true);
+  };
+
+  return (
+    <View>
+      <Card style={styles.card}>
+        <DetailRow
+          label={t('membership.details.mobile')}
+          value={member.mobileNumber}
+        />
+        <DetailRow
+          label={t('membership.details.appStatus')}
+          value={appStatusLabel}
+        />
+        <DetailRow
+          label={t('membership.status.label')}
+          value={t(`membership.status.${member.status}`)}
+        />
+        <DetailRow
+          label={t('membership.status.updatedAt')}
+          value={formatDate(member.statusUpdatedAt)}
+        />
+        <DetailRow
+          label={t('membership.details.created')}
+          value={formatDate(member.createdAt)}
+        />
+        <DetailRow
+          label={t('membership.details.updated')}
+          value={formatDate(member.updatedAt)}
+        />
+      </Card>
+
+      <Text style={styles.sectionTitle}>{t('membership.emergency.heading')}</Text>
+      <Card style={styles.card}>
+        <DetailRow
+          label={t('membership.emergency.name')}
+          value={member.emergencyContactName ?? '—'}
+        />
+        <DetailRow
+          label={t('membership.emergency.relation')}
+          value={member.emergencyContactRelation ?? '—'}
+        />
+        <DetailRow
+          label={t('membership.emergency.mobile')}
+          value={member.emergencyContactMobile ?? '—'}
+        />
+      </Card>
+
+      {canEdit ? (
+        <>
+          <Button
+            label={t('membership.details.edit')}
+            onPress={() =>
+              navigation.navigate('EditMember', {
+                spaceId,
+                memberId: member.memberId,
+              })
+            }
+            style={styles.actionButton}
+          />
+          <Button
+            label={t('membership.status.change')}
+            variant="secondary"
+            onPress={openStatusModal}
+            style={styles.actionButton}
+          />
+          <Button
+            label={t('membership.emergency.edit')}
+            variant="secondary"
+            onPress={openEmergencyModal}
+            style={styles.actionButton}
+          />
+        </>
+      ) : null}
+
+      {canRemove ? (
+        <Button
+          label={t('membership.members.remove')}
+          variant="ghost"
+          onPress={confirmRemove}
+          disabled={loading}
+          style={styles.actionButton}
+        />
+      ) : null}
+
+      <Modal
+        visible={statusModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setStatusModalVisible(false)}>
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setStatusModalVisible(false)}>
+          <Pressable style={styles.modalCard} onPress={e => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>{t('membership.status.change')}</Text>
+            <StatusPicker
+              value={selectedStatus}
+              onChange={setSelectedStatus}
+              error={statusError}
+            />
+            <View style={styles.modalActions}>
+              <Button
+                label={t('common.cancel')}
+                variant="ghost"
+                onPress={() => setStatusModalVisible(false)}
+                style={styles.modalButton}
+              />
+              <Button
+                label={t('common.save')}
+                onPress={handleSaveStatus}
+                disabled={loading}
+                style={styles.modalButton}
+              />
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={emergencyModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEmergencyModalVisible(false)}>
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setEmergencyModalVisible(false)}>
+          <Pressable style={styles.modalCard} onPress={e => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>{t('membership.emergency.edit')}</Text>
+            <FormInput
+              label={t('membership.emergency.name')}
+              value={emergencyName}
+              onChangeText={setEmergencyName}
+              placeholder={t('membership.emergency.namePlaceholder')}
+            />
+            <FormInput
+              label={t('membership.emergency.relation')}
+              value={emergencyRelation}
+              onChangeText={setEmergencyRelation}
+              placeholder={t('membership.emergency.relationPlaceholder')}
+            />
+            <FormInput
+              label={t('membership.emergency.mobile')}
+              value={emergencyMobile}
+              onChangeText={setEmergencyMobile}
+              placeholder={t('membership.emergency.mobilePlaceholder')}
+              keyboardType="phone-pad"
+            />
+            {emergencyError ? (
+              <Text style={styles.errorText}>{emergencyError}</Text>
+            ) : null}
+            <View style={styles.modalActions}>
+              <Button
+                label={t('common.cancel')}
+                variant="ghost"
+                onPress={() => setEmergencyModalVisible(false)}
+                style={styles.modalButton}
+              />
+              <Button
+                label={t('common.save')}
+                onPress={handleSaveEmergency}
+                disabled={loading}
+                style={styles.modalButton}
+              />
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    marginBottom: spacing.lg,
+  },
+  sectionTitle: {
+    ...typography.bodyStrong,
+    marginBottom: spacing.sm,
+  },
+  detailRow: {
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  detailLabel: {
+    ...typography.caption,
+    color: colors.muted,
+    marginBottom: spacing.xs,
+  },
+  detailValue: {
+    ...typography.bodyStrong,
+  },
+  actionButton: {
+    marginBottom: spacing.sm,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    padding: spacing.xl,
+  },
+  modalCard: {
+    backgroundColor: colors.white,
+    borderRadius: radius.card,
+    padding: spacing.xl,
+    ...shadows.md,
+  },
+  modalTitle: {
+    ...typography.h2,
+    marginBottom: spacing.lg,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  modalButton: {
+    flex: 1,
+  },
+  errorText: {
+    ...typography.caption,
+    color: '#DC2626',
+    marginBottom: spacing.sm,
+  },
+});

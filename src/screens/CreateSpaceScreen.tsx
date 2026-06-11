@@ -1,6 +1,5 @@
 import React, { useLayoutEffect, useState } from 'react';
 import {
-  Alert,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -18,6 +17,8 @@ import { Button, FormInput, SpaceTypePicker } from '../components/ui';
 import { HeaderBackButton } from '../components/ui/HeaderBackButton';
 import { useCreateSpace } from '../hooks/useCreateSpace';
 import type { MainStackParamList } from '../navigation/types';
+import { resetToDashboard } from '../navigation/navigationRef';
+import { useSpaceStore } from '../store/spaceStore';
 import { colors, spacing, typography } from '../theme';
 
 type CreateSpaceNav = NativeStackNavigationProp<MainStackParamList, 'CreateSpace'>;
@@ -33,6 +34,8 @@ export function CreateSpaceScreen() {
   const { t, i18n } = useTranslation();
   const navigation = useNavigation<CreateSpaceNav>();
   const { createSpace, isSubmitting, error, clearError } = useCreateSpace();
+  const refresh = useSpaceStore(state => state.refresh);
+  const switchSpace = useSpaceStore(state => state.switchSpace);
 
   const [name, setName] = useState('');
   const [type, setType] = useState<SpaceType | null>(null);
@@ -77,11 +80,9 @@ export function CreateSpaceScreen() {
 
     if (space) {
       console.log('[CreateSpace] Space created successfully:', JSON.stringify(space, null, 2));
-      Alert.alert(
-        t('spaces.createSpace.successTitle'),
-        t('spaces.createSpace.successMessage', { name: space.name }),
-        [{ text: t('common.ok'), onPress: () => navigation.goBack() }],
-      );
+      await refresh();
+      await switchSpace(space.id);
+      resetToDashboard(space.id);
     }
   }
 

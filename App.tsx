@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { OverflowMenuProvider, Toast } from './src/components/ui';
 import { initI18n } from './src/i18n';
 import { RootNavigator } from './src/navigation';
 import { colors } from './src/theme';
@@ -30,7 +31,10 @@ function App() {
   return (
     <GestureHandlerRootView style={styles.flex}>
       <SafeAreaProvider>
-        <RootNavigator />
+        <OverflowMenuProvider>
+          <RootNavigator />
+          <Toast />
+        </OverflowMenuProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
