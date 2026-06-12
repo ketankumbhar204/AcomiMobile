@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Alert, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import type { MemberDetailsResponse, MemberStatus } from '../../api/types';
-import { Button, Card, FormInput } from '../ui';
+import { Button, Card, FormInput, useConfirmDialog } from '../ui';
 import type { MainStackParamList } from '../../navigation/types';
 import { useMemberStore } from '../../store/memberStore';
 import { useToastStore } from '../../store/toastStore';
@@ -53,6 +53,7 @@ export function MemberProfileTab({
   const updateStatus = useMemberStore(state => state.updateStatus);
   const updateEmergencyContact = useMemberStore(state => state.updateEmergencyContact);
   const removeMember = useMemberStore(state => state.removeMember);
+  const { showConfirm } = useConfirmDialog();
 
   const [statusModalVisible, setStatusModalVisible] = useState(false);
   const [emergencyModalVisible, setEmergencyModalVisible] = useState(false);
@@ -114,24 +115,19 @@ export function MemberProfileTab({
   };
 
   const confirmRemove = () => {
-    Alert.alert(
-      t('membership.remove.title'),
-      t('membership.remove.message'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('membership.remove.confirm'),
-          style: 'destructive',
-          onPress: async () => {
-            console.log('[MemberProfileTab] remove member', member.memberId);
-            const success = await removeMember(member.memberId);
-            if (success) {
-              navigation.goBack();
-            }
-          },
-        },
-      ],
-    );
+    showConfirm({
+      title: t('membership.remove.title'),
+      message: t('membership.remove.message'),
+      confirmLabel: t('membership.remove.confirm'),
+      destructive: true,
+      onConfirm: async () => {
+        console.log('[MemberProfileTab] remove member', member.memberId);
+        const success = await removeMember(member.memberId);
+        if (success) {
+          navigation.goBack();
+        }
+      },
+    });
   };
 
   const openStatusModal = () => {

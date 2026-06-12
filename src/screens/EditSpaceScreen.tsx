@@ -1,6 +1,5 @@
 import React, { useCallback, useLayoutEffect, useState } from 'react';
 import {
-  Alert,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -17,7 +16,7 @@ import type {
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { formatSpaceType } from '../api';
-import { Button, Card, FormInput, HeaderBackButton } from '../components/ui';
+import { Button, Card, FormInput, HeaderBackButton, useConfirmDialog } from '../components/ui';
 import { useDeactivateSpace } from '../hooks/useDeactivateSpace';
 import { useAuthenticatedUserId } from '../hooks/useAuth';
 import type { MainStackParamList } from '../navigation/types';
@@ -39,6 +38,7 @@ export function EditSpaceScreen() {
   const { spaceId } = route.params;
   const currentUserId = useAuthenticatedUserId();
   const { confirmDeactivate, isLoading: isDeactivating } = useDeactivateSpace();
+  const { showConfirm } = useConfirmDialog();
 
   const loadSpaceDetails = useSpaceStore(state => state.loadSpaceDetails);
   const updateSpace = useSpaceStore(state => state.updateSpace);
@@ -107,11 +107,15 @@ export function EditSpaceScreen() {
 
     if (updated) {
       console.log('[EditSpace] save success', updated.id);
-      Alert.alert(
-        t('spaces.editSpace.successTitle'),
-        t('spaces.editSpace.successMessage'),
-        [{ text: t('common.ok'), onPress: () => navigation.goBack() }],
-      );
+      const goBack = () => navigation.goBack();
+      showConfirm({
+        title: t('spaces.editSpace.successTitle'),
+        message: t('spaces.editSpace.successMessage'),
+        confirmLabel: t('common.ok'),
+        hideCancel: true,
+        onConfirm: goBack,
+        onDismiss: goBack,
+      });
     }
   }
 

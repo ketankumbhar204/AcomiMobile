@@ -69,6 +69,7 @@ export interface MySpaceResponse {
   membershipRole: MembershipRole;
   isDefault: boolean;
   joinedAt: string;
+  address?: string | null;
 }
 
 export interface DefaultSpaceResponse {
@@ -308,6 +309,401 @@ export interface AuthTokenResponse {
   tokenType: 'Bearer';
   expiresIn: number;
   user: UserResponse;
+}
+
+// ─── Accommodation (Phase 4.1) ──────────────────────────────────────────────
+
+export type AccommodationStatus =
+  | 'AVAILABLE'
+  | 'OCCUPIED'
+  | 'RESERVED'
+  | 'MAINTENANCE'
+  | 'BLOCKED';
+
+export type RoomType = 'PRIVATE' | 'SHARED' | 'DORMITORY';
+
+export type PropertyLayoutMode =
+  | 'CORRIDOR_PG'
+  | 'APARTMENT_PG'
+  | 'CO_LIVING'
+  | 'RENTAL';
+
+export type UnitKind =
+  | 'SINGLE_ROOM'
+  | 'STUDIO'
+  | 'RK'
+  | 'BHK_1'
+  | 'BHK_2'
+  | 'BHK_3'
+  | 'FLAT'
+  | 'DORMITORY'
+  | 'SUITE';
+
+export interface CreateBuildingRequest {
+  name: string;
+  code?: string;
+  layoutMode?: PropertyLayoutMode;
+}
+
+export interface UpdateBuildingRequest {
+  name: string;
+  code?: string;
+  layoutMode?: PropertyLayoutMode;
+}
+
+export interface CreateFloorRequest {
+  name: string;
+  floorNumber: number;
+  sortOrder?: number;
+}
+
+export interface UpdateFloorRequest {
+  name: string;
+  floorNumber: number;
+  sortOrder: number;
+}
+
+export interface CreateUnitRequest {
+  name: string;
+  unitNumber: string;
+  status?: AccommodationStatus;
+  unitKind?: UnitKind;
+}
+
+export interface UpdateUnitRequest {
+  name: string;
+  unitNumber: string;
+  status: AccommodationStatus;
+  unitKind?: UnitKind;
+}
+
+export interface CreateRoomRequest {
+  name: string;
+  roomNumber: string;
+  roomType: RoomType;
+  capacity: number;
+  status?: AccommodationStatus;
+}
+
+export interface UpdateRoomRequest {
+  name: string;
+  roomNumber: string;
+  roomType: RoomType;
+  capacity: number;
+  status: AccommodationStatus;
+}
+
+export interface CreateBedRequest {
+  name: string;
+  bedNumber: string;
+  status?: AccommodationStatus;
+}
+
+export interface UpdateBedRequest {
+  name: string;
+  bedNumber: string;
+  status: AccommodationStatus;
+}
+
+export interface AccommodationActionMetadata {
+  canEdit: boolean;
+  canDeactivate: boolean;
+  canRestore: boolean;
+  canDelete: boolean;
+  deleteReason?: string | null;
+}
+
+export interface BuildingResponse {
+  buildingId: UUID;
+  spaceId: UUID;
+  name: string;
+  code?: string | null;
+  layoutMode: PropertyLayoutMode;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+  actions?: AccommodationActionMetadata;
+}
+
+export interface FloorResponse {
+  floorId: UUID;
+  buildingId: UUID;
+  name: string;
+  floorNumber: number;
+  sortOrder: number;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+  actions?: AccommodationActionMetadata;
+}
+
+export interface UnitResponse {
+  unitId: UUID;
+  buildingId: UUID;
+  floorId?: UUID | null;
+  name: string;
+  unitNumber: string;
+  status: AccommodationStatus;
+  synthetic: boolean;
+  unitKind?: UnitKind | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+  actions?: AccommodationActionMetadata;
+}
+
+export interface RoomResponse {
+  roomId: UUID;
+  buildingId?: UUID | null;
+  floorId?: UUID | null;
+  unitId?: UUID | null;
+  name: string;
+  roomNumber: string;
+  roomType: RoomType;
+  capacity: number;
+  status: AccommodationStatus;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+  actions?: AccommodationActionMetadata;
+}
+
+export interface BedResponse {
+  bedId: UUID;
+  roomId: UUID;
+  name: string;
+  bedNumber: string;
+  status: AccommodationStatus;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+  actions?: AccommodationActionMetadata;
+}
+
+// ─── Accommodation Phase 4.2 orchestration ────────────────────────────────
+
+export type BedLabelStyle = 'ALPHA' | 'NUMERIC';
+
+export interface BuildingSetupInput {
+  name: string;
+  code?: string;
+}
+
+export interface PgHostelSetupConfig {
+  count: number;
+  includeGroundFloor?: boolean;
+  apartmentsPerFloor?: number;
+  roomsPerFloor: number;
+  bedsPerRoom: number;
+  defaultRoomType: RoomType;
+  capacityPerRoom: number;
+}
+
+export interface UnitSetupConfig {
+  count: number;
+  startNumber?: string;
+  numberingStep?: number;
+  roomsPerUnit?: number;
+  bedsPerRoom?: number;
+  defaultRoomType?: RoomType;
+  capacityPerRoom?: number;
+  defaultStatus?: AccommodationStatus;
+}
+
+export interface AccommodationSetupRequest {
+  spaceType: SpaceType;
+  layoutMode?: PropertyLayoutMode;
+  building: BuildingSetupInput;
+  floors?: PgHostelSetupConfig;
+  units?: UnitSetupConfig;
+}
+
+export interface AccommodationSetupTotals {
+  floors: number;
+  units: number;
+  rooms: number;
+  beds: number;
+}
+
+export interface AccommodationSetupSampleNode {
+  type: string;
+  label: string;
+  number: string;
+  children?: AccommodationSetupSampleNode[];
+}
+
+export interface AccommodationSetupPreviewResponse {
+  totals: AccommodationSetupTotals;
+  sample: AccommodationSetupSampleNode[];
+  warnings: string[];
+}
+
+export interface AccommodationSetupResultResponse {
+  buildingId: UUID;
+  totals: AccommodationSetupTotals;
+  idempotentReplay: boolean;
+}
+
+export interface StructureCountsResponse {
+  floors: number;
+  units: number;
+  rooms: number;
+  beds: number;
+}
+
+export interface StatusCountsResponse {
+  available: number;
+  occupied: number;
+  reserved: number;
+  maintenance: number;
+  blocked: number;
+}
+
+export interface PagedResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  first: boolean;
+  last: boolean;
+}
+
+export interface ListQueryParams {
+  query?: string;
+  page?: number;
+  size?: number;
+  sort?: string;
+  view?: 'summary' | 'full';
+  includeSynthetic?: boolean;
+}
+
+export interface BuildingSummaryResponse {
+  buildingId: UUID;
+  name: string;
+  code?: string | null;
+  spaceId: UUID;
+  layoutMode: PropertyLayoutMode;
+  unitCount: number;
+  visibleUnitCount: number;
+  syntheticUnitCount: number;
+  floors: number;
+  units: number;
+  rooms: number;
+  beds: number;
+  available: number;
+  occupied: number;
+  reserved: number;
+  maintenance: number;
+  blocked: number;
+}
+
+export interface FloorListItemResponse {
+  floorId: UUID;
+  name: string;
+  roomCount: number;
+  bedCount: number;
+  available: number;
+  occupied: number;
+}
+
+export interface UnitListItemResponse {
+  unitId: UUID;
+  name: string;
+  roomCount: number;
+  bedCount: number;
+  status: AccommodationStatus;
+  synthetic: boolean;
+  unitKind?: UnitKind | null;
+}
+
+export interface RoomListItemResponse {
+  roomId: UUID;
+  name: string;
+  roomType: RoomType;
+  bedCount: number;
+  availableBeds: number;
+  occupiedBeds: number;
+}
+
+export interface BedListItemResponse {
+  bedId: UUID;
+  label: string;
+  status: AccommodationStatus;
+}
+
+export interface DuplicateBuildingRequest {
+  targetBuildingName: string;
+  targetBuildingCode?: string;
+}
+
+export interface DuplicateBuildingResponse {
+  buildingId: UUID;
+  name: string;
+  code: string | null;
+  floorsCreated: number;
+  unitsCreated: number;
+  roomsCreated: number;
+  bedsCreated: number;
+}
+
+export interface DuplicateFloorRequest {
+  targetFloorNumber: number;
+  targetName?: string;
+  renumberRooms?: boolean;
+}
+
+export interface DuplicateFloorResponse {
+  floorId: UUID;
+  floorNumber: number;
+  roomsCreated: number;
+  bedsCreated: number;
+}
+
+export interface DuplicateRoomRequest {
+  targetRoomNumber?: string;
+}
+
+export interface DuplicateRoomResponse {
+  roomId: UUID;
+  roomNumber: string;
+  bedsCreated: number;
+}
+
+export interface BulkCreateUnitsRequest {
+  count: number;
+  startUnitNumber?: string;
+  defaultStatus?: AccommodationStatus;
+}
+
+export interface BulkCreateUnitsResponse {
+  unitsCreated: number;
+  unitIds: UUID[];
+}
+
+export interface BulkCreateRoomsRequest {
+  count: number;
+  startRoomNumber?: string;
+  roomType: RoomType;
+  capacity: number;
+  bedsPerRoom: number;
+  defaultStatus?: AccommodationStatus;
+}
+
+export interface BulkCreateRoomsResponse {
+  roomsCreated: number;
+  bedsCreated: number;
+  roomIds: UUID[];
+}
+
+export interface BulkCreateBedsRequest {
+  count: number;
+  labelStyle: BedLabelStyle;
+}
+
+export interface BulkCreateBedsResponse {
+  bedsCreated: number;
+  bedIds: UUID[];
 }
 
 // ─── Error types ────────────────────────────────────────────────────────────

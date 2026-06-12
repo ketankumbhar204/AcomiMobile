@@ -15,9 +15,11 @@ import {
   SkeletonCard,
 } from '../components/ui';
 import { resetToDashboard } from '../navigation/navigationRef';
+import { invalidateAccommodationQueries } from '../utils/accommodationQueryCache';
 import type { MainStackParamList } from '../navigation/types';
 import { useSpaceStore } from '../store/spaceStore';
 import { colors, spacing, typography } from '../theme';
+import { formatSpaceDisplayName } from '../utils/spaceLabels';
 
 type MySpacesNavigation = NativeStackNavigationProp<
   MainStackParamList,
@@ -88,6 +90,7 @@ export function MySpacesScreen() {
     console.log('[MySpaces] open space → dashboard', space.spaceId);
     const success = await switchSpace(space.spaceId);
     if (success) {
+      invalidateAccommodationQueries();
       resetToDashboard(space.spaceId);
     }
   };
@@ -162,7 +165,7 @@ export function MySpacesScreen() {
                   </View>
                 ) : null}
                 <ListCard
-                  title={space.spaceName}
+                  title={formatSpaceDisplayName(space)}
                   subtitle={buildSubtitle(space)}
                   iconLabel={spaceTypeIconLabel(space.spaceType)}
                   onPress={() => openSpace(space)}

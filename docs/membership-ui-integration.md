@@ -96,7 +96,7 @@ See [auth-ui-integration.md](./auth-ui-integration.md) for login. Use [my-spaces
 
 1. Read `spaceId` from current space context.
 2. `GET /api/v1/spaces/{spaceId}/members`
-3. Show: `fullName`, `mobileNumber`, `role`, `linkedUser` badge, `createdAt`
+3. Show: `fullName`, `mobileNumber`, `role`, `status` badge, `linkedUser` badge, `createdAt`
 4. Tap row → member detail screen
 5. **Add member** FAB (OWNER/MANAGER) → direct add form
 6. **Invite** action (OWNER/MANAGER) → invitation form (separate from direct add)
@@ -249,8 +249,11 @@ export interface MemberResponse {
   mobileNumber: string;
   role: MembershipRole;
   linkedUser: boolean;
+  status: MemberStatus;
   createdAt: string;
 }
+
+export type MemberStatus = 'ACTIVE' | 'VACATED' | 'SUSPENDED' | 'BLACKLISTED';
 
 export interface MemberDetailsResponse {
   memberId: string;
@@ -262,6 +265,15 @@ export interface MemberDetailsResponse {
   linkedUserId?: string | null;
   membershipId?: string | null;
   active: boolean;
+  status: MemberStatus;
+  statusUpdatedAt?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactRelation?: string | null;
+  emergencyContactMobile?: string | null;
+  depositAmount: number;
+  depositPaid: number;
+  depositRefunded: number;
+  depositBalance: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -853,8 +865,10 @@ export function useMembers(spaceId: string | null) {
 
 ## Related docs
 
+- [member-management-ui-integration.md](./member-management-ui-integration.md) — Status, deposit, documents, notes, history (Phase 3)
 - [auth-ui-integration.md](./auth-ui-integration.md) — Login, JWT
 - [my-spaces-ui-integration.md](./my-spaces-ui-integration.md) — Current space context
 - [space-ui-integration.md](./space-ui-integration.md) — Space management
 - [member-master-module.md](./member-master-module.md) — Backend spec
 - [domain-model.md](./domain-model.md) — Domain rules
+accommodation-flow-redesign.md

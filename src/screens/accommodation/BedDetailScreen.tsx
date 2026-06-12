@@ -1,0 +1,221 @@
+import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import type {
+  NativeStackNavigationProp,
+  NativeStackScreenProps,
+} from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
+import { accommodationApi } from '../../api/accommodationApi';
+import type { BedResponse } from '../../api/types';
+import {
+  AccommodationContextTrail,
+  AccommodationDetailRow,
+  AccommodationLifecycleActions,
+  AccommodationStatusBadge,
+  formatAccommodationDate,
+} from '../../components/accommodation';
+import { Card, HeaderBackButton, Screen, SkeletonCard } from '../../components/ui';
+import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
+import {
+  useDeactivateBed,
+  useDeleteBed,
+  useRestoreBed,
+} from '../../hooks/accommodationLifecycle';
+import { useAccommodationLifecycleConfirm } from '../../hooks/useAccommodationLifecycleConfirm';
+import type { MainStackParamList } from '../../navigation/types';
+import { useSpaceStore } from '../../store/spaceStore';
+import { useToastStore } from '../../store/toastStore';
+import { spacing, typography } from '../../theme';
+import { buildAccommodationTrail } from '../../utils/accommodationContext';
+import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
+import { navigateToAccommodationTrailSegment } from '../../utils/accommodationNavigation';
+
+type Nav = NativeStackNavigationProp<MainStackParamList, 'BedDetail'>;
+type Route = NativeStackScreenProps<MainStackParamList, 'BedDetail'>['route'];
+
+export function BedDetailScreen() {
+  const { t, i18n } = useTranslation();
+  const navigation = useNavigation<Nav>();
+  const route = useRoute<Route>();
+  const {
+    buildingId,
+    roomId,
+    bedId,
+    buildingName,
+    parentName,
+    parentType,
+    floorId,
+    unitId,
+    roomName,
+    bedLabel,
+  } = route.params;
+  const spaceId = useActiveSpaceId(route.params.spaceId);
+  const showToast = useToastStore(state => state.showToast);
+  const { confirmDeactivate, confirmRestore, confirmDelete } =
+    useAccommodationLifecycleConfirm();
+  const { mutate: deactivateBed, loading: deactivating } = useDeactivateBed();
+  const { mutate: restoreBed, loading: restoring } = useRestoreBed();
+  const { mutate: deleteBed, loading: deleting } = useDeleteBed();
+  const lifecycleLoading = deactivating || restoring || deleting;
+
+  const mySpaces = useSpaceStore(state => state.mySpaces);
+  const currentRole = useMemo(
+    () => mySpaces.find(space => space.spaceId === spaceId)?.membershipRole,
+    [mySpaces, spaceId],
+  );
+
+  const [bed, setBed] = useState<BedResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const trailContext = useMemo(
+    () => ({
+      spaceId,
+      buildingId,
+      buildingName,
+      floorId,
+      floorName: parentType === 'floor' ? parentName : undefined,
+      unitId,
+      unitName: parentType === 'unit' ? parentName : undefined,
+      roomId,
+      roomName,
+      bedLabel: bedLabel ?? bed?.bedNumber ?? bed?.name,
+    }),
+    [
+      bed?.bedNumber,
+      bed?.name,
+      bedLabel,
+      buildingId,
+      buildingName,
+      floorId,
+      parentName,
+      parentType,
+      roomId,
+      roomName,
+      spaceId,
+      unitId,
+    ],
+  );
+
+  const trailSegments = useMemo(
+    () => buildAccommodationTrail(trailContext, 'bed'),
+    [trailContext],
+  );
+
+  const onTrailNavigate = useCallback(
+    (level: Parameters<typeof navigateToAccommodationTrailSegment>[2]) => {
+      navigateToAccommodationTrailSegment(navigation, trailContext, level);
+    },
+    [navigation, trailContext],
+  );
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: bed?.name ?? bedLabel ?? t('accommodation.beds.detailTitle'),
+      headerBackVisible: false,
+      headerLeft: () => <HeaderBackButton />,
+    });
+  }, [bed?.name, bedLabel, navigation, t, i18n.language]);
+
+  const loadBed = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await accommodationApi.getBedById(spaceId, bedId);
+      setBed(data);
+    } catch (err) {
+      setError(getAccommodationErrorMessage(err, 'accommodation.errors.loadBeds'));
+    } finally {
+      setLoading(false);
+    }
+  }, [bedId, spaceId]);
+
+  useFocusEffect(useCallback(() => { void loadBed(); }, [loadBed]));
+
+  if (loading && !bed) {
+    return <Screen contentStyle={styles.content}><SkeletonCard /></Screen>;
+  }
+
+  return (
+    <Screen scrollable contentStyle={styles.content}>
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      {bed ? (
+        <>
+          <AccommodationContextTrail segments={trailSegments} onNavigate={onTrailNavigate} />
+          <View style={styles.badgeRow}>
+            <AccommodationStatusBadge status={bed.status} />
+          </View>
+          <Card>
+            <AccommodationDetailRow label={t('accommodation.fields.name')} value={bed.name} />
+            <AccommodationDetailRow
+              label={t('accommodation.beds.bedNumberLabel')}
+              value={bed.bedNumber}
+            />
+            <AccommodationDetailRow
+              label={t('accommodation.status.label')}
+              value={t(`accommodation.status.${bed.status}`)}
+            />
+            <AccommodationDetailRow
+              label={t('accommodation.fields.created')}
+              value={formatAccommodationDate(bed.createdAt)}
+            />
+            <AccommodationDetailRow
+              label={t('accommodation.fields.updated')}
+              value={formatAccommodationDate(bed.updatedAt)}
+            />
+          </Card>
+
+          <AccommodationLifecycleActions
+            actions={bed.actions}
+            role={currentRole}
+            loading={lifecycleLoading}
+            onEdit={() =>
+              navigation.navigate('BedForm', {
+                spaceId,
+                buildingId: route.params.buildingId,
+                roomId,
+                mode: 'edit',
+                bedId,
+              })
+            }
+            onDeactivate={() =>
+              confirmDeactivate(
+                () => deactivateBed(spaceId, bedId),
+                () => {
+                  showToast(t('accommodation.lifecycle.deactivateSuccess'));
+                  navigation.goBack();
+                },
+              )
+            }
+            onRestore={() =>
+              confirmRestore(
+                () => restoreBed(spaceId, bedId),
+                () => {
+                  showToast(t('accommodation.lifecycle.restoreSuccess'));
+                  void loadBed();
+                },
+              )
+            }
+            onDelete={() =>
+              confirmDelete(
+                'bed',
+                () => deleteBed(spaceId, bedId),
+                () => {
+                  showToast(t('accommodation.lifecycle.deleteSuccess'));
+                  navigation.goBack();
+                },
+              )
+            }
+          />
+        </>
+      ) : null}
+    </Screen>
+  );
+}
+
+const styles = StyleSheet.create({
+  content: { padding: spacing.xxl, paddingBottom: spacing.section },
+  errorText: { ...typography.body, color: '#DC2626' },
+  badgeRow: { marginBottom: spacing.md },
+});

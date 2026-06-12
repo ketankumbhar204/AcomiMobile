@@ -2,6 +2,8 @@
   "common": {
     "appName": "CountIn",
     "ok": "OK",
+    "yes": "Yes",
+    "no": "No",
     "cancel": "Cancel",
     "save": "Save",
     "user": "User",
@@ -29,6 +31,7 @@
     "verifyOtp": "Verify OTP",
     "dashboard": "Dashboard",
     "members": "Members",
+    "accommodation": "Accommodation",
     "rooms": "Rooms",
     "meals": "Meals",
     "payments": "Payments",
@@ -352,6 +355,363 @@
       "cancel": "Failed to cancel invitation. Please try again.",
       "remove": "Failed to remove member. Please try again.",
       "accept": "Failed to accept invitation. Please try again."
+    }
+  },
+  "accommodation": {
+    "search": {
+      "placeholder": "Search…"
+    },
+    "fields": {
+      "name": "Name",
+      "code": "Code",
+      "created": "Created",
+      "updated": "Updated"
+    },
+    "actions": {
+      "edit": "Edit"
+    },
+    "status": {
+      "label": "Status",
+      "required": "Please select a status.",
+      "AVAILABLE": "Available",
+      "OCCUPIED": "Occupied",
+      "RESERVED": "Reserved",
+      "MAINTENANCE": "Maintenance",
+      "BLOCKED": "Blocked"
+    },
+    "roomType": {
+      "label": "Room Type",
+      "required": "Please select a room type.",
+      "PRIVATE": "Private",
+      "SHARED": "Shared",
+      "DORMITORY": "Dormitory"
+    },
+    "layoutMode": {
+      "label": "Property layout",
+      "CORRIDOR_PG": "Corridor PG",
+      "CORRIDOR_PG_desc": "Rooms along corridors on each floor",
+      "APARTMENT_PG": "Apartment PG",
+      "APARTMENT_PG_desc": "Apartments per floor with rooms inside each",
+      "CO_LIVING": "Co-living",
+      "CO_LIVING_desc": "Units with shared or private rooms",
+      "RENTAL": "Rental",
+      "RENTAL_desc": "Rentable units without room subdivisions"
+    },
+    "home": {
+      "emptyTitle": "No property structure yet",
+      "emptyDescription": "Describe your property in a few steps or create manually.",
+      "quickSetup": "Quick Setup",
+      "addBuildingManually": "Add Building Manually",
+      "manageHint": "Tap to manage",
+      "beds": "{{count}} beds",
+      "floors": "{{count}} floors",
+      "units": "{{count}} units",
+      "apartments": "{{count}} apartments",
+      "rooms": "{{count}} rooms"
+    },
+    "setup": {
+      "title": "Quick Setup",
+      "step": "Step {{current}} of {{total}}",
+      "buildingStep": "Building",
+      "floorsStep": "Floors",
+      "floorsAndApartmentsStep": "Floors & Apartments",
+      "unitsStep": "Units",
+      "roomsStep": "Rooms & Beds",
+      "roomsAndBedsApartmentStep": "Rooms & Beds per Apartment",
+      "selectedLayout": "Layout: {{layout}}",
+      "apartmentPgStructureHint": "Set how many floors you have and how many apartments sit on each floor.",
+      "apartmentPgRoomsHint": "These rooms are created inside each apartment, not directly on the floor.",
+      "previewStep": "Preview",
+      "floorCount": "Number of floors",
+      "includeGroundFloor": "Include ground floor",
+      "unitCount": "Number of units",
+      "startNumber": "Starting unit number",
+      "numberingStep": "Numbering step",
+      "roomsPerFloor": "Rooms per floor",
+      "apartmentsPerFloor": "Apartments per floor",
+      "roomsPerApartment": "Rooms per apartment",
+      "roomsPerUnit": "Rooms per unit",
+      "bedsPerRoom": "Beds per room",
+      "capacityPerRoom": "Capacity per room",
+      "estimatedBeds": "Estimated total beds: {{count}}",
+      "sampleTree": "Sample structure",
+      "next": "Next",
+      "back": "Back",
+      "generate": "Generate",
+      "success": "{{beds}} beds ready in {{name}}",
+      "notApplicable": "Quick Setup is not available for this space type.",
+      "totals": {
+        "floors": "{{count}} floors",
+        "units": "{{count}} units",
+        "rooms": "{{count}} rooms",
+        "beds": "{{count}} beds"
+      },
+      "errors": {
+        "preview": "Failed to preview setup. Please try again.",
+        "execute": "Failed to generate structure. Please try again.",
+        "floorCount": "Enter between 1 and 20 floors.",
+        "roomBedCounts": "Rooms and beds per room must be at least 1.",
+        "maxBeds": "Setup exceeds the 500-bed limit.",
+        "unitCount": "Enter at least 1 unit.",
+        "maxUnits": "Setup exceeds the 50-unit limit.",
+        "roomsPerUnit": "Rooms per unit must be at least 1.",
+        "bedsPerRoom": "Beds per room must be at least 1.",
+        "roomType": "Please select a room type.",
+        "capacity": "Capacity must be at least 1.",
+        "apartmentsPerFloor": "Apartments per floor must be at least 1."
+      }
+    },
+    "overview": {
+      "title": "Building Overview",
+      "open": "Open building overview",
+      "parentSummary": "Summary",
+      "summaryRooms": "{{count}} rooms",
+      "summaryBeds": "{{count}} beds"
+    },
+    "apartments": {
+      "onFloor": "Apartments on this floor",
+      "count": "{{count}} apartments",
+      "emptyTitle": "No apartments yet",
+      "emptyMessage": "Add an apartment to organize rooms on this floor."
+    },
+    "builder": {
+      "title": "Property Builder",
+      "notApplicable": "Builder is not available for this space type.",
+      "buildingNode": "Building structure",
+      "emptyStructure": "No structure yet — add floors, units, or rooms.",
+      "summaryFloors": "{{count}} floors",
+      "summaryUnits": "{{count}} units",
+      "summaryApartments": "{{count}} apartments",
+      "summaryRooms": "{{count}} rooms",
+      "summaryBeds": "{{count}} beds",
+      "statusLine": "Available: {{available}} · Occupied: {{occupied}} · Reserved: {{reserved}} · Maintenance: {{maintenance}} · Blocked: {{blocked}}",
+      "addFloor": "Add floor",
+      "addUnit": "Add unit",
+      "addRoom": "Add room",
+      "addBed": "Add bed",
+      "loadMore": "Load more"
+    },
+    "duplicate": {
+      "confirm": "Duplicate",
+      "building": {
+        "action": "Duplicate building",
+        "title": "Duplicate building",
+        "hint": "Create a copy of \"{{name}}\" with all floors, rooms, and beds.",
+        "targetName": "New building name",
+        "nameRequired": "Building name is required.",
+        "success": "Building duplicated successfully."
+      },
+      "floor": {
+        "action": "Duplicate floor",
+        "title": "Duplicate floor",
+        "hint": "Clone \"{{name}}\" with all apartments, rooms, and beds.",
+        "targetNumber": "Target floor number",
+        "namePlaceholder": "Optional display name",
+        "numberRequired": "Enter a valid floor number.",
+        "renumber": "Renumber for target floor",
+        "renumberHint": "Assign floor-specific apartment or room numbers (recommended).",
+        "success": "Floor duplicated successfully."
+      },
+      "room": {
+        "action": "Duplicate room",
+        "title": "Duplicate room",
+        "hint": "Clone \"{{name}}\" with all beds on the same parent.",
+        "targetNumber": "Target room number",
+        "autoPlaceholder": "Leave blank for auto-assign",
+        "success": "Room duplicated successfully."
+      },
+      "errors": {
+        "building": "Failed to duplicate building. Please try again.",
+        "floor": "Failed to duplicate floor. Please try again.",
+        "room": "Failed to duplicate room. Please try again."
+      }
+    },
+    "bulk": {
+      "confirm": "Create",
+      "autoNumber": "Leave blank for auto-assign",
+      "units": {
+        "action": "Bulk add units",
+        "title": "Bulk add units",
+        "count": "Number of units",
+        "startNumber": "Starting unit number",
+        "success": "{{count}} units created."
+      },
+      "rooms": {
+        "action": "Bulk add rooms",
+        "title": "Bulk add rooms",
+        "count": "Number of rooms",
+        "startNumber": "Starting room number",
+        "bedsPerRoom": "Beds per room",
+        "capacityRequired": "Capacity must be at least 1.",
+        "success": "{{rooms}} rooms and {{beds}} beds created."
+      },
+      "beds": {
+        "action": "Bulk add beds",
+        "title": "Bulk add beds",
+        "hint": "Add beds to \"{{name}}\".",
+        "count": "Number of beds",
+        "labelStyle": "Label style",
+        "labelStyle_ALPHA": "A, B, C…",
+        "labelStyle_NUMERIC": "1, 2, 3…",
+        "success": "{{count}} beds created."
+      },
+      "errors": {
+        "units": "Failed to bulk create units. Please try again.",
+        "rooms": "Failed to bulk create rooms. Please try again.",
+        "beds": "Failed to bulk create beds. Please try again.",
+        "unitCount": "Enter between 1 and 50 units.",
+        "roomCount": "Enter between 1 and 50 rooms.",
+        "bedsPerRoom": "Beds per room cannot be negative.",
+        "maxBeds": "Total beds exceed the 500-bed bulk limit.",
+        "bedCount": "Enter at least 1 bed."
+      }
+    },
+    "buildings": {
+      "emptyTitle": "No buildings yet",
+      "emptyDescription": "Add your first building to define the property structure.",
+      "addFab": "Add building",
+      "code": "Code: {{value}}",
+      "detailTitle": "Building Details",
+      "createTitle": "Add Building",
+      "editTitle": "Edit Building",
+      "namePlaceholder": "e.g. Building A",
+      "codePlaceholder": "e.g. BLD-A",
+      "nameRequired": "Building name is required.",
+      "createSuccess": "Building added successfully.",
+      "updateSuccess": "Building updated successfully."
+    },
+    "inlineEdit": {
+      "editName": "Edit name",
+      "save": "Save name",
+      "cancel": "Cancel editing",
+      "nameRequired": "Name is required.",
+      "saveFailed": "Could not save the name. Please try again."
+    },
+    "listItem": {
+      "floor": "{{roomCount}} rooms · {{bedCount}} beds",
+      "unit": "{{roomCount}} rooms · {{bedCount}} beds",
+      "room": "{{type}} · {{availableBeds}}/{{bedCount}} beds available",
+      "bed": "Bed {{label}}"
+    },
+    "floors": {
+      "title": "Floors",
+      "view": "View Floors",
+      "emptyTitle": "No floors yet",
+      "emptyDescription": "Add your first floor to this building.",
+      "addFab": "Add floor",
+      "floorNumber": "Floor {{value}}",
+      "floorNumberLabel": "Floor Number",
+      "sortOrder": "Sort Order",
+      "detailTitle": "Floor Details",
+      "createTitle": "Add Floor",
+      "editTitle": "Edit Floor",
+      "nameRequired": "Floor name is required.",
+      "floorNumberRequired": "Enter a valid floor number.",
+      "createSuccess": "Floor added successfully.",
+      "updateSuccess": "Floor updated successfully."
+    },
+    "units": {
+      "title": "Units",
+      "view": "View Units",
+      "emptyTitle": "No units yet",
+      "emptyDescription": "Add your first unit to this building.",
+      "addFab": "Add unit",
+      "unitNumber": "Unit {{value}}",
+      "unitNumberLabel": "Unit Number",
+      "detailTitle": "Unit Details",
+      "createTitle": "Add Unit",
+      "editTitle": "Edit Unit",
+      "nameRequired": "Unit name is required.",
+      "unitNumberRequired": "Unit number is required.",
+      "createSuccess": "Unit added successfully.",
+      "updateSuccess": "Unit updated successfully."
+    },
+    "rooms": {
+      "title": "Rooms",
+      "view": "View Rooms",
+      "emptyTitle": "No rooms found",
+      "emptyDescription": "Create the first room for this floor or unit.",
+      "addFab": "Add room",
+      "subtitle": "{{number}} · {{type}} · Cap. {{capacity}}",
+      "roomNumberLabel": "Room Number",
+      "capacity": "Capacity",
+      "detailTitle": "Room Details",
+      "createTitle": "Add Room",
+      "editTitle": "Edit Room",
+      "validationError": "Please fill in all required room fields.",
+      "createSuccess": "Room added successfully.",
+      "updateSuccess": "Room updated successfully."
+    },
+    "beds": {
+      "title": "Beds",
+      "view": "View Beds",
+      "emptyTitle": "No beds yet",
+      "emptyDescription": "Create the first bed for this room.",
+      "addFab": "Add bed",
+      "bedNumber": "Bed {{value}}",
+      "bedNumberLabel": "Bed Number",
+      "detailTitle": "Bed Details",
+      "createTitle": "Add Bed",
+      "editTitle": "Edit Bed",
+      "validationError": "Please fill in all required bed fields.",
+      "createSuccess": "Bed added successfully.",
+      "updateSuccess": "Bed updated successfully."
+    },
+    "lifecycle": {
+      "menuTitle": "Actions",
+      "deactivateTitle": "Deactivate",
+      "deactivateMessage": "Hide this item from active lists? History will be preserved. You can restore it later.",
+      "deactivateConfirm": "Deactivate",
+      "deactivateSuccess": "Deactivated successfully.",
+      "restoreTitle": "Restore",
+      "restoreMessage": "Restore this item and make it active again?",
+      "restoreConfirm": "Restore",
+      "restoreSuccess": "Restored successfully.",
+      "deleteConfirm": "Delete Permanently",
+      "deleteSuccess": "Deleted permanently.",
+      "delete": {
+        "building": {
+          "title": "Delete Building",
+          "message": "This will permanently delete the building and all floors, rooms, beds, and related accommodation structure that has never been used.\n\nThis action cannot be undone."
+        },
+        "floor": {
+          "title": "Delete Floor",
+          "message": "This will permanently delete the floor and all rooms and beds under it.\n\nThis action cannot be undone."
+        },
+        "unit": {
+          "title": "Delete Unit",
+          "message": "This will permanently delete the unit and all rooms and beds under it.\n\nThis action cannot be undone."
+        },
+        "room": {
+          "title": "Delete Room",
+          "message": "This will permanently delete the room and all beds under it.\n\nThis action cannot be undone."
+        },
+        "bed": {
+          "title": "Delete Bed",
+          "message": "This action cannot be undone."
+        }
+      }
+    },
+    "errors": {
+      "generic": "Something went wrong. Please try again.",
+      "forbidden": "You do not have permission to perform this action.",
+      "notFound": "The requested item was not found.",
+      "notInSpace": "This room is not in the current space. Go back and open it again from the property list.",
+      "spaceContextMismatch": "Space changed — reopen this room from the current space.",
+      "staleRoomList": "Room list was out of date. Refreshing…",
+      "goBack": "Go back",
+      "deactivate": "Failed to deactivate. Please try again.",
+      "loadBuildings": "Failed to load buildings. Please try again.",
+      "loadFloors": "Failed to load floors. Please try again.",
+      "loadUnits": "Failed to load units. Please try again.",
+      "loadRooms": "Failed to load rooms. Please try again.",
+      "loadBeds": "Failed to load beds. Please try again.",
+      "loadSummary": "Failed to load building summary. Please try again.",
+      "saveBuilding": "Failed to save building. Please try again.",
+      "saveFloor": "Failed to save floor. Please try again.",
+      "saveUnit": "Failed to save unit. Please try again.",
+      "saveRoom": "Failed to save room. Please try again.",
+      "saveBed": "Failed to save bed. Please try again."
     }
   },
   "dashboard": {

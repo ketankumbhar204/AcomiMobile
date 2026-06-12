@@ -23,6 +23,8 @@ Authorization: Bearer <accessToken>
 
 See [auth-ui-integration.md](./auth-ui-integration.md) for login flow.
 
+For property structure (buildings, floors, units, rooms, beds), see [accommodation-ui-integration.md](./accommodation-ui-integration.md) — not applicable to `MESS` spaces.
+
 ---
 
 ## Base URL
@@ -123,6 +125,7 @@ export interface ApiResponse<T> {
 export interface MySpaceResponse {
   spaceId: string;
   spaceName: string;
+  address?: string | null;
   spaceType: SpaceType;
   membershipRole: MembershipRole;
   isDefault: boolean;
@@ -151,7 +154,7 @@ export interface SetDefaultSpaceResponse {
 ### 1. My Spaces list screen
 
 - **API:** `GET /api/v1/spaces/my`
-- Show cards/rows with: `spaceName`, `spaceType`, `membershipRole`
+- Show cards/rows with: `spaceName`, `address` (subtitle when names duplicate), `spaceType`, `membershipRole`
 - Highlight row where `isDefault === true` (badge: "Default")
 - Sort is handled by backend: default first, then most recently joined
 - Tap row → switch to that space (call set default + update local state)

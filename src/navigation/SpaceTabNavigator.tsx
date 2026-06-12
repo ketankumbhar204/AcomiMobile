@@ -1,11 +1,14 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { SpaceTabBackButton } from '../components/ui';
 import { useSpaceTabHeader } from '../hooks/useSpaceTabHeader';
+import { AccommodationHomeScreen } from '../screens/accommodation/AccommodationHomeScreen';
 import { MembersScreen } from '../screens/MembersScreen';
+import { useSpaceStore } from '../store/spaceStore';
 import { tabBarOptions, tabHeaderOptions } from '../theme';
+import { isAccommodationApplicable } from '../utils/accommodationProfile';
 import { ScreenPlaceholder } from './ScreenPlaceholder';
 import type { SpaceTabParamList } from './types';
 
@@ -20,7 +23,7 @@ type TabRouteName = keyof SpaceTabParamList;
 const TAB_TITLE_KEYS: Record<TabRouteName, string> = {
   Dashboard: 'navigation.dashboard',
   Members: 'navigation.members',
-  Rooms: 'navigation.rooms',
+  Accommodation: 'navigation.accommodation',
   Meals: 'navigation.meals',
   Payments: 'navigation.payments',
   Complaints: 'navigation.complaints',
@@ -43,7 +46,6 @@ function createTabScreen(
 }
 
 const DashboardScreen = createTabScreen('Dashboard', { showProfileAndMenu: true });
-const RoomsScreen = createTabScreen('Rooms');
 const MealsScreen = createTabScreen('Meals');
 const PaymentsScreen = createTabScreen('Payments');
 const ComplaintsScreen = createTabScreen('Complaints');
@@ -57,9 +59,17 @@ const tabScreenOptions = {
 
 export function SpaceTabNavigator({ spaceId }: SpaceTabNavigatorProps) {
   const { t, i18n } = useTranslation();
+  const mySpaces = useSpaceStore(state => state.mySpaces);
+
+  const showAccommodation = useMemo(() => {
+    const spaceType = mySpaces.find(space => space.spaceId === spaceId)?.spaceType;
+    return spaceType ? isAccommodationApplicable(spaceType) : true;
+  }, [mySpaces, spaceId]);
 
   return (
-    <Tab.Navigator key={i18n.language} screenOptions={tabScreenOptions}>
+    <Tab.Navigator
+      key={`${spaceId}-${i18n.language}-${showAccommodation}`}
+      screenOptions={tabScreenOptions}>
       <Tab.Screen
         name="Dashboard"
         component={DashboardScreen}
@@ -72,12 +82,14 @@ export function SpaceTabNavigator({ spaceId }: SpaceTabNavigatorProps) {
         initialParams={{ spaceId }}
         options={{ headerShown: true, title: t('navigation.members') }}
       />
-      <Tab.Screen
-        name="Rooms"
-        component={RoomsScreen}
-        initialParams={{ spaceId }}
-        options={{ title: t('navigation.rooms') }}
-      />
+      {showAccommodation ? (
+        <Tab.Screen
+          name="Accommodation"
+          component={AccommodationHomeScreen}
+          initialParams={{ spaceId }}
+          options={{ title: t('navigation.accommodation') }}
+        />
+      ) : null}
       <Tab.Screen
         name="Meals"
         component={MealsScreen}

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { InlineEditableName } from './InlineEditableName';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 
 type ListCardProps = {
@@ -7,12 +8,24 @@ type ListCardProps = {
   subtitle?: string;
   iconLabel?: string;
   onPress?: () => void;
+  onLongPress?: () => void;
+  editableName?: boolean;
+  onSaveName?: (name: string) => Promise<void>;
 };
 
-export function ListCard({ title, subtitle, iconLabel, onPress }: ListCardProps) {
+export function ListCard({
+  title,
+  subtitle,
+  iconLabel,
+  onPress,
+  onLongPress,
+  editableName = false,
+  onSaveName,
+}: ListCardProps) {
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onLongPress}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
       {iconLabel ? (
         <View style={styles.icon}>
@@ -20,7 +33,11 @@ export function ListCard({ title, subtitle, iconLabel, onPress }: ListCardProps)
         </View>
       ) : null}
       <View style={styles.info}>
-        <Text style={styles.title}>{title}</Text>
+        <InlineEditableName
+          value={title}
+          editable={editableName}
+          onSave={onSaveName}
+        />
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
       <Text style={styles.chevron}>›</Text>
@@ -60,13 +77,11 @@ const styles = StyleSheet.create({
   },
   info: {
     flex: 1,
-  },
-  title: {
-    ...typography.bodyStrong,
-    marginBottom: 2,
+    minWidth: 0,
   },
   subtitle: {
     ...typography.caption,
+    marginTop: 2,
   },
   chevron: {
     fontSize: 24,

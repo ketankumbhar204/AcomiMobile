@@ -6,6 +6,22 @@ import type { RootStackParamList } from './types';
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
+function buildSpaceTabsState(spaceId: string, initialTab: string) {
+  const routes = [
+    { name: 'Dashboard' as const, params: { spaceId } },
+    { name: 'Members' as const, params: { spaceId } },
+    { name: 'Accommodation' as const, params: { spaceId } },
+    { name: 'Meals' as const, params: { spaceId } },
+    { name: 'Payments' as const, params: { spaceId } },
+    { name: 'Complaints' as const, params: { spaceId } },
+  ];
+  const tabIndex = Math.max(
+    routes.findIndex(route => route.name === initialTab),
+    0,
+  );
+  return { index: tabIndex, routes };
+}
+
 export function resetToDashboard(spaceId: string): void {
   if (!navigationRef.isReady()) {
     return;
@@ -19,7 +35,43 @@ export function resetToDashboard(spaceId: string): void {
           name: 'Main',
           state: {
             index: 0,
-            routes: [{ name: 'SpaceTabs', params: { spaceId } }],
+            routes: [
+              {
+                name: 'SpaceTabs',
+                params: { spaceId },
+                state: buildSpaceTabsState(spaceId, 'Dashboard'),
+              },
+            ],
+          },
+        },
+      ],
+    }),
+  );
+}
+
+/** Clears accommodation drill-down stack and lands on the Accommodation tab. */
+export function resetToAccommodationHome(spaceId: string): void {
+  if (!navigationRef.isReady()) {
+    return;
+  }
+
+  console.log('[navigation] resetToAccommodationHome', spaceId);
+
+  navigationRef.dispatch(
+    CommonActions.reset({
+      index: 0,
+      routes: [
+        {
+          name: 'Main',
+          state: {
+            index: 0,
+            routes: [
+              {
+                name: 'SpaceTabs',
+                params: { spaceId },
+                state: buildSpaceTabsState(spaceId, 'Accommodation'),
+              },
+            ],
           },
         },
       ],

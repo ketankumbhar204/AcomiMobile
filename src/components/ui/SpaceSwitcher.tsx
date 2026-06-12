@@ -7,9 +7,11 @@ import {
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { resetToDashboard } from '../../navigation/navigationRef';
+import { resetToAccommodationHome } from '../../navigation/navigationRef';
 import { useSpaceStore } from '../../store/spaceStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { invalidateAccommodationQueries } from '../../utils/accommodationQueryCache';
+import { formatSpaceDisplayName } from '../../utils/spaceLabels';
 
 type SpaceSwitcherProps = {
   spaceId: string;
@@ -25,11 +27,12 @@ export function SpaceSwitcher({ spaceId }: SpaceSwitcherProps) {
   const switchSpace = useSpaceStore(state => state.switchSpace);
   const loadMySpaces = useSpaceStore(state => state.loadMySpaces);
 
-  const title =
-    currentSpace?.spaceId === spaceId
-      ? currentSpace.spaceName
-      : mySpaces.find(item => item.spaceId === spaceId)?.spaceName ??
-        t('navigation.dashboard');
+  const activeSpace = mySpaces.find(
+    item => item.spaceId === (currentSpace?.spaceId ?? spaceId),
+  );
+  const title = activeSpace
+    ? formatSpaceDisplayName(activeSpace)
+    : currentSpace?.spaceName ?? t('navigation.dashboard');
 
   const sortedSpaces = useMemo(
     () =>
@@ -64,7 +67,8 @@ export function SpaceSwitcher({ spaceId }: SpaceSwitcherProps) {
 
     const success = await switchSpace(selectedSpaceId);
     if (success) {
-      resetToDashboard(selectedSpaceId);
+      invalidateAccommodationQueries();
+      resetToAccommodationHome(selectedSpaceId);
     }
   };
 
@@ -89,14 +93,12 @@ export function SpaceSwitcher({ spaceId }: SpaceSwitcherProps) {
         animationType="fade"
         onRequestClose={() => setIsOpen(false)}
         statusBarTranslucent>
-        <View style={styles.popupRoot}>
-          <Pressable
-            style={styles.backdrop}
-            onPress={() => setIsOpen(false)}
-            accessibilityRole="button"
-            accessibilityLabel={t('spaces.switcher.dismiss')}
-          />
-          <View style={styles.menu} onStartShouldSetResponder={() => true}>
+        <Pressable
+          style={styles.backdrop}
+          onPress={() => setIsOpen(false)}
+          accessibilityRole="button"
+          accessibilityLabel={t('spaces.switcher.dismiss')}>
+          <Pressable style={styles.menu} onPress={event => event.stopPropagation()}>
             {sortedSpaces.length === 0 ? (
               <View style={styles.emptyRow}>
                 <Text style={styles.emptyText}>
@@ -126,7 +128,7 @@ export function SpaceSwitcher({ spaceId }: SpaceSwitcherProps) {
                         isSelected && styles.menuItemLabelSelected,
                       ]}
                       numberOfLines={1}>
-                      {space.spaceName}
+                      {formatSpaceDisplayName(space)}
                     </Text>
                     {isSelected ? (
                       <Text style={styles.checkmark}>✓</Text>
@@ -139,8 +141,8 @@ export function SpaceSwitcher({ spaceId }: SpaceSwitcherProps) {
                 );
               })
             )}
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
     </>
   );
@@ -168,11 +170,8 @@ const styles = StyleSheet.create({
     color: colors.muted,
     marginTop: 2,
   },
-  popupRoot: {
-    flex: 1,
-  },
   backdrop: {
-    ...StyleSheet.absoluteFill,
+    flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.15)',
   },
   menu: {

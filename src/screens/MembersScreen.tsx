@@ -1,6 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -22,7 +21,16 @@ import type {
 import { useTranslation } from 'react-i18next';
 import type { MemberResponse, MembershipRole, PendingInvitationResponse } from '../api/types';
 import { MemberStatusBadge } from '../components/member';
-import { Badge, Button, EmptyState, FAB, ListCard, SkeletonCard } from '../components/ui';
+import {
+  Badge,
+  Button,
+  EmptyState,
+  FAB,
+  ListCard,
+  SkeletonCard,
+  useConfirmDialog,
+} from '../components/ui';
+import { useActiveSpaceId } from '../hooks/useActiveSpaceId';
 import { useSpaceTabHeader } from '../hooks/useSpaceTabHeader';
 import type { MainStackParamList, SpaceTabParamList } from '../navigation/types';
 import { useMemberStore } from '../store/memberStore';
@@ -68,7 +76,7 @@ export function MembersScreen() {
   const { t, i18n } = useTranslation();
   const navigation = useNavigation<MembersNavigation>();
   const route = useRoute<MembersRoute>();
-  const spaceId = route.params?.spaceId ?? '';
+  const spaceId = useActiveSpaceId(route.params?.spaceId);
 
   const mySpaces = useSpaceStore(state => state.mySpaces);
   const members = useMemberStore(state => state.members);
@@ -80,6 +88,7 @@ export function MembersScreen() {
   const loadPendingInvitations = useMemberStore(state => state.loadPendingInvitations);
   const refresh = useMemberStore(state => state.refresh);
   const cancelInvitation = useMemberStore(state => state.cancelInvitation);
+  const { showConfirm } = useConfirmDialog();
 
   const [activeTab, setActiveTab] = useState<MembersTab>('members');
 
@@ -138,21 +147,16 @@ export function MembersScreen() {
   };
 
   const confirmCancelInvitation = (invitation: PendingInvitationResponse) => {
-    Alert.alert(
-      t('membership.cancel.title'),
-      t('membership.cancel.message'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('membership.cancel.confirm'),
-          style: 'destructive',
-          onPress: async () => {
-            console.log('[MembersScreen] cancel invitation', invitation.invitationId);
-            await cancelInvitation(invitation.invitationId);
-          },
-        },
-      ],
-    );
+    showConfirm({
+      title: t('membership.cancel.title'),
+      message: t('membership.cancel.message'),
+      confirmLabel: t('membership.cancel.confirm'),
+      destructive: true,
+      onConfirm: async () => {
+        console.log('[MembersScreen] cancel invitation', invitation.invitationId);
+        await cancelInvitation(invitation.invitationId);
+      },
+    });
   };
 
   const showLoading =

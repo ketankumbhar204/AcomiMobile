@@ -1,9 +1,9 @@
 import React, { useLayoutEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { Button, Card, HeaderBackButton, Screen } from '../components/ui';
+import { Button, Card, HeaderBackButton, Screen, useConfirmDialog } from '../components/ui';
 import { useAuthenticatedUser } from '../hooks/useAuth';
 import { useLogout } from '../hooks/useLogout';
 import {
@@ -21,6 +21,7 @@ export function ProfileScreen() {
   const navigation = useNavigation<ProfileNav>();
   const user = useAuthenticatedUser();
   const logout = useLogout();
+  const { showConfirm } = useConfirmDialog();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const currentLanguage = i18n.language as AppLanguage;
 
@@ -41,25 +42,20 @@ export function ProfileScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      t('settings.profile.logoutTitle'),
-      t('settings.profile.logoutMessage'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('settings.profile.logoutConfirm'),
-          style: 'destructive',
-          onPress: async () => {
-            setIsLoggingOut(true);
-            try {
-              await logout();
-            } finally {
-              setIsLoggingOut(false);
-            }
-          },
-        },
-      ],
-    );
+    showConfirm({
+      title: t('settings.profile.logoutTitle'),
+      message: t('settings.profile.logoutMessage'),
+      confirmLabel: t('settings.profile.logoutConfirm'),
+      destructive: true,
+      onConfirm: async () => {
+        setIsLoggingOut(true);
+        try {
+          await logout();
+        } finally {
+          setIsLoggingOut(false);
+        }
+      },
+    });
   };
 
   return (

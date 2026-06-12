@@ -120,15 +120,13 @@ export function OverflowMenuProvider({ children }: OverflowMenuProviderProps) {
         animationType="fade"
         onRequestClose={closeMenu}
         statusBarTranslucent>
-        <View style={styles.popupRoot}>
-          <Pressable
-            style={styles.backdrop}
-            onPress={closeMenu}
-            accessibilityRole="button"
-            accessibilityLabel="Dismiss menu"
-          />
+        <Pressable
+          style={styles.backdrop}
+          onPress={closeMenu}
+          accessibilityRole="button"
+          accessibilityLabel="Dismiss menu">
           {menuState && menuPosition ? (
-            <View
+            <Pressable
               style={[
                 styles.menu,
                 {
@@ -137,7 +135,7 @@ export function OverflowMenuProvider({ children }: OverflowMenuProviderProps) {
                   minWidth: MENU_MIN_WIDTH,
                 },
               ]}
-              onStartShouldSetResponder={() => true}>
+              onPress={event => event.stopPropagation()}>
               {menuState.items.map((item, index) => (
                 <Pressable
                   key={item.id}
@@ -157,9 +155,9 @@ export function OverflowMenuProvider({ children }: OverflowMenuProviderProps) {
                   </Text>
                 </Pressable>
               ))}
-            </View>
+            </Pressable>
           ) : null}
-        </View>
+        </Pressable>
       </Modal>
     </OverflowMenuContext.Provider>
   );
@@ -249,11 +247,8 @@ export function HeaderOverflowMenu({
 }
 
 const styles = StyleSheet.create({
-  popupRoot: {
-    flex: 1,
-  },
   backdrop: {
-    ...StyleSheet.absoluteFill,
+    flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.15)',
   },
   menu: {

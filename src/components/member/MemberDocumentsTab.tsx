@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { PENDING_UPLOAD_FILE_URL } from '../../api/memberApi';
 import type { MemberDocumentType } from '../../api/types';
-import { Button, EmptyState, FormInput, SkeletonCard } from '../ui';
+import { Button, EmptyState, FormInput, SkeletonCard, useConfirmDialog } from '../ui';
 import { useMemberStore } from '../../store/memberStore';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
@@ -32,6 +32,7 @@ export function MemberDocumentsTab({ memberId, canEdit }: MemberDocumentsTabProp
   const loadDocuments = useMemberStore(state => state.loadDocuments);
   const addDocument = useMemberStore(state => state.addDocument);
   const deleteDocument = useMemberStore(state => state.deleteDocument);
+  const { showConfirm } = useConfirmDialog();
 
   const [modalVisible, setModalVisible] = useState(false);
   const [documentType, setDocumentType] = useState<MemberDocumentType | null>(null);
@@ -74,21 +75,16 @@ export function MemberDocumentsTab({ memberId, canEdit }: MemberDocumentsTabProp
   };
 
   const confirmDelete = (documentId: string) => {
-    Alert.alert(
-      t('membership.documents.deleteTitle'),
-      t('membership.documents.deleteMessage'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('membership.documents.deleteConfirm'),
-          style: 'destructive',
-          onPress: async () => {
-            console.log('[MemberDocumentsTab] delete document', documentId);
-            await deleteDocument(memberId, documentId);
-          },
-        },
-      ],
-    );
+    showConfirm({
+      title: t('membership.documents.deleteTitle'),
+      message: t('membership.documents.deleteMessage'),
+      confirmLabel: t('membership.documents.deleteConfirm'),
+      destructive: true,
+      onConfirm: async () => {
+        console.log('[MemberDocumentsTab] delete document', documentId);
+        await deleteDocument(memberId, documentId);
+      },
+    });
   };
 
   if (documentsLoading && documents.length === 0) {

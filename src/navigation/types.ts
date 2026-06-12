@@ -10,11 +10,13 @@ export type AuthStackParamList = {
 export type SpaceTabParamList = {
   Dashboard: { spaceId: UUID };
   Members: { spaceId: UUID };
-  Rooms: { spaceId: UUID };
+  Accommodation: { spaceId: UUID };
   Meals: { spaceId: UUID };
   Payments: { spaceId: UUID };
   Complaints: { spaceId: UUID };
 };
+
+export type AccommodationFormMode = 'create' | 'edit';
 
 export type MainStackParamList = {
   MySpaces: undefined;
@@ -27,6 +29,100 @@ export type MainStackParamList = {
   AddMember: { spaceId: UUID };
   MemberDetails: { spaceId: UUID; memberId: UUID };
   EditMember: { spaceId: UUID; memberId: UUID };
+  Floors: { spaceId: UUID; buildingId: UUID; buildingName?: string };
+  Units: { spaceId: UUID; buildingId: UUID; buildingName?: string };
+  AccommodationFloorApartments: {
+    spaceId: UUID;
+    buildingId: UUID;
+    buildingName?: string;
+    floorId: UUID;
+    floorName?: string;
+  };
+  AccommodationRooms: {
+    spaceId: UUID;
+    buildingId: UUID;
+    buildingName?: string;
+    parentType: 'floor' | 'unit';
+    parentId: UUID;
+    parentName?: string;
+    parentRoomCount?: number;
+    parentBedCount?: number;
+  };
+  AccommodationBeds: {
+    spaceId: UUID;
+    buildingId: UUID;
+    roomId: UUID;
+    roomName: string;
+    buildingName?: string;
+    parentName?: string;
+    parentType?: 'floor' | 'unit';
+    floorId?: UUID;
+    unitId?: UUID;
+  };
+  BuildingDetail: { spaceId: UUID; buildingId: UUID };
+  FloorDetail: {
+    spaceId: UUID;
+    buildingId: UUID;
+    floorId: UUID;
+    buildingName?: string;
+  };
+  UnitDetail: {
+    spaceId: UUID;
+    buildingId: UUID;
+    unitId: UUID;
+    buildingName?: string;
+  };
+  RoomDetail: {
+    spaceId: UUID;
+    buildingId: UUID;
+    roomId: UUID;
+    floorId?: UUID;
+    unitId?: UUID;
+  };
+  BedDetail: {
+    spaceId: UUID;
+    buildingId: UUID;
+    roomId: UUID;
+    bedId: UUID;
+    buildingName?: string;
+    parentName?: string;
+    parentType?: 'floor' | 'unit';
+    floorId?: UUID;
+    unitId?: UUID;
+    roomName?: string;
+    bedLabel?: string;
+  };
+  BuildingForm: { spaceId: UUID; mode: AccommodationFormMode; buildingId?: UUID };
+  FloorForm: {
+    spaceId: UUID;
+    buildingId: UUID;
+    mode: AccommodationFormMode;
+    floorId?: UUID;
+  };
+  UnitForm: {
+    spaceId: UUID;
+    buildingId: UUID;
+    mode: AccommodationFormMode;
+    unitId?: UUID;
+    floorId?: UUID;
+  };
+  RoomForm: {
+    spaceId: UUID;
+    buildingId: UUID;
+    parentType: 'floor' | 'unit';
+    parentId: UUID;
+    mode: AccommodationFormMode;
+    roomId?: UUID;
+  };
+  BedForm: {
+    spaceId: UUID;
+    buildingId: UUID;
+    roomId: UUID;
+    mode: AccommodationFormMode;
+    bedId?: UUID;
+  };
+  QuickSetupWizard: { spaceId: UUID };
+  AccommodationBuilder: { spaceId: UUID; buildingId: UUID };
 };
 
 export type RootStackParamList = {

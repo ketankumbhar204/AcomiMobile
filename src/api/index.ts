@@ -2,6 +2,8 @@ export { default as apiClient, getAuthToken, setAuthToken } from './client';
 export { authApi } from './authApi';
 export { unwrapApiResponse, unwrapVoidResponse } from './apiRequest';
 export { invitationApi } from './invitationApi';
+export { accommodationApi } from './accommodationApi';
+export { accommodationLifecycleApi } from './accommodationLifecycleApi';
 export { memberApi } from './memberApi';
 export { membershipApi } from './membershipApi';
 export { mySpacesApi } from './mySpacesApi';
