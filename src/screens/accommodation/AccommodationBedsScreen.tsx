@@ -16,15 +16,19 @@ import { accommodationApi } from '../../api/accommodationApi';
 import type { BedListItemResponse, RoomResponse } from '../../api/types';
 import {
   AccommodationContextTrail,
-  AccommodationEntityRow,
   AccommodationListFooter,
   AccommodationSearchBar,
   AccommodationStatusBadge,
   BuilderRowLifecycleMenu,
   BulkBedsModal,
 } from '../../components/accommodation';
+import {
+  AccommodationOccupancyFlowModals,
+  BedInventoryListRow,
+} from '../../components/occupancy';
 import { Button, Card, EmptyState, FAB, HeaderBackButton, InlineEditableName, SkeletonCard } from '../../components/ui';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
+import { useAccommodationOccupancyFlow } from '../../hooks/useAccommodationOccupancyFlow';
 import { useBeds } from '../../hooks/useBeds';
 import { useBulkBeds } from '../../hooks/useBulkBeds';
 import type { MainStackParamList } from '../../navigation/types';
@@ -37,6 +41,7 @@ import {
   canCreateOrUpdateAccommodation,
   canManageAccommodation,
 } from '../../utils/accommodationPermissions';
+import { canManageOccupancy } from '../../utils/occupancyPermissions';
 import { invalidateAccommodationQueries } from '../../utils/accommodationQueryCache';
 import { renameBedNumber, renameRoomName } from '../../utils/accommodationInlineRename';
 
@@ -69,11 +74,16 @@ export function AccommodationBedsScreen() {
   );
 
   const mySpaces = useSpaceStore(state => state.mySpaces);
+  const spaceType = useMemo(
+    () => mySpaces.find(space => space.spaceId === spaceId)?.spaceType,
+    [mySpaces, spaceId],
+  );
   const currentRole = useMemo(
     () => mySpaces.find(space => space.spaceId === spaceId)?.membershipRole,
     [mySpaces, spaceId],
   );
   const canManage = canManageAccommodation(currentRole);
+  const canManageOccupancyActions = canManageOccupancy(currentRole);
   const showFab = canCreateOrUpdateAccommodation(currentRole);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -139,6 +149,16 @@ export function AccommodationBedsScreen() {
       setRoomLoading(false);
     }
   }, [roomId, spaceId]);
+
+  const occupancyFlow = useAccommodationOccupancyFlow({
+    spaceId,
+    spaceType: spaceType ?? 'PG',
+    canManage: canManageOccupancyActions,
+    onSuccess: () => {
+      void loadRoom();
+      void refresh();
+    },
+  });
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -304,10 +324,21 @@ export function AccommodationBedsScreen() {
         }}
         onEndReachedThreshold={0.3}
         renderItem={({ item: bed }) => (
-          <AccommodationEntityRow
-            title={bed.label}
-            subtitle={t(`accommodation.status.${bed.status}`)}
-            iconLabel={bed.label.charAt(0).toUpperCase()}
+          <BedInventoryListRow
+            bed={bed}
+            spaceId={spaceId}
+            spaceType={spaceType ?? 'PG'}
+            flow={occupancyFlow}
+            buildingId={buildingId}
+            buildingName={buildingName}
+            roomId={roomId}
+            roomName={resolvedRoomName}
+            floorId={floorId}
+            unitId={unitId}
+            parentName={parentName}
+            parentType={parentType}
+            canManageLifecycle={canManage}
+            canManageOccupancyActions={canManageOccupancyActions}
             editableName={canManage}
             onSaveName={async bedNumber => {
               await renameBedNumber(spaceId, buildingId, roomId, bed.bedId, bedNumber);
@@ -315,31 +346,34 @@ export function AccommodationBedsScreen() {
               await refresh();
             }}
             onPress={() => openBedDetail(bed)}
-            menu={
-              canManage ? (
-                <BuilderRowLifecycleMenu
-                  spaceId={spaceId}
-                  buildingId={buildingId}
-                  entityType="bed"
-                  entityId={bed.bedId}
-                  roomId={roomId}
-                  role={currentRole}
-                  onEdit={() =>
-                    navigation.navigate('BedForm', {
-                      spaceId,
-                      buildingId,
-                      roomId,
-                      mode: 'edit',
-                      bedId: bed.bedId,
-                    })
-                  }
-                  onSuccess={handleLifecycleSuccess}
-                />
-              ) : undefined
-            }
+            lifecycleMenuProps={{
+              spaceId,
+              buildingId,
+              entityType: 'bed',
+              entityId: bed.bedId,
+              roomId,
+              role: currentRole,
+              onEdit: () =>
+                navigation.navigate('BedForm', {
+                  spaceId,
+                  buildingId,
+                  roomId,
+                  mode: 'edit',
+                  bedId: bed.bedId,
+                }),
+              onSuccess: handleLifecycleSuccess,
+            }}
           />
         )}
       />
+
+      {spaceType ? (
+        <AccommodationOccupancyFlowModals
+          spaceId={spaceId}
+          spaceType={spaceType}
+          flow={occupancyFlow}
+        />
+      ) : null}
 
       {showFab && !hasBlockingError ? (
         <FAB

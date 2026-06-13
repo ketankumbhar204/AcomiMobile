@@ -5,6 +5,7 @@
     "yes": "Yes",
     "no": "No",
     "cancel": "Cancel",
+    "back": "Back",
     "save": "Save",
     "user": "User",
     "errors": {
@@ -485,9 +486,9 @@
       "summaryRooms": "{{count}} rooms",
       "summaryBeds": "{{count}} beds",
       "statusLine": "Available: {{available}} · Occupied: {{occupied}} · Reserved: {{reserved}} · Maintenance: {{maintenance}} · Blocked: {{blocked}}",
-      "availabilityBeds": "Beds: {{available}} available · {{occupied}} occupied",
-      "availabilityRooms": "Rooms: {{available}} available · {{occupied}} occupied",
-      "availabilityUnits": "Units: {{available}} available · {{occupied}} occupied",
+      "availabilityBeds": "Beds: {{available}} available · {{occupied}} occupied · {{reserved}} reserved",
+      "availabilityRooms": "Rooms: {{available}} available · {{occupied}} occupied · {{reserved}} reserved",
+      "availabilityUnits": "Units: {{available}} available · {{occupied}} occupied · {{reserved}} reserved",
       "addFloor": "Add floor",
       "addUnit": "Add unit",
       "addRoom": "Add room",
@@ -721,6 +722,7 @@
     "section": {
       "title": "Accommodation",
       "currentAccommodation": "Current Accommodation",
+      "reservedAccommodation": "Reserved Accommodation",
       "noAccommodationTitle": "No Accommodation Assigned",
       "noAccommodationBody": "This member is currently not occupying any accommodation.",
       "building": "Building",
@@ -729,12 +731,15 @@
       "room": "Room",
       "bed": "Bed",
       "allocatedOn": "Allocated On",
+      "moveInDate": "Move-in date",
+      "reservedOn": "Reserved on",
       "status": "Occupancy status",
       "location": "Current location",
       "notAllocated": "Not allocated to any bed, room, or unit."
     },
     "memberStatus": {
       "ALLOCATED": "Allocated",
+      "RESERVED": "Reserved",
       "VACATED": "Vacated"
     },
     "targetType": {
@@ -744,14 +749,61 @@
     },
     "status": {
       "ACTIVE": "Active",
+      "RESERVED": "Reserved",
       "VACATED": "Vacated"
+    },
+    "memberCategory": {
+      "STUDENT": "Student",
+      "WORKING_PROFESSIONAL": "Working professional",
+      "FAMILY": "Family",
+      "GUEST": "Guest",
+      "INTERN": "Intern"
     },
     "actions": {
       "allocate": "Allocate",
       "allocateAccommodation": "Allocate Accommodation",
+      "reserve": "Reserve",
+      "walkInAllocate": "Allocate today",
+      "moveIn": "Move in",
+      "cancelReservation": "Cancel reservation",
+      "cancelShort": "Cancel",
       "transfer": "Transfer",
       "vacate": "Vacate",
       "viewHistory": "View occupancy history"
+    },
+    "accommodationActions": {
+      "title": "Occupancy actions"
+    },
+    "quickActions": {
+      "occupiedBy": "Occupied by {{name}}",
+      "reservedFor": "Reserved for {{name}}",
+      "viewOccupant": "View occupant",
+      "viewReservation": "View reservation",
+      "loadingOccupant": "Loading occupant…"
+    },
+    "bedMenu": {
+      "title": "Bed {{bed}}"
+    },
+    "memberPicker": {
+      "title": "Select member",
+      "subtitle": "Choose who will occupy this accommodation",
+      "searchPlaceholder": "Search by name or mobile",
+      "empty": "No eligible members found"
+    },
+    "reserve": {
+      "title": "Reserve accommodation"
+    },
+    "walkIn": {
+      "title": "Allocate today"
+    },
+    "moveIn": {
+      "title": "Confirm move-in",
+      "allowEarly": "Move in before scheduled date",
+      "allowEarlyHint": "Required when the scheduled move-in date is in the future."
+    },
+    "cancelReservation": {
+      "title": "Cancel reservation",
+      "message": "Release this reserved accommodation and return the bed to available?"
     },
     "allocate": {
       "title": "Allocate member"
@@ -766,6 +818,9 @@
     },
     "fields": {
       "expectedCheckout": "Expected checkout (optional)",
+      "expectedExit": "Expected exit date (optional)",
+      "memberCategory": "Member category (optional)",
+      "agreementSigned": "Agreement signed",
       "remarks": "Remarks",
       "remarksPlaceholder": "Optional notes"
     },
@@ -776,13 +831,42 @@
       "unit": "Select unit",
       "room": "Select room",
       "bed": "Select bed",
+      "chooseAccommodation": "Choose accommodation",
+      "reservationDetails": "Reservation details",
+      "allocationDetails": "Allocation details",
+      "reviewTitle": "Review allocation",
+      "selectedAccommodation": "Selected accommodation",
+      "member": "Member",
+      "continueToReview": "Continue to review",
+      "confirmReserve": "Confirm reservation",
+      "confirmAllocate": "Confirm allocation",
+      "confirmTransfer": "Confirm transfer",
       "searchPlaceholder": "Search room, bed, flat, or unit number",
       "searchResults": "Search results",
+      "searchResultBed": "{{room}} · Bed {{bed}}",
       "searchEmpty": "No matching accommodation found.",
-      "noAvailable": "No available targets found."
+      "orBrowse": "Or browse manually",
+      "browseManually": "No results — browse manually",
+      "browseAvailable": "Browse available",
+      "selectBuilding": "Select a building to browse available beds.",
+      "selectFloor": "Select a floor",
+      "selectUnit": "Select a unit",
+      "backToAllUnits": "← Back to all units",
+      "backToUnits": "← Back to units",
+      "roomAvailability": "{{type}} · {{available}}/{{capacity}} beds available",
+      "noAvailable": "No available targets found.",
+      "today": "today",
+      "financialTerms": "Financial terms",
+      "rent": "Rent",
+      "deposit": "Deposit",
+      "foodCharges": "Food charges",
+      "amenities": "Amenities",
+      "policies": "Policies & rules",
+      "comingSoonHint": "Captured at move-in in a future update (Phase 4.3b / 4.4)."
     },
     "targetOccupant": {
       "title": "Current occupant",
+      "titleReserved": "Reserved occupant",
       "member": "Member",
       "viewMember": "View member profile"
     },
@@ -796,8 +880,11 @@
       "allocatedAt": "Allocated {{date}}",
       "vacatedAt": "Vacated {{date}}",
       "ALLOCATED": "Allocated",
+      "RESERVED": "Reserved",
+      "MOVE_IN": "Move-in",
       "TRANSFERRED": "Transferred",
-      "VACATED": "Vacated"
+      "VACATED": "Vacated",
+      "RESERVATION_CANCELLED": "Reservation cancelled"
     },
     "success": {
       "updated": "Occupancy updated."
@@ -809,10 +896,23 @@
       "loadMember": "Failed to load occupancy history.",
       "loadTarget": "Failed to load occupant details.",
       "allocate": "Failed to allocate member.",
+      "reserve": "Failed to reserve accommodation.",
+      "moveIn": "Failed to complete move-in.",
+      "cancelReservation": "Failed to cancel reservation.",
       "transfer": "Failed to transfer member.",
       "vacate": "Failed to vacate member.",
       "search": "Failed to search accommodation.",
       "noActive": "No active occupancy found for this member.",
+      "noReserved": "No reserved occupancy found for this member.",
+      "moveInDateRequired": "Enter a move-in date.",
+      "moveInDateNotReached": "Move-in date has not been reached. Enable early move-in to continue.",
+      "alreadyOccupied": "Member already has an active or reserved occupancy in this space.",
+      "genderMaleOnly": "Member gender does not match this space's male-only policy.",
+      "genderFemaleOnly": "Member gender does not match this space's female-only policy.",
+      "genderMismatch": "Member gender does not match the space gender policy.",
+      "targetMaintenance": "This target is under maintenance and cannot be selected.",
+      "targetBlocked": "This target is blocked and cannot be selected.",
+      "targetUnavailable": "This target is not available.",
       "invalidTargetType": "This allocation type is not allowed for this space.",
       "bedRequired": "Select a bed.",
       "roomRequired": "Select a room.",

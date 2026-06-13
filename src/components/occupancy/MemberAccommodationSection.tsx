@@ -3,7 +3,13 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import type { CurrentOccupancySummaryResponse, MemberDetailsResponse, MembershipRole, SpaceType } from '../../api/types';
+import type {
+  CurrentOccupancySummaryResponse,
+  MemberDetailsResponse,
+  MembershipRole,
+  OccupancyResponse,
+  SpaceType,
+} from '../../api/types';
 import { Button, Card, useConfirmDialog } from '../ui';
 import type { MainStackParamList } from '../../navigation/types';
 import { useMemberOccupancies } from '../../hooks/useMemberOccupancies';
@@ -19,10 +25,17 @@ import {
 } from '../../utils/occupancyPermissions';
 import {
   buildAllocateRequest,
+  buildReserveRequest,
   buildTransferRequest,
   formatOccupancyAllocatedDate,
+  getOccupancyExitDate,
+  type OccupancyTargetSelection,
 } from '../../utils/occupancyRules';
-import { OccupancyTargetPickerModal, type OccupancyTargetSelection } from './OccupancyTargetPickerModal';
+import { MoveInModal, type MoveInFormValues } from './MoveInModal';
+import {
+  OccupancyTargetPickerModal,
+  type OccupancyPickerExtras,
+} from './OccupancyTargetPickerModal';
 
 type Nav = NativeStackNavigationProp<MainStackParamList>;
 
@@ -45,6 +58,27 @@ function LocationLine({ label, value }: { label: string; value?: string | null }
   );
 }
 
+function summaryFromOccupancy(
+  occupancy: OccupancyResponse,
+): CurrentOccupancySummaryResponse {
+  return {
+    occupancyId: occupancy.occupancyId,
+    occupancyStatus: occupancy.status,
+    targetType: occupancy.targetType,
+    buildingId: occupancy.buildingId,
+    buildingName: occupancy.buildingName,
+    floorId: occupancy.floorId,
+    floorName: occupancy.floorName,
+    unitId: occupancy.unitId,
+    unitName: occupancy.unitName,
+    roomId: occupancy.roomId,
+    roomName: occupancy.roomName,
+    bedId: occupancy.bedId,
+    bedName: occupancy.bedName,
+    moveInDate: occupancy.moveInDate,
+  };
+}
+
 function AccommodationLocationDetails({
   occupancy,
 }: {
@@ -59,6 +93,18 @@ function AccommodationLocationDetails({
       <LocationLine label={t('occupancy.section.unit')} value={occupancy.unitName} />
       <LocationLine label={t('occupancy.section.room')} value={occupancy.roomName} />
       <LocationLine label={t('occupancy.section.bed')} value={occupancy.bedName} />
+    </View>
+  );
+}
+
+function OccupancyDateRow({ label, value }: { label: string; value?: string | null }) {
+  if (!value) {
+    return null;
+  }
+  return (
+    <View style={styles.dateRow}>
+      <Text style={styles.locationLabel}>{label}</Text>
+      <Text style={styles.dateValue}>{formatOccupancyAllocatedDate(value)}</Text>
     </View>
   );
 }
@@ -85,26 +131,54 @@ export function MemberAccommodationSection({
   const { data: occupancyData } = useMemberOccupancies(spaceId, member.memberId, {
     enabled: showSection,
   });
-  const { allocate, transfer, vacate, loading, error, clearError } =
-    useOccupancyMutations(spaceId);
+  const {
+    allocate,
+    reserve,
+    moveIn,
+    cancelReservation,
+    transfer,
+    vacate,
+    loading,
+    error,
+    clearError,
+  } = useOccupancyMutations(spaceId);
 
-  const [allocateVisible, setAllocateVisible] = useState(false);
+  const [reserveVisible, setReserveVisible] = useState(false);
+  const [walkInVisible, setWalkInVisible] = useState(false);
   const [transferVisible, setTransferVisible] = useState(false);
+  const [moveInVisible, setMoveInVisible] = useState(false);
 
   if (!showSection || !spaceType) {
     return null;
   }
 
   const resolvedSpaceType = spaceType;
-
   const canManage = canShowOccupancyActionsForMember(member.role, currentRole);
   const isAllocated = member.occupancyStatus === 'ALLOCATED';
-  const currentOccupancy = member.currentOccupancy;
-  const activeOccupancyId = occupancyData?.currentOccupancy?.occupancyId;
-  const allocatedAt = occupancyData?.currentOccupancy?.allocatedAt;
+  const isReserved = member.occupancyStatus === 'RESERVED';
 
-  function closePicker() {
-    setAllocateVisible(false);
+  const activeOccupancy = occupancyData?.currentOccupancy;
+  const reservedOccupancy = occupancyData?.reservedOccupancy;
+  const activeOccupancyId = activeOccupancy?.occupancyId;
+  const reservedOccupancyId = reservedOccupancy?.occupancyId;
+
+  const activeSummary =
+    member.currentOccupancy?.occupancyStatus === 'ACTIVE'
+      ? member.currentOccupancy
+      : activeOccupancy
+        ? summaryFromOccupancy(activeOccupancy)
+        : member.currentOccupancy;
+
+  const reservedSummary =
+    member.currentOccupancy?.occupancyStatus === 'RESERVED'
+      ? member.currentOccupancy
+      : reservedOccupancy
+        ? summaryFromOccupancy(reservedOccupancy)
+        : null;
+
+  function closePickers() {
+    setReserveVisible(false);
+    setWalkInVisible(false);
     setTransferVisible(false);
   }
 
@@ -113,9 +187,44 @@ export function MemberAccommodationSection({
     showToast(t('occupancy.success.updated'));
   }
 
-  async function handleAllocate(
+  async function handleReserve(
     selection: OccupancyTargetSelection,
-    extras?: { expectedCheckoutDate?: string; remarks?: string },
+    extras?: OccupancyPickerExtras,
+  ) {
+    clearError();
+    const { body, errorKey } = buildReserveRequest(
+      member.memberId,
+      resolvedSpaceType,
+      selection.targetType,
+      {
+        bedId: selection.bedId,
+        roomId: selection.roomId,
+        unitId: selection.unitId,
+      },
+      {
+        moveInDate: extras?.moveInDate ?? '',
+        expectedExitDate: extras?.expectedExitDate,
+        expectedCheckoutDate: extras?.expectedCheckoutDate,
+        memberCategory: extras?.memberCategory,
+        remarks: extras?.remarks,
+      },
+    );
+    if (!body || errorKey) {
+      showToast(t(errorKey ?? 'occupancy.errors.generic'));
+      return;
+    }
+    try {
+      await reserve(body);
+      closePickers();
+      await afterMutation();
+    } catch {
+      // error surfaced via hook
+    }
+  }
+
+  async function handleWalkIn(
+    selection: OccupancyTargetSelection,
+    extras?: OccupancyPickerExtras,
   ) {
     clearError();
     const { body, errorKey } = buildAllocateRequest(
@@ -135,7 +244,7 @@ export function MemberAccommodationSection({
     }
     try {
       await allocate(body);
-      closePicker();
+      closePickers();
       await afterMutation();
     } catch {
       // error surfaced via hook
@@ -144,7 +253,7 @@ export function MemberAccommodationSection({
 
   async function handleTransfer(
     selection: OccupancyTargetSelection,
-    extras?: { remarks?: string },
+    extras?: OccupancyPickerExtras,
   ) {
     if (!activeOccupancyId) {
       showToast(t('occupancy.errors.noActive'));
@@ -168,11 +277,52 @@ export function MemberAccommodationSection({
     }
     try {
       await transfer(activeOccupancyId, body);
-      closePicker();
+      closePickers();
       await afterMutation();
     } catch {
       // error surfaced via hook
     }
+  }
+
+  async function handleMoveIn(values: MoveInFormValues) {
+    if (!reservedOccupancyId) {
+      showToast(t('occupancy.errors.noReserved'));
+      return;
+    }
+    clearError();
+    try {
+      await moveIn(reservedOccupancyId, {
+        expectedExitDate: values.expectedExitDate ?? null,
+        allowEarlyMoveIn: values.allowEarlyMoveIn,
+        agreementSigned: values.agreementSigned,
+        remarks: values.remarks ?? null,
+      });
+      setMoveInVisible(false);
+      await afterMutation();
+    } catch {
+      // error surfaced via hook
+    }
+  }
+
+  function confirmCancelReservation() {
+    showConfirm({
+      title: t('occupancy.cancelReservation.title'),
+      message: t('occupancy.cancelReservation.message'),
+      confirmLabel: t('occupancy.actions.cancelReservation'),
+      destructive: true,
+      onConfirm: async () => {
+        if (!reservedOccupancyId) {
+          showToast(t('occupancy.errors.noReserved'));
+          return;
+        }
+        try {
+          await cancelReservation(reservedOccupancyId);
+          await afterMutation();
+        } catch {
+          // error surfaced via hook
+        }
+      },
+    });
   }
 
   function confirmVacate() {
@@ -200,16 +350,43 @@ export function MemberAccommodationSection({
     <View style={styles.wrap}>
       <Text style={styles.sectionTitle}>{t('occupancy.section.title')}</Text>
       <Card style={styles.card}>
-        {isAllocated && currentOccupancy ? (
+        {isAllocated && activeSummary ? (
           <>
             <Text style={styles.cardHeading}>{t('occupancy.section.currentAccommodation')}</Text>
-            <AccommodationLocationDetails occupancy={currentOccupancy} />
-            <View style={styles.allocatedOnRow}>
-              <Text style={styles.locationLabel}>{t('occupancy.section.allocatedOn')}</Text>
-              <Text style={styles.allocatedOnValue}>
-                {formatOccupancyAllocatedDate(allocatedAt)}
-              </Text>
-            </View>
+            <Text style={styles.statusBadge}>{t('occupancy.status.ACTIVE')}</Text>
+            <AccommodationLocationDetails occupancy={activeSummary} />
+            <OccupancyDateRow
+              label={t('occupancy.section.moveInDate')}
+              value={activeOccupancy?.actualMoveInAt ?? activeOccupancy?.moveInDate}
+            />
+            <OccupancyDateRow
+              label={t('occupancy.section.allocatedOn')}
+              value={activeOccupancy?.allocatedAt}
+            />
+            <OccupancyDateRow
+              label={t('occupancy.fields.expectedExit')}
+              value={getOccupancyExitDate(activeOccupancy)}
+            />
+          </>
+        ) : isReserved && reservedSummary ? (
+          <>
+            <Text style={styles.cardHeading}>{t('occupancy.section.reservedAccommodation')}</Text>
+            <Text style={[styles.statusBadge, styles.statusReserved]}>
+              {t('occupancy.status.RESERVED')}
+            </Text>
+            <AccommodationLocationDetails occupancy={reservedSummary} />
+            <OccupancyDateRow
+              label={t('occupancy.section.moveInDate')}
+              value={reservedOccupancy?.moveInDate ?? reservedSummary.moveInDate}
+            />
+            <OccupancyDateRow
+              label={t('occupancy.section.reservedOn')}
+              value={reservedOccupancy?.reservedAt}
+            />
+            <OccupancyDateRow
+              label={t('occupancy.fields.expectedExit')}
+              value={getOccupancyExitDate(reservedOccupancy)}
+            />
           </>
         ) : (
           <>
@@ -239,13 +416,38 @@ export function MemberAccommodationSection({
                   style={styles.actionBtn}
                 />
               </>
+            ) : isReserved ? (
+              <>
+                <Button
+                  label={t('occupancy.actions.moveIn')}
+                  onPress={() => setMoveInVisible(true)}
+                  disabled={loading}
+                  style={styles.actionBtn}
+                />
+                <Button
+                  label={t('occupancy.actions.cancelReservation')}
+                  variant="ghost"
+                  onPress={confirmCancelReservation}
+                  disabled={loading}
+                  style={styles.actionBtn}
+                />
+              </>
             ) : (
-              <Button
-                label={t('occupancy.actions.allocateAccommodation')}
-                onPress={() => setAllocateVisible(true)}
-                disabled={loading}
-                style={styles.actionBtn}
-              />
+              <>
+                <Button
+                  label={t('occupancy.actions.reserve')}
+                  onPress={() => setReserveVisible(true)}
+                  disabled={loading}
+                  style={styles.actionBtn}
+                />
+                <Button
+                  label={t('occupancy.actions.walkInAllocate')}
+                  variant="secondary"
+                  onPress={() => setWalkInVisible(true)}
+                  disabled={loading}
+                  style={styles.actionBtn}
+                />
+              </>
             )}
           </View>
         ) : null}
@@ -265,24 +467,48 @@ export function MemberAccommodationSection({
       </Card>
 
       <OccupancyTargetPickerModal
-        visible={allocateVisible}
+        visible={reserveVisible}
         spaceId={spaceId}
         spaceType={spaceType}
-        title={t('occupancy.allocate.title')}
+        mode="RESERVE"
+        title={t('occupancy.reserve.title')}
+        memberName={member.fullName}
+        loading={loading}
+        onClose={closePickers}
+        onConfirm={handleReserve}
+      />
+
+      <OccupancyTargetPickerModal
+        visible={walkInVisible}
+        spaceId={spaceId}
+        spaceType={spaceType}
+        mode="WALK_IN"
+        title={t('occupancy.walkIn.title')}
+        memberName={member.fullName}
         showCheckoutDate
         loading={loading}
-        onClose={closePicker}
-        onConfirm={handleAllocate}
+        onClose={closePickers}
+        onConfirm={handleWalkIn}
       />
 
       <OccupancyTargetPickerModal
         visible={transferVisible}
         spaceId={spaceId}
         spaceType={spaceType}
+        mode="TRANSFER"
         title={t('occupancy.transfer.title')}
+        memberName={member.fullName}
         loading={loading}
-        onClose={closePicker}
-        onConfirm={(selection, extras) => handleTransfer(selection, extras)}
+        onClose={closePickers}
+        onConfirm={handleTransfer}
+      />
+
+      <MoveInModal
+        visible={moveInVisible}
+        moveInDate={reservedOccupancy?.moveInDate ?? reservedSummary?.moveInDate}
+        loading={loading}
+        onClose={() => setMoveInVisible(false)}
+        onConfirm={handleMoveIn}
       />
     </View>
   );
@@ -303,6 +529,15 @@ const styles = StyleSheet.create({
     ...typography.bodyStrong,
     marginBottom: spacing.sm,
   },
+  statusBadge: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    fontWeight: '600',
+    marginBottom: spacing.sm,
+  },
+  statusReserved: {
+    color: '#B45309',
+  },
   locationBlock: {
     gap: spacing.xs,
     marginBottom: spacing.sm,
@@ -317,11 +552,11 @@ const styles = StyleSheet.create({
   locationValue: {
     ...typography.body,
   },
-  allocatedOnRow: {
-    marginTop: spacing.sm,
+  dateRow: {
+    marginTop: spacing.xs,
     gap: 2,
   },
-  allocatedOnValue: {
+  dateValue: {
     ...typography.bodyStrong,
   },
   notAllocated: {

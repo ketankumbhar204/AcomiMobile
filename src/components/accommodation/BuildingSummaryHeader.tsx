@@ -96,14 +96,16 @@ export function BuildingSummaryHeader({
           {t('accommodation.builder.availabilityBeds', {
             available: summary.availableBeds,
             occupied: summary.occupiedBeds ?? 0,
+            reserved: summary.reservedBeds ?? 0,
           })}
         </Text>
       ) : null}
-      {summary.availableRooms != null && summary.availableRooms + (summary.occupiedRooms ?? 0) > 0 ? (
+      {summary.availableRooms != null && summary.availableRooms + (summary.occupiedRooms ?? 0) + (summary.reservedRooms ?? 0) > 0 ? (
         <Text style={styles.availability}>
           {t('accommodation.builder.availabilityRooms', {
             available: summary.availableRooms,
             occupied: summary.occupiedRooms ?? 0,
+            reserved: summary.reservedRooms ?? 0,
           })}
         </Text>
       ) : null}
@@ -112,6 +114,7 @@ export function BuildingSummaryHeader({
           {t('accommodation.builder.availabilityUnits', {
             available: summary.availableUnits,
             occupied: summary.occupiedUnits ?? 0,
+            reserved: summary.reservedUnits ?? 0,
           })}
         </Text>
       ) : null}

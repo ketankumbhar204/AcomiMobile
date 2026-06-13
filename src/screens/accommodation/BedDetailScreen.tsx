@@ -15,7 +15,7 @@ import {
   AccommodationStatusBadge,
   formatAccommodationDate,
 } from '../../components/accommodation';
-import { AccommodationOccupantSection } from '../../components/occupancy';
+import { AccommodationOccupantSection, AccommodationOccupancyActions } from '../../components/occupancy';
 import { Card, HeaderBackButton, Screen, SkeletonCard } from '../../components/ui';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useTargetOccupancy } from '../../hooks/useTargetOccupancy';
@@ -31,7 +31,8 @@ import { useToastStore } from '../../store/toastStore';
 import { spacing, typography } from '../../theme';
 import { buildAccommodationTrail } from '../../utils/accommodationContext';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
-import { canViewSpaceOccupancies } from '../../utils/occupancyPermissions';
+import { canManageOccupancy, canViewSpaceOccupancies } from '../../utils/occupancyPermissions';
+import { buildBedOccupancyTarget } from '../../utils/buildOccupancyTarget';
 import { navigateToAccommodationTrailSegment } from '../../utils/accommodationNavigation';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'BedDetail'>;
@@ -63,6 +64,10 @@ export function BedDetailScreen() {
   const lifecycleLoading = deactivating || restoring || deleting;
 
   const mySpaces = useSpaceStore(state => state.mySpaces);
+  const spaceType = useMemo(
+    () => mySpaces.find(space => space.spaceId === spaceId)?.spaceType,
+    [mySpaces, spaceId],
+  );
   const currentRole = useMemo(
     () => mySpaces.find(space => space.spaceId === spaceId)?.membershipRole,
     [mySpaces, spaceId],
@@ -75,6 +80,8 @@ export function BedDetailScreen() {
   const showsOccupant =
     bed?.status === 'OCCUPIED' || bed?.status === 'RESERVED';
   const canViewOccupant = canViewSpaceOccupancies(currentRole);
+  const canManageOccupancyActions = canManageOccupancy(currentRole);
+  const hasBedOccupant = Boolean(bed?.occupant);
   const {
     occupancy,
     loading: occupancyLoading,
@@ -83,8 +90,36 @@ export function BedDetailScreen() {
   } = useTargetOccupancy(
     spaceId,
     { bedId },
-    { enabled: showsOccupant && canViewOccupant },
+    { enabled: showsOccupant && (canViewOccupant || canManageOccupancyActions) },
   );
+
+  const occupancyTarget = useMemo(() => {
+    if (!bed) {
+      return null;
+    }
+    return buildBedOccupancyTarget({
+      buildingId,
+      buildingName,
+      floorId,
+      floorName: parentType === 'floor' ? parentName : undefined,
+      unitId,
+      unitName: parentType === 'unit' ? parentName : undefined,
+      roomId,
+      roomName: roomName ?? '',
+      bedId: bed.bedId,
+      bedName: bed.name ?? bed.bedNumber,
+    });
+  }, [
+    bed,
+    buildingId,
+    buildingName,
+    floorId,
+    parentName,
+    parentType,
+    roomId,
+    roomName,
+    unitId,
+  ]);
 
   const trailContext = useMemo(
     () => ({
@@ -191,9 +226,24 @@ export function BedDetailScreen() {
           {showsOccupant && canViewOccupant ? (
             <AccommodationOccupantSection
               spaceId={spaceId}
+              occupant={bed.occupant}
               occupancy={occupancy}
-              loading={occupancyLoading}
-              error={occupancyError}
+              loading={!hasBedOccupant && occupancyLoading}
+              error={!hasBedOccupant ? occupancyError : null}
+            />
+          ) : null}
+
+          {bed && spaceType && occupancyTarget && canManageOccupancyActions ? (
+            <AccommodationOccupancyActions
+              spaceId={spaceId}
+              spaceType={spaceType}
+              accommodationStatus={bed.status}
+              target={occupancyTarget}
+              occupancy={occupancy}
+              onSuccess={() => {
+                void loadBed();
+                void refreshOccupancy();
+              }}
             />
           ) : null}
 

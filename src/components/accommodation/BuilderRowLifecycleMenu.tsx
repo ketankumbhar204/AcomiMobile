@@ -1,12 +1,5 @@
-import React, { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import React, { useCallback } from 'react';
+import { Pressable, StyleSheet, Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { accommodationApi } from '../../api/accommodationApi';
 import { accommodationLifecycleApi } from '../../api/accommodationLifecycleApi';
@@ -15,13 +8,14 @@ import type {
   MembershipRole,
   UUID,
 } from '../../api/types';
-import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { colors } from '../../theme';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
 import {
   canCreateOrUpdateAccommodation,
   canDeactivateAccommodation,
 } from '../../utils/accommodationPermissions';
 import { useAccommodationLifecycleConfirm } from '../../hooks/useAccommodationLifecycleConfirm';
+import { useAccommodationActionSheetStore } from '../../store/accommodationActionSheetStore';
 import { useToastStore } from '../../store/toastStore';
 import { invalidateAccommodationQueries } from '../../utils/accommodationQueryCache';
 
@@ -32,13 +26,13 @@ export type BuilderLifecycleEntityType =
   | 'room'
   | 'bed';
 
-type MenuOption = {
+export type MenuOption = {
   label: string;
   action: () => void;
   destructive?: boolean;
 };
 
-type BuilderRowLifecycleMenuProps = {
+export type BuilderRowLifecycleMenuProps = {
   spaceId: UUID;
   buildingId: UUID;
   entityType: BuilderLifecycleEntityType;
@@ -48,11 +42,16 @@ type BuilderRowLifecycleMenuProps = {
   onEdit: () => void;
   onDuplicate?: () => void;
   duplicateLabel?: string;
+  prependOptions?: MenuOption[];
+  sheetTitle?: string;
+  forceShowTrigger?: boolean;
   onSuccess: (
     action: 'deactivate' | 'restore' | 'delete',
     entityType: BuilderLifecycleEntityType,
   ) => void;
 };
+
+const MENU_OPEN_DELAY_MS = 50;
 
 async function loadEntityActions(
   spaceId: UUID,
@@ -137,69 +136,41 @@ export function BuilderRowLifecycleMenu({
   onEdit,
   onDuplicate,
   duplicateLabel,
+  prependOptions = [],
+  sheetTitle,
+  forceShowTrigger = false,
   onSuccess,
 }: BuilderRowLifecycleMenuProps) {
   const { t } = useTranslation();
   const showToast = useToastStore(state => state.showToast);
+  const closeActionSheet = useAccommodationActionSheetStore(state => state.close);
   const { confirmDeactivate, confirmRestore, confirmDelete } =
     useAccommodationLifecycleConfirm();
-  const [loading, setLoading] = useState(false);
-  const [menuVisible, setMenuVisible] = useState(false);
-  const [menuOptions, setMenuOptions] = useState<MenuOption[]>([]);
 
-  const closeMenu = useCallback(() => {
-    setMenuVisible(false);
-    setMenuOptions([]);
-  }, []);
+  const resolvedTitle = sheetTitle ?? t('accommodation.lifecycle.menuTitle');
 
-  const handleSelect = useCallback(
-    (action: () => void) => {
-      closeMenu();
-      requestAnimationFrame(() => {
-        action();
-      });
-    },
-    [closeMenu],
-  );
-
-  const showMenu = useCallback(async () => {
-    if (!canCreateOrUpdateAccommodation(role) && !canDeactivateAccommodation(role)) {
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const actions = await loadEntityActions(
-        spaceId,
-        entityType,
-        entityId,
-        roomId,
-      );
-
-      if (!actions) {
-        return;
-      }
-
+  const buildLifecycleOptions = useCallback(
+    (actions: AccommodationActionMetadata): MenuOption[] => {
+      const lifecycleOptions: MenuOption[] = [];
       const isOwner = canDeactivateAccommodation(role);
       const canManage = canCreateOrUpdateAccommodation(role);
-      const options: MenuOption[] = [];
 
       if (actions.canEdit && canManage) {
-        options.push({
+        lifecycleOptions.push({
           label: t('accommodation.actions.edit'),
           action: onEdit,
         });
       }
 
       if (onDuplicate && canManage) {
-        options.push({
+        lifecycleOptions.push({
           label: duplicateLabel ?? t('accommodation.duplicate.confirm'),
           action: onDuplicate,
         });
       }
 
       if (isOwner && actions.canDeactivate) {
-        options.push({
+        lifecycleOptions.push({
           label: t('accommodation.lifecycle.deactivateConfirm'),
           destructive: true,
           action: () =>
@@ -214,7 +185,7 @@ export function BuilderRowLifecycleMenu({
       }
 
       if (isOwner && actions.canRestore) {
-        options.push({
+        lifecycleOptions.push({
           label: t('accommodation.lifecycle.restoreConfirm'),
           action: () =>
             confirmRestore(
@@ -228,7 +199,7 @@ export function BuilderRowLifecycleMenu({
       }
 
       if (isOwner && actions.canDelete) {
-        options.push({
+        lifecycleOptions.push({
           label: t('accommodation.lifecycle.deleteConfirm'),
           destructive: true,
           action: () =>
@@ -243,101 +214,123 @@ export function BuilderRowLifecycleMenu({
         });
       }
 
+      return lifecycleOptions;
+    },
+    [
+      confirmDeactivate,
+      confirmDelete,
+      confirmRestore,
+      duplicateLabel,
+      entityId,
+      entityType,
+      onDuplicate,
+      onEdit,
+      onSuccess,
+      role,
+      showToast,
+      spaceId,
+      t,
+    ],
+  );
+
+  const presentActionSheet = useCallback(
+    (options: MenuOption[]) => {
       if (options.length === 0) {
-        if (isOwner && !actions.canDelete && actions.deleteReason) {
-          showToast(actions.deleteReason);
+        return false;
+      }
+
+      // Defer so the opening tap does not dismiss the sheet immediately.
+      setTimeout(() => {
+        const { visible, open, setOptions } = useAccommodationActionSheetStore.getState();
+        if (visible) {
+          setOptions(options);
+        } else {
+          open(resolvedTitle, options);
         }
+      }, MENU_OPEN_DELAY_MS);
+      return true;
+    },
+    [resolvedTitle],
+  );
+
+  const showMenu = useCallback(async () => {
+    const canManageLifecycle =
+      canCreateOrUpdateAccommodation(role) || canDeactivateAccommodation(role);
+
+    if (!canManageLifecycle && prependOptions.length === 0) {
+      return;
+    }
+
+    if (prependOptions.length > 0) {
+      presentActionSheet(prependOptions);
+    }
+
+    if (!canManageLifecycle) {
+      return;
+    }
+
+    try {
+      const actions = await loadEntityActions(
+        spaceId,
+        entityType,
+        entityId,
+        roomId,
+      );
+
+      const lifecycleOptions = actions ? buildLifecycleOptions(actions) : [];
+      const isOwner = canDeactivateAccommodation(role);
+      const mergedOptions = [...prependOptions, ...lifecycleOptions];
+
+      if (
+        mergedOptions.length === 0 &&
+        isOwner &&
+        actions &&
+        !actions.canDelete &&
+        actions.deleteReason
+      ) {
+        closeActionSheet();
+        showToast(actions.deleteReason);
         return;
       }
 
-      setMenuOptions(options);
-      setMenuVisible(true);
+      presentActionSheet(mergedOptions);
     } catch (err) {
-      showToast(getAccommodationErrorMessage(err, 'accommodation.errors.generic'));
-    } finally {
-      setLoading(false);
+      if (prependOptions.length === 0) {
+        showToast(getAccommodationErrorMessage(err, 'accommodation.errors.generic'));
+      }
     }
   }, [
-    confirmDeactivate,
-    confirmDelete,
-    confirmRestore,
+    buildLifecycleOptions,
+    closeActionSheet,
     entityId,
     entityType,
-    duplicateLabel,
-    onDuplicate,
-    onEdit,
-    onSuccess,
+    prependOptions,
+    presentActionSheet,
     role,
     roomId,
     showToast,
     spaceId,
-    t,
   ]);
 
-  if (!canCreateOrUpdateAccommodation(role) && !canDeactivateAccommodation(role)) {
+  const canShowTrigger =
+    forceShowTrigger ||
+    canCreateOrUpdateAccommodation(role) ||
+    canDeactivateAccommodation(role) ||
+    prependOptions.length > 0;
+
+  if (!canShowTrigger) {
     return null;
   }
 
   return (
-    <>
-      <Pressable
-        onPress={() => void showMenu()}
-        hitSlop={8}
-        style={styles.trigger}
-        accessibilityRole="button"
-        accessibilityLabel={t('accommodation.lifecycle.menuTitle')}>
-        {loading ? (
-          <ActivityIndicator size="small" color={colors.muted} />
-        ) : (
-          <Text style={styles.icon}>⋯</Text>
-        )}
-      </Pressable>
-
-      <Modal
-        visible={menuVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={closeMenu}
-        statusBarTranslucent>
-        <Pressable
-          style={styles.backdrop}
-          onPress={closeMenu}
-          accessibilityRole="button"
-          accessibilityLabel={t('common.cancel')}>
-          <Pressable style={styles.sheet} onPress={event => event.stopPropagation()}>
-            <Text style={styles.sheetTitle}>{t('accommodation.lifecycle.menuTitle')}</Text>
-            {menuOptions.map((option, index) => (
-              <Pressable
-                key={option.label}
-                onPress={() => handleSelect(option.action)}
-                style={({ pressed }) => [
-                  styles.menuItem,
-                  index < menuOptions.length - 1 && styles.menuItemBorder,
-                  pressed && styles.menuItemPressed,
-                ]}
-                accessibilityRole="menuitem">
-                <Text
-                  style={[
-                    styles.menuItemLabel,
-                    option.destructive && styles.menuItemDestructive,
-                  ]}>
-                  {option.label}
-                </Text>
-              </Pressable>
-            ))}
-            <Pressable
-              onPress={closeMenu}
-              style={({ pressed }) => [
-                styles.cancelItem,
-                pressed && styles.menuItemPressed,
-              ]}
-              accessibilityRole="button">
-              <Text style={styles.cancelLabel}>{t('common.cancel')}</Text>
-            </Pressable>
-          </Pressable>
-        </Pressable>
-      </Modal>
-    </>
+    <Pressable
+      onPress={() => void showMenu()}
+      hitSlop={8}
+      style={styles.trigger}
+      accessibilityRole="button"
+      accessibilityLabel={t('accommodation.lifecycle.menuTitle')}>
+      <Text style={styles.icon}>⋯</Text>
+    </Pressable>
   );
 }
 
@@ -353,60 +346,5 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: colors.muted,
     fontWeight: '700',
-  },
-  backdrop: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: spacing.xl,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
-  },
-  sheet: {
-    backgroundColor: colors.white,
-    borderRadius: radius.card,
-    overflow: 'hidden',
-    ...shadows.md,
-  },
-  sheetTitle: {
-    ...typography.bodyStrong,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.sm,
-    color: colors.textPrimary,
-  },
-  menuItem: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    minHeight: 48,
-    justifyContent: 'center',
-    backgroundColor: colors.white,
-  },
-  menuItemBorder: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  menuItemPressed: {
-    backgroundColor: colors.surface,
-  },
-  menuItemLabel: {
-    ...typography.body,
-    color: colors.primaryDark,
-    fontWeight: '600',
-  },
-  menuItemDestructive: {
-    color: '#DC2626',
-  },
-  cancelItem: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    minHeight: 48,
-    justifyContent: 'center',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  cancelLabel: {
-    ...typography.bodyStrong,
-    color: colors.textPrimary,
-    textAlign: 'center',
   },
 });

@@ -2,6 +2,9 @@ import { useCallback, useState } from 'react';
 import { occupancyApi } from '../api/occupancyApi';
 import type {
   AllocateOccupancyRequest,
+  CancelReservationRequest,
+  MoveInOccupancyRequest,
+  ReserveOccupancyRequest,
   TransferOccupancyRequest,
   UUID,
   VacateOccupancyRequest,
@@ -23,6 +26,63 @@ export function useOccupancyMutations(spaceId: UUID) {
         return result;
       } catch (err) {
         const message = getOccupancyErrorMessage(err, 'occupancy.errors.allocate');
+        setError(message);
+        throw new Error(message);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [spaceId],
+  );
+
+  const reserve = useCallback(
+    async (body: ReserveOccupancyRequest) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const result = await occupancyApi.reserveOccupancy(spaceId, body);
+        invalidateAfterOccupancyChange();
+        return result;
+      } catch (err) {
+        const message = getOccupancyErrorMessage(err, 'occupancy.errors.reserve');
+        setError(message);
+        throw new Error(message);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [spaceId],
+  );
+
+  const moveIn = useCallback(
+    async (occupancyId: UUID, body?: MoveInOccupancyRequest) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const result = await occupancyApi.moveInOccupancy(spaceId, occupancyId, body);
+        invalidateAfterOccupancyChange();
+        return result;
+      } catch (err) {
+        const message = getOccupancyErrorMessage(err, 'occupancy.errors.moveIn');
+        setError(message);
+        throw new Error(message);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [spaceId],
+  );
+
+  const cancelReservation = useCallback(
+    async (occupancyId: UUID, body?: CancelReservationRequest) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const result = await occupancyApi.cancelReservation(spaceId, occupancyId, body);
+        invalidateAfterOccupancyChange();
+        return result;
+      } catch (err) {
+        const message = getOccupancyErrorMessage(err, 'occupancy.errors.cancelReservation');
         setError(message);
         throw new Error(message);
       } finally {
@@ -72,5 +132,15 @@ export function useOccupancyMutations(spaceId: UUID) {
 
   const clearError = useCallback(() => setError(null), []);
 
-  return { allocate, transfer, vacate, loading, error, clearError };
+  return {
+    allocate,
+    reserve,
+    moveIn,
+    cancelReservation,
+    transfer,
+    vacate,
+    loading,
+    error,
+    clearError,
+  };
 }

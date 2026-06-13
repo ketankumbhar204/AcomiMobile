@@ -30,6 +30,7 @@ export {
   useRestoreBed,
   useDeleteBed,
 } from './accommodationLifecycle';
+export { useAccommodationOccupancyFlow } from './useAccommodationOccupancyFlow';
 export { useAccommodationSummary } from './useAccommodationSummary';
 export { useAccommodationUiProfile } from './useAccommodationUiProfile';
 export { useQuickSetup } from './useQuickSetup';

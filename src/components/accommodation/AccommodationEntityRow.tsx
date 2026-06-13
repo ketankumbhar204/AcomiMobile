@@ -6,11 +6,13 @@ import { colors, radius, shadows, spacing, typography } from '../../theme';
 type AccommodationEntityRowProps = {
   title: string;
   subtitle?: string;
+  meta?: React.ReactNode;
   iconLabel?: string;
   onPress: () => void;
   onLongPress?: () => void;
   menu?: React.ReactNode;
   badge?: React.ReactNode;
+  footer?: React.ReactNode;
   showChevron?: boolean;
   editableName?: boolean;
   onSaveName?: (name: string) => Promise<void>;
@@ -19,11 +21,13 @@ type AccommodationEntityRowProps = {
 export function AccommodationEntityRow({
   title,
   subtitle,
+  meta,
   iconLabel,
   onPress,
   onLongPress,
   menu,
   badge,
+  footer,
   showChevron = true,
   editableName = false,
   onSaveName,
@@ -48,6 +52,7 @@ export function AccommodationEntityRow({
               editable={editableName}
               onSave={onSaveName}
             />
+            {meta ? <View style={styles.meta}>{meta}</View> : null}
             {subtitle ? (
               <Text style={styles.subtitle} numberOfLines={2}>
                 {subtitle}
@@ -63,6 +68,7 @@ export function AccommodationEntityRow({
             <View style={styles.menuSlot}>{menu}</View>
           </>
         ) : null}
+        {footer ? <View style={styles.footer}>{footer}</View> : null}
       </View>
     </View>
   );
@@ -109,6 +115,11 @@ const styles = StyleSheet.create({
   info: {
     flex: 1,
     minWidth: 0,
+    minHeight: 72,
+    justifyContent: 'center',
+  },
+  meta: {
+    minHeight: 18,
   },
   subtitle: {
     ...typography.caption,
@@ -133,5 +144,13 @@ const styles = StyleSheet.create({
     width: 44,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 1,
+  },
+  footer: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+    paddingTop: spacing.xs,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
   },
 });

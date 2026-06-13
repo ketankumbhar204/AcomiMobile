@@ -470,6 +470,13 @@ export interface RoomResponse {
   actions?: AccommodationActionMetadata;
 }
 
+export interface BedOccupantSummaryResponse {
+  occupancyId: UUID;
+  memberId: UUID;
+  memberName: string;
+  occupancyStatus: OccupancyStatus;
+}
+
 export interface BedResponse {
   bedId: UUID;
   roomId: UUID;
@@ -480,6 +487,7 @@ export interface BedResponse {
   createdAt: string;
   updatedAt: string;
   actions?: AccommodationActionMetadata;
+  occupant?: BedOccupantSummaryResponse | null;
 }
 
 // ─── Accommodation Phase 4.2 orchestration ────────────────────────────────
@@ -600,10 +608,13 @@ export interface BuildingSummaryResponse {
   blocked: number;
   availableBeds?: number;
   occupiedBeds?: number;
+  reservedBeds?: number;
   availableRooms?: number;
   occupiedRooms?: number;
+  reservedRooms?: number;
   availableUnits?: number;
   occupiedUnits?: number;
+  reservedUnits?: number;
 }
 
 export interface FloorListItemResponse {
@@ -717,9 +728,23 @@ export interface BulkCreateBedsResponse {
 // ─── Occupancy (Phase 4.3) ──────────────────────────────────────────────────
 
 export type AllocationTargetType = 'BED' | 'ROOM' | 'UNIT';
-export type OccupancyStatus = 'ACTIVE' | 'VACATED';
-export type MemberOccupancyStatus = 'ALLOCATED' | 'VACATED';
-export type OccupancyHistoryEvent = 'ALLOCATED' | 'TRANSFERRED' | 'VACATED';
+export type OccupancyStatus = 'ACTIVE' | 'RESERVED' | 'VACATED';
+export type MemberOccupancyStatus = 'ALLOCATED' | 'RESERVED' | 'VACATED';
+export type OccupancyHistoryEvent =
+  | 'ALLOCATED'
+  | 'RESERVED'
+  | 'MOVE_IN'
+  | 'TRANSFERRED'
+  | 'VACATED'
+  | 'RESERVATION_CANCELLED';
+export type MemberGender = 'MALE' | 'FEMALE' | 'OTHER' | 'UNSPECIFIED';
+export type MemberCategory =
+  | 'STUDENT'
+  | 'WORKING_PROFESSIONAL'
+  | 'FAMILY'
+  | 'GUEST'
+  | 'INTERN';
+export type GenderPolicy = 'MALE' | 'FEMALE' | 'MIXED';
 
 export interface OccupancyResponse {
   occupancyId: UUID;
@@ -740,6 +765,12 @@ export interface OccupancyResponse {
   allocatedAt: string;
   allocatedBy: UUID;
   expectedCheckoutDate?: string | null;
+  reservedAt?: string | null;
+  moveInDate?: string | null;
+  actualMoveInAt?: string | null;
+  expectedExitDate?: string | null;
+  memberCategory?: MemberCategory | null;
+  agreementSigned?: boolean;
   vacatedAt?: string | null;
   vacatedBy?: UUID | null;
   status: OccupancyStatus;
@@ -771,11 +802,14 @@ export interface OccupancyHistoryEntryResponse {
 
 export interface MemberOccupancyListResponse {
   currentOccupancy: OccupancyResponse | null;
+  reservedOccupancy: OccupancyResponse | null;
   occupancies: OccupancyResponse[];
   history: OccupancyHistoryEntryResponse[];
 }
 
 export interface CurrentOccupancySummaryResponse {
+  occupancyId?: UUID;
+  occupancyStatus?: OccupancyStatus;
   targetType: AllocationTargetType;
   buildingId: UUID;
   buildingName: string;
@@ -787,6 +821,31 @@ export interface CurrentOccupancySummaryResponse {
   roomName?: string | null;
   bedId?: UUID | null;
   bedName?: string | null;
+  moveInDate?: string | null;
+}
+
+export interface ReserveOccupancyRequest {
+  memberId: UUID;
+  targetType: AllocationTargetType;
+  bedId?: UUID | null;
+  roomId?: UUID | null;
+  unitId?: UUID | null;
+  moveInDate: string;
+  expectedExitDate?: string | null;
+  memberCategory?: MemberCategory | null;
+  remarks?: string | null;
+}
+
+export interface MoveInOccupancyRequest {
+  moveInDate?: string | null;
+  expectedExitDate?: string | null;
+  allowEarlyMoveIn?: boolean;
+  agreementSigned?: boolean;
+  remarks?: string | null;
+}
+
+export interface CancelReservationRequest {
+  remarks?: string | null;
 }
 
 export interface AllocateOccupancyRequest {
@@ -796,6 +855,7 @@ export interface AllocateOccupancyRequest {
   roomId?: UUID | null;
   unitId?: UUID | null;
   expectedCheckoutDate?: string | null;
+  expectedExitDate?: string | null;
   remarks?: string | null;
 }
 

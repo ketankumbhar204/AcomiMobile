@@ -1,9 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -11,56 +11,78 @@ import {
 import { useTranslation } from 'react-i18next';
 import { accommodationApi } from '../../api/accommodationApi';
 import type {
-  AllocationTargetType,
   BuildingResponse,
   FloorListItemResponse,
-  RoomListItemResponse,
+  MemberCategory,
   SpaceType,
   UnitListItemResponse,
-  BedListItemResponse,
 } from '../../api/types';
 import { AccommodationSearchBar } from '../accommodation/AccommodationSearchBar';
 import { AccommodationStatusBadge } from '../accommodation/AccommodationStatusBadge';
-import { Button, FormInput } from '../ui';
+import { Button, Card, FormInput } from '../ui';
 import { useOccupancyTargetSearch } from '../../hooks/useOccupancyTargetSearch';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
-import { getAccommodationUiProfile } from '../../utils/accommodationProfile';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
-import type { OccupancySearchResult } from '../../utils/occupancyTargetSearch';
 import {
-  defaultTargetType,
-  getAllowedTargetTypes,
+  browseUsesApartmentUnitPicker,
+  browseUsesCoLivingUnits,
+  browseUsesFloorTabs,
+  browseUsesRoomGroups,
+  browseUsesUnitsOnly,
+  formatOccupancySearchResultSubtitle,
+  formatOccupancySearchResultTitle,
+  formatOccupancyTargetLines,
+  loadAvailableUnitsForBuilding,
+  loadCoLivingUnitsForBuilding,
+  loadFloorsForBrowse,
+  loadRoomBedGroupsForFloor,
+  loadRoomBedGroupsForUnit,
+  loadUnitsOnFloor,
+  type OccupancyBrowseRoomGroup,
+  type OccupancyBrowseUnitItem,
+} from '../../utils/occupancyBrowse';
+import type { OccupancySearchResult } from '../../utils/occupancyTargetSearch';
+import type { OccupancyTargetSelection } from '../../utils/occupancyRules';
+import {
+  formatTodayIsoDate,
+  formatOccupancyAllocatedDate,
 } from '../../utils/occupancyRules';
 
-export type OccupancyTargetSelection = {
-  targetType: AllocationTargetType;
-  buildingId: string;
-  buildingName: string;
-  floorId?: string;
-  floorName?: string;
-  unitId?: string;
-  unitName?: string;
-  roomId?: string;
-  roomName?: string;
-  bedId?: string;
-  bedName?: string;
+export type OccupancyPickerMode = 'RESERVE' | 'WALK_IN' | 'TRANSFER';
+
+export type OccupancyPickerExtras = {
+  moveInDate?: string;
+  expectedExitDate?: string;
+  expectedCheckoutDate?: string;
+  memberCategory?: MemberCategory;
+  remarks?: string;
 };
 
-type PickerStep = 'targetType' | 'building' | 'floor' | 'unit' | 'room' | 'bed';
+type PickerPhase = 'select' | 'details' | 'review';
 
 type OccupancyTargetPickerModalProps = {
   visible: boolean;
   spaceId: string;
   spaceType: SpaceType;
+  mode?: OccupancyPickerMode;
   title: string;
+  memberName?: string;
   showCheckoutDate?: boolean;
+  defaultMemberCategory?: MemberCategory;
+  initialSelection?: OccupancyTargetSelection | null;
+  skipSelectPhase?: boolean;
   loading?: boolean;
   onClose: () => void;
-  onConfirm: (
-    selection: OccupancyTargetSelection,
-    extras?: { expectedCheckoutDate?: string; remarks?: string },
-  ) => void;
+  onConfirm: (selection: OccupancyTargetSelection, extras?: OccupancyPickerExtras) => void;
 };
+
+const MEMBER_CATEGORIES: MemberCategory[] = [
+  'STUDENT',
+  'WORKING_PROFESSIONAL',
+  'FAMILY',
+  'GUEST',
+  'INTERN',
+];
 
 function searchResultToSelection(result: OccupancySearchResult): OccupancyTargetSelection {
   return {
@@ -78,38 +100,45 @@ function searchResultToSelection(result: OccupancySearchResult): OccupancyTarget
   };
 }
 
-function SearchResultRow({
-  result,
-  disabled,
-  onPress,
+function SelectionSummaryCard({
+  selection,
+  label,
 }: {
-  result: OccupancySearchResult;
-  disabled: boolean;
-  onPress: () => void;
+  selection: OccupancyTargetSelection;
+  label: string;
 }) {
   const { t } = useTranslation();
-  const lines = [
-    result.buildingName,
-    result.floorName,
-    result.unitName,
-    result.roomName,
-    result.bedName ? t('accommodation.beds.bedNumber', { value: result.bedName }) : null,
-  ].filter(Boolean);
+  const lines = formatOccupancyTargetLines(selection);
 
   return (
-    <Pressable
-      style={[styles.row, disabled && styles.rowDisabled]}
-      onPress={onPress}
-      disabled={disabled}>
-      <View style={styles.rowBody}>
-        {lines.map((line, index) => (
-          <Text key={`${result.key}-${index}`} style={index === 0 ? styles.rowTitle : styles.rowSub}>
-            {line}
-          </Text>
-        ))}
-      </View>
-      <Text style={styles.chevron}>✓</Text>
-    </Pressable>
+    <Card style={styles.summaryCard}>
+      <Text style={styles.summaryLabel}>{label}</Text>
+      {lines.map((line, index) => (
+        <Text key={`${line}-${index}`} style={index === 0 ? styles.summaryPrimary : styles.summaryLine}>
+          {index === 0 ? line : line}
+        </Text>
+      ))}
+      {selection.bedName ? (
+        <Text style={styles.summaryMeta}>
+          {t('accommodation.beds.bedNumber', { value: selection.bedName })}
+        </Text>
+      ) : null}
+    </Card>
+  );
+}
+
+function ComingSoonSection({ title, items }: { title: string; items?: string[] }) {
+  const { t } = useTranslation();
+  return (
+    <View style={styles.comingSoonBlock}>
+      <Text style={styles.comingSoonTitle}>{title}</Text>
+      {items?.map(item => (
+        <Text key={item} style={styles.comingSoonItem}>
+          · {item}
+        </Text>
+      ))}
+      <Text style={styles.comingSoonHint}>{t('occupancy.picker.comingSoonHint')}</Text>
+    </View>
   );
 }
 
@@ -117,39 +146,55 @@ export function OccupancyTargetPickerModal({
   visible,
   spaceId,
   spaceType,
+  mode = 'WALK_IN',
   title,
+  memberName,
   showCheckoutDate = false,
+  defaultMemberCategory,
+  initialSelection = null,
+  skipSelectPhase = false,
   loading = false,
   onClose,
   onConfirm,
 }: OccupancyTargetPickerModalProps) {
   const { t } = useTranslation();
-  const allowedTypes = useMemo(() => getAllowedTargetTypes(spaceType), [spaceType]);
 
-  const [step, setStep] = useState<PickerStep>('building');
-  const [targetType, setTargetType] = useState<AllocationTargetType>(
-    defaultTargetType(spaceType) ?? 'BED',
-  );
-  const [building, setBuilding] = useState<BuildingResponse | null>(null);
-  const [floor, setFloor] = useState<FloorListItemResponse | null>(null);
-  const [unit, setUnit] = useState<UnitListItemResponse | null>(null);
-  const [room, setRoom] = useState<RoomListItemResponse | null>(null);
-
+  const [phase, setPhase] = useState<PickerPhase>('select');
+  const [pendingSelection, setPendingSelection] = useState<OccupancyTargetSelection | null>(null);
   const [buildings, setBuildings] = useState<BuildingResponse[]>([]);
-  const [floors, setFloors] = useState<FloorListItemResponse[]>([]);
-  const [units, setUnits] = useState<UnitListItemResponse[]>([]);
-  const [rooms, setRooms] = useState<RoomListItemResponse[]>([]);
-  const [beds, setBeds] = useState<BedListItemResponse[]>([]);
-  const [listLoading, setListLoading] = useState(false);
-  const [listError, setListError] = useState<string | null>(null);
+  const [activeBuilding, setActiveBuilding] = useState<BuildingResponse | null>(null);
+  const [coLivingUnit, setCoLivingUnit] = useState<UnitListItemResponse | null>(null);
+  const [roomGroups, setRoomGroups] = useState<OccupancyBrowseRoomGroup[]>([]);
+  const [browseUnits, setBrowseUnits] = useState<OccupancyBrowseUnitItem[]>([]);
+  const [coLivingUnits, setCoLivingUnits] = useState<UnitListItemResponse[]>([]);
+  const [browseFloors, setBrowseFloors] = useState<FloorListItemResponse[]>([]);
+  const [activeBrowseFloor, setActiveBrowseFloor] = useState<FloorListItemResponse | null>(null);
+  const [apartmentUnits, setApartmentUnits] = useState<UnitListItemResponse[]>([]);
+  const [selectedApartmentUnit, setSelectedApartmentUnit] = useState<UnitListItemResponse | null>(
+    null,
+  );
+  const [buildingsLoading, setBuildingsLoading] = useState(false);
+  const [groupsLoading, setGroupsLoading] = useState(false);
+  const [browseError, setBrowseError] = useState<string | null>(null);
   const [selecting, setSelecting] = useState(false);
 
+  const wasVisibleRef = useRef(false);
+  const browseRequestSeq = useRef(0);
+
   const [searchQuery, setSearchQuery] = useState('');
+  const [moveInDate, setMoveInDate] = useState('');
   const [expectedCheckoutDate, setExpectedCheckoutDate] = useState('');
+  const [memberCategory, setMemberCategory] = useState<MemberCategory | undefined>(
+    defaultMemberCategory,
+  );
   const [remarks, setRemarks] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
 
   const isSearchMode = searchQuery.trim().length > 0;
-  const interactionLocked = loading || selecting || listLoading;
+  const browseLoading = buildingsLoading || groupsLoading;
+  const interactionLocked = loading || selecting || browseLoading;
+  const showDetailsPhase = mode !== 'TRANSFER';
+  const todayIso = formatTodayIsoDate();
 
   const {
     results: searchResults,
@@ -163,34 +208,31 @@ export function OccupancyTargetPickerModal({
     visible && isSearchMode,
   );
 
-  const profile = useMemo(
-    () =>
-      building
-        ? getAccommodationUiProfile(spaceType, building.layoutMode)
-        : null,
-    [building, spaceType],
-  );
-
   const reset = useCallback(() => {
-    const initialStep = allowedTypes.length > 1 ? 'targetType' : 'building';
-    setStep(initialStep);
-    setTargetType(defaultTargetType(spaceType) ?? 'BED');
-    setBuilding(null);
-    setFloor(null);
-    setUnit(null);
-    setRoom(null);
+    setPhase('select');
+    setPendingSelection(null);
     setBuildings([]);
-    setFloors([]);
-    setUnits([]);
-    setRooms([]);
-    setBeds([]);
-    setListError(null);
+    setActiveBuilding(null);
+    setCoLivingUnit(null);
+    setRoomGroups([]);
+    setBrowseUnits([]);
+    setCoLivingUnits([]);
+    setBrowseFloors([]);
+    setActiveBrowseFloor(null);
+    setApartmentUnits([]);
+    setSelectedApartmentUnit(null);
+    setBuildingsLoading(false);
+    setGroupsLoading(false);
+    setBrowseError(null);
     setSelecting(false);
     setSearchQuery('');
+    setMoveInDate(mode === 'RESERVE' ? todayIso : todayIso);
     setExpectedCheckoutDate('');
+    setMemberCategory(defaultMemberCategory);
     setRemarks('');
+    setFormError(null);
     resetSearch();
-  }, [allowedTypes.length, resetSearch, spaceType]);
+  }, [defaultMemberCategory, mode, resetSearch, todayIso]);
 
   const handleDismiss = useCallback(() => {
     reset();
@@ -199,10 +241,27 @@ export function OccupancyTargetPickerModal({
 
   useEffect(() => {
     if (!visible) {
+      wasVisibleRef.current = false;
+      browseRequestSeq.current += 1;
+      return;
+    }
+    if (wasVisibleRef.current) {
+      return;
+    }
+    wasVisibleRef.current = true;
+    if (skipSelectPhase && initialSelection) {
+      setPendingSelection(initialSelection);
+      setPhase(mode === 'TRANSFER' ? 'review' : 'details');
+      setSearchQuery('');
+      setMoveInDate(mode === 'RESERVE' ? todayIso : todayIso);
+      setExpectedCheckoutDate('');
+      setMemberCategory(defaultMemberCategory);
+      setRemarks('');
+      setFormError(null);
       return;
     }
     reset();
-  }, [visible, reset]);
+  }, [defaultMemberCategory, initialSelection, mode, reset, skipSelectPhase, todayIso, visible]);
 
   useEffect(() => {
     if (!loading) {
@@ -210,355 +269,367 @@ export function OccupancyTargetPickerModal({
     }
   }, [loading]);
 
-  const isRootStep = useCallback(() => {
-    return step === 'targetType' || (step === 'building' && allowedTypes.length === 1);
-  }, [allowedTypes.length, step]);
-
   const loadBuildings = useCallback(async () => {
-    setListLoading(true);
-    setListError(null);
+    setBuildingsLoading(true);
+    setBrowseError(null);
     try {
       const data = await accommodationApi.getBuildings(spaceId);
       setBuildings(data);
+      if (data.length === 1) {
+        setActiveBuilding(data[0]);
+      }
     } catch (err) {
-      setListError(getAccommodationErrorMessage(err, 'accommodation.errors.loadBuildings'));
+      setBrowseError(getAccommodationErrorMessage(err, 'accommodation.errors.loadBuildings'));
     } finally {
-      setListLoading(false);
+      setBuildingsLoading(false);
     }
   }, [spaceId]);
 
   useEffect(() => {
-    if (!visible || isSearchMode || step !== 'building') {
+    if (!visible || phase !== 'select' || isSearchMode || buildings.length > 0) {
       return;
     }
     void loadBuildings();
-  }, [isSearchMode, loadBuildings, step, visible]);
+  }, [buildings.length, isSearchMode, loadBuildings, phase, visible]);
 
-  const loadFloors = useCallback(async () => {
-    if (!building) {
+  const loadBrowseFloors = useCallback(async () => {
+    if (!activeBuilding || !browseUsesFloorTabs(spaceType, activeBuilding)) {
+      setBrowseFloors([]);
+      setActiveBrowseFloor(null);
       return;
     }
-    setListLoading(true);
-    setListError(null);
+    const seq = ++browseRequestSeq.current;
+    setGroupsLoading(true);
+    setBrowseError(null);
     try {
-      const page = await accommodationApi.listFloors(spaceId, building.buildingId, {
-        view: 'summary',
-        size: 50,
-      });
-      setFloors(page.content);
-    } catch (err) {
-      setListError(getAccommodationErrorMessage(err, 'accommodation.errors.loadFloors'));
-    } finally {
-      setListLoading(false);
-    }
-  }, [building, spaceId]);
-
-  const loadUnits = useCallback(async () => {
-    if (!building) {
-      return;
-    }
-    setListLoading(true);
-    setListError(null);
-    try {
-      if (floor && profile?.showUnitsOnFloor) {
-        const page = await accommodationApi.listUnitsByFloor(
-          spaceId,
-          building.buildingId,
-          floor.floorId,
-          { view: 'summary', size: 50 },
-        );
-        setUnits(page.content.filter(item => !item.synthetic));
-      } else {
-        const page = await accommodationApi.listUnits(spaceId, building.buildingId, {
-          view: 'summary',
-          size: 50,
-        });
-        setUnits(page.content.filter(item => !item.synthetic));
-      }
-    } catch (err) {
-      setListError(getAccommodationErrorMessage(err, 'accommodation.errors.loadUnits'));
-    } finally {
-      setListLoading(false);
-    }
-  }, [building, floor, profile?.showUnitsOnFloor, spaceId]);
-
-  const loadRooms = useCallback(async () => {
-    if (!building) {
-      return;
-    }
-    setListLoading(true);
-    setListError(null);
-    try {
-      let page;
-      if (unit) {
-        page = await accommodationApi.listRoomsByUnit(spaceId, unit.unitId, {
-          view: 'summary',
-          size: 50,
-        });
-      } else if (floor) {
-        page = await accommodationApi.listRoomsByFloor(spaceId, floor.floorId, {
-          view: 'summary',
-          size: 50,
-        });
-      } else {
-        setRooms([]);
+      const floors = await loadFloorsForBrowse(spaceId, activeBuilding.buildingId);
+      if (seq !== browseRequestSeq.current) {
         return;
       }
-      const available =
-        targetType === 'ROOM'
-          ? page.content.filter(r => r.availableBeds >= r.bedCount && r.bedCount > 0)
-          : page.content.filter(r => r.availableBeds > 0);
-      setRooms(available);
+      setBrowseFloors(floors);
+      setActiveBrowseFloor(floors[0] ?? null);
+      setApartmentUnits([]);
+      setSelectedApartmentUnit(null);
     } catch (err) {
-      setListError(getAccommodationErrorMessage(err, 'accommodation.errors.loadRooms'));
+      if (seq !== browseRequestSeq.current) {
+        return;
+      }
+      setBrowseError(getAccommodationErrorMessage(err, 'accommodation.errors.loadFloors'));
     } finally {
-      setListLoading(false);
+      if (seq === browseRequestSeq.current) {
+        setGroupsLoading(false);
+      }
     }
-  }, [building, floor, spaceId, targetType, unit]);
+  }, [activeBuilding, spaceId, spaceType]);
 
-  const loadBeds = useCallback(async () => {
-    if (!room) {
+  const loadApartmentUnits = useCallback(async () => {
+    if (
+      !activeBuilding ||
+      !activeBrowseFloor ||
+      !browseUsesApartmentUnitPicker(activeBuilding)
+    ) {
+      setApartmentUnits([]);
+      setSelectedApartmentUnit(null);
       return;
     }
-    setListLoading(true);
-    setListError(null);
+    const seq = ++browseRequestSeq.current;
+    setGroupsLoading(true);
+    setBrowseError(null);
     try {
-      const page = await accommodationApi.listBeds(spaceId, room.roomId, {
-        view: 'summary',
-        size: 50,
-      });
-      setBeds(page.content.filter(b => b.status === 'AVAILABLE'));
+      const units = await loadUnitsOnFloor(
+        spaceId,
+        activeBuilding.buildingId,
+        activeBrowseFloor.floorId,
+      );
+      if (seq !== browseRequestSeq.current) {
+        return;
+      }
+      setApartmentUnits(units);
+      setSelectedApartmentUnit(units[0] ?? null);
+      setRoomGroups([]);
     } catch (err) {
-      setListError(getAccommodationErrorMessage(err, 'accommodation.errors.loadBeds'));
+      if (seq !== browseRequestSeq.current) {
+        return;
+      }
+      setBrowseError(getAccommodationErrorMessage(err, 'accommodation.errors.loadUnits'));
     } finally {
-      setListLoading(false);
+      if (seq === browseRequestSeq.current) {
+        setGroupsLoading(false);
+      }
     }
-  }, [room, spaceId]);
+  }, [activeBrowseFloor, activeBuilding, spaceId]);
+
+  const loadBrowseContent = useCallback(async () => {
+    if (!activeBuilding) {
+      return;
+    }
+    const seq = ++browseRequestSeq.current;
+    setGroupsLoading(true);
+    setBrowseError(null);
+    try {
+      if (browseUsesUnitsOnly(spaceType, activeBuilding)) {
+        const units = await loadAvailableUnitsForBuilding(spaceId, activeBuilding);
+        if (seq !== browseRequestSeq.current) {
+          return;
+        }
+        setBrowseUnits(units);
+        setRoomGroups([]);
+        setCoLivingUnits([]);
+        return;
+      }
+
+      if (browseUsesCoLivingUnits(spaceType, activeBuilding) && !coLivingUnit) {
+        const units = await loadCoLivingUnitsForBuilding(spaceId, activeBuilding);
+        if (seq !== browseRequestSeq.current) {
+          return;
+        }
+        setCoLivingUnits(units);
+        setCoLivingUnit(units[0] ?? null);
+        setRoomGroups([]);
+        setBrowseUnits([]);
+        return;
+      }
+
+      if (
+        browseUsesFloorTabs(spaceType, activeBuilding) &&
+        activeBrowseFloor &&
+        browseUsesApartmentUnitPicker(activeBuilding)
+      ) {
+        if (!selectedApartmentUnit) {
+          return;
+        }
+        const groups = await loadRoomBedGroupsForUnit(
+          spaceId,
+          activeBuilding,
+          {
+            unitId: selectedApartmentUnit.unitId,
+            unitName: selectedApartmentUnit.name,
+          },
+          {
+            floorId: activeBrowseFloor.floorId,
+            floorName: activeBrowseFloor.name,
+          },
+        );
+        if (seq !== browseRequestSeq.current) {
+          return;
+        }
+        setRoomGroups(groups);
+        setBrowseUnits([]);
+        setCoLivingUnits([]);
+        return;
+      }
+
+      if (browseUsesFloorTabs(spaceType, activeBuilding) && activeBrowseFloor) {
+        const groups = await loadRoomBedGroupsForFloor(
+          spaceId,
+          spaceType,
+          activeBuilding,
+          activeBrowseFloor,
+        );
+        if (seq !== browseRequestSeq.current) {
+          return;
+        }
+        setRoomGroups(groups);
+        setBrowseUnits([]);
+        setCoLivingUnits([]);
+        return;
+      }
+
+      if (browseUsesRoomGroups(spaceType, activeBuilding) && coLivingUnit) {
+        const groups = await loadRoomBedGroupsForUnit(
+          spaceId,
+          activeBuilding,
+          {
+            unitId: coLivingUnit.unitId,
+            unitName: coLivingUnit.name,
+          },
+        );
+        if (seq !== browseRequestSeq.current) {
+          return;
+        }
+        setRoomGroups(groups);
+        setBrowseUnits([]);
+        setCoLivingUnits([]);
+      }
+    } catch (err) {
+      if (seq !== browseRequestSeq.current) {
+        return;
+      }
+      setBrowseError(getAccommodationErrorMessage(err, 'occupancy.errors.search'));
+    } finally {
+      if (seq === browseRequestSeq.current) {
+        setGroupsLoading(false);
+      }
+    }
+  }, [activeBrowseFloor, activeBuilding, coLivingUnit, selectedApartmentUnit, spaceId, spaceType]);
 
   useEffect(() => {
-    if (isSearchMode) {
+    if (!visible || phase !== 'select' || isSearchMode || !activeBuilding) {
       return;
     }
-    if (step === 'floor') {
-      void loadFloors();
-    } else if (step === 'unit') {
-      void loadUnits();
-    } else if (step === 'room') {
-      void loadRooms();
-    } else if (step === 'bed') {
-      void loadBeds();
+    if (browseUsesFloorTabs(spaceType, activeBuilding)) {
+      void loadBrowseFloors();
+      return;
     }
-  }, [isSearchMode, loadBeds, loadFloors, loadRooms, loadUnits, step]);
+    void loadBrowseContent();
+  }, [activeBuilding, isSearchMode, loadBrowseContent, loadBrowseFloors, phase, spaceType, visible]);
 
-  function goBack() {
-    if (step === 'bed') {
-      setStep('room');
+  useEffect(() => {
+    if (!visible || phase !== 'select' || isSearchMode || !activeBuilding || !activeBrowseFloor) {
       return;
     }
-    if (step === 'room') {
-      if (unit) {
-        setStep('unit');
-        setRoom(null);
-      } else if (floor) {
-        setStep('floor');
-        setRoom(null);
+    if (!browseUsesFloorTabs(spaceType, activeBuilding)) {
+      return;
+    }
+    if (browseUsesApartmentUnitPicker(activeBuilding)) {
+      void loadApartmentUnits();
+      return;
+    }
+    void loadBrowseContent();
+  }, [
+    activeBrowseFloor,
+    activeBuilding,
+    isSearchMode,
+    loadApartmentUnits,
+    loadBrowseContent,
+    phase,
+    spaceType,
+    visible,
+  ]);
+
+  useEffect(() => {
+    if (
+      !visible ||
+      phase !== 'select' ||
+      isSearchMode ||
+      !activeBuilding ||
+      !activeBrowseFloor ||
+      !selectedApartmentUnit
+    ) {
+      return;
+    }
+    if (!browseUsesApartmentUnitPicker(activeBuilding)) {
+      return;
+    }
+    void loadBrowseContent();
+  }, [
+    activeBrowseFloor,
+    activeBuilding,
+    isSearchMode,
+    loadBrowseContent,
+    phase,
+    selectedApartmentUnit,
+    visible,
+  ]);
+
+  useEffect(() => {
+    if (!visible || phase !== 'select' || isSearchMode || !activeBuilding || !coLivingUnit) {
+      return;
+    }
+    if (!browseUsesCoLivingUnits(spaceType, activeBuilding)) {
+      return;
+    }
+    void loadBrowseContent();
+  }, [
+    activeBuilding,
+    coLivingUnit,
+    isSearchMode,
+    loadBrowseContent,
+    phase,
+    spaceType,
+    visible,
+  ]);
+
+  function buildExtras(): OccupancyPickerExtras {
+    const resolvedMoveInDate = mode === 'WALK_IN' ? todayIso : moveInDate.trim();
+    return {
+      moveInDate: resolvedMoveInDate || undefined,
+      expectedExitDate: expectedCheckoutDate.trim() || undefined,
+      expectedCheckoutDate: expectedCheckoutDate.trim() || undefined,
+      memberCategory: mode === 'RESERVE' ? memberCategory : undefined,
+      remarks: remarks.trim() || undefined,
+    };
+  }
+
+  function validateDetails(): boolean {
+    if (mode === 'RESERVE' && !moveInDate.trim()) {
+      setFormError(t('occupancy.errors.moveInDateRequired'));
+      return false;
+    }
+    setFormError(null);
+    return true;
+  }
+
+  function pickTarget(selection: OccupancyTargetSelection) {
+    setPendingSelection(selection);
+    if (mode === 'TRANSFER') {
+      setPhase('review');
+      return;
+    }
+    setPhase('details');
+  }
+
+  function handleContinueToReview() {
+    if (!validateDetails()) {
+      return;
+    }
+    setPhase('review');
+  }
+
+  function handleFinalConfirm() {
+    if (!pendingSelection || interactionLocked) {
+      return;
+    }
+    if (showDetailsPhase && !validateDetails()) {
+      setPhase('details');
+      return;
+    }
+    setSelecting(true);
+    onConfirm(pendingSelection, buildExtras());
+  }
+
+  function handleHeaderBack() {
+    if (phase === 'review') {
+      setPhase(mode === 'TRANSFER' ? 'select' : 'details');
+      return;
+    }
+    if (phase === 'details') {
+      if (skipSelectPhase) {
+        handleDismiss();
+        return;
       }
-      return;
-    }
-    if (step === 'unit') {
-      if (floor && profile?.showUnitsOnFloor) {
-        setStep('floor');
-        setUnit(null);
-      } else {
-        setStep('building');
-        setBuilding(null);
-        setUnit(null);
-      }
-      return;
-    }
-    if (step === 'floor') {
-      setStep('building');
-      setBuilding(null);
-      setFloor(null);
-      return;
-    }
-    if (step === 'building') {
-      if (allowedTypes.length > 1) {
-        setStep('targetType');
-      }
+      setPhase('select');
+      setPendingSelection(null);
       return;
     }
     handleDismiss();
   }
 
-  function handleHeaderBack() {
-    if (isRootStep()) {
-      handleDismiss();
-      return;
-    }
-    goBack();
-  }
-
-  function afterBuildingSelected(selected: BuildingResponse) {
-    setBuilding(selected);
-    const p = getAccommodationUiProfile(spaceType, selected.layoutMode);
-    if (!p) {
-      return;
-    }
-    if (targetType === 'UNIT') {
-      setStep('unit');
-      return;
-    }
-    if (targetType === 'ROOM' || targetType === 'BED') {
-      if (p.showFloors && !p.showUnits) {
-        setStep('floor');
-      } else if (p.showUnits) {
-        setStep(p.showUnitsOnFloor ? 'floor' : 'unit');
-      }
-    }
-  }
-
-  function afterFloorSelected(selected: FloorListItemResponse) {
-    setFloor(selected);
-    if (profile?.showUnitsOnFloor) {
-      setStep('unit');
-    } else {
-      setStep('room');
-    }
-  }
-
-  function afterUnitSelected(selected: UnitListItemResponse) {
-    setUnit(selected);
-    if (targetType === 'UNIT') {
-      return;
-    }
-    setStep('room');
-  }
-
-  function afterRoomSelected(selected: RoomListItemResponse) {
-    setRoom(selected);
-    if (targetType === 'BED') {
-      setStep('bed');
-    }
-  }
-
-  function confirmSelection(
-    selection: OccupancyTargetSelection,
-    extras?: { expectedCheckoutDate?: string; remarks?: string },
-  ) {
-    if (interactionLocked) {
-      return;
-    }
-    setSelecting(true);
-    onConfirm(selection, extras);
-  }
-
-  function handleSelectBed(selected: BedListItemResponse) {
-    if (!building) {
-      return;
-    }
-    confirmSelection(
-      {
-        targetType: 'BED',
-        buildingId: building.buildingId,
-        buildingName: building.name,
-        floorId: floor?.floorId,
-        floorName: floor?.name,
-        unitId: unit?.unitId,
-        unitName: unit?.name,
-        roomId: room?.roomId,
-        roomName: room?.name,
-        bedId: selected.bedId,
-        bedName: selected.label,
-      },
-      {
-        expectedCheckoutDate: expectedCheckoutDate.trim() || undefined,
-        remarks: remarks.trim() || undefined,
-      },
-    );
-  }
-
-  function handleSelectRoom(selected: RoomListItemResponse) {
-    if (!building || targetType !== 'ROOM') {
-      return;
-    }
-    confirmSelection(
-      {
-        targetType: 'ROOM',
-        buildingId: building.buildingId,
-        buildingName: building.name,
-        floorId: floor?.floorId,
-        floorName: floor?.name,
-        unitId: unit?.unitId,
-        unitName: unit?.name,
-        roomId: selected.roomId,
-        roomName: selected.name,
-      },
-      {
-        expectedCheckoutDate: expectedCheckoutDate.trim() || undefined,
-        remarks: remarks.trim() || undefined,
-      },
-    );
-  }
-
-  function handleSelectUnit(selected: UnitListItemResponse) {
-    if (!building || targetType !== 'UNIT') {
-      return;
-    }
-    if (selected.status !== 'AVAILABLE') {
-      return;
-    }
-    confirmSelection(
-      {
-        targetType: 'UNIT',
-        buildingId: building.buildingId,
-        buildingName: building.name,
-        unitId: selected.unitId,
-        unitName: selected.name,
-      },
-      {
-        expectedCheckoutDate: expectedCheckoutDate.trim() || undefined,
-        remarks: remarks.trim() || undefined,
-      },
-    );
-  }
-
-  function handleSearchResultPress(result: OccupancySearchResult) {
-    confirmSelection(searchResultToSelection(result), {
-      expectedCheckoutDate: expectedCheckoutDate.trim() || undefined,
-      remarks: remarks.trim() || undefined,
-    });
-  }
-
-  const stepTitle = useMemo(() => {
-    if (isSearchMode) {
-      return t('occupancy.picker.searchResults');
-    }
-    switch (step) {
-      case 'targetType':
-        return t('occupancy.picker.targetType');
-      case 'building':
-        return t('occupancy.picker.building');
-      case 'floor':
-        return t('occupancy.picker.floor');
-      case 'unit':
-        return t('occupancy.picker.unit');
-      case 'room':
-        return t('occupancy.picker.room');
-      case 'bed':
-        return t('occupancy.picker.bed');
+  const phaseTitle = useMemo(() => {
+    switch (phase) {
+      case 'select':
+        return isSearchMode
+          ? t('occupancy.picker.searchResults')
+          : t('occupancy.picker.chooseAccommodation');
+      case 'details':
+        return mode === 'RESERVE'
+          ? t('occupancy.picker.reservationDetails')
+          : t('occupancy.picker.allocationDetails');
+      case 'review':
+        return t('occupancy.picker.reviewTitle');
       default:
         return title;
     }
-  }, [isSearchMode, step, t, title]);
+  }, [isSearchMode, mode, phase, t, title]);
 
-  const showExtrasOnRoom =
-    showCheckoutDate && step === 'room' && targetType === 'ROOM';
+  const showSearchEmptyBrowseHint =
+    isSearchMode && !searchLoading && searchResults.length === 0 && searchQuery.trim().length > 0;
 
-  const availableUnits = units.filter(u => u.status === 'AVAILABLE');
-  const activeError = searchError ?? listError;
-  const showHierarchyLoader = !isSearchMode && listLoading;
-  const showSearchLoader = isSearchMode && searchLoading;
+  const showBrowseSection =
+    phase === 'select' &&
+    !skipSelectPhase &&
+    (!isSearchMode || showSearchEmptyBrowseHint) &&
+    !(isSearchMode && searchResults.length > 0);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleDismiss}>
@@ -567,236 +638,450 @@ export function OccupancyTargetPickerModal({
           <View style={styles.header}>
             <Pressable onPress={handleHeaderBack} hitSlop={8} disabled={interactionLocked}>
               <Text style={styles.backText}>
-                {isRootStep() ? t('common.cancel') : '‹ ' + t('common.back')}
+                {phase === 'select' ? t('common.cancel') : t('common.back')}
               </Text>
             </Pressable>
             <Text style={styles.title}>{title}</Text>
-            <Text style={styles.stepLabel}>{stepTitle}</Text>
+            <Text style={styles.stepLabel}>{phaseTitle}</Text>
           </View>
 
-          <View style={styles.searchWrap}>
-            <AccommodationSearchBar
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder={t('occupancy.picker.searchPlaceholder')}
-            />
-          </View>
+          <ScrollView
+            style={styles.body}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}>
+            {phase === 'select' ? (
+              <>
+                <View style={styles.searchWrap}>
+                  <AccommodationSearchBar
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    placeholder={t('occupancy.picker.searchPlaceholder')}
+                  />
+                </View>
 
-          {activeError ? <Text style={styles.errorText}>{activeError}</Text> : null}
+                {searchError ? <Text style={styles.errorText}>{searchError}</Text> : null}
+                {browseError ? <Text style={styles.errorText}>{browseError}</Text> : null}
 
-          {showSearchLoader || showHierarchyLoader ? (
-            <ActivityIndicator color={colors.primary} style={styles.loader} />
-          ) : null}
+                {isSearchMode ? (
+                  <>
+                    {searchLoading ? (
+                      <ActivityIndicator color={colors.primary} style={styles.loader} />
+                    ) : (
+                      <>
+                        {searchResults.length > 0 ? (
+                          <View style={styles.section}>
+                            {searchResults.map(result => (
+                              <Pressable
+                                key={result.key}
+                                style={[styles.row, interactionLocked && styles.rowDisabled]}
+                                onPress={() => pickTarget(searchResultToSelection(result))}
+                                disabled={interactionLocked}>
+                                <View style={styles.rowBody}>
+                                  <Text style={styles.rowTitle}>
+                                    {formatOccupancySearchResultTitle(result, t)}
+                                  </Text>
+                                  <Text style={styles.rowSub}>
+                                    {formatOccupancySearchResultSubtitle(result)}
+                                  </Text>
+                                </View>
+                                <Text style={styles.pickMark}>›</Text>
+                              </Pressable>
+                            ))}
+                          </View>
+                        ) : showSearchEmptyBrowseHint ? (
+                          <Text style={styles.empty}>{t('occupancy.picker.searchEmpty')}</Text>
+                        ) : null}
+                      </>
+                    )}
+                  </>
+                ) : null}
 
-          {isSearchMode && !showSearchLoader ? (
-            <FlatList
-              data={searchResults}
-              keyExtractor={item => item.key}
-              style={styles.list}
-              keyboardShouldPersistTaps="handled"
-              renderItem={({ item }) => (
-                <SearchResultRow
-                  result={item}
-                  disabled={interactionLocked}
-                  onPress={() => handleSearchResultPress(item)}
+                {showBrowseSection ? (
+                  <>
+                    {showSearchEmptyBrowseHint ? (
+                      <Text style={styles.browseDivider}>{t('occupancy.picker.browseManually')}</Text>
+                    ) : !isSearchMode ? (
+                      <Text style={styles.browseDivider}>{t('occupancy.picker.browseAvailable')}</Text>
+                    ) : null}
+
+                    {buildings.length > 1 ? (
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.buildingTabs}>
+                        {buildings.map(building => (
+                          <Pressable
+                            key={building.buildingId}
+                            style={[
+                              styles.buildingTab,
+                              activeBuilding?.buildingId === building.buildingId &&
+                                styles.buildingTabActive,
+                            ]}
+                            onPress={() => {
+                              browseRequestSeq.current += 1;
+                              setActiveBuilding(building);
+                              setCoLivingUnit(null);
+                              setBrowseFloors([]);
+                              setActiveBrowseFloor(null);
+                              setApartmentUnits([]);
+                              setSelectedApartmentUnit(null);
+                              setRoomGroups([]);
+                            }}>
+                            <Text
+                              style={[
+                                styles.buildingTabText,
+                                activeBuilding?.buildingId === building.buildingId &&
+                                  styles.buildingTabTextActive,
+                              ]}>
+                              {building.name}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </ScrollView>
+                    ) : null}
+
+                    {browseFloors.length > 0 &&
+                    activeBuilding &&
+                    browseUsesFloorTabs(spaceType, activeBuilding) ? (
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.buildingTabs}>
+                        {browseFloors.map(floor => (
+                          <Pressable
+                            key={floor.floorId}
+                            style={[
+                              styles.buildingTab,
+                              activeBrowseFloor?.floorId === floor.floorId && styles.buildingTabActive,
+                            ]}
+                            onPress={() => {
+                              browseRequestSeq.current += 1;
+                              setActiveBrowseFloor(floor);
+                              setApartmentUnits([]);
+                              setSelectedApartmentUnit(null);
+                              setRoomGroups([]);
+                            }}>
+                            <Text
+                              style={[
+                                styles.buildingTabText,
+                                activeBrowseFloor?.floorId === floor.floorId &&
+                                  styles.buildingTabTextActive,
+                              ]}>
+                              {floor.name}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </ScrollView>
+                    ) : null}
+
+                    {apartmentUnits.length > 0 &&
+                    activeBuilding &&
+                    browseUsesApartmentUnitPicker(activeBuilding) &&
+                    activeBrowseFloor ? (
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.buildingTabs}>
+                        {apartmentUnits.map(unit => (
+                          <Pressable
+                            key={unit.unitId}
+                            style={[
+                              styles.buildingTab,
+                              selectedApartmentUnit?.unitId === unit.unitId &&
+                                styles.buildingTabActive,
+                            ]}
+                            onPress={() => {
+                              browseRequestSeq.current += 1;
+                              setSelectedApartmentUnit(unit);
+                              setRoomGroups([]);
+                            }}>
+                            <Text
+                              style={[
+                                styles.buildingTabText,
+                                selectedApartmentUnit?.unitId === unit.unitId &&
+                                  styles.buildingTabTextActive,
+                              ]}>
+                              {unit.name}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </ScrollView>
+                    ) : null}
+
+                    {coLivingUnits.length > 0 &&
+                    activeBuilding &&
+                    browseUsesCoLivingUnits(spaceType, activeBuilding) ? (
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.buildingTabs}>
+                        {coLivingUnits.map(unit => (
+                          <Pressable
+                            key={unit.unitId}
+                            style={[
+                              styles.buildingTab,
+                              coLivingUnit?.unitId === unit.unitId && styles.buildingTabActive,
+                            ]}
+                            onPress={() => {
+                              browseRequestSeq.current += 1;
+                              setCoLivingUnit(unit);
+                              setRoomGroups([]);
+                            }}>
+                            <Text
+                              style={[
+                                styles.buildingTabText,
+                                coLivingUnit?.unitId === unit.unitId && styles.buildingTabTextActive,
+                              ]}>
+                              {unit.name}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </ScrollView>
+                    ) : null}
+
+                    {groupsLoading ? (
+                      <ActivityIndicator color={colors.primary} style={styles.loader} />
+                    ) : null}
+
+                    {!groupsLoading &&
+                    activeBuilding &&
+                    browseUsesApartmentUnitPicker(activeBuilding) &&
+                    activeBrowseFloor &&
+                    apartmentUnits.length === 0 ? (
+                      <Text style={styles.empty}>{t('occupancy.picker.noAvailable')}</Text>
+                    ) : null}
+
+                    {!groupsLoading && activeBuilding && browseUsesUnitsOnly(spaceType, activeBuilding) ? (
+                      <View style={styles.section}>
+                        {browseUnits.map(unit => (
+                          <Pressable
+                            key={unit.unitId}
+                            style={styles.row}
+                            onPress={() => pickTarget(unit.selection)}>
+                            <View style={styles.rowBody}>
+                              <Text style={styles.rowTitle}>{unit.unitName}</Text>
+                              <AccommodationStatusBadge status={unit.status} />
+                            </View>
+                            <Text style={styles.pickMark}>›</Text>
+                          </Pressable>
+                        ))}
+                        {browseUnits.length === 0 ? (
+                          <Text style={styles.empty}>{t('occupancy.picker.noAvailable')}</Text>
+                        ) : null}
+                      </View>
+                    ) : null}
+
+                    {!groupsLoading &&
+                    activeBuilding &&
+                    browseUsesRoomGroups(spaceType, activeBuilding) &&
+                    (!browseUsesCoLivingUnits(spaceType, activeBuilding) || coLivingUnit) &&
+                    (!browseUsesFloorTabs(spaceType, activeBuilding) ||
+                      activeBrowseFloor) &&
+                    (!browseUsesApartmentUnitPicker(activeBuilding) ||
+                      selectedApartmentUnit) ? (
+                      <View style={styles.section}>
+                        {roomGroups.map(group => (
+                          <View key={group.key} style={styles.roomGroup}>
+                            <View style={styles.roomGroupHeader}>
+                              <Text style={styles.roomGroupTitle}>{group.roomName}</Text>
+                              <Text style={styles.roomGroupMeta}>
+                                {t('occupancy.picker.roomAvailability', {
+                                  type: t(`accommodation.roomType.${group.roomType}`),
+                                  available: group.availableCount,
+                                  capacity: group.bedCount,
+                                })}
+                              </Text>
+                              {[group.floorName, group.unitName].filter(Boolean).length > 0 ? (
+                                <Text style={styles.roomGroupContext}>
+                                  {[group.floorName, group.unitName].filter(Boolean).join(' · ')}
+                                </Text>
+                              ) : null}
+                            </View>
+                            <View style={styles.bedChipRow}>
+                              {group.beds.map(bed => (
+                                <Pressable
+                                  key={bed.bedId}
+                                  style={styles.bedChip}
+                                  onPress={() => pickTarget(bed.selection)}
+                                  disabled={interactionLocked}>
+                                  <Text style={styles.bedChipText}>
+                                    {t('accommodation.beds.bedNumber', { value: bed.label })}
+                                  </Text>
+                                </Pressable>
+                              ))}
+                            </View>
+                          </View>
+                        ))}
+                        {roomGroups.length === 0 ? (
+                          <Text style={styles.empty}>{t('occupancy.picker.noAvailable')}</Text>
+                        ) : null}
+                      </View>
+                    ) : null}
+
+                    {!groupsLoading && !activeBuilding && buildings.length > 1 ? (
+                      <Text style={styles.empty}>{t('occupancy.picker.selectBuilding')}</Text>
+                    ) : null}
+                  </>
+                ) : null}
+              </>
+            ) : null}
+
+            {phase === 'details' && pendingSelection ? (
+              <View style={styles.section}>
+                <SelectionSummaryCard
+                  selection={pendingSelection}
+                  label={t('occupancy.picker.selectedAccommodation')}
                 />
-              )}
-              ListEmptyComponent={
-                <Text style={styles.empty}>{t('occupancy.picker.searchEmpty')}</Text>
-              }
-            />
-          ) : null}
 
-          {!isSearchMode && step === 'targetType' ? (
-            <View style={styles.typeRow}>
-              {allowedTypes.map(type => (
+                {mode === 'RESERVE' ? (
+                  <FormInput
+                    label={t('occupancy.section.moveInDate')}
+                    value={moveInDate}
+                    onChangeText={setMoveInDate}
+                    placeholder="YYYY-MM-DD"
+                  />
+                ) : (
+                  <View style={styles.readonlyField}>
+                    <Text style={styles.readonlyLabel}>{t('occupancy.section.moveInDate')}</Text>
+                    <Text style={styles.readonlyValue}>
+                      {formatOccupancyAllocatedDate(todayIso)} ({t('occupancy.picker.today')})
+                    </Text>
+                  </View>
+                )}
+
+                {(showCheckoutDate || mode === 'RESERVE' || mode === 'WALK_IN') ? (
+                  <FormInput
+                    label={t('occupancy.fields.expectedExit')}
+                    value={expectedCheckoutDate}
+                    onChangeText={setExpectedCheckoutDate}
+                    placeholder="YYYY-MM-DD"
+                  />
+                ) : null}
+
+                {mode === 'RESERVE' ? (
+                  <>
+                    <Text style={styles.categoryLabel}>{t('occupancy.fields.memberCategory')}</Text>
+                    <View style={styles.categoryRow}>
+                      {MEMBER_CATEGORIES.map(category => (
+                        <Pressable
+                          key={category}
+                          style={[
+                            styles.categoryChip,
+                            memberCategory === category && styles.categoryChipSelected,
+                          ]}
+                          onPress={() =>
+                            setMemberCategory(memberCategory === category ? undefined : category)
+                          }>
+                          <Text
+                            style={[
+                              styles.categoryChipText,
+                              memberCategory === category && styles.categoryChipTextSelected,
+                            ]}>
+                            {t(`occupancy.memberCategory.${category}`)}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </>
+                ) : null}
+
+                <FormInput
+                  label={t('occupancy.fields.remarks')}
+                  value={remarks}
+                  onChangeText={setRemarks}
+                  placeholder={t('occupancy.fields.remarksPlaceholder')}
+                />
+
+                {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
+
                 <Button
-                  key={type}
-                  label={t(`occupancy.targetType.${type}`)}
-                  variant={targetType === type ? 'primary' : 'secondary'}
-                  onPress={() => {
-                    setTargetType(type);
-                    setStep('building');
-                  }}
+                  label={t('occupancy.picker.continueToReview')}
+                  onPress={handleContinueToReview}
                   disabled={interactionLocked}
-                  style={styles.typeButton}
+                  style={styles.footerButton}
                 />
-              ))}
-            </View>
-          ) : null}
+              </View>
+            ) : null}
 
-          {!isSearchMode && step === 'building' && !showHierarchyLoader ? (
-            <FlatList
-              data={buildings}
-              keyExtractor={item => item.buildingId}
-              style={styles.list}
-              renderItem={({ item }) => (
-                <Pressable
-                  style={[styles.row, interactionLocked && styles.rowDisabled]}
-                  onPress={() => afterBuildingSelected(item)}
-                  disabled={interactionLocked}>
-                  <Text style={styles.rowTitle}>{item.name}</Text>
-                  <Text style={styles.chevron}>›</Text>
-                </Pressable>
-              )}
-              ListEmptyComponent={
-                <Text style={styles.empty}>{t('accommodation.buildings.emptyTitle')}</Text>
-              }
-            />
-          ) : null}
+            {phase === 'review' && pendingSelection ? (
+              <View style={styles.section}>
+                {memberName ? (
+                  <Card style={styles.summaryCard}>
+                    <Text style={styles.summaryLabel}>{t('occupancy.picker.member')}</Text>
+                    <Text style={styles.summaryPrimary}>{memberName}</Text>
+                  </Card>
+                ) : null}
 
-          {!isSearchMode && step === 'floor' && !showHierarchyLoader ? (
-            <FlatList
-              data={floors}
-              keyExtractor={item => item.floorId}
-              style={styles.list}
-              renderItem={({ item }) => (
-                <Pressable
-                  style={[styles.row, interactionLocked && styles.rowDisabled]}
-                  onPress={() => afterFloorSelected(item)}
-                  disabled={interactionLocked}>
-                  <Text style={styles.rowTitle}>{item.name}</Text>
-                  <Text style={styles.chevron}>›</Text>
-                </Pressable>
-              )}
-            />
-          ) : null}
+                <SelectionSummaryCard
+                  selection={pendingSelection}
+                  label={t('occupancy.picker.selectedAccommodation')}
+                />
 
-          {!isSearchMode && step === 'unit' && !showHierarchyLoader ? (
-            <>
-              {showCheckoutDate && targetType === 'UNIT' ? (
-                <View style={styles.extras}>
-                  <FormInput
-                    label={t('occupancy.fields.expectedCheckout')}
-                    value={expectedCheckoutDate}
-                    onChangeText={setExpectedCheckoutDate}
-                    placeholder="YYYY-MM-DD"
-                  />
-                  <FormInput
-                    label={t('occupancy.fields.remarks')}
-                    value={remarks}
-                    onChangeText={setRemarks}
-                    placeholder={t('occupancy.fields.remarksPlaceholder')}
-                  />
-                </View>
-              ) : null}
-              <FlatList
-                data={availableUnits}
-                keyExtractor={item => item.unitId}
-                style={styles.list}
-                renderItem={({ item }) => (
-                  <Pressable
-                    style={[styles.row, interactionLocked && styles.rowDisabled]}
-                    onPress={() =>
-                      targetType === 'UNIT' ? handleSelectUnit(item) : afterUnitSelected(item)
-                    }
-                    disabled={interactionLocked}>
-                    <View style={styles.rowBody}>
-                      <Text style={styles.rowTitle}>{item.name}</Text>
-                      <AccommodationStatusBadge status={item.status} />
-                    </View>
-                    <Text style={styles.chevron}>{targetType === 'UNIT' ? '✓' : '›'}</Text>
-                  </Pressable>
-                )}
-                ListEmptyComponent={
-                  <Text style={styles.empty}>{t('occupancy.picker.noAvailable')}</Text>
-                }
-              />
-            </>
-          ) : null}
-
-          {!isSearchMode && step === 'room' && !showHierarchyLoader ? (
-            <>
-              {showExtrasOnRoom ? (
-                <View style={styles.extras}>
-                  <FormInput
-                    label={t('occupancy.fields.expectedCheckout')}
-                    value={expectedCheckoutDate}
-                    onChangeText={setExpectedCheckoutDate}
-                    placeholder="YYYY-MM-DD"
-                  />
-                  <FormInput
-                    label={t('occupancy.fields.remarks')}
-                    value={remarks}
-                    onChangeText={setRemarks}
-                    placeholder={t('occupancy.fields.remarksPlaceholder')}
-                  />
-                </View>
-              ) : null}
-              <FlatList
-                data={rooms}
-                keyExtractor={item => item.roomId}
-                style={styles.list}
-                renderItem={({ item }) => (
-                  <Pressable
-                    style={[styles.row, interactionLocked && styles.rowDisabled]}
-                    onPress={() =>
-                      targetType === 'ROOM' ? handleSelectRoom(item) : afterRoomSelected(item)
-                    }
-                    disabled={interactionLocked}>
-                    <View style={styles.rowBody}>
-                      <Text style={styles.rowTitle}>{item.name}</Text>
-                      <Text style={styles.rowSub}>
-                        {t('accommodation.listItem.room', {
-                          type: t(`accommodation.roomType.${item.roomType}`),
-                          bedCount: item.bedCount,
-                          availableBeds: item.availableBeds,
-                          occupiedBeds: item.occupiedBeds,
-                        })}
+                {showDetailsPhase ? (
+                  <Card style={styles.reviewFacts}>
+                    {mode === 'RESERVE' ? (
+                      <Text style={styles.reviewLine}>
+                        {t('occupancy.section.moveInDate')}: {formatOccupancyAllocatedDate(moveInDate)}
                       </Text>
-                    </View>
-                    <Text style={styles.chevron}>{targetType === 'ROOM' ? '✓' : '›'}</Text>
-                  </Pressable>
-                )}
-                ListEmptyComponent={
-                  <Text style={styles.empty}>{t('occupancy.picker.noAvailable')}</Text>
-                }
-              />
-            </>
-          ) : null}
-
-          {!isSearchMode && step === 'bed' && !showHierarchyLoader ? (
-            <>
-              {showCheckoutDate ? (
-                <View style={styles.extras}>
-                  <FormInput
-                    label={t('occupancy.fields.expectedCheckout')}
-                    value={expectedCheckoutDate}
-                    onChangeText={setExpectedCheckoutDate}
-                    placeholder="YYYY-MM-DD"
-                  />
+                    ) : (
+                      <Text style={styles.reviewLine}>
+                        {t('occupancy.section.moveInDate')}: {formatOccupancyAllocatedDate(todayIso)} ({t('occupancy.picker.today')})
+                      </Text>
+                    )}
+                    {expectedCheckoutDate ? (
+                      <Text style={styles.reviewLine}>
+                        {t('occupancy.fields.expectedExit')}: {formatOccupancyAllocatedDate(expectedCheckoutDate)}
+                      </Text>
+                    ) : null}
+                    {memberCategory ? (
+                      <Text style={styles.reviewLine}>
+                        {t('occupancy.fields.memberCategory')}: {t(`occupancy.memberCategory.${memberCategory}`)}
+                      </Text>
+                    ) : null}
+                    {remarks ? (
+                      <Text style={styles.reviewLine}>
+                        {t('occupancy.fields.remarks')}: {remarks}
+                      </Text>
+                    ) : null}
+                  </Card>
+                ) : (
                   <FormInput
                     label={t('occupancy.fields.remarks')}
                     value={remarks}
                     onChangeText={setRemarks}
                     placeholder={t('occupancy.fields.remarksPlaceholder')}
                   />
-                </View>
-              ) : null}
-              <FlatList
-                data={beds}
-                keyExtractor={item => item.bedId}
-                style={styles.list}
-                renderItem={({ item }) => (
-                  <Pressable
-                    style={[styles.row, interactionLocked && styles.rowDisabled]}
-                    onPress={() => handleSelectBed(item)}
-                    disabled={interactionLocked}>
-                    <View style={styles.rowBody}>
-                      <Text style={styles.rowTitle}>
-                        {t('accommodation.beds.bedNumber', { value: item.label })}
-                      </Text>
-                      <AccommodationStatusBadge status={item.status} />
-                    </View>
-                    <Text style={styles.chevron}>✓</Text>
-                  </Pressable>
                 )}
-                ListEmptyComponent={
-                  <Text style={styles.empty}>{t('occupancy.picker.noAvailable')}</Text>
-                }
-              />
-            </>
-          ) : null}
+
+                <ComingSoonSection
+                  title={t('occupancy.picker.financialTerms')}
+                  items={[
+                    t('occupancy.picker.rent'),
+                    t('occupancy.picker.deposit'),
+                    t('occupancy.picker.foodCharges'),
+                  ]}
+                />
+                <ComingSoonSection title={t('occupancy.picker.amenities')} />
+                <ComingSoonSection title={t('occupancy.picker.policies')} />
+
+                {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
+
+                <Button
+                  label={
+                    mode === 'RESERVE'
+                      ? t('occupancy.picker.confirmReserve')
+                      : mode === 'WALK_IN'
+                        ? t('occupancy.picker.confirmAllocate')
+                        : t('occupancy.picker.confirmTransfer')
+                  }
+                  onPress={handleFinalConfirm}
+                  loading={loading || selecting}
+                  disabled={interactionLocked}
+                  style={styles.footerButton}
+                />
+              </View>
+            ) : null}
+          </ScrollView>
 
           {loading || selecting ? (
             <View style={styles.savingOverlay}>
@@ -821,7 +1106,6 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radius.card,
     maxHeight: '92%',
     minHeight: '55%',
-    paddingBottom: spacing.xl,
     ...shadows.md,
   },
   header: {
@@ -843,22 +1127,57 @@ const styles = StyleSheet.create({
     color: colors.muted,
     marginTop: spacing.xs,
   },
+  body: {
+    flexGrow: 1,
+  },
   searchWrap: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
   },
-  typeRow: {
-    padding: spacing.xl,
+  browseDivider: {
+    ...typography.caption,
+    color: colors.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+  },
+  buildingTabs: {
+    paddingHorizontal: spacing.xl,
     gap: spacing.sm,
+    paddingBottom: spacing.md,
   },
-  typeButton: {
-    width: '100%',
+  buildingTab: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  buildingTabActive: {
+    borderColor: colors.primary,
+    backgroundColor: `${colors.primary}14`,
+  },
+  buildingTabText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  buildingTabTextActive: {
+    color: colors.primaryDark,
+    fontWeight: '600',
+  },
+  section: {
+    paddingBottom: spacing.xl,
+  },
+  sectionHeading: {
+    ...typography.bodyStrong,
+    paddingHorizontal: spacing.xl,
+    marginBottom: spacing.sm,
   },
   loader: {
     marginVertical: spacing.lg,
-  },
-  list: {
-    flexGrow: 1,
   },
   row: {
     flexDirection: 'row',
@@ -882,7 +1201,7 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.muted,
   },
-  chevron: {
+  pickMark: {
     fontSize: 20,
     color: colors.muted,
   },
@@ -892,15 +1211,156 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     padding: spacing.xl,
   },
+  roomGroup: {
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  roomGroupHeader: {
+    marginBottom: spacing.sm,
+    gap: 2,
+  },
+  roomGroupTitle: {
+    ...typography.bodyStrong,
+  },
+  roomGroupMeta: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  roomGroupContext: {
+    ...typography.caption,
+    color: colors.muted,
+  },
+  bedChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  bedChip: {
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: `${colors.primary}14`,
+    borderRadius: radius.input,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  bedChipText: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    fontWeight: '600',
+  },
+  coLivingBack: {
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.sm,
+  },
+  coLivingBackText: {
+    ...typography.caption,
+    color: colors.primary,
+  },
+  summaryCard: {
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.md,
+    gap: spacing.xs,
+  },
+  summaryLabel: {
+    ...typography.caption,
+    color: colors.muted,
+    textTransform: 'uppercase',
+  },
+  summaryPrimary: {
+    ...typography.bodyStrong,
+  },
+  summaryLine: {
+    ...typography.body,
+    color: colors.textSecondary,
+  },
+  summaryMeta: {
+    ...typography.caption,
+    color: colors.muted,
+  },
+  readonlyField: {
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.md,
+  },
+  readonlyLabel: {
+    ...typography.caption,
+    color: colors.muted,
+    marginBottom: spacing.xs,
+  },
+  readonlyValue: {
+    ...typography.bodyStrong,
+  },
+  categoryLabel: {
+    ...typography.caption,
+    color: colors.muted,
+    marginBottom: spacing.xs,
+    paddingHorizontal: spacing.xl,
+  },
+  categoryRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.xl,
+  },
+  categoryChip: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.input,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  categoryChipSelected: {
+    borderColor: colors.primary,
+    backgroundColor: `${colors.primary}14`,
+  },
+  categoryChipText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  categoryChipTextSelected: {
+    color: colors.primaryDark,
+    fontWeight: '600',
+  },
+  reviewFacts: {
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.md,
+    gap: spacing.xs,
+  },
+  reviewLine: {
+    ...typography.body,
+  },
+  comingSoonBlock: {
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.input,
+    backgroundColor: colors.background,
+    gap: spacing.xs,
+  },
+  comingSoonTitle: {
+    ...typography.bodyStrong,
+  },
+  comingSoonItem: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  comingSoonHint: {
+    ...typography.caption,
+    color: colors.muted,
+    marginTop: spacing.xs,
+  },
+  footerButton: {
+    marginHorizontal: spacing.xl,
+    marginTop: spacing.md,
+    width: 'auto',
+  },
   errorText: {
     ...typography.caption,
     color: '#DC2626',
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.sm,
-  },
-  extras: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
   },
   savingOverlay: {
     ...StyleSheet.absoluteFill,

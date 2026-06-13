@@ -15,7 +15,7 @@ import {
   formatAccommodationDate,
 } from '../../components/accommodation';
 import { Button, Card, HeaderBackButton, Screen, SkeletonCard } from '../../components/ui';
-import { AccommodationOccupantSection } from '../../components/occupancy';
+import { AccommodationOccupantSection, AccommodationOccupancyActions } from '../../components/occupancy';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useTargetOccupancy } from '../../hooks/useTargetOccupancy';
 import {
@@ -30,7 +30,8 @@ import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
 import { spacing, typography } from '../../theme';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
-import { canViewSpaceOccupancies } from '../../utils/occupancyPermissions';
+import { canManageOccupancy, canViewSpaceOccupancies } from '../../utils/occupancyPermissions';
+import { buildRoomOccupancyTarget, isOccupancyTargetSupported } from '../../utils/buildOccupancyTarget';
 import { useAccommodationUiProfile } from '../../hooks/useAccommodationUiProfile';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'RoomDetail'>;
@@ -68,6 +69,10 @@ export function RoomDetailScreen() {
   const showsOccupant =
     room?.status === 'OCCUPIED' || room?.status === 'RESERVED';
   const canViewOccupant = canViewSpaceOccupancies(currentRole);
+  const canManageOccupancyActions = canManageOccupancy(currentRole);
+  const supportsRoomOccupancy = Boolean(
+    spaceType && isOccupancyTargetSupported(spaceType, 'ROOM'),
+  );
   const {
     occupancy,
     loading: occupancyLoading,
@@ -76,8 +81,22 @@ export function RoomDetailScreen() {
   } = useTargetOccupancy(
     spaceId,
     { roomId },
-    { enabled: showsOccupant && canViewOccupant },
+    { enabled: showsOccupant && (canViewOccupant || canManageOccupancyActions) },
   );
+
+  const occupancyTarget = useMemo(() => {
+    if (!room || !supportsRoomOccupancy) {
+      return null;
+    }
+    return buildRoomOccupancyTarget({
+      buildingId: room.buildingId ?? buildingId,
+      buildingName: '',
+      floorId: room.floorId ?? floorId ?? undefined,
+      unitId: room.unitId ?? unitId ?? undefined,
+      roomId: room.roomId,
+      roomName: room.name,
+    });
+  }, [buildingId, floorId, room, supportsRoomOccupancy, unitId]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -153,6 +172,20 @@ export function RoomDetailScreen() {
               occupancy={occupancy}
               loading={occupancyLoading}
               error={occupancyError}
+            />
+          ) : null}
+
+          {room && spaceType && occupancyTarget && canManageOccupancyActions ? (
+            <AccommodationOccupancyActions
+              spaceId={spaceId}
+              spaceType={spaceType}
+              accommodationStatus={room.status}
+              target={occupancyTarget}
+              occupancy={occupancy}
+              onSuccess={() => {
+                void loadRoom();
+                void refreshOccupancy();
+              }}
             />
           ) : null}
 

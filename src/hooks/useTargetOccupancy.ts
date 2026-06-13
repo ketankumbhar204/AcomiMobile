@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { occupancyApi } from '../api/occupancyApi';
-import type { OccupancyResponse, UUID } from '../api/types';
+import type { OccupancyResponse, OccupancyStatus, UUID } from '../api/types';
 import { getOccupancyErrorMessage } from '../utils/occupancyErrors';
 import {
   getOccupancyInvalidationGeneration,
@@ -13,6 +13,21 @@ export type TargetOccupancyFilter = {
   roomId?: UUID;
   unitId?: UUID;
 };
+
+async function fetchOccupancyForTarget(
+  spaceId: UUID,
+  target: TargetOccupancyFilter,
+  status: OccupancyStatus,
+): Promise<OccupancyResponse | null> {
+  const page = await occupancyApi.listOccupancies(spaceId, {
+    status,
+    bedId: target.bedId,
+    roomId: target.roomId,
+    unitId: target.unitId,
+    size: 1,
+  });
+  return page.content[0] ?? null;
+}
 
 export function useTargetOccupancy(
   spaceId: UUID | null,
@@ -29,6 +44,14 @@ export function useTargetOccupancy(
   );
 
   const targetKey = target.bedId ?? target.roomId ?? target.unitId ?? '';
+  const targetFilter = useMemo(
+    () => ({
+      bedId: target.bedId,
+      roomId: target.roomId,
+      unitId: target.unitId,
+    }),
+    [target.bedId, target.roomId, target.unitId],
+  );
 
   useEffect(() => {
     return subscribeOccupancyInvalidation(() => {
@@ -37,7 +60,9 @@ export function useTargetOccupancy(
   }, []);
 
   const refresh = useCallback(async () => {
-    const hasTarget = Boolean(target.bedId || target.roomId || target.unitId);
+    const hasTarget = Boolean(
+      targetFilter.bedId || targetFilter.roomId || targetFilter.unitId,
+    );
     if (!spaceId || !hasTarget || !enabled) {
       setOccupancy(null);
       return null;
@@ -48,19 +73,21 @@ export function useTargetOccupancy(
     setError(null);
 
     try {
-      const page = await occupancyApi.listOccupancies(spaceId, {
-        status: 'ACTIVE',
-        bedId: target.bedId,
-        roomId: target.roomId,
-        unitId: target.unitId,
-        size: 1,
-      });
+      const active = await fetchOccupancyForTarget(spaceId, targetFilter, 'ACTIVE');
       if (seq !== requestSeq.current) {
         return null;
       }
-      const active = page.content[0] ?? null;
-      setOccupancy(active);
-      return active;
+      if (active) {
+        setOccupancy(active);
+        return active;
+      }
+
+      const reserved = await fetchOccupancyForTarget(spaceId, targetFilter, 'RESERVED');
+      if (seq !== requestSeq.current) {
+        return null;
+      }
+      setOccupancy(reserved);
+      return reserved;
     } catch (err) {
       if (seq !== requestSeq.current) {
         return null;
@@ -73,7 +100,7 @@ export function useTargetOccupancy(
         setLoading(false);
       }
     }
-  }, [enabled, spaceId, target.bedId, target.roomId, target.unitId]);
+  }, [enabled, spaceId, targetFilter]);
 
   useEffect(() => {
     requestSeq.current += 1;
@@ -90,9 +117,6 @@ export function useTargetOccupancy(
     loading,
     error,
     refresh,
-    queryKey: occupancyKeys.list(spaceId ?? '', {
-      status: 'ACTIVE',
-      ...target,
-    }),
+    queryKey: occupancyKeys.list(spaceId ?? '', target),
   };
 }

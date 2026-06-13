@@ -18,7 +18,12 @@ import {
   AccommodationSearchBar,
   AccommodationStatusBadge,
 } from '../../components/accommodation';
+import {
+  AccommodationOccupancyFlowModals,
+  AccommodationOccupancyQuickActions,
+} from '../../components/occupancy';
 import { EmptyState, FAB, HeaderBackButton, ListCard, SkeletonCard } from '../../components/ui';
+import { useAccommodationOccupancyFlow } from '../../hooks/useAccommodationOccupancyFlow';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useUnits } from '../../hooks/useUnits';
 import type { MainStackParamList } from '../../navigation/types';
@@ -28,6 +33,8 @@ import {
   canCreateOrUpdateAccommodation,
   canManageAccommodation,
 } from '../../utils/accommodationPermissions';
+import { canManageOccupancy } from '../../utils/occupancyPermissions';
+import { buildUnitOccupancyTarget, isOccupancyTargetSupported } from '../../utils/buildOccupancyTarget';
 import { renameUnitName } from '../../utils/accommodationInlineRename';
 import { useToastStore } from '../../store/toastStore';
 import { useAccommodationUiProfile } from '../../hooks/useAccommodationUiProfile';
@@ -55,6 +62,10 @@ export function UnitsScreen() {
   const isRental = profile?.layoutMode === 'RENTAL';
   const showFab = canCreateOrUpdateAccommodation(currentRole);
   const canManage = canManageAccommodation(currentRole);
+  const canManageOccupancyActions = canManageOccupancy(currentRole);
+  const supportsUnitOccupancy = Boolean(
+    spaceType && isOccupancyTargetSupported(spaceType, 'UNIT'),
+  );
   const showToast = useToastStore(state => state.showToast);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,6 +75,29 @@ export function UnitsScreen() {
     spaceId,
     buildingId,
     { searchQuery },
+  );
+
+  const occupancyFlow = useAccommodationOccupancyFlow({
+    spaceId,
+    spaceType: spaceType ?? 'RENTAL',
+    canManage: canManageOccupancyActions,
+    onSuccess: () => {
+      void refresh();
+    },
+  });
+
+  const buildUnitContext = useCallback(
+    (unit: UnitListItemResponse) => ({
+      target: buildUnitOccupancyTarget({
+        buildingId,
+        buildingName: buildingName ?? '',
+        unitId: unit.unitId,
+        unitName: unit.name,
+      }),
+      accommodationStatus: unit.status,
+      occupancy: null,
+    }),
+    [buildingId, buildingName],
   );
 
   useLayoutEffect(() => {
@@ -185,9 +219,32 @@ export function UnitsScreen() {
               onPress={() => openUnit(unit)}
               onLongPress={() => openUnitDetail(unit)}
             />
+            {supportsUnitOccupancy && spaceType && canManageOccupancyActions ? (
+              <AccommodationOccupancyQuickActions
+                spaceType={spaceType}
+                accommodationStatus={unit.status}
+                context={buildUnitContext(unit)}
+                flow={occupancyFlow}
+                canManage={canManageOccupancyActions}
+                layout="compact"
+                onViewOccupant={
+                  unit.status === 'AVAILABLE'
+                    ? undefined
+                    : () => openUnitDetail(unit)
+                }
+              />
+            ) : null}
           </View>
         )}
       />
+
+      {spaceType ? (
+        <AccommodationOccupancyFlowModals
+          spaceId={spaceId}
+          spaceType={spaceType}
+          flow={occupancyFlow}
+        />
+      ) : null}
 
       {showFab ? (
         <FAB

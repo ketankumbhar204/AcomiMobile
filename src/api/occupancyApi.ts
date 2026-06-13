@@ -3,10 +3,13 @@ import apiClient from './client';
 import type {
   AllocateOccupancyRequest,
   ApiResponse,
+  CancelReservationRequest,
   MemberOccupancyListResponse,
+  MoveInOccupancyRequest,
   OccupancyListFilters,
   OccupancyResponse,
   PagedResponse,
+  ReserveOccupancyRequest,
   TransferOccupancyRequest,
   UUID,
   VacateOccupancyRequest,
@@ -63,6 +66,50 @@ export const occupancyApi = {
       apiClient.post<ApiResponse<OccupancyResponse>>(
         `/spaces/${spaceId}/occupancies`,
         body,
+      ),
+    );
+  },
+
+  reserveOccupancy: async (
+    spaceId: UUID,
+    body: ReserveOccupancyRequest,
+  ): Promise<OccupancyResponse> => {
+    console.log(`${LOG_TAG} POST /spaces/${spaceId}/occupancies/reserve`, body);
+    return unwrapApiResponse(
+      apiClient.post<ApiResponse<OccupancyResponse>>(
+        `/spaces/${spaceId}/occupancies/reserve`,
+        body,
+      ),
+    );
+  },
+
+  moveInOccupancy: async (
+    spaceId: UUID,
+    occupancyId: UUID,
+    body?: MoveInOccupancyRequest,
+  ): Promise<OccupancyResponse> => {
+    console.log(`${LOG_TAG} POST /spaces/${spaceId}/occupancies/${occupancyId}/move-in`, body);
+    return unwrapApiResponse(
+      apiClient.post<ApiResponse<OccupancyResponse>>(
+        `/spaces/${spaceId}/occupancies/${occupancyId}/move-in`,
+        body ?? {},
+      ),
+    );
+  },
+
+  cancelReservation: async (
+    spaceId: UUID,
+    occupancyId: UUID,
+    body?: CancelReservationRequest,
+  ): Promise<OccupancyResponse> => {
+    console.log(
+      `${LOG_TAG} POST /spaces/${spaceId}/occupancies/${occupancyId}/cancel-reservation`,
+      body,
+    );
+    return unwrapApiResponse(
+      apiClient.post<ApiResponse<OccupancyResponse>>(
+        `/spaces/${spaceId}/occupancies/${occupancyId}/cancel-reservation`,
+        body ?? {},
       ),
     );
   },

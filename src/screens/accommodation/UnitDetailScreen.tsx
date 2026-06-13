@@ -16,7 +16,7 @@ import {
   formatAccommodationDate,
 } from '../../components/accommodation';
 import { Button, Card, HeaderBackButton, Screen, SkeletonCard } from '../../components/ui';
-import { AccommodationOccupantSection } from '../../components/occupancy';
+import { AccommodationOccupantSection, AccommodationOccupancyActions } from '../../components/occupancy';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useTargetOccupancy } from '../../hooks/useTargetOccupancy';
 import {
@@ -31,7 +31,8 @@ import { useToastStore } from '../../store/toastStore';
 import { spacing, typography } from '../../theme';
 import { buildAccommodationTrail } from '../../utils/accommodationContext';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
-import { canViewSpaceOccupancies } from '../../utils/occupancyPermissions';
+import { canManageOccupancy, canViewSpaceOccupancies } from '../../utils/occupancyPermissions';
+import { buildUnitOccupancyTarget } from '../../utils/buildOccupancyTarget';
 import { navigateToAccommodationTrailSegment } from '../../utils/accommodationNavigation';
 import { useAccommodationUiProfile } from '../../hooks/useAccommodationUiProfile';
 
@@ -70,6 +71,7 @@ export function UnitDetailScreen() {
   const showsOccupant =
     unit?.status === 'OCCUPIED' || unit?.status === 'RESERVED';
   const canViewOccupant = canViewSpaceOccupancies(currentRole);
+  const canManageOccupancyActions = canManageOccupancy(currentRole);
   const {
     occupancy,
     loading: occupancyLoading,
@@ -78,8 +80,20 @@ export function UnitDetailScreen() {
   } = useTargetOccupancy(
     spaceId,
     { unitId },
-    { enabled: showsOccupant && canViewOccupant },
+    { enabled: showsOccupant && (canViewOccupant || canManageOccupancyActions) },
   );
+
+  const occupancyTarget = useMemo(() => {
+    if (!unit) {
+      return null;
+    }
+    return buildUnitOccupancyTarget({
+      buildingId,
+      buildingName: buildingName ?? '',
+      unitId: unit.unitId,
+      unitName: unit.name,
+    });
+  }, [buildingId, buildingName, unit]);
 
   const trailContext = useMemo(
     () => ({
@@ -171,6 +185,20 @@ export function UnitDetailScreen() {
               occupancy={occupancy}
               loading={occupancyLoading}
               error={occupancyError}
+            />
+          ) : null}
+
+          {unit && spaceType && occupancyTarget && canManageOccupancyActions ? (
+            <AccommodationOccupancyActions
+              spaceId={spaceId}
+              spaceType={spaceType}
+              accommodationStatus={unit.status}
+              target={occupancyTarget}
+              occupancy={occupancy}
+              onSuccess={() => {
+                void loadUnit();
+                void refreshOccupancy();
+              }}
             />
           ) : null}
 

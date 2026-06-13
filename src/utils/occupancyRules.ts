@@ -2,9 +2,25 @@ import type {
   AllocationTargetType,
   AllocateOccupancyRequest,
   CurrentOccupancySummaryResponse,
+  MemberCategory,
+  ReserveOccupancyRequest,
   SpaceType,
   TransferOccupancyRequest,
 } from '../api/types';
+
+export type OccupancyTargetSelection = {
+  targetType: AllocationTargetType;
+  buildingId: string;
+  buildingName: string;
+  floorId?: string;
+  floorName?: string;
+  unitId?: string;
+  unitName?: string;
+  roomId?: string;
+  roomName?: string;
+  bedId?: string;
+  bedName?: string;
+};
 
 export function getAllowedTargetTypes(spaceType: SpaceType): AllocationTargetType[] {
   switch (spaceType) {
@@ -48,12 +64,56 @@ export function validateTargetSelection(
   return null;
 }
 
+export function getExpectedExitDate(options?: {
+  expectedExitDate?: string;
+  expectedCheckoutDate?: string;
+}): string | null {
+  const value = options?.expectedExitDate?.trim() || options?.expectedCheckoutDate?.trim();
+  return value || null;
+}
+
+export function buildReserveRequest(
+  memberId: string,
+  spaceType: SpaceType,
+  targetType: AllocationTargetType,
+  ids: { bedId?: string; roomId?: string; unitId?: string },
+  options: {
+    moveInDate: string;
+    expectedExitDate?: string;
+    expectedCheckoutDate?: string;
+    memberCategory?: MemberCategory;
+    remarks?: string;
+  },
+): { body: ReserveOccupancyRequest | null; errorKey: string | null } {
+  const errorKey = validateTargetSelection(spaceType, targetType, ids);
+  if (errorKey) {
+    return { body: null, errorKey };
+  }
+  if (!options.moveInDate.trim()) {
+    return { body: null, errorKey: 'occupancy.errors.moveInDateRequired' };
+  }
+  return {
+    body: {
+      memberId,
+      targetType,
+      bedId: targetType === 'BED' ? ids.bedId : null,
+      roomId: targetType === 'ROOM' ? ids.roomId : null,
+      unitId: targetType === 'UNIT' ? ids.unitId : null,
+      moveInDate: options.moveInDate.trim(),
+      expectedExitDate: getExpectedExitDate(options),
+      memberCategory: options.memberCategory ?? null,
+      remarks: options.remarks?.trim() || null,
+    },
+    errorKey: null,
+  };
+}
+
 export function buildAllocateRequest(
   memberId: string,
   spaceType: SpaceType,
   targetType: AllocationTargetType,
   ids: { bedId?: string; roomId?: string; unitId?: string },
-  options?: { expectedCheckoutDate?: string; remarks?: string },
+  options?: { expectedCheckoutDate?: string; expectedExitDate?: string; remarks?: string },
 ): { body: AllocateOccupancyRequest | null; errorKey: string | null } {
   const errorKey = validateTargetSelection(spaceType, targetType, ids);
   if (errorKey) {
@@ -66,7 +126,8 @@ export function buildAllocateRequest(
       bedId: targetType === 'BED' ? ids.bedId : null,
       roomId: targetType === 'ROOM' ? ids.roomId : null,
       unitId: targetType === 'UNIT' ? ids.unitId : null,
-      expectedCheckoutDate: options?.expectedCheckoutDate || null,
+      expectedCheckoutDate: getExpectedExitDate(options),
+      expectedExitDate: getExpectedExitDate(options),
       remarks: options?.remarks?.trim() || null,
     },
     errorKey: null,
@@ -95,6 +156,14 @@ export function buildTransferRequest(
   };
 }
 
+export function formatTodayIsoDate(): string {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function formatOccupancyAllocatedDate(value?: string | null): string {
   if (!value) {
     return '—';
@@ -107,6 +176,29 @@ export function formatOccupancyAllocatedDate(value?: string | null): string {
   const month = date.toLocaleString('en', { month: 'short' });
   const year = date.getFullYear();
   return `${day}-${month}-${year}`;
+}
+
+export function getOccupancyExitDate(
+  occupancy?: {
+    expectedExitDate?: string | null;
+    expectedCheckoutDate?: string | null;
+  } | null,
+): string | null {
+  return occupancy?.expectedExitDate ?? occupancy?.expectedCheckoutDate ?? null;
+}
+
+export function isMoveInDateInFuture(moveInDate?: string | null): boolean {
+  if (!moveInDate) {
+    return false;
+  }
+  const date = new Date(moveInDate);
+  if (Number.isNaN(date.getTime())) {
+    return false;
+  }
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  date.setHours(0, 0, 0, 0);
+  return date.getTime() > today.getTime();
 }
 
 export function formatOccupancyLocation(

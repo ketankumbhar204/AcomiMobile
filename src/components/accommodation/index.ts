@@ -8,6 +8,7 @@ export { PropertyLayoutModePicker } from './PropertyLayoutModePicker';
 export { BuildingSummaryHeader } from './BuildingSummaryHeader';
 export { SetupPreviewTree } from './SetupPreviewTree';
 export { AccommodationLifecycleActions } from './AccommodationLifecycleActions';
+export { AccommodationActionSheet } from './AccommodationActionSheet';
 export { BuilderRowLifecycleMenu, type BuilderLifecycleEntityType } from './BuilderRowLifecycleMenu';
 export { AccommodationContextTrail } from './AccommodationContextTrail';
 export { AccommodationEntityRow } from './AccommodationEntityRow';
