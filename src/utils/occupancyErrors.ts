@@ -3,6 +3,26 @@ import { i18n } from '../i18n';
 
 const MESSAGE_PATTERNS: Array<{ pattern: RegExp; key: string }> = [
   {
+    pattern: /rent is required when activating occupancy/i,
+    key: 'occupancy.contract.errors.rentRequired',
+  },
+  {
+    pattern: /rent is required when transferring occupancy/i,
+    key: 'occupancy.contract.errors.rentRequiredTransfer',
+  },
+  {
+    pattern: /custom rent is required/i,
+    key: 'occupancy.contract.errors.customRentRequired',
+  },
+  {
+    pattern: /food charge is required when food is enabled/i,
+    key: 'occupancy.contract.errors.foodChargeRequired',
+  },
+  {
+    pattern: /at most 10 additional charges/i,
+    key: 'occupancy.contract.errors.tooManyCharges',
+  },
+  {
     pattern: /active or reserved occupancy/i,
     key: 'occupancy.errors.alreadyOccupied',
   },
@@ -52,6 +72,15 @@ export function getOccupancyErrorMessage(
 ): string {
   if (!(error instanceof ApiError)) {
     return i18n.t(fallbackKey);
+  }
+
+  const errorCode = error.body?.errorCode;
+  if (errorCode) {
+    const codeKey = `occupancy.errors.codes.${errorCode}`;
+    const translated = i18n.t(codeKey);
+    if (translated !== codeKey) {
+      return translated;
+    }
   }
 
   if (error.message) {

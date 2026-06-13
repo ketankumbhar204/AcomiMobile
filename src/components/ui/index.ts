@@ -22,6 +22,7 @@ export {
 export { SpaceHeaderMenu } from './SpaceHeaderMenu';
 export { SpaceSwitcher } from './SpaceSwitcher';
 export { ListCard } from './ListCard';
+export { ModuleActionCard } from './ModuleActionCard';
 export { MetricCard, MetricCardProgress } from './MetricCard';
 export { Screen } from './Screen';
 export { Skeleton, SkeletonCard } from './Skeleton';

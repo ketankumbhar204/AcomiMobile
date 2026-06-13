@@ -15,6 +15,7 @@ import type {
   UUID,
 } from '../api/types';
 import { getSpaceErrorMessage } from '../utils/spaceErrors';
+import { resolveStartupSpace } from '../utils/resolveStartupSpace';
 
 const LOG_TAG = '[SpaceStore]';
 const CURRENT_SPACE_KEY = '@countin/current_space';
@@ -37,6 +38,8 @@ interface SpaceState {
   error: string | null;
   isSpaceBootstrapping: boolean;
   hasSpaceBootstrapped: boolean;
+  /** Set during bootstrap so MainNavigator can open the correct first screen. */
+  startupRoute: SpaceBootstrapRoute | null;
 
   hydrateCurrentSpace: () => Promise<void>;
   bootstrapSpaces: () => Promise<SpaceBootstrapResult>;
@@ -98,6 +101,7 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
   error: null,
   isSpaceBootstrapping: false,
   hasSpaceBootstrapped: false,
+  startupRoute: null,
 
   hydrateCurrentSpace: async () => {
     try {
@@ -115,49 +119,72 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
   },
 
   bootstrapSpaces: async () => {
+    if (get().isSpaceBootstrapping) {
+      console.log(`${LOG_TAG} bootstrapSpaces skipped — already in flight`);
+      return {
+        route: get().startupRoute ?? 'MySpaces',
+        spaceId: get().selectedSpaceId ?? undefined,
+      };
+    }
+
+    if (get().hasSpaceBootstrapped && get().startupRoute) {
+      console.log(`${LOG_TAG} bootstrapSpaces skipped — already resolved`);
+      return {
+        route: get().startupRoute,
+        spaceId: get().selectedSpaceId ?? undefined,
+      };
+    }
+
     console.log(`${LOG_TAG} bootstrapSpaces started`);
-    set({ isSpaceBootstrapping: true, loading: true, error: null });
+    set({ isSpaceBootstrapping: true, loading: true, error: null, startupRoute: null });
 
     try {
-      const defaultSpace = await mySpacesApi.getDefaultSpace();
-      console.log(`${LOG_TAG} bootstrapSpaces default`, defaultSpace?.spaceId);
+      const resolved = await resolveStartupSpace();
+      console.log(`${LOG_TAG} bootstrapSpaces resolved`, resolved.kind);
 
-      if (defaultSpace) {
-        await persistCurrentSpace(defaultSpace);
+      if (resolved.kind === 'dashboard') {
+        await persistCurrentSpace(resolved.space);
         set({
-          ...applyCurrentSpace(defaultSpace),
+          ...applyCurrentSpace(resolved.space),
+          startupRoute: 'SpaceTabs',
           hasSpaceBootstrapped: true,
           isSpaceBootstrapping: false,
           loading: false,
         });
-        await get().loadSpaceDetails(defaultSpace.spaceId);
-        await get().loadMySpaces();
-        return { route: 'SpaceTabs', spaceId: defaultSpace.spaceId };
+        void get().loadSpaceDetails(resolved.spaceId);
+        void get().loadMySpaces();
+        return { route: 'SpaceTabs', spaceId: resolved.spaceId };
       }
 
-      const spaces = await mySpacesApi.getMySpaces();
-      console.log(`${LOG_TAG} bootstrapSpaces mySpaces`, spaces.length);
-      set({ mySpaces: spaces });
-
-      if (spaces.length > 0) {
-        const first = spaces[0];
-        const switched = await get().switchSpace(first.spaceId);
-        set({ hasSpaceBootstrapped: true, isSpaceBootstrapping: false, loading: false });
-
-        if (switched) {
-          return { route: 'SpaceTabs', spaceId: first.spaceId };
-        }
-
-        return { route: 'MySpaces' };
+      if (resolved.kind === 'onboarding') {
+        await persistCurrentSpace(null);
+        set({
+          ...applyCurrentSpace(null),
+          mySpaces: [],
+          startupRoute: 'CreateSpace',
+          hasSpaceBootstrapped: true,
+          isSpaceBootstrapping: false,
+          loading: false,
+        });
+        return { route: 'CreateSpace' };
       }
 
-      set({ hasSpaceBootstrapped: true, isSpaceBootstrapping: false, loading: false });
-      return { route: 'CreateSpace' };
+      await persistCurrentSpace(null);
+      set({
+        ...applyCurrentSpace(null),
+        mySpaces: resolved.spaces,
+        startupRoute: 'MySpaces',
+        hasSpaceBootstrapped: true,
+        isSpaceBootstrapping: false,
+        loading: false,
+      });
+      return { route: 'MySpaces' };
     } catch (err) {
       const message = getSpaceErrorMessage(err, 'common.errors.loadSpaces');
       console.error(`${LOG_TAG} bootstrapSpaces failed`, err);
       set({
         error: message,
+        startupRoute: 'MySpaces',
         hasSpaceBootstrapped: true,
         isSpaceBootstrapping: false,
         loading: false,
@@ -402,6 +429,7 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
       error: null,
       isSpaceBootstrapping: false,
       hasSpaceBootstrapped: false,
+      startupRoute: null,
     });
     await persistCurrentSpace(null);
   },

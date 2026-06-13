@@ -43,4 +43,6 @@ export { useBulkBeds } from './useBulkBeds';
 export { useMemberOccupancies } from './useMemberOccupancies';
 export { useOccupancyMutations } from './useOccupancyMutations';
 export { useOccupancyTargetSearch } from './useOccupancyTargetSearch';
+export { useAllocationTargetSearch } from './useAllocationTargetSearch';
+export { useMemberSearch } from './useMemberSearch';
 export { useTargetOccupancy } from './useTargetOccupancy';

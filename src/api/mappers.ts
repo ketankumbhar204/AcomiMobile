@@ -40,6 +40,8 @@ export function spaceDetailsResponseToSpace(
     address: response.address ?? null,
     contactNumber: response.contactNumber ?? null,
     isActive: true,
+    foodIncludedInRent: response.foodIncludedInRent,
+    defaultFoodCharge: response.defaultFoodCharge ?? null,
     createdAt: response.createdAt,
     updatedAt: response.updatedAt,
   };

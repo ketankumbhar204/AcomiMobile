@@ -14,7 +14,9 @@ import type {
   BuildingResponse,
   FloorListItemResponse,
   MemberCategory,
+  OccupancyResponse,
   SpaceType,
+  TransferRentPolicy,
   UnitListItemResponse,
 } from '../../api/types';
 import { AccommodationSearchBar } from '../accommodation/AccommodationSearchBar';
@@ -47,6 +49,21 @@ import {
   formatTodayIsoDate,
   formatOccupancyAllocatedDate,
 } from '../../utils/occupancyRules';
+import { fetchTargetCatalogDefaults } from '../../utils/fetchTargetCatalogDefaults';
+import {
+  fetchSpaceFoodPolicy,
+  type SpaceFoodPolicy,
+} from '../../utils/fetchSpaceFoodPolicy';
+import {
+  buildContractSnapshotPayload,
+  buildTransferContractPayload,
+  contractTermsFromOccupancy,
+  emptyContractTermsFormValues,
+  resolveContractFoodPolicy,
+  validateContractTerms,
+  type ContractTermsFormValues,
+} from '../../utils/occupancyContract';
+import { ContractTermsForm } from './ContractTermsForm';
 
 export type OccupancyPickerMode = 'RESERVE' | 'WALK_IN' | 'TRANSFER';
 
@@ -56,9 +73,11 @@ export type OccupancyPickerExtras = {
   expectedCheckoutDate?: string;
   memberCategory?: MemberCategory;
   remarks?: string;
+  rentPolicy?: TransferRentPolicy;
+  contract?: ReturnType<typeof buildContractSnapshotPayload>;
 };
 
-type PickerPhase = 'select' | 'details' | 'review';
+type PickerPhase = 'select' | 'details' | 'contract' | 'review';
 
 type OccupancyTargetPickerModalProps = {
   visible: boolean;
@@ -71,6 +90,7 @@ type OccupancyTargetPickerModalProps = {
   defaultMemberCategory?: MemberCategory;
   initialSelection?: OccupancyTargetSelection | null;
   skipSelectPhase?: boolean;
+  currentOccupancy?: OccupancyResponse | null;
   loading?: boolean;
   onClose: () => void;
   onConfirm: (selection: OccupancyTargetSelection, extras?: OccupancyPickerExtras) => void;
@@ -153,6 +173,7 @@ export function OccupancyTargetPickerModal({
   defaultMemberCategory,
   initialSelection = null,
   skipSelectPhase = false,
+  currentOccupancy = null,
   loading = false,
   onClose,
   onConfirm,
@@ -189,6 +210,26 @@ export function OccupancyTargetPickerModal({
   );
   const [remarks, setRemarks] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
+  const [rentPolicy, setRentPolicy] = useState<TransferRentPolicy>('APPLY_NEW');
+  const [contractValues, setContractValues] = useState<ContractTermsFormValues>(
+    emptyContractTermsFormValues(),
+  );
+  const [catalogRent, setCatalogRent] = useState<number | null>(null);
+  const [catalogDeposit, setCatalogDeposit] = useState<number | null>(null);
+  const [foodPolicy, setFoodPolicy] = useState<SpaceFoodPolicy>({
+    foodIncludedInRent: false,
+    defaultFoodCharge: null,
+  });
+  const [catalogLoading, setCatalogLoading] = useState(false);
+
+  const effectiveFoodPolicy = useMemo(
+    () =>
+      resolveContractFoodPolicy(
+        foodPolicy,
+        mode === 'TRANSFER' && rentPolicy === 'KEEP' ? currentOccupancy : null,
+      ),
+    [currentOccupancy, foodPolicy, mode, rentPolicy],
+  );
 
   const isSearchMode = searchQuery.trim().length > 0;
   const browseLoading = buildingsLoading || groupsLoading;
@@ -231,6 +272,11 @@ export function OccupancyTargetPickerModal({
     setMemberCategory(defaultMemberCategory);
     setRemarks('');
     setFormError(null);
+    setRentPolicy('APPLY_NEW');
+    setContractValues(emptyContractTermsFormValues());
+    setCatalogRent(null);
+    setCatalogDeposit(null);
+    setCatalogLoading(false);
     resetSearch();
   }, [defaultMemberCategory, mode, resetSearch, todayIso]);
 
@@ -251,7 +297,9 @@ export function OccupancyTargetPickerModal({
     wasVisibleRef.current = true;
     if (skipSelectPhase && initialSelection) {
       setPendingSelection(initialSelection);
-      setPhase(mode === 'TRANSFER' ? 'review' : 'details');
+      setPhase(
+        mode === 'TRANSFER' ? 'contract' : mode === 'RESERVE' ? 'details' : 'details',
+      );
       setSearchQuery('');
       setMoveInDate(mode === 'RESERVE' ? todayIso : todayIso);
       setExpectedCheckoutDate('');
@@ -542,14 +590,71 @@ export function OccupancyTargetPickerModal({
 
   function buildExtras(): OccupancyPickerExtras {
     const resolvedMoveInDate = mode === 'WALK_IN' ? todayIso : moveInDate.trim();
+    let contractPayload: OccupancyPickerExtras['contract'];
+
+    if (mode === 'WALK_IN') {
+      contractPayload = buildContractSnapshotPayload(contractValues, {
+        foodPolicy: effectiveFoodPolicy,
+      });
+    } else if (mode === 'TRANSFER') {
+      const transferPayload = buildTransferContractPayload(
+        rentPolicy,
+        contractValues,
+        effectiveFoodPolicy,
+      );
+      const { rentPolicy: _policy, ...snapshot } = transferPayload;
+      contractPayload = snapshot;
+    }
+
     return {
       moveInDate: resolvedMoveInDate || undefined,
       expectedExitDate: expectedCheckoutDate.trim() || undefined,
       expectedCheckoutDate: expectedCheckoutDate.trim() || undefined,
       memberCategory: mode === 'RESERVE' ? memberCategory : undefined,
       remarks: remarks.trim() || undefined,
+      rentPolicy: mode === 'TRANSFER' ? rentPolicy : undefined,
+      contract: contractPayload,
     };
   }
+
+  const loadContractCatalog = useCallback(
+    async (selection: OccupancyTargetSelection) => {
+      setCatalogLoading(true);
+      try {
+        const [catalog, policy] = await Promise.all([
+          fetchTargetCatalogDefaults(
+            spaceId,
+            selection.targetType,
+            {
+              bedId: selection.bedId,
+              roomId: selection.roomId,
+              unitId: selection.unitId,
+            },
+            selection.roomId,
+          ),
+          fetchSpaceFoodPolicy(spaceId),
+        ]);
+        setCatalogRent(catalog.defaultRent ?? null);
+        setCatalogDeposit(catalog.defaultDeposit ?? null);
+        setFoodPolicy(policy);
+        if (mode === 'TRANSFER' && rentPolicy === 'KEEP' && currentOccupancy) {
+          setContractValues(contractTermsFromOccupancy(currentOccupancy));
+        } else {
+          setContractValues(emptyContractTermsFormValues(catalog, policy));
+        }
+      } finally {
+        setCatalogLoading(false);
+      }
+    },
+    [currentOccupancy, mode, rentPolicy, spaceId],
+  );
+
+  useEffect(() => {
+    if (!visible || phase !== 'contract' || !pendingSelection) {
+      return;
+    }
+    void loadContractCatalog(pendingSelection);
+  }, [loadContractCatalog, pendingSelection, phase, visible]);
 
   function validateDetails(): boolean {
     if (mode === 'RESERVE' && !moveInDate.trim()) {
@@ -560,17 +665,47 @@ export function OccupancyTargetPickerModal({
     return true;
   }
 
+  function validateContractStep(): boolean {
+    if (mode === 'RESERVE') {
+      return true;
+    }
+
+    const rentRequired =
+      mode === 'WALK_IN' ||
+      rentPolicy === 'CUSTOM' ||
+      (mode === 'TRANSFER' && rentPolicy === 'APPLY_NEW');
+
+    const validationError = validateContractTerms(contractValues, {
+      rentRequired,
+      catalogDefaultRent: catalogRent,
+      foodPolicy: effectiveFoodPolicy,
+    });
+    if (validationError) {
+      setFormError(t(validationError));
+      return false;
+    }
+    setFormError(null);
+    return true;
+  }
+
   function pickTarget(selection: OccupancyTargetSelection) {
     setPendingSelection(selection);
     if (mode === 'TRANSFER') {
-      setPhase('review');
+      setPhase('contract');
       return;
     }
     setPhase('details');
   }
 
-  function handleContinueToReview() {
+  function handleContinueToContract() {
     if (!validateDetails()) {
+      return;
+    }
+    setPhase('contract');
+  }
+
+  function handleContinueToReview() {
+    if (!validateContractStep()) {
       return;
     }
     setPhase('review');
@@ -584,13 +719,24 @@ export function OccupancyTargetPickerModal({
       setPhase('details');
       return;
     }
+    if (mode !== 'RESERVE' && !validateContractStep()) {
+      setPhase('contract');
+      return;
+    }
     setSelecting(true);
     onConfirm(pendingSelection, buildExtras());
   }
 
   function handleHeaderBack() {
     if (phase === 'review') {
+      setPhase(mode === 'RESERVE' ? 'details' : 'contract');
+      return;
+    }
+    if (phase === 'contract') {
       setPhase(mode === 'TRANSFER' ? 'select' : 'details');
+      if (mode === 'TRANSFER') {
+        setPendingSelection(null);
+      }
       return;
     }
     if (phase === 'details') {
@@ -615,6 +761,8 @@ export function OccupancyTargetPickerModal({
         return mode === 'RESERVE'
           ? t('occupancy.picker.reservationDetails')
           : t('occupancy.picker.allocationDetails');
+      case 'contract':
+        return t('occupancy.contract.stepTitle');
       case 'review':
         return t('occupancy.picker.reviewTitle');
       default:
@@ -995,9 +1143,112 @@ export function OccupancyTargetPickerModal({
                 {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
 
                 <Button
+                  label={
+                    mode === 'WALK_IN'
+                      ? t('occupancy.contract.continueToTerms')
+                      : t('occupancy.picker.continueToReview')
+                  }
+                  onPress={mode === 'WALK_IN' ? handleContinueToContract : handleContinueToReview}
+                  disabled={interactionLocked}
+                  style={styles.footerButton}
+                />
+              </View>
+            ) : null}
+
+            {phase === 'contract' && pendingSelection ? (
+              <View style={styles.section}>
+                <SelectionSummaryCard
+                  selection={pendingSelection}
+                  label={t('occupancy.picker.selectedAccommodation')}
+                />
+
+                {mode === 'TRANSFER' ? (
+                  <>
+                    <Text style={styles.categoryLabel}>{t('occupancy.contract.rentPolicy')}</Text>
+                    <View style={styles.categoryRow}>
+                      {(['APPLY_NEW', 'KEEP', 'CUSTOM'] as TransferRentPolicy[]).map(policy => (
+                        <Pressable
+                          key={policy}
+                          style={[
+                            styles.categoryChip,
+                            rentPolicy === policy && styles.categoryChipSelected,
+                          ]}
+                          onPress={() => {
+                            setRentPolicy(policy);
+                            if (policy === 'KEEP' && currentOccupancy) {
+                              setContractValues(contractTermsFromOccupancy(currentOccupancy));
+                            } else if (policy === 'APPLY_NEW') {
+                              setContractValues(
+                                emptyContractTermsFormValues(
+                                  {
+                                    defaultRent: catalogRent,
+                                    defaultDeposit: catalogDeposit,
+                                  },
+                                  foodPolicy,
+                                ),
+                              );
+                            } else {
+                              setContractValues(emptyContractTermsFormValues(undefined, foodPolicy));
+                            }
+                          }}>
+                          <Text
+                            style={[
+                              styles.categoryChipText,
+                              rentPolicy === policy && styles.categoryChipTextSelected,
+                            ]}>
+                            {t(`occupancy.contract.rentPolicyOption.${policy}`)}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </>
+                ) : null}
+
+                {catalogLoading ? (
+                  <ActivityIndicator color={colors.primary} style={styles.loader} />
+                ) : (
+                  <ContractTermsForm
+                    values={contractValues}
+                    onChange={setContractValues}
+                    showRentDeposit={
+                      mode !== 'TRANSFER' ||
+                      rentPolicy === 'APPLY_NEW' ||
+                      rentPolicy === 'CUSTOM'
+                    }
+                    rentRequired={
+                      mode === 'WALK_IN' ||
+                      rentPolicy === 'CUSTOM' ||
+                      (mode === 'TRANSFER' && rentPolicy === 'APPLY_NEW')
+                    }
+                    readOnlyRent={
+                      mode === 'TRANSFER' && rentPolicy === 'KEEP'
+                        ? currentOccupancy?.rentSnapshot ?? null
+                        : undefined
+                    }
+                    readOnlyDeposit={
+                      mode === 'TRANSFER' && rentPolicy === 'KEEP'
+                        ? currentOccupancy?.depositSnapshot ?? 0
+                        : undefined
+                    }
+                    catalogRentHint={catalogRent}
+                    catalogDepositHint={catalogDeposit}
+                    foodPolicy={effectiveFoodPolicy}
+                  />
+                )}
+
+                <FormInput
+                  label={t('occupancy.fields.remarks')}
+                  value={remarks}
+                  onChangeText={setRemarks}
+                  placeholder={t('occupancy.fields.remarksPlaceholder')}
+                />
+
+                {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
+
+                <Button
                   label={t('occupancy.picker.continueToReview')}
                   onPress={handleContinueToReview}
-                  disabled={interactionLocked}
+                  disabled={interactionLocked || catalogLoading}
                   style={styles.footerButton}
                 />
               </View>
@@ -1053,16 +1304,34 @@ export function OccupancyTargetPickerModal({
                   />
                 )}
 
-                <ComingSoonSection
-                  title={t('occupancy.picker.financialTerms')}
-                  items={[
-                    t('occupancy.picker.rent'),
-                    t('occupancy.picker.deposit'),
-                    t('occupancy.picker.foodCharges'),
-                  ]}
-                />
-                <ComingSoonSection title={t('occupancy.picker.amenities')} />
-                <ComingSoonSection title={t('occupancy.picker.policies')} />
+                {mode !== 'RESERVE' ? (
+                  <Card style={styles.reviewFacts}>
+                    <Text style={styles.reviewLine}>
+                      {t('occupancy.contract.rent')}:{' '}
+                      {contractValues.rentSnapshot.trim() ||
+                        (catalogRent != null
+                          ? catalogRent.toLocaleString('en-IN')
+                          : t('occupancy.contract.notRecorded'))}
+                    </Text>
+                    <Text style={styles.reviewLine}>
+                      {t('occupancy.contract.deposit')}:{' '}
+                      {contractValues.depositSnapshot.trim() || '0'}
+                    </Text>
+                    <Text style={styles.reviewLine}>
+                      {t('occupancy.contract.food')}:{' '}
+                      {contractValues.foodEnabled
+                        ? contractValues.foodChargeSnapshot.trim() ||
+                          t('occupancy.contract.foodIncludedNoAmount')
+                        : t('occupancy.contract.foodDisabled')}
+                    </Text>
+                    {mode === 'TRANSFER' ? (
+                      <Text style={styles.reviewLine}>
+                        {t('occupancy.contract.rentPolicy')}:{' '}
+                        {t(`occupancy.contract.rentPolicyOption.${rentPolicy}`)}
+                      </Text>
+                    ) : null}
+                  </Card>
+                ) : null}
 
                 {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
 

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AccommodationBedsScreen } from '../screens/accommodation/AccommodationBedsScreen';
 import { AccommodationBuilderScreen } from '../screens/accommodation/AccommodationBuilderScreen';
+import { OccupancyWizardScreen } from '../features/occupancy/OccupancyWizard';
 import { AccommodationFloorApartmentsScreen } from '../screens/accommodation/AccommodationFloorApartmentsScreen';
 import { AccommodationRoomsScreen } from '../screens/accommodation/AccommodationRoomsScreen';
 import { QuickSetupWizardScreen } from '../screens/accommodation/QuickSetupWizardScreen';
@@ -28,14 +29,33 @@ import { MySpacesScreen } from '../screens/MySpacesScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { SpaceDetailsScreen } from '../screens/SpaceDetailsScreen';
 import { stackHeaderOptions } from '../theme';
+import { useSpaceStore } from '../store/spaceStore';
 import { SpaceTabNavigator } from './SpaceTabNavigator';
 import type { MainStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
 export function MainNavigator() {
+  const startupRoute = useSpaceStore(state => state.startupRoute);
+  const selectedSpaceId = useSpaceStore(state => state.selectedSpaceId);
+
+  const initialRouteName = useMemo((): keyof MainStackParamList => {
+    if (startupRoute === 'CreateSpace') {
+      return 'CreateSpace';
+    }
+    if (startupRoute === 'MySpaces') {
+      return 'MySpaces';
+    }
+    if (selectedSpaceId) {
+      return 'SpaceTabs';
+    }
+    return 'MySpaces';
+  }, [selectedSpaceId, startupRoute]);
+
   return (
-    <Stack.Navigator screenOptions={stackHeaderOptions}>
+    <Stack.Navigator
+      initialRouteName={initialRouteName}
+      screenOptions={stackHeaderOptions}>
       <Stack.Screen
         name="MySpaces"
         component={MySpacesScreen}
@@ -109,8 +129,16 @@ export function MainNavigator() {
       <Stack.Screen name="QuickSetupWizard" component={QuickSetupWizardScreen} />
       <Stack.Screen name="AccommodationBuilder" component={AccommodationBuilderScreen} />
       <Stack.Screen
+        name="OccupancyWizard"
+        component={OccupancyWizardScreen}
+        options={{ title: 'Occupancy' }}
+      />
+      <Stack.Screen
         name="SpaceTabs"
         options={{ headerShown: false }}
+        initialParams={
+          selectedSpaceId ? { spaceId: selectedSpaceId } : undefined
+        }
         children={({ route }) => (
           <SpaceTabNavigator spaceId={route.params.spaceId} />
         )}

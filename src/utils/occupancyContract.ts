@@ -1,0 +1,320 @@
+import type {
+  ContractSnapshotInput,
+  OccupancyChargeCode,
+  OccupancyChargeLine,
+  OccupancyResponse,
+  TransferRentPolicy,
+} from '../api/types';
+import type { TargetCatalogDefaults } from './fetchTargetCatalogDefaults';
+import type { SpaceFoodPolicy } from './fetchSpaceFoodPolicy';
+
+export const OCCUPANCY_CHARGE_CODES: OccupancyChargeCode[] = [
+  'PARKING',
+  'LAUNDRY',
+  'ELECTRICITY',
+  'WIFI',
+  'MAINTENANCE',
+  'OTHER',
+];
+
+export const MAX_OTHER_CHARGES = 10;
+
+export type ContractTermsFormValues = {
+  rentSnapshot: string;
+  depositSnapshot: string;
+  foodEnabled: boolean;
+  foodChargeSnapshot: string;
+  otherCharges: OccupancyChargeLine[];
+};
+
+function parseAmount(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return null;
+  }
+  return parsed;
+}
+
+export function emptyContractTermsFormValues(
+  catalog?: TargetCatalogDefaults,
+  foodPolicy?: SpaceFoodPolicy,
+): ContractTermsFormValues {
+  const foodIncludedInRent = foodPolicy?.foodIncludedInRent ?? false;
+  const defaultFood = foodPolicy?.defaultFoodCharge;
+
+  return {
+    rentSnapshot:
+      catalog?.defaultRent != null && catalog.defaultRent > 0
+        ? String(catalog.defaultRent)
+        : '',
+    depositSnapshot:
+      catalog?.defaultDeposit != null && catalog.defaultDeposit > 0
+        ? String(catalog.defaultDeposit)
+        : '0',
+    foodEnabled: true,
+    foodChargeSnapshot:
+      !foodIncludedInRent && defaultFood != null ? String(defaultFood) : '',
+    otherCharges: [],
+  };
+}
+
+export function contractTermsFromOccupancy(
+  occupancy: OccupancyResponse,
+): ContractTermsFormValues {
+  return {
+    rentSnapshot:
+      occupancy.rentSnapshot != null ? String(occupancy.rentSnapshot) : '',
+    depositSnapshot:
+      occupancy.depositSnapshot != null ? String(occupancy.depositSnapshot) : '0',
+    foodEnabled: occupancy.foodIncludedInRent
+      ? true
+      : Boolean(occupancy.foodEnabled),
+    foodChargeSnapshot:
+      occupancy.foodIncludedInRent
+        ? ''
+        : occupancy.foodChargeSnapshot != null
+          ? String(occupancy.foodChargeSnapshot)
+          : '',
+    otherCharges:
+      occupancy.otherCharges?.map(charge => ({
+        code: charge.code,
+        label: charge.label,
+        amount: charge.amount,
+      })) ?? [],
+  };
+}
+
+export function resolveContractFoodPolicy(
+  spacePolicy: SpaceFoodPolicy,
+  occupancy?: OccupancyResponse | null,
+): SpaceFoodPolicy {
+  if (occupancy?.foodIncludedInRent) {
+    return { foodIncludedInRent: true, defaultFoodCharge: null };
+  }
+  return spacePolicy;
+}
+
+export function computeMonthlyRentFoodTotal(
+  values: ContractTermsFormValues,
+  foodPolicy?: SpaceFoodPolicy,
+): number | null {
+  const rent = parseAmount(values.rentSnapshot);
+  if (rent == null) {
+    return null;
+  }
+
+  if (foodPolicy?.foodIncludedInRent) {
+    return rent;
+  }
+
+  if (!values.foodEnabled) {
+    return rent;
+  }
+
+  const food = parseAmount(values.foodChargeSnapshot) ?? 0;
+  return rent + food;
+}
+
+export function validateContractTerms(
+  values: ContractTermsFormValues,
+  options: {
+    rentRequired: boolean;
+    catalogDefaultRent?: number | null;
+    foodPolicy?: SpaceFoodPolicy;
+  },
+): string | null {
+  const foodIncludedInRent = options.foodPolicy?.foodIncludedInRent ?? false;
+  const rentEntered = parseAmount(values.rentSnapshot);
+  const hasRent =
+    rentEntered != null ||
+    (options.catalogDefaultRent != null && options.catalogDefaultRent > 0);
+
+  if (options.rentRequired && !hasRent) {
+    return 'occupancy.contract.errors.rentRequired';
+  }
+
+  if (values.depositSnapshot.trim()) {
+    const deposit = parseAmount(values.depositSnapshot);
+    if (deposit == null) {
+      return 'occupancy.contract.errors.depositInvalid';
+    }
+  }
+
+  if (values.foodEnabled && !foodIncludedInRent) {
+    const foodCharge = parseAmount(values.foodChargeSnapshot);
+    const hasDefaultFood =
+      options.foodPolicy?.defaultFoodCharge != null &&
+      options.foodPolicy.defaultFoodCharge > 0;
+    if (foodCharge == null && !hasDefaultFood) {
+      return 'occupancy.contract.errors.foodChargeRequired';
+    }
+    if (foodCharge != null && foodCharge < 0) {
+      return 'occupancy.contract.errors.foodChargeInvalid';
+    }
+  }
+
+  if (values.otherCharges.length > MAX_OTHER_CHARGES) {
+    return 'occupancy.contract.errors.tooManyCharges';
+  }
+
+  for (const charge of values.otherCharges) {
+    if (!charge.label.trim()) {
+      return 'occupancy.contract.errors.chargeLabelRequired';
+    }
+    if (!Number.isFinite(charge.amount) || charge.amount < 0) {
+      return 'occupancy.contract.errors.chargeAmountInvalid';
+    }
+  }
+
+  return null;
+}
+
+export function buildContractSnapshotPayload(
+  values: ContractTermsFormValues,
+  options?: {
+    includeRent?: boolean;
+    includeDeposit?: boolean;
+    includeFood?: boolean;
+    foodPolicy?: SpaceFoodPolicy;
+  },
+): ContractSnapshotInput {
+  const includeRent = options?.includeRent !== false;
+  const includeDeposit = options?.includeDeposit !== false;
+  const includeFood = options?.includeFood !== false;
+  const foodIncludedInRent = options?.foodPolicy?.foodIncludedInRent ?? false;
+
+  const payload: ContractSnapshotInput = {};
+
+  if (includeRent) {
+    const rent = parseAmount(values.rentSnapshot);
+    if (rent != null) {
+      payload.rentSnapshot = rent;
+    }
+  }
+
+  if (includeDeposit) {
+    const deposit = parseAmount(values.depositSnapshot);
+    payload.depositSnapshot = deposit ?? 0;
+  }
+
+  if (includeFood) {
+    if (foodIncludedInRent) {
+      payload.foodEnabled = true;
+      payload.foodChargeSnapshot = null;
+      payload.foodIncludedInRent = true;
+    } else {
+      payload.foodEnabled = values.foodEnabled;
+      payload.foodIncludedInRent = false;
+      if (values.foodEnabled) {
+        const foodCharge = parseAmount(values.foodChargeSnapshot);
+        if (foodCharge != null) {
+          payload.foodChargeSnapshot = foodCharge;
+        }
+      } else {
+        payload.foodChargeSnapshot = null;
+      }
+    }
+  }
+
+  if (values.otherCharges.length > 0) {
+    payload.otherCharges = values.otherCharges.map(charge => ({
+      code: charge.code,
+      label: charge.label.trim(),
+      amount: charge.amount,
+    }));
+  }
+
+  return payload;
+}
+
+export function buildTransferContractPayload(
+  rentPolicy: TransferRentPolicy,
+  values: ContractTermsFormValues,
+  foodPolicy?: SpaceFoodPolicy,
+): Pick<
+  ContractSnapshotInput,
+  | 'rentSnapshot'
+  | 'depositSnapshot'
+  | 'foodEnabled'
+  | 'foodChargeSnapshot'
+  | 'foodIncludedInRent'
+  | 'otherCharges'
+> & { rentPolicy: TransferRentPolicy } {
+  const foodIncludedInRent = foodPolicy?.foodIncludedInRent ?? false;
+
+  if (rentPolicy === 'KEEP') {
+    return {
+      rentPolicy,
+      foodEnabled: foodIncludedInRent ? true : values.foodEnabled,
+      foodIncludedInRent,
+      foodChargeSnapshot:
+        foodIncludedInRent || !values.foodEnabled
+          ? null
+          : parseAmount(values.foodChargeSnapshot),
+      otherCharges:
+        values.otherCharges.length > 0
+          ? values.otherCharges.map(charge => ({
+              code: charge.code,
+              label: charge.label.trim(),
+              amount: charge.amount,
+            }))
+          : [],
+    };
+  }
+
+  const snapshot = buildContractSnapshotPayload(values, {
+    includeRent: rentPolicy === 'CUSTOM' || rentPolicy === 'APPLY_NEW',
+    includeDeposit: true,
+    includeFood: true,
+    foodPolicy,
+  });
+
+  return {
+    rentPolicy,
+    ...snapshot,
+  };
+}
+
+export function formatContractAmount(
+  value?: number | null,
+  notRecordedLabel = 'Not recorded',
+): string {
+  if (value == null) {
+    return notRecordedLabel;
+  }
+  return `₹${value.toLocaleString('en-IN')}`;
+}
+
+export function computeOccupancyMonthlyTotal(
+  occupancy: OccupancyResponse,
+): number | null {
+  if (occupancy.rentSnapshot == null) {
+    return null;
+  }
+
+  if (occupancy.foodIncludedInRent) {
+    return occupancy.rentSnapshot;
+  }
+
+  if (!occupancy.foodEnabled) {
+    return occupancy.rentSnapshot;
+  }
+
+  return occupancy.rentSnapshot + (occupancy.foodChargeSnapshot ?? 0);
+}
+
+export function hasContractSnapshot(occupancy: OccupancyResponse): boolean {
+  return (
+    occupancy.status === 'ACTIVE' &&
+    (occupancy.rentSnapshot != null ||
+      occupancy.depositSnapshot != null ||
+      Boolean(occupancy.foodEnabled) ||
+      Boolean(occupancy.foodIncludedInRent) ||
+      (occupancy.otherCharges?.length ?? 0) > 0 ||
+      occupancy.pricingLockedAt != null)
+  );
+}

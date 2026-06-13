@@ -6,6 +6,7 @@
     "no": "No",
     "cancel": "Cancel",
     "back": "Back",
+    "continue": "Continue",
     "save": "Save",
     "user": "User",
     "errors": {
@@ -366,7 +367,9 @@
       "name": "Name",
       "code": "Code",
       "created": "Created",
-      "updated": "Updated"
+      "updated": "Updated",
+      "defaultRent": "Default monthly rent (prefill only)",
+      "defaultDeposit": "Default deposit (prefill only)"
     },
     "actions": {
       "edit": "Edit"
@@ -718,6 +721,67 @@
       "saveBed": "Failed to save bed. Please try again."
     }
   },
+  "occupancyWizard": {
+    "title": {
+      "default": "Occupancy",
+      "allocate": "Move In today",
+      "reserve": "Reserve accommodation",
+      "moveIn": "Complete move-in",
+      "transfer": "Transfer member",
+      "vacate": "Vacate member"
+    },
+    "stepProgress": "Step {{current}} of {{total}}",
+    "searchMemberPlaceholder": "Search by name or mobile",
+    "searchTargetPlaceholder": "Search building, room, bed…",
+    "noMembers": "No matching members.",
+    "noTargets": "No accommodation targets found.",
+    "noTargetsInBuilding": "No available beds in {{building}}",
+    "noTargetsWithStatus": "No {{status}} targets found.",
+    "noTargetsWithStatusInBuilding": "No {{status}} targets in {{building}}.",
+    "memberNotAllocated": "Member has no active occupancy",
+    "addMemberHint": "A tenant record will be created when you continue. No separate setup needed.",
+    "memberMode": {
+      "search": "Search existing",
+      "addNew": "Add new tenant"
+    },
+    "context": {
+      "member": "Tenant",
+      "accommodation": "Accommodation"
+    },
+    "steps": {
+      "member": "Select member",
+      "memberHint": "Search by name or mobile number",
+      "target": "Select accommodation",
+      "targetHint": "Search by room, bed, or building — full paths are shown",
+      "contract": "Contract terms",
+      "reserveDates": "Reservation details",
+      "reserveDatesHint": "No charges are collected when reserving.",
+      "transferCurrent": "Current accommodation",
+      "vacate": "Confirm vacate",
+      "review": "Review & confirm"
+    },
+    "review": {
+      "member": "Member",
+      "accommodation": "Accommodation"
+    },
+    "filters": {
+      "allBuildings": "All buildings",
+      "allFloors": "All floors",
+      "allStatuses": "All statuses",
+      "status": "Status",
+      "statusBrowseHint": "Showing all targets with this status. Only available targets can be selected."
+    },
+    "occupancyStatus": {
+      "ALLOCATED": "Allocated",
+      "RESERVED": "Reserved",
+      "VACATED": "Vacated"
+    },
+    "errors": {
+      "searchMembers": "Failed to search members.",
+      "searchTargets": "Failed to search accommodation.",
+      "memberRequired": "Select a tenant or add a new one to continue."
+    }
+  },
   "occupancy": {
     "section": {
       "title": "Accommodation",
@@ -816,6 +880,69 @@
       "message": "End this member's current accommodation assignment?",
       "confirm": "Vacate"
     },
+    "contract": {
+      "title": "Contract terms",
+      "hint": "Agreed monthly rent and charges at activation. Not billing or payments.",
+      "stepTitle": "Contract terms",
+      "continueToTerms": "Continue to contract terms",
+      "snapshotTitle": "Agreed charges",
+      "lockedAt": "Locked on {{date}}",
+      "rent": "Monthly rent",
+      "rentRequired": "Monthly rent (required)",
+      "deposit": "Deposit",
+      "depositOptional": "Deposit (optional)",
+      "depositDefaultHint": "Defaults to 0 if left empty",
+      "catalogRentHint": "Catalog default: ₹{{amount}}",
+      "catalogDepositHint": "Catalog default: ₹{{amount}}",
+      "food": "Food",
+      "foodEnabled": "Include food charges",
+      "foodEnabledHint": "When enabled, agree a separate monthly food charge",
+      "foodCharge": "Food charge",
+      "foodChargeHint": "Leave blank if your space has a default food charge on the server",
+      "foodChargeDefaultHint": "Space default: ₹{{amount}} (used if left blank)",
+      "foodBundledTitle": "Food included in rent",
+      "foodBundledHint": "This property charges mandatory food as part of monthly rent. There is no separate food line.",
+      "monthlyTotal": "Monthly total (rent + food)",
+      "foodDisabled": "Not included",
+      "foodIncludedInRent": "Included in monthly rent",
+      "foodIncludedNoAmount": "Included (amount not recorded)",
+      "otherCharges": "Additional charges",
+      "addCharge": "Add charge",
+      "removeCharge": "Remove",
+      "chargeLine": "Charge {{index}}",
+      "chargeLabel": "Label",
+      "chargeLabelPlaceholder": "e.g. Parking",
+      "chargeAmount": "Amount",
+      "amountPlaceholder": "Enter amount",
+      "notRecorded": "Not recorded",
+      "legacyNoSnapshot": "Contract terms were not captured for this occupancy.",
+      "keepCurrent": "Keeping current (₹{{amount}})",
+      "rentPolicy": "Rent policy",
+      "rentPolicyOption": {
+        "APPLY_NEW": "Apply new defaults",
+        "KEEP": "Keep current",
+        "CUSTOM": "Custom rent"
+      },
+      "errors": {
+        "rentRequired": "Monthly rent is required when activating.",
+        "rentRequiredTransfer": "Rent is required when transferring.",
+        "customRentRequired": "Custom rent is required for this transfer policy.",
+        "foodChargeRequired": "Food charge is required when food is enabled.",
+        "depositInvalid": "Enter a valid deposit amount.",
+        "foodChargeInvalid": "Enter a valid food charge amount.",
+        "tooManyCharges": "At most 10 additional charges are allowed.",
+        "chargeLabelRequired": "Each charge needs a label.",
+        "chargeAmountInvalid": "Each charge amount must be 0 or greater."
+      },
+      "chargeCode": {
+        "PARKING": "Parking",
+        "LAUNDRY": "Laundry",
+        "ELECTRICITY": "Electricity",
+        "WIFI": "Wi-Fi",
+        "MAINTENANCE": "Maintenance",
+        "OTHER": "Other"
+      }
+    },
     "fields": {
       "expectedCheckout": "Expected checkout (optional)",
       "expectedExit": "Expected exit date (optional)",
@@ -862,7 +989,7 @@
       "foodCharges": "Food charges",
       "amenities": "Amenities",
       "policies": "Policies & rules",
-      "comingSoonHint": "Captured at move-in in a future update (Phase 4.3b / 4.4)."
+      "comingSoonHint": "Amenities and policies will be captured in a future update."
     },
     "targetOccupant": {
       "title": "Current occupant",
@@ -916,7 +1043,12 @@
       "invalidTargetType": "This allocation type is not allowed for this space.",
       "bedRequired": "Select a bed.",
       "roomRequired": "Select a room.",
-      "unitRequired": "Select a unit."
+      "unitRequired": "Select a unit.",
+      "codes": {
+        "RENT_SNAPSHOT_REQUIRED": "Monthly rent is required when activating.",
+        "FOOD_CHARGE_REQUIRED": "Food charge is required when food is enabled.",
+        "FOOD_CHARGE_NOT_ALLOWED": "Food charge cannot be set when food is included in rent."
+      }
     }
   },
   "dashboard": {
@@ -926,7 +1058,21 @@
     "mealsHint": "↓ 18% less waste vs last week",
     "rentCollected": "Rent collected (May)",
     "rentHint": "78% of expected collection",
-    "sectionComingSoon": "The {{section}} section is being set up. Check back soon."
+    "sectionComingSoon": "The {{section}} section is being set up. Check back soon.",
+    "quickActions": {
+      "title": "Quick actions",
+      "residents": "Residents",
+      "residentsSubtitle": "Move in • Reserve • Transfer • Vacate",
+      "meals": "Meals",
+      "mealsSubtitle": "Meal planning • Availability poll",
+      "comingSoon": "Coming soon",
+      "allocate": "Move In",
+      "reserve": "Reserve",
+      "transfer": "Transfer",
+      "vacate": "Vacate",
+      "mealsPlanning": "Meal Planning",
+      "poll": "Availability Poll"
+    }
   },
   "settings": {
     "profile": {

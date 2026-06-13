@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -12,6 +12,7 @@ import type {
 } from '../../api/types';
 import { Button, Card, useConfirmDialog } from '../ui';
 import type { MainStackParamList } from '../../navigation/types';
+import { openOccupancyWizardFromRef } from '../../features/occupancy/OccupancyWizard';
 import { useMemberOccupancies } from '../../hooks/useMemberOccupancies';
 import { useOccupancyMutations } from '../../hooks/useOccupancyMutations';
 import { useMemberStore } from '../../store/memberStore';
@@ -24,18 +25,10 @@ import {
   shouldShowOccupancySection,
 } from '../../utils/occupancyPermissions';
 import {
-  buildAllocateRequest,
-  buildReserveRequest,
-  buildTransferRequest,
   formatOccupancyAllocatedDate,
   getOccupancyExitDate,
-  type OccupancyTargetSelection,
 } from '../../utils/occupancyRules';
-import { MoveInModal, type MoveInFormValues } from './MoveInModal';
-import {
-  OccupancyTargetPickerModal,
-  type OccupancyPickerExtras,
-} from './OccupancyTargetPickerModal';
+import { OccupancyContractSnapshotCard } from './OccupancyContractSnapshotCard';
 
 type Nav = NativeStackNavigationProp<MainStackParamList>;
 
@@ -131,28 +124,12 @@ export function MemberAccommodationSection({
   const { data: occupancyData } = useMemberOccupancies(spaceId, member.memberId, {
     enabled: showSection,
   });
-  const {
-    allocate,
-    reserve,
-    moveIn,
-    cancelReservation,
-    transfer,
-    vacate,
-    loading,
-    error,
-    clearError,
-  } = useOccupancyMutations(spaceId);
-
-  const [reserveVisible, setReserveVisible] = useState(false);
-  const [walkInVisible, setWalkInVisible] = useState(false);
-  const [transferVisible, setTransferVisible] = useState(false);
-  const [moveInVisible, setMoveInVisible] = useState(false);
+  const { cancelReservation, loading, error } = useOccupancyMutations(spaceId);
 
   if (!showSection || !spaceType) {
     return null;
   }
 
-  const resolvedSpaceType = spaceType;
   const canManage = canShowOccupancyActionsForMember(member.role, currentRole);
   const isAllocated = member.occupancyStatus === 'ALLOCATED';
   const isReserved = member.occupancyStatus === 'RESERVED';
@@ -176,132 +153,23 @@ export function MemberAccommodationSection({
         ? summaryFromOccupancy(reservedOccupancy)
         : null;
 
-  function closePickers() {
-    setReserveVisible(false);
-    setWalkInVisible(false);
-    setTransferVisible(false);
+  function openWizard(mode: 'ALLOCATE' | 'RESERVE' | 'MOVE_IN' | 'TRANSFER' | 'VACATE') {
+    openOccupancyWizardFromRef({
+      spaceId,
+      mode,
+      memberId: member.memberId,
+      occupancyId:
+        mode === 'MOVE_IN'
+          ? reservedOccupancyId
+          : mode === 'TRANSFER' || mode === 'VACATE'
+            ? activeOccupancyId
+            : undefined,
+    });
   }
 
   async function afterMutation() {
     await refreshMember(member.memberId);
     showToast(t('occupancy.success.updated'));
-  }
-
-  async function handleReserve(
-    selection: OccupancyTargetSelection,
-    extras?: OccupancyPickerExtras,
-  ) {
-    clearError();
-    const { body, errorKey } = buildReserveRequest(
-      member.memberId,
-      resolvedSpaceType,
-      selection.targetType,
-      {
-        bedId: selection.bedId,
-        roomId: selection.roomId,
-        unitId: selection.unitId,
-      },
-      {
-        moveInDate: extras?.moveInDate ?? '',
-        expectedExitDate: extras?.expectedExitDate,
-        expectedCheckoutDate: extras?.expectedCheckoutDate,
-        memberCategory: extras?.memberCategory,
-        remarks: extras?.remarks,
-      },
-    );
-    if (!body || errorKey) {
-      showToast(t(errorKey ?? 'occupancy.errors.generic'));
-      return;
-    }
-    try {
-      await reserve(body);
-      closePickers();
-      await afterMutation();
-    } catch {
-      // error surfaced via hook
-    }
-  }
-
-  async function handleWalkIn(
-    selection: OccupancyTargetSelection,
-    extras?: OccupancyPickerExtras,
-  ) {
-    clearError();
-    const { body, errorKey } = buildAllocateRequest(
-      member.memberId,
-      resolvedSpaceType,
-      selection.targetType,
-      {
-        bedId: selection.bedId,
-        roomId: selection.roomId,
-        unitId: selection.unitId,
-      },
-      extras,
-    );
-    if (!body || errorKey) {
-      showToast(t(errorKey ?? 'occupancy.errors.generic'));
-      return;
-    }
-    try {
-      await allocate(body);
-      closePickers();
-      await afterMutation();
-    } catch {
-      // error surfaced via hook
-    }
-  }
-
-  async function handleTransfer(
-    selection: OccupancyTargetSelection,
-    extras?: OccupancyPickerExtras,
-  ) {
-    if (!activeOccupancyId) {
-      showToast(t('occupancy.errors.noActive'));
-      return;
-    }
-
-    clearError();
-    const { body, errorKey } = buildTransferRequest(
-      resolvedSpaceType,
-      selection.targetType,
-      {
-        bedId: selection.bedId,
-        roomId: selection.roomId,
-        unitId: selection.unitId,
-      },
-      extras?.remarks,
-    );
-    if (!body || errorKey) {
-      showToast(t(errorKey ?? 'occupancy.errors.generic'));
-      return;
-    }
-    try {
-      await transfer(activeOccupancyId, body);
-      closePickers();
-      await afterMutation();
-    } catch {
-      // error surfaced via hook
-    }
-  }
-
-  async function handleMoveIn(values: MoveInFormValues) {
-    if (!reservedOccupancyId) {
-      showToast(t('occupancy.errors.noReserved'));
-      return;
-    }
-    clearError();
-    try {
-      await moveIn(reservedOccupancyId, {
-        expectedExitDate: values.expectedExitDate ?? null,
-        allowEarlyMoveIn: values.allowEarlyMoveIn,
-        agreementSigned: values.agreementSigned,
-        remarks: values.remarks ?? null,
-      });
-      setMoveInVisible(false);
-      await afterMutation();
-    } catch {
-      // error surfaced via hook
-    }
   }
 
   function confirmCancelReservation() {
@@ -317,27 +185,6 @@ export function MemberAccommodationSection({
         }
         try {
           await cancelReservation(reservedOccupancyId);
-          await afterMutation();
-        } catch {
-          // error surfaced via hook
-        }
-      },
-    });
-  }
-
-  function confirmVacate() {
-    showConfirm({
-      title: t('occupancy.vacate.title'),
-      message: t('occupancy.vacate.message'),
-      confirmLabel: t('occupancy.vacate.confirm'),
-      destructive: true,
-      onConfirm: async () => {
-        if (!activeOccupancyId) {
-          showToast(t('occupancy.errors.noActive'));
-          return;
-        }
-        try {
-          await vacate(activeOccupancyId);
           await afterMutation();
         } catch {
           // error surfaced via hook
@@ -367,6 +214,9 @@ export function MemberAccommodationSection({
               label={t('occupancy.fields.expectedExit')}
               value={getOccupancyExitDate(activeOccupancy)}
             />
+            {activeOccupancy ? (
+              <OccupancyContractSnapshotCard occupancy={activeOccupancy} />
+            ) : null}
           </>
         ) : isReserved && reservedSummary ? (
           <>
@@ -404,14 +254,14 @@ export function MemberAccommodationSection({
                 <Button
                   label={t('occupancy.actions.transfer')}
                   variant="secondary"
-                  onPress={() => setTransferVisible(true)}
+                  onPress={() => openWizard('TRANSFER')}
                   disabled={loading}
                   style={styles.actionBtn}
                 />
                 <Button
                   label={t('occupancy.actions.vacate')}
                   variant="ghost"
-                  onPress={confirmVacate}
+                  onPress={() => openWizard('VACATE')}
                   disabled={loading}
                   style={styles.actionBtn}
                 />
@@ -420,7 +270,7 @@ export function MemberAccommodationSection({
               <>
                 <Button
                   label={t('occupancy.actions.moveIn')}
-                  onPress={() => setMoveInVisible(true)}
+                  onPress={() => openWizard('MOVE_IN')}
                   disabled={loading}
                   style={styles.actionBtn}
                 />
@@ -436,14 +286,14 @@ export function MemberAccommodationSection({
               <>
                 <Button
                   label={t('occupancy.actions.reserve')}
-                  onPress={() => setReserveVisible(true)}
+                  onPress={() => openWizard('RESERVE')}
                   disabled={loading}
                   style={styles.actionBtn}
                 />
                 <Button
                   label={t('occupancy.actions.walkInAllocate')}
                   variant="secondary"
-                  onPress={() => setWalkInVisible(true)}
+                  onPress={() => openWizard('ALLOCATE')}
                   disabled={loading}
                   style={styles.actionBtn}
                 />
@@ -465,51 +315,6 @@ export function MemberAccommodationSection({
           style={styles.historyBtn}
         />
       </Card>
-
-      <OccupancyTargetPickerModal
-        visible={reserveVisible}
-        spaceId={spaceId}
-        spaceType={spaceType}
-        mode="RESERVE"
-        title={t('occupancy.reserve.title')}
-        memberName={member.fullName}
-        loading={loading}
-        onClose={closePickers}
-        onConfirm={handleReserve}
-      />
-
-      <OccupancyTargetPickerModal
-        visible={walkInVisible}
-        spaceId={spaceId}
-        spaceType={spaceType}
-        mode="WALK_IN"
-        title={t('occupancy.walkIn.title')}
-        memberName={member.fullName}
-        showCheckoutDate
-        loading={loading}
-        onClose={closePickers}
-        onConfirm={handleWalkIn}
-      />
-
-      <OccupancyTargetPickerModal
-        visible={transferVisible}
-        spaceId={spaceId}
-        spaceType={spaceType}
-        mode="TRANSFER"
-        title={t('occupancy.transfer.title')}
-        memberName={member.fullName}
-        loading={loading}
-        onClose={closePickers}
-        onConfirm={handleTransfer}
-      />
-
-      <MoveInModal
-        visible={moveInVisible}
-        moveInDate={reservedOccupancy?.moveInDate ?? reservedSummary?.moveInDate}
-        loading={loading}
-        onClose={() => setMoveInVisible(false)}
-        onConfirm={handleMoveIn}
-      />
     </View>
   );
 }

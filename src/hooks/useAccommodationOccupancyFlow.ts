@@ -7,21 +7,12 @@ import type {
   SpaceType,
 } from '../api/types';
 import { useConfirmDialog } from '../components/ui';
+import { openOccupancyWizardFromRef } from '../features/occupancy/OccupancyWizard';
 import { useOccupancyMutations } from './useOccupancyMutations';
 import { useToastStore } from '../store/toastStore';
 import { fetchTargetOccupancy } from '../utils/fetchTargetOccupancy';
 import { isOccupancyTargetSupported } from '../utils/buildOccupancyTarget';
-import {
-  buildAllocateRequest,
-  buildReserveRequest,
-  buildTransferRequest,
-  type OccupancyTargetSelection,
-} from '../utils/occupancyRules';
-import type { MoveInFormValues } from '../components/occupancy/MoveInModal';
-import type {
-  OccupancyPickerExtras,
-  OccupancyPickerMode,
-} from '../components/occupancy/OccupancyTargetPickerModal';
+import type { OccupancyTargetSelection } from '../utils/occupancyRules';
 
 export type OccupancyFlowContext = {
   target: OccupancyTargetSelection;
@@ -45,25 +36,10 @@ export function useAccommodationOccupancyFlow({
   const { t } = useTranslation();
   const showToast = useToastStore(state => state.showToast);
   const { showConfirm } = useConfirmDialog();
-  const {
-    allocate,
-    reserve,
-    moveIn,
-    cancelReservation,
-    transfer,
-    vacate,
-    loading,
-    error,
-    clearError,
-  } = useOccupancyMutations(spaceId);
+  const { cancelReservation, vacate, loading, error, clearError } =
+    useOccupancyMutations(spaceId);
 
   const [flowContext, setFlowContext] = useState<OccupancyFlowContext | null>(null);
-  const [memberPickerVisible, setMemberPickerVisible] = useState(false);
-  const [allocationMode, setAllocationMode] = useState<OccupancyPickerMode>('WALK_IN');
-  const [allocationVisible, setAllocationVisible] = useState(false);
-  const [selectedMember, setSelectedMember] = useState<MemberResponse | null>(null);
-  const [transferVisible, setTransferVisible] = useState(false);
-  const [moveInVisible, setMoveInVisible] = useState(false);
   const [resolvingOccupancy, setResolvingOccupancy] = useState(false);
 
   const target = flowContext?.target ?? null;
@@ -100,178 +76,29 @@ export function useAccommodationOccupancyFlow({
     [spaceId],
   );
 
-  const closeAllocationFlow = useCallback(() => {
-    setAllocationVisible(false);
-    setMemberPickerVisible(false);
-    setSelectedMember(null);
-  }, []);
-
   const afterMutation = useCallback(async () => {
     showToast(t('occupancy.success.updated'));
     onSuccess?.();
   }, [onSuccess, showToast, t]);
 
-  const openMemberPicker = useCallback(
-    async (context: OccupancyFlowContext, mode: OccupancyPickerMode) => {
-      clearError();
-      await ensureContext(context);
-      setAllocationMode(mode);
-      setMemberPickerVisible(true);
+  const openWizard = useCallback(
+    (
+      mode: 'ALLOCATE' | 'RESERVE' | 'MOVE_IN' | 'TRANSFER' | 'VACATE',
+      context: OccupancyFlowContext,
+      resolvedOccupancy?: OccupancyResponse | null,
+    ) => {
+      openOccupancyWizardFromRef({
+        spaceId,
+        mode,
+        memberId: resolvedOccupancy?.memberId,
+        bedId: context.target.bedId,
+        roomId: context.target.roomId,
+        unitId: context.target.unitId,
+        buildingId: context.target.buildingId,
+        occupancyId: resolvedOccupancy?.occupancyId,
+      });
     },
-    [clearError, ensureContext],
-  );
-
-  const handleMemberSelected = useCallback((member: MemberResponse) => {
-    setSelectedMember(member);
-    setMemberPickerVisible(false);
-    setAllocationVisible(true);
-  }, []);
-
-  const handleReserve = useCallback(
-    async (extras?: OccupancyPickerExtras) => {
-      if (!selectedMember || !target) {
-        return;
-      }
-      clearError();
-      const { body, errorKey } = buildReserveRequest(
-        selectedMember.memberId,
-        spaceType,
-        target.targetType,
-        {
-          bedId: target.bedId,
-          roomId: target.roomId,
-          unitId: target.unitId,
-        },
-        {
-          moveInDate: extras?.moveInDate ?? '',
-          expectedExitDate: extras?.expectedExitDate,
-          expectedCheckoutDate: extras?.expectedCheckoutDate,
-          memberCategory: extras?.memberCategory,
-          remarks: extras?.remarks,
-        },
-      );
-      if (!body || errorKey) {
-        showToast(t(errorKey ?? 'occupancy.errors.generic'));
-        return;
-      }
-      try {
-        await reserve(body);
-        closeAllocationFlow();
-        await afterMutation();
-      } catch {
-        // surfaced via hook
-      }
-    },
-    [
-      afterMutation,
-      clearError,
-      closeAllocationFlow,
-      reserve,
-      selectedMember,
-      showToast,
-      spaceType,
-      t,
-      target,
-    ],
-  );
-
-  const handleWalkIn = useCallback(
-    async (extras?: OccupancyPickerExtras) => {
-      if (!selectedMember || !target) {
-        return;
-      }
-      clearError();
-      const { body, errorKey } = buildAllocateRequest(
-        selectedMember.memberId,
-        spaceType,
-        target.targetType,
-        {
-          bedId: target.bedId,
-          roomId: target.roomId,
-          unitId: target.unitId,
-        },
-        extras,
-      );
-      if (!body || errorKey) {
-        showToast(t(errorKey ?? 'occupancy.errors.generic'));
-        return;
-      }
-      try {
-        await allocate(body);
-        closeAllocationFlow();
-        await afterMutation();
-      } catch {
-        // surfaced via hook
-      }
-    },
-    [
-      afterMutation,
-      allocate,
-      clearError,
-      closeAllocationFlow,
-      selectedMember,
-      showToast,
-      spaceType,
-      t,
-      target,
-    ],
-  );
-
-  const handleTransfer = useCallback(
-    async (selection: OccupancyTargetSelection, extras?: OccupancyPickerExtras) => {
-      const occupancyId = occupancy?.occupancyId;
-      if (!occupancyId) {
-        showToast(t('occupancy.errors.noActive'));
-        return;
-      }
-      clearError();
-      const { body, errorKey } = buildTransferRequest(
-        spaceType,
-        selection.targetType,
-        {
-          bedId: selection.bedId,
-          roomId: selection.roomId,
-          unitId: selection.unitId,
-        },
-        extras?.remarks,
-      );
-      if (!body || errorKey) {
-        showToast(t(errorKey ?? 'occupancy.errors.generic'));
-        return;
-      }
-      try {
-        await transfer(occupancyId, body);
-        setTransferVisible(false);
-        await afterMutation();
-      } catch {
-        // surfaced via hook
-      }
-    },
-    [afterMutation, clearError, occupancy?.occupancyId, showToast, spaceType, t, transfer],
-  );
-
-  const handleMoveIn = useCallback(
-    async (values: MoveInFormValues) => {
-      const occupancyId = occupancy?.occupancyId;
-      if (!occupancyId) {
-        showToast(t('occupancy.errors.noReserved'));
-        return;
-      }
-      clearError();
-      try {
-        await moveIn(occupancyId, {
-          expectedExitDate: values.expectedExitDate ?? null,
-          allowEarlyMoveIn: values.allowEarlyMoveIn,
-          agreementSigned: values.agreementSigned,
-          remarks: values.remarks ?? null,
-        });
-        setMoveInVisible(false);
-        await afterMutation();
-      } catch {
-        // surfaced via hook
-      }
-    },
-    [afterMutation, clearError, moveIn, occupancy?.occupancyId, showToast, t],
+    [spaceId],
   );
 
   const confirmCancelReservation = useCallback(() => {
@@ -296,64 +123,46 @@ export function useAccommodationOccupancyFlow({
     });
   }, [afterMutation, cancelReservation, occupancy?.occupancyId, showConfirm, showToast, t]);
 
-  const confirmVacate = useCallback(() => {
-    showConfirm({
-      title: t('occupancy.vacate.title'),
-      message: t('occupancy.vacate.message'),
-      confirmLabel: t('occupancy.vacate.confirm'),
-      destructive: true,
-      onConfirm: async () => {
-        const occupancyId = occupancy?.occupancyId;
-        if (!occupancyId) {
-          showToast(t('occupancy.errors.noActive'));
-          return;
-        }
-        try {
-          await vacate(occupancyId);
-          await afterMutation();
-        } catch {
-          // surfaced via hook
-        }
-      },
-    });
-  }, [afterMutation, occupancy?.occupancyId, showConfirm, showToast, t, vacate]);
-
   const startReserve = useCallback(
     (context: OccupancyFlowContext) => {
-      void openMemberPicker(context, 'RESERVE');
+      clearError();
+      openWizard('RESERVE', context);
     },
-    [openMemberPicker],
+    [clearError, openWizard],
   );
 
   const startWalkIn = useCallback(
     (context: OccupancyFlowContext) => {
-      void openMemberPicker(context, 'WALK_IN');
+      clearError();
+      openWizard('ALLOCATE', context);
     },
-    [openMemberPicker],
+    [clearError, openWizard],
   );
 
   const startMoveIn = useCallback(
     async (context: OccupancyFlowContext) => {
+      clearError();
       const resolved = await ensureContext(context);
       if (!resolved.occupancy?.occupancyId) {
         showToast(t('occupancy.errors.noReserved'));
         return;
       }
-      setMoveInVisible(true);
+      openWizard('MOVE_IN', resolved, resolved.occupancy);
     },
-    [ensureContext, showToast, t],
+    [clearError, ensureContext, openWizard, showToast, t],
   );
 
   const startTransfer = useCallback(
     async (context: OccupancyFlowContext) => {
+      clearError();
       const resolved = await ensureContext(context);
       if (!resolved.occupancy?.occupancyId) {
         showToast(t('occupancy.errors.noActive'));
         return;
       }
-      setTransferVisible(true);
+      openWizard('TRANSFER', resolved, resolved.occupancy);
     },
-    [ensureContext, showToast, t],
+    [clearError, ensureContext, openWizard, showToast, t],
   );
 
   const startCancelReservation = useCallback(
@@ -366,10 +175,15 @@ export function useAccommodationOccupancyFlow({
 
   const startVacate = useCallback(
     async (context: OccupancyFlowContext) => {
-      await ensureContext(context);
-      confirmVacate();
+      clearError();
+      const resolved = await ensureContext(context);
+      if (!resolved.occupancy?.occupancyId) {
+        showToast(t('occupancy.errors.noActive'));
+        return;
+      }
+      openWizard('VACATE', resolved, resolved.occupancy);
     },
-    [confirmVacate, ensureContext],
+    [clearError, ensureContext, openWizard, showToast, t],
   );
 
   return {
@@ -379,21 +193,6 @@ export function useAccommodationOccupancyFlow({
     target,
     accommodationStatus,
     occupancy,
-    selectedMember,
-    memberPickerVisible,
-    allocationVisible,
-    allocationMode,
-    transferVisible,
-    moveInVisible,
-    setMemberPickerVisible,
-    closeAllocationFlow,
-    handleMemberSelected,
-    handleReserve,
-    handleWalkIn,
-    handleTransfer,
-    handleMoveIn,
-    setTransferVisible,
-    setMoveInVisible,
     startReserve,
     startWalkIn,
     startMoveIn,

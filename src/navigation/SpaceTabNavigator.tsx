@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { SpaceTabBackButton } from '../components/ui';
 import { useSpaceTabHeader } from '../hooks/useSpaceTabHeader';
 import { AccommodationHomeScreen } from '../screens/accommodation/AccommodationHomeScreen';
+import { DashboardScreen } from '../screens/dashboard/DashboardScreen';
 import { MembersScreen } from '../screens/MembersScreen';
 import { useSpaceStore } from '../store/spaceStore';
 import { tabBarOptions, tabHeaderOptions } from '../theme';
@@ -18,37 +19,43 @@ type SpaceTabNavigatorProps = {
   spaceId: string;
 };
 
-type TabRouteName = keyof SpaceTabParamList;
-
-const TAB_TITLE_KEYS: Record<TabRouteName, string> = {
-  Dashboard: 'navigation.dashboard',
-  Members: 'navigation.members',
-  Accommodation: 'navigation.accommodation',
-  Meals: 'navigation.meals',
-  Payments: 'navigation.payments',
-  Complaints: 'navigation.complaints',
-};
-
-function createTabScreen(
-  routeName: TabRouteName,
-  options?: { showProfileAndMenu?: boolean },
-) {
-  return function TabScreen() {
-    const { t } = useTranslation();
-    const route = useRoute<RouteProp<SpaceTabParamList, typeof routeName>>();
-    const { spaceId } = route.params;
-    const title = t(TAB_TITLE_KEYS[routeName]);
-
-    useSpaceTabHeader(spaceId, options);
-
-    return <ScreenPlaceholder title={title} />;
-  };
+function DashboardTabScreen() {
+  const route = useRoute<RouteProp<SpaceTabParamList, 'Dashboard'>>();
+  const { spaceId } = route.params;
+  useSpaceTabHeader(spaceId, { showProfileAndMenu: true });
+  return <DashboardScreen />;
 }
 
-const DashboardScreen = createTabScreen('Dashboard', { showProfileAndMenu: true });
-const MealsScreen = createTabScreen('Meals');
-const PaymentsScreen = createTabScreen('Payments');
-const ComplaintsScreen = createTabScreen('Complaints');
+function MembersTabScreen() {
+  const route = useRoute<RouteProp<SpaceTabParamList, 'Members'>>();
+  const { spaceId } = route.params;
+  useSpaceTabHeader(spaceId);
+  return <MembersScreen />;
+}
+
+function MealsTabScreen() {
+  const { t } = useTranslation();
+  const route = useRoute<RouteProp<SpaceTabParamList, 'Meals'>>();
+  const { spaceId } = route.params;
+  useSpaceTabHeader(spaceId);
+  return <ScreenPlaceholder title={t('navigation.meals')} />;
+}
+
+function PaymentsTabScreen() {
+  const { t } = useTranslation();
+  const route = useRoute<RouteProp<SpaceTabParamList, 'Payments'>>();
+  const { spaceId } = route.params;
+  useSpaceTabHeader(spaceId);
+  return <ScreenPlaceholder title={t('navigation.payments')} />;
+}
+
+function ComplaintsTabScreen() {
+  const { t } = useTranslation();
+  const route = useRoute<RouteProp<SpaceTabParamList, 'Complaints'>>();
+  const { spaceId } = route.params;
+  useSpaceTabHeader(spaceId);
+  return <ScreenPlaceholder title={t('navigation.complaints')} />;
+}
 
 const tabScreenOptions = {
   ...tabHeaderOptions,
@@ -72,13 +79,13 @@ export function SpaceTabNavigator({ spaceId }: SpaceTabNavigatorProps) {
       screenOptions={tabScreenOptions}>
       <Tab.Screen
         name="Dashboard"
-        component={DashboardScreen}
+        component={DashboardTabScreen}
         initialParams={{ spaceId }}
         options={{ title: t('navigation.dashboard') }}
       />
       <Tab.Screen
         name="Members"
-        component={MembersScreen}
+        component={MembersTabScreen}
         initialParams={{ spaceId }}
         options={{ headerShown: true, title: t('navigation.members') }}
       />
@@ -92,19 +99,19 @@ export function SpaceTabNavigator({ spaceId }: SpaceTabNavigatorProps) {
       ) : null}
       <Tab.Screen
         name="Meals"
-        component={MealsScreen}
+        component={MealsTabScreen}
         initialParams={{ spaceId }}
         options={{ title: t('navigation.meals') }}
       />
       <Tab.Screen
         name="Payments"
-        component={PaymentsScreen}
+        component={PaymentsTabScreen}
         initialParams={{ spaceId }}
         options={{ title: t('navigation.payments') }}
       />
       <Tab.Screen
         name="Complaints"
-        component={ComplaintsScreen}
+        component={ComplaintsTabScreen}
         initialParams={{ spaceId }}
         options={{ title: t('navigation.complaints') }}
       />

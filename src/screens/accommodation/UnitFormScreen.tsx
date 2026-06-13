@@ -37,6 +37,8 @@ export function UnitFormScreen() {
   const [name, setName] = useState('');
   const [unitNumber, setUnitNumber] = useState('');
   const [status, setStatus] = useState<AccommodationStatus | null>(isEdit ? null : 'AVAILABLE');
+  const [defaultRent, setDefaultRent] = useState('');
+  const [defaultDeposit, setDefaultDeposit] = useState('');
   const [nameError, setNameError] = useState<string | null>(null);
   const [unitNumberError, setUnitNumberError] = useState<string | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
@@ -58,6 +60,8 @@ export function UnitFormScreen() {
         setName(unit.name);
         setUnitNumber(unit.unitNumber);
         setStatus(unit.status);
+        setDefaultRent(unit.defaultRent != null ? String(unit.defaultRent) : '');
+        setDefaultDeposit(unit.defaultDeposit != null ? String(unit.defaultDeposit) : '');
       }).catch(err => setSubmitError(getAccommodationErrorMessage(err)));
     }, [buildingId, isEdit, spaceId, unitId]),
   );
@@ -84,10 +88,15 @@ export function UnitFormScreen() {
 
     try {
       if (isEdit && unitId && status) {
+        const parsedRent = defaultRent.trim() ? Number(defaultRent.trim()) : null;
+        const parsedDeposit = defaultDeposit.trim() ? Number(defaultDeposit.trim()) : null;
         await accommodationApi.updateUnit(spaceId, buildingId, unitId, {
           name: name.trim(),
           unitNumber: unitNumber.trim(),
           status,
+          defaultRent: parsedRent != null && Number.isFinite(parsedRent) ? parsedRent : null,
+          defaultDeposit:
+            parsedDeposit != null && Number.isFinite(parsedDeposit) ? parsedDeposit : null,
         });
         showToast(t('accommodation.units.updateSuccess'));
       } else if (floorId) {
@@ -125,6 +134,22 @@ export function UnitFormScreen() {
           />
           {isEdit ? (
             <AccommodationStatusPicker value={status} onChange={setStatus} error={statusError} />
+          ) : null}
+          {isEdit ? (
+            <>
+              <FormInput
+                label={t('accommodation.fields.defaultRent')}
+                value={defaultRent}
+                onChangeText={setDefaultRent}
+                keyboardType="numeric"
+              />
+              <FormInput
+                label={t('accommodation.fields.defaultDeposit')}
+                value={defaultDeposit}
+                onChangeText={setDefaultDeposit}
+                keyboardType="numeric"
+              />
+            </>
           ) : null}
           {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
           <Button label={t('common.save')} onPress={handleSubmit} loading={submitting} />

@@ -1,54 +1,145 @@
-import React, { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
+import type { OccupancyTargetSelection } from '../../utils/occupancyRules';
+import { fetchTargetCatalogDefaults } from '../../utils/fetchTargetCatalogDefaults';
+import {
+  fetchSpaceFoodPolicy,
+  type SpaceFoodPolicy,
+} from '../../utils/fetchSpaceFoodPolicy';
+import {
+  buildContractSnapshotPayload,
+  emptyContractTermsFormValues,
+  validateContractTerms,
+  type ContractTermsFormValues,
+} from '../../utils/occupancyContract';
+import { isMoveInDateInFuture } from '../../utils/occupancyRules';
+import { ContractTermsForm } from './ContractTermsForm';
 import { Button, FormInput } from '../ui';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
-import { isMoveInDateInFuture } from '../../utils/occupancyRules';
 
 export type MoveInFormValues = {
   expectedExitDate?: string;
   agreementSigned: boolean;
   allowEarlyMoveIn: boolean;
   remarks?: string;
+  contract: ContractTermsFormValues;
+  foodPolicy?: SpaceFoodPolicy;
 };
 
 type MoveInModalProps = {
   visible: boolean;
+  spaceId: string;
+  target: OccupancyTargetSelection;
   moveInDate?: string | null;
   loading?: boolean;
   onClose: () => void;
   onConfirm: (values: MoveInFormValues) => void;
 };
 
+type MoveInStep = 'dates' | 'contract';
+
 export function MoveInModal({
   visible,
+  spaceId,
+  target,
   moveInDate,
   loading = false,
   onClose,
   onConfirm,
 }: MoveInModalProps) {
   const { t } = useTranslation();
+  const [step, setStep] = useState<MoveInStep>('dates');
   const [expectedExitDate, setExpectedExitDate] = useState('');
   const [agreementSigned, setAgreementSigned] = useState(false);
   const [allowEarlyMoveIn, setAllowEarlyMoveIn] = useState(false);
   const [remarks, setRemarks] = useState('');
+  const [contractValues, setContractValues] = useState<ContractTermsFormValues>(
+    emptyContractTermsFormValues(),
+  );
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogRent, setCatalogRent] = useState<number | null>(null);
+  const [foodPolicy, setFoodPolicy] = useState<SpaceFoodPolicy>({
+    foodIncludedInRent: false,
+    defaultFoodCharge: null,
+  });
+  const [formError, setFormError] = useState<string | null>(null);
 
   const needsEarlyMoveIn = isMoveInDateInFuture(moveInDate);
 
-  function handleDismiss() {
+  useEffect(() => {
+    if (!visible) {
+      return;
+    }
+    setStep('dates');
     setExpectedExitDate('');
     setAgreementSigned(false);
     setAllowEarlyMoveIn(false);
     setRemarks('');
+    setFormError(null);
+    setCatalogLoading(true);
+    void Promise.all([
+      fetchTargetCatalogDefaults(spaceId, target.targetType, {
+        bedId: target.bedId,
+        roomId: target.roomId,
+        unitId: target.unitId,
+      }, target.roomId),
+      fetchSpaceFoodPolicy(spaceId),
+    ])
+      .then(([catalog, policy]) => {
+        setCatalogRent(catalog.defaultRent ?? null);
+        setFoodPolicy(policy);
+        setContractValues(emptyContractTermsFormValues(catalog, policy));
+      })
+      .finally(() => setCatalogLoading(false));
+  }, [spaceId, target, visible]);
+
+  function handleDismiss() {
+    setStep('dates');
+    setExpectedExitDate('');
+    setAgreementSigned(false);
+    setAllowEarlyMoveIn(false);
+    setRemarks('');
+    setFormError(null);
     onClose();
   }
 
+  function handleContinueToContract() {
+    if (needsEarlyMoveIn && !allowEarlyMoveIn) {
+      setFormError(t('occupancy.errors.moveInDateNotReached'));
+      return;
+    }
+    setFormError(null);
+    setStep('contract');
+  }
+
   function handleConfirm() {
+    const validationError = validateContractTerms(contractValues, {
+      rentRequired: true,
+      catalogDefaultRent: catalogRent,
+      foodPolicy,
+    });
+    if (validationError) {
+      setFormError(t(validationError));
+      return;
+    }
+
     onConfirm({
       expectedExitDate: expectedExitDate.trim() || undefined,
       agreementSigned,
       allowEarlyMoveIn: needsEarlyMoveIn ? allowEarlyMoveIn : false,
       remarks: remarks.trim() || undefined,
+      contract: contractValues,
+      foodPolicy,
     });
   }
 
@@ -56,74 +147,114 @@ export function MoveInModal({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleDismiss}>
       <Pressable style={styles.backdrop} onPress={handleDismiss}>
         <Pressable style={styles.sheet} onPress={event => event.stopPropagation()}>
-          <Text style={styles.title}>{t('occupancy.moveIn.title')}</Text>
-          {moveInDate ? (
-            <Text style={styles.subtitle}>
-              {t('occupancy.section.moveInDate')}: {moveInDate}
-            </Text>
-          ) : null}
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <Text style={styles.title}>{t('occupancy.moveIn.title')}</Text>
+            {moveInDate ? (
+              <Text style={styles.subtitle}>
+                {t('occupancy.section.moveInDate')}: {moveInDate}
+              </Text>
+            ) : null}
 
-          {needsEarlyMoveIn ? (
-            <View style={styles.switchRow}>
-              <View style={styles.switchCopy}>
-                <Text style={styles.switchLabel}>{t('occupancy.moveIn.allowEarly')}</Text>
-                <Text style={styles.switchHint}>{t('occupancy.moveIn.allowEarlyHint')}</Text>
-              </View>
-              <Switch
-                value={allowEarlyMoveIn}
-                onValueChange={setAllowEarlyMoveIn}
-                trackColor={{ false: colors.border, true: colors.primary }}
-              />
-            </View>
-          ) : null}
+            {step === 'dates' ? (
+              <>
+                {needsEarlyMoveIn ? (
+                  <View style={styles.switchRow}>
+                    <View style={styles.switchCopy}>
+                      <Text style={styles.switchLabel}>{t('occupancy.moveIn.allowEarly')}</Text>
+                      <Text style={styles.switchHint}>{t('occupancy.moveIn.allowEarlyHint')}</Text>
+                    </View>
+                    <Switch
+                      value={allowEarlyMoveIn}
+                      onValueChange={setAllowEarlyMoveIn}
+                      trackColor={{ false: colors.border, true: colors.primary }}
+                    />
+                  </View>
+                ) : null}
 
-          <FormInput
-            label={t('occupancy.fields.expectedExit')}
-            value={expectedExitDate}
-            onChangeText={setExpectedExitDate}
-            placeholder="YYYY-MM-DD"
-          />
+                <FormInput
+                  label={t('occupancy.fields.expectedExit')}
+                  value={expectedExitDate}
+                  onChangeText={setExpectedExitDate}
+                  placeholder="YYYY-MM-DD"
+                />
 
-          <View style={styles.switchRow}>
-            <Text style={styles.switchLabel}>{t('occupancy.fields.agreementSigned')}</Text>
-            <Switch
-              value={agreementSigned}
-              onValueChange={setAgreementSigned}
-              trackColor={{ false: colors.border, true: colors.primary }}
-            />
-          </View>
+                <View style={styles.switchRow}>
+                  <Text style={styles.switchLabel}>{t('occupancy.fields.agreementSigned')}</Text>
+                  <Switch
+                    value={agreementSigned}
+                    onValueChange={setAgreementSigned}
+                    trackColor={{ false: colors.border, true: colors.primary }}
+                  />
+                </View>
 
-          <FormInput
-            label={t('occupancy.fields.remarks')}
-            value={remarks}
-            onChangeText={setRemarks}
-            placeholder={t('occupancy.fields.remarksPlaceholder')}
-          />
+                <FormInput
+                  label={t('occupancy.fields.remarks')}
+                  value={remarks}
+                  onChangeText={setRemarks}
+                  placeholder={t('occupancy.fields.remarksPlaceholder')}
+                />
 
-          <View style={styles.comingSoonBlock}>
-            <Text style={styles.comingSoonTitle}>{t('occupancy.picker.financialTerms')}</Text>
-            <Text style={styles.comingSoonItem}>· {t('occupancy.picker.rent')}</Text>
-            <Text style={styles.comingSoonItem}>· {t('occupancy.picker.deposit')}</Text>
-            <Text style={styles.comingSoonItem}>· {t('occupancy.picker.foodCharges')}</Text>
-            <Text style={styles.comingSoonHint}>{t('occupancy.picker.comingSoonHint')}</Text>
-          </View>
+                {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
 
-          <View style={styles.actions}>
-            <Button
-              label={t('occupancy.actions.moveIn')}
-              onPress={handleConfirm}
-              loading={loading}
-              disabled={loading || (needsEarlyMoveIn && !allowEarlyMoveIn)}
-              style={styles.actionBtn}
-            />
-            <Button
-              label={t('common.cancel')}
-              variant="ghost"
-              onPress={handleDismiss}
-              disabled={loading}
-              style={styles.actionBtn}
-            />
-          </View>
+                <View style={styles.actions}>
+                  <Button
+                    label={t('occupancy.contract.continueToTerms')}
+                    onPress={handleContinueToContract}
+                    disabled={loading || (needsEarlyMoveIn && !allowEarlyMoveIn)}
+                    style={styles.actionBtn}
+                  />
+                  <Button
+                    label={t('common.cancel')}
+                    variant="ghost"
+                    onPress={handleDismiss}
+                    disabled={loading}
+                    style={styles.actionBtn}
+                  />
+                </View>
+              </>
+            ) : (
+              <>
+                {catalogLoading ? (
+                  <ActivityIndicator color={colors.primary} style={styles.loader} />
+                ) : (
+                  <ContractTermsForm
+                    values={contractValues}
+                    onChange={setContractValues}
+                    rentRequired
+                    catalogRentHint={catalogRent}
+                    catalogDepositHint={
+                      contractValues.depositSnapshot
+                        ? Number(contractValues.depositSnapshot)
+                        : null
+                    }
+                    foodPolicy={foodPolicy}
+                  />
+                )}
+
+                {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
+
+                <View style={styles.actions}>
+                  <Button
+                    label={t('occupancy.actions.moveIn')}
+                    onPress={handleConfirm}
+                    loading={loading}
+                    disabled={loading || catalogLoading}
+                    style={styles.actionBtn}
+                  />
+                  <Button
+                    label={t('common.back')}
+                    variant="ghost"
+                    onPress={() => {
+                      setFormError(null);
+                      setStep('dates');
+                    }}
+                    disabled={loading}
+                    style={styles.actionBtn}
+                  />
+                </View>
+              </>
+            )}
+          </ScrollView>
         </Pressable>
       </Pressable>
     </Modal>
@@ -141,6 +272,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: radius.card,
     padding: spacing.xl,
+    maxHeight: '90%',
     ...shadows.md,
   },
   title: {
@@ -170,24 +302,8 @@ const styles = StyleSheet.create({
     color: colors.muted,
     marginTop: spacing.xs,
   },
-  comingSoonBlock: {
-    marginBottom: spacing.md,
-    padding: spacing.md,
-    borderRadius: radius.input,
-    backgroundColor: colors.background,
-    gap: spacing.xs,
-  },
-  comingSoonTitle: {
-    ...typography.bodyStrong,
-  },
-  comingSoonItem: {
-    ...typography.caption,
-    color: colors.textSecondary,
-  },
-  comingSoonHint: {
-    ...typography.caption,
-    color: colors.muted,
-    marginTop: spacing.xs,
+  loader: {
+    marginVertical: spacing.lg,
   },
   actions: {
     marginTop: spacing.md,
@@ -195,5 +311,10 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     width: '100%',
+  },
+  errorText: {
+    ...typography.caption,
+    color: '#DC2626',
+    marginBottom: spacing.sm,
   },
 });

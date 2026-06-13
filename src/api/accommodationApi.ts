@@ -5,6 +5,8 @@ import {
   AccommodationSetupPreviewResponse,
   AccommodationSetupRequest,
   AccommodationSetupResultResponse,
+  AllocationTargetSearchParams,
+  AllocationTargetSearchResponse,
   ApiResponse,
   BedListItemResponse,
   BedResponse,
@@ -899,6 +901,50 @@ export const accommodationApi = {
     );
 
     console.log(`${LOG_TAG} bulkCreateBeds response`, response.bedsCreated);
+    return response;
+  },
+
+  searchAllocationTargets: async (
+    spaceId: UUID,
+    params?: AllocationTargetSearchParams,
+  ): Promise<PagedResponse<AllocationTargetSearchResponse>> => {
+    const q = new URLSearchParams();
+    if (params?.query?.trim()) {
+      q.set('query', params.query.trim());
+    }
+    if (params?.targetType) {
+      q.set('targetType', params.targetType);
+    }
+    if (params?.buildingId) {
+      q.set('buildingId', params.buildingId);
+    }
+    if (params?.floorId) {
+      q.set('floorId', params.floorId);
+    }
+    if (params?.unitId) {
+      q.set('unitId', params.unitId);
+    }
+    if (params?.status) {
+      q.set('status', params.status);
+    }
+    if (params?.selectableOnly != null) {
+      q.set('selectableOnly', String(params.selectableOnly));
+    }
+    if (params?.page != null) {
+      q.set('page', String(params.page));
+    }
+    if (params?.size != null) {
+      q.set('size', String(params.size));
+    }
+    const query = q.toString();
+    const path = `/spaces/${spaceId}/accommodation/allocation-targets${query ? `?${query}` : ''}`;
+    console.log(`${LOG_TAG} GET ${path}`);
+
+    const response = await unwrapApiResponse(
+      apiClient.get<ApiResponse<PagedResponse<AllocationTargetSearchResponse>>>(path),
+    );
+
+    console.log(`${LOG_TAG} searchAllocationTargets response`, response.content.length);
     return response;
   },
 };

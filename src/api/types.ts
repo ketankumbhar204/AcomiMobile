@@ -50,6 +50,10 @@ export interface SpaceDetailsResponse {
   address?: string;
   contactNumber?: string;
   ownerId: UUID;
+  /** When true, food is mandatory and bundled in rent — no separate food charge. */
+  foodIncludedInRent?: boolean;
+  /** Default separate food charge when food is not bundled in rent. */
+  defaultFoodCharge?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -88,6 +92,8 @@ export interface UpdateSpaceRequest {
   name: string;
   address?: string;
   contactNumber?: string;
+  foodIncludedInRent?: boolean;
+  defaultFoodCharge?: number | null;
 }
 
 export interface CreateMemberRequest {
@@ -179,6 +185,7 @@ export interface MemberResponse {
   role: MembershipRole;
   linkedUser: boolean;
   status: MemberStatus;
+  occupancyStatus?: MemberOccupancyStatus;
   createdAt: string;
 }
 
@@ -254,6 +261,8 @@ export interface Space {
   address: string | null;
   contactNumber: string | null;
   isActive: boolean;
+  foodIncludedInRent?: boolean;
+  defaultFoodCharge?: number | null;
   createdAt: string;
   updatedAt: string;
   role?: MembershipRole;
@@ -377,6 +386,8 @@ export interface UpdateUnitRequest {
   unitNumber: string;
   status: AccommodationStatus;
   unitKind?: UnitKind;
+  defaultRent?: number | null;
+  defaultDeposit?: number | null;
 }
 
 export interface CreateRoomRequest {
@@ -393,6 +404,8 @@ export interface UpdateRoomRequest {
   roomType: RoomType;
   capacity: number;
   status: AccommodationStatus;
+  defaultRent?: number | null;
+  defaultDeposit?: number | null;
 }
 
 export interface CreateBedRequest {
@@ -405,6 +418,8 @@ export interface UpdateBedRequest {
   name: string;
   bedNumber: string;
   status: AccommodationStatus;
+  defaultRent?: number | null;
+  defaultDeposit?: number | null;
 }
 
 export interface AccommodationActionMetadata {
@@ -451,6 +466,8 @@ export interface UnitResponse {
   active: boolean;
   createdAt: string;
   updatedAt: string;
+  defaultRent?: number | null;
+  defaultDeposit?: number | null;
   actions?: AccommodationActionMetadata;
 }
 
@@ -467,6 +484,8 @@ export interface RoomResponse {
   active: boolean;
   createdAt: string;
   updatedAt: string;
+  defaultRent?: number | null;
+  defaultDeposit?: number | null;
   actions?: AccommodationActionMetadata;
 }
 
@@ -486,6 +505,8 @@ export interface BedResponse {
   active: boolean;
   createdAt: string;
   updatedAt: string;
+  defaultRent?: number | null;
+  defaultDeposit?: number | null;
   actions?: AccommodationActionMetadata;
   occupant?: BedOccupantSummaryResponse | null;
 }
@@ -586,6 +607,47 @@ export interface ListQueryParams {
   sort?: string;
   view?: 'summary' | 'full';
   includeSynthetic?: boolean;
+}
+
+export interface MemberSearchParams {
+  search?: string;
+  occupancyStatus?: MemberOccupancyStatus;
+}
+
+export interface AllocationTargetSearchParams {
+  query?: string;
+  targetType?: 'BED' | 'UNIT';
+  buildingId?: UUID;
+  floorId?: UUID;
+  unitId?: UUID;
+  status?: AccommodationStatus;
+  selectableOnly?: boolean;
+  page?: number;
+  size?: number;
+}
+
+export interface AllocationTargetSearchResponse {
+  targetType: 'BED' | 'UNIT';
+  targetId: UUID;
+  buildingId: UUID;
+  buildingName: string;
+  floorId?: UUID | null;
+  floorName?: string | null;
+  unitId?: UUID | null;
+  unitName?: string | null;
+  roomId?: UUID | null;
+  roomName?: string | null;
+  roomNumber?: string | null;
+  bedId?: UUID | null;
+  bedName?: string | null;
+  bedNumber?: string | null;
+  displayPath: string;
+  displayPathShort: string;
+  status: AccommodationStatus;
+  defaultRent?: number | null;
+  defaultDeposit?: number | null;
+  selectable: boolean;
+  notSelectableReason?: string | null;
 }
 
 export interface BuildingSummaryResponse {
@@ -746,6 +808,39 @@ export type MemberCategory =
   | 'INTERN';
 export type GenderPolicy = 'MALE' | 'FEMALE' | 'MIXED';
 
+export type OccupancyChargeCode =
+  | 'PARKING'
+  | 'LAUNDRY'
+  | 'ELECTRICITY'
+  | 'WIFI'
+  | 'MAINTENANCE'
+  | 'OTHER';
+
+export type TransferRentPolicy = 'KEEP' | 'APPLY_NEW' | 'CUSTOM';
+
+export type OccupancyChargeLine = {
+  code: OccupancyChargeCode;
+  label: string;
+  amount: number;
+};
+
+export type ContractSnapshotInput = {
+  rentSnapshot?: number | null;
+  depositSnapshot?: number | null;
+  foodEnabled?: boolean;
+  foodChargeSnapshot?: number | null;
+  /** True when food is mandatory and included in rent (no separate food line). */
+  foodIncludedInRent?: boolean;
+  otherCharges?: OccupancyChargeLine[];
+};
+
+export interface OccupancyChargeSnapshotResponse {
+  chargeSnapshotId: UUID;
+  code: OccupancyChargeCode;
+  label: string;
+  amount: number;
+}
+
 export interface OccupancyResponse {
   occupancyId: UUID;
   spaceId: UUID;
@@ -775,6 +870,13 @@ export interface OccupancyResponse {
   vacatedBy?: UUID | null;
   status: OccupancyStatus;
   remarks?: string | null;
+  rentSnapshot?: number | null;
+  depositSnapshot?: number | null;
+  foodEnabled?: boolean;
+  foodChargeSnapshot?: number | null;
+  foodIncludedInRent?: boolean;
+  pricingLockedAt?: string | null;
+  otherCharges?: OccupancyChargeSnapshotResponse[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -842,6 +944,11 @@ export interface MoveInOccupancyRequest {
   allowEarlyMoveIn?: boolean;
   agreementSigned?: boolean;
   remarks?: string | null;
+  rentSnapshot?: number | null;
+  depositSnapshot?: number | null;
+  foodEnabled?: boolean;
+  foodChargeSnapshot?: number | null;
+  otherCharges?: OccupancyChargeLine[];
 }
 
 export interface CancelReservationRequest {
@@ -857,6 +964,11 @@ export interface AllocateOccupancyRequest {
   expectedCheckoutDate?: string | null;
   expectedExitDate?: string | null;
   remarks?: string | null;
+  rentSnapshot?: number | null;
+  depositSnapshot?: number | null;
+  foodEnabled?: boolean;
+  foodChargeSnapshot?: number | null;
+  otherCharges?: OccupancyChargeLine[];
 }
 
 export interface TransferOccupancyRequest {
@@ -865,6 +977,12 @@ export interface TransferOccupancyRequest {
   roomId?: UUID | null;
   unitId?: UUID | null;
   remarks?: string | null;
+  rentPolicy?: TransferRentPolicy;
+  rentSnapshot?: number | null;
+  depositSnapshot?: number | null;
+  foodEnabled?: boolean;
+  foodChargeSnapshot?: number | null;
+  otherCharges?: OccupancyChargeLine[];
 }
 
 export interface VacateOccupancyRequest {
@@ -890,6 +1008,7 @@ export interface ApiErrorBody {
   success?: boolean;
   message?: string;
   error?: string;
+  errorCode?: string;
   data?: Record<string, string> | null;
   status?: number;
   timestamp?: string;

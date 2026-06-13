@@ -1,6 +1,12 @@
 # CountIn Development Roadmap
 
-## Phase 1 - Foundation
+**Last updated:** June 2026
+
+**Status legend:** ✅ Complete · 🔶 Partial · ⬜ Not started / deferred
+
+---
+
+## Phase 1 - Foundation ✅
 
 ✅ Authentication
 
@@ -13,90 +19,95 @@
 
 ---
 
-## Phase 2 - Spaces Module
+## Phase 2 - Spaces Module ✅
 
 ### Space Management
 
-* Create Space
-* Edit Space
-* View Space Details
-* Delete Space (Optional)
+* ✅ Create Space
+* ✅ Edit Space
+* ✅ View Space Details
+* ⬜ Delete Space (Optional)
 
 ### My Spaces
 
-* List Spaces
-* Search Spaces
-* Space Switcher
-* Default Space Selection
+* ✅ List Spaces
+* ✅ Search Spaces
+* ✅ Space Switcher
+* ✅ Default Space Selection
+* ✅ Single-space startup (auto-open dashboard)
 
 ### Membership Management
 
-* Invite Members
-* Accept Invitation
-* Cancel Invitation
-* View Members
-* Role Management
+* ✅ Invite Members
+* ✅ Accept Invitation
+* ✅ Cancel Invitation
+* ✅ View Members
+* ✅ Role Management
 
 ### Space Types
 
-* PG
-* Mess
-* Hostel
-* Co-Living
-* Rental
+* ✅ PG
+* ✅ Mess
+* ✅ Hostel
+* ✅ Co-Living
+* ✅ Rental
 
 ### Space Settings
 
-* General Information
-* Notifications
-* Language Settings
-* Space Archive / Deactivate
+* 🔶 General Information
+* ⬜ Notifications
+* ✅ Language Settings
+* ⬜ Space Archive / Deactivate
 
 ---
 
-## Phase 3 - Members Module
+## Phase 3 - Members Module ✅
 
 ### Member Management
 
-* Add Member
-* Edit Member
-* View Member Profile
+* ✅ Add Member
+* ✅ Edit Member
+* ✅ View Member Profile
 
 ### Member Profile
 
-* Member Status
-* Emergency Contact
-* App User Linking
+* ✅ Member Status
+* ✅ Emergency Contact
+* 🔶 App User Linking
 
 ### Document Management
 
-* Aadhaar
-* PAN
-* Passport
-* Other Documents
-* Verification Status
+* ✅ Aadhaar
+* ✅ PAN
+* ✅ Passport
+* ✅ Other Documents
+* ✅ Verification Status
 
 ### Deposit Management
 
-* Deposit Amount
-* Deposit Paid
-* Deposit Refunded
-* Deposit Balance
+* ✅ Deposit Amount
+* ✅ Deposit Paid
+* ✅ Deposit Refunded
+* ✅ Deposit Balance
 
 ### Member Notes
 
-* Internal Notes
-* Remarks
+* ✅ Internal Notes
+* ✅ Remarks
 
 ### Member History
 
-* Status History
-* Deposit History
-* Profile Change History
+* ✅ Status History
+* ✅ Deposit History
+* ✅ Profile Change History
 
 ---
 
-## Phase 4 - Accommodation Management (Current Focus)
+## Phase 4 - Accommodation Management ✅ Core complete
+
+> **Delivered:** 4.1 Structure CRUD · 4.2 Quick Setup & Builder · 4.3 Occupancy lifecycle · 4.3b Contract snapshots · Dashboard Residents module card
+>
+> **Remaining polish (4.5):** real dashboard metrics, availability browse screen, permission tab gating, structure list filters
 
 ### Goal
 
@@ -109,56 +120,52 @@ Manage physical accommodation structure and occupancy across:
 
 Mess spaces do not use Accommodation Management.
 
-### Structure UI
+### Structure UI ✅
 
 * ✅ Inline name edit on list rows (building, floor, unit, room, bed)
-* Full edit screens kept for other fields
+* ✅ Full edit screens for other fields
+* ✅ Quick Setup wizard
+* ✅ Manual Builder with lifecycle menus
+* ✅ Bulk create (rooms, units, beds) and duplicate
 
-### Occupancy Management
-
-* Allocate member to bed / room / unit (by space type)
-* Transfer member
-* Vacate member
-* Member accommodation section + occupancy history
-
-### Property Structure
+### Property Structure ✅
 
 #### Buildings
 
-* Create Building
-* Edit Building
-* View Building
-* Deactivate Building
+* ✅ Create Building
+* ✅ Edit Building
+* ✅ View Building
+* ✅ Deactivate Building
 
 #### Floors
 
-* Create Floor
-* Edit Floor
-* View Floor
-* Deactivate Floor
+* ✅ Create Floor
+* ✅ Edit Floor
+* ✅ View Floor
+* ✅ Deactivate Floor
 
 #### Units
 
-* Create Unit
-* Edit Unit
-* View Unit
-* Deactivate Unit
+* ✅ Create Unit
+* ✅ Edit Unit
+* ✅ View Unit
+* ✅ Deactivate Unit
 
 #### Rooms
 
-* Create Room
-* Edit Room
-* View Room
-* Deactivate Room
+* ✅ Create Room
+* ✅ Edit Room
+* ✅ View Room
+* ✅ Deactivate Room
 
 #### Beds
 
-* Create Bed
-* Edit Bed
-* View Bed
-* Deactivate Bed
+* ✅ Create Bed
+* ✅ Edit Bed
+* ✅ View Bed
+* ✅ Deactivate Bed
 
-### Space Type Rules
+### Space Type Rules ✅
 
 #### PG / Hostel
 
@@ -178,33 +185,57 @@ Accommodation not applicable (Members, Meals, Availability, Billing)
 
 ### Occupancy Management ✅
 
-* Allocate Member (Bed / Room / Unit by space type)
-* Transfer Member
-* Vacate Member
-* Occupancy history
+* ✅ Allocate Member (Bed / Room / Unit by space type)
+* ✅ Reserve Member (future move-in)
+* ✅ Move In (reserved → active)
+* ✅ Transfer Member
+* ✅ Vacate Member
+* ✅ Cancel Reservation
+* ✅ Occupancy history
+* ✅ OccupancyWizard (shared flow from dashboard, member profile, bed/room context)
+* ✅ Contract snapshots — rent, deposit, food terms (4.3b)
+* ✅ Dashboard **Residents** module card → bottom sheet (Move In · Reserve · Transfer · Vacate)
 
-### Availability Management
-
-* Available / Occupied beds & rooms
-* Vacant units
-
-### Accommodation Status
+### Accommodation Status ✅
 
 Available · Occupied · Reserved · Maintenance · Blocked
 
-### Capacity, Dashboard & Search
+* ✅ Status on unit, room, bed forms and lists
+* ✅ Status filter chips in occupancy wizard target picker
+* ✅ MAINTENANCE / BLOCKED excluded from allocation picker
 
-* Room & bed capacity
-* Structure & occupancy metrics
-* Filter by building, floor, unit, room, status
+### Availability Management 🔶
 
-### Permissions
+* 🔶 Available / Occupied beds & rooms — counts in building summary header
+* 🔶 Vacant units — aggregated in summary API
+* ⬜ Dedicated availability / vacancy browse screen
 
-* OWNER — full access
-* MANAGER — operate, no structure delete
-* TENANT — own allocation read-only
-* CUSTOMER — no access
-* STAFF — limited read
+### Capacity, Dashboard & Search 🔶
+
+* ✅ Room & bed capacity (forms, quick setup)
+* ✅ Structure metrics — building summary on accommodation home
+* ✅ Text search on structure list screens
+* ✅ Allocation-target search in occupancy wizard
+* 🔶 Filter by building, floor, unit, room, status — hierarchy navigation + wizard filters only; no global structure filter UI
+* 🔶 Dashboard occupancy metric — placeholder value; not yet wired to summary API
+
+### Permissions 🔶
+
+Implementation: `accommodationPermissions.ts`, `occupancyPermissions.ts`
+
+| Role | Intended access | Status | Notes |
+|------|-----------------|--------|-------|
+| **OWNER** | Full access | ✅ | Structure CRUD, deactivate/delete, quick setup, occupancy manage |
+| **MANAGER** | Operate, no structure delete | ✅ | Create/edit structure, duplicate, bulk, occupancy manage; deactivate/delete owner-only |
+| **TENANT** | Own allocation read-only | 🔶 | Can view own occupancy on member profile (`canViewMemberOccupancy`); cannot manage occupancies; accommodation tab not role-restricted yet |
+| **CUSTOMER** | No access | ⬜ | `canViewAccommodation()` returns true for all roles and is unused; accommodation tab visible to every role |
+| **STAFF** | Limited read | 🔶 | Can view space occupancies (`canViewSpaceOccupancies`); no structure write or occupancy manage; structure browse is read-only via missing FAB |
+
+**Occupancy write** (allocate, reserve, transfer, vacate): OWNER and MANAGER only (`canManageOccupancy`).
+
+**Structure deactivate / delete:** OWNER only (`canDeactivateAccommodation`).
+
+**4.5 remaining:** hide accommodation tab for CUSTOMER; restrict TENANT to own-allocation views; enforce `canViewAccommodation` at tab and screen level.
 
 ### Out of Scope (Phase 4)
 
@@ -212,7 +243,7 @@ Rent, billing, payments, deposits, meals, availability polls, complaints, mainte
 
 ---
 
-## Phase 5 - Meal Management
+## Phase 5 - Meal Management (Next)
 
 ### Menu Master
 
@@ -234,6 +265,8 @@ Rent, billing, payments, deposits, meals, availability polls, complaints, mainte
 
 * Daily History
 * Weekly History
+
+> Dashboard **Meals** module card is stubbed (Coming soon) pending Phase 5.
 
 ---
 

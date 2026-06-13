@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -15,6 +15,7 @@ import {
   resetToMySpaces,
 } from './navigationRef';
 import type { RootStackParamList } from './types';
+import type { SpaceBootstrapResult } from '../store/spaceStore';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -24,6 +25,24 @@ function BootstrapScreen() {
       <ActivityIndicator size="large" color={colors.primary} />
     </View>
   );
+}
+
+function applyStartupNavigation(result: SpaceBootstrapResult) {
+  if (!navigationRef.isReady()) {
+    return false;
+  }
+
+  console.log('[Dashboard] bootstrap navigation', result);
+
+  if (result.route === 'SpaceTabs' && result.spaceId) {
+    resetToDashboard(result.spaceId);
+  } else if (result.route === 'CreateSpace') {
+    resetToCreateSpace();
+  } else {
+    resetToMySpaces();
+  }
+
+  return true;
 }
 
 export function RootNavigator() {
@@ -36,6 +55,9 @@ export function RootNavigator() {
   const bootstrapSpaces = useSpaceStore(state => state.bootstrapSpaces);
   const hydrateCurrentSpace = useSpaceStore(state => state.hydrateCurrentSpace);
 
+  const pendingNavigationRef = useRef<SpaceBootstrapResult | null>(null);
+  const bootstrapStartedRef = useRef(false);
+
   const rootStackKey = isAuthenticated ? 'authenticated' : 'unauthenticated';
   const showBootstrap =
     isBootstrapping || (isAuthenticated && !hasSpaceBootstrapped) || isSpaceBootstrapping;
@@ -46,36 +68,49 @@ export function RootNavigator() {
   }, [bootstrap, hydrateCurrentSpace]);
 
   useEffect(() => {
-    if (!isAuthenticated || isBootstrapping || hasSpaceBootstrapped) {
+    if (!isAuthenticated) {
+      bootstrapStartedRef.current = false;
+      pendingNavigationRef.current = null;
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated || isBootstrapping || bootstrapStartedRef.current) {
       return;
     }
 
+    bootstrapStartedRef.current = true;
     let isActive = true;
 
     bootstrapSpaces().then(result => {
-      if (!isActive || !navigationRef.isReady()) {
+      if (!isActive) {
         return;
       }
-
-      console.log('[Dashboard] bootstrap navigation', result);
-
-      if (result.route === 'SpaceTabs' && result.spaceId) {
-        resetToDashboard(result.spaceId);
-      } else if (result.route === 'CreateSpace') {
-        resetToCreateSpace();
-      } else {
-        resetToMySpaces();
+      pendingNavigationRef.current = result;
+      if (!applyStartupNavigation(result)) {
+        return;
       }
+      pendingNavigationRef.current = null;
     });
 
     return () => {
       isActive = false;
     };
-  }, [bootstrapSpaces, hasSpaceBootstrapped, isAuthenticated, isBootstrapping]);
+  }, [bootstrapSpaces, isAuthenticated, isBootstrapping]);
+
+  function handleNavigationReady() {
+    const pending = pendingNavigationRef.current;
+    if (!pending) {
+      return;
+    }
+    if (applyStartupNavigation(pending)) {
+      pendingNavigationRef.current = null;
+    }
+  }
 
   return (
     <ConfirmDialogProvider>
-      <NavigationContainer ref={navigationRef}>
+      <NavigationContainer ref={navigationRef} onReady={handleNavigationReady}>
         <Stack.Navigator
           key={rootStackKey}
           screenOptions={{ headerShown: false }}>

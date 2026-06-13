@@ -1,11 +1,13 @@
 import type {
   AllocationTargetType,
   AllocateOccupancyRequest,
+  ContractSnapshotInput,
   CurrentOccupancySummaryResponse,
   MemberCategory,
   ReserveOccupancyRequest,
   SpaceType,
   TransferOccupancyRequest,
+  TransferRentPolicy,
 } from '../api/types';
 
 export type OccupancyTargetSelection = {
@@ -113,7 +115,12 @@ export function buildAllocateRequest(
   spaceType: SpaceType,
   targetType: AllocationTargetType,
   ids: { bedId?: string; roomId?: string; unitId?: string },
-  options?: { expectedCheckoutDate?: string; expectedExitDate?: string; remarks?: string },
+  options?: {
+    expectedCheckoutDate?: string;
+    expectedExitDate?: string;
+    remarks?: string;
+    contract?: ContractSnapshotInput;
+  },
 ): { body: AllocateOccupancyRequest | null; errorKey: string | null } {
   const errorKey = validateTargetSelection(spaceType, targetType, ids);
   if (errorKey) {
@@ -129,6 +136,7 @@ export function buildAllocateRequest(
       expectedCheckoutDate: getExpectedExitDate(options),
       expectedExitDate: getExpectedExitDate(options),
       remarks: options?.remarks?.trim() || null,
+      ...options?.contract,
     },
     errorKey: null,
   };
@@ -138,7 +146,11 @@ export function buildTransferRequest(
   spaceType: SpaceType,
   targetType: AllocationTargetType,
   ids: { bedId?: string; roomId?: string; unitId?: string },
-  remarks?: string,
+  options?: {
+    remarks?: string;
+    rentPolicy?: TransferRentPolicy;
+    contract?: ContractSnapshotInput;
+  },
 ): { body: TransferOccupancyRequest | null; errorKey: string | null } {
   const errorKey = validateTargetSelection(spaceType, targetType, ids);
   if (errorKey) {
@@ -150,7 +162,9 @@ export function buildTransferRequest(
       bedId: targetType === 'BED' ? ids.bedId : null,
       roomId: targetType === 'ROOM' ? ids.roomId : null,
       unitId: targetType === 'UNIT' ? ids.unitId : null,
-      remarks: remarks?.trim() || null,
+      remarks: options?.remarks?.trim() || null,
+      rentPolicy: options?.rentPolicy ?? 'APPLY_NEW',
+      ...options?.contract,
     },
     errorKey: null,
   };

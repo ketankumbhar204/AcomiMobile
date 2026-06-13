@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import type { BedOccupantSummaryResponse, OccupancyResponse } from '../../api/types';
 import { Button, Card } from '../ui';
+import { OccupancyContractSnapshotCard } from './OccupancyContractSnapshotCard';
 import type { MainStackParamList } from '../../navigation/types';
 import { colors, spacing, typography } from '../../theme';
 import {
@@ -129,6 +130,10 @@ export function AccommodationOccupantSection({
           onPress={openMemberProfile}
           style={styles.button}
         />
+
+        {!isReserved && occupancy ? (
+          <OccupancyContractSnapshotCard occupancy={occupancy} />
+        ) : null}
       </Card>
     </View>
   );

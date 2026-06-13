@@ -13,6 +13,7 @@ import {
   MemberHistoryResponse,
   MemberNoteResponse,
   MemberResponse,
+  MemberSearchParams,
   PendingInvitationResponse,
   SpaceMembershipResponse,
   UpdateDepositRequest,
@@ -44,13 +45,23 @@ export const memberApi = {
     return response;
   },
 
-  getMembers: async (spaceId: UUID): Promise<MemberResponse[]> => {
-    console.log(`${LOG_TAG} GET /spaces/${spaceId}/members`);
+  getMembers: async (
+    spaceId: UUID,
+    params?: MemberSearchParams,
+  ): Promise<MemberResponse[]> => {
+    const q = new URLSearchParams();
+    if (params?.search?.trim()) {
+      q.set('search', params.search.trim());
+    }
+    if (params?.occupancyStatus) {
+      q.set('occupancyStatus', params.occupancyStatus);
+    }
+    const query = q.toString();
+    const path = `/spaces/${spaceId}/members${query ? `?${query}` : ''}`;
+    console.log(`${LOG_TAG} GET ${path}`);
 
     const response = await unwrapApiResponse(
-      apiClient.get<ApiResponse<MemberResponse[]>>(
-        `/spaces/${spaceId}/members`,
-      ),
+      apiClient.get<ApiResponse<MemberResponse[]>>(path),
     );
 
     console.log(`${LOG_TAG} getMembers response`, response.length);

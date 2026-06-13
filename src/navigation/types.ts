@@ -124,6 +124,16 @@ export type MainStackParamList = {
   };
   QuickSetupWizard: { spaceId: UUID };
   AccommodationBuilder: { spaceId: UUID; buildingId: UUID };
+  OccupancyWizard: {
+    spaceId: UUID;
+    mode: 'ALLOCATE' | 'RESERVE' | 'MOVE_IN' | 'TRANSFER' | 'VACATE';
+    memberId?: UUID;
+    bedId?: UUID;
+    roomId?: UUID;
+    unitId?: UUID;
+    buildingId?: UUID;
+    occupancyId?: UUID;
+  };
 };
 
 export type RootStackParamList = {
