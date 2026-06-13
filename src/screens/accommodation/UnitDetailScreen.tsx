@@ -16,7 +16,9 @@ import {
   formatAccommodationDate,
 } from '../../components/accommodation';
 import { Button, Card, HeaderBackButton, Screen, SkeletonCard } from '../../components/ui';
+import { AccommodationOccupantSection } from '../../components/occupancy';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
+import { useTargetOccupancy } from '../../hooks/useTargetOccupancy';
 import {
   useDeactivateUnit,
   useDeleteUnit,
@@ -29,6 +31,7 @@ import { useToastStore } from '../../store/toastStore';
 import { spacing, typography } from '../../theme';
 import { buildAccommodationTrail } from '../../utils/accommodationContext';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
+import { canViewSpaceOccupancies } from '../../utils/occupancyPermissions';
 import { navigateToAccommodationTrailSegment } from '../../utils/accommodationNavigation';
 import { useAccommodationUiProfile } from '../../hooks/useAccommodationUiProfile';
 
@@ -63,6 +66,20 @@ export function UnitDetailScreen() {
   const [unit, setUnit] = useState<UnitResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const showsOccupant =
+    unit?.status === 'OCCUPIED' || unit?.status === 'RESERVED';
+  const canViewOccupant = canViewSpaceOccupancies(currentRole);
+  const {
+    occupancy,
+    loading: occupancyLoading,
+    error: occupancyError,
+    refresh: refreshOccupancy,
+  } = useTargetOccupancy(
+    spaceId,
+    { unitId },
+    { enabled: showsOccupant && canViewOccupant },
+  );
 
   const trailContext = useMemo(
     () => ({
@@ -108,7 +125,12 @@ export function UnitDetailScreen() {
     }
   }, [spaceId, unitId]);
 
-  useFocusEffect(useCallback(() => { void loadUnit(); }, [loadUnit]));
+  useFocusEffect(
+    useCallback(() => {
+      void loadUnit();
+      void refreshOccupancy();
+    }, [loadUnit, refreshOccupancy]),
+  );
 
   if (loading && !unit) {
     return <Screen contentStyle={styles.content}><SkeletonCard /></Screen>;
@@ -142,6 +164,15 @@ export function UnitDetailScreen() {
               value={formatAccommodationDate(unit.updatedAt)}
             />
           </Card>
+
+          {showsOccupant && canViewOccupant ? (
+            <AccommodationOccupantSection
+              spaceId={spaceId}
+              occupancy={occupancy}
+              loading={occupancyLoading}
+              error={occupancyError}
+            />
+          ) : null}
 
           {profile?.showRoomsUnderUnit ? (
             <Button

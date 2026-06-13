@@ -39,3 +39,7 @@ export { useDuplicateRoom } from './useDuplicateRoom';
 export { useBulkUnits } from './useBulkUnits';
 export { useBulkRooms } from './useBulkRooms';
 export { useBulkBeds } from './useBulkBeds';
+export { useMemberOccupancies } from './useMemberOccupancies';
+export { useOccupancyMutations } from './useOccupancyMutations';
+export { useOccupancyTargetSearch } from './useOccupancyTargetSearch';
+export { useTargetOccupancy } from './useTargetOccupancy';

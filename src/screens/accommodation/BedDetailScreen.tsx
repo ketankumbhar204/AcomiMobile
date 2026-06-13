@@ -15,8 +15,10 @@ import {
   AccommodationStatusBadge,
   formatAccommodationDate,
 } from '../../components/accommodation';
+import { AccommodationOccupantSection } from '../../components/occupancy';
 import { Card, HeaderBackButton, Screen, SkeletonCard } from '../../components/ui';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
+import { useTargetOccupancy } from '../../hooks/useTargetOccupancy';
 import {
   useDeactivateBed,
   useDeleteBed,
@@ -29,6 +31,7 @@ import { useToastStore } from '../../store/toastStore';
 import { spacing, typography } from '../../theme';
 import { buildAccommodationTrail } from '../../utils/accommodationContext';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
+import { canViewSpaceOccupancies } from '../../utils/occupancyPermissions';
 import { navigateToAccommodationTrailSegment } from '../../utils/accommodationNavigation';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'BedDetail'>;
@@ -68,6 +71,20 @@ export function BedDetailScreen() {
   const [bed, setBed] = useState<BedResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const showsOccupant =
+    bed?.status === 'OCCUPIED' || bed?.status === 'RESERVED';
+  const canViewOccupant = canViewSpaceOccupancies(currentRole);
+  const {
+    occupancy,
+    loading: occupancyLoading,
+    error: occupancyError,
+    refresh: refreshOccupancy,
+  } = useTargetOccupancy(
+    spaceId,
+    { bedId },
+    { enabled: showsOccupant && canViewOccupant },
+  );
 
   const trailContext = useMemo(
     () => ({
@@ -131,7 +148,12 @@ export function BedDetailScreen() {
     }
   }, [bedId, spaceId]);
 
-  useFocusEffect(useCallback(() => { void loadBed(); }, [loadBed]));
+  useFocusEffect(
+    useCallback(() => {
+      void loadBed();
+      void refreshOccupancy();
+    }, [loadBed, refreshOccupancy]),
+  );
 
   if (loading && !bed) {
     return <Screen contentStyle={styles.content}><SkeletonCard /></Screen>;
@@ -165,6 +187,15 @@ export function BedDetailScreen() {
               value={formatAccommodationDate(bed.updatedAt)}
             />
           </Card>
+
+          {showsOccupant && canViewOccupant ? (
+            <AccommodationOccupantSection
+              spaceId={spaceId}
+              occupancy={occupancy}
+              loading={occupancyLoading}
+              error={occupancyError}
+            />
+          ) : null}
 
           <AccommodationLifecycleActions
             actions={bed.actions}

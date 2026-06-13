@@ -3,7 +3,8 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import type { MemberDetailsResponse, MemberStatus } from '../../api/types';
+import type { MemberDetailsResponse, MemberStatus, SpaceType } from '../../api/types';
+import { MemberAccommodationSection } from '../occupancy';
 import { Button, Card, FormInput, useConfirmDialog } from '../ui';
 import type { MainStackParamList } from '../../navigation/types';
 import { useMemberStore } from '../../store/memberStore';
@@ -15,9 +16,11 @@ type MemberProfileNav = NativeStackNavigationProp<MainStackParamList>;
 
 type MemberProfileTabProps = {
   spaceId: string;
+  spaceType?: SpaceType;
   member: MemberDetailsResponse;
   canEdit: boolean;
   canRemove: boolean;
+  currentRole?: MemberDetailsResponse['role'];
 };
 
 function DetailRow({ label, value }: { label: string; value: string }) {
@@ -42,9 +45,11 @@ function formatDate(value?: string | null): string {
 
 export function MemberProfileTab({
   spaceId,
+  spaceType,
   member,
   canEdit,
   canRemove,
+  currentRole,
 }: MemberProfileTabProps) {
   const { t } = useTranslation();
   const navigation = useNavigation<MemberProfileNav>();
@@ -146,6 +151,13 @@ export function MemberProfileTab({
 
   return (
     <View>
+      <MemberAccommodationSection
+        spaceId={spaceId}
+        spaceType={spaceType}
+        member={member}
+        currentRole={currentRole}
+      />
+
       <Card style={styles.card}>
         <DetailRow
           label={t('membership.details.mobile')}

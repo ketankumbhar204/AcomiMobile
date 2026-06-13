@@ -20,7 +20,7 @@ import type {
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import type { MemberResponse, MembershipRole, PendingInvitationResponse } from '../api/types';
-import { MemberStatusBadge } from '../components/member';
+import { MemberStatusBadge, RoleBadge } from '../components/member';
 import {
   Badge,
   Button,
@@ -65,6 +65,24 @@ function formatDate(value: string): string {
   return new Date(value).toLocaleDateString();
 }
 
+const ROLE_SORT_ORDER: Record<MembershipRole, number> = {
+  OWNER: 0,
+  MANAGER: 1,
+  STAFF: 2,
+  TENANT: 3,
+  CUSTOMER: 4,
+};
+
+function sortMembersByRole(members: MemberResponse[]): MemberResponse[] {
+  return [...members].sort((a, b) => {
+    const roleDiff = ROLE_SORT_ORDER[a.role] - ROLE_SORT_ORDER[b.role];
+    if (roleDiff !== 0) {
+      return roleDiff;
+    }
+    return a.fullName.localeCompare(b.fullName);
+  });
+}
+
 function buildMemberSubtitle(
   member: MemberResponse,
   t: (key: string, options?: Record<string, string>) => string,
@@ -96,6 +114,8 @@ export function MembersScreen() {
     () => mySpaces.find(space => space.spaceId === spaceId)?.membershipRole,
     [mySpaces, spaceId],
   );
+
+  const sortedMembers = useMemo(() => sortMembersByRole(members), [members]);
 
   const showAddFab = canAddMember(currentRole);
   const showInviteAction = canInviteMember(currentRole);
@@ -202,7 +222,7 @@ export function MembersScreen() {
               <View style={styles.gap} />
               <SkeletonCard />
             </>
-          ) : members.length === 0 ? (
+          ) : sortedMembers.length === 0 ? (
             <EmptyState
               title={t('membership.members.emptyTitle')}
               description={t('membership.members.emptyDescription')}
@@ -210,9 +230,10 @@ export function MembersScreen() {
             />
           ) : (
             <View style={styles.list}>
-              {members.map(member => (
+              {sortedMembers.map(member => (
                 <View key={member.memberId} style={styles.listItem}>
                   <View style={styles.badgeRow}>
+                    <RoleBadge role={member.role} />
                     <MemberStatusBadge status={member.status ?? 'ACTIVE'} />
                     <Badge
                       label={

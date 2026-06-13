@@ -23,6 +23,7 @@ import { EditMemberScreen } from '../screens/EditMemberScreen';
 import { EditSpaceScreen } from '../screens/EditSpaceScreen';
 import { InviteMemberScreen } from '../screens/InviteMemberScreen';
 import { MemberDetailsScreen } from '../screens/MemberDetailsScreen';
+import { MemberOccupancyHistoryScreen } from '../screens/MemberOccupancyHistoryScreen';
 import { MySpacesScreen } from '../screens/MySpacesScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { SpaceDetailsScreen } from '../screens/SpaceDetailsScreen';
@@ -82,6 +83,10 @@ export function MainNavigator() {
         name="EditMember"
         component={EditMemberScreen}
         options={{ title: 'Edit Member' }}
+      />
+      <Stack.Screen
+        name="MemberOccupancyHistory"
+        component={MemberOccupancyHistoryScreen}
       />
       <Stack.Screen name="Floors" component={FloorsScreen} />
       <Stack.Screen name="Units" component={UnitsScreen} />

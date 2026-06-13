@@ -28,6 +28,7 @@ export type MainStackParamList = {
   InviteMembers: { spaceId: UUID };
   AddMember: { spaceId: UUID };
   MemberDetails: { spaceId: UUID; memberId: UUID };
+  MemberOccupancyHistory: { spaceId: UUID; memberId: UUID; memberName: string };
   EditMember: { spaceId: UUID; memberId: UUID };
   Floors: { spaceId: UUID; buildingId: UUID; buildingName?: string };
   Units: { spaceId: UUID; buildingId: UUID; buildingName?: string };

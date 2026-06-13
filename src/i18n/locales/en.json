@@ -485,6 +485,9 @@
       "summaryRooms": "{{count}} rooms",
       "summaryBeds": "{{count}} beds",
       "statusLine": "Available: {{available}} · Occupied: {{occupied}} · Reserved: {{reserved}} · Maintenance: {{maintenance}} · Blocked: {{blocked}}",
+      "availabilityBeds": "Beds: {{available}} available · {{occupied}} occupied",
+      "availabilityRooms": "Rooms: {{available}} available · {{occupied}} occupied",
+      "availabilityUnits": "Units: {{available}} available · {{occupied}} occupied",
       "addFloor": "Add floor",
       "addUnit": "Add unit",
       "addRoom": "Add room",
@@ -712,6 +715,108 @@
       "saveUnit": "Failed to save unit. Please try again.",
       "saveRoom": "Failed to save room. Please try again.",
       "saveBed": "Failed to save bed. Please try again."
+    }
+  },
+  "occupancy": {
+    "section": {
+      "title": "Accommodation",
+      "currentAccommodation": "Current Accommodation",
+      "noAccommodationTitle": "No Accommodation Assigned",
+      "noAccommodationBody": "This member is currently not occupying any accommodation.",
+      "building": "Building",
+      "floor": "Floor",
+      "unit": "Unit",
+      "room": "Room",
+      "bed": "Bed",
+      "allocatedOn": "Allocated On",
+      "status": "Occupancy status",
+      "location": "Current location",
+      "notAllocated": "Not allocated to any bed, room, or unit."
+    },
+    "memberStatus": {
+      "ALLOCATED": "Allocated",
+      "VACATED": "Vacated"
+    },
+    "targetType": {
+      "BED": "Bed",
+      "ROOM": "Room",
+      "UNIT": "Unit"
+    },
+    "status": {
+      "ACTIVE": "Active",
+      "VACATED": "Vacated"
+    },
+    "actions": {
+      "allocate": "Allocate",
+      "allocateAccommodation": "Allocate Accommodation",
+      "transfer": "Transfer",
+      "vacate": "Vacate",
+      "viewHistory": "View occupancy history"
+    },
+    "allocate": {
+      "title": "Allocate member"
+    },
+    "transfer": {
+      "title": "Transfer member"
+    },
+    "vacate": {
+      "title": "Vacate member",
+      "message": "End this member's current accommodation assignment?",
+      "confirm": "Vacate"
+    },
+    "fields": {
+      "expectedCheckout": "Expected checkout (optional)",
+      "remarks": "Remarks",
+      "remarksPlaceholder": "Optional notes"
+    },
+    "picker": {
+      "targetType": "Select allocation type",
+      "building": "Select building",
+      "floor": "Select floor",
+      "unit": "Select unit",
+      "room": "Select room",
+      "bed": "Select bed",
+      "searchPlaceholder": "Search room, bed, flat, or unit number",
+      "searchResults": "Search results",
+      "searchEmpty": "No matching accommodation found.",
+      "noAvailable": "No available targets found."
+    },
+    "targetOccupant": {
+      "title": "Current occupant",
+      "member": "Member",
+      "viewMember": "View member profile"
+    },
+    "history": {
+      "title": "Occupancy history",
+      "current": "Current assignment",
+      "past": "Past assignments",
+      "events": "Event log",
+      "empty": "No past occupancies.",
+      "emptyEvents": "No history events yet.",
+      "allocatedAt": "Allocated {{date}}",
+      "vacatedAt": "Vacated {{date}}",
+      "ALLOCATED": "Allocated",
+      "TRANSFERRED": "Transferred",
+      "VACATED": "Vacated"
+    },
+    "success": {
+      "updated": "Occupancy updated."
+    },
+    "errors": {
+      "generic": "Occupancy action failed. Please try again.",
+      "forbidden": "You do not have permission for this occupancy action.",
+      "notFound": "Occupancy record not found.",
+      "loadMember": "Failed to load occupancy history.",
+      "loadTarget": "Failed to load occupant details.",
+      "allocate": "Failed to allocate member.",
+      "transfer": "Failed to transfer member.",
+      "vacate": "Failed to vacate member.",
+      "search": "Failed to search accommodation.",
+      "noActive": "No active occupancy found for this member.",
+      "invalidTargetType": "This allocation type is not allowed for this space.",
+      "bedRequired": "Select a bed.",
+      "roomRequired": "Select a room.",
+      "unitRequired": "Select a unit."
     }
   },
   "dashboard": {

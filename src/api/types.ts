@@ -193,6 +193,8 @@ export interface MemberDetailsResponse {
   membershipId?: UUID | null;
   active: boolean;
   status: MemberStatus;
+  occupancyStatus?: MemberOccupancyStatus;
+  currentOccupancy?: CurrentOccupancySummaryResponse | null;
   statusUpdatedAt?: string | null;
   emergencyContactName?: string | null;
   emergencyContactRelation?: string | null;
@@ -596,6 +598,12 @@ export interface BuildingSummaryResponse {
   reserved: number;
   maintenance: number;
   blocked: number;
+  availableBeds?: number;
+  occupiedBeds?: number;
+  availableRooms?: number;
+  occupiedRooms?: number;
+  availableUnits?: number;
+  occupiedUnits?: number;
 }
 
 export interface FloorListItemResponse {
@@ -704,6 +712,116 @@ export interface BulkCreateBedsRequest {
 export interface BulkCreateBedsResponse {
   bedsCreated: number;
   bedIds: UUID[];
+}
+
+// ─── Occupancy (Phase 4.3) ──────────────────────────────────────────────────
+
+export type AllocationTargetType = 'BED' | 'ROOM' | 'UNIT';
+export type OccupancyStatus = 'ACTIVE' | 'VACATED';
+export type MemberOccupancyStatus = 'ALLOCATED' | 'VACATED';
+export type OccupancyHistoryEvent = 'ALLOCATED' | 'TRANSFERRED' | 'VACATED';
+
+export interface OccupancyResponse {
+  occupancyId: UUID;
+  spaceId: UUID;
+  memberId: UUID;
+  memberName: string;
+  targetType: AllocationTargetType;
+  buildingId: UUID;
+  buildingName: string;
+  floorId?: UUID | null;
+  floorName?: string | null;
+  unitId?: UUID | null;
+  unitName?: string | null;
+  roomId?: UUID | null;
+  roomName?: string | null;
+  bedId?: UUID | null;
+  bedName?: string | null;
+  allocatedAt: string;
+  allocatedBy: UUID;
+  expectedCheckoutDate?: string | null;
+  vacatedAt?: string | null;
+  vacatedBy?: UUID | null;
+  status: OccupancyStatus;
+  remarks?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface OccupancyHistoryEntryResponse {
+  historyId: UUID;
+  occupancyId: UUID;
+  eventType: OccupancyHistoryEvent;
+  fromTargetType?: AllocationTargetType | null;
+  fromBuildingId?: UUID | null;
+  fromFloorId?: UUID | null;
+  fromUnitId?: UUID | null;
+  fromRoomId?: UUID | null;
+  fromBedId?: UUID | null;
+  toTargetType?: AllocationTargetType | null;
+  toBuildingId?: UUID | null;
+  toFloorId?: UUID | null;
+  toUnitId?: UUID | null;
+  toRoomId?: UUID | null;
+  toBedId?: UUID | null;
+  performedBy: UUID;
+  performedAt: string;
+  remarks?: string | null;
+}
+
+export interface MemberOccupancyListResponse {
+  currentOccupancy: OccupancyResponse | null;
+  occupancies: OccupancyResponse[];
+  history: OccupancyHistoryEntryResponse[];
+}
+
+export interface CurrentOccupancySummaryResponse {
+  targetType: AllocationTargetType;
+  buildingId: UUID;
+  buildingName: string;
+  floorId?: UUID | null;
+  floorName?: string | null;
+  unitId?: UUID | null;
+  unitName?: string | null;
+  roomId?: UUID | null;
+  roomName?: string | null;
+  bedId?: UUID | null;
+  bedName?: string | null;
+}
+
+export interface AllocateOccupancyRequest {
+  memberId: UUID;
+  targetType: AllocationTargetType;
+  bedId?: UUID | null;
+  roomId?: UUID | null;
+  unitId?: UUID | null;
+  expectedCheckoutDate?: string | null;
+  remarks?: string | null;
+}
+
+export interface TransferOccupancyRequest {
+  targetType: AllocationTargetType;
+  bedId?: UUID | null;
+  roomId?: UUID | null;
+  unitId?: UUID | null;
+  remarks?: string | null;
+}
+
+export interface VacateOccupancyRequest {
+  remarks?: string | null;
+}
+
+export interface OccupancyListFilters {
+  status?: OccupancyStatus;
+  memberId?: UUID;
+  buildingId?: UUID;
+  floorId?: UUID;
+  unitId?: UUID;
+  roomId?: UUID;
+  bedId?: UUID;
+  targetType?: AllocationTargetType;
+  page?: number;
+  size?: number;
 }
 
 // ─── Error types ────────────────────────────────────────────────────────────

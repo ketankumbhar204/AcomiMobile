@@ -51,6 +51,7 @@ export function MemberDetailsScreen() {
   const [activeTab, setActiveTab] = useState<MemberDetailTab>('profile');
 
   const currentRole = mySpaces.find(space => space.spaceId === spaceId)?.membershipRole;
+  const spaceType = mySpaces.find(space => space.spaceId === spaceId)?.spaceType;
   const canEdit = canEditMember(currentRole) && member?.role !== 'OWNER';
   const canRemove = canRemoveMember(currentRole) && member?.role !== 'OWNER';
 
@@ -79,9 +80,11 @@ export function MemberDetailsScreen() {
         return (
           <MemberProfileTab
             spaceId={spaceId}
+            spaceType={spaceType}
             member={member}
             canEdit={canEdit}
             canRemove={canRemove}
+            currentRole={currentRole}
           />
         );
       case 'deposit':

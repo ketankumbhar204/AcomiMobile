@@ -4,6 +4,7 @@ export { unwrapApiResponse, unwrapVoidResponse } from './apiRequest';
 export { invitationApi } from './invitationApi';
 export { accommodationApi } from './accommodationApi';
 export { accommodationLifecycleApi } from './accommodationLifecycleApi';
+export { occupancyApi } from './occupancyApi';
 export { memberApi } from './memberApi';
 export { membershipApi } from './membershipApi';
 export { mySpacesApi } from './mySpacesApi';

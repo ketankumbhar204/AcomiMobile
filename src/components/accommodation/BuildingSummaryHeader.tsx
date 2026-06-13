@@ -91,6 +91,30 @@ export function BuildingSummaryHeader({
           blocked: summary.blocked,
         })}
       </Text>
+      {profile.showBeds && summary.availableBeds != null ? (
+        <Text style={styles.availability}>
+          {t('accommodation.builder.availabilityBeds', {
+            available: summary.availableBeds,
+            occupied: summary.occupiedBeds ?? 0,
+          })}
+        </Text>
+      ) : null}
+      {summary.availableRooms != null && summary.availableRooms + (summary.occupiedRooms ?? 0) > 0 ? (
+        <Text style={styles.availability}>
+          {t('accommodation.builder.availabilityRooms', {
+            available: summary.availableRooms,
+            occupied: summary.occupiedRooms ?? 0,
+          })}
+        </Text>
+      ) : null}
+      {profile.showUnits && summary.availableUnits != null ? (
+        <Text style={styles.availability}>
+          {t('accommodation.builder.availabilityUnits', {
+            available: summary.availableUnits,
+            occupied: summary.occupiedUnits ?? 0,
+          })}
+        </Text>
+      ) : null}
     </Card>
   );
 }
@@ -120,5 +144,10 @@ const styles = StyleSheet.create({
   status: {
     ...typography.caption,
     color: colors.muted,
+  },
+  availability: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
 });

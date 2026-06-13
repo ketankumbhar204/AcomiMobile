@@ -15,7 +15,9 @@ import {
   formatAccommodationDate,
 } from '../../components/accommodation';
 import { Button, Card, HeaderBackButton, Screen, SkeletonCard } from '../../components/ui';
+import { AccommodationOccupantSection } from '../../components/occupancy';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
+import { useTargetOccupancy } from '../../hooks/useTargetOccupancy';
 import {
   useDeactivateRoom,
   useDeleteRoom,
@@ -28,6 +30,7 @@ import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
 import { spacing, typography } from '../../theme';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
+import { canViewSpaceOccupancies } from '../../utils/occupancyPermissions';
 import { useAccommodationUiProfile } from '../../hooks/useAccommodationUiProfile';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'RoomDetail'>;
@@ -62,6 +65,20 @@ export function RoomDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const showsOccupant =
+    room?.status === 'OCCUPIED' || room?.status === 'RESERVED';
+  const canViewOccupant = canViewSpaceOccupancies(currentRole);
+  const {
+    occupancy,
+    loading: occupancyLoading,
+    error: occupancyError,
+    refresh: refreshOccupancy,
+  } = useTargetOccupancy(
+    spaceId,
+    { roomId },
+    { enabled: showsOccupant && canViewOccupant },
+  );
+
   useLayoutEffect(() => {
     navigation.setOptions({
       title: t('accommodation.rooms.detailTitle'),
@@ -83,7 +100,12 @@ export function RoomDetailScreen() {
     }
   }, [roomId, spaceId]);
 
-  useFocusEffect(useCallback(() => { void loadRoom(); }, [loadRoom]));
+  useFocusEffect(
+    useCallback(() => {
+      void loadRoom();
+      void refreshOccupancy();
+    }, [loadRoom, refreshOccupancy]),
+  );
 
   if (loading && !room) {
     return <Screen contentStyle={styles.content}><SkeletonCard /></Screen>;
@@ -124,6 +146,15 @@ export function RoomDetailScreen() {
               value={formatAccommodationDate(room.updatedAt)}
             />
           </Card>
+
+          {showsOccupant && canViewOccupant ? (
+            <AccommodationOccupantSection
+              spaceId={spaceId}
+              occupancy={occupancy}
+              loading={occupancyLoading}
+              error={occupancyError}
+            />
+          ) : null}
 
           {profile?.showBeds ? (
             <Button
