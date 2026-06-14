@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useState } from 'react';
 import {
   FlatList,
   RefreshControl,
@@ -22,18 +22,13 @@ import {
   AccommodationOccupancyFlowModals,
   AccommodationOccupancyQuickActions,
 } from '../../components/occupancy';
-import { EmptyState, FAB, HeaderBackButton, ListCard, SkeletonCard } from '../../components/ui';
+import { EmptyState, FAB, HeaderBackButton, ListCard, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
 import { useAccommodationOccupancyFlow } from '../../hooks/useAccommodationOccupancyFlow';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
+import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useUnits } from '../../hooks/useUnits';
 import type { MainStackParamList } from '../../navigation/types';
-import { useSpaceStore } from '../../store/spaceStore';
 import { colors, spacing, typography } from '../../theme';
-import {
-  canCreateOrUpdateAccommodation,
-  canManageAccommodation,
-} from '../../utils/accommodationPermissions';
-import { canManageOccupancy } from '../../utils/occupancyPermissions';
 import { buildUnitOccupancyTarget, isOccupancyTargetSupported } from '../../utils/buildOccupancyTarget';
 import { renameUnitName } from '../../utils/accommodationInlineRename';
 import { useToastStore } from '../../store/toastStore';
@@ -49,20 +44,13 @@ export function UnitsScreen() {
   const { buildingId, buildingName } = route.params;
   const spaceId = useActiveSpaceId(route.params.spaceId);
 
-  const mySpaces = useSpaceStore(state => state.mySpaces);
-  const spaceType = useMemo(
-    () => mySpaces.find(space => space.spaceId === spaceId)?.spaceType,
-    [mySpaces, spaceId],
-  );
-  const currentRole = useMemo(
-    () => mySpaces.find(space => space.spaceId === spaceId)?.membershipRole,
-    [mySpaces, spaceId],
-  );
+  const permissions = useSpacePermissions(spaceId);
+  const spaceType = permissions.spaceType;
   const { profile } = useAccommodationUiProfile(spaceId, spaceType, buildingId);
   const isRental = profile?.layoutMode === 'RENTAL';
-  const showFab = canCreateOrUpdateAccommodation(currentRole);
-  const canManage = canManageAccommodation(currentRole);
-  const canManageOccupancyActions = canManageOccupancy(currentRole);
+  const showFab = permissions.canManageAccommodation;
+  const canManage = permissions.canManageAccommodation;
+  const canManageOccupancyActions = permissions.canManageOccupancy;
   const supportsUnitOccupancy = Boolean(
     spaceType && isOccupancyTargetSupported(spaceType, 'UNIT'),
   );
@@ -184,6 +172,7 @@ export function UnitsScreen() {
     ) : null;
 
   return (
+    <RequireAccommodationAccess spaceId={spaceId}>
     <View style={styles.root}>
       <FlatList
         data={showLoading ? [] : units}
@@ -255,6 +244,7 @@ export function UnitsScreen() {
         />
       ) : null}
     </View>
+    </RequireAccommodationAccess>
   );
 }
 

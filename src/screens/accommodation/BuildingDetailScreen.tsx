@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type {
@@ -13,8 +13,9 @@ import {
   AccommodationLifecycleActions,
   formatAccommodationDate,
 } from '../../components/accommodation';
-import { Button, Card, HeaderBackButton, Screen, SkeletonCard } from '../../components/ui';
+import { Button, Card, HeaderBackButton, RequireAccommodationAccess, Screen, SkeletonCard } from '../../components/ui';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
+import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import {
   useDeactivateBuilding,
   useDeleteBuilding,
@@ -22,7 +23,6 @@ import {
 } from '../../hooks/accommodationLifecycle';
 import { useAccommodationLifecycleConfirm } from '../../hooks/useAccommodationLifecycleConfirm';
 import type { MainStackParamList } from '../../navigation/types';
-import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
 import { spacing, typography } from '../../theme';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
@@ -44,11 +44,7 @@ export function BuildingDetailScreen() {
   const { mutate: deleteBuilding, loading: deleting } = useDeleteBuilding();
   const lifecycleLoading = deactivating || restoring || deleting;
 
-  const mySpaces = useSpaceStore(state => state.mySpaces);
-  const currentRole = useMemo(
-    () => mySpaces.find(space => space.spaceId === spaceId)?.membershipRole,
-    [mySpaces, spaceId],
-  );
+  const permissions = useSpacePermissions(spaceId);
 
   const [building, setBuilding] = useState<BuildingResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -91,6 +87,7 @@ export function BuildingDetailScreen() {
   }
 
   return (
+    <RequireAccommodationAccess spaceId={spaceId}>
     <Screen scrollable contentStyle={styles.content}>
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
       {building ? (
@@ -124,7 +121,7 @@ export function BuildingDetailScreen() {
 
           <AccommodationLifecycleActions
             actions={building.actions}
-            role={currentRole}
+            role={permissions.membershipRole}
             loading={lifecycleLoading}
             onEdit={() =>
               navigation.navigate('BuildingForm', {
@@ -165,6 +162,7 @@ export function BuildingDetailScreen() {
         </>
       ) : null}
     </Screen>
+    </RequireAccommodationAccess>
   );
 }
 

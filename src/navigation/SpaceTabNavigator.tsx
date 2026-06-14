@@ -4,12 +4,11 @@ import { RouteProp, useRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { SpaceTabBackButton } from '../components/ui';
 import { useSpaceTabHeader } from '../hooks/useSpaceTabHeader';
+import { useSpacePermissions } from '../hooks/useSpacePermissions';
 import { AccommodationHomeScreen } from '../screens/accommodation/AccommodationHomeScreen';
 import { DashboardScreen } from '../screens/dashboard/DashboardScreen';
 import { MembersScreen } from '../screens/MembersScreen';
-import { useSpaceStore } from '../store/spaceStore';
 import { tabBarOptions, tabHeaderOptions } from '../theme';
-import { isAccommodationApplicable } from '../utils/accommodationProfile';
 import { ScreenPlaceholder } from './ScreenPlaceholder';
 import type { SpaceTabParamList } from './types';
 
@@ -66,12 +65,12 @@ const tabScreenOptions = {
 
 export function SpaceTabNavigator({ spaceId }: SpaceTabNavigatorProps) {
   const { t, i18n } = useTranslation();
-  const mySpaces = useSpaceStore(state => state.mySpaces);
+  const permissions = useSpacePermissions(spaceId);
 
-  const showAccommodation = useMemo(() => {
-    const spaceType = mySpaces.find(space => space.spaceId === spaceId)?.spaceType;
-    return spaceType ? isAccommodationApplicable(spaceType) : true;
-  }, [mySpaces, spaceId]);
+  const showAccommodation = useMemo(
+    () => permissions.canViewAccommodation,
+    [permissions.canViewAccommodation],
+  );
 
   return (
     <Tab.Navigator

@@ -1074,6 +1074,32 @@
       "poll": "Availability Poll"
     }
   },
+  "permissions": {
+    "noAccess": {
+      "title": "No access",
+      "body": "You do not have permission to view this section.",
+      "accommodationTitle": "Accommodation unavailable",
+      "accommodationBody": "Your role cannot browse property structure. View your stay from your member profile if you are a resident.",
+      "backToDashboard": "Back to dashboard"
+    },
+    "myStay": {
+      "title": "My stay",
+      "subtitle": "View your current accommodation",
+      "noLinkedMember": "Your resident profile is not linked yet. Contact the manager."
+    },
+    "errors": {
+      "forbidden": "You do not have permission to perform this action.",
+      "notAMember": "You are not a member of this space.",
+      "ownScopeOnly": "You can only view your own stay.",
+      "noAccommodationAccess": "You do not have permission to view accommodation.",
+      "ownerOrManagerOnly": "Only owners or managers can perform this action.",
+      "ownerOnly": "Only the space owner can perform this action.",
+      "customerNoOccupancy": "Occupancy data is not available for your role.",
+      "useMemberOccupancyEndpoint": "Use your member profile to view your stay.",
+      "nonResidentMember": "Owners and managers cannot be allocated to accommodation.",
+      "messNoAccommodation": "Accommodation is not available for mess spaces."
+    }
+  },
   "settings": {
     "profile": {
       "eyebrow": "Account",

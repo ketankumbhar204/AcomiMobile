@@ -66,6 +66,16 @@ export interface UserSpaceResponse {
   joinedAt: string;
 }
 
+export interface SpacePermissionsResponse {
+  canViewAccommodation: boolean;
+  canManageAccommodation: boolean;
+  canDeactivateAccommodation: boolean;
+  canManageOccupancy: boolean;
+  canViewSpaceOccupancies: boolean;
+  canManageMembers: boolean;
+  canRemoveMember: boolean;
+}
+
 export interface MySpaceResponse {
   spaceId: UUID;
   spaceName: string;
@@ -74,6 +84,7 @@ export interface MySpaceResponse {
   isDefault: boolean;
   joinedAt: string;
   address?: string | null;
+  permissions?: SpacePermissionsResponse;
 }
 
 export interface DefaultSpaceResponse {
@@ -184,6 +195,7 @@ export interface MemberResponse {
   mobileNumber: string;
   role: MembershipRole;
   linkedUser: boolean;
+  linkedUserId?: UUID | null;
   status: MemberStatus;
   occupancyStatus?: MemberOccupancyStatus;
   createdAt: string;

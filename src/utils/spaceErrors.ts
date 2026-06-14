@@ -1,5 +1,6 @@
 import { ApiError } from '../api/types';
 import { i18n } from '../i18n';
+import { getPermissionErrorMessage } from './permissionErrors';
 
 export function getSpaceErrorMessage(error: unknown, fallbackKey?: string): string {
   if (!(error instanceof ApiError)) {
@@ -10,7 +11,7 @@ export function getSpaceErrorMessage(error: unknown, fallbackKey?: string): stri
     case 401:
       return i18n.t('spaces.errors.unauthorized');
     case 403:
-      return i18n.t('spaces.errors.forbidden');
+      return getPermissionErrorMessage(error, 'spaces.errors.forbidden');
     case 404:
       return i18n.t('spaces.errors.notFound');
     case 500:

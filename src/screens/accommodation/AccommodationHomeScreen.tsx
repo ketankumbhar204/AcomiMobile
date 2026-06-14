@@ -21,21 +21,18 @@ import {
 import { accommodationApi } from '../../api/accommodationApi';
 import type { BuildingResponse, BuildingSummaryResponse } from '../../api/types';
 import { AccommodationSearchBar } from '../../components/accommodation';
-import { Button, EmptyState, FAB, ListCard, SkeletonCard } from '../../components/ui';
+import { Button, EmptyState, FAB, ListCard, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useBuildings } from '../../hooks/useBuildings';
+import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useSpaceTabHeader } from '../../hooks/useSpaceTabHeader';
 import type { MainStackParamList, SpaceTabParamList } from '../../navigation/types';
 import { useSpaceStore } from '../../store/spaceStore';
+import { useToastStore } from '../../store/toastStore';
 import { colors, spacing, typography } from '../../theme';
-import {
-  canCreateOrUpdateAccommodation,
-  canManageAccommodation,
-} from '../../utils/accommodationPermissions';
-import { getAccommodationUiProfile } from '../../utils/accommodationProfile';
 import { matchesSearch } from '../../utils/accommodationSearch';
 import { renameBuildingName } from '../../utils/accommodationInlineRename';
-import { useToastStore } from '../../store/toastStore';
+import { getAccommodationUiProfile } from '../../utils/accommodationProfile';
 
 type AccommodationNav = CompositeNavigationProp<
   BottomTabNavigationProp<SpaceTabParamList, 'Accommodation'>,
@@ -94,12 +91,9 @@ export function AccommodationHomeScreen() {
     () => mySpaces.find(space => space.spaceId === spaceId)?.spaceType,
     [mySpaces, spaceId],
   );
-  const currentRole = useMemo(
-    () => mySpaces.find(space => space.spaceId === spaceId)?.membershipRole,
-    [mySpaces, spaceId],
-  );
-  const canManage = canManageAccommodation(currentRole);
-  const showFab = canCreateOrUpdateAccommodation(currentRole);
+  const permissions = useSpacePermissions(spaceId);
+  const canManage = permissions.canManageAccommodation;
+  const showFab = permissions.canManageAccommodation;
   const showToast = useToastStore(state => state.showToast);
 
   const { buildings, loading, error, refresh } = useBuildings(spaceId);
@@ -189,7 +183,8 @@ export function AccommodationHomeScreen() {
   const isEmpty = !showLoading && filteredBuildings.length === 0;
 
   return (
-    <View style={styles.root}>
+    <RequireAccommodationAccess spaceId={spaceId}>
+      <View style={styles.root}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -282,7 +277,8 @@ export function AccommodationHomeScreen() {
           accessibilityLabel={t('accommodation.home.addBuildingManually')}
         />
       ) : null}
-    </View>
+      </View>
+    </RequireAccommodationAccess>
   );
 }
 

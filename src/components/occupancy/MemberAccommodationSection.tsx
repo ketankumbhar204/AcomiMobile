@@ -15,13 +15,15 @@ import type { MainStackParamList } from '../../navigation/types';
 import { openOccupancyWizardFromRef } from '../../features/occupancy/OccupancyWizard';
 import { useMemberOccupancies } from '../../hooks/useMemberOccupancies';
 import { useOccupancyMutations } from '../../hooks/useOccupancyMutations';
+import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useMemberStore } from '../../store/memberStore';
 import { useToastStore } from '../../store/toastStore';
+import { useAuthStore } from '../../store/authStore';
 import { colors, spacing, typography } from '../../theme';
 import { isAccommodationApplicable } from '../../utils/accommodationProfile';
 import {
   canShowOccupancyActionsForMember,
-  canViewMemberOccupancy,
+  canViewMemberOccupancyForProfile,
   shouldShowOccupancySection,
 } from '../../utils/occupancyPermissions';
 import {
@@ -113,12 +115,20 @@ export function MemberAccommodationSection({
   const showToast = useToastStore(state => state.showToast);
   const refreshMember = useMemberStore(state => state.refreshMember);
   const { showConfirm } = useConfirmDialog();
+  const viewerUserId = useAuthStore(state => state.userId);
+  const spacePermissions = useSpacePermissions(spaceId);
 
   const showSection = Boolean(
     spaceType &&
       isAccommodationApplicable(spaceType) &&
       shouldShowOccupancySection(member.role) &&
-      canViewMemberOccupancy(currentRole),
+      canViewMemberOccupancyForProfile(
+        member.role,
+        member.linkedUserId,
+        currentRole,
+        viewerUserId,
+        spacePermissions,
+      ),
   );
 
   const { data: occupancyData } = useMemberOccupancies(spaceId, member.memberId, {
@@ -130,7 +140,11 @@ export function MemberAccommodationSection({
     return null;
   }
 
-  const canManage = canShowOccupancyActionsForMember(member.role, currentRole);
+  const canManage = canShowOccupancyActionsForMember(
+    member.role,
+    currentRole,
+    spacePermissions,
+  );
   const isAllocated = member.occupancyStatus === 'ALLOCATED';
   const isReserved = member.occupancyStatus === 'RESERVED';
 

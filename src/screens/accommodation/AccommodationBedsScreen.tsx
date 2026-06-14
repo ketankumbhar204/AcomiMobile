@@ -26,22 +26,17 @@ import {
   AccommodationOccupancyFlowModals,
   BedInventoryListRow,
 } from '../../components/occupancy';
-import { Button, Card, EmptyState, FAB, HeaderBackButton, InlineEditableName, SkeletonCard } from '../../components/ui';
+import { Button, Card, EmptyState, FAB, HeaderBackButton, InlineEditableName, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useAccommodationOccupancyFlow } from '../../hooks/useAccommodationOccupancyFlow';
+import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useBeds } from '../../hooks/useBeds';
 import { useBulkBeds } from '../../hooks/useBulkBeds';
 import type { MainStackParamList } from '../../navigation/types';
-import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
 import { colors, spacing, typography } from '../../theme';
 import { buildAccommodationTrail } from '../../utils/accommodationContext';
 import { navigateToAccommodationTrailSegment } from '../../utils/accommodationNavigation';
-import {
-  canCreateOrUpdateAccommodation,
-  canManageAccommodation,
-} from '../../utils/accommodationPermissions';
-import { canManageOccupancy } from '../../utils/occupancyPermissions';
 import { invalidateAccommodationQueries } from '../../utils/accommodationQueryCache';
 import { renameBedNumber, renameRoomName } from '../../utils/accommodationInlineRename';
 
@@ -73,18 +68,11 @@ export function AccommodationBedsScreen() {
     [buildingId, floorId, roomId, spaceId, unitId],
   );
 
-  const mySpaces = useSpaceStore(state => state.mySpaces);
-  const spaceType = useMemo(
-    () => mySpaces.find(space => space.spaceId === spaceId)?.spaceType,
-    [mySpaces, spaceId],
-  );
-  const currentRole = useMemo(
-    () => mySpaces.find(space => space.spaceId === spaceId)?.membershipRole,
-    [mySpaces, spaceId],
-  );
-  const canManage = canManageAccommodation(currentRole);
-  const canManageOccupancyActions = canManageOccupancy(currentRole);
-  const showFab = canCreateOrUpdateAccommodation(currentRole);
+  const permissions = useSpacePermissions(spaceId);
+  const spaceType = permissions.spaceType;
+  const canManage = permissions.canManageAccommodation;
+  const canManageOccupancyActions = permissions.canManageOccupancy;
+  const showFab = permissions.canManageAccommodation;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -244,7 +232,7 @@ export function AccommodationBedsScreen() {
             buildingId={buildingId}
             entityType="room"
             entityId={roomId}
-            role={currentRole}
+            role={permissions.membershipRole}
             onEdit={() =>
               navigation.navigate('RoomForm', {
                 spaceId,
@@ -304,6 +292,7 @@ export function AccommodationBedsScreen() {
     ) : null;
 
   return (
+    <RequireAccommodationAccess spaceId={spaceId}>
     <View style={styles.root}>
       <FlatList
         data={hasBlockingError || showLoading ? [] : beds}
@@ -352,7 +341,7 @@ export function AccommodationBedsScreen() {
               entityType: 'bed',
               entityId: bed.bedId,
               roomId,
-              role: currentRole,
+              role: permissions.membershipRole,
               onEdit: () =>
                 navigation.navigate('BedForm', {
                   spaceId,
@@ -413,6 +402,7 @@ export function AccommodationBedsScreen() {
         }}
       />
     </View>
+    </RequireAccommodationAccess>
   );
 }
 

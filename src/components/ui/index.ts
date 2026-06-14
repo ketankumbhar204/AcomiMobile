@@ -24,6 +24,7 @@ export { SpaceSwitcher } from './SpaceSwitcher';
 export { ListCard } from './ListCard';
 export { ModuleActionCard } from './ModuleActionCard';
 export { MetricCard, MetricCardProgress } from './MetricCard';
+export { PermissionDeniedScreen, RequireAccommodationAccess } from './PermissionDeniedScreen';
 export { Screen } from './Screen';
 export { Skeleton, SkeletonCard } from './Skeleton';
 export { Toast } from './Toast';

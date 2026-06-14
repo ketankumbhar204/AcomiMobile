@@ -1,3 +1,5 @@
+export { useSpacePermissions } from './useSpacePermissions';
+export { useLinkedMember } from './useLinkedMember';
 export { useActiveSpaceId } from './useActiveSpaceId';
 export { useScreenBackButton } from './useScreenBackButton';
 export { useLogout } from './useLogout';

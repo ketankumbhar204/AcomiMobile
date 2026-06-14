@@ -15,9 +15,10 @@ import {
   AccommodationStatusBadge,
   formatAccommodationDate,
 } from '../../components/accommodation';
-import { Button, Card, HeaderBackButton, Screen, SkeletonCard } from '../../components/ui';
+import { Button, Card, HeaderBackButton, RequireAccommodationAccess, Screen, SkeletonCard } from '../../components/ui';
 import { AccommodationOccupantSection, AccommodationOccupancyActions } from '../../components/occupancy';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
+import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useTargetOccupancy } from '../../hooks/useTargetOccupancy';
 import {
   useDeactivateUnit,
@@ -26,12 +27,10 @@ import {
 } from '../../hooks/accommodationLifecycle';
 import { useAccommodationLifecycleConfirm } from '../../hooks/useAccommodationLifecycleConfirm';
 import type { MainStackParamList } from '../../navigation/types';
-import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
 import { spacing, typography } from '../../theme';
 import { buildAccommodationTrail } from '../../utils/accommodationContext';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
-import { canManageOccupancy, canViewSpaceOccupancies } from '../../utils/occupancyPermissions';
 import { buildUnitOccupancyTarget } from '../../utils/buildOccupancyTarget';
 import { navigateToAccommodationTrailSegment } from '../../utils/accommodationNavigation';
 import { useAccommodationUiProfile } from '../../hooks/useAccommodationUiProfile';
@@ -53,15 +52,8 @@ export function UnitDetailScreen() {
   const { mutate: deleteUnit, loading: deleting } = useDeleteUnit();
   const lifecycleLoading = deactivating || restoring || deleting;
 
-  const mySpaces = useSpaceStore(state => state.mySpaces);
-  const spaceType = useMemo(
-    () => mySpaces.find(space => space.spaceId === spaceId)?.spaceType,
-    [mySpaces, spaceId],
-  );
-  const currentRole = useMemo(
-    () => mySpaces.find(space => space.spaceId === spaceId)?.membershipRole,
-    [mySpaces, spaceId],
-  );
+  const permissions = useSpacePermissions(spaceId);
+  const spaceType = permissions.spaceType;
   const { profile } = useAccommodationUiProfile(spaceId, spaceType, buildingId);
 
   const [unit, setUnit] = useState<UnitResponse | null>(null);
@@ -70,8 +62,8 @@ export function UnitDetailScreen() {
 
   const showsOccupant =
     unit?.status === 'OCCUPIED' || unit?.status === 'RESERVED';
-  const canViewOccupant = canViewSpaceOccupancies(currentRole);
-  const canManageOccupancyActions = canManageOccupancy(currentRole);
+  const canViewOccupant = permissions.canViewSpaceOccupancies;
+  const canManageOccupancyActions = permissions.canManageOccupancy;
   const {
     occupancy,
     loading: occupancyLoading,
@@ -151,6 +143,7 @@ export function UnitDetailScreen() {
   }
 
   return (
+    <RequireAccommodationAccess spaceId={spaceId}>
     <Screen scrollable contentStyle={styles.content}>
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
       {unit ? (
@@ -221,7 +214,7 @@ export function UnitDetailScreen() {
 
           <AccommodationLifecycleActions
             actions={unit.actions}
-            role={currentRole}
+            role={permissions.membershipRole}
             loading={lifecycleLoading}
             onEdit={() =>
               navigation.navigate('UnitForm', {
@@ -263,6 +256,7 @@ export function UnitDetailScreen() {
         </>
       ) : null}
     </Screen>
+    </RequireAccommodationAccess>
   );
 }
 

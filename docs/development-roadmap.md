@@ -219,23 +219,24 @@ Available · Occupied · Reserved · Maintenance · Blocked
 * 🔶 Filter by building, floor, unit, room, status — hierarchy navigation + wizard filters only; no global structure filter UI
 * 🔶 Dashboard occupancy metric — placeholder value; not yet wired to summary API
 
-### Permissions 🔶
+### Permissions ✅ (Phase 4.5)
 
-Implementation: `accommodationPermissions.ts`, `occupancyPermissions.ts`
+Implementation: `spacePermissions.ts`, `useSpacePermissions`, `permissions-backend-spec.md`
 
-| Role | Intended access | Status | Notes |
-|------|-----------------|--------|-------|
-| **OWNER** | Full access | ✅ | Structure CRUD, deactivate/delete, quick setup, occupancy manage |
-| **MANAGER** | Operate, no structure delete | ✅ | Create/edit structure, duplicate, bulk, occupancy manage; deactivate/delete owner-only |
-| **TENANT** | Own allocation read-only | 🔶 | Can view own occupancy on member profile (`canViewMemberOccupancy`); cannot manage occupancies; accommodation tab not role-restricted yet |
-| **CUSTOMER** | No access | ⬜ | `canViewAccommodation()` returns true for all roles and is unused; accommodation tab visible to every role |
-| **STAFF** | Limited read | 🔶 | Can view space occupancies (`canViewSpaceOccupancies`); no structure write or occupancy manage; structure browse is read-only via missing FAB |
+| Role | Intended access | Status |
+|------|-----------------|--------|
+| **OWNER** | Full access | ✅ Server + UI |
+| **MANAGER** | Operate, no structure delete | ✅ Server + UI |
+| **TENANT** | Own allocation read-only | ✅ Tab hidden; My stay on dashboard |
+| **CUSTOMER** | No accommodation/occupancy | ✅ Tab hidden; section hidden |
+| **STAFF** | Structure read + occupancy list | ✅ Read-only FABs |
 
-**Occupancy write** (allocate, reserve, transfer, vacate): OWNER and MANAGER only (`canManageOccupancy`).
+- `GET /spaces/my` `permissions` block preferred over local role matrix
+- Accommodation tab gated by `canViewAccommodation`
+- Stack screens wrapped in `RequireAccommodationAccess`
+- 403 errors mapped via `permissionErrors.ts`
 
-**Structure deactivate / delete:** OWNER only (`canDeactivateAccommodation`).
-
-**4.5 remaining:** hide accommodation tab for CUSTOMER; restrict TENANT to own-allocation views; enforce `canViewAccommodation` at tab and screen level.
+> **Backend spec:** [permissions-backend-spec.md](./permissions-backend-spec.md)
 
 ### Out of Scope (Phase 4)
 

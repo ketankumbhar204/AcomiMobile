@@ -1,33 +1,44 @@
 import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { useRoute } from '@react-navigation/native';
-import type { RouteProp } from '@react-navigation/native';
+import {
+  CompositeNavigationProp,
+  RouteProp,
+  useNavigation,
+  useRoute,
+} from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { formatSpaceType } from '../../api';
 import { MetricCard, MetricCardProgress, ModuleActionCard } from '../../components/ui';
 import { Screen } from '../../components/ui/Screen';
 import { openOccupancyWizardFromRef } from '../../features/occupancy/OccupancyWizard';
-import type { SpaceTabParamList } from '../../navigation/types';
+import { useLinkedMember } from '../../hooks/useLinkedMember';
+import { useSpacePermissions } from '../../hooks/useSpacePermissions';
+import type { MainStackParamList, SpaceTabParamList } from '../../navigation/types';
 import { useAccommodationActionSheetStore } from '../../store/accommodationActionSheetStore';
 import { useSpaceStore } from '../../store/spaceStore';
 import { colors, spacing, typography } from '../../theme';
-import { canManageOccupancy } from '../../utils/occupancyPermissions';
 
 type DashboardRoute = RouteProp<SpaceTabParamList, 'Dashboard'>;
+type DashboardNav = CompositeNavigationProp<
+  BottomTabNavigationProp<SpaceTabParamList, 'Dashboard'>,
+  NativeStackNavigationProp<MainStackParamList>
+>;
 
 export function DashboardScreen() {
   const { t } = useTranslation();
+  const navigation = useNavigation<DashboardNav>();
   const route = useRoute<DashboardRoute>();
   const { spaceId } = route.params;
   const selectedSpace = useSpaceStore(state => state.selectedSpace);
-  const mySpaces = useSpaceStore(state => state.mySpaces);
-
-  const currentRole = useMemo(
-    () => mySpaces.find(space => space.spaceId === spaceId)?.membershipRole,
-    [mySpaces, spaceId],
-  );
-  const canManage = canManageOccupancy(currentRole);
+  const permissions = useSpacePermissions(spaceId);
+  const { memberId: linkedMemberId } = useLinkedMember(spaceId);
   const openActionSheet = useAccommodationActionSheetStore(state => state.open);
+
+  const isTenant = permissions.membershipRole === 'TENANT';
+  const showResidentsActions = permissions.canManageOccupancy;
+  const showMyStay = isTenant && linkedMemberId != null;
 
   const handleResidentsPress = useCallback(() => {
     openActionSheet(t('dashboard.quickActions.residents'), [
@@ -50,6 +61,64 @@ export function DashboardScreen() {
       },
     ]);
   }, [openActionSheet, spaceId, t]);
+
+  const handleMyStayPress = useCallback(() => {
+    if (!linkedMemberId) {
+      return;
+    }
+    navigation.navigate('MemberDetails', { spaceId, memberId: linkedMemberId });
+  }, [linkedMemberId, navigation, spaceId]);
+
+  const quickActions = useMemo(() => {
+    if (showResidentsActions) {
+      return (
+        <View style={styles.moduleRow}>
+          <ModuleActionCard
+            icon="👥"
+            title={t('dashboard.quickActions.residents')}
+            subtitle={t('dashboard.quickActions.residentsSubtitle')}
+            onPress={handleResidentsPress}
+          />
+          <ModuleActionCard
+            icon="🍽"
+            title={t('dashboard.quickActions.meals')}
+            subtitle={t('dashboard.quickActions.mealsSubtitle')}
+            disabled
+            comingSoonLabel={t('dashboard.quickActions.comingSoon')}
+          />
+        </View>
+      );
+    }
+
+    if (showMyStay) {
+      return (
+        <ModuleActionCard
+          icon="🏠"
+          title={t('permissions.myStay.title')}
+          subtitle={t('permissions.myStay.subtitle')}
+          onPress={handleMyStayPress}
+        />
+      );
+    }
+
+    if (isTenant && !linkedMemberId) {
+      return (
+        <Text style={styles.tenantHint}>{t('permissions.myStay.noLinkedMember')}</Text>
+      );
+    }
+
+    return null;
+  }, [
+    handleMyStayPress,
+    handleResidentsPress,
+    isTenant,
+    linkedMemberId,
+    showMyStay,
+    showResidentsActions,
+    t,
+  ]);
+
+  const showQuickSection = quickActions != null;
 
   return (
     <Screen scrollable contentStyle={styles.content}>
@@ -81,24 +150,10 @@ export function DashboardScreen() {
         <MetricCardProgress percent={78} />
       </MetricCard>
 
-      {canManage ? (
+      {showQuickSection ? (
         <View style={styles.quickSection}>
           <Text style={styles.quickTitle}>{t('dashboard.quickActions.title')}</Text>
-          <View style={styles.moduleRow}>
-            <ModuleActionCard
-              icon="👥"
-              title={t('dashboard.quickActions.residents')}
-              subtitle={t('dashboard.quickActions.residentsSubtitle')}
-              onPress={handleResidentsPress}
-            />
-            <ModuleActionCard
-              icon="🍽"
-              title={t('dashboard.quickActions.meals')}
-              subtitle={t('dashboard.quickActions.mealsSubtitle')}
-              disabled
-              comingSoonLabel={t('dashboard.quickActions.comingSoon')}
-            />
-          </View>
+          {quickActions}
         </View>
       ) : null}
     </Screen>
@@ -123,5 +178,9 @@ const styles = StyleSheet.create({
   moduleRow: {
     flexDirection: 'row',
     gap: spacing.md,
+  },
+  tenantHint: {
+    ...typography.body,
+    color: colors.muted,
   },
 });

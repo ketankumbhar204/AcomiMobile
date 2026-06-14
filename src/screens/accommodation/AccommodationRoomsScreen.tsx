@@ -27,15 +27,15 @@ import {
   AccommodationOccupancyFlowModals,
   AccommodationOccupancyQuickActions,
 } from '../../components/occupancy';
-import { Button, EmptyState, FAB, HeaderBackButton, SkeletonCard } from '../../components/ui';
+import { Button, EmptyState, FAB, HeaderBackButton, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
 import { useAccommodationOccupancyFlow } from '../../hooks/useAccommodationOccupancyFlow';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
+import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useBulkRooms } from '../../hooks/useBulkRooms';
 import { useDuplicateRoom } from '../../hooks/useDuplicateRoom';
 import { useRoomsByFloor } from '../../hooks/useRoomsByFloor';
 import { useRoomsByUnit } from '../../hooks/useRoomsByUnit';
 import type { MainStackParamList } from '../../navigation/types';
-import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
 import { colors, spacing, typography } from '../../theme';
 import { formatFloorHeaderTitle } from '../../utils/accommodationLabels';
@@ -43,11 +43,6 @@ import {
   roomBundleFromRoom,
   toAccommodationBedsParams,
 } from '../../utils/accommodationNavigation';
-import {
-  canCreateOrUpdateAccommodation,
-  canManageAccommodation,
-} from '../../utils/accommodationPermissions';
-import { canManageOccupancy } from '../../utils/occupancyPermissions';
 import {
   buildRoomOccupancyTarget,
   isOccupancyTargetSupported,
@@ -84,15 +79,8 @@ export function AccommodationRoomsScreen() {
   const spaceId = useActiveSpaceId(route.params.spaceId);
   const showToast = useToastStore(state => state.showToast);
 
-  const mySpaces = useSpaceStore(state => state.mySpaces);
-  const spaceType = useMemo(
-    () => mySpaces.find(space => space.spaceId === spaceId)?.spaceType,
-    [mySpaces, spaceId],
-  );
-  const currentRole = useMemo(
-    () => mySpaces.find(space => space.spaceId === spaceId)?.membershipRole,
-    [mySpaces, spaceId],
-  );
+  const permissions = useSpacePermissions(spaceId);
+  const spaceType = permissions.spaceType;
   const profile = useMemo(
     () =>
       spaceType
@@ -100,9 +88,9 @@ export function AccommodationRoomsScreen() {
         : null,
     [spaceType],
   );
-  const canManage = canManageAccommodation(currentRole);
-  const canManageOccupancyActions = canManageOccupancy(currentRole);
-  const showFab = canCreateOrUpdateAccommodation(currentRole);
+  const canManage = permissions.canManageAccommodation;
+  const canManageOccupancyActions = permissions.canManageOccupancy;
+  const showFab = permissions.canManageAccommodation;
   const showBeds = profile?.showBeds ?? false;
   const supportsRoomOccupancy = Boolean(
     spaceType && isOccupancyTargetSupported(spaceType, 'ROOM'),
@@ -314,6 +302,7 @@ export function AccommodationRoomsScreen() {
     ) : null;
 
   return (
+    <RequireAccommodationAccess spaceId={spaceId}>
     <View style={styles.root}>
       <FlatList
         data={showLoading ? [] : rooms}
@@ -379,7 +368,7 @@ export function AccommodationRoomsScreen() {
                   buildingId={buildingId}
                   entityType="room"
                   entityId={room.roomId}
-                  role={currentRole}
+                  role={permissions.membershipRole}
                   onEdit={() =>
                     navigation.navigate('RoomForm', {
                       spaceId,
@@ -478,6 +467,7 @@ export function AccommodationRoomsScreen() {
         }}
       />
     </View>
+    </RequireAccommodationAccess>
   );
 }
 

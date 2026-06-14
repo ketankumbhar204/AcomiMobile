@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useState } from 'react';
 import {
   FlatList,
   RefreshControl,
@@ -14,16 +14,12 @@ import type {
 import { useTranslation } from 'react-i18next';
 import type { FloorListItemResponse } from '../../api/types';
 import { AccommodationListFooter, AccommodationSearchBar } from '../../components/accommodation';
-import { EmptyState, FAB, HeaderBackButton, ListCard, SkeletonCard } from '../../components/ui';
+import { EmptyState, FAB, HeaderBackButton, ListCard, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useFloors } from '../../hooks/useFloors';
+import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../../navigation/types';
-import { useSpaceStore } from '../../store/spaceStore';
 import { colors, spacing, typography } from '../../theme';
-import {
-  canCreateOrUpdateAccommodation,
-  canManageAccommodation,
-} from '../../utils/accommodationPermissions';
 import { renameFloorName } from '../../utils/accommodationInlineRename';
 import { useToastStore } from '../../store/toastStore';
 import { formatFloorHeaderTitle } from '../../utils/accommodationLabels';
@@ -38,13 +34,9 @@ export function FloorsScreen() {
   const { buildingId, buildingName } = route.params;
   const spaceId = useActiveSpaceId(route.params.spaceId);
 
-  const mySpaces = useSpaceStore(state => state.mySpaces);
-  const currentRole = useMemo(
-    () => mySpaces.find(space => space.spaceId === spaceId)?.membershipRole,
-    [mySpaces, spaceId],
-  );
-  const showFab = canCreateOrUpdateAccommodation(currentRole);
-  const canManage = canManageAccommodation(currentRole);
+  const permissions = useSpacePermissions(spaceId);
+  const showFab = permissions.canManageAccommodation;
+  const canManage = permissions.canManageAccommodation;
   const showToast = useToastStore(state => state.showToast);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -119,6 +111,7 @@ export function FloorsScreen() {
     ) : null;
 
   return (
+    <RequireAccommodationAccess spaceId={spaceId}>
     <View style={styles.root}>
       <FlatList
         data={showLoading ? [] : floors}
@@ -171,6 +164,7 @@ export function FloorsScreen() {
         />
       ) : null}
     </View>
+    </RequireAccommodationAccess>
   );
 }
 

@@ -18,14 +18,10 @@ import {
   RoleBadge,
 } from '../components/member';
 import { Badge, HeaderBackButton, Screen, SkeletonCard } from '../components/ui';
+import { useSpacePermissions } from '../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../navigation/types';
 import { useMemberStore } from '../store/memberStore';
-import { useSpaceStore } from '../store/spaceStore';
 import { spacing, typography } from '../theme';
-import {
-  canEditMember,
-  canRemoveMember,
-} from '../utils/memberPermissions';
 
 type MemberDetailsNav = NativeStackNavigationProp<
   MainStackParamList,
@@ -42,7 +38,7 @@ export function MemberDetailsScreen() {
   const route = useRoute<MemberDetailsRoute>();
   const { spaceId, memberId } = route.params;
 
-  const mySpaces = useSpaceStore(state => state.mySpaces);
+  const permissions = useSpacePermissions(spaceId);
   const member = useMemberStore(state => state.selectedMember);
   const loadMemberDetails = useMemberStore(state => state.loadMemberDetails);
   const memberLoading = useMemberStore(state => state.memberLoading);
@@ -50,10 +46,9 @@ export function MemberDetailsScreen() {
 
   const [activeTab, setActiveTab] = useState<MemberDetailTab>('profile');
 
-  const currentRole = mySpaces.find(space => space.spaceId === spaceId)?.membershipRole;
-  const spaceType = mySpaces.find(space => space.spaceId === spaceId)?.spaceType;
-  const canEdit = canEditMember(currentRole) && member?.role !== 'OWNER';
-  const canRemove = canRemoveMember(currentRole) && member?.role !== 'OWNER';
+  const spaceType = permissions.spaceType;
+  const canEdit = permissions.canManageMembers && member?.role !== 'OWNER';
+  const canRemove = permissions.canRemoveMember && member?.role !== 'OWNER';
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -84,7 +79,7 @@ export function MemberDetailsScreen() {
             member={member}
             canEdit={canEdit}
             canRemove={canRemove}
-            currentRole={currentRole}
+            currentRole={permissions.membershipRole}
           />
         );
       case 'deposit':

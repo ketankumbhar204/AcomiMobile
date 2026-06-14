@@ -31,16 +31,11 @@ import {
   useConfirmDialog,
 } from '../components/ui';
 import { useActiveSpaceId } from '../hooks/useActiveSpaceId';
+import { useSpacePermissions } from '../hooks/useSpacePermissions';
 import { useSpaceTabHeader } from '../hooks/useSpaceTabHeader';
 import type { MainStackParamList, SpaceTabParamList } from '../navigation/types';
 import { useMemberStore } from '../store/memberStore';
-import { useSpaceStore } from '../store/spaceStore';
 import { colors, radius, shadows, spacing, typography } from '../theme';
-import {
-  canAddMember,
-  canCancelInvitation,
-  canInviteMember,
-} from '../utils/memberPermissions';
 
 type MembersNavigation = CompositeNavigationProp<
   BottomTabNavigationProp<SpaceTabParamList, 'Members'>,
@@ -96,7 +91,6 @@ export function MembersScreen() {
   const route = useRoute<MembersRoute>();
   const spaceId = useActiveSpaceId(route.params?.spaceId);
 
-  const mySpaces = useSpaceStore(state => state.mySpaces);
   const members = useMemberStore(state => state.members);
   const pendingInvitations = useMemberStore(state => state.pendingInvitations);
   const loading = useMemberStore(state => state.loading);
@@ -110,16 +104,13 @@ export function MembersScreen() {
 
   const [activeTab, setActiveTab] = useState<MembersTab>('members');
 
-  const currentRole = useMemo(
-    () => mySpaces.find(space => space.spaceId === spaceId)?.membershipRole,
-    [mySpaces, spaceId],
-  );
+  const permissions = useSpacePermissions(spaceId);
 
   const sortedMembers = useMemo(() => sortMembersByRole(members), [members]);
 
-  const showAddFab = canAddMember(currentRole);
-  const showInviteAction = canInviteMember(currentRole);
-  const showCancelInvitation = canCancelInvitation(currentRole);
+  const showAddFab = permissions.canManageMembers;
+  const showInviteAction = permissions.canManageMembers;
+  const showCancelInvitation = permissions.canManageMembers;
 
   const inviteHeaderAction = useMemo(
     () =>

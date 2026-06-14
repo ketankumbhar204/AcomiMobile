@@ -1,5 +1,6 @@
 import { ApiError } from '../api/types';
 import { i18n } from '../i18n';
+import { getPermissionErrorMessage } from './permissionErrors';
 
 const MESSAGE_PATTERNS: Array<{ pattern: RegExp; key: string }> = [
   {
@@ -89,7 +90,7 @@ export function getOccupancyErrorMessage(
 
   switch (error.status) {
     case 403:
-      return i18n.t('occupancy.errors.forbidden');
+      return getPermissionErrorMessage(error, 'occupancy.errors.forbidden');
     case 404:
       return i18n.t('occupancy.errors.notFound');
     default:

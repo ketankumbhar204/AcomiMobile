@@ -16,8 +16,9 @@ import {
   formatAccommodationDate,
 } from '../../components/accommodation';
 import { AccommodationOccupantSection, AccommodationOccupancyActions } from '../../components/occupancy';
-import { Card, HeaderBackButton, Screen, SkeletonCard } from '../../components/ui';
+import { Card, HeaderBackButton, RequireAccommodationAccess, Screen, SkeletonCard } from '../../components/ui';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
+import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useTargetOccupancy } from '../../hooks/useTargetOccupancy';
 import {
   useDeactivateBed,
@@ -26,12 +27,10 @@ import {
 } from '../../hooks/accommodationLifecycle';
 import { useAccommodationLifecycleConfirm } from '../../hooks/useAccommodationLifecycleConfirm';
 import type { MainStackParamList } from '../../navigation/types';
-import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
 import { spacing, typography } from '../../theme';
 import { buildAccommodationTrail } from '../../utils/accommodationContext';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
-import { canManageOccupancy, canViewSpaceOccupancies } from '../../utils/occupancyPermissions';
 import { buildBedOccupancyTarget } from '../../utils/buildOccupancyTarget';
 import { navigateToAccommodationTrailSegment } from '../../utils/accommodationNavigation';
 
@@ -63,15 +62,8 @@ export function BedDetailScreen() {
   const { mutate: deleteBed, loading: deleting } = useDeleteBed();
   const lifecycleLoading = deactivating || restoring || deleting;
 
-  const mySpaces = useSpaceStore(state => state.mySpaces);
-  const spaceType = useMemo(
-    () => mySpaces.find(space => space.spaceId === spaceId)?.spaceType,
-    [mySpaces, spaceId],
-  );
-  const currentRole = useMemo(
-    () => mySpaces.find(space => space.spaceId === spaceId)?.membershipRole,
-    [mySpaces, spaceId],
-  );
+  const permissions = useSpacePermissions(spaceId);
+  const spaceType = permissions.spaceType;
 
   const [bed, setBed] = useState<BedResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -79,8 +71,8 @@ export function BedDetailScreen() {
 
   const showsOccupant =
     bed?.status === 'OCCUPIED' || bed?.status === 'RESERVED';
-  const canViewOccupant = canViewSpaceOccupancies(currentRole);
-  const canManageOccupancyActions = canManageOccupancy(currentRole);
+  const canViewOccupant = permissions.canViewSpaceOccupancies;
+  const canManageOccupancyActions = permissions.canManageOccupancy;
   const hasBedOccupant = Boolean(bed?.occupant);
   const {
     occupancy,
@@ -195,6 +187,7 @@ export function BedDetailScreen() {
   }
 
   return (
+    <RequireAccommodationAccess spaceId={spaceId}>
     <Screen scrollable contentStyle={styles.content}>
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
       {bed ? (
@@ -249,7 +242,7 @@ export function BedDetailScreen() {
 
           <AccommodationLifecycleActions
             actions={bed.actions}
-            role={currentRole}
+            role={permissions.membershipRole}
             loading={lifecycleLoading}
             onEdit={() =>
               navigation.navigate('BedForm', {
@@ -292,6 +285,7 @@ export function BedDetailScreen() {
         </>
       ) : null}
     </Screen>
+    </RequireAccommodationAccess>
   );
 }
 

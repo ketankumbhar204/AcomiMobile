@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useState } from 'react';
 import {
   FlatList,
   RefreshControl,
@@ -29,23 +29,19 @@ import {
   DuplicateFloorModal,
   HeaderMenuSlot,
 } from '../../components/accommodation';
-import { Button, EmptyState, FAB, HeaderBackButton, SkeletonCard } from '../../components/ui';
+import { Button, EmptyState, FAB, HeaderBackButton, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useAccommodationUiProfile } from '../../hooks/useAccommodationUiProfile';
+import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useBulkUnits } from '../../hooks/useBulkUnits';
 import { useDuplicateBuilding } from '../../hooks/useDuplicateBuilding';
 import { useDuplicateFloor } from '../../hooks/useDuplicateFloor';
 import { useFloors } from '../../hooks/useFloors';
 import { useUnits } from '../../hooks/useUnits';
 import type { MainStackParamList } from '../../navigation/types';
-import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
 import { colors, spacing, typography } from '../../theme';
 import { formatFloorHeaderTitle } from '../../utils/accommodationLabels';
-import {
-  canCreateOrUpdateAccommodation,
-  canManageAccommodation,
-} from '../../utils/accommodationPermissions';
 import { invalidateAccommodationQueries } from '../../utils/accommodationQueryCache';
 import {
   renameBuildingName,
@@ -70,12 +66,8 @@ export function AccommodationBuilderScreen() {
   const spaceId = useActiveSpaceId(route.params.spaceId);
   const showToast = useToastStore(state => state.showToast);
 
-  const mySpaces = useSpaceStore(state => state.mySpaces);
-  const space = useMemo(
-    () => mySpaces.find(item => item.spaceId === spaceId),
-    [mySpaces, spaceId],
-  );
-  const spaceType = space?.spaceType as SpaceType | undefined;
+  const permissions = useSpacePermissions(spaceId);
+  const spaceType = permissions.spaceType as SpaceType | undefined;
 
   const {
     profile,
@@ -84,8 +76,8 @@ export function AccommodationBuilderScreen() {
     summaryError,
     refreshSummary,
   } = useAccommodationUiProfile(spaceId, spaceType, buildingId);
-  const canManage = canManageAccommodation(space?.membershipRole);
-  const showFab = canCreateOrUpdateAccommodation(space?.membershipRole);
+  const canManage = permissions.canManageAccommodation;
+  const showFab = permissions.canManageAccommodation;
   const isRental = profile?.layoutMode === 'RENTAL';
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -155,7 +147,7 @@ export function AccommodationBuilderScreen() {
                 buildingId={buildingId}
                 entityType="building"
                 entityId={buildingId}
-                role={space?.membershipRole}
+                role={permissions.membershipRole}
                 onEdit={() =>
                   navigation.navigate('BuildingForm', { spaceId, mode: 'edit', buildingId })
                 }
@@ -173,7 +165,7 @@ export function AccommodationBuilderScreen() {
     handleLifecycleSuccess,
     i18n.language,
     navigation,
-    space?.membershipRole,
+    permissions.membershipRole,
     spaceId,
     summary?.name,
     t,
@@ -314,7 +306,7 @@ export function AccommodationBuilderScreen() {
                 buildingId={buildingId}
                 entityType="floor"
                 entityId={item.floorId}
-                role={space?.membershipRole}
+                role={permissions.membershipRole}
                 onEdit={() =>
                   navigation.navigate('FloorForm', {
                     spaceId,
@@ -361,7 +353,7 @@ export function AccommodationBuilderScreen() {
               buildingId={buildingId}
               entityType="unit"
               entityId={unit.unitId}
-              role={space?.membershipRole}
+              role={permissions.membershipRole}
               onEdit={() =>
                 navigation.navigate('UnitForm', {
                   spaceId,
@@ -387,6 +379,7 @@ export function AccommodationBuilderScreen() {
   }
 
   return (
+    <RequireAccommodationAccess spaceId={spaceId}>
     <View style={styles.root}>
       <FlatList
         data={showListLoading ? [] : items}
@@ -505,6 +498,7 @@ export function AccommodationBuilderScreen() {
         }}
       />
     </View>
+    </RequireAccommodationAccess>
   );
 }
 

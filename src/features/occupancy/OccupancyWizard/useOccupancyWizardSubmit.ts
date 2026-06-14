@@ -15,6 +15,7 @@ import {
   validateContractTerms,
   type ContractTermsFormValues,
 } from '../../../utils/occupancyContract';
+import { getOccupancyErrorMessage } from '../../../utils/occupancyErrors';
 import type { SpaceFoodPolicy } from '../../../utils/fetchSpaceFoodPolicy';
 import type { SpaceType } from '../../../api/types';
 import type { OccupancyWizardMode } from './types';
@@ -196,9 +197,7 @@ export function useOccupancyWizardSubmit(spaceId: string) {
         showToast(t('occupancy.success.updated'));
         onSuccess();
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : t('occupancy.errors.generic');
-        showToast(message);
+        showToast(getOccupancyErrorMessage(err));
       }
     },
     [allocate, moveIn, reserve, showToast, t, transfer, vacate],

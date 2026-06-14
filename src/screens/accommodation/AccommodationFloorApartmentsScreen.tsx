@@ -21,11 +21,11 @@ import {
   AccommodationStatusBadge,
   ParentSummaryCard,
 } from '../../components/accommodation';
-import { Button, EmptyState, FAB, HeaderBackButton, SkeletonCard } from '../../components/ui';
+import { Button, EmptyState, FAB, HeaderBackButton, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
+import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useUnitsByFloor } from '../../hooks/useUnitsByFloor';
 import type { MainStackParamList } from '../../navigation/types';
-import { useSpaceStore } from '../../store/spaceStore';
 import { colors, spacing, typography } from '../../theme';
 import { formatFloorHeaderTitle } from '../../utils/accommodationLabels';
 import {
@@ -36,10 +36,6 @@ import {
   accommodationTrailContextFromParent,
   navigateToAccommodationTrailSegment,
 } from '../../utils/accommodationNavigation';
-import {
-  canCreateOrUpdateAccommodation,
-  canManageAccommodation,
-} from '../../utils/accommodationPermissions';
 import { renameUnitName } from '../../utils/accommodationInlineRename';
 import { useToastStore } from '../../store/toastStore';
 
@@ -53,13 +49,9 @@ export function AccommodationFloorApartmentsScreen() {
   const { buildingId, buildingName, floorId, floorName } = route.params;
   const spaceId = useActiveSpaceId(route.params.spaceId);
 
-  const mySpaces = useSpaceStore(state => state.mySpaces);
-  const currentRole = useMemo(
-    () => mySpaces.find(space => space.spaceId === spaceId)?.membershipRole,
-    [mySpaces, spaceId],
-  );
-  const showFab = canCreateOrUpdateAccommodation(currentRole);
-  const canManage = canManageAccommodation(currentRole);
+  const permissions = useSpacePermissions(spaceId);
+  const showFab = permissions.canManageAccommodation;
+  const canManage = permissions.canManageAccommodation;
   const showToast = useToastStore(state => state.showToast);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -185,6 +177,7 @@ export function AccommodationFloorApartmentsScreen() {
   );
 
   return (
+    <RequireAccommodationAccess spaceId={spaceId}>
     <View style={styles.container}>
       <FlatList
         data={showLoading ? [] : units}
@@ -227,6 +220,7 @@ export function AccommodationFloorApartmentsScreen() {
         />
       ) : null}
     </View>
+    </RequireAccommodationAccess>
   );
 }
 
