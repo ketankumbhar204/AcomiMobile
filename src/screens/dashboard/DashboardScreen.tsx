@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import {
   CompositeNavigationProp,
@@ -10,6 +10,7 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { formatSpaceType } from '../../api';
+import { mealsApi } from '../../api/mealsApi';
 import { MetricCard, MetricCardProgress, ModuleActionCard } from '../../components/ui';
 import { Screen } from '../../components/ui/Screen';
 import { openOccupancyWizardFromRef } from '../../features/occupancy/OccupancyWizard';
@@ -19,6 +20,8 @@ import type { MainStackParamList, SpaceTabParamList } from '../../navigation/typ
 import { useAccommodationActionSheetStore } from '../../store/accommodationActionSheetStore';
 import { useSpaceStore } from '../../store/spaceStore';
 import { colors, spacing, typography } from '../../theme';
+import { isAccommodationApplicable } from '../../utils/accommodationProfile';
+import { findMySpaceEntry } from '../../utils/spacePermissions';
 
 type DashboardRoute = RouteProp<SpaceTabParamList, 'Dashboard'>;
 type DashboardNav = CompositeNavigationProp<
@@ -31,14 +34,53 @@ export function DashboardScreen() {
   const navigation = useNavigation<DashboardNav>();
   const route = useRoute<DashboardRoute>();
   const { spaceId } = route.params;
-  const selectedSpace = useSpaceStore(state => state.selectedSpace);
+  const mySpaces = useSpaceStore(state => state.mySpaces);
+  const spaceEntry = findMySpaceEntry(mySpaces, spaceId);
   const permissions = useSpacePermissions(spaceId);
+  const spaceType = permissions.spaceType ?? spaceEntry?.spaceType;
+  const accommodationApplicable = spaceType ? isAccommodationApplicable(spaceType) : true;
   const { memberId: linkedMemberId } = useLinkedMember(spaceId);
   const openActionSheet = useAccommodationActionSheetStore(state => state.open);
 
   const isTenant = permissions.membershipRole === 'TENANT';
-  const showResidentsActions = permissions.canManageOccupancy;
-  const showMyStay = isTenant && linkedMemberId != null;
+  const isCustomer = permissions.membershipRole === 'CUSTOMER';
+  const showResidentsActions = permissions.canManageOccupancy && accommodationApplicable;
+  const showMealsActions = permissions.canManageMeals === true;
+  const showMealsReadOnly =
+    !showMealsActions && permissions.canViewMeals === true && (isTenant || isCustomer);
+  const showMyStay = isTenant && linkedMemberId != null && accommodationApplicable;
+
+  const [eligibleMealCount, setEligibleMealCount] = useState<string>('—');
+
+  useEffect(() => {
+    if (!permissions.canViewMeals) {
+      return;
+    }
+    void mealsApi
+      .getEligibilitySummary(spaceId)
+      .then(summary => {
+        const total = summary.slots.reduce((sum, slot) => sum + slot.eligibleCount, 0);
+        setEligibleMealCount(String(total));
+      })
+      .catch(() => setEligibleMealCount('—'));
+  }, [permissions.canViewMeals, spaceId]);
+
+  const handleMealsPress = useCallback(() => {
+    openActionSheet(t('dashboard.quickActions.meals'), [
+      {
+        label: t('meals.library.title'),
+        action: () => navigation.navigate('MenuLibrary', { spaceId }),
+      },
+      {
+        label: t('meals.participants'),
+        action: () => navigation.navigate('MealParticipantList', { spaceId }),
+      },
+    ]);
+  }, [navigation, openActionSheet, spaceId, t]);
+
+  const handleMealsViewPress = useCallback(() => {
+    navigation.navigate('DailyMenuToday', { spaceId });
+  }, [navigation, spaceId]);
 
   const handleResidentsPress = useCallback(() => {
     openActionSheet(t('dashboard.quickActions.residents'), [
@@ -70,23 +112,37 @@ export function DashboardScreen() {
   }, [linkedMemberId, navigation, spaceId]);
 
   const quickActions = useMemo(() => {
-    if (showResidentsActions) {
+    if (showResidentsActions || showMealsActions) {
       return (
         <View style={styles.moduleRow}>
-          <ModuleActionCard
-            icon="👥"
-            title={t('dashboard.quickActions.residents')}
-            subtitle={t('dashboard.quickActions.residentsSubtitle')}
-            onPress={handleResidentsPress}
-          />
-          <ModuleActionCard
-            icon="🍽"
-            title={t('dashboard.quickActions.meals')}
-            subtitle={t('dashboard.quickActions.mealsSubtitle')}
-            disabled
-            comingSoonLabel={t('dashboard.quickActions.comingSoon')}
-          />
+          {showResidentsActions ? (
+            <ModuleActionCard
+              icon="👥"
+              title={t('dashboard.quickActions.residents')}
+              subtitle={t('dashboard.quickActions.residentsSubtitle')}
+              onPress={handleResidentsPress}
+            />
+          ) : null}
+          {showMealsActions ? (
+            <ModuleActionCard
+              icon="🍽"
+              title={t('dashboard.quickActions.meals')}
+              subtitle={t('dashboard.quickActions.mealsSubtitle')}
+              onPress={handleMealsPress}
+            />
+          ) : null}
         </View>
+      );
+    }
+
+    if (showMealsReadOnly) {
+      return (
+        <ModuleActionCard
+          icon="🍽"
+          title={t('meals.todayMenu')}
+          subtitle={t('meals.viewTodayMenuHint')}
+          onPress={handleMealsViewPress}
+        />
       );
     }
 
@@ -109,10 +165,14 @@ export function DashboardScreen() {
 
     return null;
   }, [
+    handleMealsPress,
+    handleMealsViewPress,
     handleMyStayPress,
     handleResidentsPress,
     isTenant,
     linkedMemberId,
+    showMealsActions,
+    showMealsReadOnly,
     showMyStay,
     showResidentsActions,
     t,
@@ -122,33 +182,41 @@ export function DashboardScreen() {
 
   return (
     <Screen scrollable contentStyle={styles.content}>
-      {selectedSpace ? (
+      {spaceEntry ? (
         <View style={styles.spaceDetails}>
-          <Text style={styles.spaceName}>{selectedSpace.name}</Text>
-          <Text style={styles.spaceType}>{formatSpaceType(selectedSpace.type)}</Text>
+          <Text style={styles.spaceName}>{spaceEntry.spaceName}</Text>
+          <Text style={styles.spaceType}>
+            {spaceType ? formatSpaceType(spaceType) : ''}
+          </Text>
         </View>
       ) : null}
 
       <Text style={styles.dashboardTitle}>{t('dashboard.overview')}</Text>
 
       <View style={styles.metricsRow}>
-        <MetricCard label={t('dashboard.occupancy')} value="94%" style={styles.metricHalf} />
-        <MetricCard
-          label={t('dashboard.todaysMeals')}
-          value="42"
-          hint={t('dashboard.mealsHint')}
-          hintPositive
-          style={styles.metricHalf}
-        />
+        {accommodationApplicable ? (
+          <MetricCard label={t('dashboard.occupancy')} value="94%" style={styles.metricHalf} />
+        ) : null}
+        {permissions.canViewMeals ? (
+          <MetricCard
+            label={t('dashboard.eligibleParticipants')}
+            value={eligibleMealCount}
+            hint={t('dashboard.eligibleParticipantsHint')}
+            hintPositive
+            style={accommodationApplicable ? styles.metricHalf : styles.metricFull}
+          />
+        ) : null}
       </View>
-      <MetricCard
-        label={t('dashboard.rentCollected')}
-        value="₹ 4,28,500"
-        hint={t('dashboard.rentHint')}
-        hintPositive
-        style={styles.rentMetric}>
-        <MetricCardProgress percent={78} />
-      </MetricCard>
+      {accommodationApplicable ? (
+        <MetricCard
+          label={t('dashboard.rentCollected')}
+          value="₹ 4,28,500"
+          hint={t('dashboard.rentHint')}
+          hintPositive
+          style={styles.rentMetric}>
+          <MetricCardProgress percent={78} />
+        </MetricCard>
+      ) : null}
 
       {showQuickSection ? (
         <View style={styles.quickSection}>
@@ -172,6 +240,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   metricHalf: { flex: 1 },
+  metricFull: { flex: 1, width: '100%' },
   rentMetric: { marginBottom: spacing.xl },
   quickSection: { marginBottom: spacing.lg },
   quickTitle: { ...typography.h3, marginBottom: spacing.md },

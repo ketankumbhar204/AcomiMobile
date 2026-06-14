@@ -5,6 +5,7 @@ export { invitationApi } from './invitationApi';
 export { accommodationApi } from './accommodationApi';
 export { accommodationLifecycleApi } from './accommodationLifecycleApi';
 export { occupancyApi } from './occupancyApi';
+export { enrollMemberInFullMeals, mealsApi } from './mealsApi';
 export { memberApi } from './memberApi';
 export { membershipApi } from './membershipApi';
 export { mySpacesApi } from './mySpacesApi';

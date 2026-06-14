@@ -28,6 +28,13 @@ import { MemberOccupancyHistoryScreen } from '../screens/MemberOccupancyHistoryS
 import { MySpacesScreen } from '../screens/MySpacesScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { SpaceDetailsScreen } from '../screens/SpaceDetailsScreen';
+import { MealsHomeScreen } from '../screens/meals/MealsHomeScreen';
+import { MenuLibraryScreen } from '../screens/meals/MenuLibraryScreen';
+import { DailyMenuTodayScreen } from '../screens/meals/DailyMenuTodayScreen';
+import { DailyMenuEditScreen } from '../screens/meals/DailyMenuEditScreen';
+import { MealComboFormScreen } from '../screens/meals/MealComboFormScreen';
+import { MealParticipantListScreen } from '../screens/meals/MealParticipantListScreen';
+import { MealParticipationFormScreen } from '../screens/meals/MealParticipationFormScreen';
 import { stackHeaderOptions } from '../theme';
 import { useSpaceStore } from '../store/spaceStore';
 import { SpaceTabNavigator } from './SpaceTabNavigator';
@@ -132,6 +139,48 @@ export function MainNavigator() {
         name="OccupancyWizard"
         component={OccupancyWizardScreen}
         options={{ title: 'Occupancy' }}
+      />
+      <Stack.Screen
+        name="MenuLibrary"
+        options={{ title: 'Menu Library' }}
+        children={({ route }) => <MenuLibraryScreen spaceId={route.params.spaceId} />}
+      />
+      <Stack.Screen
+        name="DailyMenuToday"
+        options={{ title: "Today's Menu" }}
+        children={({ route }) => (
+          <DailyMenuTodayScreen spaceId={route.params.spaceId} />
+        )}
+      />
+      <Stack.Screen
+        name="DailyMenuEdit"
+        options={{ title: 'Plan Menu' }}
+        children={({ route }) => (
+          <DailyMenuEditScreen
+            spaceId={route.params.spaceId}
+            menuDate={route.params.menuDate}
+            mealType={route.params.mealType}
+          />
+        )}
+      />
+      <Stack.Screen
+        name="MealComboForm"
+        component={MealComboFormScreen}
+        options={({ route }) => ({
+          title: route.params.mode === 'edit' ? 'Edit Combo' : 'Add Combo',
+        })}
+      />
+      <Stack.Screen
+        name="MealParticipantList"
+        options={{ title: 'Meal Participants' }}
+        children={({ route }) => (
+          <MealParticipantListScreen spaceId={route.params.spaceId} />
+        )}
+      />
+      <Stack.Screen
+        name="MealParticipationForm"
+        component={MealParticipationFormScreen}
+        options={{ title: 'Meal Enrollment' }}
       />
       <Stack.Screen
         name="SpaceTabs"

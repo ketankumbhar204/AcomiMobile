@@ -9,18 +9,25 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type {
+  NativeStackNavigationProp,
+  NativeStackScreenProps,
+} from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import type { MembershipRole } from '../api/types';
 import { Button, FormInput, RolePicker } from '../components/ui';
 import { HeaderBackButton } from '../components/ui/HeaderBackButton';
 import type { MainStackParamList } from '../navigation/types';
 import { useMemberStore } from '../store/memberStore';
+import { useSpaceStore } from '../store/spaceStore';
 import { useToastStore } from '../store/toastStore';
 import { colors, spacing, typography } from '../theme';
+import { defaultRoleForSpaceType } from '../utils/memberRoles';
+import { findMySpaceEntry } from '../utils/spacePermissions';
 
 type InviteMembersNav = NativeStackNavigationProp<MainStackParamList, 'InviteMembers'>;
+type InviteMembersRoute = NativeStackScreenProps<MainStackParamList, 'InviteMembers'>['route'];
 
 type FieldErrors = {
   mobileNumber?: string;
@@ -30,6 +37,10 @@ type FieldErrors = {
 export function InviteMemberScreen() {
   const { t, i18n } = useTranslation();
   const navigation = useNavigation<InviteMembersNav>();
+  const route = useRoute<InviteMembersRoute>();
+  const { spaceId } = route.params;
+  const mySpaces = useSpaceStore(state => state.mySpaces);
+  const spaceType = findMySpaceEntry(mySpaces, spaceId)?.spaceType;
   const inviteMember = useMemberStore(state => state.inviteMember);
   const loadPendingInvitations = useMemberStore(state => state.loadPendingInvitations);
   const storeError = useMemberStore(state => state.error);
@@ -37,7 +48,9 @@ export function InviteMemberScreen() {
   const showToast = useToastStore(state => state.showToast);
 
   const [mobileNumber, setMobileNumber] = useState('');
-  const [role, setRole] = useState<MembershipRole | null>(null);
+  const [role, setRole] = useState<MembershipRole | null>(() =>
+    defaultRoleForSpaceType(spaceType),
+  );
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   useLayoutEffect(() => {
@@ -124,6 +137,7 @@ export function InviteMemberScreen() {
 
           <RolePicker
             value={role}
+            spaceType={spaceType}
             onChange={selected => {
               setRole(selected);
               if (fieldErrors.role) {

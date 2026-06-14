@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Switch, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { MemberResponse, TransferRentPolicy } from '../../../../api/types';
 import { Card } from '../../../../components/ui';
@@ -21,6 +21,9 @@ type ReviewStepProps = {
   moveInDate?: string;
   expectedExitDate?: string;
   remarks?: string;
+  enrollInMeals?: boolean;
+  onEnrollInMealsChange?: (value: boolean) => void;
+  showMealEnrollment?: boolean;
 };
 
 export function ReviewStep({
@@ -33,6 +36,9 @@ export function ReviewStep({
   moveInDate,
   expectedExitDate,
   remarks,
+  enrollInMeals = false,
+  onEnrollInMealsChange,
+  showMealEnrollment = false,
 }: ReviewStepProps) {
   const { t } = useTranslation();
   const monthlyTotal =
@@ -119,6 +125,18 @@ export function ReviewStep({
           ) : null}
         </Card>
       ) : null}
+
+      {showMealEnrollment && onEnrollInMealsChange ? (
+        <Card style={styles.card}>
+          <View style={styles.switchRow}>
+            <View style={styles.switchText}>
+              <Text style={styles.section}>{t('meals.enrollOnMoveIn')}</Text>
+              <Text style={styles.line}>{t('meals.enrollOnMoveInHint')}</Text>
+            </View>
+            <Switch value={enrollInMeals} onValueChange={onEnrollInMealsChange} />
+          </View>
+        </Card>
+      ) : null}
     </View>
   );
 }
@@ -132,4 +150,6 @@ const styles = StyleSheet.create({
   value: { ...typography.bodyStrong },
   line: { ...typography.body },
   total: { ...typography.bodyStrong, color: colors.primaryDark, marginTop: spacing.xs },
+  switchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  switchText: { flex: 1 },
 });

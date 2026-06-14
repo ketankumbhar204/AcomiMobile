@@ -17,6 +17,7 @@ import {
   MemberStatusBadge,
   RoleBadge,
 } from '../components/member';
+import { MemberMealsTab } from '../components/meals';
 import { Badge, HeaderBackButton, Screen, SkeletonCard } from '../components/ui';
 import { useSpacePermissions } from '../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../navigation/types';
@@ -49,6 +50,20 @@ export function MemberDetailsScreen() {
   const spaceType = permissions.spaceType;
   const canEdit = permissions.canManageMembers && member?.role !== 'OWNER';
   const canRemove = permissions.canRemoveMember && member?.role !== 'OWNER';
+  const showMealsTab = permissions.canViewMeals === true;
+  const canManageMeals = permissions.canManageMeals === true;
+
+  const refreshMember = useCallback(() => {
+    void loadMemberDetails(memberId);
+  }, [loadMemberDetails, memberId]);
+
+  const handleEnrollMeals = useCallback(() => {
+    navigation.navigate('MealParticipationForm', {
+      spaceId,
+      mode: 'create',
+      memberId,
+    });
+  }, [memberId, navigation, spaceId]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -80,6 +95,16 @@ export function MemberDetailsScreen() {
             canEdit={canEdit}
             canRemove={canRemove}
             currentRole={permissions.membershipRole}
+          />
+        );
+      case 'meals':
+        return (
+          <MemberMealsTab
+            spaceId={spaceId}
+            member={member}
+            canManage={canManageMeals}
+            onEnrollPress={handleEnrollMeals}
+            onRefreshMember={refreshMember}
           />
         );
       case 'deposit':
@@ -123,7 +148,11 @@ export function MemberDetailsScreen() {
             />
           </View>
 
-          <MemberDetailTabBar activeTab={activeTab} onTabChange={setActiveTab} />
+          <MemberDetailTabBar
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            showMealsTab={showMealsTab}
+          />
           {renderTabContent()}
         </>
       ) : (

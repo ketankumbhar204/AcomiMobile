@@ -108,7 +108,17 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberMobile, setNewMemberMobile] = useState('');
   const [newMemberErrors, setNewMemberErrors] = useState<NewMemberFieldErrors>({});
+  const [enrollInMeals, setEnrollInMeals] = useState(false);
   const [creatingMember, setCreatingMember] = useState(false);
+
+  useEffect(() => {
+    const foodOn =
+      foodPolicy.foodIncludedInRent ||
+      contractValues.foodEnabled;
+    if (foodOn) {
+      setEnrollInMeals(true);
+    }
+  }, [contractValues.foodEnabled, foodPolicy.foodIncludedInRent]);
 
   const allowAddNewMember = mode === 'ALLOCATE' || mode === 'RESERVE';
 
@@ -395,11 +405,13 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
       allowEarlyMoveIn,
       occupancyId,
       currentOccupancy,
+      enrollInMeals,
       onSuccess: () => navigation.goBack(),
     });
   }, [
     catalogRent,
     contractValues,
+    enrollInMeals,
     expectedExitDate,
     foodPolicy,
     member,
@@ -589,6 +601,12 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
           moveInDate={moveInDate}
           expectedExitDate={expectedExitDate}
           remarks={remarks}
+          enrollInMeals={enrollInMeals}
+          onEnrollInMealsChange={setEnrollInMeals}
+          showMealEnrollment={
+            (mode === 'ALLOCATE' || mode === 'MOVE_IN') &&
+            (contractValues.foodEnabled || foodPolicy.foodIncludedInRent)
+          }
         />
       ) : null}
 

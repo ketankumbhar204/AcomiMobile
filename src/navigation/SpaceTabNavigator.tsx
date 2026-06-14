@@ -9,6 +9,8 @@ import { AccommodationHomeScreen } from '../screens/accommodation/AccommodationH
 import { DashboardScreen } from '../screens/dashboard/DashboardScreen';
 import { MembersScreen } from '../screens/MembersScreen';
 import { tabBarOptions, tabHeaderOptions } from '../theme';
+import { MealsHomeScreen } from '../screens/meals/MealsHomeScreen';
+import { PermissionDeniedScreen } from '../components/ui/PermissionDeniedScreen';
 import { ScreenPlaceholder } from './ScreenPlaceholder';
 import type { SpaceTabParamList } from './types';
 
@@ -33,11 +35,16 @@ function MembersTabScreen() {
 }
 
 function MealsTabScreen() {
-  const { t } = useTranslation();
   const route = useRoute<RouteProp<SpaceTabParamList, 'Meals'>>();
   const { spaceId } = route.params;
+  const permissions = useSpacePermissions(spaceId);
   useSpaceTabHeader(spaceId);
-  return <ScreenPlaceholder title={t('navigation.meals')} />;
+
+  if (!permissions.canViewMeals) {
+    return <PermissionDeniedScreen spaceId={spaceId} />;
+  }
+
+  return <MealsHomeScreen spaceId={spaceId} />;
 }
 
 function PaymentsTabScreen() {

@@ -1,42 +1,51 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import type { MembershipRole } from '../../api/types';
+import { useTranslation } from 'react-i18next';
+import type { MembershipRole, SpaceType } from '../../api/types';
+import { assignableRolesForSpaceType } from '../../utils/memberRoles';
 import { colors, radius, spacing, typography } from '../../theme';
 
-const ROLES: { value: MembershipRole; label: string; description: string }[] = [
-  { value: 'TENANT', label: 'Tenant', description: 'Stays in the PG / Hostel' },
-  { value: 'CUSTOMER', label: 'Customer', description: 'Uses mess / co-living' },
-  { value: 'STAFF', label: 'Staff', description: 'Works at this space' },
-  { value: 'MANAGER', label: 'Manager', description: 'Helps manage the space' },
-];
+const ALL_ROLES: MembershipRole[] = ['TENANT', 'CUSTOMER', 'STAFF', 'MANAGER'];
 
 type RolePickerProps = {
   value: MembershipRole | null;
   onChange: (role: MembershipRole) => void;
   error?: string | null;
+  spaceType?: SpaceType;
 };
 
-export function RolePicker({ value, onChange, error }: RolePickerProps) {
+export function RolePicker({ value, onChange, error, spaceType }: RolePickerProps) {
+  const { t } = useTranslation();
+
+  const roles = useMemo(
+    () => assignableRolesForSpaceType(spaceType).filter(role => ALL_ROLES.includes(role)),
+    [spaceType],
+  );
+
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.label}>Role</Text>
+      <Text style={styles.label}>{t('membership.roles.label')}</Text>
       <View style={styles.grid}>
-        {ROLES.map(item => {
-          const isSelected = value === item.value;
+        {roles.map(role => {
+          const isSelected = value === role;
+          const descriptionKey =
+            spaceType === 'MESS' && role === 'CUSTOMER'
+              ? 'membership.roles.customer.descriptionMess'
+              : `membership.roles.${role.toLowerCase()}.description`;
           return (
             <Pressable
-              key={item.value}
+              key={role}
               style={({ pressed }) => [
                 styles.chip,
                 isSelected && styles.chipSelected,
                 pressed && !isSelected && styles.chipPressed,
               ]}
-              onPress={() => onChange(item.value)}>
+              onPress={() => onChange(role)}>
               <Text style={[styles.chipLabel, isSelected && styles.chipLabelSelected]}>
-                {item.label}
+                {t(`membership.roles.${role.toLowerCase()}.label`)}
               </Text>
               <Text style={[styles.chipDesc, isSelected && styles.chipDescSelected]}>
-                {item.description}
+                {t(descriptionKey)}
               </Text>
             </Pressable>
           );

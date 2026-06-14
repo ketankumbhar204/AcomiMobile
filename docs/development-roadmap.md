@@ -246,6 +246,8 @@ Rent, billing, payments, deposits, meals, availability polls, complaints, mainte
 
 ## Phase 5 - Meal Management (Next)
 
+> **Architecture:** [meals-phase-5-backend.md](./meals-phase-5-backend.md) (backend repo handoff) · [meals-phase-5-ui-integration.md](./meals-phase-5-ui-integration.md) (UI repo + Cursor prompt)
+
 ### Menu Master
 
 * Breakfast Menu

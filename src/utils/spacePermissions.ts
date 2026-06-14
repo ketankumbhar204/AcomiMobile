@@ -6,6 +6,7 @@ import type {
   UUID,
 } from '../api/types';
 import { isAccommodationApplicable } from './accommodationProfile';
+import { deriveMealPermissions } from './mealPermissions';
 
 /** Local fallback when GET /spaces/my omits the permissions block. */
 export function deriveSpacePermissions(
@@ -25,6 +26,7 @@ export function deriveSpacePermissions(
     canViewSpaceOccupancies: isOwner || isManager || isStaff,
     canManageMembers: isOwner || isManager,
     canRemoveMember: isOwner,
+    ...deriveMealPermissions(role),
   };
 }
 

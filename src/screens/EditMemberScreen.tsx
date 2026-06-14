@@ -19,8 +19,11 @@ import type { MembershipRole } from '../api/types';
 import { Button, FormInput, HeaderBackButton, RolePicker } from '../components/ui';
 import type { MainStackParamList } from '../navigation/types';
 import { useMemberStore } from '../store/memberStore';
+import { useSpaceStore } from '../store/spaceStore';
 import { useToastStore } from '../store/toastStore';
 import { colors, spacing, typography } from '../theme';
+import { isRoleAssignableInSpace } from '../utils/memberRoles';
+import { findMySpaceEntry } from '../utils/spacePermissions';
 
 type EditMemberNav = NativeStackNavigationProp<MainStackParamList, 'EditMember'>;
 type EditMemberRoute = NativeStackScreenProps<MainStackParamList, 'EditMember'>['route'];
@@ -35,7 +38,9 @@ export function EditMemberScreen() {
   const { t, i18n } = useTranslation();
   const navigation = useNavigation<EditMemberNav>();
   const route = useRoute<EditMemberRoute>();
-  const { memberId } = route.params;
+  const { spaceId, memberId } = route.params;
+  const mySpaces = useSpaceStore(state => state.mySpaces);
+  const spaceType = findMySpaceEntry(mySpaces, spaceId)?.spaceType;
 
   const loadMemberDetails = useMemberStore(state => state.loadMemberDetails);
   const updateMember = useMemberStore(state => state.updateMember);
@@ -87,6 +92,8 @@ export function EditMemberScreen() {
 
     if (!role || role === 'OWNER') {
       errors.role = t('membership.invite.roleRequired');
+    } else if (!isRoleAssignableInSpace(role, spaceType)) {
+      errors.role = t('membership.invite.roleNotAllowed');
     }
 
     setFieldErrors(errors);
@@ -171,6 +178,7 @@ export function EditMemberScreen() {
 
           <RolePicker
             value={role}
+            spaceType={spaceType}
             onChange={selected => {
               setRole(selected);
               if (fieldErrors.role) {

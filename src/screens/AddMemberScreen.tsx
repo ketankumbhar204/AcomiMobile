@@ -9,17 +9,24 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type {
+  NativeStackNavigationProp,
+  NativeStackScreenProps,
+} from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import type { MembershipRole } from '../api/types';
 import { Button, FormInput, HeaderBackButton, RolePicker } from '../components/ui';
 import type { MainStackParamList } from '../navigation/types';
 import { useMemberStore } from '../store/memberStore';
+import { useSpaceStore } from '../store/spaceStore';
 import { useToastStore } from '../store/toastStore';
 import { colors, spacing, typography } from '../theme';
+import { defaultRoleForSpaceType } from '../utils/memberRoles';
+import { findMySpaceEntry } from '../utils/spacePermissions';
 
 type AddMemberNav = NativeStackNavigationProp<MainStackParamList, 'AddMember'>;
+type AddMemberRoute = NativeStackScreenProps<MainStackParamList, 'AddMember'>['route'];
 
 type FieldErrors = {
   fullName?: string;
@@ -30,6 +37,10 @@ type FieldErrors = {
 export function AddMemberScreen() {
   const { t, i18n } = useTranslation();
   const navigation = useNavigation<AddMemberNav>();
+  const route = useRoute<AddMemberRoute>();
+  const { spaceId } = route.params;
+  const mySpaces = useSpaceStore(state => state.mySpaces);
+  const spaceType = findMySpaceEntry(mySpaces, spaceId)?.spaceType;
   const addMember = useMemberStore(state => state.addMember);
   const loading = useMemberStore(state => state.loading);
   const storeError = useMemberStore(state => state.error);
@@ -37,7 +48,9 @@ export function AddMemberScreen() {
 
   const [fullName, setFullName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
-  const [role, setRole] = useState<MembershipRole | null>(null);
+  const [role, setRole] = useState<MembershipRole | null>(() =>
+    defaultRoleForSpaceType(spaceType),
+  );
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   useLayoutEffect(() => {
@@ -144,6 +157,7 @@ export function AddMemberScreen() {
 
           <RolePicker
             value={role}
+            spaceType={spaceType}
             onChange={selected => {
               setRole(selected);
               if (fieldErrors.role) {

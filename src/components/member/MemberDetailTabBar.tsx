@@ -5,12 +5,13 @@ import { colors, radius, shadows, spacing, typography } from '../../theme';
 
 export type MemberDetailTab =
   | 'profile'
+  | 'meals'
   | 'deposit'
   | 'documents'
   | 'notes'
   | 'history';
 
-const TABS: MemberDetailTab[] = [
+const BASE_TABS: MemberDetailTab[] = [
   'profile',
   'deposit',
   'documents',
@@ -21,14 +22,23 @@ const TABS: MemberDetailTab[] = [
 type MemberDetailTabBarProps = {
   activeTab: MemberDetailTab;
   onTabChange: (tab: MemberDetailTab) => void;
+  showMealsTab?: boolean;
 };
 
-export function MemberDetailTabBar({ activeTab, onTabChange }: MemberDetailTabBarProps) {
+export function MemberDetailTabBar({
+  activeTab,
+  onTabChange,
+  showMealsTab = false,
+}: MemberDetailTabBarProps) {
   const { t } = useTranslation();
+
+  const tabs = showMealsTab
+    ? (['profile', 'meals', 'deposit', 'documents', 'notes', 'history'] as MemberDetailTab[])
+    : BASE_TABS;
 
   return (
     <View style={styles.tabs}>
-      {TABS.map(tab => {
+      {tabs.map(tab => {
         const isActive = activeTab === tab;
         return (
           <Pressable

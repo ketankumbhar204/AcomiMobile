@@ -74,6 +74,183 @@ export interface SpacePermissionsResponse {
   canViewSpaceOccupancies: boolean;
   canManageMembers: boolean;
   canRemoveMember: boolean;
+  canManageMeals?: boolean;
+  canViewMeals?: boolean;
+  canManageMealParticipation?: boolean;
+  canViewOwnMealParticipation?: boolean;
+}
+
+export type MealPlanCode =
+  | 'NONE'
+  | 'BREAKFAST'
+  | 'LUNCH'
+  | 'DINNER'
+  | 'FULL'
+  | 'CUSTOM';
+
+export type MealParticipationStatus = 'ACTIVE' | 'PAUSED' | 'STOPPED';
+
+export type MealType = 'BREAKFAST' | 'LUNCH' | 'DINNER';
+
+export type DailyMenuStatus = 'DRAFT' | 'PUBLISHED';
+
+export type DailyMenuEntryType = 'COMBO' | 'ITEM';
+
+export interface MealPlanResponse {
+  mealPlanId: UUID;
+  code: MealPlanCode;
+  name: string;
+  breakfastIncluded: boolean;
+  lunchIncluded: boolean;
+  dinnerIncluded: boolean;
+  isActive: boolean;
+}
+
+export interface MealParticipationResponse {
+  participationId: UUID;
+  memberId: UUID;
+  memberName: string;
+  memberRole: MembershipRole;
+  mealPlanId: UUID;
+  mealPlanCode: MealPlanCode;
+  mealPlanName: string;
+  status: MealParticipationStatus;
+  effectiveFrom: string;
+  effectiveTo?: string | null;
+  sourceOccupancyId?: UUID | null;
+}
+
+export type FoodCatalogScope = 'GLOBAL' | 'SPACE';
+
+export interface FoodCategoryResponse {
+  categoryId: UUID;
+  name: string;
+  sortOrder: number;
+  scope: FoodCatalogScope;
+  isActive: boolean;
+  itemCount?: number;
+}
+
+export interface FoodItemResponse {
+  itemId: UUID;
+  categoryId: UUID;
+  categoryName?: string;
+  name: string;
+  scope: FoodCatalogScope;
+  isCustom: boolean;
+  isActive: boolean;
+}
+
+export interface CreateFoodCategoryRequest {
+  name: string;
+}
+
+export interface CreateFoodItemRequest {
+  categoryId: UUID;
+  name: string;
+}
+
+export interface UpdateFoodItemRequest {
+  categoryId?: UUID;
+  name?: string;
+}
+
+export interface CreateMealComboRequest {
+  name: string;
+  description?: string | null;
+  itemIds: UUID[];
+}
+
+export interface UpdateMealComboRequest {
+  name?: string;
+  description?: string | null;
+  itemIds?: UUID[];
+}
+
+export interface MealComboResponse {
+  comboId: UUID;
+  name: string;
+  description?: string | null;
+  scope?: FoodCatalogScope;
+  isActive: boolean;
+  items?: Array<{ itemId: UUID; name: string }>;
+}
+
+export interface DailyMenuOptionResponse {
+  optionId?: UUID;
+  entryType?: DailyMenuEntryType;
+  comboId?: UUID | null;
+  itemId?: UUID | null;
+  label: string;
+  sortOrder: number;
+  isAvailable: boolean;
+}
+
+export interface DailyMenuResponse {
+  dailyMenuId?: UUID;
+  menuDate: string;
+  mealType: MealType;
+  status: DailyMenuStatus;
+  publishedAt?: string | null;
+  notes?: string | null;
+  options: DailyMenuOptionResponse[];
+}
+
+export interface UpsertDailyMenuRequest {
+  options: Array<{
+    entryType?: DailyMenuEntryType;
+    comboId?: UUID | null;
+    itemId?: UUID | null;
+    label: string;
+    sortOrder: number;
+    isAvailable: boolean;
+  }>;
+  notes?: string | null;
+}
+
+export interface CreateMealParticipationRequest {
+  memberId: UUID;
+  mealPlanId: UUID;
+  effectiveFrom: string;
+  effectiveTo?: string | null;
+}
+
+export interface UpdateMealParticipationRequest {
+  mealPlanId?: UUID;
+  status?: MealParticipationStatus;
+}
+
+export interface MealParticipationSearchParams {
+  status?: MealParticipationStatus;
+  mealPlanCode?: MealPlanCode;
+  search?: string;
+}
+
+export interface MealEligibilitySummaryResponse {
+  date: string;
+  slots: Array<{
+    mealType: MealType;
+    eligibleCount: number;
+    published: boolean;
+    pausedCount?: number;
+  }>;
+}
+
+export interface MealEligibleParticipantResponse {
+  memberId: UUID;
+  memberName: string;
+  mobileNumber?: string | null;
+  mealPlanCode: MealPlanCode;
+  mealPlanName?: string;
+}
+
+export interface MemberMealParticipationSummary {
+  participationId: UUID;
+  mealPlanCode: MealPlanCode;
+  mealPlanName: string;
+  status: MealParticipationStatus;
+  effectiveFrom: string;
+  effectiveTo?: string | null;
 }
 
 export interface MySpaceResponse {
@@ -222,6 +399,7 @@ export interface MemberDetailsResponse {
   depositPaid: number;
   depositRefunded: number;
   depositBalance: number;
+  mealParticipation?: MemberMealParticipationSummary | null;
   createdAt: string;
   updatedAt: string;
 }

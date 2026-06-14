@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { enrollMemberInFullMeals } from '../../../api/mealsApi';
 import type { TransferRentPolicy, OccupancyResponse } from '../../../api/types';
 import { useOccupancyMutations } from '../../../hooks/useOccupancyMutations';
 import { useToastStore } from '../../../store/toastStore';
@@ -37,6 +38,7 @@ type SubmitContext = {
   allowEarlyMoveIn?: boolean;
   occupancyId?: string;
   currentOccupancy?: OccupancyResponse | null;
+  enrollInMeals?: boolean;
   onSuccess: () => void;
 };
 
@@ -64,6 +66,7 @@ export function useOccupancyWizardSubmit(spaceId: string) {
         allowEarlyMoveIn = false,
         occupancyId,
         currentOccupancy,
+        enrollInMeals = false,
         onSuccess,
       } = ctx;
 
@@ -194,13 +197,25 @@ export function useOccupancyWizardSubmit(spaceId: string) {
           await vacate(occupancyId, { remarks: remarks ?? null });
         }
 
+        if (
+          enrollInMeals &&
+          memberId &&
+          (mode === 'ALLOCATE' || mode === 'MOVE_IN')
+        ) {
+          try {
+            await enrollMemberInFullMeals(spaceId, memberId);
+          } catch {
+            showToast(t('meals.errors.enrollFailed'));
+          }
+        }
+
         showToast(t('occupancy.success.updated'));
         onSuccess();
       } catch (err) {
         showToast(getOccupancyErrorMessage(err));
       }
     },
-    [allocate, moveIn, reserve, showToast, t, transfer, vacate],
+    [allocate, moveIn, reserve, showToast, spaceId, t, transfer, vacate],
   );
 
   return { submit, loading };

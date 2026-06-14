@@ -134,6 +134,16 @@ export type MainStackParamList = {
     buildingId?: UUID;
     occupancyId?: UUID;
   };
+  DailyMenuToday: { spaceId: UUID };
+  DailyMenuEdit: { spaceId: UUID; menuDate: string; mealType: 'BREAKFAST' | 'LUNCH' | 'DINNER' };
+  MealComboForm: { spaceId: UUID; mode: 'create' | 'edit'; comboId?: UUID };
+  MealParticipantList: { spaceId: UUID };
+  MealParticipationForm: {
+    spaceId: UUID;
+    mode: 'create' | 'edit';
+    memberId?: UUID;
+  };
+  MenuLibrary: { spaceId: UUID };
 };
 
 export type RootStackParamList = {
