@@ -15,6 +15,9 @@ Aligned with the React Native contract in `docs/meals-phase-5-ui-integration.md`
 | **V40** | **Global seed:** 12 categories, 62 items (fixed UUIDs for sample combos) |
 | **V41** | Drop legacy `meal_items`; link `meal_combo_items` → `food_items` |
 | **V42** | Rename `daily_menu_options` → `daily_menu_entries` (+ `entry_type`, `item_id`) |
+| **V43** | Idempotent global catalog repair + backfill MESS sample combos |
+| **V44** | `space_food_category_settings` for per-space global category hide |
+| **V45** | Backfill sample combos for all active spaces with none |
 
 ## Phase 5.1 — Menu library
 
@@ -27,8 +30,8 @@ Aligned with the React Native contract in `docs/meals-phase-5-ui-integration.md`
 - Custom categories (`scope=SPACE`)
 - Global item hide via `space_food_item_settings.is_enabled=false`
 
-### MESS space create hook
-On `POST /spaces` with `type=MESS`, seeds sample combos when global catalog exists:
+### Sample combo seeding (all space types)
+On space create and on first `GET /food-categories` or `GET /meal-combos` when a space has no active combos, seeds sample combos when the global catalog exists (Flyway V45 backfills existing spaces):
 - Standard Lunch Thali (Chapati, Dal Fry, Plain Rice, Green Salad)
 - Dal Rice Combo (Dal Fry, Plain Rice)
 
@@ -41,19 +44,31 @@ Base: `/api/v1/spaces/{spaceId}` — all use `ApiResponse<T>` envelope.
 |--------|------|
 | GET | `/food-categories` |
 | POST | `/food-categories` |
+| POST | `/food-categories/{categoryId}/deactivate` | 204 No Content |
 | GET | `/food-items?categoryId=` |
 | POST | `/food-items` |
 | PUT | `/food-items/{itemId}` |
-| POST | `/food-items/{itemId}/deactivate` |
+| POST | `/food-items/{itemId}/deactivate` | 204 No Content |
 
 ### Meal combos
 | Method | Path |
 |--------|------|
 | GET/POST | `/meal-combos` |
 | PUT | `/meal-combos/{comboId}` |
-| POST | `/meal-combos/{comboId}/deactivate` |
+| POST | `/meal-combos/{comboId}/deactivate` | 204 No Content |
 
-Create body uses `itemIds[]` (food library IDs).
+Create body uses `itemIds[]` (library) and/or `newItems[]` (inline add-from-combo-form):
+
+```json
+{
+  "name": "Sunday Special",
+  "description": "Optional",
+  "itemIds": ["existing-chapati-uuid"],
+  "newItems": [{ "categoryId": "uuid", "name": "Mess Special Dal" }]
+}
+```
+
+At least one of `itemIds` or `newItems` required.
 
 ### Daily menus (Phase 5.2)
 | Method | Path |

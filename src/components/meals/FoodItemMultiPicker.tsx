@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import type { FoodItemResponse } from '../../api/types';
+import type { FoodCategoryResponse, FoodItemResponse } from '../../api/types';
+import { InlineChipEditor } from './library/InlineChipEditor';
 import { MenuChip } from './library/MenuChip';
 import { colors, radius, spacing, typography } from '../../theme';
 
@@ -10,6 +11,9 @@ type FoodItemMultiPickerProps = {
   selectedIds: string[];
   onChange: (itemIds: string[]) => void;
   error?: string | null;
+  canAddItem?: boolean;
+  categories?: FoodCategoryResponse[];
+  onAddItem?: (categoryId: string, name: string) => Promise<FoodItemResponse>;
 };
 
 type CategoryGroup = {
@@ -18,30 +22,38 @@ type CategoryGroup = {
   items: FoodItemResponse[];
 };
 
-function buildCategoryGroups(items: FoodItemResponse[], fallbackCategory: string): CategoryGroup[] {
-  const map = new Map<string, CategoryGroup>();
+function mergeCategoryGroups(
+  categories: FoodCategoryResponse[],
+  items: FoodItemResponse[],
+  fallbackCategory: string,
+): CategoryGroup[] {
+  const itemGroups = new Map<string, FoodItemResponse[]>();
 
   for (const item of items) {
-    const categoryId = item.categoryId;
-    const categoryName = item.categoryName?.trim() || fallbackCategory;
-    const existing = map.get(categoryId);
-
-    if (existing) {
-      existing.items.push(item);
-      continue;
-    }
-
-    map.set(categoryId, {
-      categoryId,
-      categoryName,
-      items: [item],
-    });
+    const list = itemGroups.get(item.categoryId) ?? [];
+    list.push(item);
+    itemGroups.set(item.categoryId, list);
   }
 
-  return Array.from(map.values())
-    .map(group => ({
-      ...group,
-      items: group.items.sort((a, b) => a.name.localeCompare(b.name)),
+  const activeCategories = categories
+    .filter(category => category.isActive)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+
+  if (activeCategories.length > 0) {
+    return activeCategories.map(category => ({
+      categoryId: category.categoryId,
+      categoryName: category.name,
+      items: (itemGroups.get(category.categoryId) ?? []).sort((a, b) =>
+        a.name.localeCompare(b.name),
+      ),
+    }));
+  }
+
+  return Array.from(itemGroups.entries())
+    .map(([categoryId, categoryItems]) => ({
+      categoryId,
+      categoryName: categoryItems[0]?.categoryName?.trim() || fallbackCategory,
+      items: categoryItems.sort((a, b) => a.name.localeCompare(b.name)),
     }))
     .sort((a, b) => a.categoryName.localeCompare(b.categoryName));
 }
@@ -51,9 +63,13 @@ export function FoodItemMultiPicker({
   selectedIds,
   onChange,
   error,
+  canAddItem = false,
+  categories = [],
+  onAddItem,
 }: FoodItemMultiPickerProps) {
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
+  const [addingCategoryId, setAddingCategoryId] = useState<string | null>(null);
 
   const activeItems = useMemo(
     () => items.filter(item => item.isActive),
@@ -72,10 +88,21 @@ export function FoodItemMultiPicker({
     );
   }, [activeItems, query]);
 
-  const categoryGroups = useMemo(
-    () => buildCategoryGroups(filteredItems, t('meals.library.uncategorized')),
-    [filteredItems, t],
-  );
+  const hasSearch = query.trim().length > 0;
+
+  const categoryGroups = useMemo(() => {
+    const groups = mergeCategoryGroups(categories, filteredItems, t('meals.library.uncategorized'));
+    if (!hasSearch) {
+      return groups;
+    }
+    return groups.filter(
+      group =>
+        group.items.length > 0 ||
+        group.categoryName.toLowerCase().includes(query.trim().toLowerCase()),
+    );
+  }, [categories, filteredItems, hasSearch, query, t]);
+
+  const showAddItem = canAddItem && onAddItem;
 
   function toggleItem(itemId: string) {
     if (selectedIds.includes(itemId)) {
@@ -85,10 +112,28 @@ export function FoodItemMultiPicker({
     onChange([...selectedIds, itemId]);
   }
 
+  async function saveNewItem(categoryId: string, name: string) {
+    if (!onAddItem) {
+      return;
+    }
+
+    try {
+      const created = await onAddItem(categoryId, name);
+      onChange(
+        selectedIds.includes(created.itemId)
+          ? selectedIds
+          : [...selectedIds, created.itemId],
+      );
+      setAddingCategoryId(null);
+      setQuery('');
+    } catch {
+      // Parent shows toast; keep editor open
+    }
+  }
+
   return (
     <View style={styles.wrapper}>
       <Text style={styles.label}>{t('meals.library.comboItemsLabel')}</Text>
-      <Text style={styles.hint}>{t('meals.library.comboItemsHint')}</Text>
 
       <TextInput
         style={styles.search}
@@ -98,13 +143,12 @@ export function FoodItemMultiPicker({
         placeholderTextColor={colors.muted}
       />
 
-      {selectedIds.length > 0 ? (
-        <Text style={styles.count}>{t('meals.library.selectedCount', { count: selectedIds.length })}</Text>
-      ) : null}
 
       <View style={styles.groups}>
         {categoryGroups.map(group => {
           const selectedInGroup = group.items.filter(item => selectedIds.includes(item.itemId)).length;
+          const isAddingHere = addingCategoryId === group.categoryId;
+          const totalCount = group.items.length;
 
           return (
             <View key={group.categoryId} style={styles.group}>
@@ -113,11 +157,11 @@ export function FoodItemMultiPicker({
                   ? t('meals.library.comboCategorySelected', {
                       category: group.categoryName,
                       selected: selectedInGroup,
-                      total: group.items.length,
+                      total: totalCount,
                     })
                   : t('meals.library.comboCategoryTitle', {
                       category: group.categoryName,
-                      total: group.items.length,
+                      total: totalCount,
                     })}
               </Text>
               <View style={styles.chipGrid}>
@@ -132,7 +176,26 @@ export function FoodItemMultiPicker({
                     onPress={() => toggleItem(item.itemId)}
                   />
                 ))}
+                {showAddItem && !isAddingHere ? (
+                  <MenuChip
+                    label={t('meals.library.chipAddItem')}
+                    variant="add"
+                    size="compact"
+                    onPress={() => setAddingCategoryId(group.categoryId)}
+                  />
+                ) : null}
               </View>
+
+              {showAddItem && isAddingHere ? (
+                <View style={styles.editorRow}>
+                  <InlineChipEditor
+                    placeholder={t('meals.library.itemNameInlinePlaceholder')}
+                    onSave={name => saveNewItem(group.categoryId, name)}
+                    onCancel={() => setAddingCategoryId(null)}
+                    layout="full"
+                  />
+                </View>
+              ) : null}
             </View>
           );
         })}
@@ -148,23 +211,18 @@ export function FoodItemMultiPicker({
 }
 
 const styles = StyleSheet.create({
-  wrapper: { marginBottom: spacing.lg },
+  wrapper: { marginBottom: spacing.md },
   label: { ...typography.label, marginBottom: spacing.xxs },
-  hint: { ...typography.caption, color: colors.muted, marginBottom: spacing.sm },
   search: {
     ...typography.body,
+    fontSize: 14,
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.button,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  count: {
-    ...typography.caption,
-    color: colors.primaryDark,
-    fontWeight: '600',
+    paddingVertical: spacing.xs,
+    minHeight: 36,
     marginBottom: spacing.sm,
   },
   groups: {
@@ -184,6 +242,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
+  },
+  editorRow: {
+    width: '100%',
+    marginTop: spacing.xs,
   },
   empty: {
     ...typography.body,

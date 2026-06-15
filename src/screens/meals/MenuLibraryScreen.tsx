@@ -12,10 +12,11 @@ import { mealsApi } from '../../api/mealsApi';
 import type { FoodCategoryResponse, FoodItemResponse, MealComboResponse, UUID } from '../../api/types';
 import {
   CategoryChipRail,
-  CategoryPreviewBar,
   ComboChipRail,
   ComboPreviewBar,
   ItemChipGrid,
+  MenuLibraryTabBar,
+  type MenuLibraryTab,
 } from '../../components/meals';
 import { PermissionDeniedScreen } from '../../components/ui';
 import { Screen } from '../../components/ui/Screen';
@@ -60,6 +61,7 @@ export function MenuLibraryScreen({ spaceId }: MenuLibraryScreenProps) {
 
   const [inlineEditor, setInlineEditor] = useState<InlineEditor>(null);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<MenuLibraryTab>('items');
 
   useFocusEffect(
     useCallback(() => {
@@ -70,20 +72,28 @@ export function MenuLibraryScreen({ spaceId }: MenuLibraryScreenProps) {
   const canManage = permissions.canManageMeals === true;
   const inlineBusy = inlineEditor !== null || editingItemId !== null;
 
-  const statsSummary = useMemo(
-    () =>
-      t('meals.library.statsSummary', {
-        categories: stats.categoryCount,
-        items: stats.itemCount,
-        combos: stats.comboCount,
-      }),
-    [stats.categoryCount, stats.itemCount, stats.comboCount, t],
-  );
-
   const closeInlineEditors = useCallback(() => {
     setInlineEditor(null);
     setEditingItemId(null);
   }, []);
+
+  const statsSummary = useMemo(() => {
+    if (activeTab === 'combos') {
+      return t('meals.library.statsCombos', { combos: stats.comboCount });
+    }
+    return t('meals.library.statsItems', {
+      categories: stats.categoryCount,
+      items: stats.itemCount,
+    });
+  }, [activeTab, stats.categoryCount, stats.comboCount, stats.itemCount, t]);
+
+  const handleTabChange = useCallback(
+    (tab: MenuLibraryTab) => {
+      closeInlineEditors();
+      setActiveTab(tab);
+    },
+    [closeInlineEditors],
+  );
 
   const saveCategory = useCallback(
     async (name: string) => {
@@ -254,10 +264,13 @@ export function MenuLibraryScreen({ spaceId }: MenuLibraryScreenProps) {
       ) : null}
 
       {!loading && !loadFailed ? (
-        <Text style={styles.statsSummary}>{statsSummary}</Text>
+        <>
+          <Text style={styles.statsSummary}>{statsSummary}</Text>
+          <MenuLibraryTabBar activeTab={activeTab} onTabChange={handleTabChange} />
+        </>
       ) : null}
 
-      {!loading && !loadFailed && activeCategories.length > 0 ? (
+      {!loading && !loadFailed && activeTab === 'items' && (activeCategories.length > 0 || canManage) ? (
         <>
           <CategoryChipRail
             categories={activeCategories}
@@ -278,21 +291,16 @@ export function MenuLibraryScreen({ spaceId }: MenuLibraryScreenProps) {
             onRemoveCategory={canManage ? removeCategory : undefined}
           />
 
-          <CategoryPreviewBar
-            category={selectedCategory}
-            itemCount={filteredItems.filter(item => item.isActive).length}
+          {activeCategories.length > 0 ? (
+            <ItemChipGrid
+            items={filteredItems}
+            categoryName={selectedCategory?.name}
             canManage={canManage}
-            onRemove={
+            onRemoveCategory={
               selectedCategory && canManage
                 ? () => removeCategory(selectedCategory)
                 : undefined
             }
-          />
-
-          <ItemChipGrid
-            items={filteredItems}
-            categoryName={selectedCategory?.name}
-            canManage={canManage}
             isAdding={inlineEditor === 'item-add'}
             editingItemId={editingItemId}
             addDisabled={inlineBusy && inlineEditor !== 'item-add'}
@@ -310,20 +318,22 @@ export function MenuLibraryScreen({ spaceId }: MenuLibraryScreenProps) {
             onUpdateItem={updateItem}
             onRemoveItem={canManage ? removeItem : undefined}
           />
+          ) : null}
         </>
       ) : null}
 
-      {!loading && !loadFailed && activeCategories.length === 0 ? (
+      {!loading && !loadFailed && activeTab === 'items' && activeCategories.length === 0 && !canManage ? (
         <Text style={styles.empty}>{t('meals.library.categoriesEmpty')}</Text>
       ) : null}
 
-      {!loading && !loadFailed ? (
+      {!loading && !loadFailed && activeTab === 'combos' ? (
         <>
           <ComboChipRail
             combos={activeCombos}
             selectedComboId={selectedComboId}
             onSelect={setSelectedComboId}
             canManage={canManage}
+            hideTitle
             onAddCombo={() => openComboForm('create')}
             onEditCombo={combo => openComboForm('edit', combo.comboId)}
             onRemoveCombo={canManage ? removeCombo : undefined}

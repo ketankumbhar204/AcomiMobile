@@ -7,14 +7,14 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { mealsApi } from '../../api/mealsApi';
-import type { FoodItemResponse } from '../../api/types';
-import { FoodItemMultiPicker } from '../../components/meals/FoodItemMultiPicker';
+import type { FoodCategoryResponse, FoodItemResponse } from '../../api/types';
+import { ComboSelectionReview, FoodItemMultiPicker } from '../../components/meals';
 import { Button, FormInput, PermissionDeniedScreen } from '../../components/ui';
 import { Screen } from '../../components/ui/Screen';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
@@ -36,6 +36,7 @@ export function MealComboFormScreen() {
   const isEdit = mode === 'edit';
 
   const [items, setItems] = useState<FoodItemResponse[]>([]);
+  const [categories, setCategories] = useState<FoodCategoryResponse[]>([]);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
@@ -48,11 +49,13 @@ export function MealComboFormScreen() {
   useEffect(() => {
     void (async () => {
       try {
-        const [itemList, comboList] = await Promise.all([
+        const [itemList, categoryList, comboList] = await Promise.all([
           mealsApi.getFoodItems(spaceId),
+          mealsApi.getFoodCategories(spaceId),
           mealsApi.getMealCombos(spaceId),
         ]);
         setItems(itemList);
+        setCategories(categoryList);
 
         if (isEdit && comboId) {
           const combo = comboList.find(row => row.comboId === comboId);
@@ -117,6 +120,24 @@ export function MealComboFormScreen() {
     }
   }, [comboId, description, isEdit, name, navigation, selectedItemIds, showToast, spaceId, t]);
 
+  const addItemInline = useCallback(
+    async (categoryId: string, itemName: string) => {
+      try {
+        const created = await mealsApi.createFoodItem(spaceId, {
+          categoryId,
+          name: itemName,
+        });
+        setItems(current => [...current, created]);
+        showToast(t('meals.library.itemCreateSuccess'));
+        return created;
+      } catch {
+        showToast(t('meals.errors.actionFailed'));
+        throw new Error('createFoodItem failed');
+      }
+    },
+    [showToast, spaceId, t],
+  );
+
   if (!permissions.canManageMeals) {
     return <PermissionDeniedScreen spaceId={spaceId} />;
   }
@@ -133,44 +154,73 @@ export function MealComboFormScreen() {
     <KeyboardAvoidingView
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View style={styles.flex}>
         <ScrollView
+          style={styles.flex}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag">
-          <Text style={styles.subtitle}>{t('meals.library.addComboHint')}</Text>
+          keyboardDismissMode="on-drag"
+          nestedScrollEnabled
+          showsVerticalScrollIndicator>
+            <View style={styles.formFields}>
+              <FormInput
+                size="compact"
+                label={t('meals.library.comboNameLabel')}
+                value={name}
+                onChangeText={text => {
+                  setName(text);
+                  if (nameError) {
+                    setNameError(null);
+                  }
+                }}
+                error={nameError}
+                placeholder={t('meals.library.comboNamePlaceholder')}
+              />
 
-          <FormInput
-            label={t('meals.library.comboNameLabel')}
-            value={name}
-            onChangeText={text => {
-              setName(text);
-              if (nameError) {
-                setNameError(null);
+              <FormInput
+                size="compact"
+                label={t('meals.library.comboDescriptionLabel')}
+                value={description}
+                onChangeText={setDescription}
+                placeholder={t('meals.library.comboDescriptionPlaceholder')}
+              />
+            </View>
+
+            <FoodItemMultiPicker
+              items={items}
+              selectedIds={selectedItemIds}
+              onChange={ids => {
+                setSelectedItemIds(ids);
+                if (itemsError && ids.length > 0) {
+                  setItemsError(null);
+                }
+              }}
+              canAddItem
+              categories={categories}
+              onAddItem={addItemInline}
+            />
+          </ScrollView>
+
+          <View style={styles.footer}>
+            <ComboSelectionReview
+              comboName={name}
+              description={description}
+              items={items}
+              selectedIds={selectedItemIds}
+              onRemoveItem={itemId =>
+                setSelectedItemIds(current => current.filter(id => id !== itemId))
               }
-            }}
-            error={nameError}
-            placeholder={t('meals.library.comboNamePlaceholder')}
-          />
-
-          <FormInput
-            label={t('meals.library.comboDescriptionLabel')}
-            value={description}
-            onChangeText={setDescription}
-            placeholder={t('meals.library.comboDescriptionPlaceholder')}
-          />
-
-          <FoodItemMultiPicker
-            items={items}
-            selectedIds={selectedItemIds}
-            onChange={setSelectedItemIds}
-            error={itemsError}
-          />
-
-          {submitError ? <Text style={styles.error}>{submitError}</Text> : null}
-          <Button label={t('common.save')} onPress={submit} loading={submitting} />
-        </ScrollView>
-      </TouchableWithoutFeedback>
+              error={itemsError}
+            />
+            {submitError ? <Text style={styles.footerError}>{submitError}</Text> : null}
+            <Button
+              label={t('common.save')}
+              onPress={submit}
+              loading={submitting}
+              style={styles.saveButton}
+            />
+          </View>
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -178,10 +228,29 @@ export function MealComboFormScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: {
-    padding: spacing.xxl,
-    paddingBottom: spacing.section,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
   },
-  subtitle: { ...typography.body, color: colors.muted, marginBottom: spacing.lg },
-  error: { ...typography.caption, color: '#DC2626', marginBottom: spacing.md },
+  formFields: {
+    marginBottom: spacing.sm,
+  },
+  footer: {
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  footerError: {
+    ...typography.caption,
+    color: '#DC2626',
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.xs,
+  },
+  saveButton: {
+    marginTop: spacing.sm,
+  },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });

@@ -11,6 +11,7 @@ type ComboChipRailProps = {
   selectedComboId: string | null;
   onSelect: (comboId: string) => void;
   canManage?: boolean;
+  hideTitle?: boolean;
   onAddCombo?: () => void;
   onEditCombo?: (combo: MealComboResponse) => void;
   onRemoveCombo?: (combo: MealComboResponse) => void;
@@ -21,6 +22,7 @@ export function ComboChipRail({
   selectedComboId,
   onSelect,
   canManage = false,
+  hideTitle = false,
   onAddCombo,
   onEditCombo,
   onRemoveCombo,
@@ -69,7 +71,7 @@ export function ComboChipRail({
   if (activeCombos.length === 0 && !canManage) {
     return (
       <View style={styles.wrapper}>
-        <Text style={styles.sectionLabel}>{t('meals.library.combos')}</Text>
+        {!hideTitle ? <Text style={styles.sectionLabel}>{t('meals.library.combos')}</Text> : null}
         <Text style={styles.empty}>{t('meals.library.combosEmpty')}</Text>
       </View>
     );
@@ -77,7 +79,7 @@ export function ComboChipRail({
 
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.sectionLabel}>{t('meals.library.combos')}</Text>
+      {!hideTitle ? <Text style={styles.sectionLabel}>{t('meals.library.combos')}</Text> : null}
 
       {activeCombos.length > 0 ? (
         <ScrollableChipRail>

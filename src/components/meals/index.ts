@@ -8,9 +8,10 @@ export {
   ScrollableChipRail,
   InlineChipEditor,
   CategoryChipRail,
-  CategoryPreviewBar,
+  MenuLibraryTabBar,
   ItemChipGrid,
   ComboChipRail,
   ComboPreviewBar,
+  ComboSelectionReview,
 } from './library';
-export type { MenuChipVariant, MenuChipSize } from './library';
+export type { MenuChipVariant, MenuChipSize, MenuLibraryTab } from './library';

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { FoodItemResponse } from '../../../api/types';
 import { colors, spacing, typography } from '../../../theme';
@@ -22,6 +22,7 @@ type ItemChipGridProps = {
   onCancelEdit?: () => void;
   onUpdateItem?: (itemId: string, name: string) => void | Promise<void>;
   onRemoveItem?: (item: FoodItemResponse) => void;
+  onRemoveCategory?: () => void;
 };
 
 export function ItemChipGrid({
@@ -38,6 +39,7 @@ export function ItemChipGrid({
   onCancelEdit,
   onUpdateItem,
   onRemoveItem,
+  onRemoveCategory,
 }: ItemChipGridProps) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
@@ -97,7 +99,17 @@ export function ItemChipGrid({
 
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.sectionLabel}>{title}</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.sectionLabel}>{title}</Text>
+        {canManage && onRemoveCategory ? (
+          <Pressable
+            onPress={onRemoveCategory}
+            style={({ pressed }) => [styles.removeButton, pressed && styles.removePressed]}
+            hitSlop={8}>
+            <Text style={styles.removeLabel}>{t('meals.library.removeCategory')}</Text>
+          </Pressable>
+        ) : null}
+      </View>
       {canManage ? (
         <Text style={styles.hint}>{t('meals.library.itemManageHint')}</Text>
       ) : null}
@@ -180,9 +192,28 @@ const styles = StyleSheet.create({
   wrapper: {
     marginBottom: spacing.md,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginBottom: spacing.xxs,
+  },
   sectionLabel: {
     ...typography.bodyStrong,
-    marginBottom: spacing.xxs,
+    flex: 1,
+  },
+  removeButton: {
+    paddingVertical: spacing.xxs,
+    paddingHorizontal: spacing.xs,
+  },
+  removePressed: {
+    opacity: 0.7,
+  },
+  removeLabel: {
+    ...typography.caption,
+    color: '#DC2626',
+    fontWeight: '700',
   },
   hint: {
     ...typography.caption,

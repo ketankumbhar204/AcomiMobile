@@ -12,14 +12,29 @@ type FormInputProps = TextInputProps & {
   label: string;
   error?: string | null;
   hint?: string;
+  size?: 'default' | 'compact';
 };
 
-export function FormInput({ label, error, hint, style, ...inputProps }: FormInputProps) {
+export function FormInput({
+  label,
+  error,
+  hint,
+  size = 'default',
+  style,
+  ...inputProps
+}: FormInputProps) {
+  const compact = size === 'compact';
+
   return (
-    <View style={styles.wrapper}>
-      <Text style={styles.label}>{label}</Text>
+    <View style={[styles.wrapper, compact && styles.wrapperCompact]}>
+      <Text style={[styles.label, compact && styles.labelCompact]}>{label}</Text>
       <TextInput
-        style={[styles.input, error ? styles.inputError : null, style]}
+        style={[
+          styles.input,
+          compact && styles.inputCompact,
+          error ? styles.inputError : null,
+          style,
+        ]}
         placeholderTextColor={colors.muted}
         autoCorrect={false}
         {...inputProps}
@@ -34,10 +49,16 @@ const styles = StyleSheet.create({
   wrapper: {
     marginBottom: spacing.lg,
   },
+  wrapperCompact: {
+    marginBottom: spacing.sm,
+  },
   label: {
     ...typography.label,
     color: colors.textPrimary,
     marginBottom: spacing.xs,
+  },
+  labelCompact: {
+    marginBottom: spacing.xxs,
   },
   input: {
     minHeight: 48,
@@ -49,6 +70,13 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     fontSize: 15,
     color: colors.textPrimary,
+  },
+  inputCompact: {
+    minHeight: 40,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontSize: 14,
+    borderRadius: radius.button,
   },
   inputError: {
     borderColor: '#F87171',
