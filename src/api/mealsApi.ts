@@ -15,6 +15,7 @@ import type {
   MealParticipationResponse,
   MealParticipationSearchParams,
   MealPlanResponse,
+  MealSharePreviewResponse,
   MealType,
   UpdateMealParticipationRequest,
   UpdateFoodItemRequest,
@@ -232,6 +233,26 @@ export const mealsApi = {
     );
   },
 
+  getDailyMenusByDate: async (spaceId: UUID, menuDate: string): Promise<DailyMenuResponse[]> => {
+    const path = `/spaces/${spaceId}/daily-menus/${menuDate}`;
+    console.log(`${LOG_TAG} GET ${path}`);
+    return unwrapApiResponse(
+      apiClient.get<ApiResponse<DailyMenuResponse[]>>(path),
+    );
+  },
+
+  getDailyMenusRange: async (
+    spaceId: UUID,
+    from: string,
+    to: string,
+  ): Promise<DailyMenuResponse[]> => {
+    const path = `/spaces/${spaceId}/daily-menus?from=${from}&to=${to}`;
+    console.log(`${LOG_TAG} GET ${path}`);
+    return unwrapApiResponse(
+      apiClient.get<ApiResponse<DailyMenuResponse[]>>(path),
+    );
+  },
+
   getDailyMenu: async (
     spaceId: UUID,
     menuDate: string,
@@ -275,6 +296,36 @@ export const mealsApi = {
     const path = `/spaces/${spaceId}/daily-menus/${menuDate}/${mealType}`;
     console.log(`${LOG_TAG} DELETE ${path}`);
     await unwrapVoidResponse(apiClient.delete(path));
+  },
+
+  copyDailyMenu: async (
+    spaceId: UUID,
+    targetDate: string,
+    mealType: MealType,
+    sourceDate: string,
+    body?: { force?: boolean; publish?: boolean },
+  ): Promise<DailyMenuResponse> => {
+    const path = `/spaces/${spaceId}/daily-menus/${targetDate}/${mealType}/copy-from/${sourceDate}`;
+    console.log(`${LOG_TAG} POST ${path}`, body);
+    return unwrapApiResponse(
+      apiClient.post<ApiResponse<DailyMenuResponse>>(path, body ?? {}),
+    );
+  },
+
+  getSharePreview: async (
+    spaceId: UUID,
+    menuDate: string,
+    mealType?: MealType,
+  ): Promise<MealSharePreviewResponse> => {
+    const q = new URLSearchParams({ date: menuDate });
+    if (mealType) {
+      q.set('mealType', mealType);
+    }
+    const path = `/spaces/${spaceId}/meals/share-preview?${q.toString()}`;
+    console.log(`${LOG_TAG} GET ${path}`);
+    return unwrapApiResponse(
+      apiClient.get<ApiResponse<MealSharePreviewResponse>>(path),
+    );
   },
 
   getEligibilitySummary: async (

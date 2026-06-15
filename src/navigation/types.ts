@@ -135,7 +135,21 @@ export type MainStackParamList = {
     occupancyId?: UUID;
   };
   DailyMenuToday: { spaceId: UUID };
-  DailyMenuEdit: { spaceId: UUID; menuDate: string; mealType: 'BREAKFAST' | 'LUNCH' | 'DINNER' };
+  DailyMenuEdit: {
+    spaceId: UUID;
+    menuDate: string;
+    mealType: 'BREAKFAST' | 'LUNCH' | 'DINNER';
+  };
+  DailyMenuSelectCombo: {
+    spaceId: UUID;
+    menuDate: string;
+    mealType: 'BREAKFAST' | 'LUNCH' | 'DINNER';
+  };
+  DailyMenuSelectItems: {
+    spaceId: UUID;
+    menuDate: string;
+    mealType: 'BREAKFAST' | 'LUNCH' | 'DINNER';
+  };
   MealComboForm: { spaceId: UUID; mode: 'create' | 'edit'; comboId?: UUID };
   MealParticipantList: { spaceId: UUID };
   MealParticipationForm: {
@@ -144,6 +158,12 @@ export type MainStackParamList = {
     memberId?: UUID;
   };
   MenuLibrary: { spaceId: UUID };
+  MenuPlanning: { spaceId: UUID; menuDate?: string };
+  MenuSharePreview: {
+    spaceId: UUID;
+    menuDate: string;
+    mealType?: 'BREAKFAST' | 'LUNCH' | 'DINNER';
+  };
 };
 
 export type RootStackParamList = {
@@ -154,6 +174,6 @@ export type RootStackParamList = {
 
 declare global {
   namespace ReactNavigation {
-    interface RootParamList extends RootStackParamList {}
+    interface RootParamList extends RootStackParamList, MainStackParamList {}
   }
 }

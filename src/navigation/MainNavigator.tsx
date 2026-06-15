@@ -28,10 +28,13 @@ import { MemberOccupancyHistoryScreen } from '../screens/MemberOccupancyHistoryS
 import { MySpacesScreen } from '../screens/MySpacesScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { SpaceDetailsScreen } from '../screens/SpaceDetailsScreen';
-import { MealsHomeScreen } from '../screens/meals/MealsHomeScreen';
+import { MenuPlanningScreen } from '../screens/meals/MenuPlanningScreen';
+import { MenuSharePreviewScreen } from '../screens/meals/MenuSharePreviewScreen';
 import { MenuLibraryScreen } from '../screens/meals/MenuLibraryScreen';
 import { DailyMenuTodayScreen } from '../screens/meals/DailyMenuTodayScreen';
 import { DailyMenuEditScreen } from '../screens/meals/DailyMenuEditScreen';
+import { DailyMenuSelectComboScreen } from '../screens/meals/DailyMenuSelectComboScreen';
+import { DailyMenuSelectItemsScreen } from '../screens/meals/DailyMenuSelectItemsScreen';
 import { MealComboFormScreen } from '../screens/meals/MealComboFormScreen';
 import { MealParticipantListScreen } from '../screens/meals/MealParticipantListScreen';
 import { MealParticipationFormScreen } from '../screens/meals/MealParticipationFormScreen';
@@ -164,6 +167,28 @@ export function MainNavigator() {
         )}
       />
       <Stack.Screen
+        name="DailyMenuSelectCombo"
+        options={{ title: 'Select Combo' }}
+        children={({ route }) => (
+          <DailyMenuSelectComboScreen
+            spaceId={route.params.spaceId}
+            menuDate={route.params.menuDate}
+            mealType={route.params.mealType}
+          />
+        )}
+      />
+      <Stack.Screen
+        name="DailyMenuSelectItems"
+        options={{ title: 'Select Items' }}
+        children={({ route }) => (
+          <DailyMenuSelectItemsScreen
+            spaceId={route.params.spaceId}
+            menuDate={route.params.menuDate}
+            mealType={route.params.mealType}
+          />
+        )}
+      />
+      <Stack.Screen
         name="MealComboForm"
         component={MealComboFormScreen}
         options={({ route }) => ({
@@ -181,6 +206,27 @@ export function MainNavigator() {
         name="MealParticipationForm"
         component={MealParticipationFormScreen}
         options={{ title: 'Meal Enrollment' }}
+      />
+      <Stack.Screen
+        name="MenuPlanning"
+        options={{ title: 'Menu Planning' }}
+        children={({ route }) => (
+          <MenuPlanningScreen
+            spaceId={route.params.spaceId}
+            initialDate={route.params.menuDate}
+          />
+        )}
+      />
+      <Stack.Screen
+        name="MenuSharePreview"
+        options={{ title: 'Share Preview' }}
+        children={({ route }) => (
+          <MenuSharePreviewScreen
+            spaceId={route.params.spaceId}
+            menuDate={route.params.menuDate}
+            mealType={route.params.mealType}
+          />
+        )}
       />
       <Stack.Screen
         name="SpaceTabs"

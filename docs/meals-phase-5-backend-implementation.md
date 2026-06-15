@@ -73,14 +73,25 @@ At least one of `itemIds` or `newItems` required.
 ### Daily menus (Phase 5.2)
 | Method | Path |
 |--------|------|
-| GET | `/daily-menus/today`, `/daily-menus?from=&to=`, `/daily-menus/{date}/{mealType}` |
+| GET | `/daily-menus/today` — published slots only |
+| GET | `/daily-menus/{date}` — all slots for date (managers see drafts) |
+| GET | `/daily-menus?from=&to=` — max 31-day range |
+| GET | `/daily-menus/{date}/{mealType}` |
 | PUT | `/daily-menus/{date}/{mealType}` |
 | POST | `/daily-menus/{date}/{mealType}/publish` |
+| POST | `/daily-menus/{targetDate}/{mealType}/copy-from/{sourceDate}` |
 | DELETE | `/daily-menus/{date}/{mealType}` |
 
-Upsert accepts frontend `options[]` with `comboId`, `itemId`, `label`, `sortOrder`, `isAvailable`. GET returns `entryType`, `comboId`, `itemId` for round-trip.
+Upsert accepts frontend `options[]` with `entryType` (`COMBO` \| `ITEM`), `comboId`, `itemId`, `label`, `sortOrder`, `isAvailable`. Empty `options[]` allowed for draft save; publish requires ≥1 available option. Published menus can be edited in-place (status stays PUBLISHED).
 
-DELETE draft menu returns **204 No Content** (matches frontend `unwrapVoidResponse`).
+Copy upserts target as DRAFT. Returns 409 if target is PUBLISHED unless body `{ "force": true }`.
+
+DELETE draft menu returns **204 No Content**.
+
+### Share preview (Phase 5.2D)
+| Method | Path |
+|--------|------|
+| GET | `/meals/share-preview?date=&mealType=` — published only; `mealType` optional |
 
 ### Participation (Phase 5.3)
 | Method | Path |
@@ -121,10 +132,12 @@ DELETE draft menu returns **204 No Content** (matches frontend `unwrapVoidRespon
 
 ## Out of scope
 
-Entitlements, credits, polls, MealResponse, WhatsApp, weekly templates, menu history, headcount from subscriptions.
+Weekly templates, WhatsApp, polls, MealResponse, headcount from subscriptions.
 
 ## Tests
 
 - `FoodCatalogServiceTest` — categories, custom items, global deactivate, STAFF denied
+- `DailyMenuServiceTest` — planning by date, publish/copy, permissions, range limit
+- `MealSharePreviewServiceTest` — combo detail in messageText, published-only
 - `MealAccessServiceTest`, `MealEligibilityEngineTest`
 - `SpacePermissionPolicyTest` — meal permission flags

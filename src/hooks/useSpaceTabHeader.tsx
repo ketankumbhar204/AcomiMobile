@@ -35,16 +35,21 @@ export function useSpaceTabHeader(
       headerTitle: () => <SpaceSwitcher spaceId={spaceId} />,
       headerBackVisible: false,
       headerLeft: () => <SpaceTabBackButton />,
-      headerRight:
-        options?.showProfileAndMenu || options?.headerRightExtra
-          ? () => (
-              <SpaceTabHeaderActions
-                spaceId={spaceId}
-                extra={options?.headerRightExtra}
-                showProfileAndMenu={options?.showProfileAndMenu}
-              />
-            )
-          : undefined,
+      headerRight: () => {
+        if (options?.showProfileAndMenu) {
+          return (
+            <SpaceTabHeaderActions
+              spaceId={spaceId}
+              extra={options?.headerRightExtra}
+              showProfileAndMenu
+            />
+          );
+        }
+        if (options?.headerRightExtra) {
+          return options.headerRightExtra;
+        }
+        return null;
+      },
     });
   }, [
     navigation,

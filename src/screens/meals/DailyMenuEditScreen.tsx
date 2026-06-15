@@ -1,7 +1,8 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -11,20 +12,23 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { mealsApi } from '../../api/mealsApi';
-import type {
-  DailyMenuEntryType,
-  DailyMenuOptionResponse,
-  FoodItemResponse,
-  MealComboResponse,
-  MealType,
-  UUID,
-} from '../../api/types';
+import type { MealComboResponse, MealType, UUID } from '../../api/types';
+import { ComboPickerCard } from '../../components/meals/ComboPickerCard';
+import { PlanningSelectionSection } from '../../components/meals/PlanningSelectionSection';
 import { Button, PermissionDeniedScreen } from '../../components/ui';
-import { Screen } from '../../components/ui/Screen';
+import { useScreenBackButton } from '../../hooks/useScreenBackButton';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
+import { navigateMainStack } from '../../navigation/mainStackNavigation';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, spacing, typography } from '../../theme';
+import { addDaysIsoDate } from '../../utils/mealDates';
+import {
+  loadMenuDraft,
+  saveMenuDraft,
+  toMenuDraftOption,
+  type MenuDraftOption,
+} from '../../utils/dailyMenuDraft';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
 
 type Nav = NativeStackNavigationProp<MainStackParamList>;
@@ -35,38 +39,8 @@ type DailyMenuEditScreenProps = {
   mealType: MealType;
 };
 
-type DraftOption = {
-  entryType: DailyMenuEntryType;
-  comboId?: string | null;
-  itemId?: string | null;
-  label: string;
-  sortOrder: number;
-  isAvailable: boolean;
-};
-
-function inferEntryType(option: DailyMenuOptionResponse): DailyMenuEntryType {
-  if (option.entryType) {
-    return option.entryType;
-  }
-  if (option.itemId) {
-    return 'ITEM';
-  }
-  return 'COMBO';
-}
-
-function toDraftOption(option: DailyMenuOptionResponse, index: number): DraftOption {
-  const entryType = inferEntryType(option);
-  return {
-    entryType,
-    comboId: entryType === 'COMBO' ? option.comboId : null,
-    itemId: entryType === 'ITEM' ? option.itemId : null,
-    label: option.label,
-    sortOrder: option.sortOrder ?? index + 1,
-    isAvailable: option.isAvailable,
-  };
-}
-
 export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEditScreenProps) {
+  useScreenBackButton(false);
   const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const permissions = useSpacePermissions(spaceId);
@@ -74,27 +48,22 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [combos, setCombos] = useState<MealComboResponse[]>([]);
-  const [foodItems, setFoodItems] = useState<FoodItemResponse[]>([]);
-  const [options, setOptions] = useState<DraftOption[]>([]);
+  const [options, setOptions] = useState<MenuDraftOption[]>([]);
   const [notes, setNotes] = useState('');
   const [status, setStatus] = useState<'DRAFT' | 'PUBLISHED'>('DRAFT');
+  const [combos, setCombos] = useState<MealComboResponse[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [comboList, itemList, menu] = await Promise.all([
+      const [draft, comboList] = await Promise.all([
+        loadMenuDraft(spaceId, menuDate, mealType),
         mealsApi.getMealCombos(spaceId),
-        mealsApi.getFoodItems(spaceId),
-        mealsApi.getDailyMenu(spaceId, menuDate, mealType).catch(() => null),
       ]);
+      setOptions(draft.options);
+      setNotes(draft.notes);
+      setStatus(draft.menu?.status ?? 'DRAFT');
       setCombos(comboList.filter(combo => combo.isActive));
-      setFoodItems(itemList.filter(item => item.isActive));
-      if (menu) {
-        setOptions(menu.options.map(toDraftOption));
-        setNotes(menu.notes ?? '');
-        setStatus(menu.status);
-      }
     } catch {
       showToast(t('meals.errors.loadFailed'));
     } finally {
@@ -108,11 +77,45 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     }, [load]),
   );
 
+  const plannedCombos = useMemo(
+    () => options.filter(option => option.entryType === 'COMBO'),
+    [options],
+  );
+  const plannedItems = useMemo(
+    () => options.filter(option => option.entryType === 'ITEM'),
+    [options],
+  );
+
+  const selectedComboIdSet = useMemo(
+    () => new Set(plannedCombos.map(option => option.comboId).filter(Boolean)),
+    [plannedCombos],
+  );
+
+  const availableCombos = useMemo(
+    () => combos.filter(combo => !selectedComboIdSet.has(combo.comboId)),
+    [combos, selectedComboIdSet],
+  );
+
   if (!permissions.canManageMeals) {
     return <PermissionDeniedScreen spaceId={spaceId} />;
   }
 
+  const removeComboById = (comboId: string) => {
+    setOptions(prev =>
+      prev.filter(option => !(option.entryType === 'COMBO' && option.comboId === comboId)),
+    );
+  };
+
+  const removeItemById = (itemId: string) => {
+    setOptions(prev =>
+      prev.filter(option => !(option.entryType === 'ITEM' && option.itemId === itemId)),
+    );
+  };
+
   const addCombo = (combo: MealComboResponse) => {
+    if (selectedComboIdSet.has(combo.comboId)) {
+      return;
+    }
     setOptions(prev => [
       ...prev,
       {
@@ -126,43 +129,30 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     ]);
   };
 
-  const addItem = (item: FoodItemResponse) => {
-    setOptions(prev => {
-      if (prev.some(option => option.itemId === item.itemId)) {
-        return prev;
-      }
-      return [
-        ...prev,
-        {
-          entryType: 'ITEM' as const,
-          comboId: null,
-          itemId: item.itemId,
-          label: item.name,
-          sortOrder: prev.length + 1,
-          isAvailable: true,
-        },
-      ];
-    });
+  const copyFromYesterday = async () => {
+    const sourceDate = addDaysIsoDate(menuDate, -1);
+    setSaving(true);
+    try {
+      const copied = await mealsApi.copyDailyMenu(spaceId, menuDate, mealType, sourceDate);
+      setOptions(copied.options.map(toMenuDraftOption));
+      setNotes(copied.notes ?? '');
+      setStatus(copied.status);
+      showToast(t('meals.planning.copySuccess'));
+    } catch {
+      showToast(t('meals.planning.copyFailed'));
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const save = async (publish: boolean) => {
-    if (options.length === 0) {
+  const persist = async (publish: boolean) => {
+    if (publish && options.length === 0) {
       showToast(t('meals.errors.optionsRequired'));
       return;
     }
     setSaving(true);
     try {
-      await mealsApi.upsertDailyMenu(spaceId, menuDate, mealType, {
-        options: options.map(option => ({
-          entryType: option.entryType,
-          comboId: option.entryType === 'COMBO' ? option.comboId : null,
-          itemId: option.entryType === 'ITEM' ? option.itemId : null,
-          label: option.label,
-          sortOrder: option.sortOrder,
-          isAvailable: option.isAvailable,
-        })),
-        notes: notes.trim() || null,
-      });
+      await saveMenuDraft(spaceId, menuDate, mealType, options, notes.trim() || null);
       if (publish) {
         await mealsApi.publishDailyMenu(spaceId, menuDate, mealType);
       }
@@ -191,108 +181,162 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     }
   };
 
+  const summaryText =
+    plannedCombos.length > 0 || plannedItems.length > 0
+      ? t('meals.menu.plannedSummary', {
+          combos: plannedCombos.length,
+          items: plannedItems.length,
+        })
+      : t('meals.menu.plannedSummaryEmpty');
+
   return (
-    <Screen scrollable contentStyle={styles.content}>
-      <Text style={styles.title}>
-        {t('meals.planMenu')} — {t(mealTypeLabelKey(mealType))}
-      </Text>
-      <Text style={styles.date}>{menuDate}</Text>
-      {status === 'PUBLISHED' ? (
-        <Text style={styles.published}>{t('meals.menu.published')}</Text>
-      ) : null}
+    <View style={styles.root}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <Text style={styles.title}>{t(mealTypeLabelKey(mealType))}</Text>
+        <Text style={styles.date}>{menuDate}</Text>
+        <Text style={styles.summary}>{summaryText}</Text>
 
-      {loading ? <ActivityIndicator color={colors.primary} /> : null}
-
-      <Text style={styles.label}>{t('meals.menu.plannedEntries')}</Text>
-      {options.length === 0 ? (
-        <Text style={styles.emptyHint}>{t('meals.menu.noItemsYet')}</Text>
-      ) : null}
-      {options.map((option, index) => (
-        <View key={`${option.entryType}-${option.comboId ?? option.itemId}-${index}`} style={styles.optionRow}>
-          <View style={styles.optionMeta}>
-            <Text style={styles.optionType}>
-              {option.entryType === 'COMBO' ? t('meals.library.combos') : t('meals.library.items')}
-            </Text>
-            <TextInput
-              style={styles.input}
-              value={option.label}
-              onChangeText={value =>
-                setOptions(prev =>
-                  prev.map((row, i) => (i === index ? { ...row, label: value } : row)),
-                )
-              }
-            />
-          </View>
-          <Pressable onPress={() => setOptions(prev => prev.filter((_, i) => i !== index))}>
-            <Text style={styles.remove}>✕</Text>
-          </Pressable>
+        <View style={styles.statusRow}>
+          {status === 'PUBLISHED' ? (
+            <Text style={styles.published}>{t('meals.menu.published')}</Text>
+          ) : (
+            <Text style={styles.draft}>{t('meals.menu.draft')}</Text>
+          )}
         </View>
-      ))}
 
-      <Text style={styles.label}>{t('meals.menu.addCombo')}</Text>
-      <View style={styles.comboChips}>
-        {combos.map(combo => (
-          <Pressable key={combo.comboId} style={styles.chip} onPress={() => addCombo(combo)}>
-            <Text style={styles.chipText}>+ {combo.name}</Text>
-          </Pressable>
-        ))}
-        {combos.length === 0 ? (
-          <Text style={styles.emptyHint}>{t('meals.library.combosEmpty')}</Text>
-        ) : null}
-      </View>
-
-      <Text style={styles.label}>{t('meals.menu.addItems')}</Text>
-      <View style={styles.comboChips}>
-        {foodItems.slice(0, 24).map(item => (
-          <Pressable key={item.itemId} style={styles.chip} onPress={() => addItem(item)}>
-            <Text style={styles.chipText}>+ {item.name}</Text>
-          </Pressable>
-        ))}
-        {foodItems.length > 24 ? (
-          <Text style={styles.moreHint}>{t('meals.menu.moreItemsInLibrary')}</Text>
-        ) : null}
-      </View>
-
-      <Text style={styles.label}>{t('meals.menu.notes')}</Text>
-      <TextInput
-        style={[styles.input, styles.notesInput]}
-        value={notes}
-        onChangeText={setNotes}
-        multiline
-        placeholder={t('meals.menu.notesPlaceholder')}
-      />
-
-      <View style={styles.actions}>
-        {status === 'DRAFT' && options.length > 0 ? (
-          <Button
-            label={t('meals.actions.deleteDraft')}
-            variant="ghost"
-            loading={saving}
-            onPress={() => void clearDraft()}
-          />
-        ) : null}
         <Button
-          label={t('meals.actions.saveDraft')}
+          label={t('meals.menu.copyYesterdayButton')}
           variant="secondary"
           loading={saving}
-          onPress={() => void save(false)}
+          onPress={() => void copyFromYesterday()}
+          style={styles.copyButton}
         />
-        <Button label={t('meals.actions.publish')} loading={saving} onPress={() => void save(true)} />
+
+        {status === 'PUBLISHED' ? (
+          <Pressable
+            style={styles.previewLink}
+            onPress={() =>
+              navigateMainStack('MenuSharePreview', { spaceId, menuDate, mealType })
+            }>
+            <Text style={styles.previewLinkText}>{t('meals.planning.previewShare')}</Text>
+          </Pressable>
+        ) : null}
+
+        {loading ? <ActivityIndicator color={colors.primary} style={styles.loader} /> : null}
+
+        <Text style={styles.sectionLabel}>{t('meals.menu.plannedEntries')}</Text>
+
+        <PlanningSelectionSection
+          title={t('meals.library.combos')}
+          countLabel={t('meals.planning.selectedCount', { count: plannedCombos.length })}
+          chips={plannedCombos.map(option => ({
+            id: option.comboId ?? option.label,
+            label: option.label,
+            variant: 'COMBO',
+          }))}
+          onRemove={comboId => removeComboById(comboId)}
+          emptyText={t('meals.planning.noCombosSelected')}
+        />
+
+        <PlanningSelectionSection
+          title={t('meals.planning.additionalItems')}
+          countLabel={t('meals.planning.selectedCount', { count: plannedItems.length })}
+          chips={plannedItems.map(option => ({
+            id: option.itemId ?? option.label,
+            label: option.label,
+            variant: 'ITEM',
+          }))}
+          onRemove={itemId => removeItemById(itemId)}
+          emptyText={t('meals.planning.noAdditionalItems')}
+        />
+
+        {availableCombos.length > 0 ? (
+          <>
+            <Text style={styles.sectionLabel}>{t('meals.planning.availableCombos')}</Text>
+            <Text style={styles.sectionHint}>{t('meals.planning.availableCombosHint')}</Text>
+            {availableCombos.map(combo => (
+              <ComboPickerCard
+                key={combo.comboId}
+                name={combo.name}
+                itemNames={combo.items?.map(item => item.name).filter(Boolean) ?? []}
+                selectable={false}
+                onPress={() => addCombo(combo)}
+              />
+            ))}
+          </>
+        ) : null}
+
+        <View style={styles.addLinks}>
+          <Pressable
+            onPress={() =>
+              navigateMainStack('DailyMenuSelectCombo', { spaceId, menuDate, mealType })
+            }>
+            <Text style={styles.addLinkText}>{t('meals.menu.addCombo')}</Text>
+          </Pressable>
+          <Pressable
+            onPress={() =>
+              navigateMainStack('DailyMenuSelectItems', { spaceId, menuDate, mealType })
+            }>
+            <Text style={styles.addLinkText}>{t('meals.menu.addItems')}</Text>
+          </Pressable>
+        </View>
+
+        <Text style={styles.sectionLabel}>{t('meals.menu.notes')}</Text>
+        <TextInput
+          style={[styles.input, styles.notesInput]}
+          value={notes}
+          onChangeText={setNotes}
+          multiline
+          placeholder={t('meals.menu.notesPlaceholder')}
+        />
+      </ScrollView>
+
+      <View style={styles.stickyFooter}>
+        {status === 'DRAFT' && options.length > 0 ? (
+          <Pressable
+            style={styles.deleteLink}
+            disabled={saving}
+            onPress={() => void clearDraft()}>
+            <Text style={styles.deleteLinkText}>{t('meals.actions.deleteDraft')}</Text>
+          </Pressable>
+        ) : null}
+        <View style={styles.footerActions}>
+          <Button
+            label={t('meals.actions.saveDraft')}
+            variant="secondary"
+            loading={saving}
+            onPress={() => void persist(false)}
+            style={styles.footerButton}
+          />
+          <Button
+            label={t('meals.actions.publish')}
+            loading={saving}
+            onPress={() => void persist(true)}
+            style={styles.footerButton}
+          />
+        </View>
       </View>
-    </Screen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: spacing.section },
-  title: { ...typography.h2, marginBottom: spacing.xs },
-  date: { ...typography.caption, color: colors.muted, marginBottom: spacing.md },
-  published: { ...typography.caption, color: colors.success, marginBottom: spacing.md },
-  label: { ...typography.bodyStrong, marginTop: spacing.md, marginBottom: spacing.sm },
-  emptyHint: { ...typography.caption, color: colors.muted, marginBottom: spacing.sm },
-  optionRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginBottom: spacing.sm },
-  optionMeta: { flex: 1, gap: spacing.xs },
-  optionType: { ...typography.caption, color: colors.muted, fontWeight: '600' },
+  root: { flex: 1, backgroundColor: colors.background },
+  content: { padding: spacing.xxl, paddingBottom: spacing.section },
+  title: { ...typography.h2, marginBottom: spacing.xxs },
+  date: { ...typography.caption, color: colors.muted, marginBottom: spacing.xs },
+  summary: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.sm },
+  statusRow: { marginBottom: spacing.md },
+  published: { ...typography.caption, color: colors.success, fontWeight: '600' },
+  draft: { ...typography.caption, color: '#D97706', fontWeight: '600' },
+  copyButton: { marginBottom: spacing.sm },
+  previewLink: { marginBottom: spacing.md },
+  previewLinkText: { ...typography.body, color: colors.primaryDark, fontWeight: '600' },
+  loader: { marginVertical: spacing.md },
+  sectionLabel: { ...typography.bodyStrong, marginTop: spacing.md, marginBottom: spacing.sm },
+  sectionHint: { ...typography.caption, color: colors.muted, marginBottom: spacing.sm },
+  addLinks: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg, marginBottom: spacing.md },
+  addLinkText: { ...typography.bodyStrong, color: colors.primaryDark },
   input: {
     borderWidth: 1,
     borderColor: colors.border,
@@ -301,18 +345,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     ...typography.body,
   },
-  notesInput: { minHeight: 80, textAlignVertical: 'top' },
-  remove: { fontSize: 18, color: colors.muted, padding: spacing.sm },
-  comboChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.surface,
+  notesInput: { minHeight: 80, textAlignVertical: 'top', marginBottom: spacing.xl },
+  stickyFooter: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.white,
+    paddingHorizontal: spacing.xxl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.lg,
+    gap: spacing.sm,
   },
-  chipText: { ...typography.caption, color: colors.primaryDark },
-  moreHint: { ...typography.caption, color: colors.muted, alignSelf: 'center' },
-  actions: { marginTop: spacing.xl, gap: spacing.sm },
+  deleteLink: { alignItems: 'center', paddingVertical: spacing.xs },
+  deleteLinkText: { ...typography.caption, color: '#DC2626', fontWeight: '600' },
+  footerActions: { flexDirection: 'row', gap: spacing.sm },
+  footerButton: { flex: 1 },
 });

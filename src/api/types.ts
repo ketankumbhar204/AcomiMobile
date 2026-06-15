@@ -244,6 +244,27 @@ export interface MealEligibleParticipantResponse {
   mealPlanName?: string;
 }
 
+export interface CopyDailyMenuRequest {
+  force?: boolean;
+  publish?: boolean;
+}
+
+export interface MealSharePreviewLine {
+  label: string;
+  detail?: string | null;
+}
+
+export interface MealSharePreviewSlot {
+  mealType: MealType;
+  lines: MealSharePreviewLine[];
+}
+
+export interface MealSharePreviewResponse {
+  date: string;
+  messageText: string;
+  slots: MealSharePreviewSlot[];
+}
+
 export interface MemberMealParticipationSummary {
   participationId: UUID;
   mealPlanCode: MealPlanCode;
