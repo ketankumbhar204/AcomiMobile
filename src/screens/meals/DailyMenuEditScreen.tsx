@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -12,8 +12,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { mealsApi } from '../../api/mealsApi';
-import type { MealComboResponse, MealType, UUID } from '../../api/types';
-import { ComboPickerCard } from '../../components/meals/ComboPickerCard';
+import type { MealType, UUID } from '../../api/types';
 import { PlanningSelectionSection } from '../../components/meals/PlanningSelectionSection';
 import { Button, PermissionDeniedScreen } from '../../components/ui';
 import { useScreenBackButton } from '../../hooks/useScreenBackButton';
@@ -51,30 +50,47 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
   const [options, setOptions] = useState<MenuDraftOption[]>([]);
   const [notes, setNotes] = useState('');
   const [status, setStatus] = useState<'DRAFT' | 'PUBLISHED'>('DRAFT');
-  const [combos, setCombos] = useState<MealComboResponse[]>([]);
 
-  const load = useCallback(async () => {
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: t('meals.planning.editTitle', { meal: t(mealTypeLabelKey(mealType)) }),
+    });
+  }, [mealType, navigation, t]);
+
+  useEffect(() => {
+    setOptions([]);
+    setNotes('');
+    setStatus('DRAFT');
     setLoading(true);
-    try {
-      const [draft, comboList] = await Promise.all([
-        loadMenuDraft(spaceId, menuDate, mealType),
-        mealsApi.getMealCombos(spaceId),
-      ]);
-      setOptions(draft.options);
-      setNotes(draft.notes);
-      setStatus(draft.menu?.status ?? 'DRAFT');
-      setCombos(comboList.filter(combo => combo.isActive));
-    } catch {
-      showToast(t('meals.errors.loadFailed'));
-    } finally {
-      setLoading(false);
-    }
-  }, [mealType, menuDate, showToast, spaceId, t]);
+  }, [mealType, menuDate, spaceId]);
 
   useFocusEffect(
     useCallback(() => {
-      void load();
-    }, [load]),
+      let active = true;
+      (async () => {
+        setLoading(true);
+        try {
+          const draft = await loadMenuDraft(spaceId, menuDate, mealType);
+          if (!active) {
+            return;
+          }
+          setOptions(draft.options);
+          setNotes(draft.notes);
+          setStatus(draft.menu?.status ?? 'DRAFT');
+        } catch {
+          if (active) {
+            showToast(t('meals.errors.loadFailed'));
+          }
+        } finally {
+          if (active) {
+            setLoading(false);
+          }
+        }
+      })();
+      return () => {
+        active = false;
+      };
+    }, [mealType, menuDate, showToast, spaceId, t]),
   );
 
   const plannedCombos = useMemo(
@@ -84,16 +100,6 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
   const plannedItems = useMemo(
     () => options.filter(option => option.entryType === 'ITEM'),
     [options],
-  );
-
-  const selectedComboIdSet = useMemo(
-    () => new Set(plannedCombos.map(option => option.comboId).filter(Boolean)),
-    [plannedCombos],
-  );
-
-  const availableCombos = useMemo(
-    () => combos.filter(combo => !selectedComboIdSet.has(combo.comboId)),
-    [combos, selectedComboIdSet],
   );
 
   if (!permissions.canManageMeals) {
@@ -110,23 +116,6 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     setOptions(prev =>
       prev.filter(option => !(option.entryType === 'ITEM' && option.itemId === itemId)),
     );
-  };
-
-  const addCombo = (combo: MealComboResponse) => {
-    if (selectedComboIdSet.has(combo.comboId)) {
-      return;
-    }
-    setOptions(prev => [
-      ...prev,
-      {
-        entryType: 'COMBO',
-        comboId: combo.comboId,
-        itemId: null,
-        label: combo.name,
-        sortOrder: prev.length + 1,
-        isAvailable: true,
-      },
-    ]);
   };
 
   const copyFromYesterday = async () => {
@@ -224,45 +213,33 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
 
         {loading ? <ActivityIndicator color={colors.primary} style={styles.loader} /> : null}
 
-        <Text style={styles.sectionLabel}>{t('meals.menu.plannedEntries')}</Text>
-
-        <PlanningSelectionSection
-          title={t('meals.library.combos')}
-          countLabel={t('meals.planning.selectedCount', { count: plannedCombos.length })}
-          chips={plannedCombos.map(option => ({
-            id: option.comboId ?? option.label,
-            label: option.label,
-            variant: 'COMBO',
-          }))}
-          onRemove={comboId => removeComboById(comboId)}
-          emptyText={t('meals.planning.noCombosSelected')}
-        />
-
-        <PlanningSelectionSection
-          title={t('meals.planning.additionalItems')}
-          countLabel={t('meals.planning.selectedCount', { count: plannedItems.length })}
-          chips={plannedItems.map(option => ({
-            id: option.itemId ?? option.label,
-            label: option.label,
-            variant: 'ITEM',
-          }))}
-          onRemove={itemId => removeItemById(itemId)}
-          emptyText={t('meals.planning.noAdditionalItems')}
-        />
-
-        {availableCombos.length > 0 ? (
+        {!loading ? (
           <>
-            <Text style={styles.sectionLabel}>{t('meals.planning.availableCombos')}</Text>
-            <Text style={styles.sectionHint}>{t('meals.planning.availableCombosHint')}</Text>
-            {availableCombos.map(combo => (
-              <ComboPickerCard
-                key={combo.comboId}
-                name={combo.name}
-                itemNames={combo.items?.map(item => item.name).filter(Boolean) ?? []}
-                selectable={false}
-                onPress={() => addCombo(combo)}
-              />
-            ))}
+            <Text style={styles.sectionLabel}>{t('meals.menu.plannedEntries')}</Text>
+
+            <PlanningSelectionSection
+              title={t('meals.library.combos')}
+              countLabel={t('meals.planning.selectedCount', { count: plannedCombos.length })}
+              chips={plannedCombos.map(option => ({
+                id: option.comboId ?? option.label,
+                label: option.label,
+                variant: 'COMBO',
+              }))}
+              onRemove={comboId => removeComboById(comboId)}
+              emptyText={t('meals.planning.noCombosSelected')}
+            />
+
+            <PlanningSelectionSection
+              title={t('meals.planning.additionalItems')}
+              countLabel={t('meals.planning.selectedCount', { count: plannedItems.length })}
+              chips={plannedItems.map(option => ({
+                id: option.itemId ?? option.label,
+                label: option.label,
+                variant: 'ITEM',
+              }))}
+              onRemove={itemId => removeItemById(itemId)}
+              emptyText={t('meals.planning.noAdditionalItems')}
+            />
           </>
         ) : null}
 

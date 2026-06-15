@@ -49,6 +49,33 @@ export function resetToDashboard(spaceId: string): void {
   );
 }
 
+export function navigateToMembersTab(spaceId: string): void {
+  if (!navigationRef.isReady()) {
+    return;
+  }
+
+  navigationRef.dispatch(
+    CommonActions.reset({
+      index: 0,
+      routes: [
+        {
+          name: 'Main',
+          state: {
+            index: 0,
+            routes: [
+              {
+                name: 'SpaceTabs',
+                params: { spaceId },
+                state: buildSpaceTabsState(spaceId, 'Members'),
+              },
+            ],
+          },
+        },
+      ],
+    }),
+  );
+}
+
 /** Clears accommodation drill-down stack and lands on the Accommodation tab. */
 export function resetToAccommodationHome(spaceId: string): void {
   if (!navigationRef.isReady()) {
@@ -93,6 +120,27 @@ export function resetToCreateSpace(): void {
           state: {
             index: 0,
             routes: [{ name: 'CreateSpace' }],
+          },
+        },
+      ],
+    }),
+  );
+}
+
+export function resetToAcceptInvitations(): void {
+  if (!navigationRef.isReady()) {
+    return;
+  }
+
+  navigationRef.dispatch(
+    CommonActions.reset({
+      index: 0,
+      routes: [
+        {
+          name: 'Main',
+          state: {
+            index: 0,
+            routes: [{ name: 'AcceptInvitations' }],
           },
         },
       ],

@@ -5,6 +5,7 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TouchableWithoutFeedback,
   View,
@@ -15,6 +16,7 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { enrollMemberInFullMeals } from '../api/mealsApi';
 import type { MembershipRole } from '../api/types';
 import { Button, FormInput, HeaderBackButton, RolePicker } from '../components/ui';
 import type { MainStackParamList } from '../navigation/types';
@@ -52,6 +54,9 @@ export function AddMemberScreen() {
     defaultRoleForSpaceType(spaceType),
   );
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [mealAccessEnabled, setMealAccessEnabled] = useState(true);
+
+  const showMealAccess = spaceType === 'MESS' && role === 'CUSTOMER';
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -99,6 +104,13 @@ export function AddMemberScreen() {
 
     if (member) {
       console.log('[AddMember] success', member.memberId);
+      if (showMealAccess && mealAccessEnabled) {
+        try {
+          await enrollMemberInFullMeals(spaceId, member.memberId);
+        } catch {
+          showToast(t('meals.errors.mealAccessFailed'));
+        }
+      }
       showToast(t('membership.add.successToast'));
       navigation.goBack();
     }
@@ -167,6 +179,16 @@ export function AddMemberScreen() {
             error={fieldErrors.role}
           />
 
+          {showMealAccess ? (
+            <View style={styles.mealAccessRow}>
+              <View style={styles.mealAccessText}>
+                <Text style={styles.mealAccessLabel}>{t('meals.mealAccess.label')}</Text>
+                <Text style={styles.mealAccessHint}>{t('meals.mealAccess.addCustomerHint')}</Text>
+              </View>
+              <Switch value={mealAccessEnabled} onValueChange={setMealAccessEnabled} />
+            </View>
+          ) : null}
+
           <View style={styles.footer}>
             <Button
               label={t('membership.add.save')}
@@ -225,6 +247,21 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: '#DC2626',
   },
+  mealAccessRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    marginTop: spacing.lg,
+    padding: spacing.md,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+  },
+  mealAccessText: { flex: 1, gap: spacing.xs },
+  mealAccessLabel: { ...typography.bodyStrong },
+  mealAccessHint: { ...typography.caption, color: colors.muted },
   footer: {
     marginTop: spacing.xl,
     gap: spacing.md,

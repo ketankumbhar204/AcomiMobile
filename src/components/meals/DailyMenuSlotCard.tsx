@@ -13,6 +13,11 @@ type DailyMenuSlotCardProps = {
   onAddCombo?: () => void;
   onAddItems?: () => void;
   onEdit?: () => void;
+  onShare?: () => void;
+  onClosePoll?: () => void;
+  pollStatus?: 'OPEN' | 'CLOSED' | null;
+  pollResponseCount?: number;
+  pollActionLoading?: boolean;
   onPublish?: () => void;
   publishing?: boolean;
 };
@@ -33,6 +38,11 @@ export function DailyMenuSlotCard({
   onAddCombo,
   onAddItems,
   onEdit,
+  onShare,
+  onClosePoll,
+  pollStatus,
+  pollResponseCount = 0,
+  pollActionLoading = false,
   onPublish,
   publishing = false,
 }: DailyMenuSlotCardProps) {
@@ -116,6 +126,42 @@ export function DailyMenuSlotCard({
           </Pressable>
         ) : null}
       </View>
+
+      {published && pollStatus === 'OPEN' ? (
+        <View style={styles.shareFooter}>
+          <Text style={styles.pollStatusOpen}>
+            {t('meals.poll.pollOpen', { count: pollResponseCount })}
+          </Text>
+          {onShare ? (
+            <Pressable style={styles.shareLink} onPress={onShare}>
+              <Text style={styles.shareLinkText}>{t('meals.planning.shareSlotAgain')}</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : published && onShare ? (
+        <Pressable style={styles.shareLinkCentered} onPress={onShare}>
+          <Text style={styles.shareLinkText}>{t('meals.planning.shareSlot')}</Text>
+        </Pressable>
+      ) : null}
+
+      {published && pollStatus === 'CLOSED' ? (
+        <Text style={styles.pollStatusClosed}>{t('meals.poll.pollClosed')}</Text>
+      ) : null}
+
+      {published && pollStatus !== 'OPEN' && pollStatus !== 'CLOSED' && onShare ? (
+        <Text style={styles.pollHint}>{t('meals.poll.shareToOpen')}</Text>
+      ) : null}
+
+      {published && pollStatus === 'OPEN' && onClosePoll ? (
+        <Pressable
+          style={[styles.pollCloseButton, pollActionLoading && styles.publishButtonDisabled]}
+          onPress={onClosePoll}
+          disabled={pollActionLoading}>
+          <Text style={styles.pollCloseButtonText}>
+            {pollActionLoading ? t('meals.poll.submitting') : t('meals.poll.closePoll')}
+          </Text>
+        </Pressable>
+      ) : null}
 
       {canPublish ? (
         <Pressable
@@ -201,4 +247,47 @@ const styles = StyleSheet.create({
   },
   publishButtonDisabled: { opacity: 0.6 },
   publishButtonText: { ...typography.bodyStrong, color: colors.white, fontSize: 14 },
+  shareFooter: {
+    marginTop: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  shareLink: {
+    paddingVertical: spacing.xs,
+  },
+  shareLinkCentered: {
+    marginTop: spacing.sm,
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+  },
+  shareLinkText: { ...typography.bodyStrong, color: colors.primaryDark, fontSize: 14 },
+  pollStatusOpen: {
+    ...typography.caption,
+    color: colors.success,
+    fontWeight: '600',
+    flex: 1,
+  },
+  pollStatusClosed: {
+    ...typography.caption,
+    color: colors.muted,
+    marginTop: spacing.sm,
+    textAlign: 'center',
+  },
+  pollHint: {
+    ...typography.caption,
+    color: colors.muted,
+    marginTop: spacing.sm,
+    textAlign: 'center',
+  },
+  pollCloseButton: {
+    marginTop: spacing.sm,
+    borderRadius: radius.button,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+  },
+  pollCloseButtonText: { ...typography.bodyStrong, color: colors.muted, fontSize: 14 },
 });

@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -7,15 +7,25 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { mealsApi } from '../../api/mealsApi';
-import type { MealSharePreviewResponse, MealType, UUID } from '../../api/types';
+import type { DailyMenuResponse, MealPollSlot, MealType, UUID } from '../../api/types';
+import { ShareMealSlotCheckbox } from '../../components/meals/ShareMealSlotCheckbox';
 import { Screen } from '../../components/ui/Screen';
+import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, spacing, typography } from '../../theme';
 import { formatMenuDate } from '../../utils/mealDates';
-import { mealTypeLabelKey } from '../../utils/mealLabels';
+import { MEAL_TYPES } from '../../utils/mealLabels';
+import {
+  buildShareMessageForSelection,
+  defaultSelectedMealTypes,
+  getSlotShareState,
+  menusByMealType,
+  openPollsForMealTypes,
+} from '../../utils/shareMenuSelection';
 
 type MenuSharePreviewScreenProps = {
   spaceId: UUID;
@@ -23,45 +33,135 @@ type MenuSharePreviewScreenProps = {
   mealType?: MealType;
 };
 
+type Nav = NativeStackNavigationProp<MainStackParamList>;
+
 export function MenuSharePreviewScreen({
   spaceId,
   menuDate,
-  mealType,
+  mealType: initialMealType,
 }: MenuSharePreviewScreenProps) {
   const { t, i18n } = useTranslation();
+  const navigation = useNavigation<Nav>();
   const showToast = useToastStore(state => state.showToast);
-  const [loading, setLoading] = useState(true);
-  const [preview, setPreview] = useState<MealSharePreviewResponse | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const [loadingMenus, setLoadingMenus] = useState(true);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  const [menus, setMenus] = useState<DailyMenuResponse[]>([]);
+  const [polls, setPolls] = useState<MealPollSlot[]>([]);
+  const [selectedTypes, setSelectedTypes] = useState<MealType[]>([]);
+  const [messageText, setMessageText] = useState('');
+  const [initialized, setInitialized] = useState(false);
+  const [sharing, setSharing] = useState(false);
+
+  const menuMap = useMemo(() => menusByMealType(menus), [menus]);
+  const sharedMealTypes = useMemo(
+    () =>
+      new Set(
+        polls.filter(poll => poll.status === 'OPEN').map(poll => poll.mealType),
+      ),
+    [polls],
+  );
+  const hasShareableSlot = MEAL_TYPES.some(
+    type => getSlotShareState(menuMap[type]) === 'shareable',
+  );
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ title: t('meals.planning.shareTitle') });
+  }, [navigation, t]);
+
+  const loadMenus = useCallback(async () => {
+    setLoadingMenus(true);
     try {
-      const data = await mealsApi.getSharePreview(spaceId, menuDate, mealType);
-      setPreview(data);
+      const [rows, pollDay] = await Promise.all([
+        mealsApi.getDailyMenusByDate(spaceId, menuDate),
+        mealsApi.getMealPolls(spaceId, menuDate).catch(() => ({ pollDate: menuDate, polls: [] })),
+      ]);
+      setMenus(rows);
+      setPolls(pollDay.polls);
+      const map = menusByMealType(rows);
+      setSelectedTypes(defaultSelectedMealTypes(map, initialMealType));
+      setInitialized(true);
     } catch {
-      setPreview(null);
+      setMenus([]);
+      setPolls([]);
+      setSelectedTypes([]);
       showToast(t('meals.errors.loadFailed'));
     } finally {
-      setLoading(false);
+      setLoadingMenus(false);
     }
-  }, [mealType, menuDate, showToast, spaceId, t]);
+  }, [initialMealType, menuDate, showToast, spaceId, t]);
 
   useFocusEffect(
     useCallback(() => {
-      void load();
-    }, [load]),
+      void loadMenus();
+    }, [loadMenus]),
   );
 
-  const copyMessage = async () => {
-    if (!preview?.messageText) {
+  useEffect(() => {
+    if (!initialized || selectedTypes.length === 0) {
+      setMessageText('');
       return;
     }
+
+    let active = true;
+    setLoadingPreview(true);
+    void buildShareMessageForSelection(spaceId, menuDate, selectedTypes)
+      .then(text => {
+        if (active) {
+          setMessageText(text);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setMessageText('');
+          showToast(t('meals.errors.loadFailed'));
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setLoadingPreview(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [initialized, menuDate, selectedTypes, showToast, spaceId, t]);
+
+  const toggleMealType = (type: MealType) => {
+    setSelectedTypes(prev => {
+      const next = prev.includes(type)
+        ? prev.filter(row => row !== type)
+        : [...prev, type];
+      return MEAL_TYPES.filter(meal => next.includes(meal));
+    });
+  };
+
+  const shareMessage = async () => {
+    if (!messageText || selectedTypes.length === 0) {
+      showToast(t('meals.planning.shareSelectAtLeastOne'));
+      return;
+    }
+    setSharing(true);
     try {
-      await Share.share({ message: preview.messageText });
+      const opened = await openPollsForMealTypes(spaceId, menuDate, selectedTypes);
+      if (opened > 0) {
+        showToast(t('meals.poll.autoOpened', { count: opened }));
+      }
+      await Share.share({ message: messageText });
+      const pollDay = await mealsApi.getMealPolls(spaceId, menuDate).catch(() => null);
+      if (pollDay) {
+        setPolls(pollDay.polls);
+      }
     } catch {
       showToast(t('meals.errors.actionFailed'));
+    } finally {
+      setSharing(false);
     }
   };
+
+  const loading = loadingMenus || loadingPreview;
+  const shareDisabled = !messageText || loading || sharing;
 
   return (
     <Screen scrollable contentStyle={styles.content}>
@@ -69,33 +169,51 @@ export function MenuSharePreviewScreen({
       <Text style={styles.date}>{formatMenuDate(menuDate, i18n.language)}</Text>
       <Text style={styles.hint}>{t('meals.planning.shareHint')}</Text>
 
-      {loading ? <ActivityIndicator color={colors.primary} style={styles.loader} /> : null}
+      {loadingMenus ? <ActivityIndicator color={colors.primary} style={styles.loader} /> : null}
 
-      {!loading && !preview?.messageText ? (
+      {!loadingMenus && !hasShareableSlot ? (
         <Text style={styles.empty}>{t('meals.planning.shareEmpty')}</Text>
       ) : null}
 
-      {preview?.messageText ? (
-        <View style={styles.messageBox}>
-          <Text style={styles.message}>{preview.messageText}</Text>
-        </View>
-      ) : null}
-
-      {preview?.slots?.map(slot => (
-        <View key={slot.mealType} style={styles.slotBlock}>
-          <Text style={styles.slotTitle}>{t(mealTypeLabelKey(slot.mealType))}</Text>
-          {slot.lines.map((line, index) => (
-            <Text key={`${line.label}-${index}`} style={styles.slotLine}>
-              • {line.label}
-            </Text>
+      {!loadingMenus && hasShareableSlot ? (
+        <>
+          <Text style={styles.sectionLabel}>{t('meals.planning.shareSelectMeals')}</Text>
+          {MEAL_TYPES.map(type => (
+            <ShareMealSlotCheckbox
+              key={type}
+              mealType={type}
+              state={getSlotShareState(menuMap[type])}
+              selected={selectedTypes.includes(type)}
+              onToggle={() => toggleMealType(type)}
+              alreadyShared={sharedMealTypes.has(type)}
+            />
           ))}
-        </View>
-      ))}
 
-      {preview?.messageText ? (
-        <Pressable style={styles.copyBtn} onPress={() => void copyMessage()}>
-          <Text style={styles.copyBtnText}>{t('meals.planning.copyMessage')}</Text>
-        </Pressable>
+          {selectedTypes.length === 0 ? (
+            <Text style={styles.selectHint}>{t('meals.planning.shareSelectAtLeastOne')}</Text>
+          ) : null}
+
+          {loadingPreview ? (
+            <ActivityIndicator color={colors.primary} style={styles.loader} />
+          ) : null}
+
+          {messageText && !loadingPreview ? (
+            <View style={styles.messageBox}>
+              <Text style={styles.message} selectable>
+                {messageText}
+              </Text>
+            </View>
+          ) : null}
+
+          <Pressable
+            style={[styles.shareBtn, shareDisabled && styles.shareBtnDisabled]}
+            disabled={shareDisabled}
+            onPress={() => void shareMessage()}>
+            <Text style={styles.shareBtnText}>
+              {sharing ? t('meals.poll.openingPolls') : t('meals.planning.copyMessage')}
+            </Text>
+          </Pressable>
+        </>
       ) : null}
     </Screen>
   );
@@ -106,6 +224,12 @@ const styles = StyleSheet.create({
   title: { ...typography.h2, marginBottom: spacing.xs },
   date: { ...typography.bodyStrong, marginBottom: spacing.sm },
   hint: { ...typography.caption, color: colors.muted, marginBottom: spacing.lg },
+  sectionLabel: { ...typography.bodyStrong, marginBottom: spacing.sm },
+  selectHint: {
+    ...typography.caption,
+    color: colors.muted,
+    marginBottom: spacing.md,
+  },
   loader: { marginVertical: spacing.lg },
   empty: { ...typography.body, color: colors.muted },
   messageBox: {
@@ -114,18 +238,16 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 12,
     padding: spacing.lg,
+    marginTop: spacing.md,
     marginBottom: spacing.lg,
   },
   message: { ...typography.body, lineHeight: 22 },
-  slotBlock: { marginBottom: spacing.md },
-  slotTitle: { ...typography.bodyStrong, marginBottom: spacing.xs },
-  slotLine: { ...typography.body, color: colors.textSecondary },
-  copyBtn: {
-    marginTop: spacing.md,
+  shareBtn: {
     backgroundColor: colors.primary,
     borderRadius: 12,
     paddingVertical: spacing.md,
     alignItems: 'center',
   },
-  copyBtnText: { ...typography.bodyStrong, color: colors.white },
+  shareBtnDisabled: { opacity: 0.5 },
+  shareBtnText: { ...typography.bodyStrong, color: colors.white },
 });

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -38,30 +38,53 @@ export function DailyMenuSelectComboScreen({
   const [combos, setCombos] = useState<MealComboResponse[]>([]);
   const [selectedComboIds, setSelectedComboIds] = useState<string[]>([]);
 
-  const load = useCallback(async () => {
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: t('meals.planning.selectComboTitle', {
+        meal: t(mealTypeLabelKey(mealType)),
+      }),
+    });
+  }, [mealType, navigation, t]);
+
+  useEffect(() => {
+    setCombos([]);
+    setSelectedComboIds([]);
     setLoading(true);
-    try {
-      const [comboList, draft] = await Promise.all([
-        mealsApi.getMealCombos(spaceId),
-        loadMenuDraft(spaceId, menuDate, mealType),
-      ]);
-      const activeCombos = comboList.filter(combo => combo.isActive);
-      setCombos(activeCombos);
-      const existingComboIds = draft.options
-        .filter(option => option.entryType === 'COMBO' && option.comboId)
-        .map(option => option.comboId as string);
-      setSelectedComboIds(existingComboIds);
-    } catch {
-      showToast(t('meals.errors.loadFailed'));
-    } finally {
-      setLoading(false);
-    }
-  }, [mealType, menuDate, showToast, spaceId, t]);
+  }, [mealType, menuDate, spaceId]);
 
   useFocusEffect(
     useCallback(() => {
-      void load();
-    }, [load]),
+      let active = true;
+      (async () => {
+        setLoading(true);
+        try {
+          const [comboList, draft] = await Promise.all([
+            mealsApi.getMealCombos(spaceId),
+            loadMenuDraft(spaceId, menuDate, mealType),
+          ]);
+          if (!active) {
+            return;
+          }
+          const activeCombos = comboList.filter(combo => combo.isActive);
+          setCombos(activeCombos);
+          const existingComboIds = draft.options
+            .filter(option => option.entryType === 'COMBO' && option.comboId)
+            .map(option => option.comboId as string);
+          setSelectedComboIds(existingComboIds);
+        } catch {
+          if (active) {
+            showToast(t('meals.errors.loadFailed'));
+          }
+        } finally {
+          if (active) {
+            setLoading(false);
+          }
+        }
+      })();
+      return () => {
+        active = false;
+      };
+    }, [mealType, menuDate, showToast, spaceId, t]),
   );
 
   const selectedCombos = useMemo(

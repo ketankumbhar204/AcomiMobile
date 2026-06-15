@@ -2,6 +2,7 @@ import { unwrapApiResponse, unwrapVoidResponse } from './apiRequest';
 import apiClient from './client';
 import type {
   ApiResponse,
+  CreateMealPlanRequest,
   CreateMealParticipationRequest,
   CreateFoodCategoryRequest,
   CreateFoodItemRequest,
@@ -16,7 +17,12 @@ import type {
   MealParticipationSearchParams,
   MealPlanResponse,
   MealSharePreviewResponse,
+  MealPollDayResponse,
+  MealPollSlot,
+  MemberMealParticipationSummary,
+  PagedResponse,
   MealType,
+  SubmitMealPollSelection,
   UpdateMealParticipationRequest,
   UpdateFoodItemRequest,
   UpdateMealComboRequest,
@@ -38,6 +44,16 @@ export const mealsApi = {
     );
   },
 
+  createMealPlan: async (
+    spaceId: UUID,
+    body: CreateMealPlanRequest,
+  ): Promise<MealPlanResponse> => {
+    console.log(`${LOG_TAG} POST /spaces/${spaceId}/meal-plans`, body);
+    return unwrapApiResponse(
+      apiClient.post<ApiResponse<MealPlanResponse>>(`/spaces/${spaceId}/meal-plans`, body),
+    );
+  },
+
   getMealParticipations: async (
     spaceId: UUID,
     params?: MealParticipationSearchParams,
@@ -55,9 +71,10 @@ export const mealsApi = {
     const query = q.toString();
     const path = `/spaces/${spaceId}/meal-participations${query ? `?${query}` : ''}`;
     console.log(`${LOG_TAG} GET ${path}`);
-    return unwrapApiResponse(
-      apiClient.get<ApiResponse<MealParticipationResponse[]>>(path),
+    const page = await unwrapApiResponse(
+      apiClient.get<ApiResponse<PagedResponse<MealParticipationResponse>>>(path),
     );
+    return page.content ?? [];
   },
 
   createMealParticipation: async (
@@ -351,6 +368,44 @@ export const mealsApi = {
       apiClient.get<ApiResponse<MealEligibleParticipantResponse[]>>(path),
     );
   },
+
+  getMealPolls: async (spaceId: UUID, menuDate: string): Promise<MealPollDayResponse> => {
+    const path = `/spaces/${spaceId}/meal-polls?date=${menuDate}`;
+    console.log(`${LOG_TAG} GET ${path}`);
+    return unwrapApiResponse(apiClient.get<ApiResponse<MealPollDayResponse>>(path));
+  },
+
+  openMealPoll: async (
+    spaceId: UUID,
+    menuDate: string,
+    mealType: MealType,
+  ): Promise<MealPollSlot> => {
+    const path = `/spaces/${spaceId}/meal-polls/${menuDate}/${mealType}/open`;
+    console.log(`${LOG_TAG} POST ${path}`);
+    return unwrapApiResponse(apiClient.post<ApiResponse<MealPollSlot>>(path));
+  },
+
+  closeMealPoll: async (
+    spaceId: UUID,
+    menuDate: string,
+    mealType: MealType,
+  ): Promise<MealPollSlot> => {
+    const path = `/spaces/${spaceId}/meal-polls/${menuDate}/${mealType}/close`;
+    console.log(`${LOG_TAG} POST ${path}`);
+    return unwrapApiResponse(apiClient.post<ApiResponse<MealPollSlot>>(path));
+  },
+
+  submitMealPollResponses: async (
+    spaceId: UUID,
+    menuDate: string,
+    selections: SubmitMealPollSelection[],
+  ): Promise<MealPollDayResponse> => {
+    const path = `/spaces/${spaceId}/meal-polls/${menuDate}/responses`;
+    console.log(`${LOG_TAG} POST ${path}`, selections);
+    return unwrapApiResponse(
+      apiClient.post<ApiResponse<MealPollDayResponse>>(path, { selections }),
+    );
+  },
 };
 
 export async function enrollMemberInFullMeals(
@@ -368,4 +423,30 @@ export async function enrollMemberInFullMeals(
     mealPlanId: fullPlan.mealPlanId,
     effectiveFrom: todayIsoDate(),
   });
+}
+
+export async function setMemberMealAccess(
+  spaceId: UUID,
+  memberId: UUID,
+  enabled: boolean,
+  participation?: MemberMealParticipationSummary | null,
+): Promise<void> {
+  if (enabled) {
+    if (participation?.status === 'ACTIVE') {
+      return;
+    }
+    if (participation?.status === 'PAUSED') {
+      await mealsApi.resumeMealParticipation(spaceId, participation.participationId);
+      return;
+    }
+    const created = await enrollMemberInFullMeals(spaceId, memberId);
+    if (!created) {
+      throw new Error('FULL meal plan not available');
+    }
+    return;
+  }
+
+  if (participation && participation.status !== 'STOPPED') {
+    await mealsApi.stopMealParticipation(spaceId, participation.participationId);
+  }
 }

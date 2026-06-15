@@ -20,7 +20,11 @@ import type {
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import type { MemberResponse, MembershipRole, PendingInvitationResponse } from '../api/types';
+import { MemberListCard } from '../components/member/MemberListCard';
 import { MemberStatusBadge, RoleBadge } from '../components/member';
+import {
+  MemberListMealAccessToggle,
+} from '../components/meals/MemberListMealAccessRow';
 import {
   Badge,
   Button,
@@ -31,6 +35,7 @@ import {
   useConfirmDialog,
 } from '../components/ui';
 import { useActiveSpaceId } from '../hooks/useActiveSpaceId';
+import { useMealParticipationMap } from '../hooks/useMealParticipationMap';
 import { useSpacePermissions } from '../hooks/useSpacePermissions';
 import { useSpaceTabHeader } from '../hooks/useSpaceTabHeader';
 import type { MainStackParamList, SpaceTabParamList } from '../navigation/types';
@@ -105,6 +110,13 @@ export function MembersScreen() {
   const [activeTab, setActiveTab] = useState<MembersTab>('members');
 
   const permissions = useSpacePermissions(spaceId);
+  const showMealAccess = permissions.canViewMeals === true;
+  const canManageMeals = permissions.canManageMeals === true;
+  const isMess = permissions.spaceType === 'MESS';
+  const { participationByMemberId, reloadParticipations } = useMealParticipationMap(
+    spaceId,
+    showMealAccess,
+  );
 
   const sortedMembers = useMemo(() => sortMembersByRole(members), [members]);
 
@@ -141,13 +153,15 @@ export function MembersScreen() {
       console.log('[MembersScreen] focused', spaceId);
       loadMembers();
       loadPendingInvitations();
-    }, [loadMembers, loadPendingInvitations, spaceId]),
+      void reloadParticipations();
+    }, [loadMembers, loadPendingInvitations, reloadParticipations, spaceId]),
   );
 
   const onRefresh = useCallback(async () => {
     console.log('[MembersScreen] pull to refresh');
     await refresh();
-  }, [refresh]);
+    await reloadParticipations();
+  }, [refresh, reloadParticipations]);
 
   const openMemberDetails = (member: MemberResponse) => {
     console.log('[MembersScreen] open member details', member.memberId);
@@ -221,32 +235,61 @@ export function MembersScreen() {
             />
           ) : (
             <View style={styles.list}>
-              {sortedMembers.map(member => (
-                <View key={member.memberId} style={styles.listItem}>
-                  <View style={styles.badgeRow}>
-                    <RoleBadge role={member.role} />
-                    <MemberStatusBadge status={member.status ?? 'ACTIVE'} />
-                    <Badge
-                      label={
-                        member.linkedUser
-                          ? t('membership.members.appUser')
-                          : t('membership.members.notUsingApp')
-                      }
-                    />
+              {sortedMembers.map(member => {
+                const participation = participationByMemberId.get(member.memberId);
+                const showMealColumn =
+                  showMealAccess &&
+                  ((isMess && member.role === 'CUSTOMER') ||
+                    (!isMess && member.role === 'TENANT'));
+
+                return (
+                  <View key={member.memberId} style={styles.listItem}>
+                    <View style={styles.badgeRow}>
+                      <RoleBadge role={member.role} />
+                      <MemberStatusBadge status={member.status ?? 'ACTIVE'} />
+                      <Badge
+                        label={
+                          member.linkedUser
+                            ? t('membership.members.appUser')
+                            : t('membership.members.notUsingApp')
+                        }
+                      />
+                    </View>
+                    {showMealColumn ? (
+                      <MemberListCard
+                        title={member.fullName}
+                        subtitle={buildMemberSubtitle(member, t)}
+                        iconLabel={member.fullName.charAt(0).toUpperCase()}
+                        onPress={() => openMemberDetails(member)}
+                        trailing={
+                          <MemberListMealAccessToggle
+                            spaceId={spaceId}
+                            memberId={member.memberId}
+                            participation={participation}
+                            canManage={canManageMeals}
+                            onParticipationChanged={() => void reloadParticipations()}
+                            labelKey={
+                              isMess ? 'meals.mealAccess.label' : 'meals.foodIncluded.label'
+                            }
+                          />
+                        }
+                      />
+                    ) : (
+                      <ListCard
+                        title={member.fullName}
+                        subtitle={buildMemberSubtitle(member, t)}
+                        iconLabel={member.fullName.charAt(0).toUpperCase()}
+                        onPress={() => openMemberDetails(member)}
+                      />
+                    )}
+                    <Text style={styles.createdMeta}>
+                      {t('membership.members.created', {
+                        date: formatDate(member.createdAt),
+                      })}
+                    </Text>
                   </View>
-                  <ListCard
-                    title={member.fullName}
-                    subtitle={buildMemberSubtitle(member, t)}
-                    iconLabel={member.fullName.charAt(0).toUpperCase()}
-                    onPress={() => openMemberDetails(member)}
-                  />
-                  <Text style={styles.createdMeta}>
-                    {t('membership.members.created', {
-                      date: formatDate(member.createdAt),
-                    })}
-                  </Text>
-                </View>
-              ))}
+                );
+              })}
             </View>
           )
         ) : showLoading ? (

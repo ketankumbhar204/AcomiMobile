@@ -18,6 +18,31 @@ Aligned with the React Native contract in `docs/meals-phase-5-ui-integration.md`
 | **V43** | Idempotent global catalog repair + backfill MESS sample combos |
 | **V44** | `space_food_category_settings` for per-space global category hide |
 | **V45** | Backfill sample combos for all active spaces with none |
+| **V46** | Allow multiple CUSTOM meal plans per space (partial unique indexes) |
+
+## Phase 5.3 — Meal plans & participation
+
+### Meal plans (space-scoped)
+Preset codes seeded per space (`NONE`, `BREAKFAST`, `LUNCH`, `DINNER`, `FULL`, `CUSTOM` template). `POST /meal-plans` creates additional CUSTOM plans with slot flags.
+
+`mealPlanCovers(plan, mealType)` in `MealEligibilityEngine` — single source of truth for eligibility.
+
+### Participation APIs
+| Method | Path |
+|--------|------|
+| GET/POST | `/meal-plans` |
+| PUT | `/meal-plans/{planId}` (CUSTOM only) |
+| GET/POST/PUT | `/meal-participations` |
+| POST | `/meal-participations/{id}/pause\|resume\|stop` |
+| GET | `/members/{memberId}/meal-participation` |
+
+One ACTIVE participation per member. History on CREATED, PLAN_CHANGED, STATUS_CHANGED, STOPPED. No payment/credit fields.
+
+`GET /members/{memberId}` includes nullable `mealParticipation` summary.
+
+## Phase 5.4 — Eligibility
+
+Eligible participants ≠ headcount. Counts use ACTIVE member + ACTIVE participation + date in range + `mealPlanCovers`. PAUSED excluded. `published` flag from daily menu join.
 
 ## Phase 5.1 — Menu library
 
@@ -91,7 +116,7 @@ DELETE draft menu returns **204 No Content**.
 ### Share preview (Phase 5.2D)
 | Method | Path |
 |--------|------|
-| GET | `/meals/share-preview?date=&mealType=` — published only; `mealType` optional |
+| GET | `/meals/share-preview?date=&mealType=` — unpublished slots marked `(not published)` |
 
 ### Participation (Phase 5.3)
 | Method | Path |
@@ -138,6 +163,6 @@ Weekly templates, WhatsApp, polls, MealResponse, headcount from subscriptions.
 
 - `FoodCatalogServiceTest` — categories, custom items, global deactivate, STAFF denied
 - `DailyMenuServiceTest` — planning by date, publish/copy, permissions, range limit
-- `MealSharePreviewServiceTest` — combo detail in messageText, published-only
-- `MealAccessServiceTest`, `MealEligibilityEngineTest`
+- `MealPlanServiceTest`, `MealEligibilityEngineTest` — mealPlanCovers, CUSTOM plans
+- `MealSharePreviewServiceTest` — combo detail, unpublished slots
 - `SpacePermissionPolicyTest` — meal permission flags

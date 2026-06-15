@@ -208,6 +208,13 @@ export interface UpsertDailyMenuRequest {
   notes?: string | null;
 }
 
+export interface CreateMealPlanRequest {
+  name: string;
+  breakfastIncluded: boolean;
+  lunchIncluded: boolean;
+  dinnerIncluded: boolean;
+}
+
 export interface CreateMealParticipationRequest {
   memberId: UUID;
   mealPlanId: UUID;
@@ -265,8 +272,42 @@ export interface MealSharePreviewResponse {
   slots: MealSharePreviewSlot[];
 }
 
+export type MealPollStatus = 'OPEN' | 'CLOSED';
+export type MealPollOptionType = 'MENU_ENTRY' | 'NOT_AVAILABLE';
+
+export interface MealPollOption {
+  id: UUID;
+  optionType: MealPollOptionType;
+  sortOrder: number;
+  label: string;
+  detail?: string | null;
+  dailyMenuEntryId?: UUID | null;
+}
+
+export interface MealPollSlot {
+  id: UUID;
+  pollDate: string;
+  mealType: MealType;
+  status: MealPollStatus;
+  dailyMenuId: UUID;
+  options: MealPollOption[];
+  mySelectedOptionId?: UUID | null;
+  responseCount: number;
+}
+
+export interface MealPollDayResponse {
+  pollDate: string;
+  polls: MealPollSlot[];
+}
+
+export interface SubmitMealPollSelection {
+  mealType: MealType;
+  selectedOptionId: UUID;
+}
+
 export interface MemberMealParticipationSummary {
   participationId: UUID;
+  mealPlanId: UUID;
   mealPlanCode: MealPlanCode;
   mealPlanName: string;
   status: MealParticipationStatus;
@@ -432,6 +473,17 @@ export interface PendingInvitationResponse {
   status: InvitationStatus;
   invitedBy: string;
   createdAt: string;
+}
+
+export interface MyInvitationResponse {
+  invitationId: UUID;
+  spaceId: UUID;
+  spaceName: string;
+  spaceType: SpaceType;
+  role: MembershipRole;
+  invitedBy: string;
+  createdAt: string;
+  expiresAt: string;
 }
 
 /** @deprecated Use UpdateMemberRequest with memberId */
@@ -1160,6 +1212,7 @@ export interface MoveInOccupancyRequest {
   foodEnabled?: boolean;
   foodChargeSnapshot?: number | null;
   otherCharges?: OccupancyChargeLine[];
+  createMealParticipation?: boolean;
 }
 
 export interface CancelReservationRequest {
@@ -1180,6 +1233,7 @@ export interface AllocateOccupancyRequest {
   foodEnabled?: boolean;
   foodChargeSnapshot?: number | null;
   otherCharges?: OccupancyChargeLine[];
+  createMealParticipation?: boolean;
 }
 
 export interface TransferOccupancyRequest {

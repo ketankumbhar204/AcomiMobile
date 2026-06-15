@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -56,31 +56,55 @@ export function DailyMenuSelectItemsScreen({
   const [comboModalOpen, setComboModalOpen] = useState(false);
   const [comboName, setComboName] = useState('');
 
-  const load = useCallback(async () => {
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: t('meals.planning.selectItemsTitle', {
+        meal: t(mealTypeLabelKey(mealType)),
+      }),
+    });
+  }, [mealType, navigation, t]);
+
+  useEffect(() => {
+    setFoodItems([]);
+    setCategories([]);
+    setSelectedIds([]);
     setLoading(true);
-    try {
-      const [itemList, categoryList, draft] = await Promise.all([
-        mealsApi.getFoodItems(spaceId),
-        mealsApi.getFoodCategories(spaceId),
-        loadMenuDraft(spaceId, menuDate, mealType),
-      ]);
-      setFoodItems(itemList.filter(item => item.isActive));
-      setCategories(categoryList.filter(category => category.isActive));
-      const existingItemIds = draft.options
-        .filter(option => option.entryType === 'ITEM' && option.itemId)
-        .map(option => option.itemId as string);
-      setSelectedIds(existingItemIds);
-    } catch {
-      showToast(t('meals.errors.loadFailed'));
-    } finally {
-      setLoading(false);
-    }
-  }, [mealType, menuDate, showToast, spaceId, t]);
+  }, [mealType, menuDate, spaceId]);
 
   useFocusEffect(
     useCallback(() => {
-      void load();
-    }, [load]),
+      let active = true;
+      (async () => {
+        setLoading(true);
+        try {
+          const [itemList, categoryList, draft] = await Promise.all([
+            mealsApi.getFoodItems(spaceId),
+            mealsApi.getFoodCategories(spaceId),
+            loadMenuDraft(spaceId, menuDate, mealType),
+          ]);
+          if (!active) {
+            return;
+          }
+          setFoodItems(itemList.filter(item => item.isActive));
+          setCategories(categoryList.filter(category => category.isActive));
+          const existingItemIds = draft.options
+            .filter(option => option.entryType === 'ITEM' && option.itemId)
+            .map(option => option.itemId as string);
+          setSelectedIds(existingItemIds);
+        } catch {
+          if (active) {
+            showToast(t('meals.errors.loadFailed'));
+          }
+        } finally {
+          if (active) {
+            setLoading(false);
+          }
+        }
+      })();
+      return () => {
+        active = false;
+      };
+    }, [mealType, menuDate, showToast, spaceId, t]),
   );
 
   const selectedItems = useMemo(

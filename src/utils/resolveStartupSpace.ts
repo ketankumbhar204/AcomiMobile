@@ -1,9 +1,11 @@
+import { memberApi } from '../api/memberApi';
 import { mySpacesApi } from '../api/mySpacesApi';
-import type { DefaultSpaceResponse, MySpaceResponse, UUID } from '../api/types';
+import type { DefaultSpaceResponse, MyInvitationResponse, MySpaceResponse, UUID } from '../api/types';
 
 export type StartupSpaceResolution =
   | { kind: 'dashboard'; spaceId: UUID; space: DefaultSpaceResponse }
   | { kind: 'picker'; spaces: MySpaceResponse[] }
+  | { kind: 'invitations'; invitations: MyInvitationResponse[] }
   | { kind: 'onboarding' };
 
 /**
@@ -11,7 +13,8 @@ export type StartupSpaceResolution =
  *
  * 1. GET /spaces/default → dashboard
  * 2. Else GET /spaces/my:
- *    - 0 → onboarding (create space)
+ *    - 0 spaces → GET /invitations/my; if pending → accept-invitations screen
+ *    - 0 spaces, no invites → onboarding (create space)
  *    - 1 → PUT /spaces/{id}/default, then dashboard
  *    - 2+ → space picker
  */
@@ -27,6 +30,10 @@ export async function resolveStartupSpace(): Promise<StartupSpaceResolution> {
 
   const spaces = await mySpacesApi.getMySpaces();
   if (spaces.length === 0) {
+    const invitations = await memberApi.getMyInvitations().catch(() => []);
+    if (invitations.length > 0) {
+      return { kind: 'invitations', invitations };
+    }
     return { kind: 'onboarding' };
   }
 

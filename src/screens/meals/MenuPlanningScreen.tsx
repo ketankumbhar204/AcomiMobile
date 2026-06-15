@@ -12,11 +12,13 @@ import { mealsApi } from '../../api/mealsApi';
 import type {
   DailyMenuResponse,
   MealEligibilitySummaryResponse,
+  MealPollSlot,
   MealType,
   UUID,
 } from '../../api/types';
 import { DailyMenuSlotCard } from '../../components/meals';
-import { Screen } from '../../components/ui/Screen';
+import { Button, Screen } from '../../components/ui';
+import { navigateToMembersTab } from '../../navigation/navigationRef';
 import { useMainStackNavigation } from '../../hooks/useMainStackNavigation';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useToastStore } from '../../store/toastStore';
@@ -88,22 +90,27 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
   const [error, setError] = useState<string | null>(null);
   const [menus, setMenus] = useState<DailyMenuResponse[]>([]);
   const [eligibility, setEligibility] = useState<MealEligibilitySummaryResponse | null>(null);
+  const [polls, setPolls] = useState<MealPollSlot[]>([]);
   const [publishingMealType, setPublishingMealType] = useState<MealType | null>(null);
+  const [pollActionMealType, setPollActionMealType] = useState<MealType | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [menuList, summary] = await Promise.all([
+      const [menuList, summary, pollDay] = await Promise.all([
         mealsApi.getDailyMenusByDate(spaceId, menuDate),
         mealsApi.getEligibilitySummary(spaceId, menuDate),
+        mealsApi.getMealPolls(spaceId, menuDate).catch(() => ({ pollDate: menuDate, polls: [] })),
       ]);
       setMenus(menuList);
       setEligibility(summary);
+      setPolls(pollDay.polls);
     } catch {
       setError(t('meals.errors.loadFailed'));
       setMenus([]);
       setEligibility(null);
+      setPolls([]);
     } finally {
       setLoading(false);
     }
@@ -116,8 +123,21 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
   );
 
   const menuMap = useMemo(() => menusByType(menus), [menus]);
+  const pollMap = useMemo(
+    () =>
+      polls.reduce<Partial<Record<MealType, MealPollSlot>>>((acc, poll) => {
+        acc[poll.mealType] = poll;
+        return acc;
+      }, {}),
+    [polls],
+  );
   const eligibilityMap = useMemo(() => eligibilityByType(eligibility), [eligibility]);
   const statusSummary = useMemo(() => dayStatusSummary(menus), [menus]);
+  const canShareMenu = statusSummary.published > 0;
+  const totalEligible = useMemo(
+    () => eligibility?.slots.reduce((sum, slot) => sum + slot.eligibleCount, 0) ?? 0,
+    [eligibility],
+  );
 
   const openAddCombo = useCallback(
     (mealType: MealType) => {
@@ -136,6 +156,17 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
   const openEdit = useCallback(
     (mealType: MealType) => {
       navigateMain('DailyMenuEdit', { spaceId, menuDate, mealType });
+    },
+    [menuDate, navigateMain, spaceId],
+  );
+
+  const openShare = useCallback(
+    (mealType?: MealType) => {
+      navigateMain('MenuSharePreview', {
+        spaceId,
+        menuDate,
+        ...(mealType ? { mealType } : {}),
+      });
     },
     [menuDate, navigateMain, spaceId],
   );
@@ -163,6 +194,22 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
       }
     },
     [load, menuDate, menus, showToast, spaceId, t],
+  );
+
+  const closePoll = useCallback(
+    async (mealType: MealType) => {
+      setPollActionMealType(mealType);
+      try {
+        await mealsApi.closeMealPoll(spaceId, menuDate, mealType);
+        showToast(t('meals.poll.closeSuccess'));
+        await load();
+      } catch {
+        showToast(t('meals.errors.saveFailed'));
+      } finally {
+        setPollActionMealType(null);
+      }
+    },
+    [load, menuDate, showToast, spaceId, t],
   );
 
   return (
@@ -201,11 +248,40 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
         </Text>
       ) : null}
 
+      {!loading && !error ? (
+        <Text style={styles.eligibleSummary}>
+          {t('meals.planning.eligibleMembers', { count: totalEligible })}
+        </Text>
+      ) : null}
+
+      {permissions.canManageMeals && !loading && !error ? (
+        <Button
+          label={t('meals.planning.shareMenu')}
+          disabled={!canShareMenu}
+          onPress={() => openShare()}
+          style={styles.shareButton}
+        />
+      ) : null}
+
+      {!loading && !error && permissions.canManageMeals && !canShareMenu ? (
+        <Text style={styles.shareDisabledHint}>{t('meals.planning.previewShareDisabled')}</Text>
+      ) : null}
+
       {loading ? <ActivityIndicator color={colors.primary} style={styles.loader} /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
+      {!loading && !error && permissions.canManageMeals && totalEligible === 0 ? (
+        <Pressable
+          style={styles.enrollBanner}
+          onPress={() => navigateToMembersTab(spaceId)}>
+          <Text style={styles.enrollBannerTitle}>{t('meals.planning.noEligibleMembersCta')}</Text>
+          <Text style={styles.enrollBannerHint}>{t('meals.planning.noEligibleMembersHint')}</Text>
+        </Pressable>
+      ) : null}
+
       {MEAL_TYPES.map(mealType => {
         const slotEligibility = eligibilityMap[mealType];
+        const slotPoll = pollMap[mealType];
         return (
           <View key={mealType}>
             <DailyMenuSlotCard
@@ -214,6 +290,19 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
               onAddCombo={() => openAddCombo(mealType)}
               onAddItems={() => openAddItems(mealType)}
               onEdit={() => openEdit(mealType)}
+              onShare={
+                menuMap[mealType]?.status === 'PUBLISHED'
+                  ? () => openShare(mealType)
+                  : undefined
+              }
+              onClosePoll={
+                permissions.canManageMeals && slotPoll?.status === 'OPEN'
+                  ? () => void closePoll(mealType)
+                  : undefined
+              }
+              pollStatus={slotPoll?.status ?? null}
+              pollResponseCount={slotPoll?.responseCount ?? 0}
+              pollActionLoading={pollActionMealType === mealType}
               onPublish={
                 permissions.canManageMeals ? () => void publishSlot(mealType) : undefined
               }
@@ -232,18 +321,8 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
         <View style={styles.actions}>
           <Pressable
             style={styles.linkRow}
-            onPress={() => navigateMain('MenuSharePreview', { spaceId, menuDate })}>
-            <Text style={styles.linkText}>{t('meals.planning.previewShare')}</Text>
-          </Pressable>
-          <Pressable
-            style={styles.linkRow}
             onPress={() => navigateMain('MenuLibrary', { spaceId })}>
             <Text style={styles.linkText}>{t('meals.library.title')}</Text>
-          </Pressable>
-          <Pressable
-            style={styles.linkRow}
-            onPress={() => navigateMain('MealParticipantList', { spaceId })}>
-            <Text style={styles.linkText}>{t('meals.participants')}</Text>
           </Pressable>
           <Pressable
             style={styles.linkRow}
@@ -284,10 +363,32 @@ const styles = StyleSheet.create({
   statusSummary: {
     ...typography.caption,
     color: colors.textSecondary,
+    marginBottom: spacing.sm,
+  },
+  eligibleSummary: {
+    ...typography.bodyStrong,
+    color: colors.primaryDark,
+    marginBottom: spacing.sm,
+  },
+  shareButton: { marginBottom: spacing.md },
+  shareDisabledHint: {
+    ...typography.caption,
+    color: colors.muted,
+    marginTop: -spacing.sm,
     marginBottom: spacing.md,
   },
   loader: { marginVertical: spacing.lg },
   error: { ...typography.caption, color: '#DC2626', marginBottom: spacing.md },
+  enrollBanner: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: radius.button,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  enrollBannerTitle: { ...typography.bodyStrong, color: colors.primaryDark, marginBottom: spacing.xxs },
+  enrollBannerHint: { ...typography.caption, color: colors.muted },
   eligibleLine: {
     ...typography.caption,
     color: colors.muted,

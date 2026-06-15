@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { InlineEditableName } from './InlineEditableName';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 
@@ -11,6 +11,7 @@ type ListCardProps = {
   onLongPress?: () => void;
   editableName?: boolean;
   onSaveName?: (name: string) => Promise<void>;
+  style?: StyleProp<ViewStyle>;
 };
 
 export function ListCard({
@@ -21,12 +22,13 @@ export function ListCard({
   onLongPress,
   editableName = false,
   onSaveName,
+  style,
 }: ListCardProps) {
   return (
     <Pressable
       onPress={onPress}
       onLongPress={onLongPress}
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
+      style={({ pressed }) => [styles.card, style, pressed && styles.pressed]}>
       {iconLabel ? (
         <View style={styles.icon}>
           <Text style={styles.iconText}>{iconLabel}</Text>

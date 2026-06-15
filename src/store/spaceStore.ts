@@ -20,7 +20,7 @@ import { resolveStartupSpace } from '../utils/resolveStartupSpace';
 const LOG_TAG = '[SpaceStore]';
 const CURRENT_SPACE_KEY = '@countin/current_space';
 
-export type SpaceBootstrapRoute = 'SpaceTabs' | 'MySpaces' | 'CreateSpace';
+export type SpaceBootstrapRoute = 'SpaceTabs' | 'MySpaces' | 'CreateSpace' | 'AcceptInvitations';
 
 export type SpaceBootstrapResult = {
   route: SpaceBootstrapRoute;
@@ -167,6 +167,19 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
           loading: false,
         });
         return { route: 'CreateSpace' };
+      }
+
+      if (resolved.kind === 'invitations') {
+        await persistCurrentSpace(null);
+        set({
+          ...applyCurrentSpace(null),
+          mySpaces: [],
+          startupRoute: 'AcceptInvitations',
+          hasSpaceBootstrapped: true,
+          isSpaceBootstrapping: false,
+          loading: false,
+        });
+        return { route: 'AcceptInvitations' };
       }
 
       await persistCurrentSpace(null);

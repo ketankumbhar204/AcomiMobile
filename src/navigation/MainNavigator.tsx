@@ -18,6 +18,7 @@ import { RoomFormScreen } from '../screens/accommodation/RoomFormScreen';
 import { UnitDetailScreen } from '../screens/accommodation/UnitDetailScreen';
 import { UnitFormScreen } from '../screens/accommodation/UnitFormScreen';
 import { UnitsScreen } from '../screens/accommodation/UnitsScreen';
+import { AcceptInvitationsScreen } from '../screens/AcceptInvitationsScreen';
 import { AddMemberScreen } from '../screens/AddMemberScreen';
 import { CreateSpaceScreen } from '../screens/CreateSpaceScreen';
 import { EditMemberScreen } from '../screens/EditMemberScreen';
@@ -30,14 +31,13 @@ import { ProfileScreen } from '../screens/ProfileScreen';
 import { SpaceDetailsScreen } from '../screens/SpaceDetailsScreen';
 import { MenuPlanningScreen } from '../screens/meals/MenuPlanningScreen';
 import { MenuSharePreviewScreen } from '../screens/meals/MenuSharePreviewScreen';
+import { MealPollResponseScreen } from '../screens/meals/MealPollResponseScreen';
 import { MenuLibraryScreen } from '../screens/meals/MenuLibraryScreen';
 import { DailyMenuTodayScreen } from '../screens/meals/DailyMenuTodayScreen';
 import { DailyMenuEditScreen } from '../screens/meals/DailyMenuEditScreen';
 import { DailyMenuSelectComboScreen } from '../screens/meals/DailyMenuSelectComboScreen';
 import { DailyMenuSelectItemsScreen } from '../screens/meals/DailyMenuSelectItemsScreen';
 import { MealComboFormScreen } from '../screens/meals/MealComboFormScreen';
-import { MealParticipantListScreen } from '../screens/meals/MealParticipantListScreen';
-import { MealParticipationFormScreen } from '../screens/meals/MealParticipationFormScreen';
 import { stackHeaderOptions } from '../theme';
 import { useSpaceStore } from '../store/spaceStore';
 import { SpaceTabNavigator } from './SpaceTabNavigator';
@@ -53,6 +53,9 @@ export function MainNavigator() {
     if (startupRoute === 'CreateSpace') {
       return 'CreateSpace';
     }
+    if (startupRoute === 'AcceptInvitations') {
+      return 'AcceptInvitations';
+    }
     if (startupRoute === 'MySpaces') {
       return 'MySpaces';
     }
@@ -66,6 +69,11 @@ export function MainNavigator() {
     <Stack.Navigator
       initialRouteName={initialRouteName}
       screenOptions={stackHeaderOptions}>
+      <Stack.Screen
+        name="AcceptInvitations"
+        component={AcceptInvitationsScreen}
+        options={{ title: 'Invitations' }}
+      />
       <Stack.Screen
         name="MySpaces"
         component={MySpacesScreen}
@@ -157,6 +165,9 @@ export function MainNavigator() {
       />
       <Stack.Screen
         name="DailyMenuEdit"
+        getId={({ params }) =>
+          `${params.spaceId}-${params.menuDate}-${params.mealType}`
+        }
         options={{ title: 'Plan Menu' }}
         children={({ route }) => (
           <DailyMenuEditScreen
@@ -168,6 +179,9 @@ export function MainNavigator() {
       />
       <Stack.Screen
         name="DailyMenuSelectCombo"
+        getId={({ params }) =>
+          `${params.spaceId}-${params.menuDate}-${params.mealType}`
+        }
         options={{ title: 'Select Combo' }}
         children={({ route }) => (
           <DailyMenuSelectComboScreen
@@ -179,6 +193,9 @@ export function MainNavigator() {
       />
       <Stack.Screen
         name="DailyMenuSelectItems"
+        getId={({ params }) =>
+          `${params.spaceId}-${params.menuDate}-${params.mealType}`
+        }
         options={{ title: 'Select Items' }}
         children={({ route }) => (
           <DailyMenuSelectItemsScreen
@@ -194,18 +211,6 @@ export function MainNavigator() {
         options={({ route }) => ({
           title: route.params.mode === 'edit' ? 'Edit Combo' : 'Add Combo',
         })}
-      />
-      <Stack.Screen
-        name="MealParticipantList"
-        options={{ title: 'Meal Participants' }}
-        children={({ route }) => (
-          <MealParticipantListScreen spaceId={route.params.spaceId} />
-        )}
-      />
-      <Stack.Screen
-        name="MealParticipationForm"
-        component={MealParticipationFormScreen}
-        options={{ title: 'Meal Enrollment' }}
       />
       <Stack.Screen
         name="MenuPlanning"
@@ -225,6 +230,16 @@ export function MainNavigator() {
             spaceId={route.params.spaceId}
             menuDate={route.params.menuDate}
             mealType={route.params.mealType}
+          />
+        )}
+      />
+      <Stack.Screen
+        name="MealPollResponse"
+        options={{ title: 'Meal choices' }}
+        children={({ route }) => (
+          <MealPollResponseScreen
+            spaceId={route.params.spaceId}
+            menuDate={route.params.menuDate}
           />
         )}
       />

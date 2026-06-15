@@ -1,155 +1,119 @@
 import React, { useCallback, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { ActivityIndicator, StyleSheet, Switch, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { mealsApi } from '../../api/mealsApi';
-import type { MemberDetailsResponse } from '../../api/types';
-import { Button, Card } from '../ui';
-import {
-  MealParticipationStatusBadge,
-  MealPlanBadge,
-} from './MealBadges';
+import { setMemberMealAccess } from '../../api/mealsApi';
+import type { MemberDetailsResponse, SpaceType } from '../../api/types';
+import { Card } from '../ui';
+import { useToastStore } from '../../store/toastStore';
 import { colors, spacing, typography } from '../../theme';
+import { isReceivingMeals } from '../../utils/mealAccess';
 
 type MemberMealsTabProps = {
   spaceId: string;
+  spaceType?: SpaceType;
   member: MemberDetailsResponse;
   canManage: boolean;
-  onEnrollPress: () => void;
   onRefreshMember: () => void;
 };
 
 export function MemberMealsTab({
   spaceId,
+  spaceType,
   member,
   canManage,
-  onEnrollPress,
   onRefreshMember,
 }: MemberMealsTabProps) {
   const { t } = useTranslation();
-  const [actionLoading, setActionLoading] = useState(false);
-  const participation = member.mealParticipation;
+  const showToast = useToastStore(state => state.showToast);
+  const [loading, setLoading] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      onRefreshMember();
-    }, [onRefreshMember]),
+  const isMess = spaceType === 'MESS';
+  const receiving = isReceivingMeals(member.mealParticipation);
+  const hasActiveStay =
+    member.occupancyStatus === 'ALLOCATED' ||
+    member.currentOccupancy?.occupancyStatus === 'ACTIVE';
+
+  const toggleLabel = isMess
+    ? t('meals.mealAccess.label')
+    : t('meals.foodIncluded.label');
+
+  const onToggle = useCallback(
+    async (enabled: boolean) => {
+      setLoading(true);
+      try {
+        await setMemberMealAccess(
+          spaceId,
+          member.memberId,
+          enabled,
+          member.mealParticipation,
+        );
+        onRefreshMember();
+        showToast(
+          enabled ? t('meals.success.mealAccessOn') : t('meals.success.mealAccessOff'),
+        );
+      } catch {
+        showToast(t('meals.errors.mealAccessFailed'));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [member.mealParticipation, member.memberId, onRefreshMember, showToast, spaceId, t],
   );
-
-  const runAction = async (action: () => Promise<unknown>, successKey: string) => {
-    if (!participation) {
-      return;
-    }
-    setActionLoading(true);
-    try {
-      await action();
-      onRefreshMember();
-      Alert.alert(t('meals.actions.pause'), t(successKey));
-    } catch {
-      Alert.alert(t('common.errors.generic'), t('meals.errors.actionFailed'));
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  if (!participation) {
-    return (
-      <View style={styles.wrap}>
-        <Text style={styles.emptyTitle}>{t('meals.noParticipation')}</Text>
-        <Text style={styles.emptyBody}>{t('meals.noParticipationHint')}</Text>
-        {canManage ? (
-          <Button label={t('meals.enroll')} onPress={onEnrollPress} style={styles.btn} />
-        ) : null}
-      </View>
-    );
-  }
 
   return (
     <View style={styles.wrap}>
+      <Text style={styles.sectionTitle}>{t('meals.sectionTitle')}</Text>
+
       <Card style={styles.card}>
-        <View style={styles.badgeRow}>
-          <MealPlanBadge code={participation.mealPlanCode} />
-          <MealParticipationStatusBadge status={participation.status} />
+        <View style={styles.row}>
+          <Text style={styles.rowLabel}>{toggleLabel}</Text>
+          {canManage ? (
+            loading ? (
+              <ActivityIndicator color={colors.primary} size="small" />
+            ) : (
+              <Switch value={receiving} onValueChange={value => void onToggle(value)} />
+            )
+          ) : (
+            <Text style={styles.readOnlyValue}>
+              {receiving ? t('common.yes') : t('common.no')}
+            </Text>
+          )}
         </View>
-        <Text style={styles.line}>
-          {t('meals.fields.effectiveFrom')}: {participation.effectiveFrom}
+
+        <Text style={styles.statusLabel}>{t('meals.accessStatus.label')}</Text>
+        <Text style={[styles.statusValue, receiving ? styles.statusOn : styles.statusOff]}>
+          {receiving
+            ? t('meals.accessStatus.receiving')
+            : t('meals.accessStatus.notReceiving')}
         </Text>
-        {participation.effectiveTo ? (
-          <Text style={styles.line}>
-            {t('meals.fields.effectiveTo')}: {participation.effectiveTo}
-          </Text>
+
+        {!isMess && !hasActiveStay ? (
+          <Text style={styles.hint}>{t('meals.foodIncluded.noActiveStay')}</Text>
+        ) : null}
+
+        {!isMess && hasActiveStay ? (
+          <Text style={styles.hint}>{t('meals.foodIncluded.activeStayHint')}</Text>
         ) : null}
       </Card>
-
-      {canManage ? (
-        <View style={styles.actions}>
-          {participation.status === 'ACTIVE' ? (
-            <Button
-              label={t('meals.actions.pause')}
-              variant="secondary"
-              loading={actionLoading}
-              onPress={() =>
-                void runAction(
-                  () => mealsApi.pauseMealParticipation(spaceId, participation.participationId),
-                  'meals.success.paused',
-                )
-              }
-            />
-          ) : null}
-          {participation.status === 'PAUSED' ? (
-            <Button
-              label={t('meals.actions.resume')}
-              loading={actionLoading}
-              onPress={() =>
-                void runAction(
-                  () => mealsApi.resumeMealParticipation(spaceId, participation.participationId),
-                  'meals.success.resumed',
-                )
-              }
-            />
-          ) : null}
-          {participation.status !== 'STOPPED' ? (
-            <Button
-              label={t('meals.actions.changePlan')}
-              variant="secondary"
-              onPress={onEnrollPress}
-            />
-          ) : null}
-          {participation.status !== 'STOPPED' ? (
-            <Button
-              label={t('meals.actions.stop')}
-              variant="ghost"
-              loading={actionLoading}
-              onPress={() => {
-                Alert.alert(t('meals.actions.stop'), t('meals.confirmStop'), [
-                  { text: t('common.cancel'), style: 'cancel' },
-                  {
-                    text: t('meals.actions.stop'),
-                    style: 'destructive',
-                    onPress: () =>
-                      void runAction(
-                        () =>
-                          mealsApi.stopMealParticipation(spaceId, participation.participationId),
-                        'meals.success.stopped',
-                      ),
-                  },
-                ]);
-              }}
-            />
-          ) : null}
-        </View>
-      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: { gap: spacing.md },
-  card: { gap: spacing.sm },
-  badgeRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
-  line: { ...typography.body, color: colors.textSecondary },
-  actions: { gap: spacing.sm },
-  btn: { marginTop: spacing.md },
-  emptyTitle: { ...typography.h3 },
-  emptyBody: { ...typography.body, color: colors.muted, marginBottom: spacing.sm },
+  sectionTitle: { ...typography.h3 },
+  card: { gap: spacing.md },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  rowLabel: { ...typography.bodyStrong, flex: 1 },
+  readOnlyValue: { ...typography.body, color: colors.muted },
+  statusLabel: { ...typography.caption, color: colors.muted, fontWeight: '600' },
+  statusValue: { ...typography.bodyStrong },
+  statusOn: { color: colors.primaryDark },
+  statusOff: { color: colors.muted },
+  hint: { ...typography.caption, color: colors.muted },
 });

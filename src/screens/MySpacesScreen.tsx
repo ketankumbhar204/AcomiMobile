@@ -4,13 +4,15 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { formatSpaceType, spaceTypeIconLabel } from '../api';
-import type { MembershipRole, MySpaceResponse } from '../api/types';
+import type { MembershipRole, MyInvitationResponse, MySpaceResponse } from '../api/types';
+import { memberApi } from '../api/memberApi';
 import {
   Badge,
   EmptyState,
   FAB,
   FormInput,
   ListCard,
+  ModuleActionCard,
   ProfileHeaderButton,
   SkeletonCard,
 } from '../components/ui';
@@ -51,6 +53,15 @@ export function MySpacesScreen() {
 
   const [search, setSearch] = useState(searchQuery);
   const [refreshing, setRefreshing] = useState(false);
+  const [myInvitations, setMyInvitations] = useState<MyInvitationResponse[]>([]);
+
+  const loadMyInvitations = useCallback(async () => {
+    try {
+      setMyInvitations(await memberApi.getMyInvitations());
+    } catch {
+      setMyInvitations([]);
+    }
+  }, []);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -67,7 +78,8 @@ export function MySpacesScreen() {
       } else {
         loadMySpaces();
       }
-    }, [loadMySpaces, searchQuery, searchSpaces]),
+      void loadMyInvitations();
+    }, [loadMyInvitations, loadMySpaces, searchQuery, searchSpaces]),
   );
 
   useEffect(() => {
@@ -82,9 +94,9 @@ export function MySpacesScreen() {
   const onRefresh = useCallback(async () => {
     console.log('[MySpaces] pull to refresh');
     setRefreshing(true);
-    await refresh();
+    await Promise.all([refresh(), loadMyInvitations()]);
     setRefreshing(false);
-  }, [refresh]);
+  }, [loadMyInvitations, refresh]);
 
   const openSpace = async (space: MySpaceResponse) => {
     console.log('[MySpaces] open space → dashboard', space.spaceId);
@@ -134,6 +146,17 @@ export function MySpacesScreen() {
         />
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+        {myInvitations.length > 0 ? (
+          <View style={styles.inviteBanner}>
+            <ModuleActionCard
+              icon="✉️"
+              title={t('membership.incoming.bannerTitle', { count: myInvitations.length })}
+              subtitle={t('membership.incoming.bannerSubtitle')}
+              onPress={() => navigation.navigate('AcceptInvitations')}
+            />
+          </View>
+        ) : null}
 
         {showLoading ? (
           <>
@@ -221,6 +244,9 @@ const styles = StyleSheet.create({
   errorText: {
     ...typography.body,
     color: colors.primaryDark,
+    marginBottom: spacing.lg,
+  },
+  inviteBanner: {
     marginBottom: spacing.lg,
   },
   list: {

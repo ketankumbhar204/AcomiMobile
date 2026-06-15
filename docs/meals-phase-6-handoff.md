@@ -1,23 +1,41 @@
-# Phase 6 Handoff — Meal Polls & Availability Responses
+# Phase 6 Handoff — Menu Option Polls & Member Responses
 
-Phase 5 delivers the menu library, daily menus, meal participation, and **eligible participant counts**. Phase 6 adds availability-driven headcount: operators publish a menu, members respond, and the kitchen sees real attendance — not subscription counts.
-
-This document describes entities and APIs planned for Phase 6. **Nothing here is exposed in Phase 5.**
+Phase 5 delivers menus, participation, and share preview. Phase 6 adds **numbered menu options** that members pick (one per meal) — not simple YES/NO attendance.
 
 ---
 
-## Relationship to Phase 5
+## Share message format (6A)
 
-| Phase 5 | Phase 6 |
-|---------|---------|
-| `DailyMenu` (DRAFT / PUBLISHED) | Poll opened against a published menu slot |
-| `MealParticipation` (ACTIVE / PAUSED / STOPPED) | Who may receive poll notifications |
-| Eligible participant count | Actual headcount from poll responses |
-| No billing | Still no billing (Phase 7) |
+WhatsApp / copy text uses numbered options per meal:
+
+```
+Breakfast
+1. Combo 1
+Roti, Tomato Rice, Plain Daal
+2. Combo 2
+Dal Fry, Plain Rice
+3. Not available for Breakfast
+
+Lunch
+...
+```
+
+Implemented in `MealSharePreviewService.buildMessageText()` and shown on `MenuSharePreviewScreen`.
 
 ---
 
-## Planned entities (not implemented)
+## Response model (6B–6C)
+
+Members pick **one radio option per open poll**:
+
+- Each menu entry from the published `daily_menu` → `meal_poll_option` (`MENU_ENTRY`)
+- Synthetic last option → `NOT_AVAILABLE` (“Not available for Breakfast/Lunch/Dinner”)
+
+`meal_response.selected_option_id` stores the choice (not ATTENDING/NOT_ATTENDING).
+
+---
+
+## Entities (V48)
 
 ### `meal_poll`
 
@@ -25,23 +43,33 @@ This document describes entities and APIs planned for Phase 6. **Nothing here is
 |--------|-------|
 | id | UUID PK |
 | space_id | FK |
-| daily_menu_id | FK — poll targets one published menu |
+| daily_menu_id | FK |
 | meal_type | BREAKFAST / LUNCH / DINNER |
 | poll_date | Local date |
-| status | DRAFT, OPEN, CLOSED |
-| opens_at, closes_at | Response window |
-| created_at, updated_at | |
+| status | OPEN, CLOSED |
+| opened_at, closed_at | |
 
-One active poll per `(space_id, poll_date, meal_type)` recommended.
+Unique: `(space_id, poll_date, meal_type)`.
 
-### `meal_response`
+### `meal_poll_option`
 
 | Column | Notes |
 |--------|-------|
 | id | UUID PK |
 | poll_id | FK |
-| member_id | FK — person anchor via Member |
-| response | ATTENDING, NOT_ATTENDING, MAYBE (TBD) |
+| option_type | MENU_ENTRY, NOT_AVAILABLE |
+| daily_menu_entry_id | FK nullable |
+| sort_order | Matches share message numbering |
+| label, detail | Snapshot at poll open |
+
+### `meal_poll_response`
+
+| Column | Notes |
+|--------|-------|
+| id | UUID PK |
+| poll_id | FK |
+| member_id | FK |
+| selected_option_id | FK → meal_poll_option |
 | responded_at | |
 | source | APP, WHATSAPP (future) |
 
@@ -49,47 +77,62 @@ Unique: `(poll_id, member_id)`.
 
 ---
 
-## Planned APIs (stub)
+## APIs
 
-Base: `/api/v1/spaces/{spaceId}`
+Base: `/api/v1/spaces/{spaceId}/meal-polls`
 
 | Method | Path | Role |
 |--------|------|------|
-| POST | `/meal-polls/{date}/{mealType}/open` | canManageMeals |
-| POST | `/meal-polls/{date}/{mealType}/close` | canManageMeals |
-| GET | `/meal-polls/{date}/{mealType}` | canViewMeals |
-| POST | `/meal-polls/{pollId}/responses` | member (own) |
-| GET | `/meals/headcount-summary?date=` | canViewMeals |
-| GET | `/meals/headcount?date=&mealType=` | canManageMeals |
-
-**Headcount summary** replaces eligible counts for kitchen prep once polls exist. Until Phase 6, clients must use:
-
-- `GET /meals/eligibility-summary?date=` — subscription-based eligible participants
-- Label: **eligible participants**, never headcount
+| GET | `?date=` | List polls for date |
+| GET | `/{date}/{mealType}` | Single poll with options |
+| POST | `/{date}/{mealType}/open` | canManageMeals — snapshots menu options |
+| POST | `/{date}/{mealType}/close` | canManageMeals |
+| POST | `/{date}/responses` | TENANT/CUSTOMER — batch `{ selections: [{ mealType, selectedOptionId }] }` |
 
 ---
 
-## Integration points from Phase 5
+## App flows
 
-1. **Daily menu must be PUBLISHED** before opening a poll.
-2. **MealEligibilityEngine** logic for who is eligible to respond mirrors Phase 5 eligibility (ACTIVE member + ACTIVE participation + plan covers meal type + date in range; PAUSED excluded).
-3. **MealParticipation** remains the enrollment anchor — no separate subscriber entity.
-4. **Notifications** (WhatsApp / push) are out of scope until a later phase; poll open can be manual in v1.
+### Operator
+
+1. Publish daily menu
+2. **Share menu** — numbered WhatsApp text **and auto-opens in-app polls** for selected meals
+3. Optional: **Close poll** on Menu Planning when cutoff time passes
+4. (6D) Headcount dashboard — per option breakdown (next)
+
+### Member (TENANT / CUSTOMER)
+
+1. Dashboard → **Choose tomorrow's meals**
+2. `MealPollResponseScreen` — radio groups per open poll
+3. Save → `POST /meal-polls/{date}/responses`
 
 ---
 
-## Out of scope for Phase 6 (Phase 7+)
+## Headcount (6D — next)
 
-- MealEntitlement, credits, wallet, invoices
-- Changing occupancy `foodChargeSnapshot` / `foodEnabled` semantics
-- Weekly menu templates, menu history archive
+Kitchen view should show per option:
+
+- Combo 1: 12
+- Combo 2: 5
+- Not available: 3
+
+`GET /meals/headcount?date=&mealType=` — not implemented yet.
+
+Phase 5 **eligible participants** APIs remain for spaces without open polls.
 
 ---
 
-## Success criteria (Phase 6)
+## Out of scope
 
-After implementation:
+- Billing, credits, wallets (Phase 7+)
+- Automated WhatsApp poll delivery (manual share in v1)
+- WhatsApp inbound response parsing
 
-1. Operator publishes daily menu → opens poll → members respond.
-2. Kitchen view shows **headcount** from responses, not eligible participant count.
-3. Phase 5 eligibility APIs remain available for spaces without active polls.
+---
+
+## Success criteria
+
+1. Share text shows numbered options + “Not available for [Meal]”.
+2. Operator opens poll after publish.
+3. Member picks one option per meal in app.
+4. Responses stored per `member_id` + `selected_option_id`.

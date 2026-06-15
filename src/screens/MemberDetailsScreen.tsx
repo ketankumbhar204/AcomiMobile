@@ -57,14 +57,6 @@ export function MemberDetailsScreen() {
     void loadMemberDetails(memberId);
   }, [loadMemberDetails, memberId]);
 
-  const handleEnrollMeals = useCallback(() => {
-    navigation.navigate('MealParticipationForm', {
-      spaceId,
-      mode: 'create',
-      memberId,
-    });
-  }, [memberId, navigation, spaceId]);
-
   useLayoutEffect(() => {
     navigation.setOptions({
       title: t('navigation.memberDetails'),
@@ -101,9 +93,9 @@ export function MemberDetailsScreen() {
         return (
           <MemberMealsTab
             spaceId={spaceId}
+            spaceType={spaceType}
             member={member}
             canManage={canManageMeals}
-            onEnrollPress={handleEnrollMeals}
             onRefreshMember={refreshMember}
           />
         );

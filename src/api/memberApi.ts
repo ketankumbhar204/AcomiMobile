@@ -14,6 +14,7 @@ import {
   MemberNoteResponse,
   MemberResponse,
   MemberSearchParams,
+  MyInvitationResponse,
   PendingInvitationResponse,
   SpaceMembershipResponse,
   UpdateDepositRequest,
@@ -318,6 +319,15 @@ export const memberApi = {
     );
 
     console.log(`${LOG_TAG} getPendingInvitations response`, response.length);
+    return response;
+  },
+
+  getMyInvitations: async (): Promise<MyInvitationResponse[]> => {
+    console.log(`${LOG_TAG} GET /invitations/my`);
+    const response = await unwrapApiResponse(
+      apiClient.get<ApiResponse<MyInvitationResponse[]>>('/invitations/my'),
+    );
+    console.log(`${LOG_TAG} getMyInvitations response`, response.length);
     return response;
   },
 };

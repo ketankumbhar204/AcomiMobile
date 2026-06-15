@@ -21,10 +21,6 @@ export function MealsTabHeaderMenu({ spaceId }: MealsTabHeaderMenuProps) {
         action: () => navigateMainStack('MenuLibrary', { spaceId }),
       },
       {
-        label: t('meals.participants'),
-        action: () => navigateMainStack('MealParticipantList', { spaceId }),
-      },
-      {
         label: t('meals.todayMenu'),
         action: () => navigateMainStack('DailyMenuToday', { spaceId }),
       },

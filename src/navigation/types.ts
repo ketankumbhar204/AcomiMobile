@@ -20,6 +20,7 @@ export type AccommodationFormMode = 'create' | 'edit';
 
 export type MainStackParamList = {
   MySpaces: undefined;
+  AcceptInvitations: undefined;
   Profile: undefined;
   CreateSpace: undefined;
   SpaceDetails: { spaceId: UUID };
@@ -151,18 +152,16 @@ export type MainStackParamList = {
     mealType: 'BREAKFAST' | 'LUNCH' | 'DINNER';
   };
   MealComboForm: { spaceId: UUID; mode: 'create' | 'edit'; comboId?: UUID };
-  MealParticipantList: { spaceId: UUID };
-  MealParticipationForm: {
-    spaceId: UUID;
-    mode: 'create' | 'edit';
-    memberId?: UUID;
-  };
   MenuLibrary: { spaceId: UUID };
   MenuPlanning: { spaceId: UUID; menuDate?: string };
   MenuSharePreview: {
     spaceId: UUID;
     menuDate: string;
     mealType?: 'BREAKFAST' | 'LUNCH' | 'DINNER';
+  };
+  MealPollResponse: {
+    spaceId: UUID;
+    menuDate: string;
   };
 };
 

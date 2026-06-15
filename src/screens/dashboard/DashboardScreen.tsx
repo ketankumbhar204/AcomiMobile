@@ -17,10 +17,12 @@ import { openOccupancyWizardFromRef } from '../../features/occupancy/OccupancyWi
 import { useLinkedMember } from '../../hooks/useLinkedMember';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList, SpaceTabParamList } from '../../navigation/types';
+import { navigateMainStack } from '../../navigation/mainStackNavigation';
 import { useAccommodationActionSheetStore } from '../../store/accommodationActionSheetStore';
 import { useSpaceStore } from '../../store/spaceStore';
 import { colors, spacing, typography } from '../../theme';
 import { isAccommodationApplicable } from '../../utils/accommodationProfile';
+import { tomorrowIsoDate } from '../../utils/mealDates';
 import { findMySpaceEntry } from '../../utils/spacePermissions';
 
 type DashboardRoute = RouteProp<SpaceTabParamList, 'Dashboard'>;
@@ -56,8 +58,9 @@ export function DashboardScreen() {
     if (!permissions.canViewMeals) {
       return;
     }
+    const menuDate = tomorrowIsoDate();
     void mealsApi
-      .getEligibilitySummary(spaceId)
+      .getEligibilitySummary(spaceId, menuDate)
       .then(summary => {
         const total = summary.slots.reduce((sum, slot) => sum + slot.eligibleCount, 0);
         setEligibleMealCount(String(total));
@@ -66,21 +69,27 @@ export function DashboardScreen() {
   }, [permissions.canViewMeals, spaceId]);
 
   const handleMealsPress = useCallback(() => {
+    const tomorrow = tomorrowIsoDate();
     openActionSheet(t('dashboard.quickActions.meals'), [
+      {
+        label: t('dashboard.quickActions.mealsPlanning'),
+        action: () => navigation.navigate('MenuPlanning', { spaceId }),
+      },
+      {
+        label: t('meals.planning.shareTomorrow'),
+        action: () =>
+          navigateMainStack('MenuSharePreview', { spaceId, menuDate: tomorrow }),
+      },
+      {
+        label: t('meals.todayMenu'),
+        action: () => navigation.navigate('DailyMenuToday', { spaceId }),
+      },
       {
         label: t('meals.library.title'),
         action: () => navigation.navigate('MenuLibrary', { spaceId }),
       },
-      {
-        label: t('meals.participants'),
-        action: () => navigation.navigate('MealParticipantList', { spaceId }),
-      },
     ]);
   }, [navigation, openActionSheet, spaceId, t]);
-
-  const handleMealsViewPress = useCallback(() => {
-    navigation.navigate('DailyMenuToday', { spaceId });
-  }, [navigation, spaceId]);
 
   const handleResidentsPress = useCallback(() => {
     openActionSheet(t('dashboard.quickActions.residents'), [
@@ -139,9 +148,14 @@ export function DashboardScreen() {
       return (
         <ModuleActionCard
           icon="🍽"
-          title={t('meals.todayMenu')}
-          subtitle={t('meals.viewTodayMenuHint')}
-          onPress={handleMealsViewPress}
+          title={t('meals.poll.respondTomorrow')}
+          subtitle={t('meals.poll.respondTomorrowHint')}
+          onPress={() =>
+            navigateMainStack('MealPollResponse', {
+              spaceId,
+              menuDate: tomorrowIsoDate(),
+            })
+          }
         />
       );
     }
@@ -166,7 +180,6 @@ export function DashboardScreen() {
     return null;
   }, [
     handleMealsPress,
-    handleMealsViewPress,
     handleMyStayPress,
     handleResidentsPress,
     isTenant,
@@ -199,9 +212,9 @@ export function DashboardScreen() {
         ) : null}
         {permissions.canViewMeals ? (
           <MetricCard
-            label={t('dashboard.eligibleParticipants')}
+            label={t('dashboard.eligibleMembers')}
             value={eligibleMealCount}
-            hint={t('dashboard.eligibleParticipantsHint')}
+            hint={t('dashboard.eligibleMembersHint')}
             hintPositive
             style={accommodationApplicable ? styles.metricHalf : styles.metricFull}
           />
