@@ -14,6 +14,7 @@ type PlanningSelectionSectionProps = {
   countLabel?: string;
   chips: PlanningSelectionChip[];
   onRemove: (id: string) => void;
+  onChipPress?: (id: string) => void;
   emptyText?: string;
 };
 
@@ -22,6 +23,7 @@ export function PlanningSelectionSection({
   countLabel,
   chips,
   onRemove,
+  onChipPress,
   emptyText,
 }: PlanningSelectionSectionProps) {
   return (
@@ -39,6 +41,7 @@ export function PlanningSelectionSection({
               key={chip.id}
               label={chip.label}
               variant={chip.variant}
+              onPress={onChipPress ? () => onChipPress(chip.id) : undefined}
               onRemove={() => onRemove(chip.id)}
             />
           ))}

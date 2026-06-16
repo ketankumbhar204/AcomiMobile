@@ -146,7 +146,7 @@ export type MainStackParamList = {
     menuDate: string;
     mealType: 'BREAKFAST' | 'LUNCH' | 'DINNER';
   };
-  DailyMenuSelectItems: {
+  SelectMenuHub: {
     spaceId: UUID;
     menuDate: string;
     mealType: 'BREAKFAST' | 'LUNCH' | 'DINNER';

@@ -1,6 +1,6 @@
-# Phase 6 Handoff — Menu Option Polls & Member Responses
+# Phase 6 Handoff — MeOption Polls & Member Responses
 
-Phase 5 delivers menus, participation, and share preview. Phase 6 adds **numbered menu options** that members pick (one per meal) — not simple YES/NO attendance.
+Phase 5 delivers menus, participation, and share preview. Phase 6 add *numbered menu options** that members pick (one per meal) — not simple YES/NO attendance.
 
 ---
 

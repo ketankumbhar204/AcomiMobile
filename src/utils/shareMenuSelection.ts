@@ -13,11 +13,11 @@ export function getSlotShareState(menu?: DailyMenuResponse | null): SlotShareSta
     return 'notPublished';
   }
   const hasItems = hasAvailableMenuOptions(menu);
-  if (menu.status === 'PUBLISHED') {
-    return hasItems ? 'shareable' : 'empty';
+  if (!hasItems) {
+    return 'empty';
   }
-  if (menu.status === 'DRAFT') {
-    return hasItems ? 'draft' : 'empty';
+  if (menu.status === 'PUBLISHED' || menu.status === 'DRAFT') {
+    return 'shareable';
   }
   return 'notPublished';
 }
@@ -95,6 +95,24 @@ export function composeShareMessages(
   return lines.join('\n').trim();
 }
 
+export async function publishDraftMenusForTypes(
+  spaceId: UUID,
+  menuDate: string,
+  mealTypes: MealType[],
+  menuMap: Partial<Record<MealType, DailyMenuResponse>>,
+): Promise<void> {
+  const drafts = mealTypes.filter(type => {
+    const menu = menuMap[type];
+    return menu?.status === 'DRAFT' && hasAvailableMenuOptions(menu);
+  });
+  if (drafts.length === 0) {
+    return;
+  }
+  await Promise.all(
+    drafts.map(type => mealsApi.publishDailyMenu(spaceId, menuDate, type)),
+  );
+}
+
 export async function buildShareMessageForSelection(
   spaceId: UUID,
   menuDate: string,
@@ -103,6 +121,9 @@ export async function buildShareMessageForSelection(
   if (mealTypes.length === 0) {
     return '';
   }
+  const menus = await mealsApi.getDailyMenusByDate(spaceId, menuDate);
+  const menuMap = menusByMealType(menus);
+  await publishDraftMenusForTypes(spaceId, menuDate, mealTypes, menuMap);
   const previews = await Promise.all(
     mealTypes.map(type => mealsApi.getSharePreview(spaceId, menuDate, type)),
   );

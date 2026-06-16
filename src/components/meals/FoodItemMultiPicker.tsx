@@ -13,8 +13,10 @@ type FoodItemMultiPickerProps = {
   onChange: (itemIds: string[]) => void;
   error?: string | null;
   canAddItem?: boolean;
+  canAddCategory?: boolean;
   categories?: FoodCategoryResponse[];
   onAddItem?: (categoryId: string, name: string) => Promise<FoodItemResponse>;
+  onAddCategory?: (name: string) => Promise<FoodCategoryResponse>;
   variant?: 'default' | 'planning';
 };
 
@@ -24,13 +26,16 @@ export function FoodItemMultiPicker({
   onChange,
   error,
   canAddItem = false,
+  canAddCategory = false,
   categories = [],
   onAddItem,
+  onAddCategory,
   variant = 'default',
 }: FoodItemMultiPickerProps) {
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [addingCategoryId, setAddingCategoryId] = useState<string | null>(null);
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
 
   const activeCategories = useMemo(
     () => categories.filter(category => category.isActive).sort((a, b) => a.sortOrder - b.sortOrder),
@@ -61,6 +66,7 @@ export function FoodItemMultiPicker({
   }, [categoryItems, query]);
 
   const showAddItem = canAddItem && onAddItem;
+  const showAddCategory = canAddCategory && onAddCategory;
 
   function toggleItem(itemId: string) {
     if (selectedIds.includes(itemId)) {
@@ -86,6 +92,21 @@ export function FoodItemMultiPicker({
     }
   }
 
+  async function saveNewCategory(name: string) {
+    if (!onAddCategory) {
+      return;
+    }
+    try {
+      const created = await onAddCategory(name);
+      setSelectedCategoryId(created.categoryId);
+      setIsAddingCategory(false);
+      setAddingCategoryId(null);
+      setQuery('');
+    } catch {
+      // Parent shows toast
+    }
+  }
+
   if (variant === 'planning') {
     const selectedCategory = activeCategories.find(
       category => category.categoryId === effectiveCategoryId,
@@ -95,7 +116,7 @@ export function FoodItemMultiPicker({
       <View style={styles.wrapper}>
         <Text style={styles.sectionLabel}>{t('meals.library.items')}</Text>
 
-        {activeCategories.length > 0 ? (
+        {activeCategories.length > 0 || showAddCategory ? (
           <ScrollableChipRail>
             {activeCategories.map(category => (
               <MenuChip
@@ -103,10 +124,34 @@ export function FoodItemMultiPicker({
                 label={category.name}
                 variant="filter"
                 selected={effectiveCategoryId === category.categoryId}
-                onPress={() => setSelectedCategoryId(category.categoryId)}
+                onPress={() => {
+                  setSelectedCategoryId(category.categoryId);
+                  setIsAddingCategory(false);
+                }}
               />
             ))}
+            {showAddCategory && !isAddingCategory ? (
+              <MenuChip
+                label={t('meals.library.chipAddCategory')}
+                variant="add"
+                onPress={() => {
+                  setIsAddingCategory(true);
+                  setAddingCategoryId(null);
+                }}
+              />
+            ) : null}
           </ScrollableChipRail>
+        ) : null}
+
+        {showAddCategory && isAddingCategory ? (
+          <View style={styles.editorRow}>
+            <InlineChipEditor
+              placeholder={t('meals.library.categoryNameInlinePlaceholder')}
+              onSave={saveNewCategory}
+              onCancel={() => setIsAddingCategory(false)}
+              layout="full"
+            />
+          </View>
         ) : null}
 
         <TextInput
@@ -136,7 +181,10 @@ export function FoodItemMultiPicker({
               label={t('meals.library.chipAddItem')}
               variant="add"
               size="compact"
-              onPress={() => setAddingCategoryId(effectiveCategoryId)}
+              onPress={() => {
+                setAddingCategoryId(effectiveCategoryId);
+                setIsAddingCategory(false);
+              }}
             />
           ) : null}
         </View>

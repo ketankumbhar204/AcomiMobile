@@ -62,7 +62,9 @@ export function DashboardScreen() {
     void mealsApi
       .getEligibilitySummary(spaceId, menuDate)
       .then(summary => {
-        const total = summary.slots.reduce((sum, slot) => sum + slot.eligibleCount, 0);
+        const total =
+          summary.distinctEligibleMemberCount ??
+          summary.slots.reduce((max, slot) => Math.max(max, slot.eligibleCount), 0);
         setEligibleMealCount(String(total));
       })
       .catch(() => setEligibleMealCount('—'));

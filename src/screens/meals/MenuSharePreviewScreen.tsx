@@ -25,6 +25,7 @@ import {
   getSlotShareState,
   menusByMealType,
   openPollsForMealTypes,
+  publishDraftMenusForTypes,
 } from '../../utils/shareMenuSelection';
 
 type MenuSharePreviewScreenProps = {
@@ -144,11 +145,19 @@ export function MenuSharePreviewScreen({
     }
     setSharing(true);
     try {
+      await publishDraftMenusForTypes(spaceId, menuDate, selectedTypes, menuMap);
+      const refreshed = await mealsApi.getDailyMenusByDate(spaceId, menuDate);
+      setMenus(refreshed);
+      const latestMessage = await buildShareMessageForSelection(
+        spaceId,
+        menuDate,
+        selectedTypes,
+      );
       const opened = await openPollsForMealTypes(spaceId, menuDate, selectedTypes);
       if (opened > 0) {
         showToast(t('meals.poll.autoOpened', { count: opened }));
       }
-      await Share.share({ message: messageText });
+      await Share.share({ message: latestMessage || messageText });
       const pollDay = await mealsApi.getMealPolls(spaceId, menuDate).catch(() => null);
       if (pollDay) {
         setPolls(pollDay.polls);

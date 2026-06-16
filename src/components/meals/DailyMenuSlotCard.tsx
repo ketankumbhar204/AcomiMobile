@@ -1,146 +1,156 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import type { DailyMenuResponse, MealType } from '../../api/types';
-import { PlanningChip } from './PlanningChip';
+import type { DailyMenuResponse, MealComboResponse, MealType } from '../../api/types';
 import { Card } from '../ui/Card';
 import { colors, radius, spacing, typography } from '../../theme';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
+import { getMenuOptionItemNames } from '../../utils/plannedComboDisplay';
+import { ComboItemsPopup } from './ComboItemsPopup';
+import { PlannedComboPreviewRow } from './PlannedComboPreviewRow';
+
+const MAX_VISIBLE = 2;
+const EMPTY_COMBO_MAP = new Map<string, MealComboResponse>();
 
 type DailyMenuSlotCardProps = {
   menu?: DailyMenuResponse | null;
   mealType: MealType;
-  onAddCombo?: () => void;
-  onAddItems?: () => void;
+  comboById?: Map<string, MealComboResponse>;
+  onSelectMenu?: () => void;
   onEdit?: () => void;
   onShare?: () => void;
   onClosePoll?: () => void;
   pollStatus?: 'OPEN' | 'CLOSED' | null;
   pollResponseCount?: number;
   pollActionLoading?: boolean;
-  onPublish?: () => void;
-  publishing?: boolean;
 };
-
-function inferEntryType(option: DailyMenuResponse['options'][number]): 'COMBO' | 'ITEM' {
-  if (option.entryType) {
-    return option.entryType;
-  }
-  if (option.itemId) {
-    return 'ITEM';
-  }
-  return 'COMBO';
-}
 
 export function DailyMenuSlotCard({
   menu,
   mealType,
-  onAddCombo,
-  onAddItems,
+  comboById,
+  onSelectMenu,
   onEdit,
   onShare,
   onClosePoll,
   pollStatus,
   pollResponseCount = 0,
   pollActionLoading = false,
-  onPublish,
-  publishing = false,
 }: DailyMenuSlotCardProps) {
   const { t } = useTranslation();
+  const library = comboById ?? EMPTY_COMBO_MAP;
+  const [expanded, setExpanded] = useState(false);
+  const [comboPreviewOpen, setComboPreviewOpen] = useState(false);
+  const [comboPreviewName, setComboPreviewName] = useState('');
+  const [comboPreviewItems, setComboPreviewItems] = useState<string[]>([]);
   const published = menu?.status === 'PUBLISHED';
   const draft = menu?.status === 'DRAFT';
   const options = menu?.options?.filter(option => option.isAvailable) ?? [];
-  const comboOptions = options.filter(option => inferEntryType(option) === 'COMBO');
-  const itemOptions = options.filter(option => inferEntryType(option) === 'ITEM');
   const hasPlan = options.length > 0;
+  const canShare = hasPlan && onShare;
 
   const statusLabel = published
     ? t('meals.menu.published')
     : draft
       ? t('meals.menu.draft')
       : t('meals.menu.notPlanned');
-
   const statusStyle = published ? styles.published : draft ? styles.draft : styles.notPlanned;
-  const canPublish = draft && hasPlan && onPublish;
+
+  const hiddenCount = options.length - MAX_VISIBLE;
+
+  const optionItemNames = useMemo(
+    () =>
+      options.map(option => ({
+        option,
+        itemNames: getMenuOptionItemNames(option, library),
+      })),
+    [library, options],
+  );
+
+  const visibleOptionRows = expanded
+    ? optionItemNames
+    : optionItemNames.slice(0, MAX_VISIBLE);
+
+  const openComboPreview = (comboName: string, itemNames: string[]) => {
+    setComboPreviewName(comboName);
+    setComboPreviewItems(itemNames);
+    setComboPreviewOpen(true);
+  };
+
+  const menuCtaLabel = hasPlan
+    ? t('meals.menu.editMenu')
+    : t('meals.menu.selectMenu');
+  const menuCtaAction = hasPlan ? onEdit : onSelectMenu;
+
+  const shareLabel =
+    published && pollStatus === 'OPEN'
+      ? t('meals.planning.shareSlotAgain')
+      : t('meals.planning.shareSlot');
 
   return (
     <Card style={styles.card}>
-      <Pressable onPress={hasPlan ? onEdit : undefined} disabled={!hasPlan || !onEdit}>
-        <View style={styles.header}>
-          <Text style={styles.slotTitle}>{t(mealTypeLabelKey(mealType))}</Text>
-          <Text style={[styles.status, statusStyle]}>{statusLabel}</Text>
-        </View>
-
-        <Text style={styles.plannedLabel}>{t('meals.menu.plannedEntries')}</Text>
-
-        {!hasPlan ? (
-          <Text style={styles.empty}>{t('meals.menu.noItemsYet')}</Text>
-        ) : (
-          <>
-            {comboOptions.length > 0 ? (
-              <View style={styles.plannedGroup}>
-                <Text style={styles.plannedGroupLabel}>{t('meals.library.combos')}</Text>
-                <View style={styles.chipRow}>
-                  {comboOptions.map((option, index) => (
-                    <PlanningChip
-                      key={`combo-${index}`}
-                      label={option.label}
-                      variant="COMBO"
-                    />
-                  ))}
-                </View>
-              </View>
-            ) : null}
-            {itemOptions.length > 0 ? (
-              <View style={styles.plannedGroup}>
-                <Text style={styles.plannedGroupLabel}>{t('meals.library.items')}</Text>
-                <View style={styles.chipRow}>
-                  {itemOptions.map((option, index) => (
-                    <PlanningChip
-                      key={`item-${index}`}
-                      label={option.label}
-                      variant="ITEM"
-                    />
-                  ))}
-                </View>
-              </View>
-            ) : null}
-            {onEdit ? (
-              <Text style={styles.editHint}>{t('meals.planning.tapToEdit')}</Text>
-            ) : null}
-          </>
-        )}
-      </Pressable>
-
-      <View style={styles.divider} />
-
-      <View style={styles.actionRow}>
-        {onAddCombo ? (
-          <Pressable style={[styles.actionButton, styles.actionButtonPrimary]} onPress={onAddCombo}>
-            <Text style={styles.actionButtonTextPrimary}>{t('meals.menu.addComboShort')}</Text>
-          </Pressable>
-        ) : null}
-        {onAddItems ? (
-          <Pressable style={[styles.actionButton, styles.actionButtonSecondary]} onPress={onAddItems}>
-            <Text style={styles.actionButtonTextSecondary}>{t('meals.menu.addItemsShort')}</Text>
-          </Pressable>
-        ) : null}
+      <View style={styles.header}>
+        <Text style={styles.slotTitle}>{t(mealTypeLabelKey(mealType))}</Text>
+        <Text style={[styles.status, statusStyle]}>{statusLabel}</Text>
       </View>
+
+      {!hasPlan ? (
+        <Text style={styles.empty}>{t('meals.menu.noItemsYet')}</Text>
+      ) : (
+        <View style={styles.choicesBlock}>
+          <View style={styles.choicesHeader}>
+            <Text style={styles.choicesLabel}>{t('meals.menu.plannedMenuLabel')}</Text>
+            <Text style={styles.choicesCount}>({options.length})</Text>
+          </View>
+          {visibleOptionRows.map(({ option, itemNames }, index) => (
+            <PlannedComboPreviewRow
+              key={option.optionId ?? `${option.label}-${index}`}
+              option={option}
+              itemNames={itemNames}
+              onPress={() => openComboPreview(option.label, itemNames)}
+            />
+          ))}
+          {!expanded && hiddenCount > 0 ? (
+            <Pressable onPress={() => setExpanded(true)}>
+              <Text style={styles.moreChoices}>
+                {t('meals.menu.moreCombos', { count: hiddenCount })}
+              </Text>
+            </Pressable>
+          ) : null}
+          {expanded && hiddenCount > 0 ? (
+            <Pressable onPress={() => setExpanded(false)}>
+              <Text style={styles.moreChoices}>{t('meals.menu.showLessCombos')}</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      )}
+
+      {menuCtaAction ? (
+        <Pressable
+          style={[styles.menuCtaButton, hasPlan && styles.menuCtaButtonSecondary]}
+          onPress={menuCtaAction}>
+          <Text style={[styles.menuCtaText, hasPlan && styles.menuCtaTextSecondary]}>
+            {menuCtaLabel}
+          </Text>
+        </Pressable>
+      ) : null}
+
+      {(canShare || (published && pollStatus)) ? <View style={styles.divider} /> : null}
 
       {published && pollStatus === 'OPEN' ? (
         <View style={styles.shareFooter}>
           <Text style={styles.pollStatusOpen}>
             {t('meals.poll.pollOpen', { count: pollResponseCount })}
           </Text>
-          {onShare ? (
+          {canShare ? (
             <Pressable style={styles.shareLink} onPress={onShare}>
-              <Text style={styles.shareLinkText}>{t('meals.planning.shareSlotAgain')}</Text>
+              <Text style={styles.shareLinkText}>{shareLabel}</Text>
             </Pressable>
           ) : null}
         </View>
-      ) : published && onShare ? (
+      ) : canShare ? (
         <Pressable style={styles.shareLinkCentered} onPress={onShare}>
-          <Text style={styles.shareLinkText}>{t('meals.planning.shareSlot')}</Text>
+          <Text style={styles.shareLinkText}>{shareLabel}</Text>
         </Pressable>
       ) : null}
 
@@ -148,13 +158,9 @@ export function DailyMenuSlotCard({
         <Text style={styles.pollStatusClosed}>{t('meals.poll.pollClosed')}</Text>
       ) : null}
 
-      {published && pollStatus !== 'OPEN' && pollStatus !== 'CLOSED' && onShare ? (
-        <Text style={styles.pollHint}>{t('meals.poll.shareToOpen')}</Text>
-      ) : null}
-
       {published && pollStatus === 'OPEN' && onClosePoll ? (
         <Pressable
-          style={[styles.pollCloseButton, pollActionLoading && styles.publishButtonDisabled]}
+          style={[styles.pollCloseButton, pollActionLoading && styles.buttonDisabled]}
           onPress={onClosePoll}
           disabled={pollActionLoading}>
           <Text style={styles.pollCloseButtonText}>
@@ -163,16 +169,12 @@ export function DailyMenuSlotCard({
         </Pressable>
       ) : null}
 
-      {canPublish ? (
-        <Pressable
-          style={[styles.publishButton, publishing && styles.publishButtonDisabled]}
-          onPress={onPublish}
-          disabled={publishing}>
-          <Text style={styles.publishButtonText}>
-            {publishing ? t('meals.menu.publishing') : t('meals.menu.publishShort')}
-          </Text>
-        </Pressable>
-      ) : null}
+      <ComboItemsPopup
+        visible={comboPreviewOpen}
+        comboName={comboPreviewName}
+        items={comboPreviewItems}
+        onClose={() => setComboPreviewOpen(false)}
+      />
     </Card>
   );
 }
@@ -190,78 +192,57 @@ const styles = StyleSheet.create({
   published: { color: colors.success },
   draft: { color: '#D97706' },
   notPlanned: { color: colors.muted },
-  plannedLabel: {
+  empty: { ...typography.body, color: colors.muted, marginBottom: spacing.sm },
+  choicesBlock: { marginBottom: spacing.sm },
+  choicesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  choicesLabel: {
     ...typography.caption,
     color: colors.muted,
     fontWeight: '700',
-    marginBottom: spacing.xs,
     textTransform: 'uppercase',
     letterSpacing: 0.3,
   },
-  empty: { ...typography.body, color: colors.muted, marginBottom: spacing.sm },
-  plannedGroup: { marginBottom: spacing.sm },
-  plannedGroupLabel: {
+  choicesCount: { ...typography.caption, color: colors.muted },
+  moreChoices: {
     ...typography.caption,
-    color: colors.textSecondary,
+    color: colors.primary,
     fontWeight: '600',
-    marginBottom: spacing.xs,
+    marginTop: spacing.xs,
+    marginLeft: spacing.sm,
   },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
+  menuCtaButton: {
+    marginTop: spacing.sm,
+    borderRadius: radius.button,
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
   },
-  editHint: { ...typography.caption, color: colors.primary, fontWeight: '600', marginTop: spacing.xs },
+  menuCtaButtonSecondary: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  menuCtaText: { ...typography.bodyStrong, color: colors.white, fontSize: 14 },
+  menuCtaTextSecondary: { color: colors.primaryDark },
   divider: {
     height: 1,
     backgroundColor: colors.border,
     marginVertical: spacing.md,
   },
-  actionRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  actionButton: {
-    flex: 1,
-    borderRadius: radius.button,
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionButtonPrimary: {
-    backgroundColor: colors.primary,
-  },
-  actionButtonSecondary: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  actionButtonTextPrimary: { ...typography.bodyStrong, color: colors.white, fontSize: 14 },
-  actionButtonTextSecondary: { ...typography.bodyStrong, color: colors.primaryDark, fontSize: 14 },
-  publishButton: {
-    marginTop: spacing.sm,
-    borderRadius: radius.button,
-    backgroundColor: colors.primaryDark,
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
-  },
-  publishButtonDisabled: { opacity: 0.6 },
-  publishButtonText: { ...typography.bodyStrong, color: colors.white, fontSize: 14 },
+  buttonDisabled: { opacity: 0.6 },
   shareFooter: {
-    marginTop: spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
   },
-  shareLink: {
-    paddingVertical: spacing.xs,
-  },
-  shareLinkCentered: {
-    marginTop: spacing.sm,
-    alignItems: 'center',
-    paddingVertical: spacing.xs,
-  },
+  shareLink: { paddingVertical: spacing.xs },
+  shareLinkCentered: { alignItems: 'center', paddingVertical: spacing.xs },
   shareLinkText: { ...typography.bodyStrong, color: colors.primaryDark, fontSize: 14 },
   pollStatusOpen: {
     ...typography.caption,
@@ -270,12 +251,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   pollStatusClosed: {
-    ...typography.caption,
-    color: colors.muted,
-    marginTop: spacing.sm,
-    textAlign: 'center',
-  },
-  pollHint: {
     ...typography.caption,
     color: colors.muted,
     marginTop: spacing.sm,

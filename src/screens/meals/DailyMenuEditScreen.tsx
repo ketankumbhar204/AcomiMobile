@@ -14,6 +14,9 @@ import { useTranslation } from 'react-i18next';
 import { mealsApi } from '../../api/mealsApi';
 import type { MealType, UUID } from '../../api/types';
 import { PlanningSelectionSection } from '../../components/meals/PlanningSelectionSection';
+import { ComboItemsPopup } from '../../components/meals/ComboItemsPopup';
+import { CreateComboSheet } from '../../components/meals/CreateComboSheet';
+import { SelectComboSheet } from '../../components/meals/SelectComboSheet';
 import { Button, PermissionDeniedScreen } from '../../components/ui';
 import { useScreenBackButton } from '../../hooks/useScreenBackButton';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
@@ -24,6 +27,10 @@ import { colors, radius, spacing, typography } from '../../theme';
 import { addDaysIsoDate } from '../../utils/mealDates';
 import {
   loadMenuDraft,
+  mergeCombosIntoOptions,
+  findPlannedComboByChipId,
+  resolvePlannedComboItemNames,
+  reindexMenuOptions,
   saveMenuDraft,
   toMenuDraftOption,
   type MenuDraftOption,
@@ -50,6 +57,13 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
   const [options, setOptions] = useState<MenuDraftOption[]>([]);
   const [notes, setNotes] = useState('');
   const [status, setStatus] = useState<'DRAFT' | 'PUBLISHED'>('DRAFT');
+  const [createComboSheetOpen, setCreateComboSheetOpen] = useState(false);
+  const [createComboReturnToSelect, setCreateComboReturnToSelect] = useState(false);
+  const [comboSheetOpen, setComboSheetOpen] = useState(false);
+  const [comboPreviewOpen, setComboPreviewOpen] = useState(false);
+  const [comboPreviewName, setComboPreviewName] = useState('');
+  const [comboPreviewItems, setComboPreviewItems] = useState<string[]>([]);
+  const [comboPreviewLoading, setComboPreviewLoading] = useState(false);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -74,7 +88,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
           if (!active) {
             return;
           }
-          setOptions(draft.options);
+          setOptions(draft.options.filter(option => option.entryType !== 'ITEM'));
           setNotes(draft.notes);
           setStatus(draft.menu?.status ?? 'DRAFT');
         } catch {
@@ -94,11 +108,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
   );
 
   const plannedCombos = useMemo(
-    () => options.filter(option => option.entryType === 'COMBO'),
-    [options],
-  );
-  const plannedItems = useMemo(
-    () => options.filter(option => option.entryType === 'ITEM'),
+    () => options.filter(option => option.entryType === 'COMBO' || option.entryType === 'PACKAGE'),
     [options],
   );
 
@@ -106,15 +116,93 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     return <PermissionDeniedScreen spaceId={spaceId} />;
   }
 
-  const removeComboById = (comboId: string) => {
+  const openComboPreview = (chipId: string) => {
+    const option = findPlannedComboByChipId(options, chipId);
+    if (!option) {
+      return;
+    }
+    setComboPreviewName(option.label);
+    setComboPreviewItems([]);
+    setComboPreviewLoading(true);
+    setComboPreviewOpen(true);
+    void resolvePlannedComboItemNames(spaceId, option)
+      .then(names => setComboPreviewItems(names))
+      .catch(() => showToast(t('meals.errors.loadFailed')))
+      .finally(() => setComboPreviewLoading(false));
+  };
+
+  const removePlannedCombo = (chipId: string) => {
     setOptions(prev =>
-      prev.filter(option => !(option.entryType === 'COMBO' && option.comboId === comboId)),
+      prev.filter(option => {
+        if (option.entryType === 'PACKAGE') {
+          return option.label !== chipId;
+        }
+        if (option.entryType === 'COMBO') {
+          return (option.comboId ?? option.label) !== chipId;
+        }
+        return true;
+      }),
     );
   };
 
-  const removeItemById = (itemId: string) => {
-    setOptions(prev =>
-      prev.filter(option => !(option.entryType === 'ITEM' && option.itemId === itemId)),
+  const handleCreateCombo = async (
+    name: string,
+    itemIds: string[],
+    saveToLibrary: boolean,
+  ) => {
+    try {
+      if (saveToLibrary) {
+        const created = await mealsApi.createMealCombo(spaceId, {
+          name,
+          description: null,
+          itemIds,
+        });
+        setOptions(prev =>
+          reindexMenuOptions([
+            ...prev,
+            {
+              entryType: 'COMBO',
+              comboId: created.comboId,
+              itemId: null,
+              label: created.name,
+              sortOrder: prev.length + 1,
+              isAvailable: true,
+            },
+          ]),
+        );
+      } else {
+        setOptions(prev =>
+          reindexMenuOptions([
+            ...prev,
+            {
+              entryType: 'PACKAGE',
+              comboId: null,
+              itemId: null,
+              itemIds,
+              label: name,
+              sortOrder: prev.length + 1,
+              isAvailable: true,
+            },
+          ]),
+        );
+      }
+      showToast(
+        saveToLibrary
+          ? t('meals.planning.comboSavedToLibrary', { name })
+          : t('meals.planning.comboAdded', { name }),
+      );
+    } catch {
+      showToast(t('meals.errors.saveFailed'));
+      throw new Error('save failed');
+    }
+  };
+
+  const handleSelectCombos = (combos: Array<{ comboId: string; name: string }>) => {
+    setOptions(prev => mergeCombosIntoOptions(prev, combos));
+    showToast(
+      combos.length > 0
+        ? t('meals.planning.combosSaved', { count: combos.length })
+        : t('meals.planning.combosCleared'),
     );
   };
 
@@ -123,7 +211,9 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     setSaving(true);
     try {
       const copied = await mealsApi.copyDailyMenu(spaceId, menuDate, mealType, sourceDate);
-      setOptions(copied.options.map(toMenuDraftOption));
+      setOptions(
+        copied.options.map(toMenuDraftOption).filter(option => option.entryType !== 'ITEM'),
+      );
       setNotes(copied.notes ?? '');
       setStatus(copied.status);
       showToast(t('meals.planning.copySuccess'));
@@ -134,18 +224,15 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     }
   };
 
-  const persist = async (publish: boolean) => {
-    if (publish && options.length === 0) {
+  const persist = async () => {
+    if (options.length === 0) {
       showToast(t('meals.errors.optionsRequired'));
       return;
     }
     setSaving(true);
     try {
       await saveMenuDraft(spaceId, menuDate, mealType, options, notes.trim() || null);
-      if (publish) {
-        await mealsApi.publishDailyMenu(spaceId, menuDate, mealType);
-      }
-      showToast(publish ? t('meals.success.published') : t('meals.success.saved'));
+      showToast(t('meals.success.saved'));
       navigation.goBack();
     } catch {
       showToast(t('meals.errors.saveFailed'));
@@ -171,11 +258,8 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
   };
 
   const summaryText =
-    plannedCombos.length > 0 || plannedItems.length > 0
-      ? t('meals.menu.plannedSummary', {
-          combos: plannedCombos.length,
-          items: plannedItems.length,
-        })
+    plannedCombos.length > 0
+      ? t('meals.menu.plannedSummary', { count: plannedCombos.length })
       : t('meals.menu.plannedSummaryEmpty');
 
   return (
@@ -201,7 +285,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
           style={styles.copyButton}
         />
 
-        {status === 'PUBLISHED' ? (
+        {plannedCombos.length > 0 ? (
           <Pressable
             style={styles.previewLink}
             onPress={() =>
@@ -221,40 +305,31 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
               title={t('meals.library.combos')}
               countLabel={t('meals.planning.selectedCount', { count: plannedCombos.length })}
               chips={plannedCombos.map(option => ({
-                id: option.comboId ?? option.label,
+                id:
+                  option.entryType === 'PACKAGE'
+                    ? option.label
+                    : (option.comboId ?? option.label),
                 label: option.label,
                 variant: 'COMBO',
               }))}
-              onRemove={comboId => removeComboById(comboId)}
+              onRemove={chipId => removePlannedCombo(chipId)}
+              onChipPress={openComboPreview}
               emptyText={t('meals.planning.noCombosSelected')}
             />
 
-            <PlanningSelectionSection
-              title={t('meals.planning.additionalItems')}
-              countLabel={t('meals.planning.selectedCount', { count: plannedItems.length })}
-              chips={plannedItems.map(option => ({
-                id: option.itemId ?? option.label,
-                label: option.label,
-                variant: 'ITEM',
-              }))}
-              onRemove={itemId => removeItemById(itemId)}
-              emptyText={t('meals.planning.noAdditionalItems')}
-            />
           </>
         ) : null}
 
         <View style={styles.addLinks}>
-          <Pressable
-            onPress={() =>
-              navigateMainStack('DailyMenuSelectCombo', { spaceId, menuDate, mealType })
-            }>
+          <Pressable onPress={() => setComboSheetOpen(true)}>
             <Text style={styles.addLinkText}>{t('meals.menu.addCombo')}</Text>
           </Pressable>
           <Pressable
-            onPress={() =>
-              navigateMainStack('DailyMenuSelectItems', { spaceId, menuDate, mealType })
-            }>
-            <Text style={styles.addLinkText}>{t('meals.menu.addItems')}</Text>
+            onPress={() => {
+              setCreateComboReturnToSelect(false);
+              setCreateComboSheetOpen(true);
+            }}>
+            <Text style={styles.addLinkText}>{t('meals.menu.createCombo')}</Text>
           </Pressable>
         </View>
 
@@ -280,19 +355,53 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
         <View style={styles.footerActions}>
           <Button
             label={t('meals.actions.saveDraft')}
-            variant="secondary"
             loading={saving}
-            onPress={() => void persist(false)}
-            style={styles.footerButton}
-          />
-          <Button
-            label={t('meals.actions.publish')}
-            loading={saving}
-            onPress={() => void persist(true)}
-            style={styles.footerButton}
+            onPress={() => void persist()}
+            style={styles.footerButtonFull}
           />
         </View>
       </View>
+
+      <SelectComboSheet
+        visible={comboSheetOpen}
+        spaceId={spaceId}
+        existingOptions={options}
+        onClose={() => setComboSheetOpen(false)}
+        onSave={handleSelectCombos}
+        onCreateCombo={() => {
+          setComboSheetOpen(false);
+          setCreateComboReturnToSelect(true);
+          setCreateComboSheetOpen(true);
+        }}
+      />
+
+      <CreateComboSheet
+        visible={createComboSheetOpen}
+        spaceId={spaceId}
+        existingOptions={options}
+        onClose={() => {
+          setCreateComboSheetOpen(false);
+          setCreateComboReturnToSelect(false);
+        }}
+        onBack={
+          createComboReturnToSelect
+            ? () => {
+                setCreateComboSheetOpen(false);
+                setCreateComboReturnToSelect(false);
+                setComboSheetOpen(true);
+              }
+            : undefined
+        }
+        onSave={handleCreateCombo}
+      />
+
+      <ComboItemsPopup
+        visible={comboPreviewOpen}
+        comboName={comboPreviewName}
+        items={comboPreviewItems}
+        loading={comboPreviewLoading}
+        onClose={() => setComboPreviewOpen(false)}
+      />
     </View>
   );
 }
@@ -335,5 +444,5 @@ const styles = StyleSheet.create({
   deleteLink: { alignItems: 'center', paddingVertical: spacing.xs },
   deleteLinkText: { ...typography.caption, color: '#DC2626', fontWeight: '600' },
   footerActions: { flexDirection: 'row', gap: spacing.sm },
-  footerButton: { flex: 1 },
+  footerButtonFull: { flex: 1 },
 });

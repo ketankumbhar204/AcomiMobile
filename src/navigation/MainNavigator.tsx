@@ -36,7 +36,7 @@ import { MenuLibraryScreen } from '../screens/meals/MenuLibraryScreen';
 import { DailyMenuTodayScreen } from '../screens/meals/DailyMenuTodayScreen';
 import { DailyMenuEditScreen } from '../screens/meals/DailyMenuEditScreen';
 import { DailyMenuSelectComboScreen } from '../screens/meals/DailyMenuSelectComboScreen';
-import { DailyMenuSelectItemsScreen } from '../screens/meals/DailyMenuSelectItemsScreen';
+import { SelectMenuHubScreen } from '../screens/meals/SelectMenuHubScreen';
 import { MealComboFormScreen } from '../screens/meals/MealComboFormScreen';
 import { stackHeaderOptions } from '../theme';
 import { useSpaceStore } from '../store/spaceStore';
@@ -192,13 +192,13 @@ export function MainNavigator() {
         )}
       />
       <Stack.Screen
-        name="DailyMenuSelectItems"
+        name="SelectMenuHub"
         getId={({ params }) =>
           `${params.spaceId}-${params.menuDate}-${params.mealType}`
         }
-        options={{ title: 'Select Items' }}
+        options={{ title: 'Select Menu' }}
         children={({ route }) => (
-          <DailyMenuSelectItemsScreen
+          <SelectMenuHubScreen
             spaceId={route.params.spaceId}
             menuDate={route.params.menuDate}
             mealType={route.params.mealType}

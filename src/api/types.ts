@@ -94,7 +94,7 @@ export type MealType = 'BREAKFAST' | 'LUNCH' | 'DINNER';
 
 export type DailyMenuStatus = 'DRAFT' | 'PUBLISHED';
 
-export type DailyMenuEntryType = 'COMBO' | 'ITEM';
+export type DailyMenuEntryType = 'COMBO' | 'ITEM' | 'PACKAGE';
 
 export interface MealPlanResponse {
   mealPlanId: UUID;
@@ -184,6 +184,7 @@ export interface DailyMenuOptionResponse {
   label: string;
   sortOrder: number;
   isAvailable: boolean;
+  packageItems?: Array<{ itemId: UUID; name: string }> | null;
 }
 
 export interface DailyMenuResponse {
@@ -201,6 +202,8 @@ export interface UpsertDailyMenuRequest {
     entryType?: DailyMenuEntryType;
     comboId?: UUID | null;
     itemId?: UUID | null;
+    /** Required when entryType = 'PACKAGE' */
+    itemIds?: UUID[] | null;
     label: string;
     sortOrder: number;
     isAvailable: boolean;
@@ -235,6 +238,7 @@ export interface MealParticipationSearchParams {
 
 export interface MealEligibilitySummaryResponse {
   date: string;
+  distinctEligibleMemberCount: number;
   slots: Array<{
     mealType: MealType;
     eligibleCount: number;

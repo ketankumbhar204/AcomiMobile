@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { mealsApi } from '../../api/mealsApi';
 import type {
   DailyMenuResponse,
+  MealComboResponse,
   MealEligibilitySummaryResponse,
   MealPollSlot,
   MealType,
@@ -54,6 +55,10 @@ function eligibilityByType(summary: MealEligibilitySummaryResponse | null) {
   }, {});
 }
 
+function hasPlannedMenu(menu?: DailyMenuResponse | null): boolean {
+  return (menu?.options?.filter(option => option.isAvailable) ?? []).length > 0;
+}
+
 function dayStatusSummary(menus: DailyMenuResponse[]): {
   published: number;
   draft: number;
@@ -89,26 +94,29 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [menus, setMenus] = useState<DailyMenuResponse[]>([]);
+  const [combos, setCombos] = useState<MealComboResponse[]>([]);
   const [eligibility, setEligibility] = useState<MealEligibilitySummaryResponse | null>(null);
   const [polls, setPolls] = useState<MealPollSlot[]>([]);
-  const [publishingMealType, setPublishingMealType] = useState<MealType | null>(null);
   const [pollActionMealType, setPollActionMealType] = useState<MealType | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [menuList, summary, pollDay] = await Promise.all([
+      const [menuList, summary, pollDay, comboList] = await Promise.all([
         mealsApi.getDailyMenusByDate(spaceId, menuDate),
         mealsApi.getEligibilitySummary(spaceId, menuDate),
         mealsApi.getMealPolls(spaceId, menuDate).catch(() => ({ pollDate: menuDate, polls: [] })),
+        mealsApi.getMealCombos(spaceId).catch(() => []),
       ]);
       setMenus(menuList);
+      setCombos(comboList.filter(combo => combo.isActive));
       setEligibility(summary);
       setPolls(pollDay.polls);
     } catch {
       setError(t('meals.errors.loadFailed'));
       setMenus([]);
+      setCombos([]);
       setEligibility(null);
       setPolls([]);
     } finally {
@@ -123,6 +131,10 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
   );
 
   const menuMap = useMemo(() => menusByType(menus), [menus]);
+  const comboById = useMemo(
+    () => new Map(combos.map(combo => [combo.comboId, combo])),
+    [combos],
+  );
   const pollMap = useMemo(
     () =>
       polls.reduce<Partial<Record<MealType, MealPollSlot>>>((acc, poll) => {
@@ -133,22 +145,23 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
   );
   const eligibilityMap = useMemo(() => eligibilityByType(eligibility), [eligibility]);
   const statusSummary = useMemo(() => dayStatusSummary(menus), [menus]);
-  const canShareMenu = statusSummary.published > 0;
-  const totalEligible = useMemo(
-    () => eligibility?.slots.reduce((sum, slot) => sum + slot.eligibleCount, 0) ?? 0,
-    [eligibility],
-  );
+  const canShareMenu = MEAL_TYPES.some(type => hasPlannedMenu(menuMap[type]));
+  const distinctEligible = useMemo(() => {
+    if (!eligibility) {
+      return 0;
+    }
+    if (eligibility.distinctEligibleMemberCount != null) {
+      return eligibility.distinctEligibleMemberCount;
+    }
+    return eligibility.slots.reduce(
+      (max, slot) => Math.max(max, slot.eligibleCount),
+      0,
+    );
+  }, [eligibility]);
 
-  const openAddCombo = useCallback(
+  const openSelectMenu = useCallback(
     (mealType: MealType) => {
-      navigateMain('DailyMenuSelectCombo', { spaceId, menuDate, mealType });
-    },
-    [menuDate, navigateMain, spaceId],
-  );
-
-  const openAddItems = useCallback(
-    (mealType: MealType) => {
-      navigateMain('DailyMenuSelectItems', { spaceId, menuDate, mealType });
+      navigateMain('DailyMenuEdit', { spaceId, menuDate, mealType });
     },
     [menuDate, navigateMain, spaceId],
   );
@@ -169,31 +182,6 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
       });
     },
     [menuDate, navigateMain, spaceId],
-  );
-
-  const publishSlot = useCallback(
-    async (mealType: MealType) => {
-      const menu = menus.find(row => row.mealType === mealType);
-      if (!menu || menu.status !== 'DRAFT') {
-        return;
-      }
-      const options = menu.options?.filter(option => option.isAvailable) ?? [];
-      if (options.length === 0) {
-        showToast(t('meals.errors.optionsRequired'));
-        return;
-      }
-      setPublishingMealType(mealType);
-      try {
-        await mealsApi.publishDailyMenu(spaceId, menuDate, mealType);
-        showToast(t('meals.success.published'));
-        await load();
-      } catch {
-        showToast(t('meals.errors.saveFailed'));
-      } finally {
-        setPublishingMealType(null);
-      }
-    },
-    [load, menuDate, menus, showToast, spaceId, t],
   );
 
   const closePoll = useCallback(
@@ -250,7 +238,7 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
 
       {!loading && !error ? (
         <Text style={styles.eligibleSummary}>
-          {t('meals.planning.eligibleMembers', { count: totalEligible })}
+          {t('meals.planning.eligibleMembers', { count: distinctEligible })}
         </Text>
       ) : null}
 
@@ -270,7 +258,7 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
       {loading ? <ActivityIndicator color={colors.primary} style={styles.loader} /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      {!loading && !error && permissions.canManageMeals && totalEligible === 0 ? (
+      {!loading && !error && permissions.canManageMeals && distinctEligible === 0 ? (
         <Pressable
           style={styles.enrollBanner}
           onPress={() => navigateToMembersTab(spaceId)}>
@@ -287,11 +275,11 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
             <DailyMenuSlotCard
               mealType={mealType}
               menu={menuMap[mealType]}
-              onAddCombo={() => openAddCombo(mealType)}
-              onAddItems={() => openAddItems(mealType)}
+              comboById={comboById}
+              onSelectMenu={() => openSelectMenu(mealType)}
               onEdit={() => openEdit(mealType)}
               onShare={
-                menuMap[mealType]?.status === 'PUBLISHED'
+                permissions.canManageMeals && hasPlannedMenu(menuMap[mealType])
                   ? () => openShare(mealType)
                   : undefined
               }
@@ -303,10 +291,6 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
               pollStatus={slotPoll?.status ?? null}
               pollResponseCount={slotPoll?.responseCount ?? 0}
               pollActionLoading={pollActionMealType === mealType}
-              onPublish={
-                permissions.canManageMeals ? () => void publishSlot(mealType) : undefined
-              }
-              publishing={publishingMealType === mealType}
             />
             {slotEligibility ? (
               <Text style={styles.eligibleLine}>
