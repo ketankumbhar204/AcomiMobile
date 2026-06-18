@@ -4,6 +4,9 @@
   "private": true,
   "scripts": {
     "android": "react-native run-android",
+    "android:reset-emulator": "powershell -ExecutionPolicy Bypass -File scripts/android-reset-emulator.ps1",
+    "android:install": "powershell -ExecutionPolicy Bypass -File scripts/android-install.ps1 -Launch",
+    "android:run": "powershell -ExecutionPolicy Bypass -File scripts/android-run.ps1",
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",

@@ -10,8 +10,8 @@ import { AuthNavigator } from './AuthNavigator';
 import { MainNavigator } from './MainNavigator';
 import {
   navigationRef,
+  navigateBootstrapResult,
   resetToAcceptInvitations,
-  resetToCreateSpace,
   resetToDashboard,
   resetToMySpaces,
 } from './navigationRef';
@@ -34,17 +34,7 @@ function applyStartupNavigation(result: SpaceBootstrapResult) {
   }
 
   console.log('[Dashboard] bootstrap navigation', result);
-
-  if (result.route === 'SpaceTabs' && result.spaceId) {
-    resetToDashboard(result.spaceId);
-  } else if (result.route === 'AcceptInvitations') {
-    resetToAcceptInvitations();
-  } else if (result.route === 'CreateSpace') {
-    resetToCreateSpace();
-  } else {
-    resetToMySpaces();
-  }
-
+  navigateBootstrapResult(result);
   return true;
 }
 

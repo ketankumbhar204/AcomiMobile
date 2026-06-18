@@ -17,12 +17,11 @@ import type { MyInvitationResponse } from '../api/types';
 import { Badge, Button, EmptyState, ListCard } from '../components/ui';
 import { ProfileHeaderButton } from '../components/ui/ProfileHeaderButton';
 import { useAcceptInvitationFlow } from '../hooks/useAcceptInvitationFlow';
-import { resetToCreateSpace, resetToMySpaces } from '../navigation/navigationRef';
+import { resetToOnboardingChoice, resetToMySpaces } from '../navigation/navigationRef';
 import type { MainStackParamList } from '../navigation/types';
 import { useSpaceStore } from '../store/spaceStore';
 import { useToastStore } from '../store/toastStore';
 import { colors, radius, spacing, typography } from '../theme';
-import { formatSpaceDisplayName } from '../utils/spaceLabels';
 
 type AcceptInvitationsNav = NativeStackNavigationProp<
   MainStackParamList,
@@ -62,7 +61,7 @@ export function AcceptInvitationsScreen() {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: t('membership.incoming.title'),
+      title: t('onboarding.join.title'),
       headerRight: () => <ProfileHeaderButton />,
       headerBackVisible: navigation.canGoBack(),
     });
@@ -85,18 +84,26 @@ export function AcceptInvitationsScreen() {
     }, [load]),
   );
 
+  const refreshStartupNavigation = useSpaceStore(state => state.refreshStartupNavigation);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await load();
-    setRefreshing(false);
-  }, [load]);
+    try {
+      const result = await refreshStartupNavigation();
+      if (result.route === 'AcceptInvitations') {
+        await load();
+      }
+    } finally {
+      setRefreshing(false);
+    }
+  }, [load, refreshStartupNavigation]);
 
   const handleSkip = useCallback(() => {
-    if (mySpaces.length === 0) {
-      resetToCreateSpace();
+    if (mySpaces.length > 0) {
+      resetToMySpaces();
       return;
     }
-    resetToMySpaces();
+    resetToOnboardingChoice();
   }, [mySpaces.length]);
 
   const handleAccept = useCallback(
@@ -126,9 +133,9 @@ export function AcceptInvitationsScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} />
         }>
-        <Text style={styles.eyebrow}>{t('membership.incoming.eyebrow')}</Text>
-        <Text style={styles.heading}>{t('membership.incoming.heading')}</Text>
-        <Text style={styles.subheading}>{t('membership.incoming.subheading')}</Text>
+        <Text style={styles.eyebrow}>{t('onboarding.join.eyebrow')}</Text>
+        <Text style={styles.heading}>{t('onboarding.join.pendingHeading')}</Text>
+        <Text style={styles.subheading}>{t('onboarding.join.pendingSubheading')}</Text>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -136,8 +143,8 @@ export function AcceptInvitationsScreen() {
           <ActivityIndicator color={colors.primary} style={styles.loader} />
         ) : invitations.length === 0 ? (
           <EmptyState
-            title={t('membership.incoming.emptyTitle')}
-            description={t('membership.incoming.emptyDescription')}
+            title={t('onboarding.join.emptyTitle')}
+            description={t('onboarding.join.emptyDescription')}
             icon="✉️"
           />
         ) : (
@@ -147,9 +154,10 @@ export function AcceptInvitationsScreen() {
               return (
                 <View key={invitation.invitationId} style={styles.card}>
                   <ListCard
-                    title={formatSpaceDisplayName(invitation.spaceName)}
+                    title={invitation.spaceName}
                     subtitle={`${formatSpaceType(invitation.spaceType)} · ${formatRoleLabel(invitation.role, t)}`}
                     iconLabel={invitation.spaceName.charAt(0).toUpperCase()}
+                    style={styles.listCard}
                   />
                   <View style={styles.metaBlock}>
                     <Badge label={formatRoleLabel(invitation.role, t)} />
@@ -166,7 +174,7 @@ export function AcceptInvitationsScreen() {
                     label={
                       accepting
                         ? t('membership.incoming.accepting')
-                        : t('membership.incoming.accept')
+                        : t('onboarding.join.accept')
                     }
                     onPress={() => void handleAccept(invitation)}
                     disabled={busy}
@@ -179,7 +187,7 @@ export function AcceptInvitationsScreen() {
         )}
 
         <Pressable style={styles.skipButton} onPress={handleSkip} disabled={busy}>
-          <Text style={styles.skipText}>{t('membership.incoming.skip')}</Text>
+          <Text style={styles.skipText}>{t('onboarding.join.notNow')}</Text>
         </Pressable>
       </ScrollView>
     </View>
@@ -230,6 +238,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     padding: spacing.md,
     gap: spacing.sm,
+  },
+  listCard: {
+    borderWidth: 0,
+    shadowOpacity: 0,
+    elevation: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    minHeight: 0,
   },
   metaBlock: {
     gap: spacing.xs,

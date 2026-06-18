@@ -10,6 +10,7 @@ import type { MainStackParamList } from '../../navigation/types';
 import { useMemberStore } from '../../store/memberStore';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { memberCountInBadgeLabel, memberInviteHint } from '../../utils/memberAppStatus';
 import { StatusPicker } from './StatusPicker';
 
 type MemberProfileNav = NativeStackNavigationProp<MainStackParamList>;
@@ -20,6 +21,7 @@ type MemberProfileTabProps = {
   member: MemberDetailsResponse;
   canEdit: boolean;
   canRemove: boolean;
+  canInvite: boolean;
   currentRole?: MemberDetailsResponse['role'];
 };
 
@@ -49,12 +51,14 @@ export function MemberProfileTab({
   member,
   canEdit,
   canRemove,
+  canInvite,
   currentRole,
 }: MemberProfileTabProps) {
   const { t } = useTranslation();
   const navigation = useNavigation<MemberProfileNav>();
   const showToast = useToastStore(state => state.showToast);
   const loading = useMemberStore(state => state.loading);
+  const pendingInvitations = useMemberStore(state => state.pendingInvitations);
   const updateStatus = useMemberStore(state => state.updateStatus);
   const updateEmergencyContact = useMemberStore(state => state.updateEmergencyContact);
   const removeMember = useMemberStore(state => state.removeMember);
@@ -73,9 +77,22 @@ export function MemberProfileTab({
   const [statusError, setStatusError] = useState<string | null>(null);
   const [emergencyError, setEmergencyError] = useState<string | null>(null);
 
-  const appStatusLabel = member.linkedUser
-    ? t('membership.members.appUser')
-    : t('membership.members.notUsingApp');
+  const appStatusLabel = memberCountInBadgeLabel(member, t);
+
+  const hasPendingInvite = pendingInvitations.some(
+    invitation =>
+      invitation.mobileNumber.replace(/\D/g, '') ===
+      member.mobileNumber.replace(/\D/g, ''),
+  );
+
+  const openInviteScreen = () => {
+    navigation.navigate('InviteMembers', {
+      spaceId,
+      mobileNumber: member.mobileNumber,
+      role: member.role,
+      memberName: member.fullName,
+    });
+  };
 
   const handleSaveStatus = async () => {
     if (!selectedStatus) {
@@ -200,6 +217,22 @@ export function MemberProfileTab({
           value={member.emergencyContactMobile ?? '—'}
         />
       </Card>
+
+      {canInvite ? (
+        <Card style={styles.inviteCard}>
+          <Text style={styles.inviteHint}>{memberInviteHint(member, t)}</Text>
+          <Button
+            label={
+              hasPendingInvite
+                ? t('membership.invite.pending')
+                : t('membership.invite.send')
+            }
+            onPress={openInviteScreen}
+            disabled={hasPendingInvite}
+            style={styles.actionButton}
+          />
+        </Card>
+      ) : null}
 
       {canEdit ? (
         <>
@@ -327,6 +360,14 @@ export function MemberProfileTab({
 const styles = StyleSheet.create({
   card: {
     marginBottom: spacing.lg,
+  },
+  inviteCard: {
+    marginBottom: spacing.lg,
+    gap: spacing.md,
+  },
+  inviteHint: {
+    ...typography.body,
+    color: colors.muted,
   },
   sectionTitle: {
     ...typography.bodyStrong,

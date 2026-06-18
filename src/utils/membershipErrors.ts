@@ -23,8 +23,16 @@ export function getMembershipErrorMessage(
       return i18n.t('membership.errors.forbidden');
     case 404:
       return i18n.t('membership.errors.notFound');
-    case 409:
-      return i18n.t('membership.errors.conflict');
+    case 409: {
+      const message = error.message ?? '';
+      if (message.toLowerCase().includes('account with this mobile')) {
+        return i18n.t('membership.errors.accountExistsInSpace');
+      }
+      if (message.toLowerCase().includes('member with this mobile')) {
+        return i18n.t('membership.errors.mobileExists');
+      }
+      return message || i18n.t('membership.errors.conflict');
+    }
     default:
       return error.message || i18n.t(fallbackKey);
   }

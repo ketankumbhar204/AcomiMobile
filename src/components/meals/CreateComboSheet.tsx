@@ -6,6 +6,9 @@ import type { FoodCategoryResponse, FoodItemResponse, UUID } from '../../api/typ
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, spacing, typography } from '../../theme';
 import type { MenuDraftOption } from '../../utils/dailyMenuDraft';
+import { nextComboName } from '../../utils/comboNaming';
+import { parsePriceInput, validatePriceInput } from '../../utils/comboPrice';
+import { ComboPriceInput } from './ComboPriceInput';
 import { FoodItemMultiPicker } from './FoodItemMultiPicker';
 import { MenuPlanningBottomSheet, SheetPrimaryButton } from './MenuPlanningBottomSheet';
 import { PlanningSelectionSection } from './PlanningSelectionSection';
@@ -16,21 +19,8 @@ type CreateComboSheetProps = {
   existingOptions: MenuDraftOption[];
   onClose: () => void;
   onBack?: () => void;
-  onSave: (name: string, itemIds: string[], saveToLibrary: boolean) => Promise<void>;
+  onSave: (name: string, itemIds: string[], saveToLibrary: boolean, price?: number | null) => Promise<void>;
 };
-
-function nextComboName(existing: MenuDraftOption[]): string {
-  const usedNumbers = new Set<number>();
-  for (const opt of existing) {
-    const comboMatch = /^Combo (\d+)$/i.exec(opt.label);
-    const legacyPackageMatch = /^Package (\d+)$/i.exec(opt.label);
-    if (comboMatch) usedNumbers.add(parseInt(comboMatch[1], 10));
-    if (legacyPackageMatch) usedNumbers.add(parseInt(legacyPackageMatch[1], 10));
-  }
-  let n = 1;
-  while (usedNumbers.has(n)) n++;
-  return `Combo ${n}`;
-}
 
 export function CreateComboSheet({
   visible,
@@ -49,30 +39,36 @@ export function CreateComboSheet({
   const [categories, setCategories] = useState<FoodCategoryResponse[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [comboName, setComboName] = useState('');
+  const [suggestedName, setSuggestedName] = useState('Combo 1');
+  const [priceText, setPriceText] = useState('');
+  const [priceError, setPriceError] = useState<string | null>(null);
   const [saveToLibrary, setSaveToLibrary] = useState(false);
 
-  const defaultName = useMemo(
-    () => nextComboName(existingOptions),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [visible],
-  );
-
   useEffect(() => {
     if (!visible) return;
-    setComboName(defaultName);
+    setPriceText('');
+    setPriceError(null);
     setSelectedIds([]);
     setSaveToLibrary(false);
-  }, [visible, defaultName]);
 
-  useEffect(() => {
-    if (!visible) return;
     let active = true;
     setLoading(true);
-    Promise.all([mealsApi.getFoodItems(spaceId), mealsApi.getFoodCategories(spaceId)])
-      .then(([items, cats]) => {
+    Promise.all([
+      mealsApi.getFoodItems(spaceId),
+      mealsApi.getFoodCategories(spaceId),
+      mealsApi.getMealCombos(spaceId),
+    ])
+      .then(([items, cats, combos]) => {
         if (!active) return;
         setFoodItems(items.filter(i => i.isActive));
         setCategories(cats.filter(c => c.isActive));
+        const labels = [
+          ...existingOptions.map(option => option.label),
+          ...combos.filter(combo => combo.isActive).map(combo => combo.name),
+        ];
+        const name = nextComboName(labels);
+        setSuggestedName(name);
+        setComboName(name);
       })
       .catch(() => {})
       .finally(() => {
@@ -81,7 +77,7 @@ export function CreateComboSheet({
     return () => {
       active = false;
     };
-  }, [visible, spaceId]);
+  }, [visible, spaceId, existingOptions]);
 
   const selectedItems = useMemo(
     () =>
@@ -123,13 +119,24 @@ export function CreateComboSheet({
 
   const handleSave = async () => {
     if (selectedItems.length === 0) return;
-    const name = comboName.trim() || defaultName;
+    const validation = validatePriceInput(priceText);
+    if (validation) {
+      setPriceError(
+        validation === 'nonPositive'
+          ? t('meals.pricing.priceMustBePositive')
+          : t('meals.pricing.priceInvalid'),
+      );
+      return;
+    }
+    const name = comboName.trim() || suggestedName;
+    const price = parsePriceInput(priceText);
     setSaving(true);
     try {
       await onSave(
         name,
         selectedItems.map(i => i.itemId),
         saveToLibrary,
+        price,
       );
       onClose();
     } finally {
@@ -156,8 +163,17 @@ export function CreateComboSheet({
         style={styles.nameInput}
         value={comboName}
         onChangeText={setComboName}
-        placeholder={defaultName}
+        placeholder={suggestedName}
         returnKeyType="done"
+      />
+
+      <ComboPriceInput
+        value={priceText}
+        onChangeText={text => {
+          setPriceText(text);
+          if (priceError) setPriceError(null);
+        }}
+        error={priceError}
       />
 
       <PlanningSelectionSection

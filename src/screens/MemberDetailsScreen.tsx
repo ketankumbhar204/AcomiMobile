@@ -23,6 +23,7 @@ import { useSpacePermissions } from '../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../navigation/types';
 import { useMemberStore } from '../store/memberStore';
 import { spacing, typography } from '../theme';
+import { memberCountInBadgeLabel } from '../utils/memberAppStatus';
 
 type MemberDetailsNav = NativeStackNavigationProp<
   MainStackParamList,
@@ -42,6 +43,7 @@ export function MemberDetailsScreen() {
   const permissions = useSpacePermissions(spaceId);
   const member = useMemberStore(state => state.selectedMember);
   const loadMemberDetails = useMemberStore(state => state.loadMemberDetails);
+  const loadPendingInvitations = useMemberStore(state => state.loadPendingInvitations);
   const memberLoading = useMemberStore(state => state.memberLoading);
   const error = useMemberStore(state => state.error);
 
@@ -50,6 +52,10 @@ export function MemberDetailsScreen() {
   const spaceType = permissions.spaceType;
   const canEdit = permissions.canManageMembers && member?.role !== 'OWNER';
   const canRemove = permissions.canRemoveMember && member?.role !== 'OWNER';
+  const canInvite =
+    permissions.canManageMembers &&
+    member?.role !== 'OWNER' &&
+    member?.membershipId == null;
   const showMealsTab = permissions.canViewMeals === true;
   const canManageMeals = permissions.canManageMeals === true;
 
@@ -69,7 +75,8 @@ export function MemberDetailsScreen() {
     useCallback(() => {
       console.log('[MemberDetails] screen focused', { spaceId, memberId });
       void loadMemberDetails(memberId);
-    }, [loadMemberDetails, memberId, spaceId]),
+      void loadPendingInvitations();
+    }, [loadMemberDetails, loadPendingInvitations, memberId, spaceId]),
   );
 
   const renderTabContent = () => {
@@ -86,6 +93,7 @@ export function MemberDetailsScreen() {
             member={member}
             canEdit={canEdit}
             canRemove={canRemove}
+            canInvite={canInvite}
             currentRole={permissions.membershipRole}
           />
         );
@@ -131,13 +139,7 @@ export function MemberDetailsScreen() {
           <View style={styles.badgeRow}>
             <RoleBadge role={member.role} />
             <MemberStatusBadge status={member.status} />
-            <Badge
-              label={
-                member.linkedUser
-                  ? t('membership.members.appUser')
-                  : t('membership.members.notUsingApp')
-              }
-            />
+            <Badge label={memberCountInBadgeLabel(member, t)} />
           </View>
 
           <MemberDetailTabBar

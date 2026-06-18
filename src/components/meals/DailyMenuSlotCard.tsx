@@ -6,6 +6,10 @@ import { Card } from '../ui/Card';
 import { colors, radius, spacing, typography } from '../../theme';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
 import { getMenuOptionItemNames } from '../../utils/plannedComboDisplay';
+import {
+  resolveMenuOptionCurrency,
+  resolveMenuOptionPrice,
+} from '../../utils/comboPrice';
 import { ComboItemsPopup } from './ComboItemsPopup';
 import { PlannedComboPreviewRow } from './PlannedComboPreviewRow';
 
@@ -63,6 +67,8 @@ export function DailyMenuSlotCard({
       options.map(option => ({
         option,
         itemNames: getMenuOptionItemNames(option, library),
+        price: resolveMenuOptionPrice(option, library),
+        currencyCode: resolveMenuOptionCurrency(option, library),
       })),
     [library, options],
   );
@@ -102,11 +108,13 @@ export function DailyMenuSlotCard({
             <Text style={styles.choicesLabel}>{t('meals.menu.plannedMenuLabel')}</Text>
             <Text style={styles.choicesCount}>({options.length})</Text>
           </View>
-          {visibleOptionRows.map(({ option, itemNames }, index) => (
+          {visibleOptionRows.map(({ option, itemNames, price, currencyCode }, index) => (
             <PlannedComboPreviewRow
               key={option.optionId ?? `${option.label}-${index}`}
               option={option}
               itemNames={itemNames}
+              price={price}
+              currencyCode={currencyCode}
               onPress={() => openComboPreview(option.label, itemNames)}
             />
           ))}

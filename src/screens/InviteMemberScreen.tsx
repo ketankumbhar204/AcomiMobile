@@ -24,6 +24,7 @@ import { useSpaceStore } from '../store/spaceStore';
 import { useToastStore } from '../store/toastStore';
 import { colors, spacing, typography } from '../theme';
 import { defaultRoleForSpaceType } from '../utils/memberRoles';
+import { isValidIndianMobile, normalizeIndianMobileDigits } from '../utils/indianMobile';
 import { findMySpaceEntry } from '../utils/spacePermissions';
 
 type InviteMembersNav = NativeStackNavigationProp<MainStackParamList, 'InviteMembers'>;
@@ -38,7 +39,8 @@ export function InviteMemberScreen() {
   const { t, i18n } = useTranslation();
   const navigation = useNavigation<InviteMembersNav>();
   const route = useRoute<InviteMembersRoute>();
-  const { spaceId } = route.params;
+  const { spaceId, mobileNumber: initialMobile, role: initialRole, memberName } =
+    route.params;
   const mySpaces = useSpaceStore(state => state.mySpaces);
   const spaceType = findMySpaceEntry(mySpaces, spaceId)?.spaceType;
   const inviteMember = useMemberStore(state => state.inviteMember);
@@ -47,9 +49,9 @@ export function InviteMemberScreen() {
   const loading = useMemberStore(state => state.loading);
   const showToast = useToastStore(state => state.showToast);
 
-  const [mobileNumber, setMobileNumber] = useState('');
+  const [mobileNumber, setMobileNumber] = useState(initialMobile ?? '');
   const [role, setRole] = useState<MembershipRole | null>(() =>
-    defaultRoleForSpaceType(spaceType),
+    initialRole ?? defaultRoleForSpaceType(spaceType),
   );
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
@@ -63,11 +65,11 @@ export function InviteMemberScreen() {
 
   function validate(): boolean {
     const errors: FieldErrors = {};
-    const digits = mobileNumber.replace(/\D/g, '');
+    const digits = normalizeIndianMobileDigits(mobileNumber);
 
     if (!mobileNumber.trim()) {
       errors.mobileNumber = t('membership.invite.mobileRequired');
-    } else if (digits.length < 10) {
+    } else if (!isValidIndianMobile(digits)) {
       errors.mobileNumber = t('membership.invite.mobileInvalid');
     }
 
@@ -110,7 +112,11 @@ export function InviteMemberScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
           <Text style={styles.eyebrow}>{t('membership.invite.eyebrow')}</Text>
-          <Text style={styles.heading}>{t('membership.invite.heading')}</Text>
+          <Text style={styles.heading}>
+            {memberName
+              ? t('membership.invite.prefillHeading', { name: memberName })
+              : t('membership.invite.heading')}
+          </Text>
           <Text style={styles.subheading}>{t('membership.invite.subheading')}</Text>
 
           {storeError ? (

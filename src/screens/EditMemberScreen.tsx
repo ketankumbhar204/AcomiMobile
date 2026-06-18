@@ -23,6 +23,7 @@ import { useSpaceStore } from '../store/spaceStore';
 import { useToastStore } from '../store/toastStore';
 import { colors, spacing, typography } from '../theme';
 import { isRoleAssignableInSpace } from '../utils/memberRoles';
+import { isValidIndianMobile, normalizeIndianMobileDigits } from '../utils/indianMobile';
 import { findMySpaceEntry } from '../utils/spacePermissions';
 
 type EditMemberNav = NativeStackNavigationProp<MainStackParamList, 'EditMember'>;
@@ -78,7 +79,7 @@ export function EditMemberScreen() {
 
   function validate(): boolean {
     const errors: FieldErrors = {};
-    const digits = mobileNumber.replace(/\D/g, '');
+    const digits = normalizeIndianMobileDigits(mobileNumber);
 
     if (!fullName.trim()) {
       errors.fullName = t('membership.add.fullNameRequired');
@@ -86,7 +87,7 @@ export function EditMemberScreen() {
 
     if (!mobileNumber.trim()) {
       errors.mobileNumber = t('membership.invite.mobileRequired');
-    } else if (digits.length < 10) {
+    } else if (!isValidIndianMobile(digits)) {
       errors.mobileNumber = t('membership.invite.mobileInvalid');
     }
 
@@ -122,6 +123,12 @@ export function EditMemberScreen() {
       console.log('[EditMember] save success', updated.memberId);
       showToast(t('membership.edit.successToast'));
       navigation.goBack();
+      return;
+    }
+
+    const err = useMemberStore.getState().error;
+    if (err?.toLowerCase().includes('mobile number')) {
+      setFieldErrors({ mobileNumber: err });
     }
   }
 

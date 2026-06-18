@@ -5,6 +5,12 @@ import { mealsApi } from '../../api/mealsApi';
 import type { MealComboResponse, UUID } from '../../api/types';
 import { colors, spacing, typography } from '../../theme';
 import type { MenuDraftOption } from '../../utils/dailyMenuDraft';
+import { hasComboPrice } from '../../utils/comboPrice';
+import {
+  applyDraftPricesToCombos,
+  comboPriceDraftErrorMessage,
+  type ComboPriceDraftErrors,
+} from '../../utils/comboSelectionPricing';
 import { ComboPickerCard } from './ComboPickerCard';
 import {
   MenuPlanningBottomSheet,
@@ -12,12 +18,19 @@ import {
 } from './MenuPlanningBottomSheet';
 import { PlanningSelectionSection } from './PlanningSelectionSection';
 
+type SelectedCombo = {
+  comboId: string;
+  name: string;
+  price?: number | null;
+  currencyCode?: string | null;
+};
+
 type SelectComboSheetProps = {
   visible: boolean;
   spaceId: UUID;
   existingOptions: MenuDraftOption[];
   onClose: () => void;
-  onSave: (combos: Array<{ comboId: string; name: string }>) => void;
+  onSave: (combos: SelectedCombo[]) => void;
   onCreateCombo?: () => void;
 };
 
@@ -31,8 +44,11 @@ export function SelectComboSheet({
 }: SelectComboSheetProps) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [combos, setCombos] = useState<MealComboResponse[]>([]);
   const [selectedComboIds, setSelectedComboIds] = useState<string[]>([]);
+  const [draftPrices, setDraftPrices] = useState<Record<string, string>>({});
+  const [priceErrors, setPriceErrors] = useState<ComboPriceDraftErrors>({});
 
   useEffect(() => {
     if (!visible) return;
@@ -40,6 +56,8 @@ export function SelectComboSheet({
       .filter(option => option.entryType === 'COMBO' && option.comboId)
       .map(option => option.comboId as string);
     setSelectedComboIds(existingComboIds);
+    setDraftPrices({});
+    setPriceErrors({});
 
     let active = true;
     setLoading(true);
@@ -67,14 +85,71 @@ export function SelectComboSheet({
   );
 
   const toggleCombo = (comboId: string) => {
-    setSelectedComboIds(prev =>
-      prev.includes(comboId) ? prev.filter(id => id !== comboId) : [...prev, comboId],
-    );
+    setSelectedComboIds(prev => {
+      if (prev.includes(comboId)) {
+        setDraftPrices(current => {
+          const next = { ...current };
+          delete next[comboId];
+          return next;
+        });
+        setPriceErrors(current => {
+          const next = { ...current };
+          delete next[comboId];
+          return next;
+        });
+        return prev.filter(id => id !== comboId);
+      }
+      return [...prev, comboId];
+    });
   };
 
-  const handleSave = () => {
-    onSave(selectedCombos.map(combo => ({ comboId: combo.comboId, name: combo.name })));
+  const updateDraftPrice = (comboId: string, text: string) => {
+    setDraftPrices(prev => ({ ...prev, [comboId]: text }));
+    if (priceErrors[comboId]) {
+      setPriceErrors(prev => {
+        const next = { ...prev };
+        delete next[comboId];
+        return next;
+      });
+    }
+  };
+
+  const finishSave = (resolvedCombos: MealComboResponse[]) => {
+    onSave(
+      resolvedCombos.map(combo => ({
+        comboId: combo.comboId,
+        name: combo.name,
+        price: combo.price ?? null,
+        currencyCode: combo.currencyCode ?? 'INR',
+      })),
+    );
+    setDraftPrices({});
+    setPriceErrors({});
     onClose();
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { updatedCombos, errors } = await applyDraftPricesToCombos(
+        spaceId,
+        selectedCombos,
+        draftPrices,
+      );
+      if (Object.keys(errors).length > 0) {
+        setPriceErrors(errors);
+        setCombos(prev =>
+          prev.map(combo => {
+            const updated = updatedCombos.find(row => row.comboId === combo.comboId);
+            return updated ?? combo;
+          }),
+        );
+        return;
+      }
+      finishSave(updatedCombos);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -83,7 +158,11 @@ export function SelectComboSheet({
       title={t('meals.planning.selectCombo')}
       onClose={onClose}
       footer={
-        <SheetPrimaryButton label={t('common.save')} onPress={handleSave} />
+        <SheetPrimaryButton
+          label={t('common.save')}
+          onPress={() => void handleSave()}
+          loading={saving}
+        />
       }>
       <Text style={styles.hint}>{t('meals.planning.selectComboHintMulti')}</Text>
 
@@ -97,22 +176,35 @@ export function SelectComboSheet({
           label: combo.name,
           variant: 'COMBO',
         }))}
-        onRemove={id => setSelectedComboIds(prev => prev.filter(x => x !== id))}
+        onRemove={id => toggleCombo(id)}
         emptyText={t('meals.planning.noCombosSelected')}
       />
 
       <Text style={styles.sectionLabel}>{t('meals.planning.availableCombos')}</Text>
 
       {!loading
-        ? combos.map(combo => (
-            <ComboPickerCard
-              key={combo.comboId}
-              name={combo.name}
-              itemNames={combo.items?.map(item => item.name).filter(Boolean) ?? []}
-              selected={selectedComboIds.includes(combo.comboId)}
-              onPress={() => toggleCombo(combo.comboId)}
-            />
-          ))
+        ? combos.map(combo => {
+            const selected = selectedComboIds.includes(combo.comboId);
+            const requiresPriceInput = !hasComboPrice(combo.price);
+            const errorKey = priceErrors[combo.comboId];
+            return (
+              <ComboPickerCard
+                key={combo.comboId}
+                name={combo.name}
+                itemNames={combo.items?.map(item => item.name).filter(Boolean) ?? []}
+                price={combo.price}
+                currencyCode={combo.currencyCode}
+                selected={selected}
+                requiresPriceInput={requiresPriceInput}
+                priceDraft={draftPrices[combo.comboId] ?? ''}
+                onPriceDraftChange={text => updateDraftPrice(combo.comboId, text)}
+                priceInputError={
+                  errorKey ? comboPriceDraftErrorMessage(errorKey, t) : null
+                }
+                onPress={() => toggleCombo(combo.comboId)}
+              />
+            );
+          })
         : null}
 
       {combos.length === 0 && !loading ? (

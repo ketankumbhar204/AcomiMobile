@@ -27,7 +27,7 @@
     "createSpace": "Create Space",
     "spaceDetails": "Space Details",
     "editSpace": "Edit Space",
-    "inviteMember": "Invite Member",
+    "inviteMember": "Send Invitation",
     "acceptInvitations": "Invitations",
     "addMember": "Add Member",
     "memberDetails": "Member Details",
@@ -41,6 +41,33 @@
     "payments": "Payments",
     "complaints": "Complaints"
   },
+  "onboarding": {
+    "choice": {
+      "title": "Welcome",
+      "eyebrow": "Welcome to CountIn",
+      "heading": "How will you use CountIn?",
+      "subheading": "Choose whether you are an owner or joining as a member.",
+      "manageTitle": "I Am an Owner",
+      "manageSubtitle": "PG · Mess · Hostel · Co-living · Rental",
+      "memberTitle": "I am a member",
+      "memberSubtitle": "Tenant · Customer · Staff"
+    },
+    "join": {
+      "title": "Join Space",
+      "eyebrow": "Join a space",
+      "heading": "Join a space",
+      "body": "You are not currently connected to any spaces.\n\nAsk your PG owner, hostel manager, or mess owner to send you an invitation to your mobile number.",
+      "refresh": "Refresh",
+      "refreshing": "Checking…",
+      "manageInstead": "I Am an Owner instead",
+      "pendingHeading": "You have pending invitations",
+      "pendingSubheading": "Accept an invitation to join and start using the app.",
+      "emptyTitle": "No invitations right now",
+      "emptyDescription": "When an owner invites your mobile number, it will show up here. Tap Refresh to check again.",
+      "notNow": "Not now",
+      "accept": "Accept"
+    }
+  },
   "auth": {
     "login": {
       "heading": "Welcome back",
@@ -49,7 +76,7 @@
       "sendOtp": "Send OTP",
       "disclaimer": "New to CountIn? Your account will be created automatically.",
       "mobileRequired": "Mobile number is required.",
-      "mobileInvalid": "Enter a valid 10-digit Indian mobile number."
+      "mobileInvalid": "Enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9."
     },
     "otp": {
       "eyebrow": "Verification",
@@ -177,14 +204,19 @@
     "members": {
       "emptyTitle": "No members yet",
       "emptyDescription": "Add your first tenant, customer, or staff member to this space.",
-      "appUser": "App User",
-      "notUsingApp": "Not Using App",
+      "onCountIn": "On CountIn",
+      "notOnCountInYet": "Not on CountIn yet",
       "mobile": "Mobile: {{value}}",
       "created": "Added: {{date}}",
       "remove": "Remove Member"
     },
     "add": {
       "fab": "Add member",
+      "fabMenuTitle": "Add or invite",
+      "fabAddRecord": "Add without app",
+      "fabInviteApp": "Send invitation",
+      "inviteInstead": "Want them on CountIn?",
+      "inviteInsteadAction": "Send invitation",
       "eyebrow": "Members",
       "heading": "Add a Member",
       "subheading": "Create a business record directly. They do not need the CountIn app.",
@@ -218,7 +250,7 @@
       "eyebrow": "Member",
       "mobile": "Mobile Number",
       "role": "Role",
-      "appStatus": "App Status",
+      "appStatus": "CountIn",
       "created": "Created",
       "updated": "Updated",
       "edit": "Edit Member"
@@ -254,18 +286,22 @@
       "bannerSubtitle": "Tap to review and join"
     },
     "invite": {
-      "headerAction": "Invite",
+      "headerAction": "Send invitation",
       "eyebrow": "Members",
-      "heading": "Invite a Member",
-      "subheading": "Invite someone to use the CountIn app. They will receive an invitation to join this space.",
+      "heading": "Send invitation",
+      "subheading": "They will receive an invitation to connect with this space on CountIn.",
       "mobileLabel": "Mobile Number",
       "mobilePlaceholder": "e.g. 9876543210",
       "mobileRequired": "Mobile number is required.",
-      "mobileInvalid": "Enter a valid 10-digit mobile number.",
+      "mobileInvalid": "Enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.",
       "roleRequired": "Please select a role for this member.",
       "roleNotAllowed": "This role is not available for this space type.",
-      "send": "Send Invitation",
-      "successToast": "Invitation sent successfully."
+      "send": "Send invitation",
+      "hintNewToCountIn": "Ask them to install CountIn and sign in with {{mobile}}. The invitation will appear after they log in.",
+      "hintAlreadyOnCountIn": "They already use CountIn. The invitation will appear in their app — they just need to accept it.",
+      "pending": "Invitation sent",
+      "prefillHeading": "Send invitation to {{name}}",
+      "successToast": "Invitation sent."
     },
     "cancel": {
       "title": "Cancel invitation?",
@@ -379,6 +415,8 @@
       "forbidden": "You do not have permission to perform this action.",
       "notFound": "The requested item was not found. Try refreshing.",
       "conflict": "This person is already a member of this space.",
+      "mobileExists": "A member with this mobile number already exists in this space.",
+      "accountExistsInSpace": "An account with this mobile number already exists in this space. Use a different mobile number.",
       "loadMembers": "Failed to load members. Please try again.",
       "loadDetails": "Failed to load member details. Please try again.",
       "loadInvitations": "Failed to load invitations. Please try again.",
@@ -1093,10 +1131,21 @@
   },
   "dashboard": {
     "overview": "Overview",
+    "tomorrowMeals": "Tomorrow's meals",
+    "noMealSelectionRequired": "No meal selection required today.",
     "occupancy": "Occupancy",
     "todaysMeals": "Today's meals",
     "eligibleMembers": "Eligible members",
     "eligibleMembersHint": "Can receive tomorrow's menus",
+    "pollStatus": {
+      "title": "Tomorrow's headcount",
+      "membersResponded": "{{responded}} / {{total}} members responded",
+      "pendingMembers": "{{count}} pending",
+      "headcountReady": "Headcount ready",
+      "remindMembers": "Remind members",
+      "viewDetails": "View details",
+      "viewSummary": "View summary"
+    },
     "mealsHint": "↓ 18% less waste vs last week",
     "rentCollected": "Rent collected (May)",
     "rentHint": "78% of expected collection",
@@ -1212,6 +1261,8 @@
       "submit": "Save choices",
       "submitting": "Saving…",
       "saved": "Your meal choices are saved",
+      "updateChoices": "Update choices",
+      "notSelected": "Not selected",
       "selectAtLeastOne": "Pick at least one meal option",
       "selectAllOpen": "Please pick one option for each open meal",
       "noOpenPolls": "No polls are open for this date yet. Share the menu to open member responses in the app.",
@@ -1357,6 +1408,17 @@
       "dailyMenuLater": "Daily menu planning — Phase 5.2",
       "dailyMenuLaterHint": "After your library is ready: plan each meal, then Share menu."
     },
+    "pricing": {
+      "priceOptionalLabel": "Price (optional)",
+      "pricePlaceholder": "e.g. 80",
+      "priceRequiredTitle": "Price Required",
+      "priceRequiredBody": "{{name}} does not have a price. Enter price now.",
+      "enterPrice": "Enter price",
+      "priceRequiredInline": "Enter a price to include this combo.",
+      "saveAndSelect": "Save & Select",
+      "priceMustBePositive": "Price must be greater than 0.",
+      "priceInvalid": "Enter a valid price."
+    },
     "confirmStop": "Stop meal participation for this member?",
     "plan": {
       "none": "None",
@@ -1494,6 +1556,14 @@
       "eyebrow": "Account",
       "heading": "Profile & Settings",
       "subheading": "Manage your account and sign out securely.",
+      "edit": "Edit",
+      "save": "Save changes",
+      "cancel": "Cancel",
+      "fullNameLabel": "Full name",
+      "mobileLabel": "Mobile number",
+      "mobileHint": "Used to sign in. Cannot be changed here.",
+      "nameRequired": "Full name is required.",
+      "saveSuccess": "Profile updated",
       "sessionTitle": "Session",
       "sessionBody": "Logging out clears your session on this device. You can sign in again with your mobile number.",
       "logout": "Log out",
@@ -1504,6 +1574,7 @@
     "language": {
       "title": "Language",
       "description": "Choose your preferred app language.",
+      "select": "Select language",
       "names": {
         "en": "English",
         "hi": "हिन्दी",

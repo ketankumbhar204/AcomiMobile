@@ -19,6 +19,8 @@ import { UnitDetailScreen } from '../screens/accommodation/UnitDetailScreen';
 import { UnitFormScreen } from '../screens/accommodation/UnitFormScreen';
 import { UnitsScreen } from '../screens/accommodation/UnitsScreen';
 import { AcceptInvitationsScreen } from '../screens/AcceptInvitationsScreen';
+import { JoinSpaceScreen } from '../screens/JoinSpaceScreen';
+import { OnboardingChoiceScreen } from '../screens/OnboardingChoiceScreen';
 import { AddMemberScreen } from '../screens/AddMemberScreen';
 import { CreateSpaceScreen } from '../screens/CreateSpaceScreen';
 import { EditMemberScreen } from '../screens/EditMemberScreen';
@@ -50,6 +52,12 @@ export function MainNavigator() {
   const selectedSpaceId = useSpaceStore(state => state.selectedSpaceId);
 
   const initialRouteName = useMemo((): keyof MainStackParamList => {
+    if (startupRoute === 'OnboardingChoice') {
+      return 'OnboardingChoice';
+    }
+    if (startupRoute === 'JoinSpace') {
+      return 'JoinSpace';
+    }
     if (startupRoute === 'CreateSpace') {
       return 'CreateSpace';
     }
@@ -72,8 +80,14 @@ export function MainNavigator() {
       <Stack.Screen
         name="AcceptInvitations"
         component={AcceptInvitationsScreen}
-        options={{ title: 'Invitations' }}
+        options={{ title: 'Join Space' }}
       />
+      <Stack.Screen
+        name="OnboardingChoice"
+        component={OnboardingChoiceScreen}
+        options={{ headerShown: true }}
+      />
+      <Stack.Screen name="JoinSpace" component={JoinSpaceScreen} />
       <Stack.Screen
         name="MySpaces"
         component={MySpacesScreen}

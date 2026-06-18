@@ -3,6 +3,7 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { MealComboResponse } from '../../../api/types';
 import { spacing, typography } from '../../../theme';
+import { formatComboPrice } from '../../../utils/comboPrice';
 import { MenuChip } from './MenuChip';
 import { ScrollableChipRail } from './ScrollableChipRail';
 
@@ -83,16 +84,19 @@ export function ComboChipRail({
 
       {activeCombos.length > 0 ? (
         <ScrollableChipRail>
-          {activeCombos.map(combo => (
+          {activeCombos.map(combo => {
+            const priceLabel = formatComboPrice(combo.price, combo.currencyCode);
+            return (
             <MenuChip
               key={combo.comboId}
-              label={combo.name}
+              label={priceLabel ? `${combo.name}  ${priceLabel}` : combo.name}
               variant="combo"
               selected={selectedComboId === combo.comboId}
               onPress={() => handleComboPress(combo)}
               onLongPress={() => openComboActions(combo)}
             />
-          ))}
+            );
+          })}
         </ScrollableChipRail>
       ) : (
         <Text style={styles.empty}>{t('meals.library.combosEmpty')}</Text>

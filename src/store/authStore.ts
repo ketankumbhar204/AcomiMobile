@@ -18,6 +18,7 @@ interface AuthState {
 
   bootstrap: () => Promise<void>;
   setSession: (user: UserResponse, accessToken: string) => Promise<void>;
+  updateUser: (user: UserResponse) => Promise<void>;
   clearSession: () => Promise<void>;
 }
 
@@ -111,6 +112,19 @@ export const useAuthStore = create<AuthState>(set => ({
       userId: user.id,
       user,
       accessToken,
+    });
+  },
+
+  updateUser: async (user: UserResponse): Promise<void> => {
+    if (__DEV__) {
+      console.log(`${LOG_TAG} updateUser -> userId:`, user.id);
+    }
+
+    await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
+
+    set({
+      user,
+      userId: user.id,
     });
   },
 

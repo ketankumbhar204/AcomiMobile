@@ -3,6 +3,7 @@ import {
   createNavigationContainerRef,
 } from '@react-navigation/native';
 import type { RootStackParamList } from './types';
+import type { SpaceBootstrapResult } from '../store/spaceStore';
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
@@ -167,6 +168,78 @@ export function resetToMySpaces(): void {
       ],
     }),
   );
+}
+
+export function resetToOnboardingChoice(): void {
+  if (!navigationRef.isReady()) {
+    return;
+  }
+
+  navigationRef.dispatch(
+    CommonActions.reset({
+      index: 0,
+      routes: [
+        {
+          name: 'Main',
+          state: {
+            index: 0,
+            routes: [{ name: 'OnboardingChoice' }],
+          },
+        },
+      ],
+    }),
+  );
+}
+
+export function resetToJoinSpace(): void {
+  if (!navigationRef.isReady()) {
+    return;
+  }
+
+  navigationRef.dispatch(
+    CommonActions.reset({
+      index: 0,
+      routes: [
+        {
+          name: 'Main',
+          state: {
+            index: 0,
+            routes: [{ name: 'JoinSpace' }],
+          },
+        },
+      ],
+    }),
+  );
+}
+
+export function navigateBootstrapResult(result: SpaceBootstrapResult): void {
+  if (!navigationRef.isReady()) {
+    return;
+  }
+
+  switch (result.route) {
+    case 'SpaceTabs':
+      if (result.spaceId) {
+        resetToDashboard(result.spaceId);
+      }
+      break;
+    case 'AcceptInvitations':
+      resetToAcceptInvitations();
+      break;
+    case 'OnboardingChoice':
+      resetToOnboardingChoice();
+      break;
+    case 'JoinSpace':
+      resetToJoinSpace();
+      break;
+    case 'CreateSpace':
+      resetToCreateSpace();
+      break;
+    case 'MySpaces':
+    default:
+      resetToMySpaces();
+      break;
+  }
 }
 
 export function resetToLogin(): void {

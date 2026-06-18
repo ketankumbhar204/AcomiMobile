@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { MealComboResponse } from '../../../api/types';
 import { colors, radius, spacing, typography } from '../../../theme';
+import { formatComboPrice } from '../../../utils/comboPrice';
 
 type ComboPreviewBarProps = {
   combo: MealComboResponse | null;
@@ -19,11 +20,17 @@ export function ComboPreviewBar({ combo, canManage = false, onEdit, onRemove }: 
   }
 
   const itemNames = combo.items?.map(item => item.name).filter(Boolean) ?? [];
+  const priceLabel = formatComboPrice(combo.price, combo.currencyCode);
 
   return (
     <View style={styles.wrapper}>
       <View style={styles.headerRow}>
-        <Text style={styles.label}>{t('meals.library.comboPreview')}</Text>
+        <View style={styles.titleBlock}>
+          <Text style={styles.comboName} numberOfLines={1}>
+            {combo.name}
+          </Text>
+          {priceLabel ? <Text style={styles.price}>{priceLabel}</Text> : null}
+        </View>
         {canManage ? (
           <View style={styles.actions}>
             {onEdit ? (
@@ -45,9 +52,13 @@ export function ComboPreviewBar({ combo, canManage = false, onEdit, onRemove }: 
           </View>
         ) : null}
       </View>
-      <Text style={styles.preview} numberOfLines={3}>
-        {itemNames.length > 0 ? itemNames.join(' · ') : t('meals.library.comboPreviewEmpty')}
-      </Text>
+      {itemNames.length > 0 ? (
+        <Text style={styles.preview} numberOfLines={3}>
+          {itemNames.join(' · ')}
+        </Text>
+      ) : (
+        <Text style={styles.previewEmpty}>{t('meals.library.comboPreviewEmpty')}</Text>
+      )}
     </View>
   );
 }
@@ -64,16 +75,22 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     marginBottom: spacing.xxs,
     gap: spacing.sm,
   },
-  label: {
-    ...typography.caption,
-    color: colors.muted,
-    fontWeight: '600',
+  titleBlock: {
     flex: 1,
+    minWidth: 0,
+    gap: spacing.xxs,
+  },
+  comboName: {
+    ...typography.bodyStrong,
+  },
+  price: {
+    ...typography.bodyStrong,
+    color: colors.textSecondary,
   },
   actions: {
     flexDirection: 'row',
@@ -98,5 +115,13 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: '#DC2626',
     fontWeight: '700',
+  },
+  preview: {
+    ...typography.body,
+    color: colors.textSecondary,
+  },
+  previewEmpty: {
+    ...typography.caption,
+    color: colors.muted,
   },
 });

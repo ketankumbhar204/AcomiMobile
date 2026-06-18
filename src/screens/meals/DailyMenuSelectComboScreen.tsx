@@ -13,6 +13,12 @@ import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, spacing, typography } from '../../theme';
 import { loadMenuDraft, syncCombosOnMenu } from '../../utils/dailyMenuDraft';
+import { hasComboPrice } from '../../utils/comboPrice';
+import {
+  applyDraftPricesToCombos,
+  comboPriceDraftErrorMessage,
+  type ComboPriceDraftErrors,
+} from '../../utils/comboSelectionPricing';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
 
 type Nav = NativeStackNavigationProp<MainStackParamList>;
@@ -37,6 +43,8 @@ export function DailyMenuSelectComboScreen({
   const [saving, setSaving] = useState(false);
   const [combos, setCombos] = useState<MealComboResponse[]>([]);
   const [selectedComboIds, setSelectedComboIds] = useState<string[]>([]);
+  const [draftPrices, setDraftPrices] = useState<Record<string, string>>({});
+  const [priceErrors, setPriceErrors] = useState<ComboPriceDraftErrors>({});
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -49,6 +57,8 @@ export function DailyMenuSelectComboScreen({
   useEffect(() => {
     setCombos([]);
     setSelectedComboIds([]);
+    setDraftPrices({});
+    setPriceErrors({});
     setLoading(true);
   }, [mealType, menuDate, spaceId]);
 
@@ -96,30 +106,69 @@ export function DailyMenuSelectComboScreen({
   );
 
   const toggleCombo = (comboId: string) => {
-    setSelectedComboIds(prev =>
-      prev.includes(comboId) ? prev.filter(id => id !== comboId) : [...prev, comboId],
-    );
+    setSelectedComboIds(prev => {
+      if (prev.includes(comboId)) {
+        setDraftPrices(current => {
+          const next = { ...current };
+          delete next[comboId];
+          return next;
+        });
+        setPriceErrors(current => {
+          const next = { ...current };
+          delete next[comboId];
+          return next;
+        });
+        return prev.filter(id => id !== comboId);
+      }
+      return [...prev, comboId];
+    });
   };
 
-  const removeCombo = (comboId: string) => {
-    setSelectedComboIds(prev => prev.filter(id => id !== comboId));
+  const updateDraftPrice = (comboId: string, text: string) => {
+    setDraftPrices(prev => ({ ...prev, [comboId]: text }));
+    if (priceErrors[comboId]) {
+      setPriceErrors(prev => {
+        const next = { ...prev };
+        delete next[comboId];
+        return next;
+      });
+    }
+  };
+
+  const persistSelection = async (resolvedCombos: MealComboResponse[]) => {
+    await syncCombosOnMenu(
+      spaceId,
+      menuDate,
+      mealType,
+      resolvedCombos.map(combo => ({ comboId: combo.comboId, name: combo.name })),
+    );
+    showToast(
+      resolvedCombos.length > 0
+        ? t('meals.planning.combosSaved', { count: resolvedCombos.length })
+        : t('meals.planning.combosCleared'),
+    );
+    navigation.goBack();
   };
 
   const saveSelection = async () => {
     setSaving(true);
     try {
-      await syncCombosOnMenu(
+      const { updatedCombos, errors } = await applyDraftPricesToCombos(
         spaceId,
-        menuDate,
-        mealType,
-        selectedCombos.map(combo => ({ comboId: combo.comboId, name: combo.name })),
+        selectedCombos,
+        draftPrices,
       );
-      showToast(
-        selectedCombos.length > 0
-          ? t('meals.planning.combosSaved', { count: selectedCombos.length })
-          : t('meals.planning.combosCleared'),
-      );
-      navigation.goBack();
+      if (Object.keys(errors).length > 0) {
+        setPriceErrors(errors);
+        setCombos(prev =>
+          prev.map(combo => {
+            const updated = updatedCombos.find(row => row.comboId === combo.comboId);
+            return updated ?? combo;
+          }),
+        );
+        return;
+      }
+      await persistSelection(updatedCombos);
     } catch {
       showToast(t('meals.errors.saveFailed'));
     } finally {
@@ -152,21 +201,32 @@ export function DailyMenuSelectComboScreen({
             label: combo.name,
             variant: 'COMBO',
           }))}
-          onRemove={removeCombo}
+          onRemove={toggleCombo}
           emptyText={t('meals.planning.noCombosSelected')}
         />
 
         <Text style={styles.sectionLabel}>{t('meals.planning.availableCombos')}</Text>
 
-        {combos.map(combo => (
-          <ComboPickerCard
-            key={combo.comboId}
-            name={combo.name}
-            itemNames={combo.items?.map(item => item.name).filter(Boolean) ?? []}
-            selected={selectedComboIds.includes(combo.comboId)}
-            onPress={() => toggleCombo(combo.comboId)}
-          />
-        ))}
+        {combos.map(combo => {
+          const selected = selectedComboIds.includes(combo.comboId);
+          const requiresPriceInput = !hasComboPrice(combo.price);
+          const errorKey = priceErrors[combo.comboId];
+          return (
+            <ComboPickerCard
+              key={combo.comboId}
+              name={combo.name}
+              itemNames={combo.items?.map(item => item.name).filter(Boolean) ?? []}
+              price={combo.price}
+              currencyCode={combo.currencyCode}
+              selected={selected}
+              requiresPriceInput={requiresPriceInput}
+              priceDraft={draftPrices[combo.comboId] ?? ''}
+              onPriceDraftChange={text => updateDraftPrice(combo.comboId, text)}
+              priceInputError={errorKey ? comboPriceDraftErrorMessage(errorKey, t) : null}
+              onPress={() => toggleCombo(combo.comboId)}
+            />
+          );
+        })}
 
         {combos.length === 0 && !loading ? (
           <Text style={styles.empty}>{t('meals.library.combosEmpty')}</Text>
@@ -211,4 +271,5 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
   },
   footerButton: { width: '100%' },
+  loader: { marginVertical: spacing.lg },
 });

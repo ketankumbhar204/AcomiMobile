@@ -5,6 +5,7 @@ import type {
   AuthTokenResponse,
   SendOtpRequest,
   SendOtpResponse,
+  UpdateUserRequest,
   UserResponse,
   VerifyOtpRequest,
 } from './types';
@@ -40,6 +41,15 @@ export const authApi = {
     }
     return unwrapApiResponse(
       apiClient.get<ApiResponse<UserResponse>>('/auth/me'),
+    );
+  },
+
+  updateMe: async (payload: UpdateUserRequest): Promise<UserResponse> => {
+    if (__DEV__) {
+      console.log(`${LOG_TAG} updateMe →`, payload);
+    }
+    return unwrapApiResponse(
+      apiClient.patch<ApiResponse<UserResponse>>('/auth/me', payload),
     );
   },
 };

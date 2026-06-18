@@ -15,12 +15,14 @@ import { useTranslation } from 'react-i18next';
 import { mealsApi } from '../../api/mealsApi';
 import type { FoodCategoryResponse, FoodItemResponse } from '../../api/types';
 import { ComboSelectionReview, FoodItemMultiPicker } from '../../components/meals';
+import { ComboPriceInput } from '../../components/meals/ComboPriceInput';
 import { Button, FormInput, PermissionDeniedScreen } from '../../components/ui';
 import { Screen } from '../../components/ui/Screen';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, spacing, typography } from '../../theme';
+import { parsePriceInput, validatePriceInput } from '../../utils/comboPrice';
 
 type Nav = NativeStackNavigationProp<MainStackParamList>;
 type Route = NativeStackScreenProps<MainStackParamList, 'MealComboForm'>['route'];
@@ -39,6 +41,8 @@ export function MealComboFormScreen() {
   const [categories, setCategories] = useState<FoodCategoryResponse[]>([]);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [priceText, setPriceText] = useState('');
+  const [priceError, setPriceError] = useState<string | null>(null);
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [nameError, setNameError] = useState<string | null>(null);
   const [itemsError, setItemsError] = useState<string | null>(null);
@@ -62,6 +66,9 @@ export function MealComboFormScreen() {
           if (combo) {
             setName(combo.name);
             setDescription(combo.description ?? '');
+            setPriceText(
+              combo.price != null && combo.price > 0 ? String(combo.price) : '',
+            );
             setSelectedItemIds(combo.items?.map(item => item.itemId) ?? []);
           }
         }
@@ -91,6 +98,18 @@ export function MealComboFormScreen() {
       setItemsError(null);
     }
 
+    const priceValidation = validatePriceInput(priceText);
+    if (priceValidation) {
+      setPriceError(
+        priceValidation === 'nonPositive'
+          ? t('meals.pricing.priceMustBePositive')
+          : t('meals.pricing.priceInvalid'),
+      );
+      valid = false;
+    } else {
+      setPriceError(null);
+    }
+
     if (!valid) {
       return;
     }
@@ -102,6 +121,8 @@ export function MealComboFormScreen() {
       name: name.trim(),
       description: description.trim() || null,
       itemIds: selectedItemIds,
+      price: parsePriceInput(priceText),
+      currencyCode: 'INR',
     };
 
     try {
@@ -118,7 +139,7 @@ export function MealComboFormScreen() {
     } finally {
       setSubmitting(false);
     }
-  }, [comboId, description, isEdit, name, navigation, selectedItemIds, showToast, spaceId, t]);
+  }, [comboId, description, isEdit, name, navigation, priceText, selectedItemIds, showToast, spaceId, t]);
 
   const addItemInline = useCallback(
     async (categoryId: string, itemName: string) => {
@@ -184,6 +205,15 @@ export function MealComboFormScreen() {
                 onChangeText={setDescription}
                 placeholder={t('meals.library.comboDescriptionPlaceholder')}
               />
+
+              <ComboPriceInput
+                value={priceText}
+                onChangeText={text => {
+                  setPriceText(text);
+                  if (priceError) setPriceError(null);
+                }}
+                error={priceError}
+              />
             </View>
 
             <FoodItemMultiPicker
@@ -195,6 +225,7 @@ export function MealComboFormScreen() {
                   setItemsError(null);
                 }
               }}
+              variant="planning"
               canAddItem
               categories={categories}
               onAddItem={addItemInline}

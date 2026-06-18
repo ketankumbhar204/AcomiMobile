@@ -11,6 +11,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { formatSpaceType } from '../../api';
 import { mealsApi } from '../../api/mealsApi';
+import { DashboardCustomerMealsSection } from '../../components/meals/DashboardCustomerMealsSection';
+import { DashboardOwnerPollStatusCard } from '../../components/meals/DashboardOwnerPollStatusCard';
 import { MetricCard, MetricCardProgress, ModuleActionCard } from '../../components/ui';
 import { Screen } from '../../components/ui/Screen';
 import { openOccupancyWizardFromRef } from '../../features/occupancy/OccupancyWizard';
@@ -51,11 +53,12 @@ export function DashboardScreen() {
   const showMealsReadOnly =
     !showMealsActions && permissions.canViewMeals === true && (isTenant || isCustomer);
   const showMyStay = isTenant && linkedMemberId != null && accommodationApplicable;
+  const isMealParticipant = showMealsReadOnly;
 
   const [eligibleMealCount, setEligibleMealCount] = useState<string>('—');
 
   useEffect(() => {
-    if (!permissions.canViewMeals) {
+    if (!permissions.canViewMeals || isMealParticipant) {
       return;
     }
     const menuDate = tomorrowIsoDate();
@@ -68,7 +71,7 @@ export function DashboardScreen() {
         setEligibleMealCount(String(total));
       })
       .catch(() => setEligibleMealCount('—'));
-  }, [permissions.canViewMeals, spaceId]);
+  }, [isMealParticipant, permissions.canViewMeals, spaceId]);
 
   const handleMealsPress = useCallback(() => {
     const tomorrow = tomorrowIsoDate();
@@ -146,22 +149,6 @@ export function DashboardScreen() {
       );
     }
 
-    if (showMealsReadOnly) {
-      return (
-        <ModuleActionCard
-          icon="🍽"
-          title={t('meals.poll.respondTomorrow')}
-          subtitle={t('meals.poll.respondTomorrowHint')}
-          onPress={() =>
-            navigateMainStack('MealPollResponse', {
-              spaceId,
-              menuDate: tomorrowIsoDate(),
-            })
-          }
-        />
-      );
-    }
-
     if (showMyStay) {
       return (
         <ModuleActionCard
@@ -187,7 +174,6 @@ export function DashboardScreen() {
     isTenant,
     linkedMemberId,
     showMealsActions,
-    showMealsReadOnly,
     showMyStay,
     showResidentsActions,
     t,
@@ -206,32 +192,40 @@ export function DashboardScreen() {
         </View>
       ) : null}
 
-      <Text style={styles.dashboardTitle}>{t('dashboard.overview')}</Text>
+      {isMealParticipant ? <DashboardCustomerMealsSection spaceId={spaceId} /> : null}
 
-      <View style={styles.metricsRow}>
-        {accommodationApplicable ? (
-          <MetricCard label={t('dashboard.occupancy')} value="94%" style={styles.metricHalf} />
-        ) : null}
-        {permissions.canViewMeals ? (
-          <MetricCard
-            label={t('dashboard.eligibleMembers')}
-            value={eligibleMealCount}
-            hint={t('dashboard.eligibleMembersHint')}
-            hintPositive
-            style={accommodationApplicable ? styles.metricHalf : styles.metricFull}
-          />
-        ) : null}
-      </View>
-      {accommodationApplicable ? (
-        <MetricCard
-          label={t('dashboard.rentCollected')}
-          value="₹ 4,28,500"
-          hint={t('dashboard.rentHint')}
-          hintPositive
-          style={styles.rentMetric}>
-          <MetricCardProgress percent={78} />
-        </MetricCard>
+      {!isMealParticipant ? (
+        <>
+          <Text style={styles.dashboardTitle}>{t('dashboard.overview')}</Text>
+
+          <View style={styles.metricsRow}>
+            {accommodationApplicable ? (
+              <MetricCard label={t('dashboard.occupancy')} value="94%" style={styles.metricHalf} />
+            ) : null}
+            {permissions.canViewMeals ? (
+              <MetricCard
+                label={t('dashboard.eligibleMembers')}
+                value={eligibleMealCount}
+                hint={t('dashboard.eligibleMembersHint')}
+                hintPositive
+                style={accommodationApplicable ? styles.metricHalf : styles.metricFull}
+              />
+            ) : null}
+          </View>
+          {accommodationApplicable ? (
+            <MetricCard
+              label={t('dashboard.rentCollected')}
+              value="₹ 4,28,500"
+              hint={t('dashboard.rentHint')}
+              hintPositive
+              style={styles.rentMetric}>
+              <MetricCardProgress percent={78} />
+            </MetricCard>
+          ) : null}
+        </>
       ) : null}
+
+      {showMealsActions ? <DashboardOwnerPollStatusCard spaceId={spaceId} /> : null}
 
       {showQuickSection ? (
         <View style={styles.quickSection}>

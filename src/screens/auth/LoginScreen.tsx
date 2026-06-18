@@ -16,8 +16,7 @@ import { Button, FormInput } from '../../components/ui';
 import { useSendOtp } from '../../hooks/useAuth';
 import type { AuthStackParamList } from '../../navigation/types';
 import { colors, spacing, typography } from '../../theme';
-
-const MOBILE_REGEX = /^[6-9]\d{9}$/;
+import { isValidIndianMobile, normalizeIndianMobileDigits } from '../../utils/indianMobile';
 
 type LoginNav = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 
@@ -29,13 +28,15 @@ export function LoginScreen() {
   const [mobileNumber, setMobileNumber] = useState('');
   const [mobileError, setMobileError] = useState<string | null>(null);
 
-  const isValid = MOBILE_REGEX.test(mobileNumber);
+  const isValid = isValidIndianMobile(mobileNumber);
+  const formatError =
+    mobileNumber.length === 10 && !isValid ? t('auth.login.mobileInvalid') : null;
 
   function validateMobile(value: string): string | null {
     if (!value.trim()) {
       return t('auth.login.mobileRequired');
     }
-    if (!MOBILE_REGEX.test(value)) {
+    if (!isValidIndianMobile(value)) {
       return t('auth.login.mobileInvalid');
     }
     return null;
@@ -94,7 +95,7 @@ export function LoginScreen() {
                 placeholder={t('auth.login.mobilePlaceholder')}
                 value={mobileNumber}
                 onChangeText={text => {
-                  const digits = text.replace(/\D/g, '').slice(0, 10);
+                  const digits = normalizeIndianMobileDigits(text);
                   setMobileNumber(digits);
                   if (mobileError) {
                     setMobileError(null);
@@ -103,7 +104,7 @@ export function LoginScreen() {
                     clearError();
                   }
                 }}
-                error={mobileError}
+                error={mobileError ?? formatError}
                 keyboardType="phone-pad"
                 returnKeyType="done"
                 maxLength={10}

@@ -15,12 +15,19 @@ import type {
   UUID,
 } from '../api/types';
 import { getSpaceErrorMessage } from '../utils/spaceErrors';
-import { resolveStartupSpace } from '../utils/resolveStartupSpace';
+import { resolveStartupSpace, type StartupSpaceResolution } from '../utils/resolveStartupSpace';
+import { navigateBootstrapResult } from '../navigation/navigationRef';
 
 const LOG_TAG = '[SpaceStore]';
 const CURRENT_SPACE_KEY = '@countin/current_space';
 
-export type SpaceBootstrapRoute = 'SpaceTabs' | 'MySpaces' | 'CreateSpace' | 'AcceptInvitations';
+export type SpaceBootstrapRoute =
+  | 'SpaceTabs'
+  | 'MySpaces'
+  | 'CreateSpace'
+  | 'AcceptInvitations'
+  | 'OnboardingChoice'
+  | 'JoinSpace';
 
 export type SpaceBootstrapResult = {
   route: SpaceBootstrapRoute;
@@ -43,6 +50,8 @@ interface SpaceState {
 
   hydrateCurrentSpace: () => Promise<void>;
   bootstrapSpaces: () => Promise<SpaceBootstrapResult>;
+  /** Re-check invitations and memberships; navigate when status changes. */
+  refreshStartupNavigation: () => Promise<SpaceBootstrapResult>;
   loadMySpaces: () => Promise<void>;
   loadDefaultSpace: () => Promise<DefaultSpaceResponse | null>;
   searchSpaces: (query: string) => Promise<void>;
@@ -87,6 +96,63 @@ function applyCurrentSpace(
     currentSpace: space,
     selectedSpace: mapped,
     selectedSpaceId: space.spaceId,
+  };
+}
+
+function applyStartupResolution(
+  resolved: StartupSpaceResolution,
+): { patch: Partial<SpaceState>; result: SpaceBootstrapResult } {
+  if (resolved.kind === 'dashboard') {
+    return {
+      patch: {
+        ...applyCurrentSpace(resolved.space),
+        startupRoute: 'SpaceTabs',
+        hasSpaceBootstrapped: true,
+        isSpaceBootstrapping: false,
+        loading: false,
+      },
+      result: { route: 'SpaceTabs', spaceId: resolved.spaceId },
+    };
+  }
+
+  if (resolved.kind === 'invitations') {
+    return {
+      patch: {
+        ...applyCurrentSpace(null),
+        mySpaces: [],
+        startupRoute: 'AcceptInvitations',
+        hasSpaceBootstrapped: true,
+        isSpaceBootstrapping: false,
+        loading: false,
+      },
+      result: { route: 'AcceptInvitations' },
+    };
+  }
+
+  if (resolved.kind === 'onboardingChoice') {
+    return {
+      patch: {
+        ...applyCurrentSpace(null),
+        mySpaces: [],
+        startupRoute: 'OnboardingChoice',
+        hasSpaceBootstrapped: true,
+        isSpaceBootstrapping: false,
+        loading: false,
+      },
+      result: { route: 'OnboardingChoice' },
+    };
+  }
+
+  return {
+    patch: {
+      ...applyCurrentSpace(null),
+      mySpaces: resolved.spaces,
+      startupRoute: 'MySpaces',
+      hasSpaceBootstrapped: true,
+      isSpaceBootstrapping: false,
+      loading: false,
+    },
+    result: { route: 'MySpaces' },
   };
 }
 
@@ -144,54 +210,19 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
 
       if (resolved.kind === 'dashboard') {
         await persistCurrentSpace(resolved.space);
-        set({
-          ...applyCurrentSpace(resolved.space),
-          startupRoute: 'SpaceTabs',
-          hasSpaceBootstrapped: true,
-          isSpaceBootstrapping: false,
-          loading: false,
-        });
+      } else {
+        await persistCurrentSpace(null);
+      }
+
+      const { patch, result } = applyStartupResolution(resolved);
+      set(patch);
+
+      if (resolved.kind === 'dashboard') {
         void get().loadSpaceDetails(resolved.spaceId);
         void get().loadMySpaces();
-        return { route: 'SpaceTabs', spaceId: resolved.spaceId };
       }
 
-      if (resolved.kind === 'onboarding') {
-        await persistCurrentSpace(null);
-        set({
-          ...applyCurrentSpace(null),
-          mySpaces: [],
-          startupRoute: 'CreateSpace',
-          hasSpaceBootstrapped: true,
-          isSpaceBootstrapping: false,
-          loading: false,
-        });
-        return { route: 'CreateSpace' };
-      }
-
-      if (resolved.kind === 'invitations') {
-        await persistCurrentSpace(null);
-        set({
-          ...applyCurrentSpace(null),
-          mySpaces: [],
-          startupRoute: 'AcceptInvitations',
-          hasSpaceBootstrapped: true,
-          isSpaceBootstrapping: false,
-          loading: false,
-        });
-        return { route: 'AcceptInvitations' };
-      }
-
-      await persistCurrentSpace(null);
-      set({
-        ...applyCurrentSpace(null),
-        mySpaces: resolved.spaces,
-        startupRoute: 'MySpaces',
-        hasSpaceBootstrapped: true,
-        isSpaceBootstrapping: false,
-        loading: false,
-      });
-      return { route: 'MySpaces' };
+      return result;
     } catch (err) {
       const message = getSpaceErrorMessage(err, 'common.errors.loadSpaces');
       console.error(`${LOG_TAG} bootstrapSpaces failed`, err);
@@ -203,6 +234,40 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
         loading: false,
       });
       return { route: 'MySpaces' };
+    }
+  },
+
+  refreshStartupNavigation: async () => {
+    console.log(`${LOG_TAG} refreshStartupNavigation`);
+    set({ loading: true, error: null });
+
+    try {
+      const resolved = await resolveStartupSpace();
+      console.log(`${LOG_TAG} refreshStartupNavigation resolved`, resolved.kind);
+
+      if (resolved.kind === 'dashboard') {
+        await persistCurrentSpace(resolved.space);
+      } else if (resolved.kind === 'picker') {
+        await persistCurrentSpace(null);
+      } else {
+        await persistCurrentSpace(null);
+      }
+
+      const { patch, result } = applyStartupResolution(resolved);
+      set({ ...patch, loading: false });
+
+      if (resolved.kind === 'dashboard') {
+        void get().loadSpaceDetails(resolved.spaceId);
+        void get().loadMySpaces();
+      }
+
+      navigateBootstrapResult(result);
+      return result;
+    } catch (err) {
+      const message = getSpaceErrorMessage(err, 'common.errors.loadSpaces');
+      console.error(`${LOG_TAG} refreshStartupNavigation failed`, err);
+      set({ loading: false, error: message });
+      return { route: 'JoinSpace' };
     }
   },
 

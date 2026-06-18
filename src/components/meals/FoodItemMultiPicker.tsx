@@ -209,7 +209,55 @@ export function FoodItemMultiPicker({
     );
   }
 
-  // Default: grouped grid (combo form, etc.)
+  // Default: all items grouped by category section headers
+  const groupedSections = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    const sections: Array<{ categoryId: string; name: string; items: FoodItemResponse[] }> = [];
+
+    for (const category of activeCategories) {
+      const categoryItems = activeItems.filter(item => item.categoryId === category.categoryId);
+      const visible = normalized
+        ? categoryItems.filter(item => item.name.toLowerCase().includes(normalized))
+        : categoryItems;
+      if (visible.length > 0) {
+        sections.push({
+          categoryId: category.categoryId,
+          name: category.name,
+          items: visible,
+        });
+      }
+    }
+
+    const uncategorized = activeItems.filter(
+      item => !activeCategories.some(category => category.categoryId === item.categoryId),
+    );
+    const visibleUncategorized = normalized
+      ? uncategorized.filter(item => item.name.toLowerCase().includes(normalized))
+      : uncategorized;
+    if (visibleUncategorized.length > 0) {
+      sections.push({
+        categoryId: '__uncategorized__',
+        name: t('meals.library.uncategorized'),
+        items: visibleUncategorized,
+      });
+    }
+
+    if (sections.length === 0 && activeCategories.length === 0) {
+      const visible = normalized
+        ? activeItems.filter(item => item.name.toLowerCase().includes(normalized))
+        : activeItems;
+      if (visible.length > 0) {
+        sections.push({
+          categoryId: '__all__',
+          name: t('meals.library.items'),
+          items: visible,
+        });
+      }
+    }
+
+    return sections;
+  }, [activeCategories, activeItems, query, t]);
+
   return (
     <View style={styles.wrapper}>
       <Text style={styles.label}>{t('meals.library.comboItemsLabel')}</Text>
@@ -220,19 +268,32 @@ export function FoodItemMultiPicker({
         placeholder={t('meals.library.searchItems')}
         placeholderTextColor={colors.muted}
       />
-      <View style={styles.chipGrid}>
-        {filteredItems.map(item => (
-          <MenuChip
-            key={item.itemId}
-            label={item.name}
-            variant="item"
-            size="compact"
-            selected={selectedIds.includes(item.itemId)}
-            isCustom={item.isCustom}
-            onPress={() => toggleItem(item.itemId)}
-          />
-        ))}
-      </View>
+      {groupedSections.map(section => (
+        <View key={section.categoryId} style={styles.categorySection}>
+          <Text style={styles.categoryTitle}>
+            {t('meals.library.comboCategoryTitle', {
+              category: section.name,
+              total: section.items.length,
+            })}
+          </Text>
+          <View style={styles.chipGrid}>
+            {section.items.map(item => (
+              <MenuChip
+                key={item.itemId}
+                label={item.name}
+                variant="item"
+                size="compact"
+                selected={selectedIds.includes(item.itemId)}
+                isCustom={item.isCustom}
+                onPress={() => toggleItem(item.itemId)}
+              />
+            ))}
+          </View>
+        </View>
+      ))}
+      {groupedSections.length === 0 ? (
+        <Text style={styles.empty}>{t('meals.library.itemsEmpty')}</Text>
+      ) : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
   );
@@ -254,6 +315,14 @@ const styles = StyleSheet.create({
     minHeight: 36,
     marginTop: spacing.sm,
     marginBottom: spacing.sm,
+  },
+  categorySection: {
+    marginBottom: spacing.md,
+  },
+  categoryTitle: {
+    ...typography.bodyStrong,
+    marginBottom: spacing.xs,
+    marginTop: spacing.xs,
   },
   chipGrid: {
     flexDirection: 'row',

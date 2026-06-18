@@ -159,12 +159,16 @@ export interface CreateMealComboRequest {
   name: string;
   description?: string | null;
   itemIds: UUID[];
+  price?: number | null;
+  currencyCode?: string | null;
 }
 
 export interface UpdateMealComboRequest {
   name?: string;
   description?: string | null;
   itemIds?: UUID[];
+  price?: number | null;
+  currencyCode?: string | null;
 }
 
 export interface MealComboResponse {
@@ -173,6 +177,8 @@ export interface MealComboResponse {
   description?: string | null;
   scope?: FoodCatalogScope;
   isActive: boolean;
+  price?: number | null;
+  currencyCode?: string | null;
   items?: Array<{ itemId: UUID; name: string }>;
 }
 
@@ -184,6 +190,8 @@ export interface DailyMenuOptionResponse {
   label: string;
   sortOrder: number;
   isAvailable: boolean;
+  price?: number | null;
+  currencyCode?: string | null;
   packageItems?: Array<{ itemId: UUID; name: string }> | null;
 }
 
@@ -207,6 +215,8 @@ export interface UpsertDailyMenuRequest {
     label: string;
     sortOrder: number;
     isAvailable: boolean;
+    price?: number | null;
+    currencyCode?: string | null;
   }>;
   notes?: string | null;
 }
@@ -263,6 +273,8 @@ export interface CopyDailyMenuRequest {
 export interface MealSharePreviewLine {
   label: string;
   detail?: string | null;
+  price?: number | null;
+  currencyCode?: string | null;
 }
 
 export interface MealSharePreviewSlot {
@@ -439,6 +451,7 @@ export interface MemberResponse {
   role: MembershipRole;
   linkedUser: boolean;
   linkedUserId?: UUID | null;
+  membershipId?: UUID | null;
   status: MemberStatus;
   occupancyStatus?: MemberOccupancyStatus;
   createdAt: string;
@@ -580,6 +593,10 @@ export interface UserResponse {
   profilePhotoUrl?: string | null;
   active: boolean;
   createdAt: string;
+}
+
+export interface UpdateUserRequest {
+  fullName: string;
 }
 
 export interface AuthTokenResponse {

@@ -6,7 +6,7 @@ export type StartupSpaceResolution =
   | { kind: 'dashboard'; spaceId: UUID; space: DefaultSpaceResponse }
   | { kind: 'picker'; spaces: MySpaceResponse[] }
   | { kind: 'invitations'; invitations: MyInvitationResponse[] }
-  | { kind: 'onboarding' };
+  | { kind: 'onboardingChoice' };
 
 /**
  * Resolves where to send the user after auth based on default space and membership count.
@@ -14,7 +14,7 @@ export type StartupSpaceResolution =
  * 1. GET /spaces/default → dashboard
  * 2. Else GET /spaces/my:
  *    - 0 spaces → GET /invitations/my; if pending → accept-invitations screen
- *    - 0 spaces, no invites → onboarding (create space)
+ *    - 0 spaces, no invites → onboarding choice (manage vs join)
  *    - 1 → PUT /spaces/{id}/default, then dashboard
  *    - 2+ → space picker
  */
@@ -34,7 +34,7 @@ export async function resolveStartupSpace(): Promise<StartupSpaceResolution> {
     if (invitations.length > 0) {
       return { kind: 'invitations', invitations };
     }
-    return { kind: 'onboarding' };
+    return { kind: 'onboardingChoice' };
   }
 
   if (spaces.length === 1) {

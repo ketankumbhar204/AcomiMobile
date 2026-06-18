@@ -3,6 +3,7 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Switch,
@@ -25,6 +26,7 @@ import { useSpaceStore } from '../store/spaceStore';
 import { useToastStore } from '../store/toastStore';
 import { colors, spacing, typography } from '../theme';
 import { defaultRoleForSpaceType } from '../utils/memberRoles';
+import { isValidIndianMobile, normalizeIndianMobileDigits } from '../utils/indianMobile';
 import { findMySpaceEntry } from '../utils/spacePermissions';
 
 type AddMemberNav = NativeStackNavigationProp<MainStackParamList, 'AddMember'>;
@@ -68,7 +70,7 @@ export function AddMemberScreen() {
 
   function validate(): boolean {
     const errors: FieldErrors = {};
-    const digits = mobileNumber.replace(/\D/g, '');
+    const digits = normalizeIndianMobileDigits(mobileNumber);
 
     if (!fullName.trim()) {
       errors.fullName = t('membership.add.fullNameRequired');
@@ -76,7 +78,7 @@ export function AddMemberScreen() {
 
     if (!mobileNumber.trim()) {
       errors.mobileNumber = t('membership.invite.mobileRequired');
-    } else if (digits.length < 10) {
+    } else if (!isValidIndianMobile(digits)) {
       errors.mobileNumber = t('membership.invite.mobileInvalid');
     }
 
@@ -113,6 +115,12 @@ export function AddMemberScreen() {
       }
       showToast(t('membership.add.successToast'));
       navigation.goBack();
+      return;
+    }
+
+    const err = useMemberStore.getState().error;
+    if (err?.toLowerCase().includes('mobile number')) {
+      setFieldErrors({ mobileNumber: err });
     }
   }
 
@@ -129,6 +137,18 @@ export function AddMemberScreen() {
           <Text style={styles.eyebrow}>{t('membership.add.eyebrow')}</Text>
           <Text style={styles.heading}>{t('membership.add.heading')}</Text>
           <Text style={styles.subheading}>{t('membership.add.subheading')}</Text>
+          <View style={styles.inviteInsteadRow}>
+            <Text style={styles.inviteInsteadText}>
+              {t('membership.add.inviteInstead')}{' '}
+            </Text>
+            <Pressable
+              onPress={() => navigation.navigate('InviteMembers', { spaceId })}
+              hitSlop={8}>
+              <Text style={styles.inviteInsteadLink}>
+                {t('membership.add.inviteInsteadAction')}
+              </Text>
+            </Pressable>
+          </View>
 
           {storeError ? (
             <View style={styles.errorBanner}>
@@ -233,7 +253,21 @@ const styles = StyleSheet.create({
   },
   subheading: {
     ...typography.body,
+    marginBottom: spacing.sm,
+  },
+  inviteInsteadRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
     marginBottom: spacing.xxl,
+  },
+  inviteInsteadText: {
+    ...typography.body,
+    color: colors.muted,
+  },
+  inviteInsteadLink: {
+    ...typography.bodyStrong,
+    color: colors.primaryDark,
   },
   errorBanner: {
     backgroundColor: '#FEF2F2',

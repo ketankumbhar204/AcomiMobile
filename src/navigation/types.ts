@@ -1,4 +1,4 @@
-import type { UUID } from '../api/types';
+import type { MembershipRole, UUID } from '../api/types';
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -20,13 +20,20 @@ export type AccommodationFormMode = 'create' | 'edit';
 
 export type MainStackParamList = {
   MySpaces: undefined;
+  OnboardingChoice: undefined;
+  JoinSpace: undefined;
   AcceptInvitations: undefined;
   Profile: undefined;
   CreateSpace: undefined;
   SpaceDetails: { spaceId: UUID };
   EditSpace: { spaceId: UUID };
   SpaceTabs: { spaceId: UUID };
-  InviteMembers: { spaceId: UUID };
+  InviteMembers: {
+    spaceId: UUID;
+    mobileNumber?: string;
+    role?: MembershipRole;
+    memberName?: string;
+  };
   AddMember: { spaceId: UUID };
   MemberDetails: { spaceId: UUID; memberId: UUID };
   MemberOccupancyHistory: { spaceId: UUID; memberId: UUID; memberName: string };

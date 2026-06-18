@@ -1,4 +1,5 @@
 import { i18n } from '../i18n';
+import { isValidIndianMobile } from './indianMobile';
 
 export type NewMemberFieldErrors = {
   fullName?: string;
@@ -18,7 +19,7 @@ export function validateNewMemberFields(
 
   if (!mobileNumber.trim()) {
     errors.mobileNumber = i18n.t('membership.invite.mobileRequired');
-  } else if (digits.length < 10) {
+  } else if (!isValidIndianMobile(digits)) {
     errors.mobileNumber = i18n.t('membership.invite.mobileInvalid');
   }
 

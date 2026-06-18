@@ -39,8 +39,10 @@ import { useMealParticipationMap } from '../hooks/useMealParticipationMap';
 import { useSpacePermissions } from '../hooks/useSpacePermissions';
 import { useSpaceTabHeader } from '../hooks/useSpaceTabHeader';
 import type { MainStackParamList, SpaceTabParamList } from '../navigation/types';
+import { useAccommodationActionSheetStore } from '../store/accommodationActionSheetStore';
 import { useMemberStore } from '../store/memberStore';
 import { colors, radius, shadows, spacing, typography } from '../theme';
+import { memberCountInBadgeLabel } from '../utils/memberAppStatus';
 
 type MembersNavigation = CompositeNavigationProp<
   BottomTabNavigationProp<SpaceTabParamList, 'Members'>,
@@ -106,6 +108,7 @@ export function MembersScreen() {
   const refresh = useMemberStore(state => state.refresh);
   const cancelInvitation = useMemberStore(state => state.cancelInvitation);
   const { showConfirm } = useConfirmDialog();
+  const openActionSheet = useAccommodationActionSheetStore(state => state.open);
 
   const [activeTab, setActiveTab] = useState<MembersTab>('members');
 
@@ -144,9 +147,21 @@ export function MembersScreen() {
   );
 
   useSpaceTabHeader(spaceId, {
-    showProfileAndMenu: false,
     headerRightExtra: inviteHeaderAction,
   });
+
+  const openMemberFabMenu = useCallback(() => {
+    openActionSheet(t('membership.add.fabMenuTitle'), [
+      {
+        label: t('membership.add.fabAddRecord'),
+        action: () => navigation.navigate('AddMember', { spaceId }),
+      },
+      {
+        label: t('membership.add.fabInviteApp'),
+        action: () => navigation.navigate('InviteMembers', { spaceId }),
+      },
+    ]);
+  }, [navigation, openActionSheet, spaceId, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -247,13 +262,7 @@ export function MembersScreen() {
                     <View style={styles.badgeRow}>
                       <RoleBadge role={member.role} />
                       <MemberStatusBadge status={member.status ?? 'ACTIVE'} />
-                      <Badge
-                        label={
-                          member.linkedUser
-                            ? t('membership.members.appUser')
-                            : t('membership.members.notUsingApp')
-                        }
-                      />
+                      <Badge label={memberCountInBadgeLabel(member, t)} />
                     </View>
                     {showMealColumn ? (
                       <MemberListCard
@@ -337,7 +346,9 @@ export function MembersScreen() {
 
       {showAddFab ? (
         <FAB
-          onPress={() => navigation.navigate('AddMember', { spaceId })}
+          onPress={
+            showInviteAction ? openMemberFabMenu : () => navigation.navigate('AddMember', { spaceId })
+          }
           accessibilityLabel={t('membership.add.fab')}
         />
       ) : null}

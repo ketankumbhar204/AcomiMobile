@@ -12,7 +12,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { mealsApi } from '../../api/mealsApi';
-import type { MealType, UUID } from '../../api/types';
+import type { MealType, MealComboResponse, UUID } from '../../api/types';
 import { PlanningSelectionSection } from '../../components/meals/PlanningSelectionSection';
 import { ComboItemsPopup } from '../../components/meals/ComboItemsPopup';
 import { CreateComboSheet } from '../../components/meals/CreateComboSheet';
@@ -36,6 +36,11 @@ import {
   type MenuDraftOption,
 } from '../../utils/dailyMenuDraft';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
+import {
+  formatComboPrice,
+  resolveMenuOptionCurrency,
+  resolveMenuOptionPrice,
+} from '../../utils/comboPrice';
 
 type Nav = NativeStackNavigationProp<MainStackParamList>;
 
@@ -64,6 +69,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
   const [comboPreviewName, setComboPreviewName] = useState('');
   const [comboPreviewItems, setComboPreviewItems] = useState<string[]>([]);
   const [comboPreviewLoading, setComboPreviewLoading] = useState(false);
+  const [comboById, setComboById] = useState<Map<string, MealComboResponse>>(new Map());
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -76,6 +82,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     setNotes('');
     setStatus('DRAFT');
     setLoading(true);
+    setComboSheetOpen(false);
   }, [mealType, menuDate, spaceId]);
 
   useFocusEffect(
@@ -84,13 +91,28 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
       (async () => {
         setLoading(true);
         try {
-          const draft = await loadMenuDraft(spaceId, menuDate, mealType);
+          const [draft, comboList] = await Promise.all([
+            loadMenuDraft(spaceId, menuDate, mealType),
+            mealsApi.getMealCombos(spaceId).catch(() => []),
+          ]);
           if (!active) {
             return;
           }
-          setOptions(draft.options.filter(option => option.entryType !== 'ITEM'));
+          setComboById(new Map(comboList.map(combo => [combo.comboId, combo])));
+          const comboOptions = draft.options.filter(option => option.entryType !== 'ITEM');
+          setOptions(comboOptions);
           setNotes(draft.notes);
           setStatus(draft.menu?.status ?? 'DRAFT');
+
+          const isNewSlot = draft.menu == null;
+          const hasPlannedCombos = comboOptions.some(
+            option => option.entryType === 'COMBO' || option.entryType === 'PACKAGE',
+          );
+          if (isNewSlot && !hasPlannedCombos) {
+            setComboSheetOpen(true);
+          } else {
+            setComboSheetOpen(false);
+          }
         } catch {
           if (active) {
             showToast(t('meals.errors.loadFailed'));
@@ -149,6 +171,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     name: string,
     itemIds: string[],
     saveToLibrary: boolean,
+    price?: number | null,
   ) => {
     try {
       if (saveToLibrary) {
@@ -156,7 +179,10 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
           name,
           description: null,
           itemIds,
+          price: price ?? null,
+          currencyCode: 'INR',
         });
+        setComboById(prev => new Map(prev).set(created.comboId, created));
         setOptions(prev =>
           reindexMenuOptions([
             ...prev,
@@ -167,6 +193,8 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
               label: created.name,
               sortOrder: prev.length + 1,
               isAvailable: true,
+              price: created.price ?? null,
+              currencyCode: created.currencyCode ?? 'INR',
             },
           ]),
         );
@@ -182,6 +210,8 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
               label: name,
               sortOrder: prev.length + 1,
               isAvailable: true,
+              price: price ?? null,
+              currencyCode: 'INR',
             },
           ]),
         );
@@ -304,14 +334,19 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
             <PlanningSelectionSection
               title={t('meals.library.combos')}
               countLabel={t('meals.planning.selectedCount', { count: plannedCombos.length })}
-              chips={plannedCombos.map(option => ({
-                id:
-                  option.entryType === 'PACKAGE'
-                    ? option.label
-                    : (option.comboId ?? option.label),
-                label: option.label,
-                variant: 'COMBO',
-              }))}
+              chips={plannedCombos.map(option => {
+                const price = resolveMenuOptionPrice(option, comboById);
+                const currency = resolveMenuOptionCurrency(option, comboById);
+                const priceLabel = formatComboPrice(price, currency);
+                return {
+                  id:
+                    option.entryType === 'PACKAGE'
+                      ? option.label
+                      : (option.comboId ?? option.label),
+                  label: priceLabel ? `${option.label}  ${priceLabel}` : option.label,
+                  variant: 'COMBO' as const,
+                };
+              })}
               onRemove={chipId => removePlannedCombo(chipId)}
               onChipPress={openComboPreview}
               emptyText={t('meals.planning.noCombosSelected')}

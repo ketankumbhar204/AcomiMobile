@@ -1,25 +1,17 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { useAuthenticatedUser } from '../../hooks/useAuth';
-import type { MainStackParamList } from '../../navigation/types';
-import { colors, spacing } from '../../theme';
-
-type MainNav = NativeStackNavigationProp<MainStackParamList>;
+import { navigateMainStack } from '../../navigation/mainStackNavigation';
+import { colors } from '../../theme';
 
 export function ProfileHeaderButton() {
   const { t } = useTranslation();
-  const navigation = useNavigation();
   const user = useAuthenticatedUser();
-
-  const stackNavigation =
-    navigation.getParent<MainNav>() ?? (navigation as MainNav);
 
   return (
     <Pressable
-      onPress={() => stackNavigation.navigate('Profile')}
+      onPress={() => navigateMainStack('Profile', undefined)}
       style={({ pressed }) => [
         styles.button,
         pressed && styles.buttonPressed,

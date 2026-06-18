@@ -36,17 +36,14 @@ export function useSpaceTabHeader(
       headerBackVisible: false,
       headerLeft: () => <SpaceTabBackButton />,
       headerRight: () => {
-        if (options?.showProfileAndMenu) {
+        if (options?.showProfileAndMenu || options?.headerRightExtra) {
           return (
             <SpaceTabHeaderActions
               spaceId={spaceId}
               extra={options?.headerRightExtra}
-              showProfileAndMenu
+              showProfileAndMenu={options?.showProfileAndMenu}
             />
           );
-        }
-        if (options?.headerRightExtra) {
-          return options.headerRightExtra;
         }
         return null;
       },

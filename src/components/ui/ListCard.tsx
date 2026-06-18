@@ -42,7 +42,7 @@ export function ListCard({
         />
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
-      <Text style={styles.chevron}>›</Text>
+      {onPress ? <Text style={styles.chevron}>›</Text> : null}
     </Pressable>
   );
 }

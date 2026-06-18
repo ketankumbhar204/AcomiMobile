@@ -17,6 +17,8 @@ export type MenuDraftOption = {
   label: string;
   sortOrder: number;
   isAvailable: boolean;
+  price?: number | null;
+  currencyCode?: string | null;
 };
 
 function inferEntryType(option: DailyMenuOptionResponse): 'COMBO' | 'ITEM' | 'PACKAGE' {
@@ -38,6 +40,8 @@ export function toMenuDraftOption(option: DailyMenuOptionResponse, index: number
     label: option.label,
     sortOrder: option.sortOrder ?? index + 1,
     isAvailable: option.isAvailable,
+    price: option.price ?? null,
+    currencyCode: option.currencyCode ?? 'INR',
   };
 }
 
@@ -50,6 +54,8 @@ export function toUpsertOptions(options: MenuDraftOption[]): UpsertDailyMenuRequ
     label: option.label,
     sortOrder: option.sortOrder,
     isAvailable: option.isAvailable,
+    price: option.entryType === 'PACKAGE' ? (option.price ?? null) : null,
+    currencyCode: option.entryType === 'PACKAGE' ? (option.currencyCode ?? 'INR') : null,
   }));
 }
 
@@ -193,7 +199,7 @@ export function reindexMenuOptions(options: MenuDraftOption[]): MenuDraftOption[
 
 export function mergeCombosIntoOptions(
   prev: MenuDraftOption[],
-  combos: Array<{ comboId: string; name: string }>,
+  combos: Array<{ comboId: string; name: string; price?: number | null; currencyCode?: string | null }>,
 ): MenuDraftOption[] {
   const packages = prev.filter(option => option.entryType === 'PACKAGE');
   const items = prev.filter(option => option.entryType === 'ITEM');
@@ -204,6 +210,8 @@ export function mergeCombosIntoOptions(
     label: combo.name,
     sortOrder: 0,
     isAvailable: true,
+    price: combo.price ?? null,
+    currencyCode: combo.currencyCode ?? 'INR',
   }));
   return reindexMenuOptions([...comboOptions, ...packages, ...items]);
 }
