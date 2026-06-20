@@ -3,14 +3,14 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { PENDING_UPLOAD_FILE_URL } from '../../api/memberApi';
 import type { MemberDocumentType } from '../../api/types';
-import { Button, EmptyState, FormInput, SkeletonCard, useConfirmDialog } from '../ui';
+import { Button, Card, FormInput, SkeletonCard, useConfirmDialog } from '../ui';
 import { useMemberStore } from '../../store/memberStore';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { DocumentTypePicker } from './DocumentTypePicker';
-import { VerificationStatusBadge } from './VerificationStatusBadge';
+import { MemberDetailRow, MemberSectionTitle } from './MemberDetailRow';
 
-type MemberDocumentsTabProps = {
+type MemberDocumentsSectionProps = {
   memberId: string;
   canEdit: boolean;
 };
@@ -23,7 +23,7 @@ function formatDate(value: string): string {
   return date.toLocaleDateString();
 }
 
-export function MemberDocumentsTab({ memberId, canEdit }: MemberDocumentsTabProps) {
+export function MemberDocumentsSection({ memberId, canEdit }: MemberDocumentsSectionProps) {
   const { t } = useTranslation();
   const showToast = useToastStore(state => state.showToast);
   const documents = useMemberStore(state => state.documents);
@@ -40,7 +40,6 @@ export function MemberDocumentsTab({ memberId, canEdit }: MemberDocumentsTabProp
   const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('[MemberDocumentsTab] first visit, load documents', memberId);
     void loadDocuments(memberId);
   }, [loadDocuments, memberId]);
 
@@ -61,7 +60,6 @@ export function MemberDocumentsTab({ memberId, canEdit }: MemberDocumentsTabProp
       return;
     }
 
-    console.log('[MemberDocumentsTab] add document', documentType);
     const created = await addDocument(memberId, {
       documentType,
       documentNumber: documentNumber.trim(),
@@ -81,67 +79,76 @@ export function MemberDocumentsTab({ memberId, canEdit }: MemberDocumentsTabProp
       confirmLabel: t('membership.documents.deleteConfirm'),
       destructive: true,
       onConfirm: async () => {
-        console.log('[MemberDocumentsTab] delete document', documentId);
         await deleteDocument(memberId, documentId);
       },
     });
   };
 
   if (documentsLoading && documents.length === 0) {
-    return <SkeletonCard />;
+    return (
+      <View style={styles.wrap}>
+        <MemberSectionTitle title={t('membership.detailTabs.documents')} />
+        <SkeletonCard />
+      </View>
+    );
   }
 
   return (
-    <View>
+    <View style={styles.wrap}>
+      <MemberSectionTitle title={t('membership.detailTabs.documents')} />
+
       {canEdit ? (
         <Button
           label={t('membership.documents.add')}
+          variant="secondary"
           onPress={openAddModal}
           style={styles.actionButton}
         />
       ) : null}
 
       {documents.length === 0 ? (
-        <EmptyState
-          title={t('membership.documents.emptyTitle')}
-          description={t('membership.documents.emptyDescription')}
-          icon="📄"
-        />
+        <Card style={styles.card}>
+          <Text style={styles.emptyText}>{t('membership.documents.emptyDescription')}</Text>
+        </Card>
       ) : (
-        <View style={styles.list}>
-          {documents.map(doc => (
-            <View key={doc.documentId} style={styles.card}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.cardTitle}>
-                  {t(`membership.documents.types.${doc.documentType}`)}
-                </Text>
-                <VerificationStatusBadge status={doc.verificationStatus} />
-              </View>
-              <Text style={styles.cardMeta}>
-                {t('membership.documents.number', { value: doc.documentNumber })}
-              </Text>
-              <Text style={styles.cardMeta}>
-                {doc.fileUrl === PENDING_UPLOAD_FILE_URL
+        documents.map(doc => (
+          <Card key={doc.documentId} style={styles.card}>
+            <MemberDetailRow
+              label={t('membership.documents.typeLabel')}
+              value={t(`membership.documents.types.${doc.documentType}`)}
+            />
+            <MemberDetailRow
+              label={t('membership.documents.numberLabel')}
+              value={doc.documentNumber}
+            />
+            <MemberDetailRow
+              label={t('membership.documents.verificationLabel')}
+              value={t(`membership.documents.verification.${doc.verificationStatus}`)}
+            />
+            <MemberDetailRow
+              label={t('membership.documents.uploadedLabel')}
+              value={formatDate(doc.uploadedAt)}
+            />
+            <MemberDetailRow
+              label={t('membership.documents.fileLabel')}
+              value={
+                doc.fileUrl === PENDING_UPLOAD_FILE_URL
                   ? t('membership.documents.pendingUpload')
-                  : t('membership.documents.fileUrl', { value: doc.fileUrl })}
-              </Text>
-              <Text style={styles.cardMeta}>
-                {t('membership.documents.uploadedAt', {
-                  date: formatDate(doc.uploadedAt),
-                })}
-              </Text>
-              {canEdit ? (
-                <Button
-                  label={t('membership.documents.deleteConfirm')}
-                  variant="ghost"
-                  onPress={() => confirmDelete(doc.documentId)}
-                  disabled={loading}
-                  style={styles.deleteButton}
-                />
-              ) : null}
-            </View>
-          ))}
-        </View>
+                  : doc.fileUrl
+              }
+              isLast
+            />
+            {canEdit ? (
+              <Button
+                label={t('membership.documents.deleteConfirm')}
+                variant="ghost"
+                onPress={() => confirmDelete(doc.documentId)}
+                disabled={loading}
+                style={styles.deleteButton}
+              />
+            ) : null}
+          </Card>
+        ))
       )}
 
       <Modal
@@ -149,15 +156,10 @@ export function MemberDocumentsTab({ memberId, canEdit }: MemberDocumentsTabProp
         transparent
         animationType="fade"
         onRequestClose={() => setModalVisible(false)}>
-        <Pressable
-          style={styles.modalBackdrop}
-          onPress={() => setModalVisible(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setModalVisible(false)}>
           <Pressable style={styles.modalCard} onPress={e => e.stopPropagation()}>
             <Text style={styles.modalTitle}>{t('membership.documents.add')}</Text>
-            <DocumentTypePicker
-              value={documentType}
-              onChange={setDocumentType}
-            />
+            <DocumentTypePicker value={documentType} onChange={setDocumentType} />
             <FormInput
               label={t('membership.documents.numberLabel')}
               value={documentNumber}
@@ -186,40 +188,25 @@ export function MemberDocumentsTab({ memberId, canEdit }: MemberDocumentsTabProp
   );
 }
 
+/** @deprecated Use MemberDocumentsSection inside Profile tab */
+export const MemberDocumentsTab = MemberDocumentsSection;
+
 const styles = StyleSheet.create({
-  actionButton: {
+  wrap: {
     marginBottom: spacing.lg,
   },
-  list: {
-    gap: spacing.md,
-  },
   card: {
-    backgroundColor: colors.white,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-    ...shadows.sm,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
     marginBottom: spacing.sm,
   },
-  cardTitle: {
-    ...typography.bodyStrong,
-    fontSize: 16,
-  },
-  cardMeta: {
-    ...typography.body,
-    color: colors.muted,
-    marginBottom: spacing.xs,
+  actionButton: {
+    marginBottom: spacing.sm,
   },
   deleteButton: {
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  emptyText: {
+    ...typography.body,
+    color: colors.muted,
   },
   modalBackdrop: {
     flex: 1,

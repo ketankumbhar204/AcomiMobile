@@ -12,7 +12,10 @@ export type SpaceTabParamList = {
   Members: { spaceId: UUID };
   Accommodation: { spaceId: UUID };
   Meals: { spaceId: UUID };
-  Payments: { spaceId: UUID };
+  Payments: {
+    spaceId: UUID;
+    initialFilter?: 'all' | 'pending' | 'collected';
+  };
   Complaints: { spaceId: UUID };
 };
 
@@ -161,6 +164,7 @@ export type MainStackParamList = {
   MealComboForm: { spaceId: UUID; mode: 'create' | 'edit'; comboId?: UUID };
   MenuLibrary: { spaceId: UUID };
   MenuPlanning: { spaceId: UUID; menuDate?: string };
+  MealDeliveryLocations: { spaceId: UUID };
   MenuSharePreview: {
     spaceId: UUID;
     menuDate: string;

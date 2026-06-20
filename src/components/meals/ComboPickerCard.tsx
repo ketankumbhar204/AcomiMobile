@@ -1,12 +1,15 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import type { FoodType } from '../../api/types';
+import { FoodTypeIcon } from '../ui/FoodTypeIcon';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { formatComboPrice } from '../../utils/comboPrice';
 
 type ComboPickerCardProps = {
   name: string;
   itemNames: string[];
+  foodType?: FoodType | null;
   price?: number | null;
   currencyCode?: string | null;
   selected?: boolean;
@@ -15,13 +18,16 @@ type ComboPickerCardProps = {
   requiresPriceInput?: boolean;
   priceDraft?: string;
   onPriceDraftChange?: (text: string) => void;
+  onPriceBlur?: (priceDraft: string) => void;
   priceInputError?: string | null;
+  editablePrice?: boolean;
   onPress: () => void;
 };
 
 export function ComboPickerCard({
   name,
   itemNames,
+  foodType = 'VEG',
   price,
   currencyCode = 'INR',
   selected = false,
@@ -30,13 +36,16 @@ export function ComboPickerCard({
   requiresPriceInput = false,
   priceDraft = '',
   onPriceDraftChange,
+  onPriceBlur,
   priceInputError,
+  editablePrice = false,
   onPress,
 }: ComboPickerCardProps) {
   const { t } = useTranslation();
   const preview = itemNames.join(' · ');
   const priceLabel = formatComboPrice(price, currencyCode);
-  const showPriceInput = selected && requiresPriceInput;
+  const showInlinePriceInput = selected && editablePrice && onPriceDraftChange;
+  const showExpandedPriceInput = selected && requiresPriceInput && onPriceDraftChange && !editablePrice;
 
   return (
     <View
@@ -59,13 +68,32 @@ export function ComboPickerCard({
         ) : null}
         <View style={styles.content}>
           <View style={styles.nameRow}>
+            <FoodTypeIcon foodType={foodType} size={14} />
             <Text
               style={[styles.name, selectable && selected && styles.nameSelected]}
               numberOfLines={1}>
               {name}
             </Text>
-            {priceLabel ? <Text style={styles.price}>{priceLabel}</Text> : null}
+            {showInlinePriceInput ? (
+              <View style={[styles.inlinePriceRow, priceInputError ? styles.priceInputRowError : null]}>
+                <Text style={styles.inlineCurrency}>₹</Text>
+                <TextInput
+                  style={styles.inlinePriceInput}
+                  value={priceDraft}
+                  onChangeText={onPriceDraftChange}
+                  onBlur={() => onPriceBlur?.(priceDraft)}
+                  keyboardType="decimal-pad"
+                  placeholder={t('meals.pricing.pricePlaceholder')}
+                  placeholderTextColor={colors.muted}
+                />
+              </View>
+            ) : priceLabel ? (
+              <Text style={styles.price}>{priceLabel}</Text>
+            ) : null}
           </View>
+          {priceInputError && showInlinePriceInput ? (
+            <Text style={styles.inlinePriceError}>{priceInputError}</Text>
+          ) : null}
           {preview.length > 0 ? (
             <Text style={styles.items} numberOfLines={1}>
               {preview}
@@ -74,7 +102,7 @@ export function ComboPickerCard({
         </View>
       </Pressable>
 
-      {showPriceInput ? (
+      {showExpandedPriceInput ? (
         <View style={styles.priceInputBlock}>
           <Text style={styles.priceInputLabel}>{t('meals.pricing.enterPrice')}</Text>
           <View style={[styles.priceInputRow, priceInputError ? styles.priceInputRowError : null]}>
@@ -83,6 +111,7 @@ export function ComboPickerCard({
               style={styles.priceInput}
               value={priceDraft}
               onChangeText={onPriceDraftChange}
+              onBlur={() => onPriceBlur?.(priceDraft)}
               keyboardType="decimal-pad"
               placeholder={t('meals.pricing.pricePlaceholder')}
             />
@@ -186,11 +215,37 @@ const styles = StyleSheet.create({
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   name: { ...typography.bodyStrong, flex: 1, minWidth: 0 },
-  price: { ...typography.bodyStrong, color: colors.textSecondary },
+  price: { ...typography.bodyStrong, color: colors.textSecondary, flexShrink: 0 },
+  inlinePriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.button,
+    paddingHorizontal: spacing.xs,
+    backgroundColor: colors.white,
+    flexShrink: 0,
+  },
+  inlineCurrency: {
+    ...typography.caption,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  inlinePriceInput: {
+    width: 52,
+    ...typography.bodyStrong,
+    fontSize: 14,
+    paddingVertical: 4,
+    color: colors.textPrimary,
+  },
+  inlinePriceError: {
+    ...typography.caption,
+    color: '#DC2626',
+    marginTop: 2,
+  },
   nameSelected: { color: colors.primaryDark },
   items: {
     ...typography.caption,

@@ -12,6 +12,7 @@ import { tabBarOptions, tabHeaderOptions } from '../theme';
 import { MealsHomeScreen } from '../screens/meals/MealsHomeScreen';
 import { PermissionDeniedScreen } from '../components/ui/PermissionDeniedScreen';
 import { ScreenPlaceholder } from './ScreenPlaceholder';
+import { PaymentsScreen } from '../screens/payments/PaymentsScreen';
 import type { SpaceTabParamList } from './types';
 
 const Tab = createBottomTabNavigator<SpaceTabParamList>();
@@ -48,11 +49,7 @@ function MealsTabScreen() {
 }
 
 function PaymentsTabScreen() {
-  const { t } = useTranslation();
-  const route = useRoute<RouteProp<SpaceTabParamList, 'Payments'>>();
-  const { spaceId } = route.params;
-  useSpaceTabHeader(spaceId);
-  return <ScreenPlaceholder title={t('navigation.payments')} />;
+  return <PaymentsScreen />;
 }
 
 function ComplaintsTabScreen() {

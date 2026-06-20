@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import type { FoodCategoryResponse, FoodItemResponse } from '../../api/types';
+import type { FoodCategoryResponse, FoodItemResponse, FoodType } from '../../api/types';
+import { FoodTypePicker } from '../ui/FoodTypePicker';
 import { colors, radius, spacing, typography } from '../../theme';
 import { InlineChipEditor } from './library/InlineChipEditor';
 import { MenuChip } from './library/MenuChip';
@@ -15,7 +16,7 @@ type FoodItemMultiPickerProps = {
   canAddItem?: boolean;
   canAddCategory?: boolean;
   categories?: FoodCategoryResponse[];
-  onAddItem?: (categoryId: string, name: string) => Promise<FoodItemResponse>;
+  onAddItem?: (categoryId: string, name: string, foodType?: FoodType) => Promise<FoodItemResponse>;
   onAddCategory?: (name: string) => Promise<FoodCategoryResponse>;
   variant?: 'default' | 'planning';
 };
@@ -36,6 +37,7 @@ export function FoodItemMultiPicker({
   const [query, setQuery] = useState('');
   const [addingCategoryId, setAddingCategoryId] = useState<string | null>(null);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [draftFoodType, setDraftFoodType] = useState<FoodType>('VEG');
 
   const activeCategories = useMemo(
     () => categories.filter(category => category.isActive).sort((a, b) => a.sortOrder - b.sortOrder),
@@ -81,11 +83,12 @@ export function FoodItemMultiPicker({
       return;
     }
     try {
-      const created = await onAddItem(categoryId, name);
+      const created = await onAddItem(categoryId, name, draftFoodType);
       onChange(
         selectedIds.includes(created.itemId) ? selectedIds : [...selectedIds, created.itemId],
       );
       setAddingCategoryId(null);
+      setDraftFoodType('VEG');
       setQuery('');
     } catch {
       // Parent shows toast
@@ -173,6 +176,7 @@ export function FoodItemMultiPicker({
               size="compact"
               selected={selectedIds.includes(item.itemId)}
               isCustom={item.isCustom}
+              foodType={item.foodType ?? 'VEG'}
               onPress={() => toggleItem(item.itemId)}
             />
           ))}
@@ -194,9 +198,13 @@ export function FoodItemMultiPicker({
             <InlineChipEditor
               placeholder={t('meals.library.itemNameInlinePlaceholder')}
               onSave={name => saveNewItem(effectiveCategoryId, name)}
-              onCancel={() => setAddingCategoryId(null)}
+              onCancel={() => {
+                setAddingCategoryId(null);
+                setDraftFoodType('VEG');
+              }}
               layout="full"
             />
+            <FoodTypePicker value={draftFoodType} onChange={setDraftFoodType} compact />
           </View>
         ) : null}
 
@@ -285,6 +293,7 @@ export function FoodItemMultiPicker({
                 size="compact"
                 selected={selectedIds.includes(item.itemId)}
                 isCustom={item.isCustom}
+                foodType={item.foodType ?? 'VEG'}
                 onPress={() => toggleItem(item.itemId)}
               />
             ))}

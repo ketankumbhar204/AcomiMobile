@@ -2,7 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { DailyMenuOptionResponse } from '../../api/types';
 import { colors, spacing, typography } from '../../theme';
-import { formatComboPrice } from '../../utils/comboPrice';
+import { formatComboNameWithPrice, formatComboPrice } from '../../utils/comboPrice';
 
 type PlannedComboPreviewRowProps = {
   option: DailyMenuOptionResponse;
@@ -20,6 +20,7 @@ export function PlannedComboPreviewRow({
   onPress,
 }: PlannedComboPreviewRowProps) {
   const priceLabel = formatComboPrice(price, currencyCode);
+  const displayName = formatComboNameWithPrice(option.label, price, currencyCode);
   return (
     <Pressable
       onPress={onPress}
@@ -27,8 +28,8 @@ export function PlannedComboPreviewRow({
       accessibilityRole="button"
       accessibilityLabel={
         itemNames.length > 0
-          ? `${option.label}, ${itemNames.join(', ')}`
-          : option.label
+          ? `${displayName}, ${itemNames.join(', ')}`
+          : displayName
       }>
       <Text style={styles.choiceDot}>·</Text>
       <Text style={styles.comboName} numberOfLines={1}>
@@ -73,6 +74,7 @@ const styles = StyleSheet.create({
   price: {
     ...typography.bodyStrong,
     color: colors.textSecondary,
+    flexShrink: 0,
   },
   chevron: {
     ...typography.body,

@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type {
@@ -7,23 +7,20 @@ import type {
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import {
+  MemberCompactHeader,
   MemberDepositTab,
   MemberDetailTabBar,
   type MemberDetailTab,
-  MemberDocumentsTab,
   MemberHistoryTab,
-  MemberNotesTab,
   MemberProfileTab,
-  MemberStatusBadge,
-  RoleBadge,
 } from '../components/member';
 import { MemberMealsTab } from '../components/meals';
-import { Badge, HeaderBackButton, Screen, SkeletonCard } from '../components/ui';
+import { HeaderBackButton, Screen, SkeletonCard } from '../components/ui';
 import { useSpacePermissions } from '../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../navigation/types';
 import { useMemberStore } from '../store/memberStore';
+import { useMemberMealActivityDaySheetStore } from '../store/memberMealActivityDaySheetStore';
 import { spacing, typography } from '../theme';
-import { memberCountInBadgeLabel } from '../utils/memberAppStatus';
 
 type MemberDetailsNav = NativeStackNavigationProp<
   MainStackParamList,
@@ -48,6 +45,10 @@ export function MemberDetailsScreen() {
   const error = useMemberStore(state => state.error);
 
   const [activeTab, setActiveTab] = useState<MemberDetailTab>('profile');
+  const activityReloadRef = useRef<(() => void) | null>(null);
+  const openActivityDaySheet = useMemberMealActivityDaySheetStore(state => state.open);
+  const closeActivityDaySheet = useMemberMealActivityDaySheetStore(state => state.close);
+  const selectedActivityDate = useMemberMealActivityDaySheetStore(state => state.selectedDate);
 
   const spaceType = permissions.spaceType;
   const canEdit = permissions.canManageMembers && member?.role !== 'OWNER';
@@ -58,6 +59,7 @@ export function MemberDetailsScreen() {
     member?.membershipId == null;
   const showMealsTab = permissions.canViewMeals === true;
   const canManageMeals = permissions.canManageMeals === true;
+  const isMealsTab = activeTab === 'meals';
 
   const refreshMember = useCallback(() => {
     void loadMemberDetails(memberId);
@@ -76,7 +78,10 @@ export function MemberDetailsScreen() {
       console.log('[MemberDetails] screen focused', { spaceId, memberId });
       void loadMemberDetails(memberId);
       void loadPendingInvitations();
-    }, [loadMemberDetails, loadPendingInvitations, memberId, spaceId]),
+      return () => {
+        closeActivityDaySheet();
+      };
+    }, [closeActivityDaySheet, loadMemberDetails, loadPendingInvitations, memberId, spaceId]),
   );
 
   const renderTabContent = () => {
@@ -103,16 +108,28 @@ export function MemberDetailsScreen() {
             spaceId={spaceId}
             spaceType={spaceType}
             member={member}
-            canManage={canManageMeals}
-            onRefreshMember={refreshMember}
+            onSelectActivityDate={date => {
+              setTimeout(() => {
+                openActivityDaySheet(
+                  date,
+                  {
+                    spaceId,
+                    memberId: member.memberId,
+                    memberName: member.fullName,
+                    canManage: canManageMeals,
+                  },
+                  () => activityReloadRef.current?.(),
+                );
+              }, 100);
+            }}
+            selectedActivityDate={selectedActivityDate}
+            onBindActivityReload={reload => {
+              activityReloadRef.current = reload;
+            }}
           />
         );
       case 'deposit':
         return <MemberDepositTab member={member} canEdit={canEdit} />;
-      case 'documents':
-        return <MemberDocumentsTab memberId={member.memberId} canEdit={canEdit} />;
-      case 'notes':
-        return <MemberNotesTab memberId={member.memberId} canEdit={canEdit} />;
       case 'history':
         return <MemberHistoryTab memberId={member.memberId} />;
       default:
@@ -122,59 +139,58 @@ export function MemberDetailsScreen() {
 
   if (memberLoading && !member) {
     return (
-      <Screen contentStyle={styles.content}>
+      <Screen contentStyle={styles.contentCompact}>
         <SkeletonCard />
       </Screen>
     );
   }
 
   return (
-    <Screen scrollable contentStyle={styles.content}>
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+    <>
+      <Screen
+        scrollable={!isMealsTab}
+        contentStyle={[
+          styles.contentCompact,
+          isMealsTab && styles.contentMeals,
+        ]}>
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-      {member ? (
-        <>
-          <Text style={styles.eyebrow}>{t('membership.details.eyebrow')}</Text>
-          <Text style={styles.heading}>{member.fullName}</Text>
-          <View style={styles.badgeRow}>
-            <RoleBadge role={member.role} />
-            <MemberStatusBadge status={member.status} />
-            <Badge label={memberCountInBadgeLabel(member, t)} />
-          </View>
+        {member ? (
+          <>
+            <MemberCompactHeader
+              member={member}
+              spaceId={spaceId}
+              spaceType={spaceType}
+              showMealAccess={isMealsTab}
+              canManageMeals={canManageMeals}
+              onRefreshMember={refreshMember}
+            />
 
-          <MemberDetailTabBar
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            showMealsTab={showMealsTab}
-          />
-          {renderTabContent()}
-        </>
-      ) : (
-        <Text style={styles.errorText}>{t('membership.errors.loadDetails')}</Text>
-      )}
-    </Screen>
+            <MemberDetailTabBar
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              showMealsTab={showMealsTab}
+              compact
+            />
+            {renderTabContent()}
+          </>
+        ) : (
+          <Text style={styles.errorText}>{t('membership.errors.loadDetails')}</Text>
+        )}
+      </Screen>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    padding: spacing.xxl,
-    paddingBottom: spacing.section,
+  contentCompact: {
+    paddingTop: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
   },
-  eyebrow: {
-    ...typography.eyebrow,
-    marginBottom: spacing.sm,
-  },
-  heading: {
-    ...typography.h1,
-    marginBottom: spacing.sm,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.xl,
+  contentMeals: {
+    flex: 1,
+    paddingBottom: spacing.md,
   },
   errorText: {
     ...typography.body,

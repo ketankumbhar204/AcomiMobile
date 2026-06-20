@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import {
   CompositeNavigationProp,
@@ -10,20 +10,31 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { formatSpaceType } from '../../api';
-import { mealsApi } from '../../api/mealsApi';
+import {
+  DashboardAccommodationOperations,
+  DashboardAttentionCard,
+  DashboardFinancialSnapshot,
+  DashboardMealOperations,
+  DashboardSectionTitle,
+} from '../../components/dashboard';
 import { DashboardCustomerMealsSection } from '../../components/meals/DashboardCustomerMealsSection';
-import { DashboardOwnerPollStatusCard } from '../../components/meals/DashboardOwnerPollStatusCard';
-import { MetricCard, MetricCardProgress, ModuleActionCard } from '../../components/ui';
+import { ModuleActionCard, SkeletonCard } from '../../components/ui';
 import { Screen } from '../../components/ui/Screen';
 import { openOccupancyWizardFromRef } from '../../features/occupancy/OccupancyWizard';
 import { useLinkedMember } from '../../hooks/useLinkedMember';
+import { useSpaceDashboard } from '../../hooks/useSpaceDashboard';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList, SpaceTabParamList } from '../../navigation/types';
 import { navigateMainStack } from '../../navigation/mainStackNavigation';
+import {
+  navigateToMembersTab,
+  navigateToPaymentsTab,
+} from '../../navigation/navigationRef';
 import { useAccommodationActionSheetStore } from '../../store/accommodationActionSheetStore';
 import { useSpaceStore } from '../../store/spaceStore';
 import { colors, spacing, typography } from '../../theme';
 import { isAccommodationApplicable } from '../../utils/accommodationProfile';
+import { canManagePayments, canViewOperationalDashboard } from '../../utils/dashboardFinancial';
 import { tomorrowIsoDate } from '../../utils/mealDates';
 import { findMySpaceEntry } from '../../utils/spacePermissions';
 
@@ -43,6 +54,7 @@ export function DashboardScreen() {
   const permissions = useSpacePermissions(spaceId);
   const spaceType = permissions.spaceType ?? spaceEntry?.spaceType;
   const accommodationApplicable = spaceType ? isAccommodationApplicable(spaceType) : true;
+  const isMess = spaceType === 'MESS';
   const { memberId: linkedMemberId } = useLinkedMember(spaceId);
   const openActionSheet = useAccommodationActionSheetStore(state => state.open);
 
@@ -54,31 +66,29 @@ export function DashboardScreen() {
     !showMealsActions && permissions.canViewMeals === true && (isTenant || isCustomer);
   const showMyStay = isTenant && linkedMemberId != null && accommodationApplicable;
   const isMealParticipant = showMealsReadOnly;
+  const showOwnerDashboard = canViewOperationalDashboard({
+    canManageMembers: permissions.canManageMembers,
+    canManageMeals: showMealsActions,
+    canManageOccupancy: showResidentsActions,
+    canViewSpaceOccupancies: permissions.canViewSpaceOccupancies === true,
+  });
+  const showPaymentsQuickAction = canManagePayments(permissions.membershipRole);
 
-  const [eligibleMealCount, setEligibleMealCount] = useState<string>('—');
+  const dashboard = useSpaceDashboard(spaceId, spaceType, showOwnerDashboard);
 
-  useEffect(() => {
-    if (!permissions.canViewMeals || isMealParticipant) {
-      return;
-    }
-    const menuDate = tomorrowIsoDate();
-    void mealsApi
-      .getEligibilitySummary(spaceId, menuDate)
-      .then(summary => {
-        const total =
-          summary.distinctEligibleMemberCount ??
-          summary.slots.reduce((max, slot) => Math.max(max, slot.eligibleCount), 0);
-        setEligibleMealCount(String(total));
-      })
-      .catch(() => setEligibleMealCount('—'));
-  }, [isMealParticipant, permissions.canViewMeals, spaceId]);
+  const handlePaymentsNavigate = useCallback(
+    (initialFilter: 'all' | 'pending' | 'collected') => {
+      navigation.navigate('Payments', { spaceId, initialFilter });
+    },
+    [navigation, spaceId],
+  );
 
   const handleMealsPress = useCallback(() => {
     const tomorrow = tomorrowIsoDate();
     openActionSheet(t('dashboard.quickActions.meals'), [
       {
         label: t('dashboard.quickActions.mealsPlanning'),
-        action: () => navigation.navigate('MenuPlanning', { spaceId }),
+        action: () => navigateMainStack('MenuPlanning', { spaceId }),
       },
       {
         label: t('meals.planning.shareTomorrow'),
@@ -87,14 +97,31 @@ export function DashboardScreen() {
       },
       {
         label: t('meals.todayMenu'),
-        action: () => navigation.navigate('DailyMenuToday', { spaceId }),
+        action: () => navigateMainStack('DailyMenuToday', { spaceId }),
       },
       {
         label: t('meals.library.title'),
-        action: () => navigation.navigate('MenuLibrary', { spaceId }),
+        action: () => navigateMainStack('MenuLibrary', { spaceId }),
       },
     ]);
-  }, [navigation, openActionSheet, spaceId, t]);
+  }, [openActionSheet, spaceId, t]);
+
+  const handleMembersPress = useCallback(() => {
+    openActionSheet(t('dashboard.quickActions.members'), [
+      {
+        label: t('dashboard.quickActions.addCustomer'),
+        action: () => navigateMainStack('AddMember', { spaceId }),
+      },
+      {
+        label: t('dashboard.quickActions.viewMembers'),
+        action: () => navigateToMembersTab(spaceId),
+      },
+    ]);
+  }, [openActionSheet, spaceId, t]);
+
+  const handlePaymentsPress = useCallback(() => {
+    navigateToPaymentsTab(spaceId);
+  }, [spaceId]);
 
   const handleResidentsPress = useCallback(() => {
     openActionSheet(t('dashboard.quickActions.residents'), [
@@ -125,8 +152,37 @@ export function DashboardScreen() {
     navigation.navigate('MemberDetails', { spaceId, memberId: linkedMemberId });
   }, [linkedMemberId, navigation, spaceId]);
 
-  const quickActions = useMemo(() => {
-    if (showResidentsActions || showMealsActions) {
+  const messQuickActions = useMemo(() => {
+    if (!showMealsActions || !isMess) {
+      return null;
+    }
+
+    return (
+      <View style={styles.quickStack}>
+        <ModuleActionCard
+          icon="🍽"
+          title={t('dashboard.quickActions.meals')}
+          subtitle={t('dashboard.quickActions.mealsSubtitle')}
+          onPress={handleMealsPress}
+        />
+        <ModuleActionCard
+          icon="👥"
+          title={t('dashboard.quickActions.members')}
+          subtitle={t('dashboard.quickActions.membersSubtitle')}
+          onPress={handleMembersPress}
+        />
+        <ModuleActionCard
+          icon="💳"
+          title={t('dashboard.quickActions.payments')}
+          subtitle={t('dashboard.quickActions.paymentsSubtitle')}
+          onPress={handlePaymentsPress}
+        />
+      </View>
+    );
+  }, [handleMealsPress, handleMembersPress, handlePaymentsPress, isMess, showMealsActions, t]);
+
+  const accommodationQuickActions = useMemo(() => {
+    if (showResidentsActions || (showMealsActions && !isMess)) {
       return (
         <View style={styles.moduleRow}>
           {showResidentsActions ? (
@@ -137,12 +193,20 @@ export function DashboardScreen() {
               onPress={handleResidentsPress}
             />
           ) : null}
-          {showMealsActions ? (
+          {showMealsActions && !isMess ? (
             <ModuleActionCard
               icon="🍽"
               title={t('dashboard.quickActions.meals')}
               subtitle={t('dashboard.quickActions.mealsSubtitle')}
               onPress={handleMealsPress}
+            />
+          ) : null}
+          {!isMess && showPaymentsQuickAction ? (
+            <ModuleActionCard
+              icon="💳"
+              title={t('dashboard.quickActions.payments')}
+              subtitle={t('dashboard.quickActions.paymentsSubtitle')}
+              onPress={handlePaymentsPress}
             />
           ) : null}
         </View>
@@ -170,20 +234,24 @@ export function DashboardScreen() {
   }, [
     handleMealsPress,
     handleMyStayPress,
+    handlePaymentsPress,
     handleResidentsPress,
+    isMess,
     isTenant,
     linkedMemberId,
     showMealsActions,
     showMyStay,
     showResidentsActions,
+    showPaymentsQuickAction,
     t,
   ]);
 
+  const quickActions = isMess ? messQuickActions : accommodationQuickActions;
   const showQuickSection = quickActions != null;
 
   return (
     <Screen scrollable contentStyle={styles.content}>
-      {spaceEntry ? (
+      {spaceEntry && !showOwnerDashboard ? (
         <View style={styles.spaceDetails}>
           <Text style={styles.spaceName}>{spaceEntry.spaceName}</Text>
           <Text style={styles.spaceType}>
@@ -194,42 +262,54 @@ export function DashboardScreen() {
 
       {isMealParticipant ? <DashboardCustomerMealsSection spaceId={spaceId} /> : null}
 
-      {!isMealParticipant ? (
+      {showOwnerDashboard ? (
         <>
-          <Text style={styles.dashboardTitle}>{t('dashboard.overview')}</Text>
+          {dashboard.loading && !dashboard.summary ? (
+            <SkeletonCard />
+          ) : (
+            <>
+              {dashboard.attention.map((attention, index) => (
+                <DashboardAttentionCard
+                  key={`${attention.kind}-${index}`}
+                  spaceId={spaceId}
+                  attention={attention}
+                />
+              ))}
 
-          <View style={styles.metricsRow}>
-            {accommodationApplicable ? (
-              <MetricCard label={t('dashboard.occupancy')} value="94%" style={styles.metricHalf} />
-            ) : null}
-            {permissions.canViewMeals ? (
-              <MetricCard
-                label={t('dashboard.eligibleMembers')}
-                value={eligibleMealCount}
-                hint={t('dashboard.eligibleMembersHint')}
-                hintPositive
-                style={accommodationApplicable ? styles.metricHalf : styles.metricFull}
+              <DashboardFinancialSnapshot
+                loading={dashboard.financialLoading}
+                financial={dashboard.financial}
+                onExpectedPress={
+                  showPaymentsQuickAction ? () => handlePaymentsNavigate('all') : undefined
+                }
+                onCollectedPress={
+                  showPaymentsQuickAction ? () => handlePaymentsNavigate('collected') : undefined
+                }
+                onPendingPress={
+                  showPaymentsQuickAction ? () => handlePaymentsNavigate('pending') : undefined
+                }
               />
-            ) : null}
-          </View>
-          {accommodationApplicable ? (
-            <MetricCard
-              label={t('dashboard.rentCollected')}
-              value="₹ 4,28,500"
-              hint={t('dashboard.rentHint')}
-              hintPositive
-              style={styles.rentMetric}>
-              <MetricCardProgress percent={78} />
-            </MetricCard>
-          ) : null}
+
+              {dashboard.messOperations ? (
+                <DashboardMealOperations
+                  spaceId={spaceId}
+                  operations={dashboard.messOperations}
+                />
+              ) : null}
+
+              {dashboard.accommodationOperations ? (
+                <DashboardAccommodationOperations
+                  operations={dashboard.accommodationOperations}
+                />
+              ) : null}
+            </>
+          )}
         </>
       ) : null}
 
-      {showMealsActions ? <DashboardOwnerPollStatusCard spaceId={spaceId} /> : null}
-
       {showQuickSection ? (
         <View style={styles.quickSection}>
-          <Text style={styles.quickTitle}>{t('dashboard.quickActions.title')}</Text>
+          <DashboardSectionTitle title={t('dashboard.quickActions.title')} />
           {quickActions}
         </View>
       ) : null}
@@ -242,20 +322,14 @@ const styles = StyleSheet.create({
   spaceDetails: { marginBottom: spacing.lg },
   spaceName: { ...typography.h2, marginBottom: spacing.xs },
   spaceType: { ...typography.body, color: colors.muted },
-  dashboardTitle: { ...typography.h1, marginBottom: spacing.lg },
-  metricsRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginBottom: spacing.md,
-  },
-  metricHalf: { flex: 1 },
-  metricFull: { flex: 1, width: '100%' },
-  rentMetric: { marginBottom: spacing.xl },
   quickSection: { marginBottom: spacing.lg },
-  quickTitle: { ...typography.h3, marginBottom: spacing.md },
   moduleRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.md,
+  },
+  quickStack: {
+    gap: spacing.sm,
   },
   tenantHint: {
     ...typography.body,

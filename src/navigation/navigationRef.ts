@@ -77,6 +77,33 @@ export function navigateToMembersTab(spaceId: string): void {
   );
 }
 
+export function navigateToPaymentsTab(spaceId: string): void {
+  if (!navigationRef.isReady()) {
+    return;
+  }
+
+  navigationRef.dispatch(
+    CommonActions.reset({
+      index: 0,
+      routes: [
+        {
+          name: 'Main',
+          state: {
+            index: 0,
+            routes: [
+              {
+                name: 'SpaceTabs',
+                params: { spaceId },
+                state: buildSpaceTabsState(spaceId, 'Payments'),
+              },
+            ],
+          },
+        },
+      ],
+    }),
+  );
+}
+
 /** Clears accommodation drill-down stack and lands on the Accommodation tab. */
 export function resetToAccommodationHome(spaceId: string): void {
   if (!navigationRef.isReady()) {

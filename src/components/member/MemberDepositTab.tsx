@@ -5,22 +5,14 @@ import type { MemberDetailsResponse } from '../../api/types';
 import { Button, Card, FormInput } from '../ui';
 import { useMemberStore } from '../../store/memberStore';
 import { useToastStore } from '../../store/toastStore';
-import { colors, spacing, typography } from '../../theme';
+import { spacing, typography } from '../../theme';
 import { formatCurrency, parseDepositAmount, validateDeposit } from '../../utils/memberDeposit';
+import { MemberDetailRow } from './MemberDetailRow';
 
 type MemberDepositTabProps = {
   member: MemberDetailsResponse;
   canEdit: boolean;
 };
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.detailRow}>
-      <Text style={styles.detailLabel}>{label}</Text>
-      <Text style={styles.detailValue}>{value}</Text>
-    </View>
-  );
-}
 
 export function MemberDepositTab({ member, canEdit }: MemberDepositTabProps) {
   const { t } = useTranslation();
@@ -55,7 +47,6 @@ export function MemberDepositTab({ member, canEdit }: MemberDepositTabProps) {
       return;
     }
 
-    console.log('[MemberDepositTab] update deposit', body);
     const updated = await updateDeposit(member.memberId, body);
     if (updated) {
       showToast(t('membership.deposit.successToast'));
@@ -111,21 +102,22 @@ export function MemberDepositTab({ member, canEdit }: MemberDepositTabProps) {
   return (
     <View>
       <Card style={styles.card}>
-        <DetailRow
+        <MemberDetailRow
           label={t('membership.deposit.amount')}
           value={formatCurrency(member.depositAmount ?? 0)}
         />
-        <DetailRow
+        <MemberDetailRow
           label={t('membership.deposit.paid')}
           value={formatCurrency(member.depositPaid ?? 0)}
         />
-        <DetailRow
+        <MemberDetailRow
           label={t('membership.deposit.refunded')}
           value={formatCurrency(member.depositRefunded ?? 0)}
         />
-        <DetailRow
+        <MemberDetailRow
           label={t('membership.deposit.balance')}
           value={formatCurrency(member.depositBalance ?? 0)}
+          isLast
         />
       </Card>
 
@@ -143,19 +135,6 @@ export function MemberDepositTab({ member, canEdit }: MemberDepositTabProps) {
 const styles = StyleSheet.create({
   card: {
     marginBottom: spacing.lg,
-  },
-  detailRow: {
-    paddingVertical: spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  detailLabel: {
-    ...typography.caption,
-    color: colors.muted,
-    marginBottom: spacing.xs,
-  },
-  detailValue: {
-    ...typography.bodyStrong,
   },
   actionButton: {
     marginBottom: spacing.sm,

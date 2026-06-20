@@ -11,6 +11,10 @@ import { useMemberStore } from '../../store/memberStore';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { memberCountInBadgeLabel, memberInviteHint } from '../../utils/memberAppStatus';
+import { isSelectableMemberGender, memberGenderLabelKey } from '../../utils/memberGender';
+import { MemberDocumentsSection } from './MemberDocumentsSection';
+import { MemberDetailRow, MemberSectionTitle } from './MemberDetailRow';
+import { MemberNotesSection } from './MemberNotesSection';
 import { StatusPicker } from './StatusPicker';
 
 type MemberProfileNav = NativeStackNavigationProp<MainStackParamList>;
@@ -24,15 +28,6 @@ type MemberProfileTabProps = {
   canInvite: boolean;
   currentRole?: MemberDetailsResponse['role'];
 };
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.detailRow}>
-      <Text style={styles.detailLabel}>{label}</Text>
-      <Text style={styles.detailValue}>{value}</Text>
-    </View>
-  );
-}
 
 function formatDate(value?: string | null): string {
   if (!value) {
@@ -79,6 +74,10 @@ export function MemberProfileTab({
 
   const appStatusLabel = memberCountInBadgeLabel(member, t);
 
+  const genderLabel = isSelectableMemberGender(member.gender)
+    ? t(memberGenderLabelKey(member.gender))
+    : t('membership.gender.unspecified');
+
   const hasPendingInvite = pendingInvitations.some(
     invitation =>
       invitation.mobileNumber.replace(/\D/g, '') ===
@@ -100,7 +99,6 @@ export function MemberProfileTab({
       return;
     }
 
-    console.log('[MemberProfileTab] update status', selectedStatus);
     const updated = await updateStatus(member.memberId, { status: selectedStatus });
     if (updated) {
       showToast(t('membership.status.successToast'));
@@ -123,7 +121,6 @@ export function MemberProfileTab({
       return;
     }
 
-    console.log('[MemberProfileTab] update emergency contact');
     const updated = await updateEmergencyContact(member.memberId, {
       emergencyContactName: emergencyName.trim(),
       emergencyContactRelation: emergencyRelation.trim(),
@@ -143,7 +140,6 @@ export function MemberProfileTab({
       confirmLabel: t('membership.remove.confirm'),
       destructive: true,
       onConfirm: async () => {
-        console.log('[MemberProfileTab] remove member', member.memberId);
         const success = await removeMember(member.memberId);
         if (success) {
           navigation.goBack();
@@ -176,47 +172,53 @@ export function MemberProfileTab({
       />
 
       <Card style={styles.card}>
-        <DetailRow
+        <MemberDetailRow
           label={t('membership.details.mobile')}
           value={member.mobileNumber}
         />
-        <DetailRow
+        <MemberDetailRow label={t('membership.details.gender')} value={genderLabel} />
+        <MemberDetailRow
           label={t('membership.details.appStatus')}
           value={appStatusLabel}
         />
-        <DetailRow
+        <MemberDetailRow
           label={t('membership.status.label')}
           value={t(`membership.status.${member.status}`)}
         />
-        <DetailRow
+        <MemberDetailRow
           label={t('membership.status.updatedAt')}
           value={formatDate(member.statusUpdatedAt)}
         />
-        <DetailRow
+        <MemberDetailRow
           label={t('membership.details.created')}
           value={formatDate(member.createdAt)}
         />
-        <DetailRow
+        <MemberDetailRow
           label={t('membership.details.updated')}
           value={formatDate(member.updatedAt)}
+          isLast
         />
       </Card>
 
-      <Text style={styles.sectionTitle}>{t('membership.emergency.heading')}</Text>
+      <MemberSectionTitle title={t('membership.emergency.heading')} />
       <Card style={styles.card}>
-        <DetailRow
+        <MemberDetailRow
           label={t('membership.emergency.name')}
           value={member.emergencyContactName ?? '—'}
         />
-        <DetailRow
+        <MemberDetailRow
           label={t('membership.emergency.relation')}
           value={member.emergencyContactRelation ?? '—'}
         />
-        <DetailRow
+        <MemberDetailRow
           label={t('membership.emergency.mobile')}
           value={member.emergencyContactMobile ?? '—'}
+          isLast
         />
       </Card>
+
+      <MemberDocumentsSection memberId={member.memberId} canEdit={canEdit} />
+      <MemberNotesSection memberId={member.memberId} canEdit={canEdit} />
 
       {canInvite ? (
         <Card style={styles.inviteCard}>
@@ -359,32 +361,15 @@ export function MemberProfileTab({
 
 const styles = StyleSheet.create({
   card: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   inviteCard: {
-    marginBottom: spacing.lg,
-    gap: spacing.md,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
   },
   inviteHint: {
     ...typography.body,
     color: colors.muted,
-  },
-  sectionTitle: {
-    ...typography.bodyStrong,
-    marginBottom: spacing.sm,
-  },
-  detailRow: {
-    paddingVertical: spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  detailLabel: {
-    ...typography.caption,
-    color: colors.muted,
-    marginBottom: spacing.xs,
-  },
-  detailValue: {
-    ...typography.bodyStrong,
   },
   actionButton: {
     marginBottom: spacing.sm,

@@ -4,6 +4,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { OverflowMenuProvider, Toast } from './src/components/ui';
 import { AccommodationActionSheet } from './src/components/accommodation';
+import { MemberMealActivityDaySheetHost } from './src/components/meals/MemberMealActivityDaySheetHost';
 import { initI18n } from './src/i18n';
 import { RootNavigator } from './src/navigation';
 import { colors } from './src/theme';
@@ -36,6 +37,7 @@ function App() {
           <RootNavigator />
           <Toast />
           <AccommodationActionSheet />
+          <MemberMealActivityDaySheetHost />
         </OverflowMenuProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

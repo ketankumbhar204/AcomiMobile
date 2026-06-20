@@ -32,6 +32,7 @@ import { MySpacesScreen } from '../screens/MySpacesScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { SpaceDetailsScreen } from '../screens/SpaceDetailsScreen';
 import { MenuPlanningScreen } from '../screens/meals/MenuPlanningScreen';
+import { MealDeliveryLocationsScreen } from '../screens/meals/MealDeliveryLocationsScreen';
 import { MenuSharePreviewScreen } from '../screens/meals/MenuSharePreviewScreen';
 import { MealPollResponseScreen } from '../screens/meals/MealPollResponseScreen';
 import { MenuLibraryScreen } from '../screens/meals/MenuLibraryScreen';
@@ -237,6 +238,13 @@ export function MainNavigator() {
         )}
       />
       <Stack.Screen
+        name="MealDeliveryLocations"
+        options={{ title: 'Delivery locations' }}
+        children={({ route }) => (
+          <MealDeliveryLocationsScreen spaceId={route.params.spaceId} />
+        )}
+      />
+      <Stack.Screen
         name="MenuSharePreview"
         options={{ title: 'Share Preview' }}
         children={({ route }) => (
@@ -249,7 +257,10 @@ export function MainNavigator() {
       />
       <Stack.Screen
         name="MealPollResponse"
-        options={{ title: 'Meal choices' }}
+        options={{
+          title: 'Meal choices',
+          presentation: 'modal',
+        }}
         children={({ route }) => (
           <MealPollResponseScreen
             spaceId={route.params.spaceId}

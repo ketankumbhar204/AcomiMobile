@@ -2,6 +2,8 @@ import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { FoodItemResponse } from '../../../api/types';
+import { FoodTypeIcon } from '../../ui/FoodTypeIcon';
+import { resolveFoodTypeFromItems } from '../../../utils/foodType';
 import { MenuChip } from './MenuChip';
 import { colors, spacing, typography } from '../../../theme';
 
@@ -38,6 +40,11 @@ export function ComboSelectionReview({
     [items, selectedIds],
   );
 
+  const derivedFoodType = useMemo(
+    () => resolveFoodTypeFromItems(items, selectedIds),
+    [items, selectedIds],
+  );
+
   const trimmedName = comboName?.trim() ?? '';
   const trimmedDescription = description?.trim() ?? '';
   const hasSelection = selectedItems.length > 0;
@@ -45,11 +52,14 @@ export function ComboSelectionReview({
   return (
     <View style={styles.wrapper}>
       <View style={styles.headerRow}>
-        <Text
-          style={[styles.comboName, !trimmedName && styles.comboNamePlaceholder]}
-          numberOfLines={1}>
-          {trimmedName || t('meals.library.comboReviewUntitled')}
-        </Text>
+        <View style={styles.titleRow}>
+          <FoodTypeIcon foodType={derivedFoodType} size={14} />
+          <Text
+            style={[styles.comboName, !trimmedName && styles.comboNamePlaceholder]}
+            numberOfLines={1}>
+            {trimmedName || t('meals.library.comboReviewUntitled')}
+          </Text>
+        </View>
         <Text style={styles.count}>
           {t('meals.library.comboReviewCount', { count: selectedItems.length })}
         </Text>
@@ -77,6 +87,7 @@ export function ComboSelectionReview({
               size="compact"
               selected
               isCustom={item.isCustom}
+              foodType={item.foodType ?? 'VEG'}
               onPress={() => onRemoveItem(item.itemId)}
             />
           ))}
@@ -106,9 +117,16 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginBottom: spacing.xxs,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    flex: 1,
+    minWidth: 0,
+  },
   comboName: {
     ...typography.bodyStrong,
-    flex: 1,
+    flexShrink: 1,
   },
   comboNamePlaceholder: {
     color: colors.muted,

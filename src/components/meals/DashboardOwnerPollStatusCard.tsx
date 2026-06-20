@@ -1,65 +1,40 @@
-import React, { useCallback } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import type { MealPollSlot, UUID } from '../../api/types';
-import { Button } from '../ui';
-import { Card } from '../ui/Card';
-import { useOwnerMealPollStatus } from '../../hooks/useOwnerMealPollStatus';
+import type { MealHeadcountSlot, MealType, UUID } from '../../api/types';
+import { useOwnerMealHeadcount } from '../../hooks/useOwnerMealHeadcount';
 import { navigateMainStack } from '../../navigation/mainStackNavigation';
 import { colors, radius, spacing, typography } from '../../theme';
 import { formatMenuDate, tomorrowIsoDate } from '../../utils/mealDates';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
+import { Card } from '../ui/Card';
+import { MealHeadcountBottomSheet } from './MealHeadcountBottomSheet';
 
 type DashboardOwnerPollStatusCardProps = {
   spaceId: UUID;
 };
 
-function MealHeadcountRow({ polls }: { polls: MealPollSlot[] }) {
+function MealHeadcountRow({
+  slots,
+  onSelectMeal,
+}: {
+  slots: MealHeadcountSlot[];
+  onSelectMeal: (mealType: MealType) => void;
+}) {
   const { t } = useTranslation();
 
   return (
     <View style={styles.headcountRow}>
-      {polls.map(poll => (
-        <View key={poll.id} style={styles.headcountChip}>
-          <Text style={styles.headcountLabel}>{t(mealTypeLabelKey(poll.mealType))}</Text>
-          <Text style={styles.headcountValue}>{poll.responseCount}</Text>
-        </View>
+      {slots.map(slot => (
+        <Pressable
+          key={slot.pollId}
+          style={({ pressed }) => [styles.headcountChip, pressed && styles.headcountChipPressed]}
+          onPress={() => onSelectMeal(slot.mealType)}
+          accessibilityRole="button">
+          <Text style={styles.headcountLabel}>{t(mealTypeLabelKey(slot.mealType))}</Text>
+          <Text style={styles.headcountValue}>{slot.mealsToPrepare}</Text>
+        </Pressable>
       ))}
-    </View>
-  );
-}
-
-type ResponseSummaryProps = {
-  respondedCount: number;
-  eligibleCount: number;
-  pendingCount: number;
-  complete: boolean;
-};
-
-function ResponseSummary({
-  respondedCount,
-  eligibleCount,
-  pendingCount,
-  complete,
-}: ResponseSummaryProps) {
-  const { t } = useTranslation();
-
-  return (
-    <View style={styles.summarySection}>
-      <Text style={styles.summaryLine}>
-        {t('dashboard.pollStatus.membersResponded', {
-          responded: respondedCount,
-          total: eligibleCount,
-        })}
-      </Text>
-      {!complete && pendingCount > 0 ? (
-        <Text style={styles.pendingLine}>
-          {t('dashboard.pollStatus.pendingMembers', { count: pendingCount })}
-        </Text>
-      ) : null}
-      {complete ? (
-        <Text style={styles.readyLine}>{t('dashboard.pollStatus.headcountReady')}</Text>
-      ) : null}
     </View>
   );
 }
@@ -67,69 +42,72 @@ function ResponseSummary({
 export function DashboardOwnerPollStatusCard({ spaceId }: DashboardOwnerPollStatusCardProps) {
   const { t, i18n } = useTranslation();
   const menuDate = tomorrowIsoDate();
-  const status = useOwnerMealPollStatus(spaceId, menuDate, true);
+  const headcount = useOwnerMealHeadcount(spaceId, menuDate, true);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [initialMealType, setInitialMealType] = useState<MealType>('LUNCH');
 
-  const handleViewDetails = useCallback(() => {
-    navigateMainStack('MenuPlanning', { spaceId, menuDate });
-  }, [menuDate, spaceId]);
+  const handleSelectMeal = useCallback((mealType: MealType) => {
+    setInitialMealType(mealType);
+    // Defer opening so the chip tap does not hit the sheet backdrop (same fix as meal poll).
+    requestAnimationFrame(() => {
+      setSheetOpen(true);
+    });
+  }, []);
+
+  const handleCloseSheet = useCallback(() => {
+    setSheetOpen(false);
+    void headcount.reload();
+  }, [headcount.reload]);
 
   const handleRemindMembers = useCallback(() => {
     navigateMainStack('MenuSharePreview', { spaceId, menuDate });
   }, [menuDate, spaceId]);
 
-  if (status.loading || !status.hasOpenPolls) {
-    return null;
-  }
-
-  const complete = status.allResponded;
+  const showCard = !headcount.loading && headcount.hasOpenPolls;
 
   return (
-    <Card style={styles.card}>
-      <Text style={styles.title}>{t('dashboard.pollStatus.title')}</Text>
-      <Text style={styles.date}>{formatMenuDate(menuDate, i18n.language)}</Text>
+    <>
+      {showCard ? (
+        <Card style={styles.card}>
+          <Text style={styles.title}>{t('dashboard.headcount.title')}</Text>
+          <Text style={styles.date}>{formatMenuDate(menuDate, i18n.language)}</Text>
+          <Text style={styles.hint}>{t('dashboard.headcount.toggleMealHint')}</Text>
 
-      <MealHeadcountRow polls={status.openPolls} />
+          <MealHeadcountRow slots={headcount.openSlots} onSelectMeal={handleSelectMeal} />
 
-      <ResponseSummary
-        respondedCount={status.respondedCount}
-        eligibleCount={status.eligibleCount}
-        pendingCount={status.pendingCount}
-        complete={complete}
-      />
+          <Pressable style={styles.remindLink} onPress={handleRemindMembers}>
+            <Text style={styles.remindLinkText}>{t('dashboard.headcount.remindMembers')}</Text>
+          </Pressable>
+        </Card>
+      ) : null}
 
-      {complete ? (
-        <Button
-          label={t('dashboard.pollStatus.viewSummary')}
-          onPress={handleViewDetails}
-          style={styles.action}
+      {sheetOpen ? (
+        <MealHeadcountBottomSheet
+          visible={sheetOpen}
+          spaceId={spaceId}
+          menuDate={menuDate}
+          openSlots={headcount.openSlots}
+          initialMealType={initialMealType}
+          onClose={handleCloseSheet}
         />
-      ) : (
-        <>
-          <Button
-            label={t('dashboard.pollStatus.remindMembers')}
-            onPress={handleRemindMembers}
-            style={styles.action}
-          />
-          <Button
-            label={t('dashboard.pollStatus.viewDetails')}
-            onPress={handleViewDetails}
-            variant="secondary"
-            style={styles.action}
-          />
-        </>
-      )}
-    </Card>
+      ) : null}
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   card: { marginBottom: spacing.lg },
   title: { ...typography.h3, marginBottom: spacing.xs },
-  date: { ...typography.body, color: colors.muted, marginBottom: spacing.lg },
+  date: { ...typography.body, color: colors.muted, marginBottom: spacing.xs },
+  hint: {
+    ...typography.caption,
+    color: colors.muted,
+    marginBottom: spacing.lg,
+  },
   headcountRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   headcountChip: {
     flex: 1,
@@ -142,6 +120,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     gap: spacing.xs,
   },
+  headcountChipPressed: {
+    opacity: 0.92,
+  },
   headcountLabel: {
     ...typography.caption,
     color: colors.muted,
@@ -153,24 +134,12 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     lineHeight: 36,
   },
-  summarySection: {
-    gap: spacing.xs,
-    marginBottom: spacing.lg,
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+  remindLink: {
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.xs,
   },
-  summaryLine: {
-    ...typography.body,
-    color: colors.muted,
-  },
-  pendingLine: {
-    ...typography.body,
-    color: colors.muted,
-  },
-  readyLine: {
+  remindLinkText: {
     ...typography.bodyStrong,
     color: colors.primaryDark,
   },
-  action: { marginTop: spacing.sm },
 });

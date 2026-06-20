@@ -59,6 +59,26 @@ export function toUpsertOptions(options: MenuDraftOption[]): UpsertDailyMenuRequ
   }));
 }
 
+export function getDraftOptionItemNames(
+  option: MenuDraftOption,
+  comboById: Map<string, MealComboResponse>,
+): string[] {
+  if (option.entryType === 'COMBO' && option.comboId) {
+    return comboById.get(option.comboId)?.items?.map(item => item.name).filter(Boolean) ?? [];
+  }
+  return [];
+}
+
+export function getDraftOptionFoodType(
+  option: MenuDraftOption,
+  comboById: Map<string, MealComboResponse>,
+): MealComboResponse['foodType'] | null {
+  if (option.entryType === 'COMBO' && option.comboId) {
+    return comboById.get(option.comboId)?.foodType ?? null;
+  }
+  return null;
+}
+
 export async function loadMenuDraft(
   spaceId: UUID,
   menuDate: string,

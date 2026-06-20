@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Button, EmptyState, FormInput, SkeletonCard } from '../ui';
+import { Button, Card, FormInput, SkeletonCard } from '../ui';
 import { useMemberStore } from '../../store/memberStore';
 import { useToastStore } from '../../store/toastStore';
-import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { colors, spacing, typography } from '../../theme';
+import { MemberDetailRow, MemberSectionTitle } from './MemberDetailRow';
 
-type MemberNotesTabProps = {
+type MemberNotesSectionProps = {
   memberId: string;
   canEdit: boolean;
 };
@@ -19,7 +20,7 @@ function formatDate(value: string): string {
   return date.toLocaleString();
 }
 
-export function MemberNotesTab({ memberId, canEdit }: MemberNotesTabProps) {
+export function MemberNotesSection({ memberId, canEdit }: MemberNotesSectionProps) {
   const { t } = useTranslation();
   const showToast = useToastStore(state => state.showToast);
   const notes = useMemberStore(state => state.notes);
@@ -32,7 +33,6 @@ export function MemberNotesTab({ memberId, canEdit }: MemberNotesTabProps) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('[MemberNotesTab] first visit, load notes', memberId);
     void loadNotes(memberId);
   }, [loadNotes, memberId]);
 
@@ -42,7 +42,6 @@ export function MemberNotesTab({ memberId, canEdit }: MemberNotesTabProps) {
       return;
     }
 
-    console.log('[MemberNotesTab] add note');
     const created = await addNote(memberId, { note: noteText.trim() });
     if (created) {
       showToast(t('membership.notes.successToast'));
@@ -52,13 +51,20 @@ export function MemberNotesTab({ memberId, canEdit }: MemberNotesTabProps) {
   };
 
   if (notesLoading && notes.length === 0) {
-    return <SkeletonCard />;
+    return (
+      <View style={styles.wrap}>
+        <MemberSectionTitle title={t('membership.detailTabs.notes')} />
+        <SkeletonCard />
+      </View>
+    );
   }
 
   return (
-    <View>
+    <View style={styles.wrap}>
+      <MemberSectionTitle title={t('membership.detailTabs.notes')} />
+
       {canEdit ? (
-        <View style={styles.compose}>
+        <Card style={styles.card}>
           <FormInput
             label={t('membership.notes.addLabel')}
             value={noteText}
@@ -71,66 +77,54 @@ export function MemberNotesTab({ memberId, canEdit }: MemberNotesTabProps) {
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
           <Button
             label={t('membership.notes.add')}
+            variant="secondary"
             onPress={handleAdd}
             disabled={loading}
             style={styles.actionButton}
           />
-        </View>
+        </Card>
       ) : null}
 
       {notes.length === 0 ? (
-        <EmptyState
-          title={t('membership.notes.emptyTitle')}
-          description={t('membership.notes.emptyDescription')}
-          icon="📝"
-        />
+        <Card style={styles.card}>
+          <Text style={styles.emptyText}>{t('membership.notes.emptyDescription')}</Text>
+        </Card>
       ) : (
-        <View style={styles.list}>
-          {notes.map(note => (
-            <View key={note.noteId} style={styles.card}>
-              <Text style={styles.noteBody}>{note.note}</Text>
-              <Text style={styles.noteMeta}>
-                {t('membership.notes.meta', {
-                  name: note.createdByName,
-                  date: formatDate(note.createdAt),
-                })}
-              </Text>
-            </View>
-          ))}
-        </View>
+        notes.map(note => (
+          <Card key={note.noteId} style={styles.card}>
+            <MemberDetailRow label={t('membership.notes.addLabel')} value={note.note} />
+            <MemberDetailRow label={t('membership.notes.authorLabel')} value={note.createdByName} />
+            <MemberDetailRow
+              label={t('membership.notes.dateLabel')}
+              value={formatDate(note.createdAt)}
+              isLast
+            />
+          </Card>
+        ))
       )}
     </View>
   );
 }
 
+/** @deprecated Use MemberNotesSection inside Profile tab */
+export const MemberNotesTab = MemberNotesSection;
+
 const styles = StyleSheet.create({
-  compose: {
+  wrap: {
     marginBottom: spacing.lg,
   },
+  card: {
+    marginBottom: spacing.sm,
+  },
   noteInput: {
-    minHeight: 96,
+    minHeight: 72,
     textAlignVertical: 'top',
   },
   actionButton: {
-    marginBottom: spacing.sm,
+    marginTop: spacing.xs,
   },
-  list: {
-    gap: spacing.md,
-  },
-  card: {
-    backgroundColor: colors.white,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-    ...shadows.sm,
-  },
-  noteBody: {
+  emptyText: {
     ...typography.body,
-    marginBottom: spacing.sm,
-  },
-  noteMeta: {
-    ...typography.caption,
     color: colors.muted,
   },
   errorText: {

@@ -9,7 +9,7 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { mealsApi } from '../../api/mealsApi';
-import type { FoodCategoryResponse, FoodItemResponse, MealComboResponse, UUID } from '../../api/types';
+import type { FoodCategoryResponse, FoodItemResponse, FoodType, MealComboResponse, UUID } from '../../api/types';
 import {
   CategoryChipRail,
   ComboChipRail,
@@ -111,7 +111,7 @@ export function MenuLibraryScreen({ spaceId }: MenuLibraryScreenProps) {
   );
 
   const saveItem = useCallback(
-    async (name: string) => {
+    async (name: string, foodType: FoodType = 'VEG') => {
       if (!selectedCategoryId) {
         return;
       }
@@ -119,6 +119,7 @@ export function MenuLibraryScreen({ spaceId }: MenuLibraryScreenProps) {
         await mealsApi.createFoodItem(spaceId, {
           categoryId: selectedCategoryId,
           name,
+          foodType,
         });
         showToast(t('meals.library.itemCreateSuccess'));
         closeInlineEditors();
@@ -131,9 +132,9 @@ export function MenuLibraryScreen({ spaceId }: MenuLibraryScreenProps) {
   );
 
   const updateItem = useCallback(
-    async (itemId: string, name: string) => {
+    async (itemId: string, name: string, foodType: FoodType = 'VEG') => {
       try {
-        await mealsApi.updateFoodItem(spaceId, itemId, { name });
+        await mealsApi.updateFoodItem(spaceId, itemId, { name, foodType });
         showToast(t('meals.library.itemUpdateSuccess'));
         closeInlineEditors();
         await reload();

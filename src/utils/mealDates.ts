@@ -33,3 +33,35 @@ export function formatMenuDate(isoDate: string, locale: string): string {
     year: 'numeric',
   });
 }
+
+/** Compact date for sheet headers, e.g. "19 Jun 2026". */
+export function formatMenuDateCompact(isoDate: string, locale: string): string {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.toLocaleDateString(locale, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+export function formatResponseDateParts(
+  iso: string,
+  locale: string,
+): { date: string; time: string } | null {
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  return {
+    date: parsed.toLocaleDateString(locale, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }),
+    time: parsed.toLocaleTimeString(locale, {
+      hour: 'numeric',
+      minute: '2-digit',
+    }),
+  };
+}

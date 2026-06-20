@@ -13,7 +13,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { mealsApi } from '../../api/mealsApi';
-import type { FoodCategoryResponse, FoodItemResponse } from '../../api/types';
+import type { FoodCategoryResponse, FoodItemResponse, FoodType } from '../../api/types';
 import { ComboSelectionReview, FoodItemMultiPicker } from '../../components/meals';
 import { ComboPriceInput } from '../../components/meals/ComboPriceInput';
 import { Button, FormInput, PermissionDeniedScreen } from '../../components/ui';
@@ -142,11 +142,12 @@ export function MealComboFormScreen() {
   }, [comboId, description, isEdit, name, navigation, priceText, selectedItemIds, showToast, spaceId, t]);
 
   const addItemInline = useCallback(
-    async (categoryId: string, itemName: string) => {
+    async (categoryId: string, itemName: string, foodType: FoodType = 'VEG') => {
       try {
         const created = await mealsApi.createFoodItem(spaceId, {
           categoryId,
           name: itemName,
+          foodType,
         });
         setItems(current => [...current, created]);
         showToast(t('meals.library.itemCreateSuccess'));
@@ -214,6 +215,7 @@ export function MealComboFormScreen() {
                 }}
                 error={priceError}
               />
+
             </View>
 
             <FoodItemMultiPicker

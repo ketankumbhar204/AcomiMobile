@@ -35,6 +35,16 @@ export function formatComboPriceLabel(
   return formatted ? `${name}     ${formatted}` : name;
 }
 
+/** Combo label with price suffix, e.g. "Dal Rice Combo ₹60". */
+export function formatComboNameWithPrice(
+  name: string,
+  price?: number | null,
+  currencyCode?: string | null,
+): string {
+  const formatted = formatComboPrice(price, currencyCode ?? 'INR');
+  return formatted ? `${name} ${formatted}` : name;
+}
+
 export function hasComboPrice(price?: number | null): boolean {
   return price != null && !Number.isNaN(price) && price > 0;
 }

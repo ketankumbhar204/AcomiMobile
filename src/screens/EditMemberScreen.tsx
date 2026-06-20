@@ -15,14 +15,15 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import type { MembershipRole } from '../api/types';
-import { Button, FormInput, HeaderBackButton, RolePicker } from '../components/ui';
+import type { MemberGender, MembershipRole } from '../api/types';
+import { Button, FormInput, GenderPicker, HeaderBackButton, RolePicker } from '../components/ui';
 import type { MainStackParamList } from '../navigation/types';
 import { useMemberStore } from '../store/memberStore';
 import { useSpaceStore } from '../store/spaceStore';
 import { useToastStore } from '../store/toastStore';
 import { colors, spacing, typography } from '../theme';
 import { isRoleAssignableInSpace } from '../utils/memberRoles';
+import { isMemberGenderRequired, isSelectableMemberGender } from '../utils/memberGender';
 import { isValidIndianMobile, normalizeIndianMobileDigits } from '../utils/indianMobile';
 import { findMySpaceEntry } from '../utils/spacePermissions';
 
@@ -33,6 +34,7 @@ type FieldErrors = {
   fullName?: string;
   mobileNumber?: string;
   role?: string;
+  gender?: string;
 };
 
 export function EditMemberScreen() {
@@ -52,8 +54,11 @@ export function EditMemberScreen() {
   const [fullName, setFullName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
   const [role, setRole] = useState<MembershipRole | null>(null);
+  const [gender, setGender] = useState<MemberGender | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const genderRequired = isMemberGenderRequired(spaceType);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -72,6 +77,7 @@ export function EditMemberScreen() {
           setFullName(loaded.fullName);
           setMobileNumber(loaded.mobileNumber);
           setRole(loaded.role);
+          setGender(isSelectableMemberGender(loaded.gender) ? loaded.gender : null);
         }
       });
     }, [loadMemberDetails, memberId]),
@@ -97,6 +103,10 @@ export function EditMemberScreen() {
       errors.role = t('membership.invite.roleNotAllowed');
     }
 
+    if (genderRequired && !gender) {
+      errors.gender = t('membership.gender.required');
+    }
+
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   }
@@ -115,6 +125,7 @@ export function EditMemberScreen() {
       fullName: fullName.trim(),
       mobileNumber: mobileNumber.trim(),
       role,
+      gender: gender ?? undefined,
     });
 
     setIsSubmitting(false);
@@ -193,6 +204,18 @@ export function EditMemberScreen() {
               }
             }}
             error={fieldErrors.role}
+          />
+
+          <GenderPicker
+            value={gender}
+            onChange={selected => {
+              setGender(selected);
+              if (fieldErrors.gender) {
+                setFieldErrors(prev => ({ ...prev, gender: undefined }));
+              }
+            }}
+            error={fieldErrors.gender}
+            required={genderRequired}
           />
 
           <View style={styles.footer}>

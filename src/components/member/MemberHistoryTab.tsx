@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { EmptyState, SkeletonCard } from '../ui';
+import { Card, SkeletonCard } from '../ui';
 import { useMemberStore } from '../../store/memberStore';
-import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { colors, spacing, typography } from '../../theme';
 import { formatHistoryValue, HISTORY_ACTION_LABEL_KEYS } from '../../utils/memberHistory';
+import { MemberDetailRow, MemberSectionTitle } from './MemberDetailRow';
 
 type MemberHistoryTabProps = {
   memberId: string;
@@ -25,7 +26,6 @@ export function MemberHistoryTab({ memberId }: MemberHistoryTabProps) {
   const loadHistory = useMemberStore(state => state.loadHistory);
 
   useEffect(() => {
-    console.log('[MemberHistoryTab] first visit, load history', memberId);
     void loadHistory(memberId);
   }, [loadHistory, memberId]);
 
@@ -35,57 +35,50 @@ export function MemberHistoryTab({ memberId }: MemberHistoryTabProps) {
 
   if (history.length === 0) {
     return (
-      <EmptyState
-        title={t('membership.history.emptyTitle')}
-        description={t('membership.history.emptyDescription')}
-        icon="📋"
-      />
+      <Card>
+        <Text style={styles.emptyTitle}>{t('membership.history.emptyTitle')}</Text>
+        <Text style={styles.emptyText}>{t('membership.history.emptyDescription')}</Text>
+      </Card>
     );
   }
 
   return (
-    <View style={styles.list}>
+    <View>
       {history.map(entry => (
-        <View key={entry.historyId} style={styles.card}>
-          <Text style={styles.actionLabel}>
-            {t(HISTORY_ACTION_LABEL_KEYS[entry.action])}
-          </Text>
-          <Text style={styles.valueText}>{formatHistoryValue(entry)}</Text>
-          <Text style={styles.meta}>
-            {t('membership.history.meta', {
-              name: entry.changedByName,
-              date: formatDate(entry.changedAt),
-            })}
-          </Text>
-        </View>
+        <Card key={entry.historyId} style={styles.card}>
+          <MemberDetailRow
+            label={t('membership.history.actionLabel')}
+            value={t(HISTORY_ACTION_LABEL_KEYS[entry.action])}
+          />
+          <MemberDetailRow
+            label={t('membership.history.changeLabel')}
+            value={formatHistoryValue(entry)}
+          />
+          <MemberDetailRow
+            label={t('membership.notes.authorLabel')}
+            value={entry.changedByName}
+          />
+          <MemberDetailRow
+            label={t('membership.notes.dateLabel')}
+            value={formatDate(entry.changedAt)}
+            isLast
+          />
+        </Card>
       ))}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  list: {
-    gap: spacing.md,
-  },
   card: {
-    backgroundColor: colors.white,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-    ...shadows.sm,
+    marginBottom: spacing.sm,
   },
-  actionLabel: {
+  emptyTitle: {
     ...typography.bodyStrong,
     marginBottom: spacing.xs,
   },
-  valueText: {
+  emptyText: {
     ...typography.body,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-  },
-  meta: {
-    ...typography.caption,
     color: colors.muted,
   },
 });

@@ -118,9 +118,13 @@ export interface MealParticipationResponse {
   effectiveFrom: string;
   effectiveTo?: string | null;
   sourceOccupancyId?: UUID | null;
+  defaultDeliveryLocationId?: UUID | null;
+  defaultDeliveryLocationName?: string | null;
 }
 
 export type FoodCatalogScope = 'GLOBAL' | 'SPACE';
+
+export type FoodType = 'VEG' | 'NON_VEG' | 'EGG';
 
 export interface FoodCategoryResponse {
   categoryId: UUID;
@@ -139,6 +143,7 @@ export interface FoodItemResponse {
   scope: FoodCatalogScope;
   isCustom: boolean;
   isActive: boolean;
+  foodType?: FoodType;
 }
 
 export interface CreateFoodCategoryRequest {
@@ -148,11 +153,13 @@ export interface CreateFoodCategoryRequest {
 export interface CreateFoodItemRequest {
   categoryId: UUID;
   name: string;
+  foodType?: FoodType;
 }
 
 export interface UpdateFoodItemRequest {
   categoryId?: UUID;
   name?: string;
+  foodType?: FoodType;
 }
 
 export interface CreateMealComboRequest {
@@ -161,6 +168,7 @@ export interface CreateMealComboRequest {
   itemIds: UUID[];
   price?: number | null;
   currencyCode?: string | null;
+  foodType?: FoodType;
 }
 
 export interface UpdateMealComboRequest {
@@ -169,6 +177,7 @@ export interface UpdateMealComboRequest {
   itemIds?: UUID[];
   price?: number | null;
   currencyCode?: string | null;
+  foodType?: FoodType;
 }
 
 export interface MealComboResponse {
@@ -179,7 +188,8 @@ export interface MealComboResponse {
   isActive: boolean;
   price?: number | null;
   currencyCode?: string | null;
-  items?: Array<{ itemId: UUID; name: string }>;
+  foodType?: FoodType;
+  items?: Array<{ itemId: UUID; name: string; foodType?: FoodType }>;
 }
 
 export interface DailyMenuOptionResponse {
@@ -233,11 +243,13 @@ export interface CreateMealParticipationRequest {
   mealPlanId: UUID;
   effectiveFrom: string;
   effectiveTo?: string | null;
+  defaultDeliveryLocationId?: UUID | null;
 }
 
 export interface UpdateMealParticipationRequest {
   mealPlanId?: UUID;
   status?: MealParticipationStatus;
+  defaultDeliveryLocationId?: UUID | null;
 }
 
 export interface MealParticipationSearchParams {
@@ -298,6 +310,8 @@ export interface MealPollOption {
   label: string;
   detail?: string | null;
   dailyMenuEntryId?: UUID | null;
+  price?: number | null;
+  currencyCode?: string | null;
 }
 
 export interface MealPollSlot {
@@ -308,17 +322,102 @@ export interface MealPollSlot {
   dailyMenuId: UUID;
   options: MealPollOption[];
   mySelectedOptionId?: UUID | null;
+  mySelections?: MealPollMySelection[];
+  multiQuantityEnabled?: boolean;
   responseCount: number;
+  myDeliveryLocationId?: UUID | null;
+  myDeliveryLocationName?: string | null;
 }
+
+export interface MealDeliveryLocation {
+  id: UUID;
+  name: string;
+  description?: string | null;
+  active: boolean;
+  sortOrder: number;
+}
+
+export interface MealPollMySelection {
+  optionId: UUID;
+  quantity: number;
+}
+
+export type MealPollPaymentChoice = 'MARK_AS_PAID' | 'PAY_LATER';
+export type MealPollPaymentStatus = 'PENDING' | 'PENDING_APPROVAL' | 'PAID' | 'REJECTED';
 
 export interface MealPollDayResponse {
   pollDate: string;
   polls: MealPollSlot[];
+  myPaymentStatus?: MealPollPaymentStatus | null;
+  myPaymentChoice?: MealPollPaymentChoice | null;
+  myProofImageUrl?: string | null;
+  myRejectionReason?: string | null;
+  deliveryLocations?: MealDeliveryLocation[];
+  myLastDeliveryLocationIds?: Partial<Record<MealType, UUID>>;
+}
+
+export interface SubmitMealPollOptionQuantity {
+  optionId: UUID;
+  quantity: number;
 }
 
 export interface SubmitMealPollSelection {
   mealType: MealType;
-  selectedOptionId: UUID;
+  selectedOptionId?: UUID;
+  options?: SubmitMealPollOptionQuantity[];
+  deliveryLocationId?: UUID;
+}
+
+export interface MealHeadcountMember {
+  memberId: UUID;
+  memberName: string;
+  quantity?: number;
+  paymentStatus?: MealPollPaymentStatus | null;
+  paymentProofImageUrl?: string | null;
+  deliveryLocationId?: UUID | null;
+  deliveryLocationName?: string | null;
+}
+
+export interface MealHeadcountOption {
+  optionId: UUID;
+  optionType: MealPollOptionType;
+  sortOrder: number;
+  label: string;
+  detail?: string | null;
+  price?: number | null;
+  currencyCode?: string | null;
+  count: number;
+  members: MealHeadcountMember[];
+}
+
+export interface MealHeadcountSlot {
+  mealType: MealType;
+  pollId: UUID;
+  pollStatus: MealPollStatus;
+  mealsToPrepare: number;
+}
+
+export interface MealHeadcountDayResponse {
+  date: string;
+  slots: MealHeadcountSlot[];
+}
+
+export interface MealHeadcountDetailResponse {
+  date: string;
+  mealType: MealType;
+  pollId: UUID;
+  pollStatus: MealPollStatus;
+  mealsToPrepare: number;
+  eligibleCount: number;
+  options: MealHeadcountOption[];
+  noResponseMembers: MealHeadcountMember[];
+  deliveryBreakdown?: MealHeadcountDeliveryLocation[];
+}
+
+export interface MealHeadcountDeliveryLocation {
+  locationId: UUID;
+  locationName: string;
+  totalPlates: number;
 }
 
 export interface MemberMealParticipationSummary {
@@ -329,6 +428,107 @@ export interface MemberMealParticipationSummary {
   status: MealParticipationStatus;
   effectiveFrom: string;
   effectiveTo?: string | null;
+  defaultDeliveryLocationId?: UUID | null;
+  defaultDeliveryLocationName?: string | null;
+}
+
+export type MemberMealActivitySlotStatus =
+  | 'ACCEPTED'
+  | 'PENDING'
+  | 'SKIPPED'
+  | 'NO_MENU'
+  | 'INACTIVE';
+
+export interface MemberMealActivitySlot {
+  mealType: MealType;
+  status: MemberMealActivitySlotStatus;
+  selectionLabel?: string | null;
+  quantity?: number | null;
+  deliveryLocationName?: string | null;
+  slotAmount?: number | null;
+  currencyCode?: string | null;
+}
+
+export interface MemberMealActivityDay {
+  date: string;
+  hasActivity?: boolean;
+  dayTotal?: number | null;
+  currencyCode?: string | null;
+  paymentStatus?: MealPollPaymentStatus | null;
+  slots: MemberMealActivitySlot[];
+}
+
+export interface MemberMealActivitySummary {
+  acceptedMeals: number;
+  pendingResponses: number;
+  skippedMeals: number;
+  amountGenerated?: number | null;
+  paidAmount?: number | null;
+  pendingAmount?: number | null;
+  currencyCode?: string | null;
+}
+
+export interface MemberMealActivityMonth {
+  month: string;
+  summary: MemberMealActivitySummary;
+  days: MemberMealActivityDay[];
+}
+
+export interface MemberMealActivitySelection {
+  label: string;
+  price?: number | null;
+  currencyCode?: string | null;
+  quantity: number;
+  itemDetail?: string | null;
+  lineTotal?: number | null;
+}
+
+export interface MemberMealActivityDayPayment {
+  paymentChoice?: MealPollPaymentChoice | null;
+  paymentStatus?: MealPollPaymentStatus | null;
+  proofImageUrl?: string | null;
+  rejectionReason?: string | null;
+  proofSubmittedAt?: string | null;
+  proofReviewedAt?: string | null;
+}
+
+export interface MemberMealActivitySlotDetail {
+  mealType: MealType;
+  status: MemberMealActivitySlotStatus;
+  menuPublished: boolean;
+  pollStatus?: MealPollStatus | null;
+  deliveryLocationName?: string | null;
+  deliveryLocationDescription?: string | null;
+  respondedAt?: string | null;
+  slotTotal?: number | null;
+  selections: MemberMealActivitySelection[];
+}
+
+export interface MemberMealActivityDailyCharge {
+  mealType: MealType;
+  amount?: number | null;
+  currencyCode?: string | null;
+}
+
+export interface MemberMealActivitySubscription {
+  planName?: string | null;
+  creditsConsumed?: number | null;
+  creditsRemaining?: number | null;
+  coveredBySubscription?: boolean;
+}
+
+export interface MemberMealActivityDayDetail {
+  date: string;
+  memberName?: string | null;
+  hasActivity?: boolean;
+  responseSubmittedAt?: string | null;
+  dayTotal?: number | null;
+  currencyCode?: string | null;
+  payment?: MemberMealActivityDayPayment | null;
+  subscription?: MemberMealActivitySubscription | null;
+  notes?: string | null;
+  dailyCharges?: MemberMealActivityDailyCharge[];
+  slots: MemberMealActivitySlotDetail[];
 }
 
 export interface MySpaceResponse {
@@ -366,12 +566,14 @@ export interface CreateMemberRequest {
   fullName: string;
   mobileNumber: string;
   role: MembershipRole;
+  gender?: MemberGender | null;
 }
 
 export interface UpdateMemberRequest {
   fullName: string;
   mobileNumber: string;
   role: MembershipRole;
+  gender?: MemberGender | null;
 }
 
 export type MemberStatus = 'ACTIVE' | 'VACATED' | 'SUSPENDED' | 'BLACKLISTED';
@@ -454,6 +656,7 @@ export interface MemberResponse {
   membershipId?: UUID | null;
   status: MemberStatus;
   occupancyStatus?: MemberOccupancyStatus;
+  gender?: MemberGender | null;
   createdAt: string;
 }
 
@@ -469,6 +672,7 @@ export interface MemberDetailsResponse {
   active: boolean;
   status: MemberStatus;
   occupancyStatus?: MemberOccupancyStatus;
+  gender?: MemberGender | null;
   currentOccupancy?: CurrentOccupancySummaryResponse | null;
   statusUpdatedAt?: string | null;
   emergencyContactName?: string | null;
@@ -1299,6 +1503,80 @@ export interface ApiErrorBody {
   status?: number;
   timestamp?: string;
   path?: string;
+}
+
+export type DashboardFinancialSource = 'API' | 'MEAL_ACTIVITY' | 'OCCUPANCY' | 'HYBRID';
+
+export interface DashboardFinancialSummary {
+  expectedCharges: number | null;
+  collected: number | null;
+  pending: number | null;
+  currencyCode: string;
+  source?: DashboardFinancialSource;
+}
+
+export interface DashboardMessOperations {
+  membersReceivingMeals: number;
+  menusPublishedThisMonth: number;
+  openPollsCount: number;
+  todaysHeadcount: number | null;
+  pollRespondedCount: number;
+  pollEligibleCount: number;
+}
+
+export interface DashboardAccommodationOperations {
+  occupiedBeds: number;
+  vacantBeds: number;
+  moveInsThisMonth: number;
+  pendingPaymentsCount: number;
+}
+
+export type DashboardAttentionKind =
+  | 'not_planned'
+  | 'partial_planned'
+  | 'ready_to_share'
+  | 'poll_open'
+  | 'payments_overdue';
+
+export interface DashboardAttentionItem {
+  kind: DashboardAttentionKind;
+  scheduledCount?: number;
+  totalMeals?: number;
+  missingMealTypes?: MealType[];
+  respondedCount?: number;
+  eligibleCount?: number;
+  openPollCount?: number;
+  overdueCount?: number;
+  overdueAmount?: number | null;
+  currencyCode?: string;
+}
+
+export interface DashboardSummaryResponse {
+  spaceType: SpaceType;
+  month: string;
+  financial: DashboardFinancialSummary;
+  messOperations?: DashboardMessOperations | null;
+  accommodationOperations?: DashboardAccommodationOperations | null;
+  attention: DashboardAttentionItem[];
+}
+
+export type MemberPaymentStatus = 'PAID' | 'PARTIAL' | 'PENDING' | 'NONE';
+
+export interface MemberPaymentLedgerRow {
+  memberId: UUID;
+  memberName: string;
+  expectedCharges: number | null;
+  collected: number | null;
+  pending: number | null;
+  currencyCode: string;
+  status: MemberPaymentStatus;
+}
+
+export interface MemberPaymentLedgerResponse {
+  month: string;
+  spaceType: SpaceType;
+  summary: DashboardFinancialSummary;
+  members: MemberPaymentLedgerRow[];
 }
 
 export class ApiError extends Error {

@@ -9,6 +9,7 @@ import { hasComboPrice } from '../../utils/comboPrice';
 import {
   applyDraftPricesToCombos,
   comboPriceDraftErrorMessage,
+  persistComboPriceDraft,
   type ComboPriceDraftErrors,
 } from '../../utils/comboSelectionPricing';
 import { ComboPickerCard } from './ComboPickerCard';
@@ -18,19 +19,12 @@ import {
 } from './MenuPlanningBottomSheet';
 import { PlanningSelectionSection } from './PlanningSelectionSection';
 
-type SelectedCombo = {
-  comboId: string;
-  name: string;
-  price?: number | null;
-  currencyCode?: string | null;
-};
-
 type SelectComboSheetProps = {
   visible: boolean;
   spaceId: UUID;
   existingOptions: MenuDraftOption[];
   onClose: () => void;
-  onSave: (combos: SelectedCombo[]) => void;
+  onSave: (combos: MealComboResponse[]) => void;
   onCreateCombo?: () => void;
 };
 
@@ -99,6 +93,15 @@ export function SelectComboSheet({
         });
         return prev.filter(id => id !== comboId);
       }
+
+      const combo = combos.find(row => row.comboId === comboId);
+      if (combo && hasComboPrice(combo.price)) {
+        setDraftPrices(current => ({
+          ...current,
+          [comboId]: current[comboId] ?? String(combo.price),
+        }));
+      }
+
       return [...prev, comboId];
     });
   };
@@ -115,17 +118,30 @@ export function SelectComboSheet({
   };
 
   const finishSave = (resolvedCombos: MealComboResponse[]) => {
-    onSave(
-      resolvedCombos.map(combo => ({
-        comboId: combo.comboId,
-        name: combo.name,
-        price: combo.price ?? null,
-        currencyCode: combo.currencyCode ?? 'INR',
-      })),
-    );
+    onSave(resolvedCombos);
     setDraftPrices({});
     setPriceErrors({});
     onClose();
+  };
+
+  const persistPriceOnBlur = async (combo: MealComboResponse, draftValue: string) => {
+    const draftsForSave = { ...draftPrices, [combo.comboId]: draftValue };
+    const { combo: updated, error } = await persistComboPriceDraft(
+      spaceId,
+      combo,
+      draftsForSave,
+    );
+    if (error) {
+      setPriceErrors(prev => ({ ...prev, [combo.comboId]: error }));
+      return;
+    }
+    setCombos(prev =>
+      prev.map(row => (row.comboId === updated.comboId ? updated : row)),
+    );
+    setDraftPrices(prev => ({
+      ...prev,
+      [combo.comboId]: hasComboPrice(updated.price) ? String(updated.price) : draftValue,
+    }));
   };
 
   const handleSave = async () => {
@@ -187,17 +203,29 @@ export function SelectComboSheet({
             const selected = selectedComboIds.includes(combo.comboId);
             const requiresPriceInput = !hasComboPrice(combo.price);
             const errorKey = priceErrors[combo.comboId];
+            const priceDraft =
+              draftPrices[combo.comboId] ??
+              (hasComboPrice(combo.price) ? String(combo.price) : '');
             return (
               <ComboPickerCard
                 key={combo.comboId}
                 name={combo.name}
                 itemNames={combo.items?.map(item => item.name).filter(Boolean) ?? []}
+                foodType={combo.foodType ?? 'VEG'}
                 price={combo.price}
                 currencyCode={combo.currencyCode}
                 selected={selected}
+                editablePrice={selected}
                 requiresPriceInput={requiresPriceInput}
-                priceDraft={draftPrices[combo.comboId] ?? ''}
+                priceDraft={priceDraft}
                 onPriceDraftChange={text => updateDraftPrice(combo.comboId, text)}
+                onPriceBlur={
+                  selected
+                    ? draft => {
+                        void persistPriceOnBlur(combo, draft);
+                      }
+                    : undefined
+                }
                 priceInputError={
                   errorKey ? comboPriceDraftErrorMessage(errorKey, t) : null
                 }

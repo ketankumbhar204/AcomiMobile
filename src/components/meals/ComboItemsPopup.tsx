@@ -9,11 +9,14 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { colors, radius, spacing, typography } from '../../theme';
+import { formatComboNameWithPrice } from '../../utils/comboPrice';
 
 type ComboItemsPopupProps = {
   visible: boolean;
   comboName: string;
   items: string[];
+  price?: number | null;
+  currencyCode?: string | null;
   loading?: boolean;
   onClose: () => void;
 };
@@ -22,6 +25,8 @@ export function ComboItemsPopup({
   visible,
   comboName,
   items,
+  price,
+  currencyCode,
   loading = false,
   onClose,
 }: ComboItemsPopupProps) {
@@ -33,7 +38,7 @@ export function ComboItemsPopup({
         <Pressable style={styles.sheet} onPress={e => e.stopPropagation()}>
           <View style={styles.header}>
             <Text style={styles.title} numberOfLines={2}>
-              {comboName}
+              {formatComboNameWithPrice(comboName, price, currencyCode)}
             </Text>
             <Pressable onPress={onClose} hitSlop={12}>
               <Text style={styles.closeBtn}>✕</Text>

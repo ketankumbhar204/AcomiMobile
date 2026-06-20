@@ -1,6 +1,8 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import type { FoodType } from '../../../api/types';
 import { colors, radius, spacing, typography } from '../../../theme';
+import { FoodTypeIcon } from '../../ui/FoodTypeIcon';
 
 export type MenuChipVariant = 'filter' | 'item' | 'add' | 'combo';
 export type MenuChipSize = 'default' | 'compact';
@@ -11,6 +13,7 @@ type MenuChipProps = {
   size?: MenuChipSize;
   selected?: boolean;
   isCustom?: boolean;
+  foodType?: FoodType | null;
   onPress?: () => void;
   onLongPress?: () => void;
   style?: ViewStyle;
@@ -22,6 +25,7 @@ export function MenuChip({
   size = 'default',
   selected = false,
   isCustom = false,
+  foodType = null,
   onPress,
   onLongPress,
   style,
@@ -30,6 +34,8 @@ export function MenuChip({
   const isSelected =
     selected && (variant === 'filter' || variant === 'combo' || variant === 'item');
   const isCompact = size === 'compact';
+  const showFoodTypeIcon =
+    foodType != null && (variant === 'item' || variant === 'combo');
 
   return (
     <Pressable
@@ -45,16 +51,22 @@ export function MenuChip({
         pressed && styles.pressed,
         style,
       ]}>
-      <Text
-        style={[
-          styles.label,
-          isCompact && styles.compactLabel,
-          isAdd && styles.addLabel,
-          isSelected && styles.selectedLabel,
-        ]}
-        numberOfLines={1}>
-        {label}
-      </Text>
+      <View style={styles.row}>
+        {showFoodTypeIcon ? (
+          <FoodTypeIcon foodType={foodType} size={isCompact ? 12 : 14} style={styles.icon} />
+        ) : null}
+        <Text
+          style={[
+            styles.label,
+            isCompact && styles.compactLabel,
+            isAdd && styles.addLabel,
+            isSelected && styles.selectedLabel,
+            showFoodTypeIcon && styles.labelWithIcon,
+          ]}
+          numberOfLines={1}>
+          {label}
+        </Text>
+      </View>
     </Pressable>
   );
 }
@@ -68,6 +80,14 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.white,
     maxWidth: '100%',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    maxWidth: '100%',
+  },
+  icon: {
+    marginRight: spacing.xxs,
   },
   compact: {
     paddingHorizontal: spacing.sm,
@@ -99,6 +119,9 @@ const styles = StyleSheet.create({
   },
   selectedLabel: {
     color: colors.primaryDark,
+  },
+  labelWithIcon: {
+    flexShrink: 1,
   },
   addLabel: {
     color: colors.primaryDark,

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -17,10 +17,11 @@ import type {
   MealType,
   UUID,
 } from '../../api/types';
-import { DailyMenuSlotCard } from '../../components/meals';
+import { DailyMenuSlotCard, MealHeadcountBottomSheet } from '../../components/meals';
 import { Button, Screen } from '../../components/ui';
 import { navigateToMembersTab } from '../../navigation/navigationRef';
 import { useMainStackNavigation } from '../../hooks/useMainStackNavigation';
+import { useOwnerMealHeadcount } from '../../hooks/useOwnerMealHeadcount';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, spacing, typography } from '../../theme';
@@ -91,6 +92,7 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
   const showToast = useToastStore(state => state.showToast);
 
   const [menuDate, setMenuDate] = useState(initialDate ?? tomorrowIsoDate());
+  const headcount = useOwnerMealHeadcount(spaceId, menuDate, permissions.canManageMeals);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [menus, setMenus] = useState<DailyMenuResponse[]>([]);
@@ -98,6 +100,7 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
   const [eligibility, setEligibility] = useState<MealEligibilitySummaryResponse | null>(null);
   const [polls, setPolls] = useState<MealPollSlot[]>([]);
   const [pollActionMealType, setPollActionMealType] = useState<MealType | null>(null);
+  const [headcountMealType, setHeadcountMealType] = useState<MealType | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -129,6 +132,10 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
       void load();
     }, [load]),
   );
+
+  useEffect(() => {
+    setHeadcountMealType(null);
+  }, [menuDate]);
 
   const menuMap = useMemo(() => menusByType(menus), [menus]);
   const comboById = useMemo(
@@ -200,9 +207,17 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
     [load, menuDate, showToast, spaceId, t],
   );
 
+  const openHeadcount = useCallback((mealType: MealType) => {
+    setHeadcountMealType(mealType);
+  }, []);
+
+  const closeHeadcount = useCallback(() => {
+    setHeadcountMealType(null);
+    void headcount.reload();
+  }, [headcount]);
+
   return (
     <Screen scrollable contentStyle={styles.content}>
-      <Text style={styles.title}>{t('meals.planning.title')}</Text>
       <Text style={styles.subtitle}>{t('meals.planning.subtitle')}</Text>
 
       <View style={styles.dateRow}>
@@ -227,32 +242,33 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
       </View>
 
       {!loading && !error ? (
-        <Text style={styles.statusSummary}>
-          {t('meals.planning.dayStatus', {
-            published: statusSummary.published,
-            draft: statusSummary.draft,
-            notPlanned: statusSummary.notPlanned,
-          })}
-        </Text>
-      ) : null}
-
-      {!loading && !error ? (
-        <Text style={styles.eligibleSummary}>
-          {t('meals.planning.eligibleMembers', { count: distinctEligible })}
-        </Text>
-      ) : null}
-
-      {permissions.canManageMeals && !loading && !error ? (
-        <Button
-          label={t('meals.planning.shareMenu')}
-          disabled={!canShareMenu}
-          onPress={() => openShare()}
-          style={styles.shareButton}
-        />
-      ) : null}
-
-      {!loading && !error && permissions.canManageMeals && !canShareMenu ? (
-        <Text style={styles.shareDisabledHint}>{t('meals.planning.previewShareDisabled')}</Text>
+        <View style={styles.summaryRow}>
+          <View style={styles.summaryTextBlock}>
+            <Text style={styles.statusSummary}>
+              {t('meals.planning.dayStatus', {
+                published: statusSummary.published,
+                draft: statusSummary.draft,
+                notPlanned: statusSummary.notPlanned,
+              })}
+            </Text>
+            <Text style={styles.eligibleSummary}>
+              {t('meals.planning.eligibleMembers', { count: distinctEligible })}
+            </Text>
+            {permissions.canManageMeals && !canShareMenu ? (
+              <Text style={styles.shareDisabledHint}>
+                {t('meals.planning.previewShareDisabled')}
+              </Text>
+            ) : null}
+          </View>
+          {permissions.canManageMeals ? (
+            <Button
+              label={t('meals.planning.shareMenu')}
+              disabled={!canShareMenu}
+              onPress={() => openShare()}
+              style={styles.summaryShareButton}
+            />
+          ) : null}
+        </View>
       ) : null}
 
       {loading ? <ActivityIndicator color={colors.primary} style={styles.loader} /> : null}
@@ -288,6 +304,9 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
                   ? () => void closePoll(mealType)
                   : undefined
               }
+              onViewHeadcount={
+                permissions.canManageMeals && slotPoll ? () => openHeadcount(mealType) : undefined
+              }
               pollStatus={slotPoll?.status ?? null}
               pollResponseCount={slotPoll?.responseCount ?? 0}
               pollActionLoading={pollActionMealType === mealType}
@@ -313,7 +332,25 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
             onPress={() => navigateMain('DailyMenuToday', { spaceId })}>
             <Text style={styles.linkText}>{t('meals.todayMenu')}</Text>
           </Pressable>
+          {permissions.spaceType === 'MESS' ? (
+            <Pressable
+              style={styles.linkRow}
+              onPress={() => navigateMain('MealDeliveryLocations', { spaceId })}>
+              <Text style={styles.linkText}>{t('meals.deliveryLocations.manage')}</Text>
+            </Pressable>
+          ) : null}
         </View>
+      ) : null}
+
+      {headcountMealType && headcount.openSlots.length > 0 ? (
+        <MealHeadcountBottomSheet
+          visible
+          spaceId={spaceId}
+          menuDate={menuDate}
+          openSlots={headcount.openSlots}
+          initialMealType={headcountMealType}
+          onClose={closeHeadcount}
+        />
       ) : null}
     </Screen>
   );
@@ -321,7 +358,6 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
 
 const styles = StyleSheet.create({
   content: { paddingBottom: spacing.section },
-  title: { ...typography.h2, marginBottom: spacing.xs },
   subtitle: { ...typography.body, color: colors.muted, marginBottom: spacing.lg },
   dateRow: {
     flexDirection: 'row',
@@ -347,19 +383,34 @@ const styles = StyleSheet.create({
   statusSummary: {
     ...typography.caption,
     color: colors.textSecondary,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xxs,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  summaryTextBlock: {
+    flex: 1,
+    minWidth: 0,
   },
   eligibleSummary: {
     ...typography.bodyStrong,
     color: colors.primaryDark,
-    marginBottom: spacing.sm,
   },
-  shareButton: { marginBottom: spacing.md },
+  summaryShareButton: {
+    minHeight: 40,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    flexShrink: 0,
+    alignSelf: 'center',
+  },
   shareDisabledHint: {
     ...typography.caption,
     color: colors.muted,
-    marginTop: -spacing.sm,
-    marginBottom: spacing.md,
+    marginTop: spacing.xxs,
   },
   loader: { marginVertical: spacing.lg },
   error: { ...typography.caption, color: '#DC2626', marginBottom: spacing.md },

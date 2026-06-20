@@ -1,9 +1,11 @@
 export { DocumentTypePicker } from './DocumentTypePicker';
 export { MemberDepositTab } from './MemberDepositTab';
+export { MemberCompactHeader } from './MemberCompactHeader';
+export { MemberDetailRow, MemberSectionTitle } from './MemberDetailRow';
 export { MemberDetailTabBar, type MemberDetailTab } from './MemberDetailTabBar';
-export { MemberDocumentsTab } from './MemberDocumentsTab';
+export { MemberDocumentsSection, MemberDocumentsTab } from './MemberDocumentsSection';
 export { MemberHistoryTab } from './MemberHistoryTab';
-export { MemberNotesTab } from './MemberNotesTab';
+export { MemberNotesSection, MemberNotesTab } from './MemberNotesSection';
 export { MemberProfileTab } from './MemberProfileTab';
 export { MemberStatusBadge } from './MemberStatusBadge';
 export { RoleBadge } from './RoleBadge';

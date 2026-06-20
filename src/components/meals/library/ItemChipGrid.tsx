@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import type { FoodItemResponse } from '../../../api/types';
+import type { FoodItemResponse, FoodType } from '../../../api/types';
+import { FoodTypePicker } from '../../ui/FoodTypePicker';
 import { colors, spacing, typography } from '../../../theme';
 import { InlineChipEditor } from './InlineChipEditor';
 import { MenuChip } from './MenuChip';
@@ -17,10 +18,10 @@ type ItemChipGridProps = {
   addDisabled?: boolean;
   onStartAdd?: () => void;
   onCancelAdd?: () => void;
-  onSaveItem?: (name: string) => void | Promise<void>;
+  onSaveItem?: (name: string, foodType: FoodType) => void | Promise<void>;
   onStartEdit?: (item: FoodItemResponse) => void;
   onCancelEdit?: () => void;
-  onUpdateItem?: (itemId: string, name: string) => void | Promise<void>;
+  onUpdateItem?: (itemId: string, name: string, foodType: FoodType) => void | Promise<void>;
   onRemoveItem?: (item: FoodItemResponse) => void;
   onRemoveCategory?: () => void;
 };
@@ -43,6 +44,7 @@ export function ItemChipGrid({
 }: ItemChipGridProps) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
+  const [draftFoodType, setDraftFoodType] = useState<FoodType>('VEG');
 
   const activeItems = useMemo(
     () => items.filter(item => item.isActive).sort((a, b) => a.name.localeCompare(b.name)),
@@ -56,6 +58,14 @@ export function ItemChipGrid({
     () => activeItems.find(item => item.itemId === editingItemId) ?? null,
     [activeItems, editingItemId],
   );
+
+  React.useEffect(() => {
+    if (editingItem) {
+      setDraftFoodType(editingItem.foodType ?? 'VEG');
+    } else if (isAdding) {
+      setDraftFoodType('VEG');
+    }
+  }, [editingItem, editingItemId, isAdding]);
 
   const openItemActions = (item: FoodItemResponse) => {
     if (!canManage) {
@@ -130,6 +140,7 @@ export function ItemChipGrid({
                 variant="item"
                 size="compact"
                 isCustom={item.isCustom}
+                foodType={item.foodType ?? 'VEG'}
                 onPress={canManage ? () => openItemActions(item) : undefined}
                 onLongPress={canManage ? () => openItemActions(item) : undefined}
               />
@@ -160,21 +171,27 @@ export function ItemChipGrid({
       {showInlineEditor ? (
         <View style={styles.editorRow}>
           {isAdding && onSaveItem && onCancelAdd ? (
-            <InlineChipEditor
-              placeholder={t('meals.library.itemNameInlinePlaceholder')}
-              onSave={onSaveItem}
-              onCancel={onCancelAdd}
-              layout="full"
-            />
+            <>
+              <InlineChipEditor
+                placeholder={t('meals.library.itemNameInlinePlaceholder')}
+                onSave={name => onSaveItem(name, draftFoodType)}
+                onCancel={onCancelAdd}
+                layout="full"
+              />
+              <FoodTypePicker value={draftFoodType} onChange={setDraftFoodType} compact />
+            </>
           ) : null}
           {editingItem && onUpdateItem && onCancelEdit ? (
-            <InlineChipEditor
-              initialValue={editingItem.name}
-              placeholder={t('meals.library.itemNameInlinePlaceholder')}
-              onSave={name => onUpdateItem(editingItem.itemId, name)}
-              onCancel={onCancelEdit}
-              layout="full"
-            />
+            <>
+              <InlineChipEditor
+                initialValue={editingItem.name}
+                placeholder={t('meals.library.itemNameInlinePlaceholder')}
+                onSave={name => onUpdateItem(editingItem.itemId, name, draftFoodType)}
+                onCancel={onCancelEdit}
+                layout="full"
+              />
+              <FoodTypePicker value={draftFoodType} onChange={setDraftFoodType} compact />
+            </>
           ) : null}
         </View>
       ) : null}

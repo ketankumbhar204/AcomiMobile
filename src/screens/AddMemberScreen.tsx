@@ -18,14 +18,15 @@ import type {
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { enrollMemberInFullMeals } from '../api/mealsApi';
-import type { MembershipRole } from '../api/types';
-import { Button, FormInput, HeaderBackButton, RolePicker } from '../components/ui';
+import type { MemberGender, MembershipRole } from '../api/types';
+import { Button, FormInput, GenderPicker, HeaderBackButton, RolePicker } from '../components/ui';
 import type { MainStackParamList } from '../navigation/types';
 import { useMemberStore } from '../store/memberStore';
 import { useSpaceStore } from '../store/spaceStore';
 import { useToastStore } from '../store/toastStore';
 import { colors, spacing, typography } from '../theme';
 import { defaultRoleForSpaceType } from '../utils/memberRoles';
+import { isMemberGenderRequired } from '../utils/memberGender';
 import { isValidIndianMobile, normalizeIndianMobileDigits } from '../utils/indianMobile';
 import { findMySpaceEntry } from '../utils/spacePermissions';
 
@@ -36,6 +37,7 @@ type FieldErrors = {
   fullName?: string;
   mobileNumber?: string;
   role?: string;
+  gender?: string;
 };
 
 export function AddMemberScreen() {
@@ -55,8 +57,11 @@ export function AddMemberScreen() {
   const [role, setRole] = useState<MembershipRole | null>(() =>
     defaultRoleForSpaceType(spaceType),
   );
+  const [gender, setGender] = useState<MemberGender | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [mealAccessEnabled, setMealAccessEnabled] = useState(true);
+
+  const genderRequired = isMemberGenderRequired(spaceType);
 
   const showMealAccess = spaceType === 'MESS' && role === 'CUSTOMER';
 
@@ -86,6 +91,10 @@ export function AddMemberScreen() {
       errors.role = t('membership.invite.roleRequired');
     }
 
+    if (genderRequired && !gender) {
+      errors.gender = t('membership.gender.required');
+    }
+
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   }
@@ -102,6 +111,7 @@ export function AddMemberScreen() {
       fullName: fullName.trim(),
       mobileNumber: mobileNumber.trim(),
       role: role!,
+      gender: gender ?? undefined,
     });
 
     if (member) {
@@ -197,6 +207,18 @@ export function AddMemberScreen() {
               }
             }}
             error={fieldErrors.role}
+          />
+
+          <GenderPicker
+            value={gender}
+            onChange={selected => {
+              setGender(selected);
+              if (fieldErrors.gender) {
+                setFieldErrors(prev => ({ ...prev, gender: undefined }));
+              }
+            }}
+            error={fieldErrors.gender}
+            required={genderRequired}
           />
 
           {showMealAccess ? (

@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { MealPollOption } from '../../api/types';
 import { colors, radius, spacing, typography } from '../../theme';
+import { formatComboPrice } from '../../utils/comboPrice';
 
 type MealPollOptionRadioProps = {
   option: MealPollOption;
@@ -11,6 +12,7 @@ type MealPollOptionRadioProps = {
 
 export function MealPollOptionRadio({ option, selected, onSelect }: MealPollOptionRadioProps) {
   const isNotAvailable = option.optionType === 'NOT_AVAILABLE';
+  const priceLabel = formatComboPrice(option.price, option.currencyCode);
 
   return (
     <Pressable
@@ -22,10 +24,17 @@ export function MealPollOptionRadio({ option, selected, onSelect }: MealPollOpti
         {selected ? <View style={styles.radioDot} /> : null}
       </View>
       <View style={styles.content}>
-        <Text style={[styles.label, isNotAvailable && styles.labelMuted]}>
-          {option.sortOrder}. {option.label}
-        </Text>
-        {option.detail ? <Text style={styles.detail}>{option.detail}</Text> : null}
+        <View style={styles.mainLine}>
+          <Text style={[styles.label, isNotAvailable && styles.labelMuted]} numberOfLines={1}>
+            {option.sortOrder}. {option.label}
+          </Text>
+          {priceLabel ? <Text style={styles.price}>{priceLabel}</Text> : null}
+        </View>
+        {option.detail ? (
+          <Text style={styles.detail} numberOfLines={2}>
+            {option.detail}
+          </Text>
+        ) : null}
       </View>
     </Pressable>
   );
@@ -40,7 +49,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.card,
-    padding: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     marginBottom: spacing.sm,
   },
   rowMuted: {
@@ -67,17 +77,33 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    gap: spacing.xs,
+    minWidth: 0,
+    gap: spacing.xxs,
+  },
+  mainLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: 24,
   },
   label: {
     ...typography.bodyStrong,
+    flex: 1,
+    minWidth: 0,
+  },
+  price: {
+    ...typography.bodyStrong,
+    fontSize: 14,
+    color: colors.textSecondary,
+    flexShrink: 0,
   },
   labelMuted: {
     color: colors.muted,
     fontWeight: '600',
   },
   detail: {
-    ...typography.body,
+    ...typography.caption,
     color: colors.textSecondary,
+    lineHeight: 18,
   },
 });

@@ -6,6 +6,30 @@ export type ComboPriceDraftError = 'required' | 'invalid' | 'nonPositive';
 
 export type ComboPriceDraftErrors = Record<string, ComboPriceDraftError>;
 
+function priceDraftForCombo(combo: MealComboResponse, draftPrices: Record<string, string>): string {
+  const draft = draftPrices[combo.comboId]?.trim();
+  if (draft) {
+    return draft;
+  }
+  if (hasComboPrice(combo.price)) {
+    return String(combo.price);
+  }
+  return '';
+}
+
+export async function persistComboPriceDraft(
+  spaceId: UUID,
+  combo: MealComboResponse,
+  draftPrices: Record<string, string>,
+): Promise<{ combo: MealComboResponse; error?: ComboPriceDraftError }> {
+  const { updatedCombos, errors } = await applyDraftPricesToCombos(spaceId, [combo], draftPrices);
+  const error = errors[combo.comboId];
+  return {
+    combo: updatedCombos[0] ?? combo,
+    error,
+  };
+}
+
 export async function applyDraftPricesToCombos(
   spaceId: UUID,
   combos: MealComboResponse[],
@@ -15,12 +39,8 @@ export async function applyDraftPricesToCombos(
   const updatedCombos: MealComboResponse[] = [];
 
   for (const combo of combos) {
-    if (hasComboPrice(combo.price)) {
-      updatedCombos.push(combo);
-      continue;
-    }
+    const draft = priceDraftForCombo(combo, draftPrices);
 
-    const draft = draftPrices[combo.comboId]?.trim() ?? '';
     if (!draft) {
       errors[combo.comboId] = 'required';
       updatedCombos.push(combo);
@@ -37,6 +57,11 @@ export async function applyDraftPricesToCombos(
     const price = parsePriceInput(draft);
     if (price == null) {
       errors[combo.comboId] = 'invalid';
+      updatedCombos.push(combo);
+      continue;
+    }
+
+    if (hasComboPrice(combo.price) && Number(combo.price) === price) {
       updatedCombos.push(combo);
       continue;
     }

@@ -36,6 +36,7 @@ function mapDetailsToListItem(details: MemberDetailsResponse): MemberResponse {
     role: details.role,
     linkedUser: details.linkedUser,
     status: details.status,
+    gender: details.gender,
     createdAt: details.createdAt,
   };
 }

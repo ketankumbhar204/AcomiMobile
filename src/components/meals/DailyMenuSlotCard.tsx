@@ -27,6 +27,7 @@ type DailyMenuSlotCardProps = {
   pollStatus?: 'OPEN' | 'CLOSED' | null;
   pollResponseCount?: number;
   pollActionLoading?: boolean;
+  onViewHeadcount?: () => void;
 };
 
 export function DailyMenuSlotCard({
@@ -40,6 +41,7 @@ export function DailyMenuSlotCard({
   pollStatus,
   pollResponseCount = 0,
   pollActionLoading = false,
+  onViewHeadcount,
 }: DailyMenuSlotCardProps) {
   const { t } = useTranslation();
   const library = comboById ?? EMPTY_COMBO_MAP;
@@ -47,6 +49,8 @@ export function DailyMenuSlotCard({
   const [comboPreviewOpen, setComboPreviewOpen] = useState(false);
   const [comboPreviewName, setComboPreviewName] = useState('');
   const [comboPreviewItems, setComboPreviewItems] = useState<string[]>([]);
+  const [comboPreviewPrice, setComboPreviewPrice] = useState<number | null | undefined>();
+  const [comboPreviewCurrency, setComboPreviewCurrency] = useState<string | null | undefined>();
   const published = menu?.status === 'PUBLISHED';
   const draft = menu?.status === 'DRAFT';
   const options = menu?.options?.filter(option => option.isAvailable) ?? [];
@@ -77,9 +81,16 @@ export function DailyMenuSlotCard({
     ? optionItemNames
     : optionItemNames.slice(0, MAX_VISIBLE);
 
-  const openComboPreview = (comboName: string, itemNames: string[]) => {
+  const openComboPreview = (
+    comboName: string,
+    itemNames: string[],
+    price?: number | null,
+    currencyCode?: string | null,
+  ) => {
     setComboPreviewName(comboName);
     setComboPreviewItems(itemNames);
+    setComboPreviewPrice(price);
+    setComboPreviewCurrency(currencyCode);
     setComboPreviewOpen(true);
   };
 
@@ -92,6 +103,8 @@ export function DailyMenuSlotCard({
     published && pollStatus === 'OPEN'
       ? t('meals.planning.shareSlotAgain')
       : t('meals.planning.shareSlot');
+
+  const respondedLabel = t('meals.poll.respondedCount', { count: pollResponseCount });
 
   return (
     <Card style={styles.card}>
@@ -115,7 +128,7 @@ export function DailyMenuSlotCard({
               itemNames={itemNames}
               price={price}
               currencyCode={currencyCode}
-              onPress={() => openComboPreview(option.label, itemNames)}
+              onPress={() => openComboPreview(option.label, itemNames, price, currencyCode)}
             />
           ))}
           {!expanded && hiddenCount > 0 ? (
@@ -147,9 +160,19 @@ export function DailyMenuSlotCard({
 
       {published && pollStatus === 'OPEN' ? (
         <View style={styles.shareFooter}>
-          <Text style={styles.pollStatusOpen}>
-            {t('meals.poll.pollOpen', { count: pollResponseCount })}
-          </Text>
+          <View style={styles.pollStatusRow}>
+            <Text style={styles.pollStatusMuted}>{t('meals.poll.pollOpenPrefix')}</Text>
+            {onViewHeadcount ? (
+              <Pressable onPress={onViewHeadcount} hitSlop={8} style={styles.pollStatusLinkWrap}>
+                <Text style={styles.pollStatusLink}>
+                  {respondedLabel}
+                  <Text style={styles.pollStatusChevron}> ›</Text>
+                </Text>
+              </Pressable>
+            ) : (
+              <Text style={styles.pollStatusOpen}>{respondedLabel}</Text>
+            )}
+          </View>
           {canShare ? (
             <Pressable style={styles.shareLink} onPress={onShare}>
               <Text style={styles.shareLinkText}>{shareLabel}</Text>
@@ -163,7 +186,21 @@ export function DailyMenuSlotCard({
       ) : null}
 
       {published && pollStatus === 'CLOSED' ? (
-        <Text style={styles.pollStatusClosed}>{t('meals.poll.pollClosed')}</Text>
+        <View style={styles.closedPollFooter}>
+          <View style={styles.pollStatusRow}>
+            <Text style={styles.pollStatusMuted}>{t('meals.poll.pollClosedPrefix')}</Text>
+            {onViewHeadcount ? (
+              <Pressable onPress={onViewHeadcount} hitSlop={8} style={styles.pollStatusLinkWrap}>
+                <Text style={styles.pollStatusLink}>
+                  {respondedLabel}
+                  <Text style={styles.pollStatusChevron}> ›</Text>
+                </Text>
+              </Pressable>
+            ) : (
+              <Text style={styles.pollStatusClosed}>{respondedLabel}</Text>
+            )}
+          </View>
+        </View>
       ) : null}
 
       {published && pollStatus === 'OPEN' && onClosePoll ? (
@@ -181,6 +218,8 @@ export function DailyMenuSlotCard({
         visible={comboPreviewOpen}
         comboName={comboPreviewName}
         items={comboPreviewItems}
+        price={comboPreviewPrice}
+        currencyCode={comboPreviewCurrency}
         onClose={() => setComboPreviewOpen(false)}
       />
     </Card>
@@ -252,17 +291,41 @@ const styles = StyleSheet.create({
   shareLink: { paddingVertical: spacing.xs },
   shareLinkCentered: { alignItems: 'center', paddingVertical: spacing.xs },
   shareLinkText: { ...typography.bodyStrong, color: colors.primaryDark, fontSize: 14 },
+  pollStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    flex: 1,
+    gap: spacing.xxs,
+  },
+  pollStatusMuted: {
+    ...typography.caption,
+    color: colors.success,
+    fontWeight: '600',
+  },
   pollStatusOpen: {
     ...typography.caption,
     color: colors.success,
     fontWeight: '600',
-    flex: 1,
+  },
+  pollStatusLinkWrap: { paddingVertical: spacing.xxs },
+  pollStatusLink: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
+  },
+  pollStatusChevron: {
+    textDecorationLine: 'none',
+    fontWeight: '600',
   },
   pollStatusClosed: {
     ...typography.caption,
     color: colors.muted,
+    fontWeight: '600',
+  },
+  closedPollFooter: {
     marginTop: spacing.sm,
-    textAlign: 'center',
   },
   pollCloseButton: {
     marginTop: spacing.sm,

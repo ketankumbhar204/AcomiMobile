@@ -181,7 +181,7 @@ Building → Unit (optional Room) · Member → Unit
 
 #### Mess
 
-Accommodation not applicable (Members, Meals, Availability, Billing)
+Members ✅ · Meals 🔶 (Phase 5–6 MVP) · Polls & headcount 🔶 · Billing 🔶 (Phase 7 — meal ledger + dashboard API)
 
 ### Occupancy Management ✅
 
@@ -240,95 +240,150 @@ Implementation: `spacePermissions.ts`, `useSpacePermissions`, `permissions-backe
 
 ### Out of Scope (Phase 4)
 
-Rent, billing, payments, deposits, meals, availability polls, complaints, maintenance tickets
+Rent, billing, payments, deposits, complaints, maintenance tickets — handled in Phases 7–8. Meals & polls are Phase 5–6 (Mess).
 
 ---
 
-## Phase 5 - Meal Management (Next)
+## Phase 5 - Meal Management 🔶 Mess MVP in progress
 
-> **Architecture:** [meals-phase-5-backend.md](./meals-phase-5-backend.md) (backend repo handoff) · [meals-phase-5-ui-integration.md](./meals-phase-5-ui-integration.md) (UI repo + Cursor prompt)
+> **Architecture:** [meals-phase-5-backend.md](./meals-phase-5-backend.md) · [meals-phase-5-ui-integration.md](./meals-phase-5-ui-integration.md) · [meals-phase-5.2-menu-planning.md](./meals-phase-5.2-menu-planning.md) · [meals-phase-5-menu-library-architecture.md](./meals-phase-5-menu-library-architecture.md)
+>
+> **Scope:** Mess spaces only. PG/hostel food-in-rent uses participation hooks; full meal tab is Mess-first.
 
-### Menu Master
+### Menu library (master data) ✅
 
-* Breakfast Menu
-* Lunch Menu
-* Dinner Menu
+* ✅ Food categories & food items (veg / non-veg / eggless)
+* ✅ Meal combos (library CRUD, pricing, item composition)
+* ✅ Menu library screen (Items · Combos tabs, inline chip editors)
+* ✅ Combo / item deactivate
 
-### Menu Planning
+### Meal participation ✅
 
-* Daily Menu Planning
-* Weekly Menu Planning
+* ✅ Meal plans (FULL, breakfast-only, etc.)
+* ✅ Enroll / pause / resume / stop participation
+* ✅ Member meal access toggle (Mess customers & profile)
+* ✅ Eligibility summary per date & meal slot
+* 🔶 Tenant food-included via occupancy contract (backend wired; UI on move-in flows)
 
-### Meal Tracking
+### Daily menu planning ✅
 
-* Meal Consumption
-* Special Meal Requests
+* ✅ Menu planning hub (date nav, per-slot cards: Breakfast / Lunch / Dinner)
+* ✅ Plan meal screen — select combos, kitchen notes, copy yesterday
+* ✅ Draft / publish per slot
+* ✅ Inline combo price edit (library price updates on blur / save)
+* ✅ Share menu preview (numbered WhatsApp-style message)
+* ✅ Today's menu (read-only)
+* ✅ Meals tab quick entry (planning as tab root for managers)
+* ⬜ Weekly menu planning & bulk week copy
 
-### Menu History
+### Operator dashboard (Mess) 🔶
 
-* Daily History
-* Weekly History
+* ✅ Attention required (tomorrow menu not planned / partial / ready to share / open poll)
+* ✅ Financial snapshot (Expected Charges / Collected / Pending — backend API + client fallback)
+* ✅ Meal operations (members receiving meals, menus published, open polls, today's headcount)
+* ✅ Quick actions (Meals · Members · Payments shortcuts)
+* ✅ Unified PG accommodation operations on non-Mess spaces
 
-> Dashboard **Meals** module card is stubbed (Coming soon) pending Phase 5.
+### Member profile — Meals tab ✅
 
----
+* ✅ Meal activity calendar & history (accepted / pending / amounts / payment status)
+* ✅ Day detail bottom sheet (selections, delivery, payment review)
+* ✅ Profile consolidates Documents & Notes (no separate top-level tabs)
 
-## Phase 6 - Availability Management (USP)
+> ~~Dashboard **Meals** module card is stubbed~~ — **Done for Mess:** operational dashboard + quick actions. PG spaces still use Residents card only.
 
-### Meal Availability Polls
+### Not started / deferred (Phase 5)
 
-* Breakfast Poll
-* Lunch Poll
-* Dinner Poll
-
-### Response Collection
-
-* App Responses
-* WhatsApp Responses
-
-### Headcount Engine
-
-* Expected Breakfast Count
-* Expected Lunch Count
-* Expected Dinner Count
-
-### Forecasting
-
-* Daily Forecast
-* Weekly Forecast
-
-### Reports
-
-* Food Wastage Report
-* Attendance Report
-* Consumption Trends
+* ⬜ Weekly menu planning
+* ⬜ Menu history reports (beyond per-member activity)
+* ⬜ Special meal requests
+* ⬜ Dedicated meal consumption analytics
 
 ---
 
-## Phase 7 - Payment Management
+## Phase 6 - Availability & Polls 🔶 Core delivered
 
-* Rent Collection
-* Subscription Collection
-* Deposit Management
-* Payment History
-* Payment Reminders
+> **Handoff:** [meals-phase-6-handoff.md](./meals-phase-6-handoff.md)
+
+### Meal availability polls ✅
+
+* ✅ Open / close poll per meal slot (auto-open on share)
+* ✅ Numbered menu options + “Not available” synthetic option
+* ✅ Multi-quantity polls (when enabled on space)
+
+### Response collection 🔶
+
+* ✅ In-app member responses (`MealPollResponseScreen`, dashboard poll card)
+* ✅ Delivery location per response
+* 🔶 Payment choice (pay now / pay later) + proof upload + owner approve/reject
+* ⬜ WhatsApp response ingestion (share text only; no inbound parsing)
+
+### Headcount engine ✅
+
+* ✅ Day summary (`GET /meals/headcount?date=`)
+* ✅ Per-meal breakdown (options, no-response members, delivery by location)
+* ✅ Headcount bottom sheet (menu planning + dashboard)
+* ✅ Owner dashboard — tomorrow headcount chips & remind members
+
+### Member meal activity & billing signals 🔶
+
+* ✅ Monthly activity API (accepted / pending / generated / paid / pending amounts)
+* ✅ Per-day detail with slot amounts and payment status
+* ✅ Space-wide billing rollup (`GET /spaces/{id}/dashboard-summary`, `GET /spaces/{id}/payments/ledger`)
+
+### Forecasting & reports ⬜
+
+* ⬜ Daily / weekly forecast
+* ⬜ Food wastage report
+* ⬜ Attendance / consumption trend reports
 
 ---
 
-## Phase 8 - Complaints & Notices
+## Phase 7 - Payment Management 🔶
 
-* Complaint Management
-* Notice Board
-* Notifications
+* ✅ Payments tab (member ledger, filters, month nav — OWNER/MANAGER)
+* ✅ Unified financial cards (Expected Charges / Collected / Pending) on dashboard + payments
+* ✅ Backend ledger + dashboard-summary APIs (Mess meal activity, PG occupancy, hybrid)
+* 🔶 Client fallback when API unavailable (404/network)
+* ⬜ Rent collection recording (PG — expected from occupancy; collected stays empty)
+* ⬜ Mess subscription / monthly billing
+* ⬜ Deposit management (member profile ✅; space-level collections ⬜)
+* ⬜ Payment history & reminders
+* 🔶 Meal poll day payments (member choice + proof + owner review — Phase 6)
 
 ---
 
-## Phase 9 - Reports & Dashboard
+## Phase 8 - Complaints & Notices ⬜
 
-* Occupancy Reports
-* Payment Reports
-* Meal Reports
-* Business Dashboard
+* ⬜ Complaint Management
+* ⬜ Notice Board
+* ⬜ Notifications
+
+---
+
+## Phase 9 - Reports & Dashboard 🔶
+
+* 🔶 Unified space dashboard (Mess ops + PG accommodation ops + financial snapshot)
+* 🔶 Accommodation dashboard metrics (occupied/vacant beds, move-ins, pending payments count)
+* ⬜ Occupancy reports (PG)
+* ⬜ Payment reports
+* ⬜ Meal reports & advanced business dashboard
+
+---
+
+## What’s next (recommended order)
+
+### Mess operators (current focus)
+
+1. **Phase 7 polish** — rent collection API, subscription/credits billing models
+2. **Phase 6 polish** — payment workflow hardening, reminders
+3. **Phase 5** — weekly menu planning, menu history
+4. **Phase 6** — wastage / consumption reports
+
+### PG / Hostel (when switching focus)
+
+1. **Phase 4.5** — real occupancy dashboard metrics, availability browse screen, structure filters
+2. **Phase 7** — rent collection
 
 ---
 
