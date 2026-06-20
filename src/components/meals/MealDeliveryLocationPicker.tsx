@@ -9,6 +9,7 @@ type MealDeliveryLocationPickerProps = {
   selectedId?: UUID | null;
   lastUsedLocationId?: UUID | null;
   onSelect: (locationId: UUID) => void;
+  readOnly?: boolean;
 };
 
 export function MealDeliveryLocationPicker({
@@ -16,6 +17,7 @@ export function MealDeliveryLocationPicker({
   selectedId,
   lastUsedLocationId,
   onSelect,
+  readOnly = false,
 }: MealDeliveryLocationPickerProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -35,8 +37,13 @@ export function MealDeliveryLocationPicker({
   return (
     <>
       <Pressable
-        style={({ pressed }) => [styles.trigger, pressed && styles.triggerPressed]}
-        onPress={() => setOpen(true)}
+        style={({ pressed }) => [
+          styles.trigger,
+          !readOnly && pressed && styles.triggerPressed,
+          readOnly && styles.triggerReadOnly,
+        ]}
+        onPress={readOnly ? undefined : () => setOpen(true)}
+        disabled={readOnly}
         accessibilityRole="button"
         accessibilityLabel={t('meals.poll.deliverTo')}
         accessibilityState={{ expanded: open }}>
@@ -125,6 +132,9 @@ const styles = StyleSheet.create({
   },
   triggerPressed: {
     backgroundColor: colors.surface,
+  },
+  triggerReadOnly: {
+    opacity: 0.85,
   },
   triggerContent: {
     flex: 1,

@@ -8,16 +8,23 @@ type MealPollOptionRadioProps = {
   option: MealPollOption;
   selected: boolean;
   onSelect: () => void;
+  readOnly?: boolean;
 };
 
-export function MealPollOptionRadio({ option, selected, onSelect }: MealPollOptionRadioProps) {
+export function MealPollOptionRadio({
+  option,
+  selected,
+  onSelect,
+  readOnly = false,
+}: MealPollOptionRadioProps) {
   const isNotAvailable = option.optionType === 'NOT_AVAILABLE';
   const priceLabel = formatComboPrice(option.price, option.currencyCode);
 
   return (
     <Pressable
-      style={[styles.row, isNotAvailable && styles.rowMuted]}
-      onPress={onSelect}
+      style={[styles.row, isNotAvailable && styles.rowMuted, readOnly && styles.rowReadOnly]}
+      onPress={readOnly ? undefined : onSelect}
+      disabled={readOnly}
       accessibilityRole="radio"
       accessibilityState={{ selected }}>
       <View style={[styles.radio, selected && styles.radioSelected]}>
@@ -55,6 +62,9 @@ const styles = StyleSheet.create({
   },
   rowMuted: {
     backgroundColor: colors.surface,
+  },
+  rowReadOnly: {
+    opacity: 0.85,
   },
   radio: {
     width: 22,

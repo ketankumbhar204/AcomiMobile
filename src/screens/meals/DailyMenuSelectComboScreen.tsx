@@ -12,6 +12,7 @@ import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, spacing, typography } from '../../theme';
+import { isPastMenuDate } from '../../utils/mealDates';
 import { loadMenuDraft, syncCombosOnMenu } from '../../utils/dailyMenuDraft';
 import { hasComboPrice } from '../../utils/comboPrice';
 import {
@@ -38,6 +39,14 @@ export function DailyMenuSelectComboScreen({
   const navigation = useNavigation<Nav>();
   const permissions = useSpacePermissions(spaceId);
   const showToast = useToastStore(state => state.showToast);
+  const dateReadOnly = isPastMenuDate(menuDate);
+
+  useEffect(() => {
+    if (dateReadOnly) {
+      showToast(t('meals.errors.pastDateReadOnly'));
+      navigation.goBack();
+    }
+  }, [dateReadOnly, navigation, showToast, t]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

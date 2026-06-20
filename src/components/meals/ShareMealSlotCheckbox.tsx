@@ -12,6 +12,7 @@ type ShareMealSlotCheckboxProps = {
   selected: boolean;
   onToggle: () => void;
   alreadyShared?: boolean;
+  disabled?: boolean;
 };
 
 export function ShareMealSlotCheckbox({
@@ -20,10 +21,11 @@ export function ShareMealSlotCheckbox({
   selected,
   onToggle,
   alreadyShared = false,
+  disabled = false,
 }: ShareMealSlotCheckboxProps) {
   const { t } = useTranslation();
   const mealLabel = t(mealTypeLabelKey(mealType));
-  const shareable = state === 'shareable';
+  const shareable = state === 'shareable' && !disabled;
 
   const disabledMessage =
     state === 'draft'

@@ -11,6 +11,7 @@ import { useMealPollDay } from '../../hooks/useMealPollDay';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../../navigation/types';
 import { colors, spacing, typography } from '../../theme';
+import { isPastMenuDate } from '../../utils/mealDates';
 
 type MealPollResponseScreenProps = {
   spaceId: UUID;
@@ -28,6 +29,7 @@ export function MealPollResponseScreen({ spaceId, menuDate }: MealPollResponseSc
       navigation.goBack();
     },
   });
+  const dateReadOnly = isPastMenuDate(menuDate);
   const [paymentStep, setPaymentStep] = useState(false);
   const [proofModalOpen, setProofModalOpen] = useState(false);
 
@@ -64,7 +66,7 @@ export function MealPollResponseScreen({ spaceId, menuDate }: MealPollResponseSc
       <Screen scrollable contentStyle={styles.content}>
         {!poll.loading && poll.openPolls.length === 0 ? (
           <Text style={styles.empty}>{t('meals.poll.noOpenPolls')}</Text>
-        ) : paymentStep ? (
+        ) : paymentStep && !dateReadOnly ? (
           <View style={styles.paymentBlock}>
             <Text style={styles.paymentPrompt}>{t('meals.poll.paymentPrompt')}</Text>
             <Text style={styles.paymentHint}>{t('meals.poll.paymentHint')}</Text>
@@ -108,8 +110,9 @@ export function MealPollResponseScreen({ spaceId, menuDate }: MealPollResponseSc
               onUpdateChoices={poll.handleUpdateChoices}
               variant="screen"
               hideSubmitButton
+              readOnly={dateReadOnly}
             />
-            {!poll.loading && poll.openPolls.length > 0 && !poll.showSummary ? (
+            {!poll.loading && poll.openPolls.length > 0 && !poll.showSummary && !dateReadOnly ? (
               <Button
                 label={poll.saving ? t('meals.poll.submitting') : t('meals.poll.submit')}
                 onPress={() => void handleSavePress()}

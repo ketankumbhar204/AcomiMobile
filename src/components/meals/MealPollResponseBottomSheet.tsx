@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { MealDeliveryLocation, MealPollPaymentChoice, MealPollSlot, MealType, UUID } from '../../api/types';
-import { formatMenuDate } from '../../utils/mealDates';
+import { formatMenuDate, isPastMenuDate } from '../../utils/mealDates';
 import { MealPollDayContent } from './MealPollDayContent';
 import { MealPollPaymentProofModal } from './MealPollPaymentProofModal';
 import {
@@ -62,6 +62,7 @@ export function MealPollResponseBottomSheet({
 }: MealPollResponseBottomSheetProps) {
   const { t, i18n } = useTranslation();
   const dateLabel = formatMenuDate(menuDate, i18n.language);
+  const dateReadOnly = isPastMenuDate(menuDate);
   const [paymentStep, setPaymentStep] = useState(false);
   const [proofModalOpen, setProofModalOpen] = useState(false);
 
@@ -88,7 +89,7 @@ export function MealPollResponseBottomSheet({
   };
 
   const footer =
-    !loading && openPolls.length > 0 ? (
+    !dateReadOnly && !loading && openPolls.length > 0 ? (
       paymentStep ? (
         <View style={styles.paymentFooter}>
           <Text style={styles.paymentPrompt}>{t('meals.poll.paymentPrompt')}</Text>
@@ -153,6 +154,7 @@ export function MealPollResponseBottomSheet({
             variant="sheet"
             dateLabel={dateLabel}
             hideSubmitButton
+            readOnly={dateReadOnly}
           />
         )}
       </MenuPlanningBottomSheet>

@@ -32,6 +32,7 @@ function SnapshotCard({
         {value}
       </Text>
       <Text style={styles.label}>{label}</Text>
+      {onPress ? <Text style={styles.chevron}>›</Text> : null}
     </>
   );
 
@@ -114,9 +115,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xs,
+    paddingHorizontal: spacing.xxs,
     alignItems: 'center',
     gap: 2,
+    position: 'relative',
   },
   cardPressable: {},
   cardPressed: {
@@ -140,5 +142,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '600',
     fontSize: 11,
+  },
+  chevron: {
+    position: 'absolute',
+    top: spacing.xs,
+    right: spacing.xxs,
+    fontSize: 14,
+    fontWeight: '300',
+    color: colors.muted,
   },
 });

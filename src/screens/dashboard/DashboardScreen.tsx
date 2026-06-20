@@ -12,7 +12,6 @@ import { useTranslation } from 'react-i18next';
 import { formatSpaceType } from '../../api';
 import {
   DashboardAccommodationOperations,
-  DashboardAttentionCard,
   DashboardFinancialSnapshot,
   DashboardMealOperations,
   DashboardSectionTitle,
@@ -268,14 +267,6 @@ export function DashboardScreen() {
             <SkeletonCard />
           ) : (
             <>
-              {dashboard.attention.map((attention, index) => (
-                <DashboardAttentionCard
-                  key={`${attention.kind}-${index}`}
-                  spaceId={spaceId}
-                  attention={attention}
-                />
-              ))}
-
               <DashboardFinancialSnapshot
                 loading={dashboard.financialLoading}
                 financial={dashboard.financial}
@@ -291,10 +282,7 @@ export function DashboardScreen() {
               />
 
               {dashboard.messOperations ? (
-                <DashboardMealOperations
-                  spaceId={spaceId}
-                  operations={dashboard.messOperations}
-                />
+                <DashboardMealOperations spaceId={spaceId} />
               ) : null}
 
               {dashboard.accommodationOperations ? (

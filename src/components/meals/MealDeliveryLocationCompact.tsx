@@ -10,6 +10,7 @@ type MealDeliveryLocationCompactProps = {
   selectedId?: UUID | null;
   lastUsedLocationId?: UUID | null;
   onSelect: (locationId: UUID) => void;
+  readOnly?: boolean;
 };
 
 export function MealDeliveryLocationCompact({
@@ -17,6 +18,7 @@ export function MealDeliveryLocationCompact({
   selectedId,
   lastUsedLocationId,
   onSelect,
+  readOnly = false,
 }: MealDeliveryLocationCompactProps) {
   const { t } = useTranslation();
 
@@ -35,6 +37,7 @@ export function MealDeliveryLocationCompact({
         selectedId={selectedId}
         lastUsedLocationId={lastUsedLocationId}
         onSelect={onSelect}
+        readOnly={readOnly}
       />
     </View>
   );

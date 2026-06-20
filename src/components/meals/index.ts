@@ -5,6 +5,7 @@ export { DashboardCustomerMealsSection } from './DashboardCustomerMealsSection';
 export { DashboardOwnerPollStatusCard } from './DashboardOwnerPollStatusCard';
 export { DashboardTodayMenuSection } from './DashboardTodayMenuSection';
 export { MealHeadcountBottomSheet } from './MealHeadcountBottomSheet';
+export { MealHeadcountPanel } from './MealHeadcountPanel';
 export { MealPollDayContent } from './MealPollDayContent';
 export { MealPollOptionRadio } from './MealPollOptionRadio';
 export { MealsTabHeaderMenu } from './MealsTabHeaderMenu';

@@ -1181,7 +1181,13 @@
       "viewSummary": "View summary"
     },
     "headcount": {
-      "title": "Tomorrow's headcount",
+      "title": "Headcount",
+      "titleToday": "Today's headcount",
+      "titleYesterday": "Yesterday's headcount",
+      "titleTomorrow": "Tomorrow's headcount",
+      "titleDate": "{{date}} headcount",
+      "summarySubtitle": "{{date}} · {{count}} meals",
+      "summaryTotalOnly": "{{count}} meals total",
       "tapMealHint": "Tap a meal to see prep breakdown",
       "toggleMealHint": "Tap a meal to open headcount — switch meals inside the drawer",
       "summaryTitle": "{{meal}} prep",
@@ -1210,27 +1216,32 @@
     "attention": {
       "not_planned": {
         "title": "Tomorrow's meals are not planned",
+        "subtitle": "Plan before sharing",
         "body": "Plan breakfast, lunch and dinner before sharing.",
         "action": "Plan menu"
       },
       "partial_planned": {
         "titleSingle": "{{meal}} not planned",
-        "titleMultiple": "Tomorrow's menu not fully planned",
+        "titleMultiple": "Menu not fully planned",
+        "subtitle": "{{scheduled}} of {{total}} meals scheduled",
         "body": "{{scheduled}} of {{total}} meals scheduled for tomorrow.",
         "action": "Continue planning"
       },
       "ready_to_share": {
-        "title": "Tomorrow's menu is ready",
+        "title": "Menu ready to share",
+        "subtitle": "Share with members",
         "body": "Share menus with members so they can choose meals.",
         "action": "Share menu"
       },
       "poll_open": {
         "title": "Poll open",
+        "subtitle": "{{responded}} / {{eligible}} responded",
         "body": "{{responded}} / {{eligible}} members responded for tomorrow.",
         "action": "View responses"
       },
       "payments_overdue": {
-        "title": "{{count}} payments overdue",
+        "title": "{{count}} payments due",
+        "subtitle": "{{amount}} outstanding",
         "body": "{{amount}} outstanding this month across members.",
         "action": "View payments"
       }
@@ -1257,7 +1268,16 @@
       "pollResponses": "{{responded}} / {{eligible}} responded",
       "noOpenPolls": "Awaiting responses",
       "todaysHeadcount": "Today's headcount",
-      "today": "Today"
+      "dayHeadcount": "Headcount",
+      "today": "Today",
+      "emptyAllNotPlanned": "No menus planned for this date yet.",
+      "emptyNonePublished": "Menus are still in draft. Publish and share to start collecting responses.",
+      "emptyNoResponses": "Menus are published but no member responses yet.",
+      "planMenuCta": "Plan menu",
+      "pollOpenLine": "Poll open · {{responded}} / {{eligible}} responded",
+      "pollClosed": "Polls closed for this date",
+      "pollNotOpenDraft": "Publish and share menu to open poll",
+      "pollNotOpen": "No poll open yet"
     },
     "quickActions": {
       "title": "Quick actions",
@@ -1314,6 +1334,13 @@
     "title": "Meals",
     "todayMenu": "Today's menu",
     "planMenu": "Plan menu",
+    "dates": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "tomorrow": "Tomorrow",
+      "goToToday": "Go to today",
+      "goToTomorrow": "Go to tomorrow"
+    },
     "planning": {
       "title": "Menu planning",
       "subtitle": "Plan breakfast, lunch, and dinner from your menu library.",
@@ -1360,6 +1387,8 @@
       "pickDate": "Pick a date",
       "customDate": "Or enter a date",
       "invalidDate": "Enter a valid date (YYYY-MM-DD)",
+      "pastDateNotAllowed": "Past dates cannot be selected.",
+      "pastDateReadOnly": "Past dates are view-only. You cannot add or edit menus for this day.",
       "openCalendar": "Open calendar",
       "previewShare": "Preview share message",
       "previewShareDisabled": "Plan at least one meal to share.",
@@ -1404,6 +1433,7 @@
       "responseTitle": "Choose your meals",
       "responseHint": "Pick one option per meal. Your mess uses this for kitchen headcount.",
       "responseHintMess": "Set quantities for each combo. Total plates helps the kitchen prepare accurately.",
+      "pastDateReadOnly": "This date has passed. Your choices can no longer be changed.",
       "totalPlates": "Total plates: {{count}}",
       "selectAtLeastOnePlate": "Select at least one plate across your combos",
       "submit": "Save choices",
@@ -1823,7 +1853,8 @@
       "saveComboFailed": "Could not save combo.",
       "actionFailed": "Could not update participation.",
       "mealAccessFailed": "Could not update meal access.",
-      "optionsRequired": "Add at least one menu option."
+      "optionsRequired": "Add at least one menu option.",
+      "pastDateReadOnly": "Past dates are view-only."
     }
   },
   "permissions": {

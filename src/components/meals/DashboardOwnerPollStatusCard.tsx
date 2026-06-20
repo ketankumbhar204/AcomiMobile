@@ -5,7 +5,7 @@ import type { MealHeadcountSlot, MealType, UUID } from '../../api/types';
 import { useOwnerMealHeadcount } from '../../hooks/useOwnerMealHeadcount';
 import { navigateMainStack } from '../../navigation/mainStackNavigation';
 import { colors, radius, spacing, typography } from '../../theme';
-import { formatMenuDate, tomorrowIsoDate } from '../../utils/mealDates';
+import { formatMenuDate, headcountTitleKey, tomorrowIsoDate } from '../../utils/mealDates';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
 import { Card } from '../ui/Card';
 import { MealHeadcountBottomSheet } from './MealHeadcountBottomSheet';
@@ -69,7 +69,7 @@ export function DashboardOwnerPollStatusCard({ spaceId }: DashboardOwnerPollStat
     <>
       {showCard ? (
         <Card style={styles.card}>
-          <Text style={styles.title}>{t('dashboard.headcount.title')}</Text>
+          <Text style={styles.title}>{t(headcountTitleKey(menuDate))}</Text>
           <Text style={styles.date}>{formatMenuDate(menuDate, i18n.language)}</Text>
           <Text style={styles.hint}>{t('dashboard.headcount.toggleMealHint')}</Text>
 

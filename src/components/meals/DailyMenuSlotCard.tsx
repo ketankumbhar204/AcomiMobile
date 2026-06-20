@@ -28,6 +28,7 @@ type DailyMenuSlotCardProps = {
   pollResponseCount?: number;
   pollActionLoading?: boolean;
   onViewHeadcount?: () => void;
+  readOnly?: boolean;
 };
 
 export function DailyMenuSlotCard({
@@ -42,6 +43,7 @@ export function DailyMenuSlotCard({
   pollResponseCount = 0,
   pollActionLoading = false,
   onViewHeadcount,
+  readOnly = false,
 }: DailyMenuSlotCardProps) {
   const { t } = useTranslation();
   const library = comboById ?? EMPTY_COMBO_MAP;
@@ -97,7 +99,8 @@ export function DailyMenuSlotCard({
   const menuCtaLabel = hasPlan
     ? t('meals.menu.editMenu')
     : t('meals.menu.selectMenu');
-  const menuCtaAction = hasPlan ? onEdit : onSelectMenu;
+  const menuCtaAction = readOnly ? undefined : hasPlan ? onEdit : onSelectMenu;
+  const canShareAction = !readOnly && canShare;
 
   const shareLabel =
     published && pollStatus === 'OPEN'
@@ -156,7 +159,7 @@ export function DailyMenuSlotCard({
         </Pressable>
       ) : null}
 
-      {(canShare || (published && pollStatus)) ? <View style={styles.divider} /> : null}
+      {(canShareAction || (published && pollStatus)) ? <View style={styles.divider} /> : null}
 
       {published && pollStatus === 'OPEN' ? (
         <View style={styles.shareFooter}>
@@ -173,13 +176,13 @@ export function DailyMenuSlotCard({
               <Text style={styles.pollStatusOpen}>{respondedLabel}</Text>
             )}
           </View>
-          {canShare ? (
+          {canShareAction ? (
             <Pressable style={styles.shareLink} onPress={onShare}>
               <Text style={styles.shareLinkText}>{shareLabel}</Text>
             </Pressable>
           ) : null}
         </View>
-      ) : canShare ? (
+      ) : canShareAction ? (
         <Pressable style={styles.shareLinkCentered} onPress={onShare}>
           <Text style={styles.shareLinkText}>{shareLabel}</Text>
         </Pressable>
@@ -203,7 +206,7 @@ export function DailyMenuSlotCard({
         </View>
       ) : null}
 
-      {published && pollStatus === 'OPEN' && onClosePoll ? (
+      {published && pollStatus === 'OPEN' && onClosePoll && !readOnly ? (
         <Pressable
           style={[styles.pollCloseButton, pollActionLoading && styles.buttonDisabled]}
           onPress={onClosePoll}

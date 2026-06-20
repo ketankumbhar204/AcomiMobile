@@ -8,28 +8,44 @@ type MealPollQuantityRowProps = {
   option: MealPollOption;
   quantity: number;
   onChange: (quantity: number) => void;
+  readOnly?: boolean;
 };
 
-export function MealPollQuantityRow({ option, quantity, onChange }: MealPollQuantityRowProps) {
+export function MealPollQuantityRow({
+  option,
+  quantity,
+  onChange,
+  readOnly = false,
+}: MealPollQuantityRowProps) {
   const selected = quantity > 0;
   const priceLabel = formatComboPrice(option.price, option.currencyCode);
 
   const toggleSelected = () => {
+    if (readOnly) {
+      return;
+    }
     onChange(selected ? 0 : 1);
   };
 
   const decrement = () => {
-    if (quantity > 1) {
-      onChange(quantity - 1);
+    if (readOnly || quantity <= 1) {
+      return;
     }
+    onChange(quantity - 1);
   };
 
-  const increment = () => onChange(quantity + 1);
+  const increment = () => {
+    if (readOnly) {
+      return;
+    }
+    onChange(quantity + 1);
+  };
 
   return (
     <Pressable
-      style={[styles.row, selected && styles.rowSelected]}
-      onPress={toggleSelected}
+      style={[styles.row, selected && styles.rowSelected, readOnly && styles.rowReadOnly]}
+      onPress={readOnly ? undefined : toggleSelected}
+      disabled={readOnly}
       accessibilityRole="checkbox"
       accessibilityState={{ checked: selected }}>
       <View style={[styles.checkbox, selected && styles.checkboxSelected]}>
@@ -54,7 +70,7 @@ export function MealPollQuantityRow({ option, quantity, onChange }: MealPollQuan
                 <Pressable
                   style={[styles.button, quantity <= 1 && styles.buttonDisabled]}
                   onPress={decrement}
-                  disabled={quantity <= 1}
+                  disabled={readOnly || quantity <= 1}
                   accessibilityLabel="Decrease quantity">
                   <Text style={styles.buttonLabel}>−</Text>
                 </Pressable>
@@ -62,6 +78,7 @@ export function MealPollQuantityRow({ option, quantity, onChange }: MealPollQuan
                 <Pressable
                   style={styles.button}
                   onPress={increment}
+                  disabled={readOnly}
                   accessibilityLabel="Increase quantity">
                   <Text style={styles.buttonLabel}>+</Text>
                 </Pressable>
@@ -96,6 +113,9 @@ const styles = StyleSheet.create({
   rowSelected: {
     borderColor: colors.primary,
     backgroundColor: colors.lightGreen,
+  },
+  rowReadOnly: {
+    opacity: 0.85,
   },
   checkbox: {
     width: 22,

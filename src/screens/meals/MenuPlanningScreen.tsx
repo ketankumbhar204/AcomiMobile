@@ -18,6 +18,8 @@ import type {
   UUID,
 } from '../../api/types';
 import { DailyMenuSlotCard, MealHeadcountBottomSheet } from '../../components/meals';
+import { MenuDateContextHints } from '../../components/meals/MenuDateContextHints';
+import { MenuDatePickerModal } from '../../components/meals/MenuDatePickerModal';
 import { Button, Screen } from '../../components/ui';
 import { navigateToMembersTab } from '../../navigation/navigationRef';
 import { useMainStackNavigation } from '../../hooks/useMainStackNavigation';
@@ -28,8 +30,11 @@ import { colors, radius, spacing, typography } from '../../theme';
 import {
   addDaysIsoDate,
   formatMenuDate,
+  isPastMenuDate,
+  todayIsoDate,
   tomorrowIsoDate,
 } from '../../utils/mealDates';
+import { summarizeDailyMenuDay } from '../../utils/dailyMenuDayStatus';
 import { MEAL_TYPES } from '../../utils/mealLabels';
 
 type MenuPlanningScreenProps = {
@@ -65,24 +70,7 @@ function dayStatusSummary(menus: DailyMenuResponse[]): {
   draft: number;
   notPlanned: number;
 } {
-  let published = 0;
-  let draft = 0;
-  for (const mealType of MEAL_TYPES) {
-    const menu = menus.find(row => row.mealType === mealType);
-    if (!menu) {
-      continue;
-    }
-    if (menu.status === 'PUBLISHED') {
-      published += 1;
-    } else {
-      draft += 1;
-    }
-  }
-  return {
-    published,
-    draft,
-    notPlanned: MEAL_TYPES.length - published - draft,
-  };
+  return summarizeDailyMenuDay(menus);
 }
 
 export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenProps) {
@@ -101,6 +89,7 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
   const [polls, setPolls] = useState<MealPollSlot[]>([]);
   const [pollActionMealType, setPollActionMealType] = useState<MealType | null>(null);
   const [headcountMealType, setHeadcountMealType] = useState<MealType | null>(null);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -152,7 +141,8 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
   );
   const eligibilityMap = useMemo(() => eligibilityByType(eligibility), [eligibility]);
   const statusSummary = useMemo(() => dayStatusSummary(menus), [menus]);
-  const canShareMenu = MEAL_TYPES.some(type => hasPlannedMenu(menuMap[type]));
+  const dateReadOnly = isPastMenuDate(menuDate);
+  const canShareMenu = !dateReadOnly && MEAL_TYPES.some(type => hasPlannedMenu(menuMap[type]));
   const distinctEligible = useMemo(() => {
     if (!eligibility) {
       return 0;
@@ -166,33 +156,53 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
     );
   }, [eligibility]);
 
+  const guardEditable = useCallback(() => {
+    if (!dateReadOnly) {
+      return true;
+    }
+    showToast(t('meals.errors.pastDateReadOnly'));
+    return false;
+  }, [dateReadOnly, showToast, t]);
+
   const openSelectMenu = useCallback(
     (mealType: MealType) => {
+      if (!guardEditable()) {
+        return;
+      }
       navigateMain('DailyMenuEdit', { spaceId, menuDate, mealType });
     },
-    [menuDate, navigateMain, spaceId],
+    [guardEditable, menuDate, navigateMain, spaceId],
   );
 
   const openEdit = useCallback(
     (mealType: MealType) => {
+      if (!guardEditable()) {
+        return;
+      }
       navigateMain('DailyMenuEdit', { spaceId, menuDate, mealType });
     },
-    [menuDate, navigateMain, spaceId],
+    [guardEditable, menuDate, navigateMain, spaceId],
   );
 
   const openShare = useCallback(
     (mealType?: MealType) => {
+      if (!guardEditable()) {
+        return;
+      }
       navigateMain('MenuSharePreview', {
         spaceId,
         menuDate,
         ...(mealType ? { mealType } : {}),
       });
     },
-    [menuDate, navigateMain, spaceId],
+    [guardEditable, menuDate, navigateMain, spaceId],
   );
 
   const closePoll = useCallback(
     async (mealType: MealType) => {
+      if (!guardEditable()) {
+        return;
+      }
       setPollActionMealType(mealType);
       try {
         await mealsApi.closeMealPoll(spaceId, menuDate, mealType);
@@ -204,7 +214,7 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
         setPollActionMealType(null);
       }
     },
-    [load, menuDate, showToast, spaceId, t],
+    [guardEditable, load, menuDate, showToast, spaceId, t],
   );
 
   const openHeadcount = useCallback((mealType: MealType) => {
@@ -226,20 +236,31 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
           onPress={() => setMenuDate(prev => addDaysIsoDate(prev, -1))}>
           <Text style={styles.dateNavText}>◀</Text>
         </Pressable>
-        <View style={styles.dateCenter}>
+        <Pressable
+          style={({ pressed }) => [styles.dateCenter, pressed && styles.dateCenterPressed]}
+          onPress={() => setDatePickerOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel={formatMenuDate(menuDate, i18n.language)}
+          accessibilityHint={t('meals.planning.openCalendar')}>
           <Text style={styles.dateLabel}>{formatMenuDate(menuDate, i18n.language)}</Text>
-          <View style={styles.dateShortcuts}>
-            <Pressable onPress={() => setMenuDate(tomorrowIsoDate())}>
-              <Text style={styles.shortcut}>{t('meals.planning.tomorrow')}</Text>
-            </Pressable>
-          </View>
-        </View>
+          <MenuDateContextHints
+            menuDate={menuDate}
+            onJumpToToday={() => setMenuDate(todayIsoDate())}
+            onJumpToTomorrow={() => setMenuDate(tomorrowIsoDate())}
+          />
+        </Pressable>
         <Pressable
           style={styles.dateNavBtn}
           onPress={() => setMenuDate(prev => addDaysIsoDate(prev, 1))}>
           <Text style={styles.dateNavText}>▶</Text>
         </Pressable>
       </View>
+
+      {dateReadOnly ? (
+        <View style={styles.readOnlyBanner}>
+          <Text style={styles.readOnlyBannerText}>{t('meals.planning.pastDateReadOnly')}</Text>
+        </View>
+      ) : null}
 
       {!loading && !error ? (
         <View style={styles.summaryRow}>
@@ -292,6 +313,7 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
               mealType={mealType}
               menu={menuMap[mealType]}
               comboById={comboById}
+              readOnly={dateReadOnly}
               onSelectMenu={() => openSelectMenu(mealType)}
               onEdit={() => openEdit(mealType)}
               onShare={
@@ -350,8 +372,17 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
           openSlots={headcount.openSlots}
           initialMealType={headcountMealType}
           onClose={closeHeadcount}
+          readOnly={dateReadOnly}
         />
       ) : null}
+
+      <MenuDatePickerModal
+        visible={datePickerOpen}
+        value={menuDate}
+        allowPastDates
+        onClose={() => setDatePickerOpen(false)}
+        onConfirm={setMenuDate}
+      />
     </Screen>
   );
 }
@@ -376,10 +407,29 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   dateNavText: { ...typography.bodyStrong, color: colors.primaryDark },
-  dateCenter: { flex: 1, alignItems: 'center' },
-  dateLabel: { ...typography.bodyStrong },
-  dateShortcuts: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
-  shortcut: { ...typography.caption, color: colors.primary, fontWeight: '600' },
+  readOnlyBanner: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.button,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  readOnlyBannerText: { ...typography.caption, color: colors.muted, lineHeight: 18 },
+  dateCenter: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+    borderRadius: radius.button,
+  },
+  dateCenterPressed: {
+    backgroundColor: colors.surface,
+  },
+  dateLabel: {
+    ...typography.bodyStrong,
+    color: colors.primaryDark,
+    textDecorationLine: 'underline',
+  },
   statusSummary: {
     ...typography.caption,
     color: colors.textSecondary,

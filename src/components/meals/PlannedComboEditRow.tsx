@@ -19,6 +19,7 @@ type PlannedComboEditRowProps = {
   onRemove: () => void;
   onPress?: () => void;
   priceError?: string | null;
+  readOnly?: boolean;
 };
 
 export function PlannedComboEditRow({
@@ -34,6 +35,7 @@ export function PlannedComboEditRow({
   onRemove,
   onPress,
   priceError,
+  readOnly = false,
 }: PlannedComboEditRowProps) {
   const { t } = useTranslation();
   const itemsPreview = itemNames.join(' · ');
@@ -74,7 +76,7 @@ export function PlannedComboEditRow({
                 keyboardType="decimal-pad"
                 placeholder={placeholder}
                 placeholderTextColor={colors.muted}
-                editable={!savingPrice}
+                editable={!readOnly && !savingPrice}
               />
             </View>
           </View>
@@ -82,9 +84,11 @@ export function PlannedComboEditRow({
         {priceError ? <Text style={styles.priceError}>{priceError}</Text> : null}
       </View>
 
-      <Pressable onPress={onRemove} hitSlop={8} style={styles.removeBtn}>
-        <Text style={styles.removeText}>×</Text>
-      </Pressable>
+      {!readOnly ? (
+        <Pressable onPress={onRemove} hitSlop={8} style={styles.removeBtn}>
+          <Text style={styles.removeText}>×</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }

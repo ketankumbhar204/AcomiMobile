@@ -27,7 +27,7 @@ import { navigateMainStack } from '../../navigation/mainStackNavigation';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, spacing, typography } from '../../theme';
-import { addDaysIsoDate, formatMenuDate } from '../../utils/mealDates';
+import { addDaysIsoDate, formatMenuDate, isPastMenuDate } from '../../utils/mealDates';
 import {
   loadMenuDraft,
   mergeCombosIntoOptions,
@@ -76,6 +76,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
   const navigation = useNavigation<Nav>();
   const permissions = useSpacePermissions(spaceId);
   const showToast = useToastStore(state => state.showToast);
+  const dateReadOnly = isPastMenuDate(menuDate);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -144,7 +145,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
           const hasPlannedCombos = comboOptions.some(
             option => option.entryType === 'COMBO' || option.entryType === 'PACKAGE',
           );
-          if (isNewSlot && !hasPlannedCombos) {
+          if (isNewSlot && !hasPlannedCombos && !isPastMenuDate(menuDate)) {
             setComboSheetOpen(true);
           } else {
             setComboSheetOpen(false);
@@ -555,15 +556,23 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
           </View>
         </View>
 
-        <Button
-          label={t('meals.menu.copyYesterdayButton')}
-          variant="secondary"
-          loading={saving}
-          onPress={() => void copyFromYesterday()}
-          style={styles.copyButton}
-        />
+        {dateReadOnly ? (
+          <View style={styles.readOnlyBanner}>
+            <Text style={styles.readOnlyBannerText}>{t('meals.planning.pastDateReadOnly')}</Text>
+          </View>
+        ) : null}
 
-        {plannedCombos.length > 0 ? (
+        {!dateReadOnly ? (
+          <Button
+            label={t('meals.menu.copyYesterdayButton')}
+            variant="secondary"
+            loading={saving}
+            onPress={() => void copyFromYesterday()}
+            style={styles.copyButton}
+          />
+        ) : null}
+
+        {!dateReadOnly && plannedCombos.length > 0 ? (
           <Pressable
             style={styles.previewLink}
             onPress={() =>
@@ -592,6 +601,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
                   name={option.label}
                   itemNames={itemNames}
                   foodType={foodType}
+                  readOnly={dateReadOnly}
                   priceDraft={priceDrafts[chipId] ?? comboPriceDraftFromOption(resolvedPrice)}
                   resolvedPrice={resolvedPrice}
                   currencyCode={currency}
@@ -613,18 +623,20 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
           </>
         ) : null}
 
-        <View style={styles.addLinks}>
-          <Pressable onPress={() => setComboSheetOpen(true)}>
-            <Text style={styles.addLinkText}>{t('meals.menu.addCombo')}</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => {
-              setCreateComboReturnToSelect(false);
-              setCreateComboSheetOpen(true);
-            }}>
-            <Text style={styles.addLinkText}>{t('meals.menu.createCombo')}</Text>
-          </Pressable>
-        </View>
+        {!dateReadOnly ? (
+          <View style={styles.addLinks}>
+            <Pressable onPress={() => setComboSheetOpen(true)}>
+              <Text style={styles.addLinkText}>{t('meals.menu.addCombo')}</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                setCreateComboReturnToSelect(false);
+                setCreateComboSheetOpen(true);
+              }}>
+              <Text style={styles.addLinkText}>{t('meals.menu.createCombo')}</Text>
+            </Pressable>
+          </View>
+        ) : null}
 
         <Text style={styles.sectionLabel}>{t('meals.menu.notes')}</Text>
         <TextInput
@@ -632,11 +644,13 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
           value={notes}
           onChangeText={setNotes}
           multiline
+          editable={!dateReadOnly}
           placeholder={t('meals.menu.notesPlaceholder')}
         />
       </ScrollView>
 
-      <View style={styles.stickyFooter}>
+      {!dateReadOnly ? (
+        <View style={styles.stickyFooter}>
         {status === 'DRAFT' && options.length > 0 ? (
           <Pressable
             style={styles.deleteLink}
@@ -663,39 +677,44 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
           />
         </View>
       </View>
+      ) : null}
 
-      <SelectComboSheet
-        visible={comboSheetOpen}
-        spaceId={spaceId}
-        existingOptions={options}
-        onClose={() => setComboSheetOpen(false)}
-        onSave={handleSelectCombos}
-        onCreateCombo={() => {
-          setComboSheetOpen(false);
-          setCreateComboReturnToSelect(true);
-          setCreateComboSheetOpen(true);
-        }}
-      />
+      {!dateReadOnly ? (
+        <>
+          <SelectComboSheet
+            visible={comboSheetOpen}
+            spaceId={spaceId}
+            existingOptions={options}
+            onClose={() => setComboSheetOpen(false)}
+            onSave={handleSelectCombos}
+            onCreateCombo={() => {
+              setComboSheetOpen(false);
+              setCreateComboReturnToSelect(true);
+              setCreateComboSheetOpen(true);
+            }}
+          />
 
-      <CreateComboSheet
-        visible={createComboSheetOpen}
-        spaceId={spaceId}
-        existingOptions={options}
-        onClose={() => {
-          setCreateComboSheetOpen(false);
-          setCreateComboReturnToSelect(false);
-        }}
-        onBack={
-          createComboReturnToSelect
-            ? () => {
-                setCreateComboSheetOpen(false);
-                setCreateComboReturnToSelect(false);
-                setComboSheetOpen(true);
-              }
-            : undefined
-        }
-        onSave={handleCreateCombo}
-      />
+          <CreateComboSheet
+            visible={createComboSheetOpen}
+            spaceId={spaceId}
+            existingOptions={options}
+            onClose={() => {
+              setCreateComboSheetOpen(false);
+              setCreateComboReturnToSelect(false);
+            }}
+            onBack={
+              createComboReturnToSelect
+                ? () => {
+                    setCreateComboSheetOpen(false);
+                    setCreateComboReturnToSelect(false);
+                    setComboSheetOpen(true);
+                  }
+                : undefined
+            }
+            onSave={handleCreateCombo}
+          />
+        </>
+      ) : null}
 
       <ComboItemsPopup
         visible={comboPreviewOpen}
@@ -739,6 +758,15 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   copyButton: { marginBottom: spacing.sm },
+  readOnlyBanner: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.button,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  readOnlyBannerText: { ...typography.caption, color: colors.muted, lineHeight: 18 },
   previewLink: { marginBottom: spacing.md },
   previewLinkText: { ...typography.body, color: colors.primaryDark, fontWeight: '600' },
   loader: { marginVertical: spacing.md },

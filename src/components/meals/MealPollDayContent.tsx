@@ -5,6 +5,7 @@ import type { MealDeliveryLocation, MealPollSlot, MealType, UUID } from '../../a
 import { Button } from '../ui';
 import { colors, spacing, typography } from '../../theme';
 import { formatComboNameWithPrice } from '../../utils/comboPrice';
+import { formatMenuDate } from '../../utils/mealDates';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
 import { MealDeliveryLocationCompact } from './MealDeliveryLocationCompact';
 import { MealPollOptionRadio } from './MealPollOptionRadio';
@@ -32,6 +33,7 @@ type MealPollDayContentProps = {
   variant?: 'dashboard' | 'screen' | 'sheet';
   dateLabel?: string;
   hideSubmitButton?: boolean;
+  readOnly?: boolean;
 };
 
 export function MealPollDayContent({
@@ -56,6 +58,7 @@ export function MealPollDayContent({
   variant = 'screen',
   dateLabel: dateLabelProp,
   hideSubmitButton = false,
+  readOnly = false,
 }: MealPollDayContentProps) {
   const { t, i18n } = useTranslation();
   const isDashboard = variant === 'dashboard';
@@ -84,7 +87,11 @@ export function MealPollDayContent({
       )}
       {isSheet || !isDashboard ? (
         <Text style={styles.subtitle}>
-          {multiQuantity ? t('meals.poll.responseHintMess') : t('meals.poll.responseHint')}
+          {readOnly
+            ? t('meals.poll.pastDateReadOnly')
+            : multiQuantity
+              ? t('meals.poll.responseHintMess')
+              : t('meals.poll.responseHint')}
         </Text>
       ) : null}
 
@@ -149,6 +156,7 @@ export function MealPollDayContent({
                           option={option}
                           quantity={quantitySelections[poll.mealType]?.[option.id] ?? 0}
                           onChange={qty => onQuantityChange?.(poll.mealType, option.id, qty)}
+                          readOnly={readOnly}
                         />
                       ))
                   : poll.options.map(option => (
@@ -157,6 +165,7 @@ export function MealPollDayContent({
                         option={option}
                         selected={selections[poll.mealType] === option.id}
                         onSelect={() => onSelect(poll.mealType, option.id)}
+                        readOnly={readOnly}
                       />
                     ))}
                 {showDeliveryForMeal && mealPlates > 0 ? (
@@ -165,6 +174,7 @@ export function MealPollDayContent({
                     selectedId={deliverySelections[poll.mealType]}
                     lastUsedLocationId={lastDeliveryLocations[poll.mealType]}
                     onSelect={locationId => onDeliveryLocationChange?.(poll.mealType, locationId)}
+                    readOnly={readOnly}
                   />
                 ) : null}
               </View>
@@ -195,7 +205,7 @@ export function MealPollDayContent({
         </View>
       ) : null}
 
-      {!hideSubmitButton ? (
+      {!hideSubmitButton && !readOnly ? (
         <Button
           label={
             saving

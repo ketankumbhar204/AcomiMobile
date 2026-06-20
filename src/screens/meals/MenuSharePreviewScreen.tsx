@@ -17,7 +17,7 @@ import { Screen } from '../../components/ui/Screen';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, spacing, typography } from '../../theme';
-import { formatMenuDate } from '../../utils/mealDates';
+import { formatMenuDate, isPastMenuDate } from '../../utils/mealDates';
 import { MEAL_TYPES } from '../../utils/mealLabels';
 import {
   buildShareMessageForSelection,
@@ -44,6 +44,7 @@ export function MenuSharePreviewScreen({
   const { t, i18n } = useTranslation();
   const navigation = useNavigation<Nav>();
   const showToast = useToastStore(state => state.showToast);
+  const dateReadOnly = isPastMenuDate(menuDate);
 
   const [loadingMenus, setLoadingMenus] = useState(true);
   const [loadingPreview, setLoadingPreview] = useState(false);
@@ -139,6 +140,10 @@ export function MenuSharePreviewScreen({
   };
 
   const shareMessage = async () => {
+    if (dateReadOnly) {
+      showToast(t('meals.errors.pastDateReadOnly'));
+      return;
+    }
     if (!messageText || selectedTypes.length === 0) {
       showToast(t('meals.planning.shareSelectAtLeastOne'));
       return;
@@ -170,13 +175,17 @@ export function MenuSharePreviewScreen({
   };
 
   const loading = loadingMenus || loadingPreview;
-  const shareDisabled = !messageText || loading || sharing;
+  const shareDisabled = dateReadOnly || !messageText || loading || sharing;
 
   return (
     <Screen scrollable contentStyle={styles.content}>
       <Text style={styles.title}>{t('meals.planning.previewShare')}</Text>
       <Text style={styles.date}>{formatMenuDate(menuDate, i18n.language)}</Text>
-      <Text style={styles.hint}>{t('meals.planning.shareHint')}</Text>
+      {dateReadOnly ? (
+        <Text style={styles.readOnlyHint}>{t('meals.planning.pastDateReadOnly')}</Text>
+      ) : (
+        <Text style={styles.hint}>{t('meals.planning.shareHint')}</Text>
+      )}
 
       {loadingMenus ? <ActivityIndicator color={colors.primary} style={styles.loader} /> : null}
 
@@ -195,6 +204,7 @@ export function MenuSharePreviewScreen({
               selected={selectedTypes.includes(type)}
               onToggle={() => toggleMealType(type)}
               alreadyShared={sharedMealTypes.has(type)}
+              disabled={dateReadOnly}
             />
           ))}
 
@@ -214,14 +224,16 @@ export function MenuSharePreviewScreen({
             </View>
           ) : null}
 
-          <Pressable
-            style={[styles.shareBtn, shareDisabled && styles.shareBtnDisabled]}
-            disabled={shareDisabled}
-            onPress={() => void shareMessage()}>
-            <Text style={styles.shareBtnText}>
-              {sharing ? t('meals.poll.openingPolls') : t('meals.planning.copyMessage')}
-            </Text>
-          </Pressable>
+          {!dateReadOnly ? (
+            <Pressable
+              style={[styles.shareBtn, shareDisabled && styles.shareBtnDisabled]}
+              disabled={shareDisabled}
+              onPress={() => void shareMessage()}>
+              <Text style={styles.shareBtnText}>
+                {sharing ? t('meals.poll.openingPolls') : t('meals.planning.copyMessage')}
+              </Text>
+            </Pressable>
+          ) : null}
         </>
       ) : null}
     </Screen>
@@ -233,6 +245,12 @@ const styles = StyleSheet.create({
   title: { ...typography.h2, marginBottom: spacing.xs },
   date: { ...typography.bodyStrong, marginBottom: spacing.sm },
   hint: { ...typography.caption, color: colors.muted, marginBottom: spacing.lg },
+  readOnlyHint: {
+    ...typography.caption,
+    color: colors.muted,
+    marginBottom: spacing.lg,
+    lineHeight: 18,
+  },
   sectionLabel: { ...typography.bodyStrong, marginBottom: spacing.sm },
   selectHint: {
     ...typography.caption,

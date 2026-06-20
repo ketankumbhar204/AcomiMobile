@@ -1,14 +1,13 @@
 import React, { useCallback } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { DashboardAttentionItem, UUID } from '../../api/types';
 import { navigateMainStack } from '../../navigation/mainStackNavigation';
 import { navigateToPaymentsTab } from '../../navigation/navigationRef';
-import { colors, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { formatComboPrice } from '../../utils/comboPrice';
 import { tomorrowIsoDate } from '../../utils/mealDates';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
-import { Button, Card } from '../ui';
 
 type DashboardAttentionCardProps = {
   spaceId: UUID;
@@ -42,7 +41,7 @@ export function DashboardAttentionCard({ spaceId, attention }: DashboardAttentio
         : 'dashboard.attention.partial_planned.titleMultiple'
       : `dashboard.attention.${attention.kind}.title`;
 
-  const bodyKey = `dashboard.attention.${attention.kind}.body`;
+  const subtitleKey = `dashboard.attention.${attention.kind}.subtitle`;
 
   const titleParams =
     attention.kind === 'partial_planned' && (attention.missingMealTypes?.length ?? 0) === 1
@@ -52,15 +51,10 @@ export function DashboardAttentionCard({ spaceId, attention }: DashboardAttentio
       : attention.kind === 'payments_overdue'
         ? {
             count: attention.overdueCount ?? 0,
-            amount:
-              formatComboPrice(
-                attention.overdueAmount ?? null,
-                attention.currencyCode ?? 'INR',
-              ) ?? '—',
           }
         : undefined;
 
-  const bodyParams = {
+  const subtitleParams = {
     scheduled: attention.scheduledCount,
     total: attention.totalMeals,
     responded: attention.respondedCount,
@@ -70,15 +64,17 @@ export function DashboardAttentionCard({ spaceId, attention }: DashboardAttentio
       formatComboPrice(attention.overdueAmount ?? null, attention.currencyCode ?? 'INR') ?? '—',
   };
 
-  const onPrimaryAction = useCallback(() => {
+  const onPress = useCallback(() => {
     switch (attention.kind) {
       case 'not_planned':
       case 'partial_planned':
         navigateMainStack('MenuPlanning', { spaceId, menuDate: tomorrow });
         return;
       case 'ready_to_share':
-      case 'poll_open':
         navigateMainStack('MenuSharePreview', { spaceId, menuDate: tomorrow });
+        return;
+      case 'poll_open':
+        navigateMainStack('MenuPlanning', { spaceId, menuDate: tomorrow });
         return;
       case 'payments_overdue':
         navigateToPaymentsTab(spaceId);
@@ -88,48 +84,106 @@ export function DashboardAttentionCard({ spaceId, attention }: DashboardAttentio
     }
   }, [attention.kind, spaceId, tomorrow]);
 
-  const actionLabel = t(`dashboard.attention.${attention.kind}.action`);
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      onPress={onPress}
+      accessibilityRole="button">
+      <View style={styles.content}>
+        <View style={styles.titleRow}>
+          <Text style={styles.icon}>{attentionIcon(attention.kind)}</Text>
+          <Text style={styles.title} numberOfLines={2}>
+            {t(titleKey, titleParams)}
+          </Text>
+        </View>
+        <Text style={styles.subtitle} numberOfLines={2}>
+          {t(subtitleKey, subtitleParams)}
+        </Text>
+      </View>
+      <Text style={styles.chevron}>›</Text>
+    </Pressable>
+  );
+}
+
+type DashboardAttentionCardsRowProps = {
+  spaceId: UUID;
+  items: DashboardAttentionItem[];
+};
+
+export function DashboardAttentionCardsRow({ spaceId, items }: DashboardAttentionCardsRowProps) {
+  if (items.length === 0) {
+    return null;
+  }
 
   return (
-    <Card style={styles.card}>
-      <View style={styles.headerRow}>
-        <Text style={styles.icon}>{attentionIcon(attention.kind)}</Text>
-        <Text style={styles.title}>{t(titleKey, titleParams)}</Text>
-      </View>
-      <Text style={styles.body}>{t(bodyKey, bodyParams)}</Text>
-      <Button label={actionLabel} onPress={onPrimaryAction} style={styles.button} />
-    </Card>
+    <View style={styles.row}>
+      {items.map((attention, index) => (
+        <DashboardAttentionCard
+          key={`${attention.kind}-${index}`}
+          spaceId={spaceId}
+          attention={attention}
+        />
+      ))}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
+  row: {
+    flexDirection: 'row',
+    gap: spacing.sm,
     marginBottom: spacing.lg,
-    borderColor: '#F59E0B55',
-    backgroundColor: colors.white,
   },
-  headerRow: {
+  card: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.white,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    minHeight: 72,
+    ...shadows.sm,
+  },
+  cardPressed: {
+    borderColor: `${colors.primary}66`,
+    backgroundColor: colors.surface,
+  },
+  content: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  titleRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: spacing.sm,
-    marginBottom: spacing.xs,
+    gap: spacing.xs,
   },
   icon: {
-    fontSize: 18,
-    lineHeight: 24,
+    fontSize: 16,
+    lineHeight: 20,
   },
   title: {
     ...typography.bodyStrong,
     flex: 1,
     color: colors.textPrimary,
+    fontSize: 14,
+    lineHeight: 18,
   },
-  body: {
-    ...typography.body,
+  subtitle: {
+    ...typography.caption,
     color: colors.muted,
-    marginBottom: spacing.md,
-    lineHeight: 22,
+    marginLeft: 22,
+    lineHeight: 16,
   },
-  button: {
-    alignSelf: 'flex-start',
+  chevron: {
+    fontSize: 22,
+    fontWeight: '300',
+    color: colors.muted,
+    paddingLeft: spacing.xxs,
   },
 });
