@@ -1,6 +1,6 @@
-# Phase 6 Handoff — MeOption Polls & Member Responses
+# Phase 6 Handoff — Menu Option Polls & Member Responses
 
-Phase 5 delivers menus, participation, and share preview. Phase 6 add *numbered menu options** that members pick (one per meal) — not simple YES/NO attendance.
+Phase 5 delivers menus, participation, and share preview. Phase 6 adds **numbered menu options** that members pick (one per meal) — not simple YES/NO attendance.
 
 ---
 
@@ -98,7 +98,7 @@ Base: `/api/v1/spaces/{spaceId}/meal-polls`
 1. Publish daily menu
 2. **Share menu** — numbered WhatsApp text **and auto-opens in-app polls** for selected meals
 3. Optional: **Close poll** on Menu Planning when cutoff time passes
-4. (6D) Headcount dashboard — per option breakdown (next)
+4. Headcount dashboard — per option breakdown ✅ (`GET /meals/headcount?date=`)
 
 ### Member (TENANT / CUSTOMER)
 
@@ -108,23 +108,29 @@ Base: `/api/v1/spaces/{spaceId}/meal-polls`
 
 ---
 
-## Headcount (6D — next)
+## Headcount (6D) ✅
 
-Kitchen view should show per option:
+Kitchen view shows per option:
 
 - Combo 1: 12
 - Combo 2: 5
 - Not available: 3
 
-`GET /meals/headcount?date=&mealType=` — not implemented yet.
+`GET /api/v1/spaces/{spaceId}/meals/headcount?date=` — implemented. Used on menu planning and Mess dashboard (`todaysHeadcount`).
 
 Phase 5 **eligible participants** APIs remain for spaces without open polls.
 
 ---
 
+## Billing signals (Phase 6 → 7)
+
+Member meal activity amounts feed the Phase 7 dashboard and payments ledger. See [payments-phase-7-dashboard.md](./payments-phase-7-dashboard.md).
+
+---
+
 ## Out of scope
 
-- Billing, credits, wallets (Phase 7+)
+- Rent collection recording, subscription/credits invoices (Phase 7 — partial; see [payments-phase-7-dashboard.md](./payments-phase-7-dashboard.md))
 - Automated WhatsApp poll delivery (manual share in v1)
 - WhatsApp inbound response parsing
 

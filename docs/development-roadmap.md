@@ -107,7 +107,7 @@
 
 > **Delivered:** 4.1 Structure CRUD · 4.2 Quick Setup & Builder · 4.3 Occupancy lifecycle · 4.3b Contract snapshots · Dashboard Residents module card
 >
-> **Remaining polish (4.5):** real dashboard metrics, availability browse screen, permission tab gating, structure list filters
+> **Remaining polish (4.5):** availability browse screen, structure list filters (dashboard occupancy metrics ✅ via Phase 7 dashboard-summary)
 
 ### Goal
 
@@ -217,7 +217,7 @@ Available · Occupied · Reserved · Maintenance · Blocked
 * ✅ Text search on structure list screens
 * ✅ Allocation-target search in occupancy wizard
 * 🔶 Filter by building, floor, unit, room, status — hierarchy navigation + wizard filters only; no global structure filter UI
-* 🔶 Dashboard occupancy metric — placeholder value; not yet wired to summary API
+* ✅ Dashboard occupancy metrics — occupied/vacant beds, move-ins, pending payments (dashboard-summary API)
 
 ### Permissions ✅ (Phase 4.5)
 
@@ -246,7 +246,7 @@ Rent, billing, payments, deposits, complaints, maintenance tickets — handled i
 
 ## Phase 5 - Meal Management 🔶 Mess MVP in progress
 
-> **Architecture:** [meals-phase-5-backend.md](./meals-phase-5-backend.md) · [meals-phase-5-ui-integration.md](./meals-phase-5-ui-integration.md) · [meals-phase-5.2-menu-planning.md](./meals-phase-5.2-menu-planning.md) · [meals-phase-5-menu-library-architecture.md](./meals-phase-5-menu-library-architecture.md)
+> **Architecture:** [meals-phase-5-backend.md](./meals-phase-5-backend.md) · [meals-phase-5-ui-integration.md](./meals-phase-5-ui-integration.md) · [meals-phase-5.2-menu-planning.md](./meals-phase-5.2-menu-planning.md) · [meals-phase-5-menu-library-architecture.md](./meals-phase-5-menu-library-architecture.md) · [payments-phase-7-dashboard.md](./payments-phase-7-dashboard.md)
 >
 > **Scope:** Mess spaces only. PG/hostel food-in-rent uses participation hooks; full meal tab is Mess-first.
 
@@ -382,8 +382,8 @@ Rent, billing, payments, deposits, complaints, maintenance tickets — handled i
 
 ### PG / Hostel (when switching focus)
 
-1. **Phase 4.5** — real occupancy dashboard metrics, availability browse screen, structure filters
-2. **Phase 7** — rent collection
+1. **Phase 4.5** — availability browse screen, structure filters
+2. **Phase 7** — rent collection recording API
 
 ---
 

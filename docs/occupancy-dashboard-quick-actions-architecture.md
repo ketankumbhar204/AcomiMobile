@@ -216,7 +216,7 @@ OccupancyWizard
 | **P1 (backend)** | Member list `search` + `occupancyStatus`; `MemberResponse.occupancyStatus` |
 | **P1 (mobile)** | `OccupancyWizard` + Dashboard quick action shell |
 | **P2 (mobile)** | Wire member-first / bed-first to wizard |
-| **P2 (backend)** | Dashboard operational summary counts (optional) |
+| **P2 (backend)** | Dashboard operational summary counts ✅ (`dashboard-summary` API — Phase 7) |
 
 ---
 

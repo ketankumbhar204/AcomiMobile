@@ -319,19 +319,43 @@ Output:
 
 ## Payment Module
 
+**Phase 7 (partial):** Dashboard financial rollup and member payment ledger — see [payments-phase-7-dashboard.md](./payments-phase-7-dashboard.md).
+
 Responsibilities:
 
-* Rent Collection
-* Mess Fees
-* Maintenance Charges
-* Deposit Tracking
-* Payment Proof Verification
+* Rent Collection (expected from occupancy ✅; recording ⬜)
+* Mess Fees (meal activity + poll payments ✅)
+* Maintenance Charges (future)
+* Deposit Tracking (member profile ✅; space collections ⬜)
+* Payment Proof Verification (meal polls 🔶)
 
-Payment Status:
+Payment status (ledger rows):
 
-* PAID
-* PARTIAL
-* PENDING
+* `PAID` | `PARTIAL` | `PENDING` | `NONE`
+
+Financial cards (all space types):
+
+* Expected Charges · Collected · Pending
+
+---
+
+## Dashboard Module
+
+**Phase 7 (partial):** Unified operator dashboard — see [payments-phase-7-dashboard.md](./payments-phase-7-dashboard.md).
+
+Responsibilities:
+
+* Space financial snapshot (month)
+* Mess operational metrics (eligibility, menus, polls, headcount)
+* Accommodation operational metrics (beds, move-ins, pending payments)
+* Attention items (menu planning, open polls, overdue payments)
+
+APIs:
+
+* `GET /api/v1/spaces/{spaceId}/dashboard-summary`
+* `GET /api/v1/spaces/{spaceId}/payments/ledger`
+
+Access: dashboard summary — OWNER/MANAGER/STAFF; ledger — OWNER/MANAGER.
 
 ---
 

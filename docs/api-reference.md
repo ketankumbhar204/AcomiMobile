@@ -10,7 +10,7 @@ API documentation for frontend integration (React Native / web).
 | iOS simulator | `http://localhost:8080` |
 | Physical device | `http://<YOUR_PC_LAN_IP>:8080` |
 
-**Auth:** None yet (all endpoints are open).
+**Auth:** JWT Bearer token (`Authorization: Bearer <accessToken>`) on protected endpoints.
 
 **Content-Type:** `application/json`
 
@@ -73,6 +73,116 @@ Validation errors (`400`) may include field errors in `data`:
 
 ---
 
+## Dashboard & payments (Phase 7)
+
+> Full spec: [payments-phase-7-dashboard.md](./payments-phase-7-dashboard.md)
+
+Financial cards use generic labels everywhere: **Expected Charges**, **Collected**, **Pending** (`Pending = Expected − Collected`; when collected is unknown, pending equals full expected).
+
+### Get dashboard summary
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/v1/spaces/{spaceId}/dashboard-summary` |
+| **Query** | `month` — optional `YYYY-MM` (defaults to current month) |
+| **Auth** | Bearer JWT |
+| **Access** | `OWNER`, `MANAGER`, `STAFF` |
+
+**Success — `200` `data` shape**
+
+```json
+{
+  "spaceType": "MESS",
+  "month": "2026-06",
+  "financial": {
+    "expectedCharges": 15000,
+    "collected": 8000,
+    "pending": 7000,
+    "currencyCode": "INR",
+    "source": "MEAL_ACTIVITY"
+  },
+  "messOperations": {
+    "membersReceivingMeals": 42,
+    "menusPublishedThisMonth": 18,
+    "openPollsCount": 1,
+    "todaysHeadcount": 35,
+    "pollRespondedCount": 28,
+    "pollEligibleCount": 42
+  },
+  "accommodationOperations": null,
+  "attention": [
+    {
+      "kind": "poll_open",
+      "scheduledCount": 3,
+      "totalMeals": 3,
+      "missingMealTypes": [],
+      "respondedCount": 28,
+      "eligibleCount": 42,
+      "openPollCount": 1
+    }
+  ]
+}
+```
+
+| Field | Notes |
+|-------|-------|
+| `financial.source` | `MEAL_ACTIVITY` (Mess), `OCCUPANCY` (PG/hostel/rental), `HYBRID` (accommodation + meal participation) |
+| `messOperations` | Present for `MESS` spaces only |
+| `accommodationOperations` | Present for PG / HOSTEL / CO_LIVING / RENTAL |
+| `attention` | Mess menu/poll items + `payments_overdue` when pending member payments exist |
+
+**Expected charges by space type**
+
+| Space type | Source |
+|------------|--------|
+| Mess | Confirmed meal selections (`MemberMealActivityService`) — not published menus alone |
+| PG / Hostel / Co-living / Rental | Active occupancy `rentSnapshot` + food charges when applicable |
+| PG + food | Hybrid sum of meal activity + occupancy |
+
+**Collected today:** meal poll payments only. PG rent collection recording is not implemented — `collected` may be `null` for occupancy-only rows.
+
+### Get payment ledger
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/v1/spaces/{spaceId}/payments/ledger` |
+| **Query** | `month` — optional `YYYY-MM` |
+| **Auth** | Bearer JWT |
+| **Access** | `OWNER`, `MANAGER` only |
+
+**Success — `200`**
+
+```json
+{
+  "month": "2026-06",
+  "spaceType": "PG",
+  "summary": {
+    "expectedCharges": 24000,
+    "collected": null,
+    "pending": 24000,
+    "currencyCode": "INR",
+    "source": "OCCUPANCY"
+  },
+  "members": [
+    {
+      "memberId": "550e8400-e29b-41d4-a716-446655440000",
+      "memberName": "Rahul Kumar",
+      "expectedCharges": 8000,
+      "collected": null,
+      "pending": 8000,
+      "currencyCode": "INR",
+      "status": "PENDING"
+    }
+  ]
+}
+```
+
+Members sorted by `pending` descending, then name. Frontend falls back to client aggregation on `404` or network error only.
+
+---
+
 ## Shared enums
 
 Use exact string values in request bodies and when parsing responses.
@@ -84,6 +194,12 @@ Use exact string values in request bodies and when parsing responses.
 **MembershipStatus:** `INVITATION_SENT` | `ACCEPTED` | `ACTIVE` | `INACTIVE` | `REMOVED` | `VACATED`
 
 **InvitationStatus:** `PENDING` | `ACCEPTED` | `REJECTED` | `EXPIRED`
+
+**DashboardFinancialSource:** `API` | `MEAL_ACTIVITY` | `OCCUPANCY` | `HYBRID`
+
+**MemberPaymentStatus:** `PAID` | `PARTIAL` | `PENDING` | `NONE`
+
+**DashboardAttentionKind:** `not_planned` | `partial_planned` | `ready_to_share` | `poll_open` | `payments_overdue`
 
 ---
 
@@ -310,13 +426,17 @@ Invitations expire after **7 days** (`expiresAt`).
 
 ---
 
-## Endpoints not implemented yet
+## Endpoints not fully documented here
 
-| Resource | Status |
-|----------|--------|
-| User register / login | Not built — users must exist in DB first |
-| Member CRUD | Not built |
-| Room / Meal / Payment / Complaint | Not built |
+This file documents core space/membership flows and Phase 7 dashboard APIs. Additional implemented modules (auth, members, accommodation, occupancy, meals, polls, headcount) are covered in module-specific docs under `docs/`.
+
+| Resource | Doc |
+|----------|-----|
+| Auth (OTP + JWT) | [auth-ui-integration.md](./auth-ui-integration.md) |
+| Meals & polls | [meals-phase-5-backend.md](./meals-phase-5-backend.md), [meals-phase-6-handoff.md](./meals-phase-6-handoff.md) |
+| Dashboard & payments | [payments-phase-7-dashboard.md](./payments-phase-7-dashboard.md) |
+| Permissions | [permissions-backend-spec.md](./permissions-backend-spec.md) |
+| Accommodation & occupancy | [accommodation-domain-model.md](./accommodation-domain-model.md), [occupancy-phase-4.3b-backend.md](./occupancy-phase-4.3b-backend.md) |
 
 ---
 

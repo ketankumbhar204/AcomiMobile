@@ -17,7 +17,7 @@ CountIn uses **Mobile Number + OTP** authentication. There is **no password** an
 | Session | JWT Bearer token returned after OTP verification |
 | Token lifetime | 24 hours (86,400,000 ms) by default |
 
-**MVP OTP:** Always use `123456` (fixed on backend for development).
+**MVP OTP:** Use value from `countin.otp.mvp-code` in backend `application.yml` (default `111111` for development).
 
 ---
 
