@@ -20,7 +20,8 @@ import type {
 import { DailyMenuSlotCard, MealHeadcountBottomSheet } from '../../components/meals';
 import { MenuDateContextHints } from '../../components/meals/MenuDateContextHints';
 import { MenuDatePickerModal } from '../../components/meals/MenuDatePickerModal';
-import { Button, Screen } from '../../components/ui';
+import { MenuPlanningFilterDrawer } from '../../components/meals/MenuPlanningFilterDrawer';
+import { Button, ListSearchFilterBar, Screen } from '../../components/ui';
 import { navigateToMembersTab } from '../../navigation/navigationRef';
 import { useMainStackNavigation } from '../../hooks/useMainStackNavigation';
 import { useOwnerMealHeadcount } from '../../hooks/useOwnerMealHeadcount';
@@ -35,6 +36,11 @@ import {
   tomorrowIsoDate,
 } from '../../utils/mealDates';
 import { summarizeDailyMenuDay } from '../../utils/dailyMenuDayStatus';
+import {
+  countMenuPlanningFilters,
+  filterMealTypesByPlanningStatus,
+  type MenuPlanningStatusFilter,
+} from '../../utils/menuPlanningFilter';
 import { MEAL_TYPES } from '../../utils/mealLabels';
 
 type MenuPlanningScreenProps = {
@@ -90,6 +96,10 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
   const [pollActionMealType, setPollActionMealType] = useState<MealType | null>(null);
   const [headcountMealType, setHeadcountMealType] = useState<MealType | null>(null);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [planningStatusFilters, setPlanningStatusFilters] = useState<
+    Set<MenuPlanningStatusFilter>
+  >(new Set());
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -141,6 +151,11 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
   );
   const eligibilityMap = useMemo(() => eligibilityByType(eligibility), [eligibility]);
   const statusSummary = useMemo(() => dayStatusSummary(menus), [menus]);
+  const visibleMealTypes = useMemo(
+    () => filterMealTypesByPlanningStatus(MEAL_TYPES, menuMap, planningStatusFilters),
+    [menuMap, planningStatusFilters],
+  );
+  const activeFilterCount = countMenuPlanningFilters(planningStatusFilters);
   const dateReadOnly = isPastMenuDate(menuDate);
   const canShareMenu = !dateReadOnly && MEAL_TYPES.some(type => hasPlannedMenu(menuMap[type]));
   const distinctEligible = useMemo(() => {
@@ -263,6 +278,23 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
       ) : null}
 
       {!loading && !error ? (
+        <ListSearchFilterBar
+          searchValue=""
+          onSearchChange={() => {}}
+          onFilterPress={() => setFilterDrawerOpen(true)}
+          activeFilterCount={activeFilterCount}
+          showSearch={false}
+        />
+      ) : null}
+
+      <MenuPlanningFilterDrawer
+        visible={filterDrawerOpen}
+        applied={planningStatusFilters}
+        onClose={() => setFilterDrawerOpen(false)}
+        onApply={setPlanningStatusFilters}
+      />
+
+      {!loading && !error ? (
         <View style={styles.summaryRow}>
           <View style={styles.summaryTextBlock}>
             <Text style={styles.statusSummary}>
@@ -304,7 +336,7 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
         </Pressable>
       ) : null}
 
-      {MEAL_TYPES.map(mealType => {
+      {visibleMealTypes.map(mealType => {
         const slotEligibility = eligibilityMap[mealType];
         const slotPoll = pollMap[mealType];
         return (
@@ -361,6 +393,11 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
               <Text style={styles.linkText}>{t('meals.deliveryLocations.manage')}</Text>
             </Pressable>
           ) : null}
+          <Pressable
+            style={styles.linkRow}
+            onPress={() => navigateMain('SubscriptionPlans', { spaceId })}>
+            <Text style={styles.linkText}>{t('meals.subscriptionPlans.title')}</Text>
+          </Pressable>
         </View>
       ) : null}
 

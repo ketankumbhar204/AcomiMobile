@@ -54,8 +54,37 @@ export interface SpaceDetailsResponse {
   foodIncludedInRent?: boolean;
   /** Default separate food charge when food is not bundled in rent. */
   defaultFoodCharge?: number | null;
+  /** Mess billing mode — pay per meal or prepaid balance. */
+  mealBillingType?: MealBillingType;
+  prepaidBalanceUnit?: PrepaidBalanceUnit | null;
+  prepaidFallbackToPayPerMeal?: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export type MealBillingType = 'PAY_PER_MEAL' | 'PREPAID_BALANCE';
+
+export type PrepaidBalanceUnit = 'MEALS' | 'CURRENCY';
+
+export interface MealBillingSettings {
+  billingType: MealBillingType;
+  prepaidBalanceUnit?: PrepaidBalanceUnit | null;
+  fallbackToPayPerMeal: boolean;
+}
+
+export interface UpdateMealBillingSettingsRequest {
+  billingType: MealBillingType;
+  prepaidBalanceUnit?: PrepaidBalanceUnit | null;
+  fallbackToPayPerMeal?: boolean;
+}
+
+export interface PrepaidBalanceSummary {
+  balanceSold: number | null;
+  balanceConsumed: number | null;
+  balanceRemaining: number | null;
+  amountCollected?: number | null;
+  unit?: PrepaidBalanceUnit;
+  currencyCode?: string;
 }
 
 export interface UserSpaceResponse {
@@ -333,6 +362,7 @@ export interface MealDeliveryLocation {
   id: UUID;
   name: string;
   description?: string | null;
+  address?: string | null;
   active: boolean;
   sortOrder: number;
 }
@@ -354,6 +384,31 @@ export interface MealPollDayResponse {
   myRejectionReason?: string | null;
   deliveryLocations?: MealDeliveryLocation[];
   myLastDeliveryLocationIds?: Partial<Record<MealType, UUID>>;
+  myMealBillingType?: MealBillingType | null;
+  myPrepaidOverflowAmount?: number | null;
+  myPrepaidDebitedAmount?: number | null;
+  myPrepaidOverflowPayment?: boolean | null;
+}
+
+export type MealPollPaymentEventType =
+  | 'PAY_LATER_SELECTED'
+  | 'MARK_AS_PAID_SELECTED'
+  | 'PROOF_SUBMITTED'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'REMINDER_SENT'
+  | 'PREPAID_OVERFLOW_PAY_LATER';
+
+export interface MealPollPaymentEvent {
+  eventId: UUID;
+  pollDate: string;
+  eventType: MealPollPaymentEventType;
+  paymentStatus?: MealPollPaymentStatus | null;
+  paymentChoice?: MealPollPaymentChoice | null;
+  amount?: number | null;
+  remarks?: string | null;
+  actorId?: UUID | null;
+  createdAt: string;
 }
 
 export interface SubmitMealPollOptionQuantity {
@@ -466,6 +521,68 @@ export interface MemberMealActivitySummary {
   paidAmount?: number | null;
   pendingAmount?: number | null;
   currencyCode?: string | null;
+  balanceRemaining?: number | null;
+  balancePurchased?: number | null;
+  balanceConsumed?: number | null;
+  amountPaidThisMonth?: number | null;
+  balanceUnit?: PrepaidBalanceUnit | null;
+}
+
+export interface MemberMealBalance {
+  balance: number;
+  unit: PrepaidBalanceUnit;
+  currencyCode: string;
+  purchasedThisMonth?: number | null;
+  consumedThisMonth?: number | null;
+  amountPaidThisMonth?: number | null;
+  lastPurchaseMeals?: number | null;
+  lastPurchasePaidAmount?: number | null;
+  currentAmountPaid?: number | null;
+  lastPurchaseAt?: string | null;
+  mealsIncluded?: number | null;
+  mealsUsed?: number | null;
+  mealsRemaining?: number | null;
+  validTill?: string | null;
+  active?: boolean;
+  endedAt?: string | null;
+  endedBy?: UUID | null;
+}
+
+export type MealSubscriptionAction = 'CREATED' | 'UPDATED' | 'RENEWED' | 'MEALS_ADDED' | 'ENDED';
+
+export type MemberMealBalanceActivityEventType = 'PURCHASE' | 'DEBIT' | 'ENDED';
+
+export interface MemberMealBalanceActivityEvent {
+  eventId: UUID;
+  eventType: MemberMealBalanceActivityEventType;
+  meals?: number | null;
+  paidAmount?: number | null;
+  mealType?: MealType | null;
+  pollDate?: string | null;
+  remarks?: string | null;
+  balanceAfter?: number | null;
+  createdAt: string;
+  subscriptionAction?: MealSubscriptionAction | null;
+}
+
+export interface MemberSubscriptionLifetimeSummary {
+  totalMealsPurchased?: number | null;
+  totalMealsConsumed?: number | null;
+  totalAmountPaid?: number | null;
+  totalActivities?: number | null;
+}
+
+export interface MemberSubscriptionHistoryResponse {
+  summary: MemberSubscriptionLifetimeSummary;
+  events: MemberMealBalanceActivityEvent[];
+}
+
+export interface RecordMealBalancePurchaseRequest {
+  amount: number;
+  paidAmount?: number;
+  remarks?: string;
+  replaceBalance?: boolean;
+  validTill?: string;
 }
 
 export interface MemberMealActivityMonth {
@@ -490,6 +607,9 @@ export interface MemberMealActivityDayPayment {
   rejectionReason?: string | null;
   proofSubmittedAt?: string | null;
   proofReviewedAt?: string | null;
+  prepaidOverflowAmount?: number | null;
+  prepaidDebitedAmount?: number | null;
+  prepaidOverflowPayment?: boolean;
 }
 
 export interface MemberMealActivitySlotDetail {
@@ -567,6 +687,7 @@ export interface CreateMemberRequest {
   mobileNumber: string;
   role: MembershipRole;
   gender?: MemberGender | null;
+  mealBillingType?: MealBillingType | null;
 }
 
 export interface UpdateMemberRequest {
@@ -574,6 +695,7 @@ export interface UpdateMemberRequest {
   mobileNumber: string;
   role: MembershipRole;
   gender?: MemberGender | null;
+  mealBillingType?: MealBillingType | null;
 }
 
 export type MemberStatus = 'ACTIVE' | 'VACATED' | 'SUSPENDED' | 'BLACKLISTED';
@@ -683,6 +805,8 @@ export interface MemberDetailsResponse {
   depositRefunded: number;
   depositBalance: number;
   mealParticipation?: MemberMealParticipationSummary | null;
+  mealBillingType?: MealBillingType | null;
+  effectiveMealBillingType?: MealBillingType;
   createdAt: string;
   updatedAt: string;
 }
@@ -747,6 +871,9 @@ export interface Space {
   isActive: boolean;
   foodIncludedInRent?: boolean;
   defaultFoodCharge?: number | null;
+  mealBillingType?: MealBillingType;
+  prepaidBalanceUnit?: PrepaidBalanceUnit | null;
+  prepaidFallbackToPayPerMeal?: boolean;
   createdAt: string;
   updatedAt: string;
   role?: MembershipRole;
@@ -1095,6 +1222,7 @@ export interface ListQueryParams {
   sort?: string;
   view?: 'summary' | 'full';
   includeSynthetic?: boolean;
+  status?: AccommodationStatus;
 }
 
 export interface MemberSearchParams {
@@ -1513,6 +1641,9 @@ export interface DashboardFinancialSummary {
   pending: number | null;
   currencyCode: string;
   source?: DashboardFinancialSource;
+  mealBillingType?: MealBillingType;
+  prepaidBalance?: PrepaidBalanceSummary | null;
+  mixedMealBilling?: boolean | null;
 }
 
 export interface DashboardMessOperations {
@@ -1536,7 +1667,8 @@ export type DashboardAttentionKind =
   | 'partial_planned'
   | 'ready_to_share'
   | 'poll_open'
-  | 'payments_overdue';
+  | 'payments_overdue'
+  | 'subscription_activation_pending';
 
 export interface DashboardAttentionItem {
   kind: DashboardAttentionKind;
@@ -1549,6 +1681,7 @@ export interface DashboardAttentionItem {
   overdueCount?: number;
   overdueAmount?: number | null;
   currencyCode?: string;
+  pendingSubscriptionRequestCount?: number;
 }
 
 export interface DashboardSummaryResponse {
@@ -1570,6 +1703,11 @@ export interface MemberPaymentLedgerRow {
   pending: number | null;
   currencyCode: string;
   status: MemberPaymentStatus;
+  mealBillingType?: MealBillingType;
+  mealBalanceRemaining?: number | null;
+  mealBalancePurchased?: number | null;
+  mealBalanceConsumed?: number | null;
+  mealBalanceUnit?: PrepaidBalanceUnit | null;
 }
 
 export interface MemberPaymentLedgerResponse {
@@ -1577,6 +1715,83 @@ export interface MemberPaymentLedgerResponse {
   spaceType: SpaceType;
   summary: DashboardFinancialSummary;
   members: MemberPaymentLedgerRow[];
+}
+
+export interface SubscriptionPlanResponse {
+  planId: UUID;
+  name: string;
+  mealsIncluded: number;
+  price: number;
+  currencyCode: string;
+  validityDays: number;
+  carryForwardUnused: boolean;
+  description?: string | null;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+export type SubscriptionActivationRequestStatus =
+  | 'PENDING'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'CANCELLED';
+
+export interface SubscriptionActivationRequestResponse {
+  requestId: UUID;
+  memberId: UUID;
+  memberName: string;
+  planId: UUID;
+  planName: string;
+  status: SubscriptionActivationRequestStatus;
+  paymentReference?: string | null;
+  paymentProofImageUrl?: string | null;
+  customerNotes?: string | null;
+  ownerNotes?: string | null;
+  createdAt: string;
+  resolvedAt?: string | null;
+}
+
+export type CustomerSubscriptionLifecycleStatus =
+  | 'none'
+  | 'active'
+  | 'expiring_soon'
+  | 'expired'
+  | 'ended'
+  | 'pay_per_meal';
+
+export interface CustomerSubscriptionStatusResponse {
+  mealBillingType?: MealBillingType;
+  prepaidBilling: boolean;
+  subscriptionActive: boolean;
+  lifecycleStatus: CustomerSubscriptionLifecycleStatus;
+  validTill?: string | null;
+  endedAt?: string | null;
+  mealsRemaining?: number | null;
+  pendingActivationStatus?: SubscriptionActivationRequestStatus | null;
+  pendingActivationRequestId?: UUID | null;
+  pendingPlanName?: string | null;
+}
+
+export interface CreateSubscriptionPlanRequest {
+  name: string;
+  mealsIncluded: number;
+  price: number;
+  currencyCode?: string;
+  validityDays: number;
+  carryForwardUnused?: boolean;
+  description?: string;
+  sortOrder?: number;
+}
+
+export interface UpdateSubscriptionPlanRequest extends CreateSubscriptionPlanRequest {
+  active?: boolean;
+}
+
+export interface CreateSubscriptionActivationRequest {
+  planId: UUID;
+  paymentReference?: string;
+  proofImageBase64?: string;
+  customerNotes?: string;
 }
 
 export class ApiError extends Error {

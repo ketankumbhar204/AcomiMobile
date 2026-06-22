@@ -6,6 +6,7 @@ import type {
   CreateMemberNoteRequest,
   CreateMemberRequest,
   InvitationResponse,
+  MealBillingType,
   MemberDetailsResponse,
   MemberDocumentResponse,
   MemberHistoryResponse,
@@ -96,6 +97,10 @@ interface MemberState {
   updateMember: (
     memberId: UUID,
     payload: UpdateMemberRequest,
+  ) => Promise<MemberDetailsResponse | null>;
+  updateMealBilling: (
+    memberId: UUID,
+    selection: MealBillingType | 'DEFAULT',
   ) => Promise<MemberDetailsResponse | null>;
   updateStatus: (
     memberId: UUID,
@@ -272,6 +277,21 @@ export const useMemberStore = create<MemberState>((set, get) => ({
       set({ loading: false, error: message });
       return null;
     }
+  },
+
+  updateMealBilling: async (memberId, selection) => {
+    const member = get().selectedMember;
+    if (!member || member.memberId !== memberId) {
+      return null;
+    }
+
+    return get().updateMember(memberId, {
+      fullName: member.fullName,
+      mobileNumber: member.mobileNumber,
+      role: member.role,
+      gender: member.gender,
+      mealBillingType: selection === 'DEFAULT' ? null : selection,
+    });
   },
 
   updateStatus: async (memberId, payload) => {

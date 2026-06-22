@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   CompositeNavigationProp,
@@ -12,8 +12,8 @@ import { useTranslation } from 'react-i18next';
 import { DashboardFinancialSnapshot } from '../../components/dashboard';
 import { MemberMealActivityMonthNav } from '../../components/meals/MemberMealActivityMonthNav';
 import { MemberPaymentRow } from '../../components/payments/MemberPaymentRow';
-import { PaymentsFilterBar } from '../../components/payments/PaymentsFilterBar';
-import { EmptyState, SkeletonCard } from '../../components/ui';
+import { PaymentsFilterDrawer } from '../../components/payments/PaymentsFilterDrawer';
+import { EmptyState, ListSearchFilterBar, SkeletonCard } from '../../components/ui';
 import { usePaymentsLedger } from '../../hooks/usePaymentsLedger';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useSpaceTabHeader } from '../../hooks/useSpaceTabHeader';
@@ -21,6 +21,11 @@ import type { MainStackParamList, SpaceTabParamList } from '../../navigation/typ
 import { useSpaceStore } from '../../store/spaceStore';
 import { colors, spacing, typography } from '../../theme';
 import { canManagePayments, currentMonthKey } from '../../utils/dashboardFinancial';
+import {
+  countPaymentListFilters,
+  isPrepaidOnlyLedger,
+  type PaymentLedgerFilter,
+} from '../../utils/paymentLedger';
 import { findMySpaceEntry } from '../../utils/spacePermissions';
 
 type PaymentsRoute = RouteProp<SpaceTabParamList, 'Payments'>;
@@ -49,6 +54,7 @@ export function PaymentsScreen() {
   const canManage = canManagePayments(permissions.membershipRole);
 
   const ledger = usePaymentsLedger(spaceId, spaceType, canManage);
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
 
   useEffect(() => {
     const initialFilter = route.params.initialFilter;
@@ -57,15 +63,46 @@ export function PaymentsScreen() {
     }
   }, [ledger.setFilter, route.params.initialFilter]);
 
-  const filterCounts = useMemo(
-    () => ({
-      all: ledger.members.length,
-      pending: ledger.members.filter(row => row.status === 'PENDING' || row.status === 'PARTIAL')
-        .length,
-      collected: ledger.members.filter(row => row.status === 'PAID' && (row.collected ?? 0) > 0)
-        .length,
-    }),
-    [ledger.members],
+  const activeFilterCount = useMemo(
+    () => countPaymentListFilters(ledger.filters),
+    [ledger.filters],
+  );
+
+  const prepaidOnly = isPrepaidOnlyLedger(ledger.summary);
+
+  const paymentEmptyState = useMemo(() => {
+    if (ledger.filters.preset === 'pending') {
+      return {
+        title: t('payments.emptyPending.title'),
+        description: t('payments.emptyPending.description'),
+      };
+    }
+    if (ledger.filters.preset === 'collected') {
+      return {
+        title: t('payments.emptyCollected.title'),
+        description: prepaidOnly
+          ? t('payments.emptyCollected.prepaidDescription')
+          : t('payments.emptyCollected.description'),
+      };
+    }
+
+    return {
+      title:
+        ledger.search.trim() || activeFilterCount > 0
+          ? t('list.emptyFiltered')
+          : t('payments.empty.title'),
+      description:
+        ledger.search.trim() || activeFilterCount > 0
+          ? undefined
+          : t('payments.empty.description'),
+    };
+  }, [activeFilterCount, ledger.filters.preset, ledger.filters.statuses, ledger.search, prepaidOnly, t]);
+
+  const handleFilterNavigate = useCallback(
+    (nextFilter: PaymentLedgerFilter) => {
+      ledger.setFilter(nextFilter);
+    },
+    [ledger.setFilter],
   );
 
   const handleMemberPress = useCallback(
@@ -97,14 +134,15 @@ export function PaymentsScreen() {
   }
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-      refreshControl={
-        <RefreshControl refreshing={ledger.loading} onRefresh={() => void ledger.reload()} />
-      }>
+    <View style={styles.screen}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl refreshing={ledger.loading} onRefresh={() => void ledger.reload()} />
+        }>
       <Text style={styles.heading}>{t('payments.title')}</Text>
       <Text style={styles.subheading}>{t('payments.subtitle')}</Text>
 
@@ -114,20 +152,28 @@ export function PaymentsScreen() {
         onNextMonth={handleNextMonth}
       />
 
-      <DashboardFinancialSnapshot loading={ledger.loading} financial={ledger.summary} />
+      <DashboardFinancialSnapshot
+        loading={ledger.loading}
+        financial={ledger.summary}
+        onExpectedPress={() => handleFilterNavigate('all')}
+        onCollectedPress={() => handleFilterNavigate('collected')}
+        onPendingPress={() => handleFilterNavigate('pending')}
+      />
 
-      <PaymentsFilterBar
-        filter={ledger.filter}
-        onFilterChange={ledger.setFilter}
-        counts={filterCounts}
+      <ListSearchFilterBar
+        searchValue={ledger.search}
+        onSearchChange={ledger.setSearch}
+        searchPlaceholder={t('list.search.membersPayments')}
+        onFilterPress={() => setFilterDrawerOpen(true)}
+        activeFilterCount={activeFilterCount}
       />
 
       {ledger.loading && ledger.members.length === 0 ? (
         <SkeletonCard />
       ) : ledger.filteredMembers.length === 0 ? (
         <EmptyState
-          title={t('payments.empty.title')}
-          description={t('payments.empty.description')}
+          title={paymentEmptyState.title}
+          description={paymentEmptyState.description}
         />
       ) : (
         ledger.filteredMembers.map(row => (
@@ -142,7 +188,15 @@ export function PaymentsScreen() {
       {ledger.summary?.source === 'OCCUPANCY' ? (
         <Text style={styles.hint}>{t('payments.occupancyHint')}</Text>
       ) : null}
-    </ScrollView>
+      </ScrollView>
+
+      <PaymentsFilterDrawer
+        visible={filterDrawerOpen}
+        applied={ledger.filters}
+        onClose={() => setFilterDrawerOpen(false)}
+        onApply={ledger.setFilters}
+      />
+    </View>
   );
 }
 
@@ -150,6 +204,9 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  scroll: {
+    flex: 1,
   },
   content: {
     padding: spacing.xxl,

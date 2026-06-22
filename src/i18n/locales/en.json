@@ -8,6 +8,7 @@
     "back": "Back",
     "continue": "Continue",
     "save": "Save",
+    "edit": "Edit",
     "saving": "Saving…",
     "user": "User",
     "errors": {
@@ -20,6 +21,38 @@
       "incorrectOtp": "Incorrect OTP. Please try again.",
       "accountDisabled": "Your account has been disabled. Please contact support."
     }
+  },
+  "list": {
+    "search": {
+      "placeholder": "Search…",
+      "members": "Search by name or mobile",
+      "membersPayments": "Search by member name",
+      "pendingInvitations": "Search by mobile or inviter",
+      "menuItems": "Search menu items"
+    },
+    "filterDrawer": {
+      "title": "Filters",
+      "button": "Filter",
+      "open": "Open filters",
+      "reset": "Reset",
+      "apply": "Apply Filters",
+      "activeCount": "{{count}} filters applied"
+    },
+    "filters": {
+      "all": "All",
+      "role": "Role",
+      "status": "Status",
+      "sort": "Sort by",
+      "category": "Category"
+    },
+    "sort": {
+      "nameAsc": "Name A–Z",
+      "nameDesc": "Name Z–A",
+      "recent": "Recently added",
+      "role": "Role",
+      "dueAmount": "Due amount"
+    },
+    "emptyFiltered": "No results match your search or filters."
   },
   "navigation": {
     "mySpaces": "My Spaces",
@@ -183,6 +216,27 @@
       "successTitle": "Space updated",
       "successMessage": "Changes saved successfully."
     },
+    "mealBilling": {
+      "title": "Meal billing",
+      "subtitle": "Default billing for new members. Prepaid settings apply to all prepaid members. You can override billing per member.",
+      "balanceUnitLabel": "Balance unit",
+      "fallbackLabel": "Pay per meal when balance runs out",
+      "fallbackHint": "No separate hybrid mode — members automatically switch to pay-per-meal pricing.",
+      "types": {
+        "PAY_PER_MEAL": {
+          "label": "Pay per meal",
+          "description": "Charge for each confirmed meal. Expected, collected, and pending on the dashboard."
+        },
+        "PREPAID_BALANCE": {
+          "label": "Subscription",
+          "description": "Sell a prepaid meal pack or recharge amount. Track sold, consumed, and remaining balance."
+        }
+      },
+      "units": {
+        "MEALS": "Meals",
+        "CURRENCY": "Amount (₹)"
+      }
+    },
     "menu": {
       "open": "Open space menu"
     },
@@ -254,7 +308,9 @@
       "appStatus": "CountIn",
       "created": "Created",
       "updated": "Updated",
-      "edit": "Edit Member"
+      "edit": "Edit Member",
+      "mealBilling": "Meal billing",
+      "editMealBilling": "Change meal billing"
     },
     "gender": {
       "label": "Gender",
@@ -455,7 +511,8 @@
   },
   "accommodation": {
     "search": {
-      "placeholder": "Search…"
+      "placeholder": "Search…",
+      "beds": "Search by bed number"
     },
     "fields": {
       "name": "Name",
@@ -1244,6 +1301,13 @@
         "subtitle": "{{amount}} outstanding",
         "body": "{{amount}} outstanding this month across members.",
         "action": "View payments"
+      },
+      "subscription_activation_pending": {
+        "titleSingle": "1 subscription request waiting",
+        "titleMultiple": "{{count}} subscription requests waiting",
+        "subtitle": "Review and approve activation",
+        "body": "Customers are waiting for you to approve their meal subscription.",
+        "action": "Review requests"
       }
     },
     "financial": {
@@ -1251,7 +1315,11 @@
       "expectedCharges": "Expected charges",
       "collected": "Collected",
       "pending": "Pending",
-      "generated": "Generated"
+      "generated": "Generated",
+      "balanceSold": "Balance sold",
+      "balanceConsumed": "Balance used",
+      "balanceRemaining": "Balance left",
+      "mealsCount": "{{count}} meals"
     },
     "accommodationOperations": {
       "title": "Property operations",
@@ -1299,7 +1367,15 @@
       "transfer": "Transfer",
       "vacate": "Vacate",
       "mealsPlanning": "Meal Planning",
-      "poll": "Availability Poll"
+      "poll": "Availability Poll",
+      "deliveryLocations": "Delivery locations",
+      "deliveryLocationsSubtitle": "Drop points · Reorder · Edit addresses",
+      "pendingActions": "Pending actions",
+      "pendingActionsSubtitle": "{{count}} items need your attention"
+    },
+    "pendingActions": {
+      "screenSubtitle": "Review and complete these items to keep operations running smoothly.",
+      "empty": "No pending actions right now."
     }
   },
   "payments": {
@@ -1313,7 +1389,22 @@
       "title": "No billable activity",
       "description": "Members with meal selections or active occupancy will appear here."
     },
+    "emptyCollected": {
+      "title": "No collections this month",
+      "description": "Members who cleared dues or paid for meal packs will appear here.",
+      "prepaidDescription": "Record a meal pack purchase on a member to track money collected here."
+    },
+    "emptyPending": {
+      "title": "No pending dues",
+      "description": "Everyone is up to date for this month."
+    },
     "occupancyHint": "Rent expected charges come from occupancy contracts. Payment collection tracking will appear when rent payments are recorded.",
+    "filterDrawer": {
+      "statusSection": "Payment status",
+      "paid": "Paid",
+      "pending": "Pending",
+      "partial": "Partial"
+    },
     "filters": {
       "all": "All ({{count}})",
       "pending": "Pending ({{count}})",
@@ -1327,7 +1418,41 @@
     },
     "row": {
       "expected": "Expected {{expected}}",
-      "collectedOfExpected": "{{collected}} of {{expected}}"
+      "collectedOfExpected": "{{collected}} of {{expected}}",
+      "balanceLine": "{{remaining}} left · {{used}} used",
+      "purchasedThisMonth": "Sold this month",
+      "collectedThisMonth": "Collected this month"
+    }
+  },
+  "members": {
+    "mealBilling": {
+      "title": "Meal billing",
+      "subtitle": "Choose how this member pays for meals. Override only if they need a different plan from the mess default.",
+      "typeWithDefault": "{{type}} (Default choice)",
+      "useSpaceDefault": "Space default ({{type}})",
+      "useSpaceDefaultDescription": "Follow the mess default unless this member needs pay-per-meal or prepaid balance.",
+      "profileValueDefault": "{{type}} · Mess default",
+      "profileValueOverride": "{{type}} · Custom for this member",
+      "mealsTabHint": "This member is on {{type}}. Switch to Subscription to sell prepaid meal packs.",
+      "mealsTabHintPrepaid": "This member is on {{type}}. Meal balance and subscription tools appear below.",
+      "saveSuccess": "Meal billing updated",
+      "changeAction": "Change",
+      "switchToPayPerMealTitle": "Switch to pay per meal?",
+      "switchToPayPerMealMessage": "This member will be charged per confirmed meal instead of using a prepaid balance. Existing subscription history is kept.",
+      "switchToPayPerMealConfirm": "Switch billing"
+    },
+    "subscriptionSetup": {
+      "title": "Subscription details",
+      "subtitle": "Record the first pack when adding this member. Meals are debited when they confirm poll choices.",
+      "subtitleOptional": "Optional — record a new pack now, or add balance later from member meal activity.",
+      "mealQtyLabel": "Number of meals",
+      "mealQtyPlaceholder": "e.g. 30",
+      "priceLabel": "Subscription price (₹)",
+      "pricePlaceholder": "e.g. 3000",
+      "amountLabel": "Subscription amount (₹)",
+      "amountPlaceholder": "e.g. 3000",
+      "mealQtyRequired": "Enter how many meals are in this subscription pack.",
+      "priceRequired": "Enter the subscription amount collected."
     }
   },
   "meals": {
@@ -1393,6 +1518,11 @@
       "previewShare": "Preview share message",
       "previewShareDisabled": "Plan at least one meal to share.",
       "shareMenu": "Share menu",
+      "filterDrawer": {
+        "published": "Published",
+        "draft": "Draft",
+        "notPlanned": "Not planned"
+      },
       "shareSlot": "Share this meal",
       "shareSlotAgain": "Share this meal again",
       "shareAlreadySharedBadge": "Already shared",
@@ -1479,6 +1609,16 @@
       "rejectPayment": "Reject payment",
       "paymentApproved": "Payment approved",
       "paymentRejected": "Payment rejected",
+      "approvalRemarksPlaceholder": "Approval remarks (optional)",
+      "rejectionReasonPlaceholder": "Rejection reason (optional)",
+      "sendReminder": "Send payment reminder",
+      "sendingReminder": "Sending…",
+      "remind": "Remind",
+      "reminderSent": "Payment reminder sent",
+      "prepaidOverflowTitle": "Balance partially used",
+      "prepaidOverflowMessage": "{{debited}} meal(s) debited from balance. {{overflow}} meal(s) moved to pay later.",
+      "prepaidOverflowPayLater": "Pay the overflow amount when convenient — it shows as pending in your activity.",
+      "prepaidOverflowSaved": "Saved. {{debited}} from balance; {{overflow}} added to pay later.",
       "paymentStatusLabel": "Payment",
       "paymentStatusPaid": "Paid",
       "paymentStatusPending": "Pending",
@@ -1492,6 +1632,216 @@
       "doneChoosingDelivery": "Done",
       "totalPlatesAll": "Total plates: {{count}}"
     },
+    "balance": {
+      "title": "Meal balance",
+      "addBalance": "Add balance",
+      "recordPurchase": "Record purchase",
+      "amountMealsPlaceholder": "Number of meals",
+      "amountCurrencyPlaceholder": "Amount in ₹",
+      "paidAmountPlaceholder": "Amount paid (₹)",
+      "paidAmountRequired": "Enter the amount paid for this pack",
+      "remarksPlaceholder": "Remarks (optional)",
+      "purchaseSuccess": "Balance updated"
+    },
+    "subscription": {
+      "currentTitle": "Current subscription",
+      "mealsIncluded": "Included",
+      "mealsUsed": "Used",
+      "mealsRemainingShort": "Remaining",
+      "validTillLabel": "Valid till",
+      "createAction": "Create subscription",
+      "updateAction": "Update subscription",
+      "updateTitle": "Update subscription",
+      "renewAction": "Renew subscription",
+      "renewTitle": "Renew subscription",
+      "renewSubtitle": "Start the next subscription cycle. Unused meals from the previous period are not carried forward.",
+      "updateSubtitle": "This replaces the member's current subscription with the values below.",
+      "drawerCurrentTitle": "Current subscription",
+      "drawerLastTitle": "Last subscription",
+      "drawerNewDetailsTitle": "New subscription details",
+      "drawerUpdateSubtitle": "Saving replaces the active plan. Meals remaining will reset to the new total.",
+      "summaryMealsIncluded": "Meals included",
+      "summaryMealsUsed": "Meals used",
+      "summaryMealsRemaining": "Meals remaining",
+      "newMealsIncludedLabel": "New meals included",
+      "mealsRemainingLine": "{{count}} meals remaining",
+      "mealsIncludedLabel": "Meals included",
+      "validTillPlaceholder": "YYYY-MM-DD (e.g. 2026-07-31)",
+      "validTillRequired": "Enter a valid till date (YYYY-MM-DD).",
+      "statusLabel": "Status",
+      "statusActive": "Active",
+      "statusExpiringSoon": "Expiring soon",
+      "statusExpired": "Expired",
+      "noActiveTitle": "No active subscription",
+      "noActiveDescription": "This customer does not currently have a meal subscription.",
+      "expiredTitle": "Subscription expired",
+      "expiredLastPlan": "Last plan",
+      "expiredOn": "Expired on",
+      "noSubscription": "No active subscription yet.",
+      "editAction": "Edit subscription",
+      "renewAction": "Renew subscription",
+      "createTitle": "Create subscription",
+      "editTitle": "Edit subscription",
+      "renewTitle": "Renew subscription",
+      "createSubtitle": "Set how many meals are included and the amount collected.",
+      "editSubtitle": "Update meals included and amount for this subscription.",
+      "renewSubtitle": "Start a new subscription period with meals and amount collected.",
+      "saveSuccess": "Subscription saved",
+      "mealsRemaining": "Meals remaining",
+      "purchasedLabel": "Purchased",
+      "amountPaidLabel": "Amount paid",
+      "purchaseDateLabel": "Purchase date",
+      "purchaseMore": "+ Purchase more meals",
+      "purchaseMoreTitle": "Purchase more meals",
+      "currentBalanceLine": "Current balance: {{balance}}",
+      "lastPurchaseLine": "Last purchase: {{meals}} • {{amount}}",
+      "mealsToAddLabel": "Meals to add",
+      "mealsToAddPlaceholder": "e.g. 15",
+      "amountPaidInputLabel": "Amount paid",
+      "amountPaidPlaceholder": "e.g. 800",
+      "remarksLabel": "Remarks",
+      "remarksPlaceholder": "Optional",
+      "addingLine": "Adding: {{count}} meals",
+      "newBalanceLine": "New balance: {{balance}}",
+      "recordPurchase": "Record purchase",
+      "purchaseSuccess": "Subscription updated",
+      "paidAmountRequired": "Enter the amount paid for this pack",
+      "activityTitle": "Subscription activity",
+      "activityEmpty": "No subscription activity for this month yet.",
+      "activityPurchased": "Purchased {{meals}}",
+      "activityCreated": "Subscription created",
+      "activityUpdated": "Subscription updated",
+      "activityRenewed": "Subscription renewed",
+      "activityEnded": "Subscription ended",
+      "endAction": "End",
+      "endConfirmTitle": "End subscription?",
+      "addMealsTitle": "Add meals",
+      "addMealsAction": "Add meals",
+      "addMealsActionShort": "Add meals",
+      "addMealsSubtitle": "Enter how many meals to add and the amount received. These will be added to the current balance.",
+      "addMealsSuccess": "Meals added",
+      "createSuccess": "Subscription created",
+      "summaryCurrentBalance": "Current balance",
+      "totalAmountPaidLabel": "Total amount paid",
+      "totalPurchasedLabel": "Total purchased",
+      "totalConsumedLabel": "Total consumed",
+      "amountReceivedLabel": "Amount received",
+      "amountReceivedPlaceholder": "e.g. 1000",
+      "amountReceivedRequired": "Enter the amount received for these meals.",
+      "mealsToAddRequired": "Enter how many meals to add.",
+      "activityMealsAdded": "Added meals",
+      "historyMealsAddedLine": "{{count}} meals added",
+      "historyAmountReceivedLine": "{{amount}} received",
+      "balanceAfterEvent": "Balance after event: {{count}} meals",
+      "historyMonthSummaryCurrent": "{{count}} activities • Balance {{balance}} meals",
+      "historyMonthSummaryClosing": "{{count}} activities • Closing balance {{balance}} meals",
+      "endConfirmMessageModelB": "This customer will no longer be able to consume meals from this subscription.\n\nHistory will be preserved.",
+      "endConfirmAction": "End subscription",
+      "endSuccess": "Subscription ended",
+      "saveChanges": "Save changes",
+      "updateActionShort": "Update",
+      "historyAction": "History",
+      "historyTitle": "Subscription history",
+      "historySubtitle": "Lifetime totals and subscription changes over time.",
+      "historySummaryTitle": "Subscription summary",
+      "historyTotalPurchased": "Total meals purchased",
+      "historyTotalConsumed": "Total meals consumed",
+      "historyTotalPaid": "Total amount paid",
+      "historyTotalActivities": "Total subscription activities",
+      "historyEmpty": "No subscription history yet.",
+      "filterDrawer": {
+        "eventType": "Event type",
+        "created": "Created",
+        "addedMeals": "Added meals",
+        "ended": "Ended",
+        "month": "Month",
+        "currentMonth": "Current month",
+        "previousMonth": "Previous month"
+      },
+      "lastSubscription": "Last subscription",
+      "endedOn": "Ended on",
+      "activityConsumedTitle": "Meal consumed",
+      "activityConsumed": "Consumed {{meals}}",
+      "activityBalanceAfter": "Balance: {{balance}}",
+      "customer": {
+        "requiredTitle": "Meal subscription required",
+        "requiredBody": "You do not currently have an active meal subscription. Choose a plan to continue receiving meals.",
+        "expiredTitle": "Subscription expired",
+        "expiredBody": "Your subscription expired on {{date}}. Please renew to continue selecting meals.",
+        "expiringSoonTitle": "Subscription ending soon",
+        "expiringSoonBody": "{{remaining}} meals remaining · valid till {{date}}",
+        "pendingTitle": "Activation pending",
+        "pendingBody": "Your request for {{plan}} is waiting for owner approval.",
+        "pendingBadge": "Awaiting owner approval",
+        "pendingCatalogSubtitle": "Your activation request is under review. Plan selection is locked until the owner approves or rejects it.",
+        "viewRequestStatus": "View request status",
+        "selectedPlan": "selected plan",
+        "viewPlans": "View plans",
+        "contactOwner": "Contact owner",
+        "catalogSubtitle": "Browse available plans, pay offline, then submit your activation request.",
+        "noPlans": "No subscription plans are available yet. Please contact the mess owner.",
+        "requestTitle": "Request activation",
+        "requestHint": "Pay the amount to the owner (UPI/cash), then submit your payment reference below.",
+        "paymentReferenceLabel": "Payment reference",
+        "paymentReferencePlaceholder": "UPI ref / transaction ID",
+        "notesLabel": "Notes (optional)",
+        "notesPlaceholder": "Any message for the owner",
+        "submitRequest": "Submit activation request",
+        "planDetailsTitle": "Plan details",
+        "paymentProofHint": "Attach a screenshot of your UPI or bank payment. The owner will verify before activating your plan.",
+        "removeScreenshot": "Remove screenshot",
+        "proofOrReferenceRequired": "Add a payment reference or upload a payment screenshot.",
+        "requestSubmitted": "Activation request sent to owner",
+        "selectionRequiredHint": "Activate a subscription to select meals",
+        "selectionPendingHint": "Meal selection unlocks after owner approves your request"
+      }
+    },
+    "subscriptionPlans": {
+      "title": "Subscription Plans",
+      "ownerSubtitle": "Create reusable meal packs that customers can browse and request.",
+      "createAction": "Create plan",
+      "createTitle": "Create subscription plan",
+      "editTitle": "Edit subscription plan",
+      "formSubtitle": "Plans appear in the customer catalog when active.",
+      "nameLabel": "Plan name",
+      "namePlaceholder": "e.g. Basic Plan",
+      "nameRequired": "Enter a plan name.",
+      "mealsLabel": "Meals included",
+      "mealsRequired": "Enter how many meals are included.",
+      "mealsLine": "{{count}} meals",
+      "priceLabel": "Price",
+      "priceRequired": "Enter the plan price.",
+      "validityLabel": "Validity (days)",
+      "validityRequired": "Enter validity in days.",
+      "validityLine": "{{days}} days",
+      "unusedMealsLabel": "Unused meals",
+      "expireUnused": "Expire at plan end",
+      "carryForward": "Carry forward",
+      "descriptionLabel": "Description (optional)",
+      "descriptionPlaceholder": "Short notes for customers",
+      "empty": "No subscription plans yet. Create your first plan to let customers self-serve.",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "createSuccess": "Subscription plan created",
+      "updateSuccess": "Subscription plan updated",
+      "deactivateTitle": "Deactivate plan?",
+      "deactivateMessage": "{{name}} will no longer appear for new customer requests.",
+      "deactivateAction": "Deactivate",
+      "deactivateSuccess": "Plan deactivated",
+      "viewRequests": "Pending activation requests",
+      "noPendingRequests": "No pending subscription requests.",
+      "requestedPlan": "Requested: {{plan}}",
+      "paymentReference": "Payment ref: {{reference}}",
+      "viewPaymentProof": "View payment screenshot",
+      "approveTitle": "Approve subscription?",
+      "approveMessage": "Activate {{plan}} for {{name}}?",
+      "approveAction": "Approve",
+      "approveSuccess": "Subscription activated",
+      "rejectTitle": "Reject request?",
+      "rejectMessage": "Reject subscription request from {{name}}?",
+      "rejectAction": "Reject",
+      "rejectSuccess": "Request rejected"
+    },
     "deliveryLocations": {
       "manage": "Delivery locations",
       "subtitle": "Add drop points where meals are delivered — PG blocks, company offices, mess counter, gate pickup, etc.",
@@ -1501,7 +1851,23 @@
       "empty": "No delivery locations yet. Add your first drop point above.",
       "active": "Active",
       "inactive": "Inactive",
-      "created": "Delivery location added"
+      "created": "Delivery location added",
+      "updated": "Delivery location updated",
+      "editTitle": "Edit delivery location",
+      "addressPlaceholder": "Address (optional)"
+    },
+    "paymentTimeline": {
+      "title": "Payment timeline",
+      "empty": "No payment events for this month yet.",
+      "events": {
+        "PAY_LATER_SELECTED": "Pay later selected · {{date}}",
+        "MARK_AS_PAID_SELECTED": "Marked as paid · {{date}}",
+        "PROOF_SUBMITTED": "Payment proof submitted · {{date}}",
+        "APPROVED": "Payment approved · {{date}}",
+        "REJECTED": "Payment rejected · {{date}}",
+        "REMINDER_SENT": "Payment reminder sent · {{date}}",
+        "PREPAID_OVERFLOW_PAY_LATER": "Prepaid overflow moved to pay later · {{date}}"
+      }
     },
     "viewTodayMenu": "View today's menu",
     "viewTodayMenuHint": "Breakfast, lunch, and dinner for today",
@@ -1550,6 +1916,13 @@
         "amountGenerated": "Amount generated",
         "paid": "Paid",
         "pending": "Pending",
+        "balancePurchased": "Balance sold",
+        "balanceUsed": "Balance used",
+        "balanceRemaining": "Balance left",
+        "mealsPurchased": "Meals purchased",
+        "mealsConsumed": "Meals consumed",
+        "mealsRemaining": "Meals remaining",
+        "amountPaid": "Amount paid",
         "notSelected": "Not selected",
         "paidStatus": "Paid",
         "pendingStatus": "Pending",
@@ -1601,6 +1974,8 @@
         "address": "Address",
         "paymentSection": "Payment details",
         "paymentStatus": "Payment status",
+        "balanceDebited": "Balance debited",
+        "balanceOverflow": "Pay later (overflow)",
         "coveredBySubscription": "Covered by subscription",
         "mealCreditsUsed": "Meal credits used",
         "creditsCount_one": "{{count}} Credit",
@@ -1655,6 +2030,11 @@
       "chipAddCategory": "+ Category",
       "chipAddItem": "+ Item",
       "chipAddCombo": "+ Combo",
+      "filterDrawer": {
+        "allCategories": "All categories",
+        "multipleCategories": "{{count}} categories",
+        "pickCategoryToAdd": "Select one category in Filters to add an item."
+      },
       "statsSummary": "{{categories}} categories · {{items}} items · {{combos}} combos",
       "statsItems": "{{categories}} categories · {{items}} items",
       "statsCombos": "{{combos}} combos",

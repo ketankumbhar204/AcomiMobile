@@ -41,6 +41,12 @@ export type MainStackParamList = {
   MemberDetails: { spaceId: UUID; memberId: UUID };
   MemberOccupancyHistory: { spaceId: UUID; memberId: UUID; memberName: string };
   EditMember: { spaceId: UUID; memberId: UUID };
+  MemberSubscription: {
+    spaceId: UUID;
+    memberId: UUID;
+    action: 'create' | 'edit' | 'renew';
+  };
+  MemberSubscriptionHistory: { spaceId: UUID; memberId: UUID };
   Floors: { spaceId: UUID; buildingId: UUID; buildingName?: string };
   Units: { spaceId: UUID; buildingId: UUID; buildingName?: string };
   AccommodationFloorApartments: {
@@ -174,6 +180,10 @@ export type MainStackParamList = {
     spaceId: UUID;
     menuDate: string;
   };
+  SubscriptionPlans: { spaceId: UUID };
+  CustomerSubscriptionPlans: { spaceId: UUID; memberId: UUID };
+  SubscriptionActivationRequests: { spaceId: UUID };
+  DashboardPendingActions: { spaceId: UUID };
 };
 
 export type RootStackParamList = {

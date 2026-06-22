@@ -1,4 +1,8 @@
 export { DocumentTypePicker } from './DocumentTypePicker';
+export { MemberMealBillingBottomSheet } from './MemberMealBillingBottomSheet';
+export { MemberMealBillingPanel } from './MemberMealBillingPanel';
+export { MemberMealBillingTypeSection } from './MemberMealBillingTypeSection';
+export type { MemberMealBillingSelection } from './MemberMealBillingTypeSection';
 export { MemberDepositTab } from './MemberDepositTab';
 export { MemberCompactHeader } from './MemberCompactHeader';
 export { MemberDetailRow, MemberSectionTitle } from './MemberDetailRow';

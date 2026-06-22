@@ -20,6 +20,7 @@ import { DashboardCustomerMealsSection } from '../../components/meals/DashboardC
 import { ModuleActionCard, SkeletonCard } from '../../components/ui';
 import { Screen } from '../../components/ui/Screen';
 import { openOccupancyWizardFromRef } from '../../features/occupancy/OccupancyWizard';
+import { useDashboardAttentionItems } from '../../hooks/useDashboardAttentionItems';
 import { useLinkedMember } from '../../hooks/useLinkedMember';
 import { useSpaceDashboard } from '../../hooks/useSpaceDashboard';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
@@ -42,6 +43,29 @@ type DashboardNav = CompositeNavigationProp<
   BottomTabNavigationProp<SpaceTabParamList, 'Dashboard'>,
   NativeStackNavigationProp<MainStackParamList>
 >;
+
+function PendingActionsQuickCard({
+  count,
+  onPress,
+}: {
+  count: number;
+  onPress: () => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <ModuleActionCard
+      icon="🔔"
+      title={t('dashboard.quickActions.pendingActions')}
+      subtitle={t('dashboard.quickActions.pendingActionsSubtitle', { count })}
+      badgeCount={count}
+      trailing="forward"
+      highlight
+      fullWidth
+      onPress={onPress}
+    />
+  );
+}
 
 export function DashboardScreen() {
   const { t } = useTranslation();
@@ -74,6 +98,16 @@ export function DashboardScreen() {
   const showPaymentsQuickAction = canManagePayments(permissions.membershipRole);
 
   const dashboard = useSpaceDashboard(spaceId, spaceType, showOwnerDashboard);
+  const pendingActionItems = useDashboardAttentionItems(
+    spaceId,
+    dashboard.attention ?? [],
+    showOwnerDashboard && showMealsActions && isMess,
+  );
+  const pendingActionCount = pendingActionItems.length;
+
+  const handlePendingActionsPress = useCallback(() => {
+    navigateMainStack('DashboardPendingActions', { spaceId });
+  }, [spaceId]);
 
   const handlePaymentsNavigate = useCallback(
     (initialFilter: 'all' | 'pending' | 'collected') => {
@@ -84,7 +118,7 @@ export function DashboardScreen() {
 
   const handleMealsPress = useCallback(() => {
     const tomorrow = tomorrowIsoDate();
-    openActionSheet(t('dashboard.quickActions.meals'), [
+    const actions = [
       {
         label: t('dashboard.quickActions.mealsPlanning'),
         action: () => navigateMainStack('MenuPlanning', { spaceId }),
@@ -102,8 +136,23 @@ export function DashboardScreen() {
         label: t('meals.library.title'),
         action: () => navigateMainStack('MenuLibrary', { spaceId }),
       },
-    ]);
-  }, [openActionSheet, spaceId, t]);
+      {
+        label: t('meals.subscriptionPlans.title'),
+        action: () => navigateMainStack('SubscriptionPlans', { spaceId }),
+      },
+    ];
+    if (isMess) {
+      actions.push({
+        label: t('dashboard.quickActions.deliveryLocations'),
+        action: () => navigateMainStack('MealDeliveryLocations', { spaceId }),
+      });
+    }
+    openActionSheet(t('dashboard.quickActions.meals'), actions);
+  }, [isMess, openActionSheet, spaceId, t]);
+
+  const handleDeliveryLocationsPress = useCallback(() => {
+    navigateMainStack('MealDeliveryLocations', { spaceId });
+  }, [spaceId]);
 
   const handleMembersPress = useCallback(() => {
     openActionSheet(t('dashboard.quickActions.members'), [
@@ -151,6 +200,11 @@ export function DashboardScreen() {
     navigation.navigate('MemberDetails', { spaceId, memberId: linkedMemberId });
   }, [linkedMemberId, navigation, spaceId]);
 
+  const pendingActionsCard =
+    showOwnerDashboard && pendingActionCount > 0 ? (
+      <PendingActionsQuickCard count={pendingActionCount} onPress={handlePendingActionsPress} />
+    ) : null;
+
   const messQuickActions = useMemo(() => {
     if (!showMealsActions || !isMess) {
       return null;
@@ -158,11 +212,18 @@ export function DashboardScreen() {
 
     return (
       <View style={styles.quickStack}>
+        {pendingActionsCard}
         <ModuleActionCard
           icon="🍽"
           title={t('dashboard.quickActions.meals')}
           subtitle={t('dashboard.quickActions.mealsSubtitle')}
           onPress={handleMealsPress}
+        />
+        <ModuleActionCard
+          icon="📍"
+          title={t('dashboard.quickActions.deliveryLocations')}
+          subtitle={t('dashboard.quickActions.deliveryLocationsSubtitle')}
+          onPress={handleDeliveryLocationsPress}
         />
         <ModuleActionCard
           icon="👥"
@@ -178,13 +239,24 @@ export function DashboardScreen() {
         />
       </View>
     );
-  }, [handleMealsPress, handleMembersPress, handlePaymentsPress, isMess, showMealsActions, t]);
+  }, [
+    handleDeliveryLocationsPress,
+    handleMealsPress,
+    handleMembersPress,
+    handlePaymentsPress,
+    isMess,
+    pendingActionsCard,
+    showMealsActions,
+    t,
+  ]);
 
   const accommodationQuickActions = useMemo(() => {
     if (showResidentsActions || (showMealsActions && !isMess)) {
       return (
-        <View style={styles.moduleRow}>
-          {showResidentsActions ? (
+        <View style={styles.quickStack}>
+          {pendingActionsCard}
+          <View style={styles.moduleRow}>
+            {showResidentsActions ? (
             <ModuleActionCard
               icon="👥"
               title={t('dashboard.quickActions.residents')}
@@ -208,6 +280,7 @@ export function DashboardScreen() {
               onPress={handlePaymentsPress}
             />
           ) : null}
+          </View>
         </View>
       );
     }
@@ -238,6 +311,7 @@ export function DashboardScreen() {
     isMess,
     isTenant,
     linkedMemberId,
+    pendingActionsCard,
     showMealsActions,
     showMyStay,
     showResidentsActions,
@@ -246,7 +320,7 @@ export function DashboardScreen() {
   ]);
 
   const quickActions = isMess ? messQuickActions : accommodationQuickActions;
-  const showQuickSection = quickActions != null;
+  const showQuickSection = quickActions != null || pendingActionsCard != null;
 
   return (
     <Screen scrollable contentStyle={styles.content}>
@@ -298,7 +372,9 @@ export function DashboardScreen() {
       {showQuickSection ? (
         <View style={styles.quickSection}>
           <DashboardSectionTitle title={t('dashboard.quickActions.title')} />
-          {quickActions}
+          {quickActions ?? (
+            <View style={styles.quickStack}>{pendingActionsCard}</View>
+          )}
         </View>
       ) : null}
     </Screen>

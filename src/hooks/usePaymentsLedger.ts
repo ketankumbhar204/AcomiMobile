@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { dashboardApi } from '../api/dashboardApi';
 import type {
   DashboardFinancialSummary,
@@ -7,8 +8,15 @@ import type {
   UUID,
 } from '../api/types';
 import { currentMonthKey } from '../utils/dashboardFinancial';
+import {
+  applyPaymentLedgerFilter,
+  defaultPaymentListFilters,
+  paymentFiltersFromLegacy,
+  type PaymentLedgerFilter,
+  type PaymentListFilterState,
+} from '../utils/paymentLedger';
 
-export type PaymentLedgerFilter = 'all' | 'pending' | 'collected';
+export type { PaymentLedgerFilter, PaymentListFilterState };
 
 type PaymentsLedgerState = {
   loading: boolean;
@@ -16,25 +24,14 @@ type PaymentsLedgerState = {
   summary: DashboardFinancialSummary | null;
   members: MemberPaymentLedgerRow[];
   filteredMembers: MemberPaymentLedgerRow[];
-  filter: PaymentLedgerFilter;
+  filters: PaymentListFilterState;
+  search: string;
+  setFilters: (filters: PaymentListFilterState) => void;
   setFilter: (filter: PaymentLedgerFilter) => void;
+  setSearch: (search: string) => void;
   setMonth: (month: string) => void;
   reload: () => Promise<void>;
 };
-
-function applyFilter(
-  members: MemberPaymentLedgerRow[],
-  filter: PaymentLedgerFilter,
-): MemberPaymentLedgerRow[] {
-  switch (filter) {
-    case 'pending':
-      return members.filter(row => row.status === 'PENDING' || row.status === 'PARTIAL');
-    case 'collected':
-      return members.filter(row => row.status === 'PAID' && (row.collected ?? 0) > 0);
-    default:
-      return members;
-  }
-}
 
 export function usePaymentsLedger(
   spaceId: UUID,
@@ -43,7 +40,8 @@ export function usePaymentsLedger(
 ): PaymentsLedgerState {
   const [loading, setLoading] = useState(true);
   const [month, setMonthState] = useState(currentMonthKey());
-  const [filter, setFilter] = useState<PaymentLedgerFilter>('all');
+  const [filters, setFilters] = useState<PaymentListFilterState>(defaultPaymentListFilters);
+  const [search, setSearch] = useState('');
   const [summary, setSummary] = useState<DashboardFinancialSummary | null>(null);
   const [members, setMembers] = useState<MemberPaymentLedgerRow[]>([]);
 
@@ -65,14 +63,20 @@ export function usePaymentsLedger(
     }
   }, [enabled, month, spaceId, spaceType]);
 
-  useEffect(() => {
-    if (enabled && spaceType) {
-      void load();
-    }
-  }, [enabled, load, month, spaceType]);
+  useFocusEffect(
+    useCallback(() => {
+      if (enabled && spaceType) {
+        void load();
+      }
+    }, [enabled, load, spaceType]),
+  );
 
   const setMonth = useCallback((nextMonth: string) => {
     setMonthState(nextMonth);
+  }, []);
+
+  const setFilter = useCallback((filter: PaymentLedgerFilter) => {
+    setFilters(paymentFiltersFromLegacy(filter));
   }, []);
 
   return {
@@ -80,9 +84,12 @@ export function usePaymentsLedger(
     month,
     summary,
     members,
-    filteredMembers: applyFilter(members, filter),
-    filter,
+    filteredMembers: applyPaymentLedgerFilter(members, filters, search),
+    filters,
+    search,
+    setFilters,
     setFilter,
+    setSearch,
     setMonth,
     reload: load,
   };

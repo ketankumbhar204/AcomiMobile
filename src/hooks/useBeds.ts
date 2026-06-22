@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { accommodationApi } from '../api/accommodationApi';
-import type { BedListItemResponse, ListQueryParams, UUID } from '../api/types';
+import type { AccommodationStatus, BedListItemResponse, ListQueryParams, UUID } from '../api/types';
 import {
   accommodationQueryKeys,
   getAccommodationInvalidationGeneration,
@@ -25,10 +25,11 @@ export type BedsQueryContext = {
 
 export function useBeds(
   context: BedsQueryContext | null,
-  options?: { enabled?: boolean; searchQuery?: string },
+  options?: { enabled?: boolean; searchQuery?: string; status?: AccommodationStatus | 'ALL' },
 ) {
   const enabled = options?.enabled ?? Boolean(context?.spaceId && context?.roomId);
   const searchQuery = options?.searchQuery ?? '';
+  const statusFilter = options?.status ?? 'ALL';
 
   const [beds, setBeds] = useState<BedListItemResponse[]>([]);
   const [loading, setLoading] = useState(false);
@@ -57,9 +58,12 @@ export function useBeds(
   const queryKey = useMemo(
     () =>
       context
-        ? accommodationQueryKeys.beds(context.spaceId, context.roomId, { query: debouncedQuery })
+        ? accommodationQueryKeys.beds(context.spaceId, context.roomId, {
+            query: debouncedQuery,
+            status: statusFilter === 'ALL' ? undefined : statusFilter,
+          })
         : (['beds'] as const),
-    [context, debouncedQuery],
+    [context, debouncedQuery, statusFilter],
   );
 
   const loadPage = useCallback(
@@ -119,6 +123,9 @@ export function useBeds(
         if (debouncedQuery) {
           params.query = debouncedQuery;
         }
+        if (statusFilter !== 'ALL') {
+          params.status = statusFilter;
+        }
 
         const data = await accommodationApi.listBeds(spaceId, roomId, params);
 
@@ -151,7 +158,7 @@ export function useBeds(
         }
       }
     },
-    [context, debouncedQuery, enabled, queryKey],
+    [context, debouncedQuery, enabled, queryKey, statusFilter],
   );
 
   const refresh = useCallback(async () => {

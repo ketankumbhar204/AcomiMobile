@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   CompositeNavigationProp,
   useFocusEffect,
@@ -21,6 +21,7 @@ import {
 import { PermissionDeniedScreen } from '../../components/ui';
 import { Screen } from '../../components/ui/Screen';
 import { useMenuLibrary } from '../../hooks/useMenuLibrary';
+import { useMainStackNavigation } from '../../hooks/useMainStackNavigation';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList, SpaceTabParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
@@ -40,6 +41,7 @@ type InlineEditor = 'category' | 'item-add' | null;
 export function MenuLibraryScreen({ spaceId }: MenuLibraryScreenProps) {
   const { t } = useTranslation();
   const navigation = useNavigation<MenuLibraryNav>();
+  const { navigate: navigateMain } = useMainStackNavigation();
   const permissions = useSpacePermissions(spaceId);
   const showToast = useToastStore(state => state.showToast);
 
@@ -294,31 +296,31 @@ export function MenuLibraryScreen({ spaceId }: MenuLibraryScreenProps) {
 
           {activeCategories.length > 0 ? (
             <ItemChipGrid
-            items={filteredItems}
-            categoryName={selectedCategory?.name}
-            canManage={canManage}
-            onRemoveCategory={
-              selectedCategory && canManage
-                ? () => removeCategory(selectedCategory)
-                : undefined
-            }
-            isAdding={inlineEditor === 'item-add'}
-            editingItemId={editingItemId}
-            addDisabled={inlineBusy && inlineEditor !== 'item-add'}
-            onStartAdd={() => {
-              closeInlineEditors();
-              setInlineEditor('item-add');
-            }}
-            onCancelAdd={closeInlineEditors}
-            onSaveItem={saveItem}
-            onStartEdit={item => {
-              setInlineEditor(null);
-              setEditingItemId(item.itemId);
-            }}
-            onCancelEdit={closeInlineEditors}
-            onUpdateItem={updateItem}
-            onRemoveItem={canManage ? removeItem : undefined}
-          />
+              items={filteredItems}
+              categoryName={selectedCategory?.name}
+              canManage={canManage}
+              onRemoveCategory={
+                selectedCategory && canManage
+                  ? () => removeCategory(selectedCategory)
+                  : undefined
+              }
+              isAdding={inlineEditor === 'item-add'}
+              editingItemId={editingItemId}
+              addDisabled={inlineBusy && inlineEditor !== 'item-add'}
+              onStartAdd={() => {
+                closeInlineEditors();
+                setInlineEditor('item-add');
+              }}
+              onCancelAdd={closeInlineEditors}
+              onSaveItem={saveItem}
+              onStartEdit={item => {
+                setInlineEditor(null);
+                setEditingItemId(item.itemId);
+              }}
+              onCancelEdit={closeInlineEditors}
+              onUpdateItem={updateItem}
+              onRemoveItem={canManage ? removeItem : undefined}
+            />
           ) : null}
         </>
       ) : null}
@@ -350,6 +352,16 @@ export function MenuLibraryScreen({ spaceId }: MenuLibraryScreenProps) {
             onRemove={selectedCombo && canManage ? () => removeCombo(selectedCombo) : undefined}
           />
         </>
+      ) : null}
+
+      {canManage ? (
+        <View style={styles.links}>
+          <Pressable
+            style={styles.linkRow}
+            onPress={() => navigateMain('SubscriptionPlans', { spaceId })}>
+            <Text style={styles.linkText}>{t('meals.subscriptionPlans.title')}</Text>
+          </Pressable>
+        </View>
       ) : null}
 
       <Text style={styles.footerHint}>{t('meals.library.dailyMenuLaterHint')}</Text>
@@ -393,5 +405,17 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.muted,
     marginTop: spacing.sm,
+  },
+  links: {
+    marginTop: spacing.md,
+    gap: spacing.xxs,
+  },
+  linkRow: {
+    paddingVertical: spacing.sm,
+  },
+  linkText: {
+    ...typography.body,
+    color: colors.primaryDark,
+    fontWeight: '600',
   },
 });

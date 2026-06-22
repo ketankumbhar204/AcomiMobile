@@ -1,6 +1,13 @@
 export { AccommodationDetailRow, formatAccommodationDate } from './AccommodationDetailRows';
 export { AccommodationListFooter } from './AccommodationListFooter';
 export { AccommodationSearchBar } from './AccommodationSearchBar';
+export {
+  BedsFilterDrawer,
+  bedStatusForApi,
+  countBedStatusFilters,
+  defaultBedStatusFilters,
+} from './BedsFilterDrawer';
+export type { BedStatusFilterState } from './BedsFilterDrawer';
 export { AccommodationStatusBadge } from './AccommodationStatusBadge';
 export { AccommodationStatusPicker } from './AccommodationStatusPicker';
 export { RoomTypePicker } from './RoomTypePicker';

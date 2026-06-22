@@ -25,6 +25,8 @@ function attentionIcon(kind: DashboardAttentionItem['kind']): string {
       return '🟢';
     case 'payments_overdue':
       return '💳';
+    case 'subscription_activation_pending':
+      return '📋';
     default:
       return '⚠';
   }
@@ -39,7 +41,11 @@ export function DashboardAttentionCard({ spaceId, attention }: DashboardAttentio
       ? (attention.missingMealTypes?.length ?? 0) === 1
         ? 'dashboard.attention.partial_planned.titleSingle'
         : 'dashboard.attention.partial_planned.titleMultiple'
-      : `dashboard.attention.${attention.kind}.title`;
+      : attention.kind === 'subscription_activation_pending'
+        ? (attention.pendingSubscriptionRequestCount ?? 0) === 1
+          ? 'dashboard.attention.subscription_activation_pending.titleSingle'
+          : 'dashboard.attention.subscription_activation_pending.titleMultiple'
+        : `dashboard.attention.${attention.kind}.title`;
 
   const subtitleKey = `dashboard.attention.${attention.kind}.subtitle`;
 
@@ -52,7 +58,11 @@ export function DashboardAttentionCard({ spaceId, attention }: DashboardAttentio
         ? {
             count: attention.overdueCount ?? 0,
           }
-        : undefined;
+        : attention.kind === 'subscription_activation_pending'
+          ? {
+              count: attention.pendingSubscriptionRequestCount ?? 0,
+            }
+          : undefined;
 
   const subtitleParams = {
     scheduled: attention.scheduledCount,
@@ -62,6 +72,7 @@ export function DashboardAttentionCard({ spaceId, attention }: DashboardAttentio
     count: attention.overdueCount,
     amount:
       formatComboPrice(attention.overdueAmount ?? null, attention.currencyCode ?? 'INR') ?? '—',
+    pendingRequests: attention.pendingSubscriptionRequestCount,
   };
 
   const onPress = useCallback(() => {
@@ -79,6 +90,9 @@ export function DashboardAttentionCard({ spaceId, attention }: DashboardAttentio
       case 'payments_overdue':
         navigateToPaymentsTab(spaceId);
         return;
+      case 'subscription_activation_pending':
+        navigateMainStack('SubscriptionActivationRequests', { spaceId });
+        return;
       default:
         return;
     }
@@ -86,7 +100,11 @@ export function DashboardAttentionCard({ spaceId, attention }: DashboardAttentio
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      style={({ pressed }) => [
+        styles.card,
+        attention.kind === 'subscription_activation_pending' && styles.cardSubscription,
+        pressed && styles.cardPressed,
+      ]}
       onPress={onPress}
       accessibilityRole="button">
       <View style={styles.content}>
@@ -110,13 +128,13 @@ type DashboardAttentionCardsRowProps = {
   items: DashboardAttentionItem[];
 };
 
-export function DashboardAttentionCardsRow({ spaceId, items }: DashboardAttentionCardsRowProps) {
+export function DashboardPendingActionsList({ spaceId, items }: DashboardAttentionCardsRowProps) {
   if (items.length === 0) {
     return null;
   }
 
   return (
-    <View style={styles.row}>
+    <View style={styles.list}>
       {items.map((attention, index) => (
         <DashboardAttentionCard
           key={`${attention.kind}-${index}`}
@@ -128,30 +146,36 @@ export function DashboardAttentionCardsRow({ spaceId, items }: DashboardAttentio
   );
 }
 
+/** @deprecated Use DashboardPendingActionsList */
+export function DashboardAttentionCardsRow(props: DashboardAttentionCardsRowProps) {
+  return <DashboardPendingActionsList {...props} />;
+}
+
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
+  list: {
     gap: spacing.sm,
-    marginBottom: spacing.lg,
   },
   card: {
-    flex: 1,
-    minWidth: 0,
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: spacing.sm,
     backgroundColor: colors.white,
     borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
     minHeight: 72,
     ...shadows.sm,
   },
   cardPressed: {
     borderColor: `${colors.primary}66`,
     backgroundColor: colors.surface,
+  },
+  cardSubscription: {
+    borderColor: '#F59E0B',
+    backgroundColor: '#FFFBEB',
   },
   content: {
     flex: 1,

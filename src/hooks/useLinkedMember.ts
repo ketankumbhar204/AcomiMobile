@@ -5,7 +5,7 @@ import { useAuthStore } from '../store/authStore';
 
 /**
  * Resolves the member record linked to the signed-in user within a space.
- * Used for TENANT "My stay" flows.
+ * Used for TENANT "My stay" flows and CUSTOMER meal flows.
  */
 export function useLinkedMember(spaceId: UUID | null | undefined) {
   const userId = useAuthStore(state => state.userId);
@@ -20,13 +20,19 @@ export function useLinkedMember(spaceId: UUID | null | undefined) {
 
     setLoading(true);
     try {
-      const members = await memberApi.getMembers(spaceId);
-      const linked = members.find(item => item.linkedUserId === userId) ?? null;
+      const linked = await memberApi.getMyLinkedMember(spaceId);
       setMember(linked);
       return linked;
     } catch {
-      setMember(null);
-      return null;
+      try {
+        const members = await memberApi.getMembers(spaceId);
+        const fallback = members.find(item => item.linkedUserId === userId) ?? null;
+        setMember(fallback);
+        return fallback;
+      } catch {
+        setMember(null);
+        return null;
+      }
     } finally {
       setLoading(false);
     }

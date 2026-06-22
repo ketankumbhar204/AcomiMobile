@@ -108,6 +108,9 @@ export function MemberDetailsScreen() {
             spaceId={spaceId}
             spaceType={spaceType}
             member={member}
+            canManageBalance={canManageMeals}
+            canEditMember={canEdit}
+            onBillingChanged={refreshMember}
             onSelectActivityDate={date => {
               setTimeout(() => {
                 openActivityDaySheet(

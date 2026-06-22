@@ -22,6 +22,9 @@ export function buildListQuery(params?: ListQueryParams): string {
   if (params?.includeSynthetic != null) {
     q.set('includeSynthetic', String(params.includeSynthetic));
   }
+  if (params?.status) {
+    q.set('status', params.status);
+  }
   const s = q.toString();
   return s ? `?${s}` : '';
 }

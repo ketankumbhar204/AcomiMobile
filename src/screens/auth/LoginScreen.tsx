@@ -6,16 +6,17 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { Button, FormInput } from '../../components/ui';
+import { Button } from '../../components/ui';
 import { useSendOtp } from '../../hooks/useAuth';
 import type { AuthStackParamList } from '../../navigation/types';
-import { colors, spacing, typography } from '../../theme';
+import { colors, radius, spacing, typography } from '../../theme';
 import { isValidIndianMobile, normalizeIndianMobileDigits } from '../../utils/indianMobile';
 
 type LoginNav = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
@@ -41,6 +42,8 @@ export function LoginScreen() {
     }
     return null;
   }
+
+  const fieldError = mobileError ?? formatError;
 
   async function handleSendOtp() {
     Keyboard.dismiss();
@@ -85,14 +88,15 @@ export function LoginScreen() {
             </View>
           ) : null}
 
-          <View style={styles.inputRow}>
-            <View style={styles.prefix}>
-              <Text style={styles.prefixText}>+91</Text>
-            </View>
-            <View style={styles.inputWrap}>
-              <FormInput
-                label=""
+          <View style={styles.phoneField}>
+            <View style={styles.inputRow}>
+              <View style={styles.prefix}>
+                <Text style={styles.prefixText}>+91</Text>
+              </View>
+              <TextInput
+                style={[styles.phoneInput, fieldError ? styles.phoneInputError : null]}
                 placeholder={t('auth.login.mobilePlaceholder')}
+                placeholderTextColor={colors.muted}
                 value={mobileNumber}
                 onChangeText={text => {
                   const digits = normalizeIndianMobileDigits(text);
@@ -104,13 +108,14 @@ export function LoginScreen() {
                     clearError();
                   }
                 }}
-                error={mobileError ?? formatError}
                 keyboardType="phone-pad"
                 returnKeyType="done"
                 maxLength={10}
                 onSubmitEditing={handleSendOtp}
+                autoCorrect={false}
               />
             </View>
+            {fieldError ? <Text style={styles.fieldError}>{fieldError}</Text> : null}
           </View>
 
           <Button
@@ -185,32 +190,53 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: '#DC2626',
   },
+  phoneField: {
+    marginBottom: spacing.lg,
+  },
   inputRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: spacing.sm,
-    marginBottom: spacing.md,
   },
   prefix: {
-    height: 48,
+    minHeight: 48,
+    minWidth: 72,
     paddingHorizontal: spacing.lg,
-    borderRadius: 12,
+    borderRadius: radius.input,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 0,
   },
   prefixText: {
     ...typography.bodyStrong,
     color: colors.textSecondary,
   },
-  inputWrap: {
+  phoneInput: {
     flex: 1,
+    minHeight: 48,
+    backgroundColor: colors.white,
+    borderRadius: radius.input,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: Platform.OS === 'android' ? 0 : spacing.md,
+    fontSize: 15,
+    color: colors.textPrimary,
+    ...(Platform.OS === 'android' ? { textAlignVertical: 'center' as const } : null),
+  },
+  phoneInputError: {
+    borderColor: '#F87171',
+    backgroundColor: '#FFF5F5',
+  },
+  fieldError: {
+    ...typography.caption,
+    color: '#DC2626',
+    marginTop: spacing.xs,
   },
   button: {
-    marginTop: spacing.sm,
+    marginTop: 0,
   },
   disclaimer: {
     ...typography.caption,

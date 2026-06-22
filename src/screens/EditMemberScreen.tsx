@@ -15,7 +15,14 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import type { MemberGender, MembershipRole } from '../api/types';
+import { mealBalanceApi } from '../api/mealBalanceApi';
+import { mealBillingApi } from '../api/mealBillingApi';
+import type { MealBillingType, MemberGender, MembershipRole, PrepaidBalanceUnit } from '../api/types';
+import {
+  MemberMealBillingTypeSection,
+  type MemberMealBillingSelection,
+} from '../components/member/MemberMealBillingTypeSection';
+import { MemberSubscriptionSetupFields } from '../components/member/MemberSubscriptionSetupFields';
 import { Button, FormInput, GenderPicker, HeaderBackButton, RolePicker } from '../components/ui';
 import type { MainStackParamList } from '../navigation/types';
 import { useMemberStore } from '../store/memberStore';
@@ -26,6 +33,11 @@ import { isRoleAssignableInSpace } from '../utils/memberRoles';
 import { isMemberGenderRequired, isSelectableMemberGender } from '../utils/memberGender';
 import { isValidIndianMobile, normalizeIndianMobileDigits } from '../utils/indianMobile';
 import { findMySpaceEntry } from '../utils/spacePermissions';
+import {
+  buildSubscriptionPurchasePayload,
+  isSubscriptionBilling,
+} from '../utils/memberMealBilling';
+import { defaultSubscriptionValidTillIso, parseValidTillInput } from '../utils/subscriptionLifecycle';
 
 type EditMemberNav = NativeStackNavigationProp<MainStackParamList, 'EditMember'>;
 type EditMemberRoute = NativeStackScreenProps<MainStackParamList, 'EditMember'>['route'];
@@ -35,6 +47,8 @@ type FieldErrors = {
   mobileNumber?: string;
   role?: string;
   gender?: string;
+  subscriptionMealQty?: string;
+  subscriptionPrice?: string;
 };
 
 export function EditMemberScreen() {
@@ -55,10 +69,20 @@ export function EditMemberScreen() {
   const [mobileNumber, setMobileNumber] = useState('');
   const [role, setRole] = useState<MembershipRole | null>(null);
   const [gender, setGender] = useState<MemberGender | null>(null);
+  const [mealBillingSelection, setMealBillingSelection] =
+    useState<MemberMealBillingSelection>('DEFAULT');
+  const [spaceDefaultBilling, setSpaceDefaultBilling] = useState<MealBillingType>('PAY_PER_MEAL');
+  const [prepaidBalanceUnit, setPrepaidBalanceUnit] = useState<PrepaidBalanceUnit>('MEALS');
+  const [subscriptionMealQty, setSubscriptionMealQty] = useState('');
+  const [subscriptionPrice, setSubscriptionPrice] = useState('');
+  const [subscriptionValidTill, setSubscriptionValidTill] = useState(defaultSubscriptionValidTillIso());
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const genderRequired = isMemberGenderRequired(spaceType);
+  const showMealBilling = spaceType === 'MESS';
+  const showSubscriptionSetup =
+    showMealBilling && isSubscriptionBilling(mealBillingSelection, spaceDefaultBilling);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -72,15 +96,23 @@ export function EditMemberScreen() {
     useCallback(() => {
       console.log('[EditMember] screen focused', { memberId });
 
+      if (showMealBilling) {
+        void mealBillingApi.getSettings(spaceId).then(settings => {
+          setSpaceDefaultBilling(settings.billingType);
+          setPrepaidBalanceUnit(settings.prepaidBalanceUnit ?? 'MEALS');
+        });
+      }
+
       loadMemberDetails(memberId).then(loaded => {
         if (loaded && loaded.role !== 'OWNER') {
           setFullName(loaded.fullName);
           setMobileNumber(loaded.mobileNumber);
           setRole(loaded.role);
           setGender(isSelectableMemberGender(loaded.gender) ? loaded.gender : null);
+          setMealBillingSelection(loaded.mealBillingType ?? 'DEFAULT');
         }
       });
-    }, [loadMemberDetails, memberId]),
+    }, [loadMemberDetails, memberId, showMealBilling, spaceId]),
   );
 
   function validate(): boolean {
@@ -126,12 +158,29 @@ export function EditMemberScreen() {
       mobileNumber: mobileNumber.trim(),
       role,
       gender: gender ?? undefined,
+      mealBillingType:
+        showMealBilling && mealBillingSelection !== 'DEFAULT' ? mealBillingSelection : null,
     });
 
     setIsSubmitting(false);
 
     if (updated) {
       console.log('[EditMember] save success', updated.memberId);
+      const purchase = buildSubscriptionPurchasePayload(
+        subscriptionMealQty,
+        subscriptionPrice,
+        prepaidBalanceUnit,
+      );
+      if (showSubscriptionSetup && purchase) {
+        try {
+          await mealBalanceApi.recordPurchase(spaceId, memberId, {
+            ...purchase,
+            validTill: parseValidTillInput(subscriptionValidTill) ?? defaultSubscriptionValidTillIso(),
+          });
+        } catch {
+          showToast(t('meals.errors.saveFailed'));
+        }
+      }
       showToast(t('membership.edit.successToast'));
       navigation.goBack();
       return;
@@ -205,6 +254,29 @@ export function EditMemberScreen() {
             }}
             error={fieldErrors.role}
           />
+
+          {showMealBilling ? (
+            <MemberMealBillingTypeSection
+              spaceDefault={spaceDefaultBilling}
+              value={mealBillingSelection}
+              onChange={setMealBillingSelection}
+              disabled={isSubmitting || loading}
+            />
+          ) : null}
+
+          {showSubscriptionSetup ? (
+            <MemberSubscriptionSetupFields
+              unit={prepaidBalanceUnit}
+              mealQty={subscriptionMealQty}
+              subscriptionPrice={subscriptionPrice}
+              validTill={subscriptionValidTill}
+              onMealQtyChange={setSubscriptionMealQty}
+              onSubscriptionPriceChange={setSubscriptionPrice}
+              onValidTillChange={setSubscriptionValidTill}
+              optionalHint
+              useSubscriptionLabels
+            />
+          ) : null}
 
           <GenderPicker
             value={gender}

@@ -26,6 +26,7 @@ import type {
   MealSharePreviewResponse,
   MealPollDayResponse,
   MealPollPaymentChoice,
+  MealPollPaymentEvent,
   MealPollSlot,
   MemberMealParticipationSummary,
   PagedResponse,
@@ -497,10 +498,15 @@ export const mealsApi = {
     spaceId: UUID,
     menuDate: string,
     memberId: UUID,
+    approvalRemarks?: string,
   ): Promise<MealPollDayResponse> => {
     const path = `/spaces/${spaceId}/meal-polls/${menuDate}/payments/${memberId}/approve`;
     console.log(`${LOG_TAG} POST ${path}`);
-    return unwrapApiResponse(apiClient.post<ApiResponse<MealPollDayResponse>>(path));
+    return unwrapApiResponse(
+      apiClient.post<ApiResponse<MealPollDayResponse>>(path, {
+        ...(approvalRemarks ? { approvalRemarks } : {}),
+      }),
+    );
   },
 
   rejectMealPollPayment: async (
@@ -518,6 +524,26 @@ export const mealsApi = {
     );
   },
 
+  sendMealPollPaymentReminder: async (
+    spaceId: UUID,
+    menuDate: string,
+    memberId: UUID,
+  ): Promise<MealPollDayResponse> => {
+    const path = `/spaces/${spaceId}/meal-polls/${menuDate}/payments/${memberId}/remind`;
+    console.log(`${LOG_TAG} POST ${path}`);
+    return unwrapApiResponse(apiClient.post<ApiResponse<MealPollDayResponse>>(path));
+  },
+
+  getMemberMealPaymentEvents: async (
+    spaceId: UUID,
+    memberId: UUID,
+    month: string,
+  ): Promise<MealPollPaymentEvent[]> => {
+    const path = `/spaces/${spaceId}/members/${memberId}/meal-payment-events?month=${encodeURIComponent(month)}`;
+    console.log(`${LOG_TAG} GET ${path}`);
+    return unwrapApiResponse(apiClient.get<ApiResponse<MealPollPaymentEvent[]>>(path));
+  },
+
   getMealDeliveryLocations: async (spaceId: UUID): Promise<MealDeliveryLocation[]> => {
     const path = `/spaces/${spaceId}/meal-delivery-locations`;
     console.log(`${LOG_TAG} GET ${path}`);
@@ -532,7 +558,7 @@ export const mealsApi = {
 
   createMealDeliveryLocation: async (
     spaceId: UUID,
-    body: { name: string; description?: string; sortOrder?: number },
+    body: { name: string; description?: string; address?: string; sortOrder?: number },
   ): Promise<MealDeliveryLocation> => {
     const path = `/spaces/${spaceId}/meal-delivery-locations`;
     console.log(`${LOG_TAG} POST ${path}`, body);
@@ -542,11 +568,22 @@ export const mealsApi = {
   updateMealDeliveryLocation: async (
     spaceId: UUID,
     locationId: UUID,
-    body: { name?: string; description?: string; active?: boolean; sortOrder?: number },
+    body: { name?: string; description?: string; address?: string; active?: boolean; sortOrder?: number },
   ): Promise<MealDeliveryLocation> => {
     const path = `/spaces/${spaceId}/meal-delivery-locations/${locationId}`;
     console.log(`${LOG_TAG} PUT ${path}`, body);
     return unwrapApiResponse(apiClient.put<ApiResponse<MealDeliveryLocation>>(path, body));
+  },
+
+  reorderMealDeliveryLocations: async (
+    spaceId: UUID,
+    locationIdsInOrder: UUID[],
+  ): Promise<MealDeliveryLocation[]> => {
+    const path = `/spaces/${spaceId}/meal-delivery-locations/reorder`;
+    console.log(`${LOG_TAG} POST ${path}`, locationIdsInOrder);
+    return unwrapApiResponse(
+      apiClient.post<ApiResponse<MealDeliveryLocation[]>>(path, { locationIdsInOrder }),
+    );
   },
 };
 

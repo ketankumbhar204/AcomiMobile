@@ -14,6 +14,7 @@ import { mealsApi } from '../../api/mealsApi';
 import { useMealHeadcountDetail } from '../../hooks/useMealHeadcountDetail';
 import { navigateMainStack } from '../../navigation/mainStackNavigation';
 import { useToastStore } from '../../store/toastStore';
+import { canSendPaymentReminder } from '../../utils/mealPollPayment';
 import { colors, radius, spacing, typography } from '../../theme';
 import { formatComboNameWithPrice } from '../../utils/comboPrice';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
@@ -273,12 +274,17 @@ function buildLocationComboHierarchy(
 function CustomerRow({
   member,
   onReviewMember,
+  onRemindMember,
+  remindingMemberId,
 }: {
   member: MealHeadcountMember;
   onReviewMember?: (member: MealHeadcountMember) => void;
+  onRemindMember?: (member: MealHeadcountMember) => void;
+  remindingMemberId?: UUID | null;
 }) {
   const { t } = useTranslation();
   const canReview = member.paymentStatus === 'PENDING_APPROVAL' && member.paymentProofImageUrl;
+  const canRemind = canSendPaymentReminder(member.paymentStatus) && onRemindMember != null;
   const RowWrapper = canReview ? Pressable : View;
   const plateCount = member.quantity ?? 1;
 
@@ -292,9 +298,23 @@ function CustomerRow({
         <Text style={styles.customerName}>{member.memberName}</Text>
         {member.paymentStatus ? <PaymentStatusBadge status={member.paymentStatus} /> : null}
       </View>
-      <Text style={styles.customerPlates}>
-        {t('dashboard.headcount.memberPlates', { count: plateCount })}
-      </Text>
+      <View style={styles.customerActions}>
+        {canRemind ? (
+          <Pressable
+            style={styles.remindLink}
+            onPress={() => onRemindMember(member)}
+            disabled={remindingMemberId === member.memberId}>
+            <Text style={styles.remindLinkText}>
+              {remindingMemberId === member.memberId
+                ? t('meals.poll.sendingReminder')
+                : t('meals.poll.remind')}
+            </Text>
+          </Pressable>
+        ) : null}
+        <Text style={styles.customerPlates}>
+          {t('dashboard.headcount.memberPlates', { count: plateCount })}
+        </Text>
+      </View>
     </RowWrapper>
   );
 }
@@ -302,9 +322,13 @@ function CustomerRow({
 function ComboAtLocationBlock({
   combo,
   onReviewMember,
+  onRemindMember,
+  remindingMemberId,
 }: {
   combo: ComboAtLocation;
   onReviewMember?: (member: MealHeadcountMember) => void;
+  onRemindMember?: (member: MealHeadcountMember) => void;
+  remindingMemberId?: UUID | null;
 }) {
   const { t } = useTranslation();
 
@@ -329,7 +353,13 @@ function ComboAtLocationBlock({
       ) : null}
       <View style={styles.customerList}>
         {combo.members.map(member => (
-          <CustomerRow key={member.memberId} member={member} onReviewMember={onReviewMember} />
+          <CustomerRow
+            key={member.memberId}
+            member={member}
+            onReviewMember={onReviewMember}
+            onRemindMember={onRemindMember}
+            remindingMemberId={remindingMemberId}
+          />
         ))}
       </View>
     </View>
@@ -340,10 +370,14 @@ function DeliveryLocationHierarchyAccordion({
   group,
   defaultExpanded = true,
   onReviewMember,
+  onRemindMember,
+  remindingMemberId,
 }: {
   group: DeliveryLocationHierarchy;
   defaultExpanded?: boolean;
   onReviewMember?: (member: MealHeadcountMember) => void;
+  onRemindMember?: (member: MealHeadcountMember) => void;
+  remindingMemberId?: UUID | null;
 }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(defaultExpanded);
@@ -371,7 +405,12 @@ function DeliveryLocationHierarchyAccordion({
           {group.combos.map((combo, index) => (
             <React.Fragment key={combo.optionId}>
               {index > 0 ? <View style={styles.comboDivider} /> : null}
-              <ComboAtLocationBlock combo={combo} onReviewMember={onReviewMember} />
+              <ComboAtLocationBlock
+                combo={combo}
+                onReviewMember={onReviewMember}
+                onRemindMember={onRemindMember}
+                remindingMemberId={remindingMemberId}
+              />
             </React.Fragment>
           ))}
         </View>
@@ -383,9 +422,13 @@ function DeliveryLocationHierarchyAccordion({
 function MealHeadcountDetailBody({
   detail,
   onReviewMember,
+  onRemindMember,
+  remindingMemberId,
 }: {
   detail: MealHeadcountDetailResponse;
   onReviewMember?: (member: MealHeadcountMember) => void;
+  onRemindMember?: (member: MealHeadcountMember) => void;
+  remindingMemberId?: UUID | null;
 }) {
   const { t } = useTranslation();
 
@@ -418,6 +461,8 @@ function MealHeadcountDetailBody({
               group={group}
               defaultExpanded
               onReviewMember={onReviewMember}
+              onRemindMember={onRemindMember}
+              remindingMemberId={remindingMemberId}
             />
           ))}
         </View>
@@ -491,6 +536,7 @@ export function MealHeadcountPanel({
   const [activeMealType, setActiveMealType] = useState<MealType>(initialMealType);
   const [reviewMember, setReviewMember] = useState<MealHeadcountMember | null>(null);
   const [reviewing, setReviewing] = useState(false);
+  const [remindingMemberId, setRemindingMemberId] = useState<UUID | null>(null);
   const showToast = useToastStore(state => state.showToast);
 
   const panelEnabled = enabled && slots.length > 0;
@@ -539,11 +585,27 @@ export function MealHeadcountPanel({
     onReload?.();
   }, [onReload, reload]);
 
+  const handleRemindMember = useCallback(
+    async (member: MealHeadcountMember) => {
+      setRemindingMemberId(member.memberId);
+      try {
+        await mealsApi.sendMealPollPaymentReminder(spaceId, menuDate, member.memberId);
+        showToast(t('meals.poll.reminderSent'));
+        refreshAll();
+      } catch {
+        showToast(t('meals.errors.saveFailed'));
+      } finally {
+        setRemindingMemberId(null);
+      }
+    },
+    [menuDate, refreshAll, showToast, spaceId, t],
+  );
+
   const handleApprovePayment = useCallback(
-    async (memberId: UUID) => {
+    async (memberId: UUID, approvalRemarks?: string) => {
       setReviewing(true);
       try {
-        await mealsApi.approveMealPollPayment(spaceId, menuDate, memberId);
+        await mealsApi.approveMealPollPayment(spaceId, menuDate, memberId, approvalRemarks);
         showToast(t('meals.poll.paymentApproved'));
         setReviewMember(null);
         refreshAll();
@@ -557,10 +619,10 @@ export function MealHeadcountPanel({
   );
 
   const handleRejectPayment = useCallback(
-    async (memberId: UUID) => {
+    async (memberId: UUID, rejectionReason?: string) => {
       setReviewing(true);
       try {
-        await mealsApi.rejectMealPollPayment(spaceId, menuDate, memberId);
+        await mealsApi.rejectMealPollPayment(spaceId, menuDate, memberId, rejectionReason);
         showToast(t('meals.poll.paymentRejected'));
         setReviewMember(null);
         refreshAll();
@@ -618,6 +680,8 @@ export function MealHeadcountPanel({
         <MealHeadcountDetailBody
           detail={detail}
           onReviewMember={readOnly ? undefined : handleReviewMember}
+          onRemindMember={readOnly ? undefined : handleRemindMember}
+          remindingMemberId={remindingMemberId}
         />
       )}
 
@@ -637,8 +701,8 @@ export function MealHeadcountPanel({
         proofImageUrl={reviewMember?.paymentProofImageUrl}
         reviewing={reviewing}
         onClose={closeReview}
-        onApprove={memberId => void handleApprovePayment(memberId)}
-        onReject={memberId => void handleRejectPayment(memberId)}
+        onApprove={(memberId, approvalRemarks) => void handleApprovePayment(memberId, approvalRemarks)}
+        onReject={(memberId, rejectionReason) => void handleRejectPayment(memberId, rejectionReason)}
       />
     </>
   );
@@ -804,9 +868,22 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing.xxs,
   },
+  customerActions: {
+    alignItems: 'flex-end',
+    gap: spacing.xxs,
+    minWidth: 88,
+  },
   customerName: {
     ...typography.body,
     color: colors.textPrimary,
+  },
+  remindLink: {
+    paddingVertical: 2,
+  },
+  remindLinkText: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    fontWeight: '700',
   },
   customerPlates: {
     ...typography.body,

@@ -2,6 +2,7 @@ import { accommodationApi } from '../api/accommodationApi';
 import { mealsApi } from '../api/mealsApi';
 import { memberApi } from '../api/memberApi';
 import { occupancyApi } from '../api/occupancyApi';
+import { subscriptionPlansApi } from '../api/subscriptionPlansApi';
 import type {
   DashboardAccommodationOperations,
   DashboardAttentionItem,
@@ -162,6 +163,28 @@ function resolvePaymentsAttention(
   };
 }
 
+function resolveSubscriptionActivationAttention(
+  pendingCount: number,
+): DashboardAttentionItem | null {
+  if (pendingCount <= 0) {
+    return null;
+  }
+
+  return {
+    kind: 'subscription_activation_pending',
+    pendingSubscriptionRequestCount: pendingCount,
+  };
+}
+
+async function loadSubscriptionActivationAttention(spaceId: UUID): Promise<DashboardAttentionItem | null> {
+  try {
+    const requests = await subscriptionPlansApi.listPendingRequests(spaceId);
+    return resolveSubscriptionActivationAttention(requests.length);
+  } catch {
+    return null;
+  }
+}
+
 async function loadMessAttention(spaceId: UUID): Promise<DashboardAttentionItem[]> {
   const tomorrow = tomorrowIsoDate();
   const [menus, eligibility, pollDay] = await Promise.all([
@@ -224,7 +247,13 @@ export async function buildDashboardSummaryFallback(
 
   if (isMess) {
     messOperations = await loadMessOperations(spaceId);
-    attention = [...(await loadMessAttention(spaceId)), ...attention];
+    const subscriptionAttention = await loadSubscriptionActivationAttention(spaceId);
+    const messAttention = await loadMessAttention(spaceId);
+    attention = [
+      ...(subscriptionAttention ? [subscriptionAttention] : []),
+      ...messAttention,
+      ...attention,
+    ];
   }
 
   if (accommodationApplicable) {

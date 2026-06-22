@@ -1,7 +1,10 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import type { UUID } from '../../api/types';
+import { useCustomerSubscriptionStatus } from '../../hooks/useCustomerSubscriptionStatus';
+import { useLinkedMember } from '../../hooks/useLinkedMember';
 import { tomorrowIsoDate } from '../../utils/mealDates';
 import { useMealPollDay } from '../../hooks/useMealPollDay';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
@@ -11,6 +14,7 @@ import {
   DashboardCustomerPollCard,
   type DashboardPollCardState,
 } from './DashboardCustomerPollCard';
+import { DashboardCustomerSubscriptionBanner } from './DashboardCustomerSubscriptionBanner';
 import { MealPollPaymentProofModal } from './MealPollPaymentProofModal';
 
 type MainStackNav = NativeStackNavigationProp<MainStackParamList>;
@@ -38,12 +42,22 @@ function resolveCardState(
 }
 
 export function DashboardCustomerMealsSection({ spaceId }: DashboardCustomerMealsSectionProps) {
+  const { t, i18n } = useTranslation();
   const menuDate = tomorrowIsoDate();
   const permissions = useSpacePermissions(spaceId);
   const navigation = useNavigation();
   const stackNavigation =
     navigation.getParent<MainStackNav>() ?? (navigation as MainStackNav);
   const [proofModalOpen, setProofModalOpen] = useState(false);
+  const { memberId: linkedMemberId } = useLinkedMember(spaceId);
+  const { status: subscriptionStatus, reload: reloadSubscriptionStatus } =
+    useCustomerSubscriptionStatus(spaceId);
+
+  useFocusEffect(
+    useCallback(() => {
+      void reloadSubscriptionStatus();
+    }, [reloadSubscriptionStatus]),
+  );
 
   const poll = useMealPollDay(spaceId, menuDate, permissions.spaceType);
 
@@ -58,7 +72,30 @@ export function DashboardCustomerMealsSection({ spaceId }: DashboardCustomerMeal
     [poll.allResponded, poll.hasPartialSubmission, poll.loading, poll.openPolls.length],
   );
 
+  const mealSelectionBlocked = useMemo(() => {
+    if (!subscriptionStatus?.prepaidBilling) {
+      return false;
+    }
+    if (subscriptionStatus.pendingActivationStatus === 'PENDING') {
+      return true;
+    }
+    return !subscriptionStatus.subscriptionActive;
+  }, [subscriptionStatus]);
+
+  const mealSelectionDisabledReason = useMemo(() => {
+    if (!mealSelectionBlocked || !subscriptionStatus?.prepaidBilling) {
+      return undefined;
+    }
+    if (subscriptionStatus.pendingActivationStatus === 'PENDING') {
+      return t('meals.subscription.customer.selectionPendingHint');
+    }
+    return t('meals.subscription.customer.selectionRequiredHint');
+  }, [mealSelectionBlocked, subscriptionStatus, t]);
+
   const handleOpenPoll = useCallback(() => {
+    if (mealSelectionBlocked) {
+      return;
+    }
     if (poll.allResponded) {
       poll.handleUpdateChoices();
     }
@@ -71,12 +108,25 @@ export function DashboardCustomerMealsSection({ spaceId }: DashboardCustomerMeal
 
     navigateMainStack('MealPollResponse', params);
   }, [
+    mealSelectionBlocked,
     menuDate,
     poll.allResponded,
     poll.handleUpdateChoices,
     spaceId,
     stackNavigation,
   ]);
+
+  const handleViewPlans = useCallback(() => {
+    if (!linkedMemberId) {
+      return;
+    }
+    const params = { spaceId, memberId: linkedMemberId };
+    if (stackNavigation?.navigate) {
+      stackNavigation.navigate('CustomerSubscriptionPlans', params);
+      return;
+    }
+    navigateMainStack('CustomerSubscriptionPlans', params);
+  }, [linkedMemberId, spaceId, stackNavigation]);
 
   const handleProofSubmit = useCallback(
     async (proofImageBase64: string) => {
@@ -90,6 +140,14 @@ export function DashboardCustomerMealsSection({ spaceId }: DashboardCustomerMeal
 
   return (
     <>
+      {subscriptionStatus?.prepaidBilling ? (
+        <DashboardCustomerSubscriptionBanner
+          status={subscriptionStatus}
+          locale={i18n.language}
+          onViewPlans={handleViewPlans}
+        />
+      ) : null}
+
       <DashboardCustomerPollCard
         menuDate={menuDate}
         loading={poll.loading}
@@ -98,7 +156,12 @@ export function DashboardCustomerMealsSection({ spaceId }: DashboardCustomerMeal
         cardState={cardState}
         paymentStatus={poll.myPaymentStatus}
         rejectionReason={poll.myRejectionReason}
+        prepaidOverflowAmount={poll.myPrepaidOverflowAmount}
+        prepaidDebitedAmount={poll.myPrepaidDebitedAmount}
+        prepaidOverflowPayment={poll.myPrepaidOverflowPayment}
         onAction={cardState === 'empty' ? undefined : handleOpenPoll}
+        actionDisabled={mealSelectionBlocked && cardState !== 'empty'}
+        actionDisabledReason={mealSelectionDisabledReason}
         onUploadProof={
           poll.myPaymentStatus === 'PENDING' || poll.myPaymentStatus === 'REJECTED'
             ? () => setProofModalOpen(true)

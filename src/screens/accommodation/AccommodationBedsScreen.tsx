@@ -17,8 +17,11 @@ import type { BedListItemResponse, RoomResponse } from '../../api/types';
 import {
   AccommodationContextTrail,
   AccommodationListFooter,
-  AccommodationSearchBar,
   AccommodationStatusBadge,
+  BedsFilterDrawer,
+  bedStatusForApi,
+  countBedStatusFilters,
+  defaultBedStatusFilters,
   BuilderRowLifecycleMenu,
   BulkBedsModal,
 } from '../../components/accommodation';
@@ -26,7 +29,7 @@ import {
   AccommodationOccupancyFlowModals,
   BedInventoryListRow,
 } from '../../components/occupancy';
-import { Button, Card, EmptyState, FAB, HeaderBackButton, InlineEditableName, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
+import { Button, Card, EmptyState, FAB, HeaderBackButton, InlineEditableName, ListSearchFilterBar, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useAccommodationOccupancyFlow } from '../../hooks/useAccommodationOccupancyFlow';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
@@ -75,6 +78,8 @@ export function AccommodationBedsScreen() {
   const showFab = permissions.canManageAccommodation;
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilters, setStatusFilters] = useState(defaultBedStatusFilters);
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [room, setRoom] = useState<RoomResponse | null>(null);
   const [roomLoading, setRoomLoading] = useState(true);
@@ -82,9 +87,12 @@ export function AccommodationBedsScreen() {
 
   const bulkBedsHook = useBulkBeds();
 
+  const statusFilter = bedStatusForApi(statusFilters);
+  const activeFilterCount = countBedStatusFilters(statusFilters);
+
   const { beds, loading, loadingMore, error, notFound, hasMore, refresh, loadMore } = useBeds(
     bedsContext,
-    { searchQuery },
+    { searchQuery, status: statusFilter },
   );
 
   const resolvedRoomName = room?.name ?? roomName;
@@ -277,7 +285,13 @@ export function AccommodationBedsScreen() {
           style={styles.secondaryAction}
         />
       ) : null}
-      <AccommodationSearchBar value={searchQuery} onChangeText={setSearchQuery} />
+      <ListSearchFilterBar
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder={t('accommodation.search.beds')}
+        onFilterPress={() => setFilterDrawerOpen(true)}
+        activeFilterCount={activeFilterCount}
+      />
       {showLoading ? <SkeletonCard /> : null}
     </View>
   );
@@ -400,6 +414,13 @@ export function AccommodationBedsScreen() {
           invalidateAccommodationQueries();
           void refresh();
         }}
+      />
+
+      <BedsFilterDrawer
+        visible={filterDrawerOpen}
+        applied={statusFilters}
+        onClose={() => setFilterDrawerOpen(false)}
+        onApply={setStatusFilters}
       />
     </View>
     </RequireAccommodationAccess>

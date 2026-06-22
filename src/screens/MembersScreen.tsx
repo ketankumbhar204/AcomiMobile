@@ -31,9 +31,11 @@ import {
   EmptyState,
   FAB,
   ListCard,
+  ListSearchFilterBar,
   SkeletonCard,
   useConfirmDialog,
 } from '../components/ui';
+import { MembersFilterDrawer } from '../components/member/MembersFilterDrawer';
 import { useActiveSpaceId } from '../hooks/useActiveSpaceId';
 import { useMealParticipationMap } from '../hooks/useMealParticipationMap';
 import { useSpacePermissions } from '../hooks/useSpacePermissions';
@@ -43,6 +45,13 @@ import { useAccommodationActionSheetStore } from '../store/accommodationActionSh
 import { useMemberStore } from '../store/memberStore';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 import { memberCountInBadgeLabel } from '../utils/memberAppStatus';
+import {
+  countMemberListFilters,
+  defaultMemberListFilters,
+  filterAndSortMembers,
+  filterPendingInvitations,
+  type MemberListFilterState,
+} from '../utils/memberListQuery';
 
 type MembersNavigation = CompositeNavigationProp<
   BottomTabNavigationProp<SpaceTabParamList, 'Members'>,
@@ -65,24 +74,6 @@ function formatRoleLabel(
 
 function formatDate(value: string): string {
   return new Date(value).toLocaleDateString();
-}
-
-const ROLE_SORT_ORDER: Record<MembershipRole, number> = {
-  OWNER: 0,
-  MANAGER: 1,
-  STAFF: 2,
-  TENANT: 3,
-  CUSTOMER: 4,
-};
-
-function sortMembersByRole(members: MemberResponse[]): MemberResponse[] {
-  return [...members].sort((a, b) => {
-    const roleDiff = ROLE_SORT_ORDER[a.role] - ROLE_SORT_ORDER[b.role];
-    if (roleDiff !== 0) {
-      return roleDiff;
-    }
-    return a.fullName.localeCompare(b.fullName);
-  });
 }
 
 function buildMemberSubtitle(
@@ -111,6 +102,11 @@ export function MembersScreen() {
   const openActionSheet = useAccommodationActionSheetStore(state => state.open);
 
   const [activeTab, setActiveTab] = useState<MembersTab>('members');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [listFilters, setListFilters] = useState<MemberListFilterState>(() =>
+    defaultMemberListFilters(),
+  );
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
 
   const permissions = useSpacePermissions(spaceId);
   const showMealAccess = permissions.canViewMeals === true;
@@ -121,7 +117,27 @@ export function MembersScreen() {
     showMealAccess,
   );
 
-  const sortedMembers = useMemo(() => sortMembersByRole(members), [members]);
+  const sortedMembers = useMemo(
+    () =>
+      filterAndSortMembers(members, {
+        search: searchQuery,
+        filters: listFilters,
+        spaceType: permissions.spaceType,
+      }),
+    [listFilters, members, permissions.spaceType, searchQuery],
+  );
+
+  const filteredPendingInvitations = useMemo(
+    () =>
+      filterPendingInvitations(pendingInvitations, {
+        search: searchQuery,
+        roles: listFilters.roles,
+        spaceType: permissions.spaceType,
+      }),
+    [listFilters.roles, pendingInvitations, permissions.spaceType, searchQuery],
+  );
+
+  const activeFilterCount = countMemberListFilters(listFilters, permissions.spaceType);
 
   const showAddFab = permissions.canManageMembers;
   const showInviteAction = permissions.canManageMembers;
@@ -225,6 +241,7 @@ export function MembersScreen() {
         style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -235,6 +252,18 @@ export function MembersScreen() {
         }>
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
+        <ListSearchFilterBar
+          searchValue={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder={
+            activeTab === 'members'
+              ? t('list.search.members')
+              : t('list.search.pendingInvitations')
+          }
+          onFilterPress={() => setFilterDrawerOpen(true)}
+          activeFilterCount={activeFilterCount}
+        />
+
         {activeTab === 'members' ? (
           showLoading ? (
             <>
@@ -244,8 +273,16 @@ export function MembersScreen() {
             </>
           ) : sortedMembers.length === 0 ? (
             <EmptyState
-              title={t('membership.members.emptyTitle')}
-              description={t('membership.members.emptyDescription')}
+              title={
+                members.length === 0
+                  ? t('membership.members.emptyTitle')
+                  : t('list.emptyFiltered')
+              }
+              description={
+                members.length === 0
+                  ? t('membership.members.emptyDescription')
+                  : undefined
+              }
               icon="👥"
             />
           ) : (
@@ -313,9 +350,11 @@ export function MembersScreen() {
             description={t('membership.pending.emptyDescription')}
             icon="✉️"
           />
+        ) : filteredPendingInvitations.length === 0 ? (
+          <EmptyState title={t('list.emptyFiltered')} icon="✉️" />
         ) : (
           <View style={styles.list}>
-            {pendingInvitations.map(invitation => (
+            {filteredPendingInvitations.map(invitation => (
               <View key={invitation.invitationId} style={styles.card}>
                 <Text style={styles.cardTitle}>{invitation.mobileNumber}</Text>
                 <Text style={styles.cardMeta}>
@@ -352,6 +391,16 @@ export function MembersScreen() {
           accessibilityLabel={t('membership.add.fab')}
         />
       ) : null}
+
+      <MembersFilterDrawer
+        visible={filterDrawerOpen}
+        spaceType={permissions.spaceType}
+        applied={listFilters}
+        showStatusSection={activeTab === 'members'}
+        showSortSection={activeTab === 'members'}
+        onClose={() => setFilterDrawerOpen(false)}
+        onApply={setListFilters}
+      />
     </View>
   );
 }

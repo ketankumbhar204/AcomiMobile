@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import type { MemberMealActivityMonth } from '../../api/types';
+import type { MemberMealActivityMonth, PrepaidBalanceUnit } from '../../api/types';
 import { colors, radius, spacing, typography } from '../../theme';
 import { formatComboPrice } from '../../utils/comboPrice';
 import type { MemberMealActivityView } from './MemberMealActivityTabBar';
@@ -10,6 +10,21 @@ type MemberMealActivitySummaryCardsProps = {
   view: MemberMealActivityView;
   activity: MemberMealActivityMonth | null;
 };
+
+function formatBalanceValue(
+  amount: number | null | undefined,
+  unit: PrepaidBalanceUnit | null | undefined,
+  currencyCode: string,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  if (amount == null) {
+    return '—';
+  }
+  if (unit === 'MEALS') {
+    return t('dashboard.financial.mealsCount', { count: Math.round(amount) });
+  }
+  return formatComboPrice(amount, currencyCode) ?? '—';
+}
 
 export function MemberMealActivitySummaryCards({
   view,
@@ -21,8 +36,41 @@ export function MemberMealActivitySummaryCards({
     return null;
   }
 
+  const currencyCode = summary.currencyCode ?? 'INR';
+  const isPrepaid = summary.balanceUnit != null;
+
   if (view === 'history') {
-    const currencyCode = summary.currencyCode ?? 'INR';
+    if (isPrepaid) {
+      return (
+        <View style={styles.grid}>
+          <View style={styles.card}>
+            <Text style={styles.value}>
+              {formatBalanceValue(summary.balancePurchased, summary.balanceUnit, currencyCode, t)}
+            </Text>
+            <Text style={styles.label}>{t('meals.activity.history.mealsPurchased')}</Text>
+          </View>
+          <View style={styles.card}>
+            <Text style={styles.value}>
+              {formatBalanceValue(summary.balanceConsumed, summary.balanceUnit, currencyCode, t)}
+            </Text>
+            <Text style={styles.label}>{t('meals.activity.history.mealsConsumed')}</Text>
+          </View>
+          <View style={styles.card}>
+            <Text style={[styles.value, styles.remaining]}>
+              {formatBalanceValue(summary.balanceRemaining, summary.balanceUnit, currencyCode, t)}
+            </Text>
+            <Text style={styles.label}>{t('meals.activity.history.mealsRemaining')}</Text>
+          </View>
+          <View style={styles.card}>
+            <Text style={[styles.value, styles.paid]}>
+              {formatComboPrice(summary.amountPaidThisMonth, currencyCode) ?? '—'}
+            </Text>
+            <Text style={styles.label}>{t('meals.activity.history.amountPaid')}</Text>
+          </View>
+        </View>
+      );
+    }
+
     return (
       <View style={styles.grid}>
         <View style={styles.card}>
@@ -101,6 +149,9 @@ const styles = StyleSheet.create({
   },
   pending: {
     color: '#EAB308',
+  },
+  remaining: {
+    color: colors.primary,
   },
   label: {
     ...typography.caption,

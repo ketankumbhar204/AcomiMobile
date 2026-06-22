@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { mealsApi } from '../api/mealsApi';
 import type {
+  MealBillingType,
   MealDeliveryLocation,
   MealPollPaymentChoice,
   MealPollPaymentStatus,
@@ -13,6 +14,7 @@ import type {
 } from '../api/types';
 import { useToastStore } from '../store/toastStore';
 import { useNavigationFocusReload } from './useNavigationFocusReload';
+import { hasPrepaidOverflow } from '../utils/mealPollPayment';
 
 type SingleSelections = Partial<Record<MealType, UUID>>;
 type QuantitySelections = Partial<Record<MealType, Record<UUID, number>>>;
@@ -52,13 +54,17 @@ export function useMealPollDay(
   const { t } = useTranslation();
   const showToast = useToastStore(state => state.showToast);
   const multiQuantity = spaceType === 'MESS';
-  const requiresPayment = multiQuantity;
+  const [mealBillingType, setMealBillingType] = useState<MealBillingType>('PAY_PER_MEAL');
+  const requiresPayment = multiQuantity && mealBillingType !== 'PREPAID_BALANCE';
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [polls, setPolls] = useState<MealPollSlot[]>([]);
   const [myPaymentStatus, setMyPaymentStatus] = useState<MealPollPaymentStatus | null>(null);
   const [myRejectionReason, setMyRejectionReason] = useState<string | null>(null);
+  const [myPrepaidOverflowAmount, setMyPrepaidOverflowAmount] = useState<number | null>(null);
+  const [myPrepaidDebitedAmount, setMyPrepaidDebitedAmount] = useState<number | null>(null);
+  const [myPrepaidOverflowPayment, setMyPrepaidOverflowPayment] = useState<boolean | null>(null);
   const [selections, setSelections] = useState<SingleSelections>({});
   const [quantitySelections, setQuantitySelections] = useState<QuantitySelections>({});
   const [deliveryLocations, setDeliveryLocations] = useState<MealDeliveryLocation[]>([]);
@@ -174,9 +180,13 @@ export function useMealPollDay(
     setLoading(true);
     try {
       const day = await mealsApi.getMealPolls(spaceId, menuDate);
+      setMealBillingType(day.myMealBillingType ?? 'PAY_PER_MEAL');
       setPolls(day.polls);
       setMyPaymentStatus(day.myPaymentStatus ?? null);
       setMyRejectionReason(day.myRejectionReason ?? null);
+      setMyPrepaidOverflowAmount(day.myPrepaidOverflowAmount ?? null);
+      setMyPrepaidDebitedAmount(day.myPrepaidDebitedAmount ?? null);
+      setMyPrepaidOverflowPayment(day.myPrepaidOverflowPayment ?? null);
       setDeliveryLocations(day.deliveryLocations ?? []);
 
       const lastUsed: DeliverySelections = { ...(day.myLastDeliveryLocationIds ?? {}) };
@@ -215,6 +225,9 @@ export function useMealPollDay(
       setPolls([]);
       setMyPaymentStatus(null);
       setMyRejectionReason(null);
+      setMyPrepaidOverflowAmount(null);
+      setMyPrepaidDebitedAmount(null);
+      setMyPrepaidOverflowPayment(null);
       setDeliveryLocations([]);
       setDeliverySelections({});
       setLastDeliveryLocations({});
@@ -298,14 +311,28 @@ export function useMealPollDay(
         setPolls(day.polls);
         setMyPaymentStatus(day.myPaymentStatus ?? null);
         setMyRejectionReason(day.myRejectionReason ?? null);
+        setMyPrepaidOverflowAmount(day.myPrepaidOverflowAmount ?? null);
+        setMyPrepaidDebitedAmount(day.myPrepaidDebitedAmount ?? null);
+        setMyPrepaidOverflowPayment(day.myPrepaidOverflowPayment ?? null);
         setDeliveryLocations(day.deliveryLocations ?? []);
         setLastDeliveryLocations({ ...(day.myLastDeliveryLocationIds ?? {}) });
         setEditing(false);
-        showToast(
-          paymentChoice === 'MARK_AS_PAID'
-            ? t('meals.poll.proofSubmitted')
-            : t('meals.poll.saved'),
-        );
+        if (
+          hasPrepaidOverflow(day.myPrepaidOverflowPayment, day.myPrepaidOverflowAmount)
+        ) {
+          showToast(
+            t('meals.poll.prepaidOverflowSaved', {
+              debited: day.myPrepaidDebitedAmount ?? 0,
+              overflow: day.myPrepaidOverflowAmount ?? 0,
+            }),
+          );
+        } else {
+          showToast(
+            paymentChoice === 'MARK_AS_PAID'
+              ? t('meals.poll.proofSubmitted')
+              : t('meals.poll.saved'),
+          );
+        }
         options?.onSaved?.();
         return true;
       } catch {
@@ -363,6 +390,9 @@ export function useMealPollDay(
     hasPartialSubmission,
     myPaymentStatus,
     myRejectionReason,
+    myPrepaidOverflowAmount,
+    myPrepaidDebitedAmount,
+    myPrepaidOverflowPayment,
     requiresPayment,
     requiresDeliveryLocation,
     deliveryLocations,

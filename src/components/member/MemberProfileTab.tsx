@@ -14,6 +14,7 @@ import { memberCountInBadgeLabel, memberInviteHint } from '../../utils/memberApp
 import { isSelectableMemberGender, memberGenderLabelKey } from '../../utils/memberGender';
 import { MemberDocumentsSection } from './MemberDocumentsSection';
 import { MemberDetailRow, MemberSectionTitle } from './MemberDetailRow';
+import { MemberMealBillingPanel } from './MemberMealBillingPanel';
 import { MemberNotesSection } from './MemberNotesSection';
 import { StatusPicker } from './StatusPicker';
 
@@ -199,6 +200,15 @@ export function MemberProfileTab({
           isLast
         />
       </Card>
+
+      {spaceType === 'MESS' ? (
+        <MemberMealBillingPanel
+          spaceId={spaceId}
+          member={member}
+          spaceType={spaceType}
+          canEdit={canEdit}
+        />
+      ) : null}
 
       <MemberSectionTitle title={t('membership.emergency.heading')} />
       <Card style={styles.card}>

@@ -24,6 +24,17 @@ export {
 } from './HeaderOverflowMenu';
 export { SpaceHeaderMenu } from './SpaceHeaderMenu';
 export { SpaceSwitcher } from './SpaceSwitcher';
+export { ListSearchBar } from './ListSearchBar';
+export { ListSearchFilterBar } from './ListSearchFilterBar';
+export { ListFilterChips } from './ListFilterChips';
+export type { ListFilterChipOption } from './ListFilterChips';
+export {
+  ListFilterDrawer,
+  FilterDrawerSection,
+  FilterCheckboxRow,
+  FilterRadioRow,
+  FilterDrawerDivider,
+} from './ListFilterDrawer';
 export { ListCard } from './ListCard';
 export { ModuleActionCard } from './ModuleActionCard';
 export { MetricCard, MetricCardProgress } from './MetricCard';

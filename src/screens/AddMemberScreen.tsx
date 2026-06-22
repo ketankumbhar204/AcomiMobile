@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -18,7 +18,14 @@ import type {
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { enrollMemberInFullMeals } from '../api/mealsApi';
-import type { MemberGender, MembershipRole } from '../api/types';
+import { mealBalanceApi } from '../api/mealBalanceApi';
+import { mealBillingApi } from '../api/mealBillingApi';
+import type { MealBillingType, MemberGender, MembershipRole, PrepaidBalanceUnit } from '../api/types';
+import {
+  MemberMealBillingTypeSection,
+  type MemberMealBillingSelection,
+} from '../components/member/MemberMealBillingTypeSection';
+import { MemberSubscriptionSetupFields } from '../components/member/MemberSubscriptionSetupFields';
 import { Button, FormInput, GenderPicker, HeaderBackButton, RolePicker } from '../components/ui';
 import type { MainStackParamList } from '../navigation/types';
 import { useMemberStore } from '../store/memberStore';
@@ -29,6 +36,11 @@ import { defaultRoleForSpaceType } from '../utils/memberRoles';
 import { isMemberGenderRequired } from '../utils/memberGender';
 import { isValidIndianMobile, normalizeIndianMobileDigits } from '../utils/indianMobile';
 import { findMySpaceEntry } from '../utils/spacePermissions';
+import {
+  buildSubscriptionPurchasePayload,
+  isSubscriptionBilling,
+} from '../utils/memberMealBilling';
+import { defaultSubscriptionValidTillIso, parseValidTillInput } from '../utils/subscriptionLifecycle';
 
 type AddMemberNav = NativeStackNavigationProp<MainStackParamList, 'AddMember'>;
 type AddMemberRoute = NativeStackScreenProps<MainStackParamList, 'AddMember'>['route'];
@@ -38,6 +50,8 @@ type FieldErrors = {
   mobileNumber?: string;
   role?: string;
   gender?: string;
+  subscriptionMealQty?: string;
+  subscriptionPrice?: string;
 };
 
 export function AddMemberScreen() {
@@ -60,10 +74,31 @@ export function AddMemberScreen() {
   const [gender, setGender] = useState<MemberGender | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [mealAccessEnabled, setMealAccessEnabled] = useState(true);
+  const [mealBillingSelection, setMealBillingSelection] =
+    useState<MemberMealBillingSelection>('DEFAULT');
+  const [spaceDefaultBilling, setSpaceDefaultBilling] = useState<MealBillingType>('PAY_PER_MEAL');
+  const [prepaidBalanceUnit, setPrepaidBalanceUnit] = useState<PrepaidBalanceUnit>('MEALS');
+  const [subscriptionMealQty, setSubscriptionMealQty] = useState('');
+  const [subscriptionPrice, setSubscriptionPrice] = useState('');
+  const [subscriptionValidTill, setSubscriptionValidTill] = useState(defaultSubscriptionValidTillIso());
 
   const genderRequired = isMemberGenderRequired(spaceType);
 
   const showMealAccess = spaceType === 'MESS' && role === 'CUSTOMER';
+  const showMealBilling = showMealAccess;
+
+  useEffect(() => {
+    if (!showMealBilling) {
+      return;
+    }
+    void mealBillingApi.getSettings(spaceId).then(settings => {
+      setSpaceDefaultBilling(settings.billingType);
+      setPrepaidBalanceUnit(settings.prepaidBalanceUnit ?? 'MEALS');
+    });
+  }, [showMealBilling, spaceId]);
+
+  const showSubscriptionSetup =
+    showMealBilling && isSubscriptionBilling(mealBillingSelection, spaceDefaultBilling);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -95,6 +130,21 @@ export function AddMemberScreen() {
       errors.gender = t('membership.gender.required');
     }
 
+    if (showSubscriptionSetup) {
+      const purchase = buildSubscriptionPurchasePayload(
+        subscriptionMealQty,
+        subscriptionPrice,
+        prepaidBalanceUnit,
+      );
+      if (!purchase) {
+        if (prepaidBalanceUnit === 'MEALS') {
+          errors.subscriptionMealQty = t('members.subscriptionSetup.mealQtyRequired');
+        } else {
+          errors.subscriptionPrice = t('members.subscriptionSetup.priceRequired');
+        }
+      }
+    }
+
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   }
@@ -112,6 +162,8 @@ export function AddMemberScreen() {
       mobileNumber: mobileNumber.trim(),
       role: role!,
       gender: gender ?? undefined,
+      mealBillingType:
+        showMealBilling && mealBillingSelection !== 'DEFAULT' ? mealBillingSelection : null,
     });
 
     if (member) {
@@ -121,6 +173,23 @@ export function AddMemberScreen() {
           await enrollMemberInFullMeals(spaceId, member.memberId);
         } catch {
           showToast(t('meals.errors.mealAccessFailed'));
+        }
+      }
+      if (showSubscriptionSetup) {
+        const purchase = buildSubscriptionPurchasePayload(
+          subscriptionMealQty,
+          subscriptionPrice,
+          prepaidBalanceUnit,
+        );
+        if (purchase) {
+          try {
+            await mealBalanceApi.recordPurchase(spaceId, member.memberId, {
+            ...purchase,
+            validTill: parseValidTillInput(subscriptionValidTill) ?? defaultSubscriptionValidTillIso(),
+          });
+          } catch {
+            showToast(t('meals.errors.saveFailed'));
+          }
         }
       }
       showToast(t('membership.add.successToast'));
@@ -208,6 +277,40 @@ export function AddMemberScreen() {
             }}
             error={fieldErrors.role}
           />
+
+          {showMealBilling ? (
+            <MemberMealBillingTypeSection
+              spaceDefault={spaceDefaultBilling}
+              value={mealBillingSelection}
+              onChange={setMealBillingSelection}
+              disabled={loading}
+            />
+          ) : null}
+
+          {showSubscriptionSetup ? (
+            <MemberSubscriptionSetupFields
+              unit={prepaidBalanceUnit}
+              mealQty={subscriptionMealQty}
+              subscriptionPrice={subscriptionPrice}
+              validTill={subscriptionValidTill}
+              onMealQtyChange={value => {
+                setSubscriptionMealQty(value);
+                if (fieldErrors.subscriptionMealQty) {
+                  setFieldErrors(prev => ({ ...prev, subscriptionMealQty: undefined }));
+                }
+              }}
+              onSubscriptionPriceChange={value => {
+                setSubscriptionPrice(value);
+                if (fieldErrors.subscriptionPrice) {
+                  setFieldErrors(prev => ({ ...prev, subscriptionPrice: undefined }));
+                }
+              }}
+              onValidTillChange={setSubscriptionValidTill}
+              mealQtyError={fieldErrors.subscriptionMealQty}
+              subscriptionPriceError={fieldErrors.subscriptionPrice}
+              useSubscriptionLabels
+            />
+          ) : null}
 
           <GenderPicker
             value={gender}

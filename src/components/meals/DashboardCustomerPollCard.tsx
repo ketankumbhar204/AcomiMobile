@@ -5,6 +5,7 @@ import type { MealPollPaymentStatus, MealPollSlot } from '../../api/types';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { formatComboNameWithPrice } from '../../utils/comboPrice';
 import { formatMenuDate } from '../../utils/mealDates';
+import { hasPrepaidOverflow } from '../../utils/mealPollPayment';
 import { MEAL_TYPES, mealTypeLabelKey } from '../../utils/mealLabels';
 
 export type DashboardPollCardState = 'empty' | 'active' | 'partial' | 'complete';
@@ -17,10 +18,15 @@ type DashboardCustomerPollCardProps = {
   cardState: DashboardPollCardState;
   paymentStatus?: MealPollPaymentStatus | null;
   rejectionReason?: string | null;
+  prepaidOverflowAmount?: number | null;
+  prepaidDebitedAmount?: number | null;
+  prepaidOverflowPayment?: boolean | null;
   justSaved?: boolean;
   onAction?: () => void;
   onUploadProof?: () => void;
   onDismissSuccess?: () => void;
+  actionDisabled?: boolean;
+  actionDisabledReason?: string;
 };
 
 function paymentStatusLabel(status: MealPollPaymentStatus, t: (key: string) => string): string {
@@ -164,10 +170,15 @@ export function DashboardCustomerPollCard({
   cardState,
   paymentStatus = null,
   rejectionReason = null,
+  prepaidOverflowAmount = null,
+  prepaidDebitedAmount = null,
+  prepaidOverflowPayment = null,
   justSaved = false,
   onAction,
   onUploadProof,
   onDismissSuccess,
+  actionDisabled = false,
+  actionDisabledReason,
 }: DashboardCustomerPollCardProps) {
   const { t, i18n } = useTranslation();
   const dateLabel = formatMenuDate(menuDate, i18n.language);
@@ -183,13 +194,14 @@ export function DashboardCustomerPollCard({
     return () => clearTimeout(timer);
   }, [justSaved, onDismissSuccess]);
 
-  const isPressable = showAction && !loading && onAction != null;
+  const isPressable = showAction && !loading && onAction != null && !actionDisabled;
   const ctaVariant = cardState === 'complete' ? 'secondary' : 'primary';
   const canUploadProof =
     cardState === 'complete' &&
     paymentStatus != null &&
     (paymentStatus === 'PENDING' || paymentStatus === 'REJECTED') &&
     onUploadProof != null;
+  const showPrepaidOverflow = hasPrepaidOverflow(prepaidOverflowPayment, prepaidOverflowAmount);
 
   const cardBody = (
     <>
@@ -259,6 +271,20 @@ export function DashboardCustomerPollCard({
           {cardState === 'complete' && paymentStatus === 'PENDING_APPROVAL' ? (
             <Text style={styles.bodySubtext}>{t('meals.poll.awaitingApprovalHint')}</Text>
           ) : null}
+          {cardState === 'complete' && showPrepaidOverflow ? (
+            <View style={styles.overflowBanner}>
+              <Text style={styles.overflowTitle}>{t('meals.poll.prepaidOverflowTitle')}</Text>
+              <Text style={styles.overflowText}>
+                {t('meals.poll.prepaidOverflowMessage', {
+                  debited: prepaidDebitedAmount ?? 0,
+                  overflow: prepaidOverflowAmount ?? 0,
+                })}
+              </Text>
+              {paymentStatus === 'PENDING' ? (
+                <Text style={styles.overflowHint}>{t('meals.poll.prepaidOverflowPayLater')}</Text>
+              ) : null}
+            </View>
+          ) : null}
         </View>
       )}
 
@@ -286,6 +312,15 @@ export function DashboardCustomerPollCard({
             ]}>
             {actionLabel(cardState, t)}
           </Text>
+        </View>
+      ) : showAction && actionDisabled ? (
+        <View style={[styles.cta, styles.ctaDisabled]}>
+          <Text style={[styles.ctaLabel, styles.ctaLabelDisabled]}>
+            {actionLabel(cardState, t)}
+          </Text>
+          {actionDisabledReason ? (
+            <Text style={styles.ctaDisabledHint}>{actionDisabledReason}</Text>
+          ) : null}
         </View>
       ) : null}
     </>
@@ -447,6 +482,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: `${colors.primary}33`,
   },
+  ctaDisabled: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    opacity: 0.85,
+  },
+  ctaLabelDisabled: {
+    color: colors.muted,
+  },
+  ctaDisabledHint: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: spacing.xxs,
+    textAlign: 'center',
+    lineHeight: 16,
+  },
   ctaLabel: {
     ...typography.bodyStrong,
     fontSize: 15,
@@ -497,5 +548,28 @@ const styles = StyleSheet.create({
   },
   ctaLabelProof: {
     color: colors.white,
+  },
+  overflowBanner: {
+    backgroundColor: '#FFFBEB',
+    borderRadius: radius.button,
+    borderWidth: 1,
+    borderColor: '#F59E0B55',
+    padding: spacing.md,
+    gap: spacing.xxs,
+    marginTop: spacing.xs,
+  },
+  overflowTitle: {
+    ...typography.bodyStrong,
+    color: '#B45309',
+  },
+  overflowText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    lineHeight: 22,
+  },
+  overflowHint: {
+    ...typography.caption,
+    color: '#D97706',
+    marginTop: spacing.xxs,
   },
 });

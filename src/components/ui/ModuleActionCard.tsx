@@ -9,6 +9,10 @@ type ModuleActionCardProps = {
   onPress?: () => void;
   disabled?: boolean;
   comingSoonLabel?: string;
+  badgeCount?: number;
+  trailing?: 'expand' | 'forward';
+  highlight?: boolean;
+  fullWidth?: boolean;
 };
 
 export function ModuleActionCard({
@@ -18,6 +22,10 @@ export function ModuleActionCard({
   onPress,
   disabled = false,
   comingSoonLabel,
+  badgeCount,
+  trailing = 'expand',
+  highlight = false,
+  fullWidth = false,
 }: ModuleActionCardProps) {
   return (
     <Pressable
@@ -25,13 +33,15 @@ export function ModuleActionCard({
       disabled={disabled}
       style={({ pressed }) => [
         styles.card,
+        fullWidth && styles.cardFullWidth,
+        highlight && styles.cardHighlight,
         disabled && styles.cardDisabled,
         pressed && !disabled && styles.cardPressed,
       ]}
       accessibilityRole="button"
       accessibilityState={{ disabled }}>
       {icon ? (
-        <View style={[styles.iconWrap, disabled && styles.iconWrapDisabled]}>
+        <View style={[styles.iconWrap, disabled && styles.iconWrapDisabled, highlight && styles.iconWrapHighlight]}>
           <Text style={styles.icon}>{icon}</Text>
         </View>
       ) : null}
@@ -46,7 +56,14 @@ export function ModuleActionCard({
         ) : null}
         {comingSoonLabel ? <Text style={styles.comingSoon}>{comingSoonLabel}</Text> : null}
       </View>
-      {!disabled ? <Text style={styles.chevron}>▾</Text> : null}
+      {!disabled && badgeCount != null && badgeCount > 0 ? (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{badgeCount}</Text>
+        </View>
+      ) : null}
+      {!disabled ? (
+        <Text style={styles.chevron}>{trailing === 'forward' ? '›' : '▾'}</Text>
+      ) : null}
     </Pressable>
   );
 }
@@ -66,6 +83,10 @@ const styles = StyleSheet.create({
     minHeight: 88,
     ...shadows.sm,
   },
+  cardFullWidth: {
+    flex: 0,
+    width: '100%',
+  },
   cardDisabled: {
     backgroundColor: colors.surface,
     opacity: 0.85,
@@ -73,6 +94,10 @@ const styles = StyleSheet.create({
   cardPressed: {
     borderColor: `${colors.primary}66`,
     backgroundColor: colors.surface,
+  },
+  cardHighlight: {
+    borderColor: '#F59E0B',
+    backgroundColor: '#FFFBEB',
   },
   iconWrap: {
     width: 36,
@@ -84,6 +109,9 @@ const styles = StyleSheet.create({
   },
   iconWrapDisabled: {
     backgroundColor: colors.border,
+  },
+  iconWrapHighlight: {
+    backgroundColor: '#FEF3C7',
   },
   icon: {
     fontSize: 18,
@@ -113,6 +141,22 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontWeight: '600',
     marginTop: spacing.xs,
+  },
+  badge: {
+    minWidth: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#F59E0B',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xs,
+    marginTop: 4,
+  },
+  badgeText: {
+    ...typography.caption,
+    color: colors.white,
+    fontWeight: '700',
+    fontSize: 12,
   },
   chevron: {
     fontSize: 14,

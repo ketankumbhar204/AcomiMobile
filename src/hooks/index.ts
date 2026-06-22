@@ -1,5 +1,6 @@
 export { useSpacePermissions } from './useSpacePermissions';
 export { useLinkedMember } from './useLinkedMember';
+export { useCustomerSubscriptionStatus } from './useCustomerSubscriptionStatus';
 export { useActiveSpaceId } from './useActiveSpaceId';
 export { useScreenBackButton } from './useScreenBackButton';
 export { useLogout } from './useLogout';

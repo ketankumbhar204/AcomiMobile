@@ -28,6 +28,53 @@ describe('normalizeFinancialSummary', () => {
 
     expect(result.pending).toBe(8000);
   });
+
+  it('normalizes prepaid balance cards for meal balance billing', () => {
+    const result = normalizeFinancialSummary({
+      mealBillingType: 'PREPAID_BALANCE',
+      expectedCharges: null,
+      collected: null,
+      pending: null,
+      currencyCode: 'INR',
+      source: 'MEAL_ACTIVITY',
+      prepaidBalance: {
+        balanceSold: '30',
+        balanceConsumed: '12',
+        balanceRemaining: '18',
+        unit: 'MEALS',
+        currencyCode: 'INR',
+      },
+    });
+
+    expect(result.mealBillingType).toBe('PREPAID_BALANCE');
+    expect(result.prepaidBalance?.balanceSold).toBe(30);
+    expect(result.prepaidBalance?.balanceConsumed).toBe(12);
+    expect(result.prepaidBalance?.balanceRemaining).toBe(18);
+    expect(result.pending).toBeNull();
+  });
+
+  it('keeps pay-per-meal pending when mixed billing is enabled', () => {
+    const result = normalizeFinancialSummary({
+      mealBillingType: 'PAY_PER_MEAL',
+      mixedMealBilling: true,
+      expectedCharges: 1500,
+      collected: 500,
+      pending: 1000,
+      currencyCode: 'INR',
+      source: 'MEAL_ACTIVITY',
+      prepaidBalance: {
+        balanceSold: 30,
+        balanceConsumed: 12,
+        balanceRemaining: 18,
+        unit: 'MEALS',
+        currencyCode: 'INR',
+      },
+    });
+
+    expect(result.mixedMealBilling).toBe(true);
+    expect(result.pending).toBe(1000);
+    expect(result.prepaidBalance?.balanceSold).toBe(30);
+  });
 });
 
 describe('normalizePaymentLedger', () => {

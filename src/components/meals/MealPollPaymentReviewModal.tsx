@@ -1,5 +1,5 @@
-import React from 'react';
-import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Image, Modal, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { UUID } from '../../api/types';
 import { Button } from '../ui/Button';
@@ -12,8 +12,8 @@ type MealPollPaymentReviewModalProps = {
   proofImageUrl?: string | null;
   reviewing?: boolean;
   onClose: () => void;
-  onApprove: (memberId: UUID) => void;
-  onReject: (memberId: UUID) => void;
+  onApprove: (memberId: UUID, approvalRemarks?: string) => void;
+  onReject: (memberId: UUID, rejectionReason?: string) => void;
 };
 
 export function MealPollPaymentReviewModal({
@@ -27,6 +27,15 @@ export function MealPollPaymentReviewModal({
   onReject,
 }: MealPollPaymentReviewModalProps) {
   const { t } = useTranslation();
+  const [approvalRemarks, setApprovalRemarks] = useState('');
+  const [rejectionReason, setRejectionReason] = useState('');
+
+  useEffect(() => {
+    if (visible) {
+      setApprovalRemarks('');
+      setRejectionReason('');
+    }
+  }, [visible, memberId]);
 
   if (!visible) {
     return null;
@@ -46,17 +55,32 @@ export function MealPollPaymentReviewModal({
             <Text style={styles.missing}>{t('meals.poll.noProofImage')}</Text>
           )}
 
+          <TextInput
+            style={styles.input}
+            placeholder={t('meals.poll.approvalRemarksPlaceholder')}
+            value={approvalRemarks}
+            onChangeText={setApprovalRemarks}
+            multiline
+          />
+          <TextInput
+            style={styles.input}
+            placeholder={t('meals.poll.rejectionReasonPlaceholder')}
+            value={rejectionReason}
+            onChangeText={setRejectionReason}
+            multiline
+          />
+
           <View style={styles.actions}>
             <Button
               label={t('meals.poll.approvePayment')}
-              onPress={() => onApprove(memberId)}
+              onPress={() => onApprove(memberId, approvalRemarks.trim() || undefined)}
               loading={reviewing}
               disabled={reviewing}
             />
             <Button
               label={t('meals.poll.rejectPayment')}
               variant="secondary"
-              onPress={() => onReject(memberId)}
+              onPress={() => onReject(memberId, rejectionReason.trim() || undefined)}
               disabled={reviewing}
             />
             <Button label={t('common.cancel')} variant="ghost" onPress={onClose} disabled={reviewing} />
@@ -85,10 +109,21 @@ const styles = StyleSheet.create({
   hint: { ...typography.body, color: colors.muted, lineHeight: 22 },
   preview: {
     width: '100%',
-    height: 280,
+    height: 220,
     borderRadius: radius.button,
     backgroundColor: colors.surface,
   },
   missing: { ...typography.body, color: colors.muted, fontStyle: 'italic' },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.button,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    minHeight: 56,
+    textAlignVertical: 'top',
+    ...typography.body,
+    backgroundColor: colors.white,
+  },
   actions: { gap: spacing.sm, marginTop: spacing.xs },
 });

@@ -27,7 +27,9 @@ export function FormInput({
 
   return (
     <View style={[styles.wrapper, compact && styles.wrapperCompact]}>
-      <Text style={[styles.label, compact && styles.labelCompact]}>{label}</Text>
+      {label ? (
+        <Text style={[styles.label, compact && styles.labelCompact]}>{label}</Text>
+      ) : null}
       <TextInput
         style={[
           styles.input,

@@ -39,6 +39,16 @@ export function useMemberMealActivity(spaceId: UUID, memberId: UUID, enabled = t
           paidAmount: data.summary.paidAmount != null ? Number(data.summary.paidAmount) : null,
           pendingAmount:
             data.summary.pendingAmount != null ? Number(data.summary.pendingAmount) : null,
+          balanceRemaining:
+            data.summary.balanceRemaining != null ? Number(data.summary.balanceRemaining) : null,
+          balancePurchased:
+            data.summary.balancePurchased != null ? Number(data.summary.balancePurchased) : null,
+          balanceConsumed:
+            data.summary.balanceConsumed != null ? Number(data.summary.balanceConsumed) : null,
+          amountPaidThisMonth:
+            data.summary.amountPaidThisMonth != null
+              ? Number(data.summary.amountPaidThisMonth)
+              : null,
         },
         days: normalizeActivityMonthDays(data.days ?? []),
       });

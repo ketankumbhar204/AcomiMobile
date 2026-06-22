@@ -276,6 +276,14 @@ Rent, billing, payments, deposits, complaints, maintenance tickets — handled i
 * ✅ Meals tab quick entry (planning as tab root for managers)
 * ⬜ Weekly menu planning & bulk week copy
 
+### Delivery locations 🔶
+
+* ✅ CRUD API + `MealDeliveryLocationsScreen` (name, description, active/inactive)
+* ✅ Used in poll responses, headcount breakdown, member activity day sheet
+* 🔶 Linked from Menu Planning only — not a first-class dashboard module
+* ⬜ Address / landmark field (separate from description)
+* ⬜ Edit location, reorder list, dedicated quick action entry
+
 ### Operator dashboard (Mess) 🔶
 
 * ✅ Attention required (tomorrow menu not planned / partial / ready to share / open poll)
@@ -316,6 +324,8 @@ Rent, billing, payments, deposits, complaints, maintenance tickets — handled i
 * ✅ In-app member responses (`MealPollResponseScreen`, dashboard poll card)
 * ✅ Delivery location per response
 * 🔶 Payment choice (pay now / pay later) + proof upload + owner approve/reject
+* ⬜ Payment approval/rejection remarks (owner → member)
+* ⬜ Payment history timeline per member
 * ⬜ WhatsApp response ingestion (share text only; no inbound parsing)
 
 ### Headcount engine ✅
@@ -341,15 +351,55 @@ Rent, billing, payments, deposits, complaints, maintenance tickets — handled i
 
 ## Phase 7 - Payment Management 🔶
 
+> **Architecture:** [payments-phase-7-dashboard.md](./payments-phase-7-dashboard.md)
+>
+> **Principle:** Stabilize **Mess billing and meal payment workflow** before PG rent collection. Expected/Collected math must not change every time a new billing model is added.
+
+### Dashboard & ledger (MVP) ✅
+
 * ✅ Payments tab (member ledger, filters, month nav — OWNER/MANAGER)
 * ✅ Unified financial cards (Expected Charges / Collected / Pending) on dashboard + payments
 * ✅ Backend ledger + dashboard-summary APIs (Mess meal activity, PG occupancy, hybrid)
 * 🔶 Client fallback when API unavailable (404/network)
-* ⬜ Rent collection recording (PG — expected from occupancy; collected stays empty)
-* ⬜ Mess subscription / monthly billing
+
+### Mess billing standard 🔶 (highest priority)
+
+CountIn uses **two billing concepts only** — not four separate products:
+
+| Type | Label | Dashboard cards |
+|------|-------|-----------------|
+| `PAY_PER_MEAL` | Pay per meal | Expected · Collected · Pending |
+| `PREPAID_BALANCE` | Meal balance | Balance sold · Balance used · Balance left |
+
+Subscription, credits, and hybrid are **not separate enum values**. Prepaid balance covers both “30 meals @ ₹3,000” and “₹3,000 recharge” via `prepaidBalanceUnit` (`MEALS` | `CURRENCY`). When balance runs out, `prepaidFallbackToPayPerMeal` switches to pay-per-meal automatically — no `HYBRID` billing type.
+
+| Item | Status |
+|------|--------|
+| Space billing type field + migration (V59) | ✅ |
+| `GET/PUT /spaces/{id}/meal-billing-settings` | ✅ |
+| `SpaceBillingService` calculator branching | ✅ |
+| Edit Space billing UI (Mess owners) | ✅ |
+| Dashboard cards branch by billing type | ✅ |
+| Per-member billing override (V61) | ✅ |
+| Member balance wallet (sold/consumed/remaining) | ✅ |
+| Pay-per-meal overflow when balance empty | 🔶 Fallback + PAY_LATER day payment |
+
+### Meal payment workflow 🔶
+
+* 🔶 Pay now / pay later + proof upload + owner approve/reject (Phase 6)
+* ⬜ Approval/rejection remarks
+* ⬜ Payment history timeline (audit trail per member)
+* ⬜ Payment reminders
+
+### PG / accommodation payments ⬜ (deferred)
+
+* ⬜ Rent collection recording (amount, date, mode: cash / UPI / bank transfer, remarks)
+* ⬜ Occupancy collected amount on ledger (today: expected only; collected = null)
+
+### Other ⬜
+
 * ⬜ Deposit management (member profile ✅; space-level collections ⬜)
-* ⬜ Payment history & reminders
-* 🔶 Meal poll day payments (member choice + proof + owner review — Phase 6)
+* ⬜ Advanced payment reports (Phase 9)
 
 ---
 
@@ -373,17 +423,34 @@ Rent, billing, payments, deposits, complaints, maintenance tickets — handled i
 
 ## What’s next (recommended order)
 
+CountIn's strongest area today is **meal planning and availability**. Complete Mess billing logic before PG rent collection — otherwise dashboard Expected/Collected cards keep shifting.
+
+| # | Track | Phase | Why now |
+|---|--------|-------|---------|
+| 1 | **Mess billing models** | 7 | Space-level billing type unlocks stable Expected/Collected for all Mess flows |
+| 2 | **Delivery locations module** | 5–6 | Headcount and delivery planning already depend on it; screen exists but needs polish |
+| 3 | **Meal payment workflow** | 6–7 | Finish approve/reject loop (remarks + history) before a new rent module |
+| 4 | **Weekly menu planning** | 5 | High daily operator value; day-by-day planning already works |
+| 5 | **PG rent collection** | 7 | Reuse meal payment patterns; occupancy expected already wired |
+| 6 | **Reports & analytics** | 9 | Needs stable billing data first |
+
 ### Mess operators (current focus)
 
-1. **Phase 7 polish** — rent collection API, subscription/credits billing models
-2. **Phase 6 polish** — payment workflow hardening, reminders
-3. **Phase 5** — weekly menu planning, menu history
-4. **Phase 6** — wastage / consumption reports
+1. **Delivery locations** — address field, edit/reorder, dashboard quick action
+3. **Meal payments** — remarks, timeline, then reminders
+4. **Weekly menu planning** — week view + bulk copy
+5. **Consumption / wastage reports** (after billing stable)
 
-### PG / Hostel (when switching focus)
+### PG / Hostel (after Mess side stabilizes)
 
-1. **Phase 4.5** — availability browse screen, structure filters
-2. **Phase 7** — rent collection recording API
+1. **Phase 7** — Record Payment (rent collection API + UI)
+2. **Phase 4.5** — availability browse screen, structure filters
+
+### Where to start implementation
+
+See [payments-phase-7-dashboard.md §10](./payments-phase-7-dashboard.md#10-implementation-sequence) for the first backend + frontend tasks.
+
+**Foundation shipped:** space default + per-member billing override, member balance wallet, mixed mess dashboard. **Next:** delivery locations polish and pay-per-meal overflow UX.
 
 ---
 

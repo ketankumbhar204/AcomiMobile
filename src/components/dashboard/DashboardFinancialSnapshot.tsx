@@ -60,6 +60,19 @@ export function DashboardFinancialSnapshot({
 }: DashboardFinancialSnapshotProps) {
   const { t } = useTranslation();
   const currencyCode = financial?.currencyCode ?? 'INR';
+  const mixed = financial?.mixedMealBilling === true;
+  const prepaidOnly =
+    financial?.mealBillingType === 'PREPAID_BALANCE' && !mixed;
+  const showPayPerMealCards =
+    mixed ||
+    (!prepaidOnly &&
+      (financial?.expectedCharges != null ||
+        financial?.collected != null ||
+        financial?.pending != null));
+
+  if (!loading && !showPayPerMealCards) {
+    return null;
+  }
 
   const expected =
     formatComboPrice(financial?.expectedCharges ?? null, currencyCode) ?? '—';

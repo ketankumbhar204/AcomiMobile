@@ -30,6 +30,7 @@ import { formatComboPrice } from '../../utils/comboPrice';
 import { formatMenuDateCompact, formatResponseDateParts } from '../../utils/mealDates';
 import { MEAL_TYPES, mealTypeLabelKey } from '../../utils/mealLabels';
 import { dayDetailHasActivity, formatPlateCount } from '../../utils/memberMealActivityDayDetail';
+import { canSendPaymentReminder } from '../../utils/mealPollPayment';
 import { MealPollPaymentReviewModal } from './MealPollPaymentReviewModal';
 
 const BACKDROP_DELAY_MS = 450;
@@ -197,6 +198,8 @@ function PaymentSummarySection({
   subscription,
   canManage,
   onReview,
+  onRemind,
+  reminding,
   t,
   locale,
 }: {
@@ -204,6 +207,8 @@ function PaymentSummarySection({
   subscription?: MemberMealActivitySubscription | null;
   canManage: boolean;
   onReview: () => void;
+  onRemind: () => void;
+  reminding: boolean;
   t: ReturnType<typeof useTranslation>['t'];
   locale: string;
 }) {
@@ -219,6 +224,16 @@ function PaymentSummarySection({
     canManage &&
     payment?.paymentStatus === 'PENDING_APPROVAL' &&
     Boolean(payment.proofImageUrl);
+  const showRemind =
+    canManage && canSendPaymentReminder(payment?.paymentStatus) && Boolean(payment);
+  const overflowAmount = formatComboPrice(
+    payment?.prepaidOverflowAmount ?? null,
+    detail.currencyCode,
+  );
+  const debitedAmount = formatComboPrice(
+    payment?.prepaidDebitedAmount ?? null,
+    detail.currencyCode,
+  );
 
   return (
     <Section title={t('meals.activity.daySheet.paymentSummary')}>
@@ -246,6 +261,21 @@ function PaymentSummarySection({
           <CompactRow
             label={t('meals.activity.daySheet.method')}
             value={paymentChoiceLabel(payment.paymentChoice, t)}
+          />
+        ) : null}
+
+        {debitedAmount ? (
+          <CompactRow
+            label={t('meals.activity.daySheet.balanceDebited')}
+            value={debitedAmount}
+          />
+        ) : null}
+
+        {overflowAmount && payment?.prepaidOverflowPayment ? (
+          <CompactRow
+            label={t('meals.activity.daySheet.balanceOverflow')}
+            value={overflowAmount}
+            valueStyle={styles.overflowValue}
           />
         ) : null}
 
@@ -287,6 +317,17 @@ function PaymentSummarySection({
       {showReview ? (
         <Pressable style={styles.reviewBtn} onPress={onReview}>
           <Text style={styles.reviewBtnText}>{t('meals.activity.reviewPayment')}</Text>
+        </Pressable>
+      ) : null}
+
+      {showRemind ? (
+        <Pressable
+          style={[styles.reviewBtn, styles.remindBtn]}
+          onPress={onRemind}
+          disabled={reminding}>
+          <Text style={styles.remindBtnText}>
+            {reminding ? t('meals.poll.sendingReminder') : t('meals.poll.sendReminder')}
+          </Text>
         </Pressable>
       ) : null}
     </Section>
@@ -418,6 +459,7 @@ export function MemberMealActivityDaySheet({
   const [detail, setDetail] = useState<MemberMealActivityDayDetail | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewing, setReviewing] = useState(false);
+  const [reminding, setReminding] = useState(false);
 
   const { height: windowHeight } = useWindowDimensions();
   const minSheetHeight = windowHeight * SHEET_MIN_RATIO;
@@ -493,41 +535,63 @@ export function MemberMealActivityDaySheet({
     [maxSheetHeight, minSheetHeight, sheetHeightAnim],
   );
 
-  const handleApprovePayment = useCallback(async () => {
-    if (!date) {
-      return;
-    }
-    setReviewing(true);
-    try {
-      await mealsApi.approveMealPollPayment(spaceId, date, memberId);
-      showToast(t('meals.poll.paymentApproved'));
-      setReviewOpen(false);
-      await loadDetail();
-      onPaymentReviewed?.();
-    } catch {
-      showToast(t('meals.errors.saveFailed'));
-    } finally {
-      setReviewing(false);
-    }
-  }, [date, loadDetail, memberId, onPaymentReviewed, showToast, spaceId, t]);
+  const handleApprovePayment = useCallback(
+    async (approvalRemarks?: string) => {
+      if (!date) {
+        return;
+      }
+      setReviewing(true);
+      try {
+        await mealsApi.approveMealPollPayment(spaceId, date, memberId, approvalRemarks);
+        showToast(t('meals.poll.paymentApproved'));
+        setReviewOpen(false);
+        await loadDetail();
+        onPaymentReviewed?.();
+      } catch {
+        showToast(t('meals.errors.saveFailed'));
+      } finally {
+        setReviewing(false);
+      }
+    },
+    [date, loadDetail, memberId, onPaymentReviewed, showToast, spaceId, t],
+  );
 
-  const handleRejectPayment = useCallback(async () => {
+  const handleRejectPayment = useCallback(
+    async (rejectionReason?: string) => {
+      if (!date) {
+        return;
+      }
+      setReviewing(true);
+      try {
+        await mealsApi.rejectMealPollPayment(spaceId, date, memberId, rejectionReason);
+        showToast(t('meals.poll.paymentRejected'));
+        setReviewOpen(false);
+        await loadDetail();
+        onPaymentReviewed?.();
+      } catch {
+        showToast(t('meals.errors.saveFailed'));
+      } finally {
+        setReviewing(false);
+      }
+    },
+    [date, loadDetail, memberId, onPaymentReviewed, showToast, spaceId, t],
+  );
+
+  const handleRemindPayment = useCallback(async () => {
     if (!date) {
       return;
     }
-    setReviewing(true);
+    setReminding(true);
     try {
-      await mealsApi.rejectMealPollPayment(spaceId, date, memberId);
-      showToast(t('meals.poll.paymentRejected'));
-      setReviewOpen(false);
+      await mealsApi.sendMealPollPaymentReminder(spaceId, date, memberId);
+      showToast(t('meals.poll.reminderSent'));
       await loadDetail();
-      onPaymentReviewed?.();
     } catch {
       showToast(t('meals.errors.saveFailed'));
     } finally {
-      setReviewing(false);
+      setReminding(false);
     }
-  }, [date, loadDetail, memberId, onPaymentReviewed, showToast, spaceId, t]);
+  }, [date, loadDetail, memberId, showToast, spaceId, t]);
 
   const orderedSlots = useMemo(
     () =>
@@ -655,6 +719,8 @@ export function MemberMealActivityDaySheet({
                       subscription={detail.subscription}
                       canManage={canManage}
                       onReview={() => setReviewOpen(true)}
+                      onRemind={() => void handleRemindPayment()}
+                      reminding={reminding}
                       t={t}
                       locale={i18n.language}
                     />
@@ -699,8 +765,8 @@ export function MemberMealActivityDaySheet({
             setReviewOpen(false);
           }
         }}
-        onApprove={() => void handleApprovePayment()}
-        onReject={() => void handleRejectPayment()}
+        onApprove={(_memberId, approvalRemarks) => void handleApprovePayment(approvalRemarks)}
+        onReject={(_memberId, rejectionReason) => void handleRejectPayment(rejectionReason)}
       />
     </>
   );
@@ -899,5 +965,19 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.white,
     fontWeight: '700',
+  },
+  remindBtn: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  remindBtnText: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    fontWeight: '700',
+  },
+  overflowValue: {
+    fontWeight: '700',
+    color: '#D97706',
   },
 });

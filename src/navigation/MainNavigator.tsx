@@ -24,6 +24,8 @@ import { OnboardingChoiceScreen } from '../screens/OnboardingChoiceScreen';
 import { AddMemberScreen } from '../screens/AddMemberScreen';
 import { CreateSpaceScreen } from '../screens/CreateSpaceScreen';
 import { EditMemberScreen } from '../screens/EditMemberScreen';
+import { MemberSubscriptionScreen } from '../screens/MemberSubscriptionScreen';
+import { MemberSubscriptionHistoryScreen } from '../screens/MemberSubscriptionHistoryScreen';
 import { EditSpaceScreen } from '../screens/EditSpaceScreen';
 import { InviteMemberScreen } from '../screens/InviteMemberScreen';
 import { MemberDetailsScreen } from '../screens/MemberDetailsScreen';
@@ -41,6 +43,10 @@ import { DailyMenuEditScreen } from '../screens/meals/DailyMenuEditScreen';
 import { DailyMenuSelectComboScreen } from '../screens/meals/DailyMenuSelectComboScreen';
 import { SelectMenuHubScreen } from '../screens/meals/SelectMenuHubScreen';
 import { MealComboFormScreen } from '../screens/meals/MealComboFormScreen';
+import { SubscriptionPlansScreen } from '../screens/meals/SubscriptionPlansScreen';
+import { CustomerSubscriptionPlansScreen } from '../screens/meals/CustomerSubscriptionPlansScreen';
+import { SubscriptionActivationRequestsScreen } from '../screens/meals/SubscriptionActivationRequestsScreen';
+import { DashboardPendingActionsScreen } from '../screens/dashboard/DashboardPendingActionsScreen';
 import { stackHeaderOptions } from '../theme';
 import { useSpaceStore } from '../store/spaceStore';
 import { SpaceTabNavigator } from './SpaceTabNavigator';
@@ -136,6 +142,16 @@ export function MainNavigator() {
         name="EditMember"
         component={EditMemberScreen}
         options={{ title: 'Edit Member' }}
+      />
+      <Stack.Screen
+        name="MemberSubscription"
+        component={MemberSubscriptionScreen}
+        options={{ title: 'Subscription' }}
+      />
+      <Stack.Screen
+        name="MemberSubscriptionHistory"
+        component={MemberSubscriptionHistoryScreen}
+        options={{ title: 'Subscription history' }}
       />
       <Stack.Screen
         name="MemberOccupancyHistory"
@@ -266,6 +282,35 @@ export function MainNavigator() {
             spaceId={route.params.spaceId}
             menuDate={route.params.menuDate}
           />
+        )}
+      />
+      <Stack.Screen
+        name="SubscriptionPlans"
+        options={{ title: 'Subscription Plans' }}
+        children={({ route }) => <SubscriptionPlansScreen spaceId={route.params.spaceId} />}
+      />
+      <Stack.Screen
+        name="CustomerSubscriptionPlans"
+        options={{ title: 'Subscription Plans' }}
+        children={({ route }) => (
+          <CustomerSubscriptionPlansScreen
+            spaceId={route.params.spaceId}
+            memberId={route.params.memberId}
+          />
+        )}
+      />
+      <Stack.Screen
+        name="DashboardPendingActions"
+        options={{ title: 'Pending actions' }}
+        children={({ route }) => (
+          <DashboardPendingActionsScreen spaceId={route.params.spaceId} />
+        )}
+      />
+      <Stack.Screen
+        name="SubscriptionActivationRequests"
+        options={{ title: 'Activation Requests' }}
+        children={({ route }) => (
+          <SubscriptionActivationRequestsScreen spaceId={route.params.spaceId} />
         )}
       />
       <Stack.Screen

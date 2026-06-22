@@ -69,6 +69,13 @@ export const memberApi = {
     return response;
   },
 
+  getMyLinkedMember: async (spaceId: UUID): Promise<MemberResponse> => {
+    const path = `/spaces/${spaceId}/members/me`;
+    console.log(`${LOG_TAG} GET ${path}`);
+
+    return unwrapApiResponse(apiClient.get<ApiResponse<MemberResponse>>(path));
+  },
+
   getMember: async (
     spaceId: UUID,
     memberId: UUID,

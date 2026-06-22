@@ -16,7 +16,13 @@ import type {
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { formatSpaceType } from '../api';
+import { mealBillingApi } from '../api/mealBillingApi';
+import type { MealBillingType, PrepaidBalanceUnit } from '../api/types';
 import { Button, Card, FormInput, HeaderBackButton, useConfirmDialog } from '../components/ui';
+import {
+  MealBillingSettingsSection,
+  type MealBillingSettingsFormValues,
+} from '../components/settings/MealBillingSettingsSection';
 import { useDeactivateSpace } from '../hooks/useDeactivateSpace';
 import { useAuthenticatedUserId } from '../hooks/useAuth';
 import type { MainStackParamList } from '../navigation/types';
@@ -30,6 +36,35 @@ type EditSpaceRoute = NativeStackScreenProps<MainStackParamList, 'EditSpace'>['r
 type FieldErrors = {
   name?: string;
 };
+
+const DEFAULT_BILLING: MealBillingSettingsFormValues = {
+  billingType: 'PAY_PER_MEAL',
+  prepaidBalanceUnit: 'MEALS',
+  fallbackToPayPerMeal: true,
+};
+
+function billingFromSpace(
+  mealBillingType?: MealBillingType,
+  prepaidBalanceUnit?: PrepaidBalanceUnit | null,
+  prepaidFallbackToPayPerMeal?: boolean,
+): MealBillingSettingsFormValues {
+  return {
+    billingType: mealBillingType ?? 'PAY_PER_MEAL',
+    prepaidBalanceUnit: prepaidBalanceUnit ?? 'MEALS',
+    fallbackToPayPerMeal: prepaidFallbackToPayPerMeal ?? true,
+  };
+}
+
+function billingChanged(
+  current: MealBillingSettingsFormValues,
+  initial: MealBillingSettingsFormValues,
+): boolean {
+  return (
+    current.billingType !== initial.billingType ||
+    current.prepaidBalanceUnit !== initial.prepaidBalanceUnit ||
+    current.fallbackToPayPerMeal !== initial.fallbackToPayPerMeal
+  );
+}
 
 export function EditSpaceScreen() {
   const { t, i18n } = useTranslation();
@@ -52,8 +87,13 @@ export function EditSpaceScreen() {
   const [typeLabel, setTypeLabel] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [billingValues, setBillingValues] = useState<MealBillingSettingsFormValues>(DEFAULT_BILLING);
+  const [initialBillingValues, setInitialBillingValues] =
+    useState<MealBillingSettingsFormValues>(DEFAULT_BILLING);
+  const [spaceType, setSpaceType] = useState<string | null>(null);
 
   const owner = isSpaceOwner(selectedSpace, currentUserId);
+  const isMessSpace = spaceType === 'MESS';
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -67,12 +107,34 @@ export function EditSpaceScreen() {
     useCallback(() => {
       console.log('[EditSpace] screen focused', { spaceId });
 
-      loadSpaceDetails(spaceId).then(loaded => {
+      loadSpaceDetails(spaceId).then(async loaded => {
         if (loaded) {
           setName(loaded.name);
           setAddress(loaded.address ?? '');
           setContactNumber(loaded.contactNumber ?? '');
           setTypeLabel(formatSpaceType(loaded.type));
+          setSpaceType(loaded.type);
+
+          if (loaded.type === 'MESS') {
+            try {
+              const settings = await mealBillingApi.getSettings(spaceId);
+              const next = billingFromSpace(
+                settings.billingType,
+                settings.prepaidBalanceUnit,
+                settings.fallbackToPayPerMeal,
+              );
+              setBillingValues(next);
+              setInitialBillingValues(next);
+            } catch {
+              const fallback = billingFromSpace(
+                loaded.mealBillingType,
+                loaded.prepaidBalanceUnit,
+                loaded.prepaidFallbackToPayPerMeal,
+              );
+              setBillingValues(fallback);
+              setInitialBillingValues(fallback);
+            }
+          }
         }
       });
     }, [loadSpaceDetails, spaceId]),
@@ -102,6 +164,28 @@ export function EditSpaceScreen() {
       address: address.trim() || undefined,
       contactNumber: contactNumber.trim() || undefined,
     });
+
+    if (!updated) {
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (isMessSpace && owner && billingChanged(billingValues, initialBillingValues)) {
+      try {
+        await mealBillingApi.updateSettings(spaceId, {
+          billingType: billingValues.billingType,
+          prepaidBalanceUnit:
+            billingValues.billingType === 'PREPAID_BALANCE'
+              ? billingValues.prepaidBalanceUnit
+              : null,
+          fallbackToPayPerMeal: billingValues.fallbackToPayPerMeal,
+        });
+        setInitialBillingValues(billingValues);
+      } catch {
+        setIsSubmitting(false);
+        return;
+      }
+    }
 
     setIsSubmitting(false);
 
@@ -178,6 +262,14 @@ export function EditSpaceScreen() {
             <Text style={styles.readOnlyLabel}>{t('spaces.editSpace.typeLabel')}</Text>
             <Text style={styles.readOnlyValue}>{typeLabel || '—'}</Text>
           </Card>
+
+          {isMessSpace && owner ? (
+            <MealBillingSettingsSection
+              values={billingValues}
+              onChange={setBillingValues}
+              disabled={isSubmitting || isLoading}
+            />
+          ) : null}
 
           <View style={styles.footer}>
             <Button
