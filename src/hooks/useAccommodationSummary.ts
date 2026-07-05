@@ -61,6 +61,10 @@ export function useAccommodationSummary(spaceId: UUID | null, buildingId: UUID |
     }
   }, [buildingId, spaceId]);
 
+  const patchSummary = useCallback((patch: Partial<BuildingSummaryResponse>) => {
+    setSummary(prev => (prev ? { ...prev, ...patch } : prev));
+  }, []);
+
   useEffect(() => {
     requestSeq.current += 1;
     if (!spaceId || !buildingId) {
@@ -70,5 +74,5 @@ export function useAccommodationSummary(spaceId: UUID | null, buildingId: UUID |
     void refresh();
   }, [buildingId, cacheGeneration, refresh, spaceId]);
 
-  return { summary, loading, error, refresh };
+  return { summary, loading, error, refresh, patchSummary };
 }

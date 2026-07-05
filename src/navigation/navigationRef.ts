@@ -23,6 +23,32 @@ function buildSpaceTabsState(spaceId: string, initialTab: string) {
   return { index: tabIndex, routes };
 }
 
+export function resetToCompleteProfile(): void {
+  if (!navigationRef.isReady()) {
+    return;
+  }
+
+  navigationRef.dispatch(
+    CommonActions.reset({
+      index: 0,
+      routes: [
+        {
+          name: 'Main',
+          state: {
+            index: 0,
+            routes: [{ name: 'CompleteProfile' }],
+          },
+        },
+      ],
+    }),
+  );
+}
+
+/** @deprecated Use resetToCompleteProfile */
+export function resetToProfileCompletionGate(): void {
+  resetToCompleteProfile();
+}
+
 export function resetToDashboard(spaceId: string): void {
   if (!navigationRef.isReady()) {
     return;

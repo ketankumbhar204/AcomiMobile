@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, StyleSheet, View, ViewStyle } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, View, ViewStyle } from 'react-native';
 import { useScreenBackButton } from '../../hooks/useScreenBackButton';
 import { colors, spacing } from '../../theme';
 
@@ -9,6 +9,8 @@ type ScreenProps = {
   showBack?: boolean;
   style?: ViewStyle;
   contentStyle?: ViewStyle;
+  refreshing?: boolean;
+  onRefresh?: () => void;
 };
 
 export function Screen({
@@ -17,19 +19,28 @@ export function Screen({
   showBack = false,
   style,
   contentStyle,
+  refreshing,
+  onRefresh,
 }: ScreenProps) {
   useScreenBackButton(showBack);
 
   if (scrollable) {
     return (
-      <ScrollView
-        style={[styles.screen, style]}
-        contentContainerStyle={[styles.content, contentStyle]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        nestedScrollEnabled>
-        {children}
-      </ScrollView>
+      <View style={[styles.screen, style]}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[styles.content, contentStyle]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled
+          refreshControl={
+            onRefresh ? (
+              <RefreshControl refreshing={refreshing === true} onRefresh={onRefresh} />
+            ) : undefined
+          }>
+          {children}
+        </ScrollView>
+      </View>
     );
   }
 
@@ -44,6 +55,9 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  scroll: {
+    flex: 1,
   },
   content: {
     padding: spacing.xxl,

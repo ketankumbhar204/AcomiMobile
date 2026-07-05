@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { MemberDetailsResponse } from '../../api/types';
-import { Button, Card, FormInput } from '../ui';
+import { Button, Card, EmptyState, FormInput } from '../ui';
 import { useMemberStore } from '../../store/memberStore';
 import { useToastStore } from '../../store/toastStore';
 import { spacing, typography } from '../../theme';
@@ -54,6 +54,21 @@ export function MemberDepositTab({ member, canEdit }: MemberDepositTabProps) {
       setError(null);
     }
   };
+
+  if (
+    !canEdit &&
+    (member.depositAmount ?? 0) === 0 &&
+    (member.depositPaid ?? 0) === 0 &&
+    (member.depositRefunded ?? 0) === 0
+  ) {
+    return (
+      <EmptyState
+        icon="🏦"
+        title={t('membership.deposit.emptyTitle')}
+        description={t('membership.deposit.emptyDescription')}
+      />
+    );
+  }
 
   if (editing && canEdit) {
     return (

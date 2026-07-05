@@ -9,6 +9,7 @@ import type { BuilderRowLifecycleMenuProps } from '../accommodation/BuilderRowLi
 import { useBedOccupantLabel } from '../../hooks/useBedOccupantLabel';
 import type { useAccommodationOccupancyFlow } from '../../hooks/useAccommodationOccupancyFlow';
 import { colors, spacing, typography } from '../../theme';
+import { isAccommodationEntityActive } from '../../utils/accommodationEntityActive';
 import { buildBedOccupancyMenuOptions } from '../../utils/bedOccupancyMenuOptions';
 import { buildBedOccupancyTarget } from '../../utils/buildOccupancyTarget';
 
@@ -85,6 +86,7 @@ export function BedInventoryListRow({
   lifecycleMenuProps,
 }: BedInventoryListRowProps) {
   const { t } = useTranslation();
+  const inactive = !isAccommodationEntityActive(bed);
   const occupantLabel = useBedOccupantLabel(spaceId, bed.bedId, bed.status);
 
   const occupancyContext = useMemo(
@@ -119,7 +121,7 @@ export function BedInventoryListRow({
   );
 
   const occupancyMenuOptions = useMemo(() => {
-    if (!canManageOccupancyActions) {
+    if (!canManageOccupancyActions || inactive) {
       return [];
     }
     return buildBedOccupancyMenuOptions(
@@ -133,6 +135,7 @@ export function BedInventoryListRow({
   }, [
     bed,
     canManageOccupancyActions,
+    inactive,
     flow,
     occupancyContext,
     onPress,
@@ -145,12 +148,13 @@ export function BedInventoryListRow({
   return (
     <AccommodationEntityRow
       title={bed.label}
+      active={bed.active}
       meta={
-        canManageOccupancyActions ? (
+        canManageOccupancyActions && !inactive ? (
           <BedOccupantMeta status={bed.status} occupantLabel={occupantLabel} />
         ) : undefined
       }
-      badge={<AccommodationStatusBadge status={bed.status} />}
+      badge={inactive ? undefined : <AccommodationStatusBadge status={bed.status} />}
       iconLabel={bed.label.charAt(0).toUpperCase()}
       editableName={editableName}
       onSaveName={onSaveName}
@@ -160,6 +164,7 @@ export function BedInventoryListRow({
         showMenu ? (
           <BuilderRowLifecycleMenu
             {...lifecycleMenuProps}
+            isInactive={inactive}
             prependOptions={occupancyMenuOptions}
             sheetTitle={t('occupancy.bedMenu.title', {
               bed: bed.label,

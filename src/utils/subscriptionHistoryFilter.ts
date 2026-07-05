@@ -10,6 +10,11 @@ export const SUBSCRIPTION_EVENT_TYPES: SubscriptionEventTypeFilter[] = [
   'ended',
 ];
 
+export const SUBSCRIPTION_MONTH_FILTERS: SubscriptionMonthFilter[] = ['current', 'previous'];
+
+export const SUBSCRIPTION_HISTORY_FILTER_OPTION_COUNT =
+  SUBSCRIPTION_EVENT_TYPES.length + SUBSCRIPTION_MONTH_FILTERS.length;
+
 function monthKeyFromDate(iso: string): string {
   const date = new Date(iso);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;

@@ -19,6 +19,7 @@ import { UnitDetailScreen } from '../screens/accommodation/UnitDetailScreen';
 import { UnitFormScreen } from '../screens/accommodation/UnitFormScreen';
 import { UnitsScreen } from '../screens/accommodation/UnitsScreen';
 import { AcceptInvitationsScreen } from '../screens/AcceptInvitationsScreen';
+import { CompleteProfileScreen } from '../screens/onboarding/CompleteProfileScreen';
 import { JoinSpaceScreen } from '../screens/JoinSpaceScreen';
 import { OnboardingChoiceScreen } from '../screens/OnboardingChoiceScreen';
 import { AddMemberScreen } from '../screens/AddMemberScreen';
@@ -47,8 +48,15 @@ import { SubscriptionPlansScreen } from '../screens/meals/SubscriptionPlansScree
 import { CustomerSubscriptionPlansScreen } from '../screens/meals/CustomerSubscriptionPlansScreen';
 import { SubscriptionActivationRequestsScreen } from '../screens/meals/SubscriptionActivationRequestsScreen';
 import { DashboardPendingActionsScreen } from '../screens/dashboard/DashboardPendingActionsScreen';
+import { DashboardBedInventoryScreen } from '../screens/dashboard/DashboardBedInventoryScreen';
+import { DashboardOccupancyListScreen } from '../screens/dashboard/DashboardOccupancyListScreen';
+import { MemberPaymentsScreen } from '../screens/payments/MemberPaymentsScreen';
+import { PaymentReviewScreen } from '../screens/payments/PaymentReviewScreen';
+import { PaymentDetailScreen } from '../screens/payments/PaymentDetailScreen';
+import { PaymentHistoryScreen } from '../screens/payments/PaymentHistoryScreen';
 import { stackHeaderOptions } from '../theme';
 import { useSpaceStore } from '../store/spaceStore';
+import { useProfileCompletionGate } from '../hooks/useProfileCompletionGate';
 import { SpaceTabNavigator } from './SpaceTabNavigator';
 import type { MainStackParamList } from './types';
 
@@ -57,8 +65,12 @@ const Stack = createNativeStackNavigator<MainStackParamList>();
 export function MainNavigator() {
   const startupRoute = useSpaceStore(state => state.startupRoute);
   const selectedSpaceId = useSpaceStore(state => state.selectedSpaceId);
+  const { blocked: profileBlocked } = useProfileCompletionGate();
 
   const initialRouteName = useMemo((): keyof MainStackParamList => {
+    if (profileBlocked) {
+      return 'CompleteProfile';
+    }
     if (startupRoute === 'OnboardingChoice') {
       return 'OnboardingChoice';
     }
@@ -78,7 +90,26 @@ export function MainNavigator() {
       return 'SpaceTabs';
     }
     return 'MySpaces';
-  }, [selectedSpaceId, startupRoute]);
+  }, [profileBlocked, selectedSpaceId, startupRoute]);
+
+  if (profileBlocked) {
+    return (
+      <Stack.Navigator
+        initialRouteName="CompleteProfile"
+        screenOptions={stackHeaderOptions}>
+        <Stack.Screen
+          name="CompleteProfile"
+          component={CompleteProfileScreen}
+          options={{ title: 'Complete Profile', headerBackVisible: false }}
+        />
+        <Stack.Screen
+          name="Profile"
+          component={ProfileScreen}
+          options={{ title: 'Profile' }}
+        />
+      </Stack.Navigator>
+    );
+  }
 
   return (
     <Stack.Navigator
@@ -107,6 +138,11 @@ export function MainNavigator() {
         name="Profile"
         component={ProfileScreen}
         options={{ title: 'Profile' }}
+      />
+      <Stack.Screen
+        name="CompleteProfile"
+        component={CompleteProfileScreen}
+        options={{ title: 'Edit Profile' }}
       />
       <Stack.Screen
         name="CreateSpace"
@@ -307,12 +343,26 @@ export function MainNavigator() {
         )}
       />
       <Stack.Screen
+        name="DashboardOccupancyList"
+        options={{ title: 'Residents' }}
+        component={DashboardOccupancyListScreen}
+      />
+      <Stack.Screen
+        name="DashboardBedInventory"
+        options={{ title: 'Beds' }}
+        component={DashboardBedInventoryScreen}
+      />
+      <Stack.Screen
         name="SubscriptionActivationRequests"
         options={{ title: 'Activation Requests' }}
         children={({ route }) => (
           <SubscriptionActivationRequestsScreen spaceId={route.params.spaceId} />
         )}
       />
+      <Stack.Screen name="MemberPayments" component={MemberPaymentsScreen} />
+      <Stack.Screen name="PaymentDetail" component={PaymentDetailScreen} />
+      <Stack.Screen name="PaymentReview" component={PaymentReviewScreen} />
+      <Stack.Screen name="PaymentHistory" component={PaymentHistoryScreen} />
       <Stack.Screen
         name="SpaceTabs"
         options={{ headerShown: false }}

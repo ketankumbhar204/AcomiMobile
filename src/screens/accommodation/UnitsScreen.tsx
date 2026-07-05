@@ -59,7 +59,7 @@ export function UnitsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
-  const { units, loading, loadingMore, error, hasMore, refresh, loadMore } = useUnits(
+  const { units, loading, loadingMore, error, hasMore, refresh, loadMore, patchUnit } = useUnits(
     spaceId,
     buildingId,
     { searchQuery },
@@ -202,8 +202,8 @@ export function UnitsScreen() {
               editableName={canManage}
               onSaveName={async name => {
                 await renameUnitName(spaceId, buildingId, unit.unitId, name);
+                patchUnit(unit.unitId, { name });
                 showToast(t('accommodation.units.updateSuccess'));
-                await refresh();
               }}
               onPress={() => openUnit(unit)}
               onLongPress={() => openUnitDetail(unit)}

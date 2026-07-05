@@ -8,8 +8,9 @@ import {
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import type { OccupancyResponse, TransferRentPolicy } from '../../../../api/types';
+import type { OccupancyResponse, TransferRentPolicy, AmenityAssignment } from '../../../../api/types';
 import { ContractTermsForm } from '../../../../components/occupancy/ContractTermsForm';
+import { OccupancyAmenitiesSection } from '../../../../components/occupancy/OccupancyAmenitiesSection';
 import { fetchSpaceFoodPolicy, type SpaceFoodPolicy } from '../../../../utils/fetchSpaceFoodPolicy';
 import {
   contractTermsFromOccupancy,
@@ -36,6 +37,9 @@ type ContractTermsStepProps = {
   onAgreementSignedChange?: (value: boolean) => void;
   allowEarlyMoveIn?: boolean;
   onAllowEarlyMoveInChange?: (value: boolean) => void;
+  spaceAmenities?: AmenityAssignment[];
+  assignedAmenities?: AmenityAssignment[];
+  onAssignedAmenitiesChange?: (value: AmenityAssignment[]) => void;
 };
 
 export function ContractTermsStep({
@@ -54,6 +58,9 @@ export function ContractTermsStep({
   onAgreementSignedChange,
   allowEarlyMoveIn = false,
   onAllowEarlyMoveInChange,
+  spaceAmenities = [],
+  assignedAmenities = [],
+  onAssignedAmenitiesChange,
 }: ContractTermsStepProps) {
   const { t } = useTranslation();
   const needsEarlyMoveIn = mode === 'MOVE_IN' && isMoveInDateInFuture(moveInDate);
@@ -82,7 +89,6 @@ export function ContractTermsStep({
   return (
     <View style={styles.wrap}>
       <Text style={styles.title}>{t('occupancyWizard.steps.contract')}</Text>
-      {displayPath ? <Text style={styles.path}>{displayPath}</Text> : null}
 
       {mode === 'MOVE_IN' && needsEarlyMoveIn && onAllowEarlyMoveInChange ? (
         <View style={styles.switchRow}>
@@ -121,6 +127,9 @@ export function ContractTermsStep({
                   onRentPolicyChange(policy);
                   if (policy === 'KEEP' && currentOccupancy) {
                     onChange(contractTermsFromOccupancy(currentOccupancy));
+                    if (currentOccupancy.amenities?.length && onAssignedAmenitiesChange) {
+                      onAssignedAmenitiesChange(currentOccupancy.amenities);
+                    }
                   } else if (policy === 'APPLY_NEW') {
                     onChange(
                       emptyContractTermsFormValues(
@@ -168,6 +177,14 @@ export function ContractTermsStep({
         catalogDepositHint={catalogDeposit}
         foodPolicy={effectiveFoodPolicy}
       />
+
+      {spaceAmenities.length > 0 && onAssignedAmenitiesChange ? (
+        <OccupancyAmenitiesSection
+          available={spaceAmenities}
+          assigned={assignedAmenities}
+          onChange={onAssignedAmenitiesChange}
+        />
+      ) : null}
     </View>
   );
 }

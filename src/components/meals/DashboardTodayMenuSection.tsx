@@ -72,6 +72,7 @@ export function DashboardTodayMenuSection({ spaceId }: DashboardTodayMenuSection
               key={mealType}
               mealType={mealType}
               menu={menuMap[mealType]}
+              spaceId={spaceId}
               comboById={comboById}
             />
           ))

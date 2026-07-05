@@ -2,6 +2,11 @@ export type UUID = string;
 
 export type SpaceType = 'PG' | 'MESS' | 'HOSTEL' | 'CO_LIVING' | 'RENTAL';
 
+export interface AmenityAssignment {
+  code: string;
+  label: string;
+}
+
 export type MembershipRole =
   | 'OWNER'
   | 'MANAGER'
@@ -58,6 +63,8 @@ export interface SpaceDetailsResponse {
   mealBillingType?: MealBillingType;
   prepaidBalanceUnit?: PrepaidBalanceUnit | null;
   prepaidFallbackToPayPerMeal?: boolean;
+  genderPolicy?: GenderPolicy | null;
+  amenities?: AmenityAssignment[];
   createdAt: string;
   updatedAt: string;
 }
@@ -246,6 +253,7 @@ export interface DailyMenuResponse {
 
 export interface UpsertDailyMenuRequest {
   options: Array<{
+    optionId?: UUID;
     entryType?: DailyMenuEntryType;
     comboId?: UUID | null;
     itemId?: UUID | null;
@@ -680,6 +688,8 @@ export interface UpdateSpaceRequest {
   contactNumber?: string;
   foodIncludedInRent?: boolean;
   defaultFoodCharge?: number | null;
+  genderPolicy?: GenderPolicy | null;
+  amenities?: AmenityAssignment[];
 }
 
 export interface CreateMemberRequest {
@@ -807,8 +817,10 @@ export interface MemberDetailsResponse {
   mealParticipation?: MemberMealParticipationSummary | null;
   mealBillingType?: MealBillingType | null;
   effectiveMealBillingType?: MealBillingType;
+  assignedAmenities?: AmenityAssignment[];
   createdAt: string;
   updatedAt: string;
+  linkedUserProfile?: UserResponse | null;
 }
 
 export interface PendingInvitationResponse {
@@ -874,6 +886,8 @@ export interface Space {
   mealBillingType?: MealBillingType;
   prepaidBalanceUnit?: PrepaidBalanceUnit | null;
   prepaidFallbackToPayPerMeal?: boolean;
+  genderPolicy?: GenderPolicy | null;
+  amenities?: AmenityAssignment[];
   createdAt: string;
   updatedAt: string;
   role?: MembershipRole;
@@ -888,6 +902,8 @@ export interface CreateSpaceRequest {
   address?: string;
   contactNumber?: string;
   ownerId: UUID;
+  genderPolicy?: GenderPolicy | null;
+  amenities?: AmenityAssignment[];
 }
 
 export interface CreateInvitationRequest {
@@ -924,10 +940,54 @@ export interface UserResponse {
   profilePhotoUrl?: string | null;
   active: boolean;
   createdAt: string;
+  email?: string | null;
+  gender?: MemberGender | null;
+  dateOfBirth?: string | null;
+  permanentAddress?: string | null;
+  city?: string | null;
+  state?: string | null;
+  pincode?: string | null;
+  profileCompleted?: boolean;
+  profileCompletedAt?: string | null;
+  profileStatus?: ProfileStatus | null;
+  profileCompletionPercentage?: number | null;
+  documentsUploaded?: number | null;
+  kycStatus?: KycStatus | null;
 }
+
+export type ProfileStatus =
+  | 'PENDING'
+  | 'PARTIAL'
+  | 'COMPLETED'
+  | 'UNDER_REVIEW'
+  | 'VERIFIED';
+
+export type KycStatus = 'NOT_STARTED' | 'PENDING' | 'UNDER_REVIEW' | 'VERIFIED' | 'REJECTED';
 
 export interface UpdateUserRequest {
   fullName: string;
+}
+
+export interface CompleteUserProfileRequest {
+  fullName: string;
+  gender?: MemberGender | null;
+  dateOfBirth?: string | null;
+  email?: string | null;
+  profilePhotoUrl?: string | null;
+  permanentAddress: string;
+  city: string;
+  state: string;
+  pincode: string;
+  emergencyContactName?: string | null;
+  emergencyContactMobile?: string | null;
+  emergencyContactRelation?: string | null;
+  identityDocumentType?: MemberDocumentType | null;
+  identityDocumentNumber?: string | null;
+  addressProofFileUrl?: string | null;
+  identityProofFileUrl?: string | null;
+  additionalDocumentFileUrl?: string | null;
+  profileCompleted?: boolean;
+  profileStatus?: ProfileStatus;
 }
 
 export interface AuthTokenResponse {
@@ -1223,6 +1283,10 @@ export interface ListQueryParams {
   view?: 'summary' | 'full';
   includeSynthetic?: boolean;
   status?: AccommodationStatus;
+  includeInactive?: boolean;
+  buildingId?: UUID;
+  floorId?: UUID;
+  unitId?: UUID;
 }
 
 export interface MemberSearchParams {
@@ -1302,6 +1366,7 @@ export interface FloorListItemResponse {
   bedCount: number;
   available: number;
   occupied: number;
+  active?: boolean;
 }
 
 export interface UnitListItemResponse {
@@ -1309,9 +1374,12 @@ export interface UnitListItemResponse {
   name: string;
   roomCount: number;
   bedCount: number;
+  availableBeds?: number;
+  occupiedBeds?: number;
   status: AccommodationStatus;
   synthetic: boolean;
   unitKind?: UnitKind | null;
+  active?: boolean;
 }
 
 export interface RoomListItemResponse {
@@ -1321,12 +1389,28 @@ export interface RoomListItemResponse {
   bedCount: number;
   availableBeds: number;
   occupiedBeds: number;
+  active?: boolean;
 }
 
 export interface BedListItemResponse {
   bedId: UUID;
   label: string;
   status: AccommodationStatus;
+  active?: boolean;
+}
+
+export interface BedSpaceListItemResponse {
+  bedId: UUID;
+  label: string;
+  status: AccommodationStatus;
+  buildingId: UUID;
+  buildingName: string;
+  floorId?: UUID | null;
+  floorName?: string | null;
+  unitId?: UUID | null;
+  unitName?: string | null;
+  roomId: UUID;
+  roomName: string;
 }
 
 export interface DuplicateBuildingRequest {
@@ -1493,6 +1577,7 @@ export interface OccupancyResponse {
   foodIncludedInRent?: boolean;
   pricingLockedAt?: string | null;
   otherCharges?: OccupancyChargeSnapshotResponse[];
+  amenities?: AmenityAssignment[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -1566,6 +1651,7 @@ export interface MoveInOccupancyRequest {
   foodChargeSnapshot?: number | null;
   otherCharges?: OccupancyChargeLine[];
   createMealParticipation?: boolean;
+  amenities?: AmenityAssignment[];
 }
 
 export interface CancelReservationRequest {
@@ -1587,6 +1673,7 @@ export interface AllocateOccupancyRequest {
   foodChargeSnapshot?: number | null;
   otherCharges?: OccupancyChargeLine[];
   createMealParticipation?: boolean;
+  amenities?: AmenityAssignment[];
 }
 
 export interface TransferOccupancyRequest {
@@ -1601,6 +1688,7 @@ export interface TransferOccupancyRequest {
   foodEnabled?: boolean;
   foodChargeSnapshot?: number | null;
   otherCharges?: OccupancyChargeLine[];
+  amenities?: AmenityAssignment[];
 }
 
 export interface VacateOccupancyRequest {
@@ -1792,6 +1880,133 @@ export interface CreateSubscriptionActivationRequest {
   paymentReference?: string;
   proofImageBase64?: string;
   customerNotes?: string;
+}
+
+// ─── Universal payment collection (SpacePayment) ────────────────────────────
+
+export type UniversalPaymentType = 'MEAL' | 'RENT' | 'DEPOSIT' | 'MAINTENANCE' | 'OTHER';
+
+export type UniversalPaymentMethod = 'UPI' | 'BANK_TRANSFER' | 'CASH' | 'CHEQUE' | 'OTHER';
+
+/**
+ * PENDING → (proof upload) → UNDER_REVIEW → PAID | REJECTED
+ * PROOF_UPLOADED may appear transiently before UNDER_REVIEW.
+ */
+export type UniversalPaymentStatus =
+  | 'PENDING'
+  | 'PROOF_UPLOADED'
+  | 'UNDER_REVIEW'
+  | 'PAID'
+  | 'REJECTED';
+
+/** Reporting sub-category; valid combinations depend on paymentType. */
+export type PaymentCategory =
+  | 'MONTHLY'
+  | 'DAILY'
+  | 'EXTRA'
+  | 'ADVANCE'
+  | 'SECURITY'
+  | 'REFUND'
+  | 'ELECTRICITY'
+  | 'WATER'
+  | 'INTERNET'
+  | 'OTHER';
+
+export type PaymentRejectionReason =
+  | 'PAYMENT_AMOUNT_MISMATCH'
+  | 'WRONG_SCREENSHOT'
+  | 'INVALID_UTR'
+  | 'OTHER';
+
+export type PaymentTimelineEventType =
+  | 'CREATED'
+  | 'PROOF_UPLOADED'
+  | 'UNDER_REVIEW'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'RESUBMITTED'
+  | 'PAID'
+  | 'REFUNDED';
+
+export interface SpacePaymentResponse {
+  paymentId: UUID;
+  spaceId: UUID;
+  memberId: UUID;
+  memberName: string;
+  occupancyId?: UUID | null;
+  paymentType: UniversalPaymentType;
+  paymentCategory: PaymentCategory;
+  title: string;
+  amount: number;
+  currencyCode: string;
+  dueDate: string;
+  month: string;
+  paymentMethod?: UniversalPaymentMethod | null;
+  paymentStatus: UniversalPaymentStatus;
+  proofUrl?: string | null;
+  referenceNumber?: string | null;
+  remarks?: string | null;
+  rejectionReason?: string | null;
+  rejectionCode?: PaymentRejectionReason | null;
+  reviewedBy?: UUID | null;
+  reviewedAt?: string | null;
+  paymentDate?: string | null;
+  targetLabel?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SpacePaymentListResponse {
+  month: string;
+  payments: SpacePaymentResponse[];
+}
+
+export interface PaymentTimelineEventResponse {
+  eventId: UUID;
+  paymentId: UUID;
+  eventType: PaymentTimelineEventType;
+  performedAt: string;
+  remarks?: string | null;
+  performedBy?: UUID | null;
+}
+
+export interface PaymentTimelineResponse {
+  paymentId: UUID;
+  events: PaymentTimelineEventResponse[];
+}
+
+export interface ListSpacePaymentsParams {
+  month?: string;
+  status?: UniversalPaymentStatus;
+  memberId?: UUID;
+  paymentType?: UniversalPaymentType;
+  paymentCategory?: PaymentCategory;
+}
+
+export interface SubmitPaymentProofRequest {
+  proofImageBase64: string;
+  referenceNumber?: string;
+  remarks?: string;
+  paymentMethod?: UniversalPaymentMethod;
+}
+
+export type PaymentReviewAction = 'APPROVE' | 'REJECT';
+
+export interface ReviewPaymentRequest {
+  action: PaymentReviewAction;
+  remarks?: string;
+  rejectionCode?: PaymentRejectionReason;
+}
+
+/** @deprecated Use ReviewPaymentRequest via POST /review */
+export interface ApprovePaymentRequest {
+  remarks?: string;
+}
+
+/** @deprecated Use ReviewPaymentRequest via POST /review */
+export interface RejectPaymentRequest {
+  rejectionCode: PaymentRejectionReason;
+  rejectionReason?: string;
 }
 
 export class ApiError extends Error {

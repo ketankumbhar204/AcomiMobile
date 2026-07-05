@@ -5,7 +5,14 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  InteractionManager,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { Button } from './Button';
@@ -29,34 +36,42 @@ const ConfirmDialogContext = createContext<ConfirmDialogContextValue | null>(nul
 
 export function ConfirmDialogProvider({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
-  const [options, setOptions] = useState<ConfirmDialogOptions | null>(null);
+  const [dialog, setDialog] = useState<ConfirmDialogOptions | null>(null);
   const [loading, setLoading] = useState(false);
 
   const close = useCallback(() => {
     if (loading) {
       return;
     }
-    options?.onDismiss?.();
-    setOptions(null);
-  }, [loading, options]);
+    dialog?.onDismiss?.();
+    setDialog(null);
+  }, [dialog, loading]);
 
   const showConfirm = useCallback((next: ConfirmDialogOptions) => {
-    setOptions(next);
+    setLoading(false);
+    setDialog(next);
   }, []);
 
   const handleConfirm = useCallback(async () => {
-    if (!options) {
+    if (!dialog || loading) {
       return;
     }
 
+    const onConfirm = dialog.onConfirm;
     setLoading(true);
+    setDialog(null);
+
     try {
-      await options.onConfirm();
-      setOptions(null);
+      await new Promise<void>(resolve => {
+        InteractionManager.runAfterInteractions(() => resolve());
+      });
+      await onConfirm();
+    } catch {
+      // Errors are handled by the caller (e.g. toast).
     } finally {
       setLoading(false);
     }
-  }, [options]);
+  }, [dialog, loading]);
 
   const contextValue = useMemo(() => ({ showConfirm }), [showConfirm]);
 
@@ -64,27 +79,25 @@ export function ConfirmDialogProvider({ children }: { children: React.ReactNode 
     <ConfirmDialogContext.Provider value={contextValue}>
       {children}
       <Modal
-        visible={options !== null}
+        visible={dialog !== null}
         transparent
         animationType="fade"
         onRequestClose={close}
-        statusBarTranslucent>
-        <Pressable
-          style={styles.backdrop}
-          onPress={close}
-          accessibilityRole="button"
-          accessibilityLabel={options?.cancelLabel ?? t('common.cancel')}>
-          <Pressable style={styles.card} onPress={event => event.stopPropagation()}>
-            <Text style={styles.title}>{options?.title}</Text>
-            <Text style={styles.message}>{options?.message}</Text>
+        statusBarTranslucent
+        presentationStyle="overFullScreen">
+        <View style={styles.backdrop}>
+          <Pressable style={styles.backdropTap} onPress={close} accessibilityRole="button" />
+          <View style={styles.card}>
+            <Text style={styles.title}>{dialog?.title}</Text>
+            <Text style={styles.message}>{dialog?.message}</Text>
             <View
               style={[
                 styles.actions,
-                options?.hideCancel ? styles.actionsSingle : undefined,
+                dialog?.hideCancel ? styles.actionsSingle : undefined,
               ]}>
-              {options?.hideCancel ? null : (
+              {dialog?.hideCancel ? null : (
                 <Button
-                  label={options?.cancelLabel ?? t('common.cancel')}
+                  label={dialog?.cancelLabel ?? t('common.cancel')}
                   variant="ghost"
                   onPress={close}
                   disabled={loading}
@@ -92,17 +105,17 @@ export function ConfirmDialogProvider({ children }: { children: React.ReactNode 
                 />
               )}
               <Button
-                label={options?.confirmLabel ?? ''}
+                label={dialog?.confirmLabel ?? ''}
                 onPress={() => void handleConfirm()}
                 loading={loading}
                 style={[
                   styles.actionButton,
-                  options?.destructive ? styles.destructiveButton : undefined,
+                  dialog?.destructive ? styles.destructiveButton : undefined,
                 ]}
               />
             </View>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
     </ConfirmDialogContext.Provider>
   );
@@ -121,12 +134,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.45)',
     justifyContent: 'center',
+    alignItems: 'center',
     padding: spacing.xl,
+  },
+  backdropTap: {
+    ...StyleSheet.absoluteFillObject,
   },
   card: {
     backgroundColor: colors.white,
     borderRadius: radius.card,
     padding: spacing.xl,
+    width: '100%',
+    maxWidth: 420,
+    zIndex: 1,
+    elevation: 8,
     ...shadows.md,
   },
   title: {

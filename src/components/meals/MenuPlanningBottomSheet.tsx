@@ -24,6 +24,7 @@ type MenuPlanningBottomSheetProps = {
   subtitle?: string;
   onClose: () => void;
   onBack?: () => void;
+  stickyHeader?: React.ReactNode;
   children: React.ReactNode;
   footer?: React.ReactNode;
   scrollContentStyle?: ViewStyle;
@@ -35,6 +36,7 @@ export function MenuPlanningBottomSheet({
   subtitle,
   onClose,
   onBack,
+  stickyHeader,
   children,
   footer,
   scrollContentStyle,
@@ -155,6 +157,10 @@ export function MenuPlanningBottomSheet({
                 </Pressable>
               </View>
             </View>
+
+            {stickyHeader ? (
+              <View style={styles.stickyHeader}>{stickyHeader}</View>
+            ) : null}
 
             <ScrollView
               style={styles.scrollView}
@@ -285,6 +291,14 @@ const styles = StyleSheet.create({
   sheetTitle: { ...typography.bodyStrong, fontSize: 16, textAlign: 'center' },
   sheetSubtitle: { ...typography.caption, color: colors.muted, textAlign: 'center', fontWeight: '600' },
   closeBtn: { ...typography.body, color: colors.muted, fontSize: 18 },
+  stickyHeader: {
+    paddingHorizontal: spacing.xxl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.white,
+  },
   scrollContent: { padding: spacing.xxl, paddingBottom: spacing.md },
   footer: {
     paddingHorizontal: spacing.xxl,

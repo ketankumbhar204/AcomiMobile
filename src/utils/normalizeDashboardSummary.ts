@@ -1,4 +1,5 @@
 import type {
+  DashboardAccommodationOperations,
   DashboardAttentionItem,
   DashboardFinancialSummary,
   DashboardSummaryResponse,
@@ -82,6 +83,21 @@ function normalizeAttentionItem(raw: unknown): DashboardAttentionItem {
   };
 }
 
+function normalizeAccommodationOperations(
+  raw: unknown,
+): DashboardAccommodationOperations | null {
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+  const row = raw as Record<string, unknown>;
+  return {
+    occupiedBeds: toNumber(row.occupiedBeds) ?? 0,
+    vacantBeds: toNumber(row.vacantBeds) ?? 0,
+    moveInsThisMonth: toNumber(row.moveInsThisMonth) ?? 0,
+    pendingPaymentsCount: toNumber(row.pendingPaymentsCount) ?? 0,
+  };
+}
+
 export function normalizeDashboardSummary(raw: DashboardSummaryResponse): DashboardSummaryResponse {
   const messOperations = raw.messOperations
     ? {
@@ -94,6 +110,7 @@ export function normalizeDashboardSummary(raw: DashboardSummaryResponse): Dashbo
     ...raw,
     financial: normalizeFinancialSummary(raw.financial),
     messOperations,
+    accommodationOperations: normalizeAccommodationOperations(raw.accommodationOperations),
     attention: (raw.attention ?? []).map(normalizeAttentionItem),
   };
 }

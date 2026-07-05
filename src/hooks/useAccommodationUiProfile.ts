@@ -16,9 +16,10 @@ export function useAccommodationUiProfile(
   summaryLoading: boolean;
   summaryError: string | null;
   refreshSummary: ReturnType<typeof useAccommodationSummary>['refresh'];
+  patchSummary: ReturnType<typeof useAccommodationSummary>['patchSummary'];
 } {
   const shouldLoadSummary = Boolean(spaceId && buildingId && spaceType);
-  const { summary, loading, error, refresh } = useAccommodationSummary(
+  const { summary, loading, error, refresh, patchSummary } = useAccommodationSummary(
     shouldLoadSummary ? spaceId : null,
     shouldLoadSummary ? buildingId! : null,
   );
@@ -36,5 +37,6 @@ export function useAccommodationUiProfile(
     summaryLoading: loading,
     summaryError: error,
     refreshSummary: refresh,
+    patchSummary,
   };
 }

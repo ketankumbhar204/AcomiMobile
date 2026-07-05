@@ -12,6 +12,8 @@ export type BedStatusFilterState = Set<AccommodationStatus>;
 
 const BED_STATUSES: AccommodationStatus[] = ['AVAILABLE', 'OCCUPIED'];
 
+export const BED_FILTER_OPTION_COUNT = BED_STATUSES.length;
+
 export function defaultBedStatusFilters(): BedStatusFilterState {
   return new Set();
 }

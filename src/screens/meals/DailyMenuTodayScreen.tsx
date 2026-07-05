@@ -66,6 +66,7 @@ export function DailyMenuTodayScreen({ spaceId }: DailyMenuTodayScreenProps) {
           key={mealType}
           mealType={mealType}
           menu={menuMap[mealType]}
+          spaceId={spaceId}
           comboById={comboById}
         />
       ))}

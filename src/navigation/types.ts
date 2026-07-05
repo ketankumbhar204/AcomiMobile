@@ -26,6 +26,8 @@ export type MainStackParamList = {
   OnboardingChoice: undefined;
   JoinSpace: undefined;
   AcceptInvitations: undefined;
+  ProfileCompletionGate: undefined;
+  CompleteProfile: { mode?: 'onboarding' | 'edit' } | undefined;
   Profile: undefined;
   CreateSpace: undefined;
   SpaceDetails: { spaceId: UUID };
@@ -184,6 +186,23 @@ export type MainStackParamList = {
   CustomerSubscriptionPlans: { spaceId: UUID; memberId: UUID };
   SubscriptionActivationRequests: { spaceId: UUID };
   DashboardPendingActions: { spaceId: UUID };
+  DashboardOccupancyList: {
+    spaceId: UUID;
+    mode: 'active' | 'moveInsThisMonth';
+  };
+  DashboardBedInventory: {
+    spaceId: UUID;
+    status: 'AVAILABLE' | 'OCCUPIED';
+  };
+  MemberPayments: { spaceId: UUID; memberId: UUID; memberName: string };
+  PaymentDetail: {
+    spaceId: UUID;
+    paymentId: UUID;
+    memberId?: UUID;
+    memberName?: string;
+  };
+  PaymentReview: { spaceId: UUID };
+  PaymentHistory: { spaceId: UUID; paymentId: UUID };
 };
 
 export type RootStackParamList = {

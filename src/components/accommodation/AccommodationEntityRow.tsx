@@ -2,6 +2,11 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { InlineEditableName } from '../ui/InlineEditableName';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
+import {
+  AccommodationInactiveBadge,
+  accommodationInactiveCardStyle,
+} from './AccommodationInactiveBadge';
+import { isAccommodationEntityActive } from '../../utils/accommodationEntityActive';
 
 type AccommodationEntityRowProps = {
   title: string;
@@ -16,6 +21,7 @@ type AccommodationEntityRowProps = {
   showChevron?: boolean;
   editableName?: boolean;
   onSaveName?: (name: string) => Promise<void>;
+  active?: boolean;
 };
 
 export function AccommodationEntityRow({
@@ -31,18 +37,20 @@ export function AccommodationEntityRow({
   showChevron = true,
   editableName = false,
   onSaveName,
+  active = true,
 }: AccommodationEntityRowProps) {
+  const inactive = !isAccommodationEntityActive({ active });
   const showTrailingChevron = showChevron && !menu;
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.card}>
+      <View style={[styles.card, inactive && accommodationInactiveCardStyle]}>
         <Pressable
           onPress={onPress}
           onLongPress={onLongPress}
           style={({ pressed }) => [styles.main, pressed && styles.mainPressed]}>
           {iconLabel ? (
-            <View style={styles.icon}>
+            <View style={[styles.icon, inactive && styles.iconInactive]}>
               <Text style={styles.iconText}>{iconLabel}</Text>
             </View>
           ) : null}
@@ -54,11 +62,17 @@ export function AccommodationEntityRow({
             />
             {meta ? <View style={styles.meta}>{meta}</View> : null}
             {subtitle ? (
-              <Text style={styles.subtitle} numberOfLines={2}>
+              <Text style={[styles.subtitle, inactive && styles.subtitleInactive]} numberOfLines={2}>
                 {subtitle}
               </Text>
             ) : null}
-            {badge ? <View style={styles.badge}>{badge}</View> : null}
+            {inactive ? (
+              <View style={styles.badge}>
+                <AccommodationInactiveBadge />
+              </View>
+            ) : badge ? (
+              <View style={styles.badge}>{badge}</View>
+            ) : null}
           </View>
           {showTrailingChevron ? <Text style={styles.chevron}>›</Text> : null}
         </Pressable>
@@ -112,6 +126,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.white,
   },
+  iconInactive: {
+    backgroundColor: '#9CA3AF',
+  },
   info: {
     flex: 1,
     minWidth: 0,
@@ -125,6 +142,9 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.muted,
     marginTop: 2,
+  },
+  subtitleInactive: {
+    color: '#9CA3AF',
   },
   badge: {
     marginTop: spacing.xs,

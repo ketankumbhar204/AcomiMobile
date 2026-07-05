@@ -19,6 +19,9 @@ type FoodItemMultiPickerProps = {
   onAddItem?: (categoryId: string, name: string, foodType?: FoodType) => Promise<FoodItemResponse>;
   onAddCategory?: (name: string) => Promise<FoodCategoryResponse>;
   variant?: 'default' | 'planning';
+  hideSearch?: boolean;
+  externalQuery?: string;
+  hideSectionLabel?: boolean;
 };
 
 export function FoodItemMultiPicker({
@@ -32,6 +35,9 @@ export function FoodItemMultiPicker({
   onAddItem,
   onAddCategory,
   variant = 'default',
+  hideSearch = false,
+  externalQuery,
+  hideSectionLabel = false,
 }: FoodItemMultiPickerProps) {
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
@@ -60,12 +66,12 @@ export function FoodItemMultiPicker({
   }, [activeItems, effectiveCategoryId]);
 
   const filteredItems = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
+    const normalized = (externalQuery ?? query).trim().toLowerCase();
     if (!normalized) {
       return categoryItems;
     }
     return categoryItems.filter(item => item.name.toLowerCase().includes(normalized));
-  }, [categoryItems, query]);
+  }, [categoryItems, externalQuery, query]);
 
   const showAddItem = canAddItem && onAddItem;
   const showAddCategory = canAddCategory && onAddCategory;
@@ -117,7 +123,9 @@ export function FoodItemMultiPicker({
 
     return (
       <View style={styles.wrapper}>
-        <Text style={styles.sectionLabel}>{t('meals.library.items')}</Text>
+        {hideSectionLabel ? null : (
+          <Text style={styles.sectionLabel}>{t('meals.library.items')}</Text>
+        )}
 
         {activeCategories.length > 0 || showAddCategory ? (
           <ScrollableChipRail>
@@ -157,15 +165,17 @@ export function FoodItemMultiPicker({
           </View>
         ) : null}
 
-        <TextInput
-          style={styles.search}
-          value={query}
-          onChangeText={setQuery}
-          placeholder={t('meals.menu.searchInCategory', {
-            category: selectedCategory?.name ?? t('meals.library.items'),
-          })}
-          placeholderTextColor={colors.muted}
-        />
+        {hideSearch ? null : (
+          <TextInput
+            style={styles.search}
+            value={query}
+            onChangeText={setQuery}
+            placeholder={t('meals.menu.searchInCategory', {
+              category: selectedCategory?.name ?? t('meals.library.items'),
+            })}
+            placeholderTextColor={colors.muted}
+          />
+        )}
 
         <View style={styles.chipGrid}>
           {filteredItems.map(item => (

@@ -1,0 +1,84 @@
+import type { DashboardSummaryResponse, SpaceType } from '../api/types';
+import {
+  fetchDashboardSummaryCached,
+  invalidateDashboardQueries,
+  peekDashboardSummary,
+  resetDashboardQueryCacheForTests,
+} from '../dashboardQueryCache';
+
+jest.mock('../../api/dashboardApi', () => ({
+  dashboardApi: {
+    getDashboardSummary: jest.fn(),
+  },
+}));
+
+import { dashboardApi } from '../../api/dashboardApi';
+
+const spaceId = 'space-1';
+const spaceType = 'PG' as SpaceType;
+const month = '2026-07';
+
+const summary = {
+  spaceType,
+  month,
+  financial: {
+    expectedCharges: 10000,
+    collected: null,
+    pending: 10000,
+    currencyCode: 'INR',
+  },
+  attention: [
+    {
+      kind: 'payments_overdue' as const,
+      overdueCount: 1,
+      overdueAmount: 10000,
+      currencyCode: 'INR',
+    },
+  ],
+  accommodationOperations: {
+    occupiedBeds: 1,
+    vacantBeds: 213,
+    moveInsThisMonth: 1,
+    pendingPaymentsCount: 1,
+  },
+} as DashboardSummaryResponse;
+
+describe('dashboardQueryCache', () => {
+  beforeEach(() => {
+    resetDashboardQueryCacheForTests();
+    jest.clearAllMocks();
+    (dashboardApi.getDashboardSummary as jest.Mock).mockResolvedValue(summary);
+  });
+
+  it('deduplicates concurrent dashboard-summary requests', async () => {
+    const [first, second] = await Promise.all([
+      fetchDashboardSummaryCached(spaceId, spaceType, month),
+      fetchDashboardSummaryCached(spaceId, spaceType, month),
+    ]);
+
+    expect(first.attention).toHaveLength(1);
+    expect(second.attention).toHaveLength(1);
+    expect(dashboardApi.getDashboardSummary).toHaveBeenCalledTimes(1);
+    expect(peekDashboardSummary(spaceId, month)?.accommodationOperations?.occupiedBeds).toBe(1);
+  });
+
+  it('serves cached summary without refetching', async () => {
+    await fetchDashboardSummaryCached(spaceId, spaceType, month);
+    await fetchDashboardSummaryCached(spaceId, spaceType, month);
+
+    expect(dashboardApi.getDashboardSummary).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps cached summary after invalidation until force refresh', async () => {
+    await fetchDashboardSummaryCached(spaceId, spaceType, month);
+    invalidateDashboardQueries();
+
+    expect(peekDashboardSummary(spaceId, month)?.accommodationOperations?.occupiedBeds).toBe(1);
+
+    await fetchDashboardSummaryCached(spaceId, spaceType, month);
+    expect(dashboardApi.getDashboardSummary).toHaveBeenCalledTimes(1);
+
+    await fetchDashboardSummaryCached(spaceId, spaceType, month, { force: true });
+    expect(dashboardApi.getDashboardSummary).toHaveBeenCalledTimes(2);
+  });
+});

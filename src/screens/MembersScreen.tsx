@@ -50,8 +50,10 @@ import {
   defaultMemberListFilters,
   filterAndSortMembers,
   filterPendingInvitations,
+  memberFilterOptionCount,
   type MemberListFilterState,
 } from '../utils/memberListQuery';
+import { shouldUseFilterDrawer } from '../utils/filterUx';
 
 type MembersNavigation = CompositeNavigationProp<
   BottomTabNavigationProp<SpaceTabParamList, 'Members'>,
@@ -138,6 +140,9 @@ export function MembersScreen() {
   );
 
   const activeFilterCount = countMemberListFilters(listFilters, permissions.spaceType);
+  const useMembersFilterDrawer = shouldUseFilterDrawer(
+    memberFilterOptionCount(permissions.spaceType),
+  );
 
   const showAddFab = permissions.canManageMembers;
   const showInviteAction = permissions.canManageMembers;
@@ -262,6 +267,7 @@ export function MembersScreen() {
           }
           onFilterPress={() => setFilterDrawerOpen(true)}
           activeFilterCount={activeFilterCount}
+          showFilterButton={useMembersFilterDrawer}
         />
 
         {activeTab === 'members' ? (
@@ -313,6 +319,8 @@ export function MembersScreen() {
                             memberId={member.memberId}
                             participation={participation}
                             canManage={canManageMeals}
+                            spaceType={permissions.spaceType}
+                            occupancyStatus={member.occupancyStatus}
                             onParticipationChanged={() => void reloadParticipations()}
                             labelKey={
                               isMess ? 'meals.mealAccess.label' : 'meals.foodIncluded.label'

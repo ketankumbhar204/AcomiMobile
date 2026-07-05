@@ -6,6 +6,8 @@
     "no": "No",
     "cancel": "Cancel",
     "back": "Back",
+    "next": "Next",
+    "retry": "Retry",
     "continue": "Continue",
     "save": "Save",
     "edit": "Edit",
@@ -179,6 +181,47 @@
       "rental": {
         "label": "Rental",
         "description": "Flats / Rooms"
+      }
+    },
+    "propertyCategory": {
+      "label": "Property Category",
+      "pg": {
+        "gents": "Gents PG",
+        "ladies": "Ladies PG",
+        "mixed": "Mixed PG"
+      },
+      "hostel": {
+        "gents": "Boys Hostel",
+        "ladies": "Girls Hostel",
+        "mixed": "Mixed Hostel"
+      },
+      "coLiving": {
+        "gents": "Male Co-living",
+        "ladies": "Female Co-living",
+        "mixed": "Mixed Co-living"
+      }
+    },
+    "amenities": {
+      "title": "Amenities",
+      "hint": "Select amenities available at this property.",
+      "selectAll": "Select all",
+      "customLabel": "Add custom amenity",
+      "customPlaceholder": "e.g. Gym access",
+      "addCustom": "Add",
+      "customRequired": "Enter a name for the custom amenity.",
+      "customTooLong": "Custom amenity name is too long.",
+      "maxReached": "Maximum number of amenities reached.",
+      "codes": {
+        "WIFI": "WiFi",
+        "FOOD_INCLUDED": "Food",
+        "WASHING_MACHINE": "Washing Machine",
+        "HOT_WATER": "Hot Water",
+        "PARKING": "Parking",
+        "REFRIGERATOR": "Refrigerator",
+        "HOUSEKEEPING": "Housekeeping",
+        "CCTV": "CCTV",
+        "POWER_BACKUP": "Power Backup",
+        "RO_WATER": "RO Water"
       }
     },
     "roles": {
@@ -411,6 +454,11 @@
       "mobileRequired": "Mobile number is required.",
       "successToast": "Emergency contact updated."
     },
+    "meals": {
+      "emptyTitle": "No meal subscription found",
+      "emptyDescription": "You are not currently enrolled for meals in this property.",
+      "summaryTitle": "Meal plan"
+    },
     "deposit": {
       "amount": "Deposit Amount",
       "paid": "Amount Paid",
@@ -418,6 +466,8 @@
       "balance": "Balance",
       "edit": "Edit Deposit",
       "successToast": "Deposit updated.",
+      "emptyTitle": "No deposit information available",
+      "emptyDescription": "Deposit details will appear here once recorded by the property manager.",
       "errors": {
         "negative": "Amounts cannot be negative.",
         "paidExceedsAmount": "Paid amount cannot exceed deposit amount.",
@@ -470,9 +520,20 @@
       "authorLabel": "Added by",
       "dateLabel": "Date"
     },
+    "profileCorrection": {
+      "heading": "Profile correction",
+      "description": "Ask the member to update their profile or re-upload documents if something is incorrect.",
+      "sendRequest": "Request profile update",
+      "modalTitle": "Request profile update",
+      "modalHint": "Describe what needs to be corrected. The member will see this on their profile.",
+      "messageLabel": "Message",
+      "messagePlaceholder": "e.g. Please re-upload a clear photo of your Aadhaar card.",
+      "messageRequired": "Enter a message for the member.",
+      "successToast": "Profile correction request sent."
+    },
     "history": {
-      "emptyTitle": "No history",
-      "emptyDescription": "Status, deposit, and emergency contact changes appear here.",
+      "emptyTitle": "No occupancy history available",
+      "emptyDescription": "Past stays and occupancy changes will appear here when available.",
       "actionLabel": "Action",
       "changeLabel": "Change",
       "meta": "{{name}} · {{date}}",
@@ -541,6 +602,45 @@
       "SHARED": "Shared",
       "DORMITORY": "Dormitory"
     },
+    "viewMode": {
+      "list": "List",
+      "layout": "Layout"
+    },
+    "layout": {
+      "corridor": "CORRIDOR",
+      "stair": "STAIR",
+      "lift": "LIFT",
+      "hall": "HALL",
+      "ground": "GROUND",
+      "door": "Door →",
+      "occupiedRatio": "{{occupied}} / {{total}} beds",
+      "roomsCount": "{{count}} rooms",
+      "dashboard": {
+        "floors": "Floors",
+        "rooms": "Rooms",
+        "beds": "Beds",
+        "units": "Units",
+        "occupied": "Occupied",
+        "available": "Available",
+        "capacity": "Capacity",
+        "inactive": "Inactive",
+        "floorsSection": "Floors",
+        "unitsSection": "Units",
+        "roomsSection": "Rooms",
+        "bedsSection": "Beds",
+        "bedsOccupied": "{{occupied}}/{{total}} beds",
+        "roomsAndBeds": "{{rooms}} rooms · {{beds}} beds",
+        "statusLine": "Available: {{available}} · Occupied: {{occupied}} · Reserved: {{reserved}} · Maintenance: {{maintenance}} · Blocked: {{blocked}} · Inactive: {{inactive}}",
+        "level": {
+          "available": "Available",
+          "nearlyFull": "Nearly Full",
+          "full": "Full"
+        }
+      }
+    },
+    "inactive": {
+      "deactivated": "Deactivated"
+    },
     "layoutMode": {
       "label": "Property layout",
       "CORRIDOR_PG": "Corridor PG",
@@ -562,7 +662,33 @@
       "floors": "{{count}} floors",
       "units": "{{count}} units",
       "apartments": "{{count}} apartments",
-      "rooms": "{{count}} rooms"
+      "rooms": "{{count}} rooms",
+      "buildingCard": {
+        "floorsCount": "{{count}} Floors",
+        "unitsCount": "{{count}} Units",
+        "roomsCount": "{{count}} Rooms",
+        "bedsCount": "{{count}} Beds",
+        "statLabel": {
+          "floors": "Floors",
+          "units": "Units",
+          "rooms": "Rooms",
+          "beds": "Beds"
+        },
+        "roomsLine": "{{count}} Rooms",
+        "detailChipRooms": "{{count}} Rooms",
+        "detailChipAvailable": "{{count}} Available",
+        "detailChipOccupied": "{{count}} Occupied",
+        "occupancyAvailableOccupied": "Available: {{available}} • Occupied: {{occupied}}",
+        "occupancy": "Available {{available}} • Occupied {{occupied}}",
+        "occupancyBeds": "Available {{available}} beds • Occupied {{occupied}} beds",
+        "badge": {
+          "apartment": "Apartment",
+          "corridor": "Corridor",
+          "hostel": "Hostel",
+          "coLiving": "Co-living",
+          "rental": "Rental"
+        }
+      }
     },
     "setup": {
       "title": "Quick Setup",
@@ -577,6 +703,53 @@
       "apartmentPgStructureHint": "Set how many floors you have and how many apartments sit on each floor.",
       "apartmentPgRoomsHint": "These rooms are created inside each apartment, not directly on the floor.",
       "previewStep": "Preview",
+      "structurePreview": "Structure preview",
+      "viewCompleteStructure": "View complete structure",
+      "summary": {
+        "floors": "Floors",
+        "units": "Units",
+        "rooms": "Rooms",
+        "beds": "Beds"
+      },
+      "structure": {
+        "floorUnits": "• {{count}} Units",
+        "floorRooms": "• {{count}} Rooms",
+        "floorBeds": "• {{count}} Beds",
+        "bullet": "• {{label}}",
+        "unitsSection": "Units"
+      },
+      "editor": {
+        "floorActions": "Floor actions",
+        "unitActions": "Unit actions",
+        "roomActions": "Room actions",
+        "duplicate": "Duplicate",
+        "delete": "Delete",
+        "addUnit": "Add unit",
+        "addRoom": "Add room",
+        "addBed": "Add bed",
+        "applyFloorsAll": "Apply naming to all floors",
+        "applyUnitsAll": "Apply numbering to all units",
+        "applyRoomsAll": "Apply naming to all rooms",
+        "applyBedsAll": "Apply naming to all beds",
+        "presetFloorsNamed": "Use Ground / First / Second naming",
+        "presetUnitsAlpha": "Use A1 / A2 / A3 numbering",
+        "presetRoomsLetters": "Use A / B / C room names",
+        "presetBedsPositional": "Use Lower / Middle / Upper bed names",
+        "moveUp": "Move up",
+        "moveDown": "Move down",
+        "floorName": "Floor name",
+        "floorNumber": "Floor number",
+        "unitName": "Unit name",
+        "unitNumber": "Unit number",
+        "roomName": "Room name",
+        "roomNumber": "Room number",
+        "capacity": "Capacity",
+        "unitsCount": "Units: {{count}}",
+        "roomsCount": "Rooms: {{count}}",
+        "bedsCount": "Beds: {{count}}",
+        "roomsBeds": "Rooms: {{rooms}} · Beds: {{beds}}",
+        "capacityBeds": "Capacity: {{capacity}} · Beds: {{beds}}"
+      },
       "floorCount": "Number of floors",
       "includeGroundFloor": "Include ground floor",
       "unitCount": "Number of units",
@@ -590,9 +763,11 @@
       "capacityPerRoom": "Capacity per room",
       "estimatedBeds": "Estimated total beds: {{count}}",
       "sampleTree": "Sample structure",
+      "sampleLayout": "Layout preview",
       "next": "Next",
       "back": "Back",
       "generate": "Generate",
+      "generateStructure": "Generate Structure",
       "success": "{{beds}} beds ready in {{name}}",
       "notApplicable": "Quick Setup is not available for this space type.",
       "totals": {
@@ -603,6 +778,7 @@
       },
       "errors": {
         "preview": "Failed to preview setup. Please try again.",
+        "generate": "Failed to generate structure. Please try again.",
         "execute": "Failed to generate structure. Please try again.",
         "floorCount": "Enter between 1 and 20 floors.",
         "roomBedCounts": "Rooms and beds per room must be at least 1.",
@@ -639,7 +815,7 @@
       "summaryApartments": "{{count}} apartments",
       "summaryRooms": "{{count}} rooms",
       "summaryBeds": "{{count}} beds",
-      "statusLine": "Available: {{available}} · Occupied: {{occupied}} · Reserved: {{reserved}} · Maintenance: {{maintenance}} · Blocked: {{blocked}}",
+      "statusLine": "Available: {{available}} · Occupied: {{occupied}} · Reserved: {{reserved}} · Maintenance: {{maintenance}} · Blocked: {{blocked}} · Inactive: {{inactive}}",
       "availabilityBeds": "Beds: {{available}} available · {{occupied}} occupied · {{reserved}} reserved",
       "availabilityRooms": "Rooms: {{available}} available · {{occupied}} occupied · {{reserved}} reserved",
       "availabilityUnits": "Units: {{available}} available · {{occupied}} occupied · {{reserved}} reserved",
@@ -824,13 +1000,15 @@
       "restoreTitle": "Restore",
       "restoreMessage": "Restore this item and make it active again?",
       "restoreConfirm": "Restore",
+      "activateConfirm": "Activate",
       "restoreSuccess": "Restored successfully.",
       "deleteConfirm": "Delete Permanently",
       "deleteSuccess": "Deleted permanently.",
       "delete": {
         "building": {
           "title": "Delete Building",
-          "message": "This will permanently delete the building and all floors, rooms, beds, and related accommodation structure that has never been used.\n\nThis action cannot be undone."
+          "message": "This will permanently delete the building and all floors, rooms, beds, and related accommodation structure that has never been used.\n\nThis action cannot be undone.",
+          "success": "Building deleted successfully."
         },
         "floor": {
           "title": "Delete Floor",
@@ -899,6 +1077,9 @@
       "member": "Tenant",
       "accommodation": "Accommodation"
     },
+    "breadcrumb": {
+      "selectedAccommodation": "Selected accommodation"
+    },
     "steps": {
       "member": "Select member",
       "memberHint": "Search by name or mobile number",
@@ -940,6 +1121,8 @@
       "reservedAccommodation": "Reserved Accommodation",
       "noAccommodationTitle": "No Accommodation Assigned",
       "noAccommodationBody": "This member is currently not occupying any accommodation.",
+      "space": "Space",
+      "type": "Type",
       "building": "Building",
       "floor": "Floor",
       "unit": "Unit",
@@ -996,6 +1179,30 @@
       "viewReservation": "View reservation",
       "loadingOccupant": "Loading occupant…"
     },
+    "hierarchy": {
+      "allocateTitle": "Allocate resident",
+      "reserveTitle": "Reserve resident",
+      "selectFloor": "Select floor",
+      "selectBuildingTitle": "Select building",
+      "selectBuildingHint": "Choose a building to continue",
+      "selectUnit": "Select unit",
+      "selectRoom": "Select room",
+      "selectBed": "Select bed",
+      "floorAvailability": "{{available}}/{{total}} beds available",
+      "unitAvailability": "{{rooms}} rooms · {{beds}} beds",
+      "roomAvailability": "{{available}}/{{total}} beds available",
+      "continueToResident": "Continue to resident",
+      "noAvailable": "No available accommodation at this level.",
+      "bulkHint": "Select one or more available beds, then continue.",
+      "bulkProgress": "Bed {{progress}}",
+      "menu": {
+        "allocateResident": "Allocate resident",
+        "reserveBed": "Reserve bed",
+        "bulkAllocate": "Bulk allocate",
+        "bulkReserve": "Bulk reserve",
+        "viewOccupancy": "View occupancy"
+      }
+    },
     "bedMenu": {
       "title": "Bed {{bed}}"
     },
@@ -1031,6 +1238,12 @@
       "message": "End this member's current accommodation assignment?",
       "confirm": "Vacate"
     },
+    "amenities": {
+      "title": "Amenities",
+      "hint": "Select amenities included with this accommodation",
+      "noneConfigured": "No amenities configured for this space",
+      "assigned": "Selected amenities"
+    },
     "contract": {
       "title": "Contract terms",
       "hint": "Agreed monthly rent and charges at activation. Not billing or payments.",
@@ -1053,7 +1266,8 @@
       "foodChargeDefaultHint": "Space default: ₹{{amount}} (used if left blank)",
       "foodBundledTitle": "Food included in rent",
       "foodBundledHint": "This property charges mandatory food as part of monthly rent. There is no separate food line.",
-      "monthlyTotal": "Monthly total (rent + food)",
+      "monthlyTotal": "Monthly total",
+      "monthlyTotalWithFood": "Monthly total (rent + food)",
       "foodDisabled": "Not included",
       "foodIncludedInRent": "Included in monthly rent",
       "foodIncludedNoAmount": "Included (amount not recorded)",
@@ -1180,6 +1394,7 @@
       "transfer": "Failed to transfer member.",
       "vacate": "Failed to vacate member.",
       "search": "Failed to search accommodation.",
+      "loadTargets": "Could not load accommodation options. Try again.",
       "noActive": "No active occupancy found for this member.",
       "noReserved": "No reserved occupancy found for this member.",
       "moveInDateRequired": "Enter a move-in date.",
@@ -1328,6 +1543,23 @@
       "moveInsThisMonth": "Move-ins this month",
       "pendingPayments": "Pending payments"
     },
+    "drilldown": {
+      "occupiedBedsTitle": "Occupied beds",
+      "occupiedBedsSubtitle": "Active residents and their bed assignments.",
+      "vacantBedsTitle": "Vacant beds",
+      "vacantBedsSubtitle": "Available beds you can allocate or reserve.",
+      "moveInsTitle": "Move-ins this month",
+      "moveInsSubtitle": "Residents who moved in during the current month.",
+      "searchBeds": "Search beds, rooms, units…",
+      "searchResidents": "Search residents or location…",
+      "moveInLine": "Move-in {{date}}",
+      "emptyOccupiedBeds": "No occupied beds",
+      "emptyVacantBeds": "No vacant beds",
+      "emptyMoveIns": "No move-ins this month",
+      "emptyBedsDescription": "Counts update when beds are allocated, reserved, or vacated.",
+      "emptyOccupancyDescription": "Active occupancies appear here after move-in.",
+      "filterTitle": "Filter beds"
+    },
     "operations": {
       "title": "Meal operations",
       "membersReceiving": "Members receiving meals",
@@ -1376,6 +1608,125 @@
     "pendingActions": {
       "screenSubtitle": "Review and complete these items to keep operations running smoothly.",
       "empty": "No pending actions right now."
+    }
+  },
+  "paymentCollection": {
+    "payNow": "Pay Now",
+    "uploadAgain": "Upload Again",
+    "dueDate": "Due: {{date}}",
+    "waitingApproval": "Payment submitted — waiting for owner approval.",
+    "rejectedTitle": "Payment rejected",
+    "rejectedReason": "Reason: {{reason}}",
+    "status": {
+      "PENDING": "Pending",
+      "PROOF_UPLOADED": "Proof uploaded",
+      "UNDER_REVIEW": "Under review",
+      "PAID": "Paid",
+      "REJECTED": "Rejected"
+    },
+    "type": {
+      "MEAL": "Meal",
+      "RENT": "Rent",
+      "DEPOSIT": "Deposit",
+      "MAINTENANCE": "Maintenance",
+      "OTHER": "Other"
+    },
+    "category": {
+      "MONTHLY": "Monthly",
+      "DAILY": "Daily",
+      "EXTRA": "Extra",
+      "ADVANCE": "Advance",
+      "SECURITY": "Security",
+      "REFUND": "Refund",
+      "ELECTRICITY": "Electricity",
+      "WATER": "Water",
+      "INTERNET": "Internet",
+      "OTHER": "Other"
+    },
+    "method": {
+      "UPI": "UPI",
+      "BANK_TRANSFER": "Bank transfer",
+      "CASH": "Cash",
+      "CHEQUE": "Cheque",
+      "OTHER": "Other"
+    },
+    "serviceUnavailable": {
+      "title": "Payment service not available",
+      "description": "Payment collection is not enabled for this space yet. Contact your space owner or try again later."
+    },
+    "memberPayments": {
+      "title": "My payments",
+      "subtitle": "View dues and submit payment proof for approval.",
+      "dashboardTitle": "My payments",
+      "dashboardSubtitle": "Pay rent, meals, and other charges",
+      "emptyTitle": "No payments available",
+      "emptyDescription": "You have no pending or submitted payments for this month.",
+      "noLinkedMember": "Your member profile is not linked yet. Contact the property manager if this persists."
+    },
+    "detail": {
+      "title": "Payment"
+    },
+    "proof": {
+      "title": "Submit payment proof",
+      "hint": "Upload a screenshot of your payment and optionally add UTR or reference number.",
+      "uploadScreenshot": "Upload screenshot",
+      "changeScreenshot": "Change screenshot",
+      "paymentMethod": "Payment method",
+      "utrPlaceholder": "UTR / reference number (optional)",
+      "remarksPlaceholder": "Remarks (optional)",
+      "submit": "Submit payment proof",
+      "submitted": "Payment proof submitted"
+    },
+    "review": {
+      "title": "Payments review",
+      "subtitle": "Review submitted payment proofs from members.",
+      "open": "Review payments ({{count}} submitted)",
+      "openAll": "Payments review",
+      "tabSubmitted": "Submitted ({{count}})",
+      "tabPAID": "Paid",
+      "tabREJECTED": "Rejected",
+      "approved": "Payment marked as paid",
+      "rejected": "Payment rejected",
+      "empty": {
+        "SUBMITTED": "No payments awaiting review.",
+        "PAID": "No paid payments this month.",
+        "REJECTED": "No rejected payments."
+      }
+    },
+    "approval": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "utr": "UTR",
+      "method": "Method"
+    },
+    "rejection": {
+      "title": "Rejection reason",
+      "PAYMENT_AMOUNT_MISMATCH": "Payment amount mismatch",
+      "WRONG_SCREENSHOT": "Wrong screenshot",
+      "INVALID_UTR": "Invalid UTR",
+      "OTHER": "Other"
+    },
+    "timeline": {
+      "title": "Payment timeline",
+      "recent": "Recent activity",
+      "viewFull": "View full timeline",
+      "empty": "No timeline events yet.",
+      "CREATED": "Payment created",
+      "PROOF_UPLOADED": "Proof uploaded",
+      "UNDER_REVIEW": "Under review",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected",
+      "RESUBMITTED": "Resubmitted",
+      "PAID": "Paid",
+      "REFUNDED": "Refunded"
+    },
+    "errors": {
+      "loadPayments": "Failed to load payments.",
+      "loadPayment": "Failed to load payment details.",
+      "loadReview": "Failed to load payments for review.",
+      "loadTimeline": "Failed to load payment timeline.",
+      "submitProof": "Failed to submit payment proof.",
+      "review": "Failed to review payment."
     }
   },
   "payments": {
@@ -1472,10 +1823,36 @@
       "tomorrow": "Tomorrow",
       "today": "Today",
       "dayStatus": "{{published}} published · {{draft}} draft · {{notPlanned}} not planned",
+      "dayStatusVisual": "{{shared}} shared · {{notShared}} not shared · {{empty}} empty",
+      "dayOverviewTitle": "This day's meals",
+      "dayOverviewSubtitle": "Green = shared with members. Orange = saved but not shared yet. Grey = not planned.",
+      "statusShared": "Shared with members",
+      "statusNotShared": "Saved, not shared",
+      "statusEmpty": "Not planned",
+      "filterShared": "Shared",
+      "filterNotShared": "Not shared",
+      "filterEmpty": "Empty",
+      "filterLegend": "Show meals",
+      "filterLegendHint": "Tap a colour to show only those meals.",
+      "slotDetailEmpty": "Tap below to add food",
+      "slotDetailNotShared": "Share to let members choose",
+      "slotDetailShared": "Shared with members",
+      "slotDetailPollOpen": "{{count}} members chose",
+      "slotDetailPollClosed": "Poll closed · {{count}} chose",
+      "slotChoseShort": "{{count}} chose",
+      "dayHintStart": "Tap Breakfast, Lunch, or Dinner below to add today's food.",
+      "dayHintShareAll": "{{count}} meal(s) are ready. Tap Share menu to send them to members.",
+      "dayHintShareSome": "{{shared}} shared · {{notShared}} still need sharing. Tap Share menu.",
+      "dayHintAllShared": "All meals are shared. Members can choose in the app now.",
+      "dayHintPartial": "{{shared}} shared · {{empty}} still empty. Plan or share the rest.",
+      "membersCanChoose": "Members who can choose",
+      "membersCanChooseHint": "These members have active meal access for this day.",
+      "membersShort": "members",
+      "shareMenuFootnote": "Sharing sends the menu and opens meal choice in the app.",
       "eligibleSlot": "Active meal members: {{count}}",
       "eligibleMembers": "Active meal members: {{count}}",
       "noEligibleMembersCta": "Review members",
-      "noEligibleMembersHint": "No active meal members yet. Turn on meal access for customers or move in tenants with food included.",
+      "noEligibleMembersHint": "No active meal members yet. For mess customers, turn on meal access. For PG tenants, complete move-in with food included.",
       "copyYesterday": "Copy yesterday",
       "copySuccess": "Menu copied from yesterday",
       "copyFailed": "Could not copy menu",
@@ -1489,6 +1866,28 @@
       "availableCombos": "Available combos",
       "availableCombosHint": "Tap a combo to add it to this meal.",
       "selectedItems": "Selected items",
+      "selectedSummary": "Selected ({{count}})",
+      "selectedCombosGroup": "Combos",
+      "selectedItemsGroup": "Items",
+      "nothingSelectedYet": "Nothing selected yet",
+      "addMenuTitle": "Add Menu",
+      "addMenu": "+ Add Menu",
+      "addMenuDone": "Done",
+      "noMenusSelectedYet": "No menus selected yet",
+      "tabCombos": "Combos",
+      "tabIndividualItems": "Individual Items",
+      "savedCombosTitle": "Saved Combos",
+      "itemCategoriesLabel": "Categories",
+      "individualItemsTitle": "Individual Items",
+      "searchCombos": "Search combos",
+      "searchItems": "Search items",
+      "createReusableCombo": "+ Create reusable combo",
+      "createNewCombo": "+ Create New Combo",
+      "createNewComboTitle": "Create New Combo",
+      "createReusableComboTitle": "Create reusable combo",
+      "inlineCreateSelectedItems": "Selected items",
+      "saveForFutureUse": "Save for future use",
+      "createComboButton": "Create Combo",
       "additionalItems": "Additional items",
       "selectedCount": "{{count}} selected",
       "noCombosSelected": "No combos selected yet",
@@ -1553,6 +1952,8 @@
       "comboNamePlaceholder": "e.g. Regular Thali, Jain Option",
       "comboDefaultName": "Combo",
       "comboItemsLabel": "Items in this combo",
+      "itemDetailsLabel": "Item details",
+      "itemDetailsEmpty": "No details available for this item.",
       "addComboToMeal": "Add to meal",
       "comboAdded": "\"{{name}}\" added to meal",
       "comboSavedToLibrary": "\"{{name}}\" saved to library and added to meal",
@@ -2175,10 +2576,16 @@
       "editMenu": "Edit menu",
       "memberChoices": "Member choices",
       "plannedMenuLabel": "Planned menu",
+      "entryKindCombo": "Combo",
+      "entryKindComboSuffix": "(Combo)",
+      "entryKindItem": "Item",
+      "plannedMenuBreakdown": "{{combos}} combos · {{items}} items",
       "moreChoices": "+{{count}} more",
       "moreCombos": "+{{count}} more combos",
+      "moreItems": "+{{count}} more items",
       "showLess": "Show less",
       "showLessCombos": "Show fewer combos",
+      "showLessItems": "Show fewer items",
       "selectMenuHeading": "Choose how to build this meal",
       "selectMenuHint": "Each option becomes a separate choice for members.",
       "hubComboTitle": "Use saved combos",
@@ -2194,6 +2601,9 @@
       "addFromLibrary": "Add from library",
       "plannedEntries": "Planned for this slot",
       "plannedSummary": "{{count}} combos",
+      "plannedSummaryCombos": "{{count}} combos",
+      "plannedSummaryItems": "{{count}} items",
+      "plannedSummaryMixed": "{{count}} menu options",
       "plannedSummaryEmpty": "Nothing planned yet",
       "copyYesterdayButton": "Copy yesterday",
       "createNewCombo": "Create new combo in library",
@@ -2233,6 +2643,7 @@
       "saveComboFailed": "Could not save combo.",
       "actionFailed": "Could not update participation.",
       "mealAccessFailed": "Could not update meal access.",
+      "foodRequiresMoveIn": "Move the tenant into a bed before enabling food.",
       "optionsRequired": "Add at least one menu option.",
       "pastDateReadOnly": "Past dates are view-only."
     }
@@ -2263,17 +2674,121 @@
       "messNoAccommodation": "Accommodation is not available for mess spaces."
     }
   },
+  "profileCompletion": {
+    "gate": {
+      "title": "Complete Profile",
+      "heading": "Complete Your Profile",
+      "description": "Please complete your profile before accessing PG services.",
+      "completeProfile": "Complete Profile",
+      "progress": "{{percent}}% complete"
+    },
+    "wizard": {
+      "title": "Complete Profile",
+      "stepProgress": "Step {{current}} of {{total}}",
+      "submit": "Submit profile",
+      "uploadPhoto": "Upload photo",
+      "replacePhoto": "Replace photo",
+      "replacePhoto": "Replace photo",
+      "documentsOptional": "Document uploads are optional. You can add them now or later from your profile.",
+      "sections": {
+        "personal": "Personal information",
+        "address": "Address information",
+        "emergency": "Emergency contact",
+        "documents": "Identity & documents"
+      }
+    },
+    "fields": {
+      "fullName": "Full name",
+      "dateOfBirth": "Date of birth",
+      "dateOfBirthPlaceholder": "YYYY-MM-DD",
+      "mobileNumber": "Mobile number",
+      "email": "Email",
+      "profilePhoto": "Profile photo",
+      "permanentAddress": "Permanent address",
+      "city": "City",
+      "state": "State",
+      "pincode": "Pincode",
+      "guardianName": "Guardian / parent name",
+      "guardianMobile": "Guardian mobile number",
+      "relationship": "Relationship",
+      "documentNumber": "Document number",
+      "addressProof": "Address proof",
+      "identityProof": "Identity proof",
+      "additionalDocument": "Additional document (optional)"
+    },
+    "errors": {
+      "fullNameRequired": "Enter your full name.",
+      "profilePhotoRequired": "Profile photo is required.",
+      "addressRequired": "Permanent address is required.",
+      "cityRequired": "City is required.",
+      "stateRequired": "State is required.",
+      "pincodeRequired": "Pincode is required.",
+      "identityTypeRequired": "Select an identity document type.",
+      "identityNumberRequired": "Enter the document number.",
+      "identityProofRequired": "Upload identity proof.",
+      "addressProofRequired": "Upload address proof.",
+      "pickFailed": "Could not open the photo library. Check app permissions and try again.",
+      "submitFailed": "Could not save your profile. Please try again."
+    }
+  },
   "settings": {
     "profile": {
       "eyebrow": "Account",
       "heading": "Profile & Settings",
       "subheading": "Manage your account and sign out securely.",
       "edit": "Edit",
+      "editProfile": "Edit profile",
+      "editProfileTitle": "Edit profile",
       "save": "Save changes",
       "cancel": "Cancel",
       "fullNameLabel": "Full name",
       "mobileLabel": "Mobile number",
       "mobileHint": "Used to sign in. Cannot be changed here.",
+      "emailLabel": "Email",
+      "genderLabel": "Gender",
+      "dateOfBirthLabel": "Date of birth",
+      "permanentAddressLabel": "Permanent address",
+      "cityLabel": "City",
+      "stateLabel": "State",
+      "pincodeLabel": "Pincode",
+      "personalSection": "Personal information",
+      "addressSection": "Address",
+      "emergencySection": "Emergency contact",
+      "documentsSection": "Documents",
+      "documentsDescription": "Upload identity and address proof. Your property owner can review these.",
+      "documentsEmpty": "No documents uploaded yet. Tap Upload document to add your first one.",
+      "documentsNoSpace": "Join a space to upload documents here, or use Edit profile to add them during setup.",
+      "uploadPhoto": "Upload photo",
+      "identityProofHint": "Add your document type and number in Edit profile before uploading ID proof.",
+      "documents": {
+        "upload": "Upload document",
+        "pickFile": "Choose photo or file",
+        "fileRequired": "Please attach a photo or scan of the document.",
+        "uploadSuccess": "Document uploaded.",
+        "uploadFailed": "Could not upload document. Please try again.",
+        "uploaded": "Uploaded"
+      },
+      "kycSection": "Verification",
+      "profileStatusLabel": "Profile status",
+      "kycStatusLabel": "KYC status",
+      "documentsUploadedLabel": "Documents uploaded",
+      "profileCompletedAtLabel": "Profile completed",
+      "correctionRequests": "Profile correction requests",
+      "correctionFromOwner": "Requested by {{name}}",
+      "profileStatus": {
+        "PENDING": "Pending",
+        "PARTIAL": "Partial",
+        "COMPLETED": "Completed",
+        "UNDER_REVIEW": "Under review",
+        "VERIFIED": "Verified"
+      },
+      "kycStatus": {
+        "NOT_STARTED": "Not started",
+        "PENDING": "Pending",
+        "UNDER_REVIEW": "Under review",
+        "VERIFIED": "Verified",
+        "REJECTED": "Rejected"
+      },
       "nameRequired": "Full name is required.",
       "saveSuccess": "Profile updated",
       "sessionTitle": "Session",

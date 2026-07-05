@@ -8,7 +8,23 @@ import type {
   UUID,
 } from '../api/types';
 
+export type MenuSelectionItemPackage = {
+  itemId: string;
+  name: string;
+  price: number;
+  currencyCode?: string | null;
+  foodType?: import('../api/types').FoodType | null;
+};
+
+export type MenuAdHocPackage = {
+  label: string;
+  itemIds: string[];
+  price?: number | null;
+  currencyCode?: string | null;
+};
+
 export type MenuDraftOption = {
+  optionId?: string | null;
   entryType: 'COMBO' | 'ITEM' | 'PACKAGE';
   comboId?: string | null;
   itemId?: string | null;
@@ -19,6 +35,8 @@ export type MenuDraftOption = {
   isAvailable: boolean;
   price?: number | null;
   currencyCode?: string | null;
+  /** Client-only hint for PACKAGE rows in the planner UI */
+  foodType?: import('../api/types').FoodType | null;
 };
 
 function inferEntryType(option: DailyMenuOptionResponse): 'COMBO' | 'ITEM' | 'PACKAGE' {
@@ -29,14 +47,17 @@ function inferEntryType(option: DailyMenuOptionResponse): 'COMBO' | 'ITEM' | 'PA
 
 export function toMenuDraftOption(option: DailyMenuOptionResponse, index: number): MenuDraftOption {
   const entryType = inferEntryType(option);
+  const packageItemIds =
+    entryType === 'PACKAGE'
+      ? (option.packageItems?.map(pi => pi.itemId) ??
+        (option.itemId ? [option.itemId] : null))
+      : null;
   return {
+    optionId: option.optionId ?? null,
     entryType,
     comboId: entryType === 'COMBO' ? option.comboId : null,
     itemId: entryType === 'ITEM' ? option.itemId : null,
-    itemIds:
-      entryType === 'PACKAGE'
-        ? (option.packageItems?.map(pi => pi.itemId) ?? null)
-        : null,
+    itemIds: packageItemIds,
     label: option.label,
     sortOrder: option.sortOrder ?? index + 1,
     isAvailable: option.isAvailable,
@@ -47,6 +68,7 @@ export function toMenuDraftOption(option: DailyMenuOptionResponse, index: number
 
 export function toUpsertOptions(options: MenuDraftOption[]): UpsertDailyMenuRequest['options'] {
   return options.map(option => ({
+    optionId: option.optionId ?? undefined,
     entryType: option.entryType,
     comboId: option.entryType === 'COMBO' ? option.comboId : null,
     itemId: option.entryType === 'ITEM' ? option.itemId : null,
@@ -66,6 +88,9 @@ export function getDraftOptionItemNames(
   if (option.entryType === 'COMBO' && option.comboId) {
     return comboById.get(option.comboId)?.items?.map(item => item.name).filter(Boolean) ?? [];
   }
+  if (option.entryType === 'PACKAGE' && option.itemIds?.length === 1) {
+    return [];
+  }
   return [];
 }
 
@@ -73,6 +98,9 @@ export function getDraftOptionFoodType(
   option: MenuDraftOption,
   comboById: Map<string, MealComboResponse>,
 ): MealComboResponse['foodType'] | null {
+  if (option.foodType) {
+    return option.foodType;
+  }
   if (option.entryType === 'COMBO' && option.comboId) {
     return comboById.get(option.comboId)?.foodType ?? null;
   }
@@ -236,6 +264,67 @@ export function mergeCombosIntoOptions(
   return reindexMenuOptions([...comboOptions, ...packages, ...items]);
 }
 
+export function mergeSelectionIntoOptions(
+  prev: MenuDraftOption[],
+  combos: Array<{ comboId: string; name: string; price?: number | null; currencyCode?: string | null }>,
+  itemPackages: MenuSelectionItemPackage[],
+  adHocPackages: MenuAdHocPackage[] = [],
+): MenuDraftOption[] {
+  const comboOptions: MenuDraftOption[] = combos.map(combo => ({
+    optionId:
+      prev.find(option => option.entryType === 'COMBO' && option.comboId === combo.comboId)
+        ?.optionId ?? null,
+    entryType: 'COMBO',
+    comboId: combo.comboId,
+    itemId: null,
+    label: combo.name,
+    sortOrder: 0,
+    isAvailable: true,
+    price: combo.price ?? null,
+    currencyCode: combo.currencyCode ?? 'INR',
+  }));
+  const singleItemPackages: MenuDraftOption[] = itemPackages.map(item => ({
+    optionId:
+      prev.find(
+        option =>
+          option.entryType === 'PACKAGE' && option.itemIds?.length === 1 && option.itemIds[0] === item.itemId,
+      )?.optionId ?? null,
+    entryType: 'PACKAGE',
+    comboId: null,
+    itemId: null,
+    itemIds: [item.itemId],
+    label: item.name,
+    sortOrder: 0,
+    isAvailable: true,
+    price: item.price,
+    currencyCode: item.currencyCode ?? 'INR',
+    foodType: item.foodType ?? null,
+  }));
+  const multiItemPackages: MenuDraftOption[] = adHocPackages.map(pkg => ({
+    optionId:
+      prev.find(
+        option =>
+          option.entryType === 'PACKAGE' &&
+          (option.itemIds?.length ?? 0) > 1 &&
+          option.label === pkg.label,
+      )?.optionId ?? null,
+    entryType: 'PACKAGE',
+    comboId: null,
+    itemId: null,
+    itemIds: pkg.itemIds,
+    label: pkg.label,
+    sortOrder: 0,
+    isAvailable: true,
+    price: pkg.price ?? null,
+    currencyCode: pkg.currencyCode ?? 'INR',
+  }));
+  return reindexMenuOptions([
+    ...comboOptions,
+    ...multiItemPackages,
+    ...singleItemPackages,
+  ]);
+}
+
 export function mergeItemsIntoOptions(
   prev: MenuDraftOption[],
   items: Array<{ itemId: string; name: string }>,
@@ -302,19 +391,25 @@ export async function appendComboAndItemsToMenu(
   return saveMenuDraft(spaceId, menuDate, mealType, next, notes);
 }
 
+/** Stable key for planned-row price drafts and list keys. */
+export function optionChipId(option: MenuDraftOption): string {
+  if (option.entryType === 'COMBO') {
+    return option.comboId ?? option.label;
+  }
+  if (option.entryType === 'PACKAGE' && option.itemIds?.length === 1) {
+    return option.itemIds[0];
+  }
+  if (option.entryType === 'PACKAGE') {
+    return `package:${option.label}`;
+  }
+  return option.label;
+}
+
 export function findPlannedComboByChipId(
   options: MenuDraftOption[],
   chipId: string,
 ): MenuDraftOption | undefined {
-  return options.find(option => {
-    if (option.entryType === 'PACKAGE') {
-      return option.label === chipId;
-    }
-    if (option.entryType === 'COMBO') {
-      return (option.comboId ?? option.label) === chipId;
-    }
-    return false;
-  });
+  return options.find(option => optionChipId(option) === chipId);
 }
 
 export async function resolvePlannedComboItemNames(

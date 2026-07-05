@@ -10,6 +10,8 @@ import {
   OCCUPANCY_CHARGE_CODES,
   computeMonthlyRentFoodTotal,
   formatContractAmount,
+  monthlyTotalIncludesFoodFromForm,
+  monthlyTotalLabelKey,
   type ContractTermsFormValues,
 } from '../../utils/occupancyContract';
 
@@ -68,11 +70,21 @@ export function ContractTermsForm({
   const { t } = useTranslation();
   const foodIncludedInRent = foodPolicy?.foodIncludedInRent ?? false;
   const monthlyTotal = computeMonthlyRentFoodTotal(values, foodPolicy);
+  const monthlyTotalLabel = monthlyTotalLabelKey(
+    monthlyTotalIncludesFoodFromForm(values, foodPolicy),
+  );
 
   function updateCharge(index: number, patch: Partial<ContractTermsFormValues['otherCharges'][0]>) {
-    const next = values.otherCharges.map((charge, i) =>
-      i === index ? { ...charge, ...patch } : charge,
-    );
+    const next = values.otherCharges.map((charge, i) => {
+      if (i !== index) {
+        return charge;
+      }
+      const merged = { ...charge, ...patch };
+      if (patch.code && patch.code !== 'OTHER') {
+        merged.label = t(`occupancy.contract.chargeCode.${patch.code}`);
+      }
+      return merged;
+    });
     onChange({ ...values, otherCharges: next });
   }
 
@@ -157,37 +169,21 @@ export function ContractTermsForm({
                     onChange({
                       ...values,
                       foodEnabled,
-                      foodChargeSnapshot: foodEnabled ? values.foodChargeSnapshot : '',
+                      foodChargeSnapshot:
+                        foodEnabled && foodPolicy?.defaultFoodCharge != null
+                          ? String(foodPolicy.defaultFoodCharge)
+                          : '',
                     })
                   }
                   trackColor={{ false: colors.border, true: colors.primary }}
                 />
               </View>
-
-              {values.foodEnabled ? (
-                <FormInput
-                  label={t('occupancy.contract.foodCharge')}
-                  value={values.foodChargeSnapshot}
-                  onChangeText={foodChargeSnapshot =>
-                    onChange({ ...values, foodChargeSnapshot })
-                  }
-                  placeholder={t('occupancy.contract.amountPlaceholder')}
-                  keyboardType="numeric"
-                  hint={
-                    foodPolicy?.defaultFoodCharge != null
-                      ? t('occupancy.contract.foodChargeDefaultHint', {
-                          amount: foodPolicy.defaultFoodCharge.toLocaleString('en-IN'),
-                        })
-                      : t('occupancy.contract.foodChargeHint')
-                  }
-                />
-              ) : null}
             </>
           )}
 
           {monthlyTotal != null ? (
             <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>{t('occupancy.contract.monthlyTotal')}</Text>
+              <Text style={styles.totalLabel}>{t(monthlyTotalLabel)}</Text>
               <Text style={styles.totalValue}>
                 {formatContractAmount(monthlyTotal, t('occupancy.contract.notRecorded'))}
               </Text>
@@ -245,8 +241,10 @@ export function ContractTermsForm({
       {values.otherCharges.map((charge, index) => (
         <View key={`charge-${index}`} style={styles.chargeCard}>
           <View style={styles.chargeCardHeader}>
-            <Text style={styles.chargeIndex}>
-              {t('occupancy.contract.chargeLine', { index: index + 1 })}
+            <Text style={styles.chargeTitle}>
+              {charge.code === 'OTHER'
+                ? t('occupancy.contract.chargeCode.OTHER')
+                : t(`occupancy.contract.chargeCode.${charge.code}`)}
             </Text>
             <Pressable onPress={() => removeCharge(index)} hitSlop={8}>
               <Text style={styles.removeCharge}>{t('occupancy.contract.removeCharge')}</Text>
@@ -256,12 +254,14 @@ export function ContractTermsForm({
             value={charge.code}
             onChange={code => updateCharge(index, { code })}
           />
-          <FormInput
-            label={t('occupancy.contract.chargeLabel')}
-            value={charge.label}
-            onChangeText={label => updateCharge(index, { label })}
-            placeholder={t('occupancy.contract.chargeLabelPlaceholder')}
-          />
+          {charge.code === 'OTHER' ? (
+            <FormInput
+              label={t('occupancy.contract.chargeLabel')}
+              value={charge.label}
+              onChangeText={label => updateCharge(index, { label })}
+              placeholder={t('occupancy.contract.chargeLabelPlaceholder')}
+            />
+          ) : null}
           <FormInput
             label={t('occupancy.contract.chargeAmount')}
             value={String(charge.amount)}
@@ -394,10 +394,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.xs,
   },
-  chargeIndex: {
-    ...typography.caption,
-    color: colors.muted,
-    fontWeight: '600',
+  chargeTitle: {
+    ...typography.bodyStrong,
   },
   removeCharge: {
     ...typography.caption,

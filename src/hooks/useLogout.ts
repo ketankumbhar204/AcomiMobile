@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { resetToLogin } from '../navigation/navigationRef';
+import { InteractionManager } from 'react-native';
 import { useAuthStore } from '../store/authStore';
 import { useMemberStore } from '../store/memberStore';
 import { useSpaceStore } from '../store/spaceStore';
@@ -15,19 +15,19 @@ export function useLogout(): () => Promise<void> {
     console.log(`${LOG_TAG} Started`);
 
     try {
-      console.log(`${LOG_TAG} Clearing session`);
       await clearSession();
-      await resetSpaceSession();
       resetMembership();
-
-      console.log(`${LOG_TAG} Navigation reset`);
-      resetToLogin();
-
+      await resetSpaceSession();
       console.log(`${LOG_TAG} Completed`);
     } catch (err) {
       console.error(`${LOG_TAG} Error during logout`, err);
-      resetToLogin();
-      console.log(`${LOG_TAG} Completed`);
+      await clearSession();
+      resetMembership();
+      void resetSpaceSession();
     }
+
+    await new Promise<void>(resolve => {
+      InteractionManager.runAfterInteractions(() => resolve());
+    });
   }, [clearSession, resetMembership, resetSpaceSession]);
 }

@@ -46,6 +46,12 @@ export function rolesForSpace(spaceType: SpaceType | undefined): MembershipRole[
   return ['TENANT', 'STAFF', 'MANAGER', 'OWNER'];
 }
 
+const MEMBER_SORT_OPTIONS: MemberSortOption[] = ['name_asc', 'name_desc', 'recent', 'role'];
+
+export function memberFilterOptionCount(spaceType: SpaceType | undefined): number {
+  return rolesForSpace(spaceType).length + MEMBER_STATUSES.length + MEMBER_SORT_OPTIONS.length;
+}
+
 export function countMemberListFilters(
   filters: MemberListFilterState,
   spaceType: SpaceType | undefined,

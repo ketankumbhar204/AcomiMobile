@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { mealsApi } from '../../api/mealsApi';
-import type { FoodCategoryResponse, FoodItemResponse, UUID } from '../../api/types';
+import type { FoodCategoryResponse, FoodItemResponse, FoodType, UUID } from '../../api/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, spacing, typography } from '../../theme';
 import type { MenuDraftOption } from '../../utils/dailyMenuDraft';
@@ -20,6 +20,7 @@ type CreateComboSheetProps = {
   onClose: () => void;
   onBack?: () => void;
   onSave: (name: string, itemIds: string[], saveToLibrary: boolean, price?: number | null) => Promise<void>;
+  submitLabel?: string;
 };
 
 export function CreateComboSheet({
@@ -29,6 +30,7 @@ export function CreateComboSheet({
   onClose,
   onBack,
   onSave,
+  submitLabel,
 }: CreateComboSheetProps) {
   const { t } = useTranslation();
   const showToast = useToastStore(state => state.showToast);
@@ -88,9 +90,13 @@ export function CreateComboSheet({
   );
 
   const addItemInline = useCallback(
-    async (categoryId: string, itemName: string) => {
+    async (categoryId: string, itemName: string, foodType: FoodType = 'VEG') => {
       try {
-        const created = await mealsApi.createFoodItem(spaceId, { categoryId, name: itemName });
+        const created = await mealsApi.createFoodItem(spaceId, {
+          categoryId,
+          name: itemName,
+          foodType,
+        });
         setFoodItems(current => [...current, created]);
         showToast(t('meals.library.itemCreateSuccess'));
         return created;
@@ -147,12 +153,12 @@ export function CreateComboSheet({
   return (
     <MenuPlanningBottomSheet
       visible={visible}
-      title={t('meals.planning.createComboTitle')}
+      title={t('meals.planning.createNewComboTitle')}
       onClose={onClose}
       onBack={onBack}
       footer={
         <SheetPrimaryButton
-          label={saving ? t('common.saving') : t('meals.planning.addComboToMeal')}
+          label={saving ? t('common.saving') : (submitLabel ?? t('meals.planning.addComboToMeal'))}
           onPress={() => void handleSave()}
           disabled={selectedItems.length === 0}
           loading={saving}

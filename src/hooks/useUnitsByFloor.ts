@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { accommodationApi } from '../api/accommodationApi';
-import type { UUID } from '../api/types';
+import type { UnitListItemResponse, UUID } from '../api/types';
 import { accommodationQueryKeys } from '../utils/accommodationQueryCache';
 import { useAccommodationPagedList } from './useAccommodationPagedList';
 
@@ -51,5 +51,7 @@ export function useUnitsByFloor(
     totalElements: result.totalElements,
     refresh: result.refresh,
     loadMore: result.loadMore,
+    patchUnit: (unitId: UUID, patch: Partial<UnitListItemResponse>) =>
+      result.patchItems(item => item.unitId === unitId, patch),
   };
 }

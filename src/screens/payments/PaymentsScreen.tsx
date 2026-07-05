@@ -13,7 +13,7 @@ import { DashboardFinancialSnapshot } from '../../components/dashboard';
 import { MemberMealActivityMonthNav } from '../../components/meals/MemberMealActivityMonthNav';
 import { MemberPaymentRow } from '../../components/payments/MemberPaymentRow';
 import { PaymentsFilterDrawer } from '../../components/payments/PaymentsFilterDrawer';
-import { EmptyState, ListSearchFilterBar, SkeletonCard } from '../../components/ui';
+import { Button, EmptyState, ListSearchFilterBar, SkeletonCard } from '../../components/ui';
 import { usePaymentsLedger } from '../../hooks/usePaymentsLedger';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useSpaceTabHeader } from '../../hooks/useSpaceTabHeader';
@@ -24,9 +24,13 @@ import { canManagePayments, currentMonthKey } from '../../utils/dashboardFinanci
 import {
   countPaymentListFilters,
   isPrepaidOnlyLedger,
+  PAYMENT_FILTER_OPTION_COUNT,
   type PaymentLedgerFilter,
 } from '../../utils/paymentLedger';
+import { shouldUseFilterDrawer } from '../../utils/filterUx';
 import { findMySpaceEntry } from '../../utils/spacePermissions';
+import { navigateMainStack } from '../../navigation/mainStackNavigation';
+import { usePaymentReview } from '../../hooks/usePaymentReview';
 
 type PaymentsRoute = RouteProp<SpaceTabParamList, 'Payments'>;
 type PaymentsNav = CompositeNavigationProp<
@@ -54,6 +58,7 @@ export function PaymentsScreen() {
   const canManage = canManagePayments(permissions.membershipRole);
 
   const ledger = usePaymentsLedger(spaceId, spaceType, canManage);
+  const review = usePaymentReview(spaceId, { enabled: canManage });
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
 
   useEffect(() => {
@@ -146,6 +151,21 @@ export function PaymentsScreen() {
       <Text style={styles.heading}>{t('payments.title')}</Text>
       <Text style={styles.subheading}>{t('payments.subtitle')}</Text>
 
+      {review.submittedCount > 0 ? (
+        <Button
+          label={t('paymentCollection.review.open', { count: review.submittedCount })}
+          onPress={() => navigateMainStack('PaymentReview', { spaceId })}
+          style={styles.approvalsButton}
+        />
+      ) : (
+        <Button
+          label={t('paymentCollection.review.openAll')}
+          variant="secondary"
+          onPress={() => navigateMainStack('PaymentReview', { spaceId })}
+          style={styles.approvalsButton}
+        />
+      )}
+
       <MemberMealActivityMonthNav
         month={ledger.month}
         onPreviousMonth={handlePrevMonth}
@@ -166,6 +186,7 @@ export function PaymentsScreen() {
         searchPlaceholder={t('list.search.membersPayments')}
         onFilterPress={() => setFilterDrawerOpen(true)}
         activeFilterCount={activeFilterCount}
+        showFilterButton={shouldUseFilterDrawer(PAYMENT_FILTER_OPTION_COUNT)}
       />
 
       {ledger.loading && ledger.members.length === 0 ? (
@@ -219,6 +240,9 @@ const styles = StyleSheet.create({
   subheading: {
     ...typography.body,
     color: colors.muted,
+    marginBottom: spacing.md,
+  },
+  approvalsButton: {
     marginBottom: spacing.md,
   },
   hint: {

@@ -8,7 +8,9 @@ import {
   AllocationTargetSearchParams,
   AllocationTargetSearchResponse,
   ApiResponse,
+  AccommodationStatus,
   BedListItemResponse,
+  BedSpaceListItemResponse,
   BedResponse,
   BuildingResponse,
   BuildingSummaryResponse,
@@ -665,6 +667,24 @@ export const accommodationApi = {
     );
 
     return response;
+  },
+
+  searchBeds: async (
+    spaceId: UUID,
+    params?: ListQueryParams & { status?: AccommodationStatus },
+  ): Promise<PagedResponse<BedSpaceListItemResponse>> => {
+    const qs = buildListQuery({
+      view: 'summary',
+      size: DEFAULT_LIST_PAGE_SIZE,
+      ...params,
+    });
+    console.log(`${LOG_TAG} GET /spaces/${spaceId}/beds${qs}`);
+
+    return unwrapApiResponse(
+      apiClient.get<ApiResponse<PagedResponse<BedSpaceListItemResponse>>>(
+        `/spaces/${spaceId}/beds${qs}`,
+      ),
+    );
   },
 
   getBed: async (

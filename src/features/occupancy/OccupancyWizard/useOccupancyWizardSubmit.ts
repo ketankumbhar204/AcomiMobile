@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { TransferRentPolicy, OccupancyResponse } from '../../../api/types';
+import type { TransferRentPolicy, OccupancyResponse, AmenityAssignment } from '../../../api/types';
 import { useOccupancyMutations } from '../../../hooks/useOccupancyMutations';
 import { useToastStore } from '../../../store/toastStore';
 import {
@@ -21,6 +21,7 @@ import type { SpaceFoodPolicy } from '../../../utils/fetchSpaceFoodPolicy';
 import type { SpaceType } from '../../../api/types';
 import type { OccupancyWizardMode } from './types';
 import { isMoveInDateInFuture } from '../../../utils/occupancyRules';
+import { supportsSpaceAmenities } from '../../../utils/amenities';
 
 type SubmitContext = {
   mode: OccupancyWizardMode;
@@ -38,6 +39,7 @@ type SubmitContext = {
   allowEarlyMoveIn?: boolean;
   occupancyId?: string;
   currentOccupancy?: OccupancyResponse | null;
+  assignedAmenities?: AmenityAssignment[];
   onSuccess: () => void;
 };
 
@@ -65,8 +67,14 @@ export function useOccupancyWizardSubmit(spaceId: string) {
         allowEarlyMoveIn = false,
         occupancyId,
         currentOccupancy,
+        assignedAmenities,
         onSuccess,
       } = ctx;
+
+      const amenitiesPayload =
+        supportsSpaceAmenities(spaceType) && assignedAmenities
+          ? assignedAmenities
+          : undefined;
 
       try {
         if (mode === 'ALLOCATE') {
@@ -93,7 +101,7 @@ export function useOccupancyWizardSubmit(spaceId: string) {
               roomId: target.roomId,
               unitId: target.unitId,
             },
-            { remarks, contract },
+            { remarks, contract, amenities: amenitiesPayload },
           );
           if (!body || errorKey) {
             showToast(t(errorKey ?? 'occupancy.errors.generic'));
@@ -153,6 +161,7 @@ export function useOccupancyWizardSubmit(spaceId: string) {
             remarks: remarks ?? null,
             ...contract,
             createMealParticipation: shouldCreateMealParticipationFromContract(contract),
+            amenities: amenitiesPayload,
           });
         } else if (mode === 'TRANSFER') {
           if (!occupancyId || !contractValues) {
@@ -184,7 +193,7 @@ export function useOccupancyWizardSubmit(spaceId: string) {
               roomId: target.roomId,
               unitId: target.unitId,
             },
-            { remarks, rentPolicy, contract },
+            { remarks, rentPolicy, contract, amenities: amenitiesPayload },
           );
           if (!body || errorKey) {
             showToast(t(errorKey ?? 'occupancy.errors.generic'));

@@ -8,6 +8,8 @@ import {
   computeOccupancyMonthlyTotal,
   formatContractAmount,
   hasContractSnapshot,
+  monthlyTotalIncludesFoodFromOccupancy,
+  monthlyTotalLabelKey,
 } from '../../utils/occupancyContract';
 import { formatOccupancyAllocatedDate } from '../../utils/occupancyRules';
 
@@ -26,6 +28,9 @@ export function OccupancyContractSnapshotCard({
 
   const notRecorded = t('occupancy.contract.notRecorded');
   const monthlyTotal = computeOccupancyMonthlyTotal(occupancy);
+  const monthlyTotalLabel = monthlyTotalLabelKey(
+    monthlyTotalIncludesFoodFromOccupancy(occupancy),
+  );
 
   return (
     <Card style={styles.card}>
@@ -61,7 +66,7 @@ export function OccupancyContractSnapshotCard({
 
       {monthlyTotal != null ? (
         <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>{t('occupancy.contract.monthlyTotal')}</Text>
+          <Text style={styles.totalLabel}>{t(monthlyTotalLabel)}</Text>
           <Text style={styles.totalValue}>
             {formatContractAmount(monthlyTotal, notRecorded)}
           </Text>

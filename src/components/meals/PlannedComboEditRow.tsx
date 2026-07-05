@@ -4,7 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { FoodTypeIcon } from '../ui/FoodTypeIcon';
 import type { FoodType } from '../../api/types';
 import { colors, radius, spacing, typography } from '../../theme';
-import { formatComboPrice, hasComboPrice } from '../../utils/comboPrice';
+import { formatComboPrice, comboPriceDraftFromOption as comboPriceDraftFromOptionUtil } from '../../utils/comboPrice';
+
+export { comboPriceDraftFromOptionUtil as comboPriceDraftFromOption };
 
 type PlannedComboEditRowProps = {
   name: string;
@@ -91,19 +93,6 @@ export function PlannedComboEditRow({
       ) : null}
     </View>
   );
-}
-
-export function comboPriceDraftFromOption(
-  optionPrice: number | null | undefined,
-  draft?: string,
-): string {
-  if (draft != null && draft.trim().length > 0) {
-    return draft;
-  }
-  if (hasComboPrice(optionPrice)) {
-    return String(optionPrice);
-  }
-  return '';
 }
 
 const styles = StyleSheet.create({

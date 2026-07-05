@@ -18,17 +18,24 @@ import {
   AccommodationEntityRow,
   AccommodationListFooter,
   AccommodationSearchBar,
+  AccommodationViewModeToggle,
   BuilderRowLifecycleMenu,
   BulkRoomsModal,
+  CorridorFloorPlanLayout,
+  AccommodationMetadataCard,
   DuplicateRoomModal,
-  ParentSummaryCard,
+  UnitInteriorLayout,
 } from '../../components/accommodation';
 import {
   AccommodationOccupancyFlowModals,
   AccommodationOccupancyQuickActions,
 } from '../../components/occupancy';
+import { useHierarchyOccupancyPicker } from '../../hooks/useHierarchyOccupancyPicker';
+import { useAccommodationUiProfile } from '../../hooks/useAccommodationUiProfile';
 import { Button, EmptyState, FAB, HeaderBackButton, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
 import { useAccommodationOccupancyFlow } from '../../hooks/useAccommodationOccupancyFlow';
+import { useAccommodationViewMode } from '../../hooks/useAccommodationViewMode';
+import { useAccommodationSearchScroll } from '../../hooks/useAccommodationSearchScroll';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useBulkRooms } from '../../hooks/useBulkRooms';
@@ -48,10 +55,6 @@ import {
   isOccupancyTargetSupported,
 } from '../../utils/buildOccupancyTarget';
 import { inferRoomListStatus } from '../../utils/inferRoomListStatus';
-import {
-  defaultLayoutModeForSpaceType,
-  getAccommodationUiProfile,
-} from '../../utils/accommodationProfile';
 import { buildAccommodationTrail } from '../../utils/accommodationContext';
 import {
   accommodationTrailContextFromParent,
@@ -59,6 +62,8 @@ import {
 } from '../../utils/accommodationNavigation';
 import { invalidateAccommodationQueries } from '../../utils/accommodationQueryCache';
 import { renameRoomName } from '../../utils/accommodationInlineRename';
+import { isAccommodationEntityActive } from '../../utils/accommodationEntityActive';
+import { applyAccommodationInactiveLifecycle } from '../../utils/accommodationInactiveLifecycle';
 
 type RoomsNav = NativeStackNavigationProp<MainStackParamList, 'AccommodationRooms'>;
 type RoomsRoute = NativeStackScreenProps<MainStackParamList, 'AccommodationRooms'>['route'];
@@ -81,13 +86,7 @@ export function AccommodationRoomsScreen() {
 
   const permissions = useSpacePermissions(spaceId);
   const spaceType = permissions.spaceType;
-  const profile = useMemo(
-    () =>
-      spaceType
-        ? getAccommodationUiProfile(spaceType, defaultLayoutModeForSpaceType(spaceType))
-        : null,
-    [spaceType],
-  );
+  const { profile } = useAccommodationUiProfile(spaceId, spaceType, buildingId);
   const canManage = permissions.canManageAccommodation;
   const canManageOccupancyActions = permissions.canManageOccupancy;
   const showFab = permissions.canManageAccommodation;
@@ -95,6 +94,8 @@ export function AccommodationRoomsScreen() {
   const supportsRoomOccupancy = Boolean(
     spaceType && isOccupancyTargetSupported(spaceType, 'ROOM'),
   );
+
+  const { isLayout, setViewMode } = useAccommodationViewMode();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -117,8 +118,14 @@ export function AccommodationRoomsScreen() {
     { enabled: parentType === 'unit', searchQuery },
   );
 
-  const { rooms, loading, loadingMore, error, hasMore, refresh, loadMore } =
+  const { rooms, loading, loadingMore, error, hasMore, refresh, loadMore, patchRoom } =
     parentType === 'floor' ? floorHook : unitHook;
+
+  const listRef = useAccommodationSearchScroll(
+    rooms,
+    searchQuery,
+    useCallback((room: RoomListItemResponse) => room.name, []),
+  );
 
   const occupancyFlow = useAccommodationOccupancyFlow({
     spaceId,
@@ -128,6 +135,7 @@ export function AccommodationRoomsScreen() {
       void refresh();
     },
   });
+  const hierarchyPicker = useHierarchyOccupancyPicker(spaceId, spaceType);
 
   const screenTitle = useMemo(() => {
     if (parentType === 'floor' && parentName) {
@@ -141,19 +149,6 @@ export function AccommodationRoomsScreen() {
     }
     return t('accommodation.rooms.title');
   }, [buildingName, parentName, parentType, t]);
-
-  const derivedCounts = useMemo(() => {
-    if (parentRoomCount != null || parentBedCount != null) {
-      return { roomCount: parentRoomCount, bedCount: parentBedCount };
-    }
-    if (rooms.length === 0) {
-      return { roomCount: undefined, bedCount: undefined };
-    }
-    return {
-      roomCount: rooms.length,
-      bedCount: rooms.reduce((sum, room) => sum + room.bedCount, 0),
-    };
-  }, [parentBedCount, parentRoomCount, rooms]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -188,7 +183,7 @@ export function AccommodationRoomsScreen() {
         parentId,
         parentName,
       ),
-      layoutMode: spaceType ? defaultLayoutModeForSpaceType(spaceType) : undefined,
+      layoutMode: profile?.layoutMode,
     }),
     [buildingId, buildingName, parentId, parentName, parentType, spaceId, spaceType],
   );
@@ -272,10 +267,8 @@ export function AccommodationRoomsScreen() {
 
       <AccommodationContextTrail segments={trailSegments} onNavigate={onTrailNavigate} />
 
-      <ParentSummaryCard
-        roomCount={derivedCounts.roomCount}
-        bedCount={derivedCounts.bedCount}
-        loading={showLoading}
+      <AccommodationMetadataCard
+        title={parentName ?? t('accommodation.rooms.title')}
       />
 
       {canManage ? (
@@ -287,13 +280,109 @@ export function AccommodationRoomsScreen() {
         />
       ) : null}
 
+      <AccommodationViewModeToggle value={isLayout ? 'layout' : 'list'} onChange={setViewMode} />
+
       <AccommodationSearchBar value={searchQuery} onChangeText={setSearchQuery} />
       {showLoading ? <SkeletonCard /> : null}
     </View>
   );
 
+  const renderRoomMenu = (room: RoomListItemResponse) => {
+    const inactive = !isAccommodationEntityActive(room);
+    const occupancyOptions =
+      canManageOccupancyActions && !inactive
+        ? hierarchyPicker.buildMenuOptions(
+          {
+            buildingId,
+            buildingName: buildingName ?? '',
+            layoutMode: profile?.layoutMode,
+            ...(parentType === 'floor'
+              ? { floorId: parentId, floorName: parentName ?? '' }
+              : { unitId: parentId, unitName: parentName ?? '' }),
+            roomId: room.roomId,
+            roomName: room.name,
+          },
+          () => openRoom(room),
+        )
+      : [];
+
+    if (!canManage && occupancyOptions.length === 0) {
+      return undefined;
+    }
+
+    return (
+      <BuilderRowLifecycleMenu
+        spaceId={spaceId}
+        buildingId={buildingId}
+        entityType="room"
+        entityId={room.roomId}
+        role={permissions.membershipRole}
+        isInactive={inactive}
+        prependOptions={occupancyOptions}
+        forceShowTrigger={occupancyOptions.length > 0}
+        onEdit={() =>
+          navigation.navigate('RoomForm', {
+            spaceId,
+            buildingId,
+            parentType,
+            parentId,
+            mode: 'edit',
+            roomId: room.roomId,
+          })
+        }
+        onDuplicate={() => setDuplicateRoomTarget(room)}
+        duplicateLabel={t('accommodation.duplicate.room.action')}
+        onSuccess={(action, entityType) => {
+          const scopeKey =
+            parentType === 'floor' ? floorHook.inactiveScopeKey : unitHook.inactiveScopeKey;
+          const patchRoom =
+            parentType === 'floor' ? floorHook.patchRoom : unitHook.patchRoom;
+          const removeRoom =
+            parentType === 'floor' ? floorHook.removeRoom : unitHook.removeRoom;
+          if (scopeKey) {
+            applyAccommodationInactiveLifecycle(
+              action,
+              'room',
+              scopeKey,
+              room.roomId,
+              room,
+              {
+                patch: patch => patchRoom(room.roomId, patch),
+                remove: () => removeRoom(room.roomId),
+              },
+            );
+          }
+          handleLifecycleSuccess(action, entityType);
+        }}
+      />
+    );
+  };
+
+  const layoutVisual =
+    isLayout && !showLoading && rooms.length > 0 ? (
+      parentType === 'floor' ? (
+        <CorridorFloorPlanLayout
+          floorName={parentName}
+          rooms={rooms}
+          searchQuery={searchQuery}
+          onRoomPress={openRoom}
+          renderRoomMenu={renderRoomMenu}
+        />
+      ) : (
+        <UnitInteriorLayout
+          unitName={parentName}
+          rooms={rooms}
+          searchQuery={searchQuery}
+          onRoomPress={openRoom}
+          renderRoomMenu={renderRoomMenu}
+        />
+      )
+    ) : null;
+
   const listEmpty =
-    !showLoading && !error ? (
+    isLayout && layoutVisual
+      ? null
+      : !showLoading && !error ? (
       <EmptyState
         title={t('accommodation.rooms.emptyTitle')}
         description={t('accommodation.rooms.emptyDescription')}
@@ -305,13 +394,20 @@ export function AccommodationRoomsScreen() {
     <RequireAccommodationAccess spaceId={spaceId}>
     <View style={styles.root}>
       <FlatList
-        data={showLoading ? [] : rooms}
+        ref={listRef}
+        data={showLoading || isLayout ? [] : rooms}
+        key={isLayout ? 'room-plan' : 'room-list'}
         keyExtractor={item => item.roomId}
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
-        ListHeaderComponent={listHeader}
+        ListHeaderComponent={
+          <>
+            {listHeader}
+            {layoutVisual}
+          </>
+        }
         ListEmptyComponent={listEmpty}
         ListFooterComponent={<AccommodationListFooter loadingMore={loadingMore} />}
         onEndReached={() => {
@@ -327,65 +423,42 @@ export function AccommodationRoomsScreen() {
               ? buildRoomContext(room, inferredStatus)
               : null;
 
+          const occupancyFooter =
+            roomContext && spaceType && canManageOccupancyActions ? (
+              <AccommodationOccupancyQuickActions
+                spaceType={spaceType}
+                accommodationStatus={inferredStatus!}
+                context={roomContext}
+                flow={occupancyFlow}
+                canManage={canManageOccupancyActions}
+                layout="compact"
+                onViewOccupant={
+                  inferredStatus === 'AVAILABLE' ? undefined : () => openRoomDetail(room)
+                }
+              />
+            ) : undefined;
+
           return (
-          <AccommodationEntityRow
-            title={room.name}
-            subtitle={t('accommodation.listItem.room', {
-              type: t(`accommodation.roomType.${room.roomType}`),
-              bedCount: room.bedCount,
-              availableBeds: room.availableBeds,
-              occupiedBeds: room.occupiedBeds,
-            })}
-            iconLabel={room.name.charAt(0).toUpperCase()}
-            editableName={showFab}
-            onSaveName={async name => {
-              await renameRoomName(spaceId, room.roomId, name);
-              showToast(t('accommodation.rooms.updateSuccess'));
-              await refresh();
-            }}
-            onPress={() => openRoom(room)}
-            footer={
-              roomContext && spaceType && canManageOccupancyActions ? (
-                <AccommodationOccupancyQuickActions
-                  spaceType={spaceType}
-                  accommodationStatus={inferredStatus!}
-                  context={roomContext}
-                  flow={occupancyFlow}
-                  canManage={canManageOccupancyActions}
-                  layout="compact"
-                  onViewOccupant={
-                    inferredStatus === 'AVAILABLE'
-                      ? undefined
-                      : () => openRoomDetail(room)
-                  }
-                />
-              ) : undefined
-            }
-            menu={
-              canManage ? (
-                <BuilderRowLifecycleMenu
-                  spaceId={spaceId}
-                  buildingId={buildingId}
-                  entityType="room"
-                  entityId={room.roomId}
-                  role={permissions.membershipRole}
-                  onEdit={() =>
-                    navigation.navigate('RoomForm', {
-                      spaceId,
-                      buildingId,
-                      parentType,
-                      parentId,
-                      mode: 'edit',
-                      roomId: room.roomId,
-                    })
-                  }
-                  onDuplicate={() => setDuplicateRoomTarget(room)}
-                  duplicateLabel={t('accommodation.duplicate.room.action')}
-                  onSuccess={handleLifecycleSuccess}
-                />
-              ) : undefined
-            }
-          />
+            <AccommodationEntityRow
+              title={room.name}
+              subtitle={t('accommodation.listItem.room', {
+                type: t(`accommodation.roomType.${room.roomType}`),
+                bedCount: room.bedCount,
+                availableBeds: room.availableBeds,
+                occupiedBeds: room.occupiedBeds,
+              })}
+              iconLabel={room.name.charAt(0).toUpperCase()}
+              editableName={showFab}
+              onSaveName={async name => {
+                await renameRoomName(spaceId, room.roomId, name);
+                patchRoom(room.roomId, { name });
+                showToast(t('accommodation.rooms.updateSuccess'));
+              }}
+              active={room.active}
+              onPress={() => openRoom(room)}
+              footer={occupancyFooter}
+              menu={renderRoomMenu(room)}
+            />
           );
         }}
       />
@@ -397,6 +470,7 @@ export function AccommodationRoomsScreen() {
           flow={occupancyFlow}
         />
       ) : null}
+      {hierarchyPicker.pickerModal}
 
       {showFab ? (
         <FAB

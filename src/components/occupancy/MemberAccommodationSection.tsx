@@ -21,6 +21,7 @@ import { useToastStore } from '../../store/toastStore';
 import { useAuthStore } from '../../store/authStore';
 import { colors, spacing, typography } from '../../theme';
 import { isAccommodationApplicable } from '../../utils/accommodationProfile';
+import { supportsSpaceAmenities } from '../../utils/amenities';
 import {
   canShowOccupancyActionsForMember,
   canViewMemberOccupancyForProfile,
@@ -104,6 +105,19 @@ function OccupancyDateRow({ label, value }: { label: string; value?: string | nu
   );
 }
 
+function AssignedAmenitiesList({ amenities }: { amenities: { label: string }[] }) {
+  const { t } = useTranslation();
+  if (amenities.length === 0) {
+    return null;
+  }
+  return (
+    <View style={styles.amenitiesBlock}>
+      <Text style={styles.locationLabel}>{t('occupancy.amenities.assigned')}</Text>
+      <Text style={styles.amenitiesValue}>{amenities.map(item => item.label).join(', ')}</Text>
+    </View>
+  );
+}
+
 export function MemberAccommodationSection({
   spaceId,
   spaceType,
@@ -166,6 +180,15 @@ export function MemberAccommodationSection({
       : reservedOccupancy
         ? summaryFromOccupancy(reservedOccupancy)
         : null;
+
+  const assignedAmenities =
+    member.assignedAmenities?.length
+      ? member.assignedAmenities
+      : activeOccupancy?.amenities?.length
+        ? activeOccupancy.amenities
+        : reservedOccupancy?.amenities?.length
+          ? reservedOccupancy.amenities
+          : [];
 
   function openWizard(mode: 'ALLOCATE' | 'RESERVE' | 'MOVE_IN' | 'TRANSFER' | 'VACATE') {
     openOccupancyWizardFromRef({
@@ -231,6 +254,9 @@ export function MemberAccommodationSection({
             {activeOccupancy ? (
               <OccupancyContractSnapshotCard occupancy={activeOccupancy} />
             ) : null}
+            {supportsSpaceAmenities(spaceType) ? (
+              <AssignedAmenitiesList amenities={assignedAmenities} />
+            ) : null}
           </>
         ) : isReserved && reservedSummary ? (
           <>
@@ -251,6 +277,9 @@ export function MemberAccommodationSection({
               label={t('occupancy.fields.expectedExit')}
               value={getOccupancyExitDate(reservedOccupancy)}
             />
+            {supportsSpaceAmenities(spaceType) ? (
+              <AssignedAmenitiesList amenities={assignedAmenities} />
+            ) : null}
           </>
         ) : (
           <>
@@ -377,6 +406,13 @@ const styles = StyleSheet.create({
   },
   dateValue: {
     ...typography.bodyStrong,
+  },
+  amenitiesBlock: {
+    marginTop: spacing.sm,
+    gap: 2,
+  },
+  amenitiesValue: {
+    ...typography.body,
   },
   notAllocated: {
     ...typography.body,

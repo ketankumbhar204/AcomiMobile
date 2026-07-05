@@ -1,6 +1,10 @@
 import type { DailyMenuResponse } from '../api/types';
 import { MEAL_TYPES } from './mealLabels';
 
+function hasPlannedMenu(menu: DailyMenuResponse): boolean {
+  return (menu.options?.filter(option => option.isAvailable) ?? []).length > 0;
+}
+
 export type DailyMenuDaySummary = {
   published: number;
   draft: number;
@@ -15,7 +19,7 @@ export function summarizeDailyMenuDay(menus: DailyMenuResponse[]): DailyMenuDayS
 
   for (const mealType of MEAL_TYPES) {
     const menu = menus.find(row => row.mealType === mealType);
-    if (!menu) {
+    if (!menu || !hasPlannedMenu(menu)) {
       continue;
     }
     if (menu.status === 'PUBLISHED') {

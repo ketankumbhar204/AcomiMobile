@@ -26,6 +26,7 @@ import { colors, radius, spacing, typography } from '../../../../theme';
 type TargetPickerStepProps = {
   spaceId: UUID;
   selectableOnly?: boolean;
+  hideTitle?: boolean;
   onSelect: (target: AllocationTargetSearchResponse) => void;
 };
 
@@ -56,6 +57,7 @@ function FilterChip({ label, selected, onPress }: FilterChipProps) {
 export function TargetPickerStep({
   spaceId,
   selectableOnly = true,
+  hideTitle = false,
   onSelect,
 }: TargetPickerStepProps) {
   const { t } = useTranslation();
@@ -99,8 +101,12 @@ export function TargetPickerStep({
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.title}>{t('occupancyWizard.steps.target')}</Text>
-      <Text style={styles.hint}>{t('occupancyWizard.steps.targetHint')}</Text>
+      {!hideTitle ? (
+        <>
+          <Text style={styles.title}>{t('occupancyWizard.steps.target')}</Text>
+          <Text style={styles.hint}>{t('occupancyWizard.steps.targetHint')}</Text>
+        </>
+      ) : null}
 
       <AccommodationSearchBar
         value={query}

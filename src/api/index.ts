@@ -1,4 +1,5 @@
 export { dashboardApi } from './dashboardApi';
+export { paymentsApi, PaymentServiceUnavailableError } from './paymentsApi';
 export { default as apiClient, getAuthToken, setAuthToken } from './client';
 export { authApi } from './authApi';
 export { unwrapApiResponse, unwrapVoidResponse } from './apiRequest';

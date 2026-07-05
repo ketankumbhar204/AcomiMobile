@@ -45,6 +45,7 @@ export type BuilderRowLifecycleMenuProps = {
   prependOptions?: MenuOption[];
   sheetTitle?: string;
   forceShowTrigger?: boolean;
+  isInactive?: boolean;
   onSuccess: (
     action: 'deactivate' | 'restore' | 'delete',
     entityType: BuilderLifecycleEntityType,
@@ -139,6 +140,7 @@ export function BuilderRowLifecycleMenu({
   prependOptions = [],
   sheetTitle,
   forceShowTrigger = false,
+  isInactive = false,
   onSuccess,
 }: BuilderRowLifecycleMenuProps) {
   const { t } = useTranslation();
@@ -162,7 +164,7 @@ export function BuilderRowLifecycleMenu({
         });
       }
 
-      if (onDuplicate && canManage) {
+      if (onDuplicate && canManage && !isInactive) {
         lifecycleOptions.push({
           label: duplicateLabel ?? t('accommodation.duplicate.confirm'),
           action: onDuplicate,
@@ -186,7 +188,7 @@ export function BuilderRowLifecycleMenu({
 
       if (isOwner && actions.canRestore) {
         lifecycleOptions.push({
-          label: t('accommodation.lifecycle.restoreConfirm'),
+          label: t('accommodation.lifecycle.activateConfirm'),
           action: () =>
             confirmRestore(
               () => runLifecycleAction(spaceId, entityType, entityId, 'restore'),
@@ -207,7 +209,11 @@ export function BuilderRowLifecycleMenu({
               entityType,
               () => runLifecycleAction(spaceId, entityType, entityId, 'delete'),
               () => {
-                showToast(t('accommodation.lifecycle.deleteSuccess'));
+                showToast(
+                  t(`accommodation.lifecycle.delete.${entityType}.success`, {
+                    defaultValue: t('accommodation.lifecycle.deleteSuccess'),
+                  }),
+                );
                 onSuccess('delete', entityType);
               },
             ),
@@ -226,6 +232,7 @@ export function BuilderRowLifecycleMenu({
       onDuplicate,
       onEdit,
       onSuccess,
+      isInactive,
       role,
       showToast,
       spaceId,

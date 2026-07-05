@@ -9,6 +9,8 @@ export const MENU_PLANNING_STATUSES: MenuPlanningStatusFilter[] = [
   'not_planned',
 ];
 
+export const MENU_PLANNING_FILTER_OPTION_COUNT = MENU_PLANNING_STATUSES.length;
+
 function hasPlannedMenu(menu?: DailyMenuResponse | null): boolean {
   return (menu?.options?.filter(option => option.isAvailable) ?? []).length > 0;
 }

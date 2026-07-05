@@ -33,6 +33,8 @@ export function Button({
     <Pressable
       onPress={onPress}
       disabled={isDisabled}
+      hitSlop={8}
+      android_ripple={{ color: 'rgba(0,0,0,0.08)' }}
       style={({ pressed }) => [
         styles.base,
         styles[variant],

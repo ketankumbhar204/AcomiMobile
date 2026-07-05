@@ -1,10 +1,11 @@
 import { useCallback, useState } from 'react';
 import { memberApi } from '../api/memberApi';
 import type { SpaceMembershipResponse, UUID } from '../api/types';
-import { resetToDashboard } from '../navigation/navigationRef';
+import { resetToCompleteProfile, resetToDashboard } from '../navigation/navigationRef';
 import { useAuthStore } from '../store/authStore';
 import { useSpaceStore } from '../store/spaceStore';
 import { getMembershipErrorMessage } from '../utils/membershipErrors';
+import { requiresProfileCompletion } from '../utils/profileCompletion';
 
 const LOG_TAG = '[AcceptInvitation]';
 
@@ -17,6 +18,8 @@ type UseAcceptInvitationFlowResult = {
 
 export function useAcceptInvitationFlow(): UseAcceptInvitationFlowResult {
   const userId = useAuthStore(state => state.userId);
+  const user = useAuthStore(state => state.user);
+  const refreshUser = useAuthStore(state => state.refreshUser);
   const loadMySpaces = useSpaceStore(state => state.loadMySpaces);
   const switchSpace = useSpaceStore(state => state.switchSpace);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,8 +43,15 @@ export function useAcceptInvitationFlow(): UseAcceptInvitationFlowResult {
         console.log(`${LOG_TAG} success`, membership.spaceId);
 
         await loadMySpaces();
+        const refreshedUser = (await refreshUser()) ?? user;
+        const mySpaces = useSpaceStore.getState().mySpaces;
         await switchSpace(membership.spaceId);
-        resetToDashboard(membership.spaceId);
+
+        if (requiresProfileCompletion(refreshedUser, mySpaces)) {
+          resetToCompleteProfile();
+        } else {
+          resetToDashboard(membership.spaceId);
+        }
 
         return membership;
       } catch (err) {
@@ -53,7 +63,7 @@ export function useAcceptInvitationFlow(): UseAcceptInvitationFlowResult {
         setIsSubmitting(false);
       }
     },
-    [loadMySpaces, switchSpace, userId],
+    [loadMySpaces, refreshUser, switchSpace, user, userId],
   );
 
   const clearError = useCallback(() => setError(null), []);

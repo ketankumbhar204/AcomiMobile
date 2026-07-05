@@ -17,9 +17,11 @@ import { colors, spacing, typography } from '../theme';
 import {
   countSubscriptionHistoryFilters,
   filterSubscriptionHistoryEvents,
+  SUBSCRIPTION_HISTORY_FILTER_OPTION_COUNT,
   type SubscriptionEventTypeFilter,
   type SubscriptionMonthFilter,
 } from '../utils/subscriptionHistoryFilter';
+import { shouldUseFilterDrawer } from '../utils/filterUx';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'MemberSubscriptionHistory'>;
 type Route = NativeStackScreenProps<MainStackParamList, 'MemberSubscriptionHistory'>['route'];
@@ -92,6 +94,7 @@ export function MemberSubscriptionHistoryScreen() {
             onSearchChange={() => {}}
             onFilterPress={() => setFilterDrawerOpen(true)}
             activeFilterCount={activeFilterCount}
+            showFilterButton={shouldUseFilterDrawer(SUBSCRIPTION_HISTORY_FILTER_OPTION_COUNT)}
             showSearch={false}
           />
         ) : null}

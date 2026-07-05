@@ -76,6 +76,32 @@ export function validatePriceInput(text: string): string | null {
   return null;
 }
 
+export function comboPriceDraftFromOption(
+  optionPrice: number | null | undefined,
+  draft?: string,
+): string {
+  if (draft != null && draft.trim().length > 0) {
+    return draft;
+  }
+  if (hasComboPrice(optionPrice)) {
+    return String(optionPrice);
+  }
+  return '';
+}
+
+/** Merges typed draft with resolved catalog/menu price for validation and display. */
+export function getEffectivePriceDraft(
+  id: string,
+  draftPrices: Record<string, string>,
+  resolvedPrice?: number | null,
+): string {
+  const stored = draftPrices[id];
+  if (stored != null && stored.trim().length > 0) {
+    return stored;
+  }
+  return comboPriceDraftFromOption(resolvedPrice);
+}
+
 export function resolveMenuOptionPrice(
   option: ComboPrice & { comboId?: string | null; entryType?: string },
   comboById?: Map<string, ComboPrice>,

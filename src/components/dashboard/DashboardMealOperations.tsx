@@ -17,6 +17,7 @@ import { DashboardSectionTitle } from './DashboardSectionTitle';
 
 type DashboardMealOperationsProps = {
   spaceId: UUID;
+  enabled?: boolean;
 };
 
 function MealSlotChip({
@@ -50,12 +51,12 @@ function emptyMessageKey(kind: MealOperationsEmptyKind): string {
   }
 }
 
-export function DashboardMealOperations({ spaceId }: DashboardMealOperationsProps) {
+export function DashboardMealOperations({ spaceId, enabled = true }: DashboardMealOperationsProps) {
   const { t, i18n } = useTranslation();
   const [menuDate, setMenuDate] = useState(todayIsoDate());
-  const headcount = useOwnerMealHeadcount(spaceId, menuDate, true);
-  const menuStatus = useMealDayMenuStatus(spaceId, menuDate, true);
-  const pollStatus = useOwnerMealPollStatus(spaceId, menuDate, true);
+  const headcount = useOwnerMealHeadcount(spaceId, menuDate, enabled);
+  const menuStatus = useMealDayMenuStatus(spaceId, menuDate, enabled);
+  const pollStatus = useOwnerMealPollStatus(spaceId, menuDate, enabled);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [initialMealType, setInitialMealType] = useState<MealType>('BREAKFAST');

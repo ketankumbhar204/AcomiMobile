@@ -1,7 +1,8 @@
 import { useCallback, useMemo } from 'react';
 import { accommodationApi } from '../api/accommodationApi';
-import type { UUID } from '../api/types';
+import type { FloorListItemResponse, UUID } from '../api/types';
 import { accommodationQueryKeys } from '../utils/accommodationQueryCache';
+import { accommodationInactiveScopeKey } from '../utils/accommodationInactiveRegistry';
 import { useAccommodationPagedList } from './useAccommodationPagedList';
 
 export function useFloors(
@@ -11,6 +12,14 @@ export function useFloors(
 ) {
   const enabled = options?.enabled ?? Boolean(spaceId && buildingId);
   const searchQuery = options?.searchQuery ?? '';
+
+  const inactiveScopeKey = useMemo(
+    () =>
+      spaceId && buildingId
+        ? accommodationInactiveScopeKey('floor', { spaceId, buildingId })
+        : null,
+    [buildingId, spaceId],
+  );
 
   const fetchPage = useCallback(
     (params: Parameters<typeof accommodationApi.listFloors>[2]) => {
@@ -37,6 +46,8 @@ export function useFloors(
     logTag: 'useFloors',
     queryKey,
     sort: 'sortOrder,floorNumber',
+    inactiveScopeKey,
+    getItemId: item => item.floorId,
   });
 
   return {
@@ -48,5 +59,9 @@ export function useFloors(
     totalElements: result.totalElements,
     refresh: result.refresh,
     loadMore: result.loadMore,
+    patchFloor: (floorId: UUID, patch: Partial<FloorListItemResponse>) =>
+      result.patchItems(item => item.floorId === floorId, patch),
+    removeFloor: (floorId: UUID) => result.removeItems(item => item.floorId === floorId),
+    inactiveScopeKey,
   };
 }

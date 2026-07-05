@@ -13,5 +13,8 @@ export function inferRoomListStatus(
   if (room.availableBeds === 0 && room.occupiedBeds > 0) {
     return 'OCCUPIED';
   }
+  if (room.availableBeds > 0 && room.occupiedBeds > 0) {
+    return 'RESERVED';
+  }
   return null;
 }

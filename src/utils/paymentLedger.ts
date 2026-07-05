@@ -6,6 +6,11 @@ export type PaymentSortOption = 'due_desc' | 'name_asc' | 'name_desc';
 
 export const PAYMENT_STATUSES: MemberPaymentStatus[] = ['PAID', 'PENDING', 'PARTIAL'];
 
+export const PAYMENT_SORT_OPTIONS: PaymentSortOption[] = ['due_desc', 'name_asc', 'name_desc'];
+
+export const PAYMENT_FILTER_OPTION_COUNT =
+  PAYMENT_STATUSES.length + PAYMENT_SORT_OPTIONS.length;
+
 export const DEFAULT_PAYMENT_SORT: PaymentSortOption = 'due_desc';
 
 export type PaymentListFilterState = {

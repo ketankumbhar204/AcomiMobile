@@ -66,7 +66,7 @@ export function AccommodationLifecycleActions({
 
       {showRestore ? (
         <Button
-          label={t('accommodation.lifecycle.restoreConfirm')}
+          label={t('accommodation.lifecycle.activateConfirm')}
           variant="secondary"
           onPress={onRestore}
           disabled={loading}

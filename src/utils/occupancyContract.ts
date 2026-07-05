@@ -115,8 +115,35 @@ export function computeMonthlyRentFoodTotal(
     return rent;
   }
 
-  const food = parseAmount(values.foodChargeSnapshot) ?? 0;
+  const food =
+    parseAmount(values.foodChargeSnapshot) ?? foodPolicy?.defaultFoodCharge ?? 0;
   return rent + food;
+}
+
+/** True when the monthly total line should read "rent + food" (separate food charge is active). */
+export function monthlyTotalIncludesFoodFromForm(
+  values: ContractTermsFormValues,
+  foodPolicy?: SpaceFoodPolicy,
+): boolean {
+  if (foodPolicy?.foodIncludedInRent) {
+    return false;
+  }
+  return values.foodEnabled;
+}
+
+export function monthlyTotalIncludesFoodFromOccupancy(
+  occupancy: OccupancyResponse,
+): boolean {
+  if (occupancy.foodIncludedInRent) {
+    return false;
+  }
+  return Boolean(occupancy.foodEnabled);
+}
+
+export function monthlyTotalLabelKey(includesFood: boolean): string {
+  return includesFood
+    ? 'occupancy.contract.monthlyTotalWithFood'
+    : 'occupancy.contract.monthlyTotal';
 }
 
 export function validateContractTerms(
@@ -162,7 +189,11 @@ export function validateContractTerms(
   }
 
   for (const charge of values.otherCharges) {
-    if (!charge.label.trim()) {
+    const effectiveLabel =
+      charge.code === 'OTHER'
+        ? charge.label.trim()
+        : charge.label.trim() || charge.code;
+    if (charge.code === 'OTHER' && !effectiveLabel) {
       return 'occupancy.contract.errors.chargeLabelRequired';
     }
     if (!Number.isFinite(charge.amount) || charge.amount < 0) {
@@ -210,7 +241,10 @@ export function buildContractSnapshotPayload(
       payload.foodEnabled = values.foodEnabled;
       payload.foodIncludedInRent = false;
       if (values.foodEnabled) {
-        const foodCharge = parseAmount(values.foodChargeSnapshot);
+        const foodCharge =
+          parseAmount(values.foodChargeSnapshot) ??
+          options?.foodPolicy?.defaultFoodCharge ??
+          null;
         if (foodCharge != null) {
           payload.foodChargeSnapshot = foodCharge;
         }

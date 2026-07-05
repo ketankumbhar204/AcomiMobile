@@ -31,11 +31,11 @@ export function buildBedOccupancyMenuOptions(
   if (bed.status === 'AVAILABLE') {
     return [
       {
-        label: t('occupancy.actions.reserve'),
+        label: t('occupancy.hierarchy.menu.reserveBed'),
         action: () => flow.startReserve(context),
       },
       {
-        label: t('occupancy.actions.walkInAllocate'),
+        label: t('occupancy.hierarchy.menu.allocateResident'),
         action: () => flow.startWalkIn(context),
       },
     ];

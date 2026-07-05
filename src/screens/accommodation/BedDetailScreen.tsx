@@ -11,27 +11,23 @@ import type { BedResponse } from '../../api/types';
 import {
   AccommodationContextTrail,
   AccommodationDetailRow,
-  AccommodationLifecycleActions,
-  AccommodationStatusBadge,
+  BedDetailHero,
+  BuilderRowLifecycleMenu,
   formatAccommodationDate,
+  HeaderMenuSlot,
 } from '../../components/accommodation';
 import { AccommodationOccupantSection, AccommodationOccupancyActions } from '../../components/occupancy';
 import { Card, HeaderBackButton, RequireAccommodationAccess, Screen, SkeletonCard } from '../../components/ui';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useTargetOccupancy } from '../../hooks/useTargetOccupancy';
-import {
-  useDeactivateBed,
-  useDeleteBed,
-  useRestoreBed,
-} from '../../hooks/accommodationLifecycle';
-import { useAccommodationLifecycleConfirm } from '../../hooks/useAccommodationLifecycleConfirm';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { spacing, typography } from '../../theme';
 import { buildAccommodationTrail } from '../../utils/accommodationContext';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
 import { buildBedOccupancyTarget } from '../../utils/buildOccupancyTarget';
+import { formatBedDisplayLabel } from '../../utils/formatBedDisplayLabel';
 import { navigateToAccommodationTrailSegment } from '../../utils/accommodationNavigation';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'BedDetail'>;
@@ -55,12 +51,6 @@ export function BedDetailScreen() {
   } = route.params;
   const spaceId = useActiveSpaceId(route.params.spaceId);
   const showToast = useToastStore(state => state.showToast);
-  const { confirmDeactivate, confirmRestore, confirmDelete } =
-    useAccommodationLifecycleConfirm();
-  const { mutate: deactivateBed, loading: deactivating } = useDeactivateBed();
-  const { mutate: restoreBed, loading: restoring } = useRestoreBed();
-  const { mutate: deleteBed, loading: deleting } = useDeleteBed();
-  const lifecycleLoading = deactivating || restoring || deleting;
 
   const permissions = useSpacePermissions(spaceId);
   const spaceType = permissions.spaceType;
@@ -113,6 +103,12 @@ export function BedDetailScreen() {
     unitId,
   ]);
 
+  const resolvedBedLabel = bed?.bedNumber ?? bed?.name ?? bedLabel;
+  const displayBedLabel = useMemo(
+    () => formatBedDisplayLabel(resolvedBedLabel, t),
+    [resolvedBedLabel, t],
+  );
+
   const trailContext = useMemo(
     () => ({
       spaceId,
@@ -124,14 +120,12 @@ export function BedDetailScreen() {
       unitName: parentType === 'unit' ? parentName : undefined,
       roomId,
       roomName,
-      bedLabel: bedLabel ?? bed?.bedNumber ?? bed?.name,
+      bedLabel: displayBedLabel,
     }),
     [
-      bed?.bedNumber,
-      bed?.name,
-      bedLabel,
       buildingId,
       buildingName,
+      displayBedLabel,
       floorId,
       parentName,
       parentType,
@@ -154,14 +148,6 @@ export function BedDetailScreen() {
     [navigation, trailContext],
   );
 
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      title: bed?.name ?? bedLabel ?? t('accommodation.beds.detailTitle'),
-      headerBackVisible: false,
-      headerLeft: () => <HeaderBackButton />,
-    });
-  }, [bed?.name, bedLabel, navigation, t, i18n.language]);
-
   const loadBed = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -174,6 +160,68 @@ export function BedDetailScreen() {
       setLoading(false);
     }
   }, [bedId, spaceId]);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: displayBedLabel || t('accommodation.beds.detailTitle'),
+      headerBackVisible: false,
+      headerLeft: () => <HeaderBackButton />,
+      headerRight:
+        bed && permissions.canManageAccommodation
+          ? () => (
+              <HeaderMenuSlot>
+                <BuilderRowLifecycleMenu
+                  spaceId={spaceId}
+                  buildingId={buildingId}
+                  entityType="bed"
+                  entityId={bedId}
+                  roomId={roomId}
+                  role={permissions.membershipRole}
+                  onEdit={() =>
+                    navigation.navigate('BedForm', {
+                      spaceId,
+                      buildingId: route.params.buildingId,
+                      roomId,
+                      mode: 'edit',
+                      bedId,
+                    })
+                  }
+                  onSuccess={action => {
+                    if (action === 'delete' || action === 'deactivate') {
+                      showToast(
+                        t(
+                          action === 'delete'
+                            ? 'accommodation.lifecycle.deleteSuccess'
+                            : 'accommodation.lifecycle.deactivateSuccess',
+                        ),
+                      );
+                      navigation.goBack();
+                      return;
+                    }
+                    showToast(t('accommodation.lifecycle.restoreSuccess'));
+                    void loadBed();
+                  }}
+                />
+              </HeaderMenuSlot>
+            )
+          : undefined,
+    });
+  }, [
+    bed,
+    bedId,
+    buildingId,
+    displayBedLabel,
+    loadBed,
+    navigation,
+    permissions.canManageAccommodation,
+    permissions.membershipRole,
+    roomId,
+    route.params.buildingId,
+    showToast,
+    spaceId,
+    t,
+    i18n.language,
+  ]);
 
   useFocusEffect(
     useCallback(() => {
@@ -193,9 +241,20 @@ export function BedDetailScreen() {
       {bed ? (
         <>
           <AccommodationContextTrail segments={trailSegments} onNavigate={onTrailNavigate} />
-          <View style={styles.badgeRow}>
-            <AccommodationStatusBadge status={bed.status} />
-          </View>
+          <BedDetailHero
+            label={displayBedLabel}
+            status={bed.status}
+            occupantName={
+              bed.occupant?.memberName ??
+              occupancy?.memberName ??
+              null
+            }
+            subtitle={
+              occupancy?.moveInDate
+                ? t('occupancy.section.moveInDate') + ': ' + formatAccommodationDate(occupancy.moveInDate)
+                : null
+            }
+          />
           <Card>
             <AccommodationDetailRow label={t('accommodation.fields.name')} value={bed.name} />
             <AccommodationDetailRow
@@ -239,49 +298,6 @@ export function BedDetailScreen() {
               }}
             />
           ) : null}
-
-          <AccommodationLifecycleActions
-            actions={bed.actions}
-            role={permissions.membershipRole}
-            loading={lifecycleLoading}
-            onEdit={() =>
-              navigation.navigate('BedForm', {
-                spaceId,
-                buildingId: route.params.buildingId,
-                roomId,
-                mode: 'edit',
-                bedId,
-              })
-            }
-            onDeactivate={() =>
-              confirmDeactivate(
-                () => deactivateBed(spaceId, bedId),
-                () => {
-                  showToast(t('accommodation.lifecycle.deactivateSuccess'));
-                  navigation.goBack();
-                },
-              )
-            }
-            onRestore={() =>
-              confirmRestore(
-                () => restoreBed(spaceId, bedId),
-                () => {
-                  showToast(t('accommodation.lifecycle.restoreSuccess'));
-                  void loadBed();
-                },
-              )
-            }
-            onDelete={() =>
-              confirmDelete(
-                'bed',
-                () => deleteBed(spaceId, bedId),
-                () => {
-                  showToast(t('accommodation.lifecycle.deleteSuccess'));
-                  navigation.goBack();
-                },
-              )
-            }
-          />
         </>
       ) : null}
     </Screen>
@@ -292,5 +308,4 @@ export function BedDetailScreen() {
 const styles = StyleSheet.create({
   content: { padding: spacing.xxl, paddingBottom: spacing.section },
   errorText: { ...typography.body, color: '#DC2626' },
-  badgeRow: { marginBottom: spacing.md },
 });

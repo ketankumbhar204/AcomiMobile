@@ -17,13 +17,18 @@ import type {
 import { useTranslation } from 'react-i18next';
 import { formatSpaceType } from '../api';
 import { mealBillingApi } from '../api/mealBillingApi';
-import type { MealBillingType, PrepaidBalanceUnit } from '../api/types';
+import type { GenderPolicy, MealBillingType, PrepaidBalanceUnit, SpaceType } from '../api/types';
 import { Button, Card, FormInput, HeaderBackButton, useConfirmDialog } from '../components/ui';
 import {
   MealBillingSettingsSection,
   type MealBillingSettingsFormValues,
 } from '../components/settings/MealBillingSettingsSection';
+import { SpaceAmenitiesField } from '../components/spaces/SpaceAmenitiesField';
+import { SpacePropertyCategoryPicker } from '../components/spaces/SpacePropertyCategoryPicker';
 import { useDeactivateSpace } from '../hooks/useDeactivateSpace';
+import type { AmenityAssignment } from '../api/types';
+import { normalizeAmenityAssignments, supportsSpaceAmenities } from '../utils/amenities';
+import { supportsSpacePropertyCategory } from '../utils/spacePropertyCategory';
 import { useAuthenticatedUserId } from '../hooks/useAuth';
 import type { MainStackParamList } from '../navigation/types';
 import { useSpaceStore } from '../store/spaceStore';
@@ -91,9 +96,13 @@ export function EditSpaceScreen() {
   const [initialBillingValues, setInitialBillingValues] =
     useState<MealBillingSettingsFormValues>(DEFAULT_BILLING);
   const [spaceType, setSpaceType] = useState<string | null>(null);
+  const [amenities, setAmenities] = useState<AmenityAssignment[]>([]);
+  const [genderPolicy, setGenderPolicy] = useState<GenderPolicy | null>(null);
 
   const owner = isSpaceOwner(selectedSpace, currentUserId);
   const isMessSpace = spaceType === 'MESS';
+  const showAmenities = supportsSpaceAmenities(spaceType as SpaceType | null);
+  const showPropertyCategory = supportsSpacePropertyCategory(spaceType as SpaceType | null);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -114,6 +123,8 @@ export function EditSpaceScreen() {
           setContactNumber(loaded.contactNumber ?? '');
           setTypeLabel(formatSpaceType(loaded.type));
           setSpaceType(loaded.type);
+          setAmenities(normalizeAmenityAssignments(loaded.amenities ?? []));
+          setGenderPolicy(loaded.genderPolicy ?? null);
 
           if (loaded.type === 'MESS') {
             try {
@@ -163,6 +174,8 @@ export function EditSpaceScreen() {
       name: name.trim(),
       address: address.trim() || undefined,
       contactNumber: contactNumber.trim() || undefined,
+      amenities: showAmenities ? normalizeAmenityAssignments(amenities) : undefined,
+      genderPolicy: showPropertyCategory ? genderPolicy : undefined,
     });
 
     if (!updated) {
@@ -262,6 +275,22 @@ export function EditSpaceScreen() {
             <Text style={styles.readOnlyLabel}>{t('spaces.editSpace.typeLabel')}</Text>
             <Text style={styles.readOnlyValue}>{typeLabel || '—'}</Text>
           </Card>
+
+          {showPropertyCategory && spaceType ? (
+            <SpacePropertyCategoryPicker
+              spaceType={spaceType as SpaceType}
+              value={genderPolicy}
+              onChange={setGenderPolicy}
+            />
+          ) : null}
+
+          {showAmenities ? (
+            <SpaceAmenitiesField
+              value={amenities}
+              onChange={setAmenities}
+              disabled={isSubmitting || isLoading}
+            />
+          ) : null}
 
           {isMessSpace && owner ? (
             <MealBillingSettingsSection

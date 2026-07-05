@@ -13,6 +13,8 @@ import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { memberCountInBadgeLabel, memberInviteHint } from '../../utils/memberAppStatus';
 import { isSelectableMemberGender, memberGenderLabelKey } from '../../utils/memberGender';
 import { MemberDocumentsSection } from './MemberDocumentsSection';
+import { MemberProfileCorrectionSection } from '../profile/MemberProfileCorrectionSection';
+import { UserProfileFields } from '../profile/UserProfileFields';
 import { MemberDetailRow, MemberSectionTitle } from './MemberDetailRow';
 import { MemberMealBillingPanel } from './MemberMealBillingPanel';
 import { MemberNotesSection } from './MemberNotesSection';
@@ -201,6 +203,18 @@ export function MemberProfileTab({
         />
       </Card>
 
+      {member.linkedUserProfile ? (
+        <UserProfileFields
+          user={member.linkedUserProfile}
+          emergencyContact={{
+            name: member.emergencyContactName,
+            relation: member.emergencyContactRelation,
+            mobile: member.emergencyContactMobile,
+          }}
+          showPhoto
+        />
+      ) : null}
+
       {spaceType === 'MESS' ? (
         <MemberMealBillingPanel
           spaceId={spaceId}
@@ -211,23 +225,29 @@ export function MemberProfileTab({
       ) : null}
 
       <MemberSectionTitle title={t('membership.emergency.heading')} />
-      <Card style={styles.card}>
-        <MemberDetailRow
-          label={t('membership.emergency.name')}
-          value={member.emergencyContactName ?? '—'}
-        />
-        <MemberDetailRow
-          label={t('membership.emergency.relation')}
-          value={member.emergencyContactRelation ?? '—'}
-        />
-        <MemberDetailRow
-          label={t('membership.emergency.mobile')}
-          value={member.emergencyContactMobile ?? '—'}
-          isLast
-        />
-      </Card>
+      {!member.linkedUserProfile ? (
+        <Card style={styles.card}>
+          <MemberDetailRow
+            label={t('membership.emergency.name')}
+            value={member.emergencyContactName ?? '—'}
+          />
+          <MemberDetailRow
+            label={t('membership.emergency.relation')}
+            value={member.emergencyContactRelation ?? '—'}
+          />
+          <MemberDetailRow
+            label={t('membership.emergency.mobile')}
+            value={member.emergencyContactMobile ?? '—'}
+            isLast
+          />
+        </Card>
+      ) : null}
 
       <MemberDocumentsSection memberId={member.memberId} canEdit={canEdit} />
+      <MemberProfileCorrectionSection
+        memberId={member.memberId}
+        canRequest={canEdit && member.linkedUser}
+      />
       <MemberNotesSection memberId={member.memberId} canEdit={canEdit} />
 
       {canInvite ? (

@@ -3,11 +3,64 @@ import { create } from 'zustand';
 import { authApi } from '../api/authApi';
 import { setAuthToken } from '../api/client';
 import type { UserResponse, UUID } from '../api/types';
+import { isUserProfileComplete } from '../utils/profileCompletion';
 
 const TOKEN_KEY = '@countin/access_token';
 const USER_KEY = '@countin/user';
 
 const LOG_TAG = '[AuthStore]';
+
+function mergeStoredUserProfile(
+  apiUser: UserResponse,
+  storedUser: UserResponse | null,
+): UserResponse {
+  if (!storedUser || storedUser.id !== apiUser.id) {
+    return apiUser;
+  }
+
+  if (apiUser.profileCompleted === true || isUserProfileComplete(apiUser)) {
+    return apiUser;
+  }
+
+  if (!storedUser.profileCompleted && !isUserProfileComplete(storedUser)) {
+    return apiUser;
+  }
+
+  return {
+    ...storedUser,
+    ...apiUser,
+    fullName: apiUser.fullName || storedUser.fullName,
+    mobileNumber: apiUser.mobileNumber,
+    active: apiUser.active,
+    profilePhotoUrl: apiUser.profilePhotoUrl ?? storedUser.profilePhotoUrl ?? null,
+    email: apiUser.email ?? storedUser.email ?? null,
+    gender: apiUser.gender ?? storedUser.gender ?? null,
+    dateOfBirth: apiUser.dateOfBirth ?? storedUser.dateOfBirth ?? null,
+    permanentAddress: apiUser.permanentAddress ?? storedUser.permanentAddress ?? null,
+    city: apiUser.city ?? storedUser.city ?? null,
+    state: apiUser.state ?? storedUser.state ?? null,
+    pincode: apiUser.pincode ?? storedUser.pincode ?? null,
+    profileCompleted: apiUser.profileCompleted ?? storedUser.profileCompleted ?? false,
+    profileStatus: apiUser.profileStatus ?? storedUser.profileStatus ?? null,
+    profileCompletedAt: apiUser.profileCompletedAt ?? storedUser.profileCompletedAt ?? null,
+    profileCompletionPercentage:
+      apiUser.profileCompletionPercentage ?? storedUser.profileCompletionPercentage ?? null,
+    documentsUploaded: apiUser.documentsUploaded ?? storedUser.documentsUploaded ?? null,
+    kycStatus: apiUser.kycStatus ?? storedUser.kycStatus ?? null,
+  };
+}
+
+async function readStoredUser(): Promise<UserResponse | null> {
+  try {
+    const raw = await AsyncStorage.getItem(USER_KEY);
+    if (!raw) {
+      return null;
+    }
+    return JSON.parse(raw) as UserResponse;
+  } catch {
+    return null;
+  }
+}
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -19,6 +72,7 @@ interface AuthState {
   bootstrap: () => Promise<void>;
   setSession: (user: UserResponse, accessToken: string) => Promise<void>;
   updateUser: (user: UserResponse) => Promise<void>;
+  refreshUser: () => Promise<UserResponse | null>;
   clearSession: () => Promise<void>;
 }
 
@@ -57,16 +111,20 @@ export const useAuthStore = create<AuthState>(set => ({
       }
 
       const user = await authApi.getMe();
+      const storedUser = await readStoredUser();
+      const mergedUser = mergeStoredUserProfile(user, storedUser);
 
       if (__DEV__) {
-        console.log(`${LOG_TAG} session restored -> userId:`, user.id);
+        console.log(`${LOG_TAG} session restored -> userId:`, mergedUser.id);
       }
+
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(mergedUser));
 
       set({
         isBootstrapping: false,
         isAuthenticated: true,
-        userId: user.id,
-        user,
+        userId: mergedUser.id,
+        user: mergedUser,
         accessToken: storedToken,
       });
     } catch (err: unknown) {
@@ -126,6 +184,20 @@ export const useAuthStore = create<AuthState>(set => ({
       user,
       userId: user.id,
     });
+  },
+
+  refreshUser: async (): Promise<UserResponse | null> => {
+    try {
+      const user = await authApi.getMe();
+      const storedUser = await readStoredUser();
+      const mergedUser = mergeStoredUserProfile(user, storedUser);
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(mergedUser));
+      set({ user: mergedUser, userId: mergedUser.id });
+      return mergedUser;
+    } catch (err) {
+      console.error(`${LOG_TAG} refreshUser failed`, err);
+      return null;
+    }
   },
 
   clearSession: async (): Promise<void> => {

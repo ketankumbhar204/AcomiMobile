@@ -2,12 +2,14 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { mealsApi } from '../../api/mealsApi';
 import type {
   DailyMenuResponse,
@@ -17,11 +19,9 @@ import type {
   MealType,
   UUID,
 } from '../../api/types';
-import { DailyMenuSlotCard, MealHeadcountBottomSheet } from '../../components/meals';
+import { DailyMenuSlotCard, MealHeadcountBottomSheet, MenuPlanningDayOverview } from '../../components/meals';
 import { MenuDateContextHints } from '../../components/meals/MenuDateContextHints';
 import { MenuDatePickerModal } from '../../components/meals/MenuDatePickerModal';
-import { MenuPlanningFilterDrawer } from '../../components/meals/MenuPlanningFilterDrawer';
-import { Button, ListSearchFilterBar, Screen } from '../../components/ui';
 import { navigateToMembersTab } from '../../navigation/navigationRef';
 import { useMainStackNavigation } from '../../hooks/useMainStackNavigation';
 import { useOwnerMealHeadcount } from '../../hooks/useOwnerMealHeadcount';
@@ -37,7 +37,6 @@ import {
 } from '../../utils/mealDates';
 import { summarizeDailyMenuDay } from '../../utils/dailyMenuDayStatus';
 import {
-  countMenuPlanningFilters,
   filterMealTypesByPlanningStatus,
   type MenuPlanningStatusFilter,
 } from '../../utils/menuPlanningFilter';
@@ -81,11 +80,12 @@ function dayStatusSummary(menus: DailyMenuResponse[]): {
 
 export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenProps) {
   const { t, i18n } = useTranslation();
+  const insets = useSafeAreaInsets();
   const { navigate: navigateMain } = useMainStackNavigation();
   const permissions = useSpacePermissions(spaceId);
   const showToast = useToastStore(state => state.showToast);
 
-  const [menuDate, setMenuDate] = useState(initialDate ?? tomorrowIsoDate());
+  const [menuDate, setMenuDate] = useState(initialDate ?? todayIsoDate());
   const headcount = useOwnerMealHeadcount(spaceId, menuDate, permissions.canManageMeals);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -99,7 +99,6 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
   const [planningStatusFilters, setPlanningStatusFilters] = useState<
     Set<MenuPlanningStatusFilter>
   >(new Set());
-  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -155,7 +154,6 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
     () => filterMealTypesByPlanningStatus(MEAL_TYPES, menuMap, planningStatusFilters),
     [menuMap, planningStatusFilters],
   );
-  const activeFilterCount = countMenuPlanningFilters(planningStatusFilters);
   const dateReadOnly = isPastMenuDate(menuDate);
   const canShareMenu = !dateReadOnly && MEAL_TYPES.some(type => hasPlannedMenu(menuMap[type]));
   const distinctEligible = useMemo(() => {
@@ -242,7 +240,16 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
   }, [headcount]);
 
   return (
-    <Screen scrollable contentStyle={styles.content}>
+    <View style={styles.root}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: spacing.section + Math.max(insets.bottom, spacing.md) },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled
+        showsVerticalScrollIndicator={false}>
       <Text style={styles.subtitle}>{t('meals.planning.subtitle')}</Text>
 
       <View style={styles.dateRow}>
@@ -278,50 +285,17 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
       ) : null}
 
       {!loading && !error ? (
-        <ListSearchFilterBar
-          searchValue=""
-          onSearchChange={() => {}}
-          onFilterPress={() => setFilterDrawerOpen(true)}
-          activeFilterCount={activeFilterCount}
-          showSearch={false}
+        <MenuPlanningDayOverview
+          menuMap={menuMap}
+          pollMap={pollMap}
+          statusSummary={statusSummary}
+          eligibleCount={distinctEligible}
+          selectedFilters={planningStatusFilters}
+          onFilterChange={setPlanningStatusFilters}
+          shareDisabled={!canShareMenu}
+          onShare={permissions.canManageMeals ? () => openShare() : undefined}
+          dateReadOnly={dateReadOnly}
         />
-      ) : null}
-
-      <MenuPlanningFilterDrawer
-        visible={filterDrawerOpen}
-        applied={planningStatusFilters}
-        onClose={() => setFilterDrawerOpen(false)}
-        onApply={setPlanningStatusFilters}
-      />
-
-      {!loading && !error ? (
-        <View style={styles.summaryRow}>
-          <View style={styles.summaryTextBlock}>
-            <Text style={styles.statusSummary}>
-              {t('meals.planning.dayStatus', {
-                published: statusSummary.published,
-                draft: statusSummary.draft,
-                notPlanned: statusSummary.notPlanned,
-              })}
-            </Text>
-            <Text style={styles.eligibleSummary}>
-              {t('meals.planning.eligibleMembers', { count: distinctEligible })}
-            </Text>
-            {permissions.canManageMeals && !canShareMenu ? (
-              <Text style={styles.shareDisabledHint}>
-                {t('meals.planning.previewShareDisabled')}
-              </Text>
-            ) : null}
-          </View>
-          {permissions.canManageMeals ? (
-            <Button
-              label={t('meals.planning.shareMenu')}
-              disabled={!canShareMenu}
-              onPress={() => openShare()}
-              style={styles.summaryShareButton}
-            />
-          ) : null}
-        </View>
       ) : null}
 
       {loading ? <ActivityIndicator color={colors.primary} style={styles.loader} /> : null}
@@ -344,6 +318,7 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
             <DailyMenuSlotCard
               mealType={mealType}
               menu={menuMap[mealType]}
+              spaceId={spaceId}
               comboById={comboById}
               readOnly={dateReadOnly}
               onSelectMenu={() => openSelectMenu(mealType)}
@@ -400,6 +375,7 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
           </Pressable>
         </View>
       ) : null}
+      </ScrollView>
 
       {headcountMealType && headcount.openSlots.length > 0 ? (
         <MealHeadcountBottomSheet
@@ -420,12 +396,14 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
         onClose={() => setDatePickerOpen(false)}
         onConfirm={setMenuDate}
       />
-    </Screen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: spacing.section },
+  root: { flex: 1, backgroundColor: colors.background },
+  scroll: { flex: 1 },
+  content: { padding: spacing.xxl },
   subtitle: { ...typography.body, color: colors.muted, marginBottom: spacing.lg },
   dateRow: {
     flexDirection: 'row',
@@ -466,38 +444,6 @@ const styles = StyleSheet.create({
     ...typography.bodyStrong,
     color: colors.primaryDark,
     textDecorationLine: 'underline',
-  },
-  statusSummary: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    marginBottom: spacing.xxs,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-    marginBottom: spacing.md,
-  },
-  summaryTextBlock: {
-    flex: 1,
-    minWidth: 0,
-  },
-  eligibleSummary: {
-    ...typography.bodyStrong,
-    color: colors.primaryDark,
-  },
-  summaryShareButton: {
-    minHeight: 40,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    flexShrink: 0,
-    alignSelf: 'center',
-  },
-  shareDisabledHint: {
-    ...typography.caption,
-    color: colors.muted,
-    marginTop: spacing.xxs,
   },
   loader: { marginVertical: spacing.lg },
   error: { ...typography.caption, color: '#DC2626', marginBottom: spacing.md },

@@ -5,10 +5,10 @@ export const ACCOMMODATION_STATUS_OPTIONS: {
   color: string;
 }[] = [
   { value: 'AVAILABLE', color: '#22c55e' },
-  { value: 'OCCUPIED', color: '#3b82f6' },
-  { value: 'RESERVED', color: '#a855f7' },
-  { value: 'MAINTENANCE', color: '#f97316' },
-  { value: 'BLOCKED', color: '#ef4444' },
+  { value: 'RESERVED', color: '#eab308' },
+  { value: 'OCCUPIED', color: '#ef4444' },
+  { value: 'MAINTENANCE', color: '#6b7280' },
+  { value: 'BLOCKED', color: '#9ca3af' },
 ];
 
 export const ROOM_TYPE_OPTIONS = ['PRIVATE', 'SHARED', 'DORMITORY'] as const;

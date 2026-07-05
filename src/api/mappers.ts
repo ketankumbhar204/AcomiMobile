@@ -45,6 +45,8 @@ export function spaceDetailsResponseToSpace(
     mealBillingType: response.mealBillingType ?? 'PAY_PER_MEAL',
     prepaidBalanceUnit: response.prepaidBalanceUnit ?? null,
     prepaidFallbackToPayPerMeal: response.prepaidFallbackToPayPerMeal ?? true,
+    genderPolicy: response.genderPolicy ?? null,
+    amenities: response.amenities ?? [],
     createdAt: response.createdAt,
     updatedAt: response.updatedAt,
   };

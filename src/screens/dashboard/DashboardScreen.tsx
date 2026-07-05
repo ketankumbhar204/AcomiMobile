@@ -17,25 +17,26 @@ import {
   DashboardSectionTitle,
 } from '../../components/dashboard';
 import { DashboardCustomerMealsSection } from '../../components/meals/DashboardCustomerMealsSection';
-import { ModuleActionCard, SkeletonCard } from '../../components/ui';
+import { ModuleActionCard, SkeletonCard, useQuickActionSheet } from '../../components/ui';
+import type { QuickActionSheetOption } from '../../components/ui';
 import { Screen } from '../../components/ui/Screen';
-import { openOccupancyWizardFromRef } from '../../features/occupancy/OccupancyWizard';
 import { useDashboardAttentionItems } from '../../hooks/useDashboardAttentionItems';
 import { useLinkedMember } from '../../hooks/useLinkedMember';
+import { useHierarchyOccupancyPicker } from '../../hooks/useHierarchyOccupancyPicker';
+import { useNavigateFromSpaceTab } from '../../hooks/useNavigateFromSpaceTab';
 import { useSpaceDashboard } from '../../hooks/useSpaceDashboard';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList, SpaceTabParamList } from '../../navigation/types';
-import { navigateMainStack } from '../../navigation/mainStackNavigation';
 import {
   navigateToMembersTab,
   navigateToPaymentsTab,
 } from '../../navigation/navigationRef';
-import { useAccommodationActionSheetStore } from '../../store/accommodationActionSheetStore';
 import { useSpaceStore } from '../../store/spaceStore';
 import { colors, spacing, typography } from '../../theme';
 import { isAccommodationApplicable } from '../../utils/accommodationProfile';
 import { canManagePayments, canViewOperationalDashboard } from '../../utils/dashboardFinancial';
 import { tomorrowIsoDate } from '../../utils/mealDates';
+import { shouldShowDashboardMealOperations } from '../../utils/dashboardMealOperations';
 import { findMySpaceEntry } from '../../utils/spacePermissions';
 
 type DashboardRoute = RouteProp<SpaceTabParamList, 'Dashboard'>;
@@ -78,8 +79,10 @@ export function DashboardScreen() {
   const spaceType = permissions.spaceType ?? spaceEntry?.spaceType;
   const accommodationApplicable = spaceType ? isAccommodationApplicable(spaceType) : true;
   const isMess = spaceType === 'MESS';
-  const { memberId: linkedMemberId } = useLinkedMember(spaceId);
-  const openActionSheet = useAccommodationActionSheetStore(state => state.open);
+  const { memberId: linkedMemberId, member: linkedMember } = useLinkedMember(spaceId);
+  const { showQuickActionSheet } = useQuickActionSheet();
+  const hierarchyPicker = useHierarchyOccupancyPicker(spaceId, spaceType);
+  const navigateFromTab = useNavigateFromSpaceTab();
 
   const isTenant = permissions.membershipRole === 'TENANT';
   const isCustomer = permissions.membershipRole === 'CUSTOMER';
@@ -98,6 +101,16 @@ export function DashboardScreen() {
   const showPaymentsQuickAction = canManagePayments(permissions.membershipRole);
 
   const dashboard = useSpaceDashboard(spaceId, spaceType, showOwnerDashboard);
+  const handleDashboardRefresh = useCallback(() => {
+    void dashboard.reload(true);
+  }, [dashboard.reload]);
+  const showMealOperations = shouldShowDashboardMealOperations({
+    showOwnerDashboard,
+    canManageMeals: showMealsActions,
+    isMess,
+    accommodationApplicable,
+    hasMessOperationsSummary: dashboard.messOperations != null,
+  });
   const pendingActionItems = useDashboardAttentionItems(
     spaceId,
     dashboard.attention ?? [],
@@ -106,8 +119,8 @@ export function DashboardScreen() {
   const pendingActionCount = pendingActionItems.length;
 
   const handlePendingActionsPress = useCallback(() => {
-    navigateMainStack('DashboardPendingActions', { spaceId });
-  }, [spaceId]);
+    navigateFromTab('DashboardPendingActions', { spaceId });
+  }, [navigateFromTab, spaceId]);
 
   const handlePaymentsNavigate = useCallback(
     (initialFilter: 'all' | 'pending' | 'collected') => {
@@ -116,89 +129,115 @@ export function DashboardScreen() {
     [navigation, spaceId],
   );
 
+  const handleOccupiedBedsPress = useCallback(() => {
+    navigateFromTab('DashboardOccupancyList', { spaceId, mode: 'active' });
+  }, [navigateFromTab, spaceId]);
+
+  const handleVacantBedsPress = useCallback(() => {
+    navigateFromTab('DashboardBedInventory', { spaceId, status: 'AVAILABLE' });
+  }, [navigateFromTab, spaceId]);
+
+  const handleMoveInsPress = useCallback(() => {
+    navigateFromTab('DashboardOccupancyList', { spaceId, mode: 'moveInsThisMonth' });
+  }, [navigateFromTab, spaceId]);
+
+  const handleAccommodationPendingPaymentsPress = useCallback(() => {
+    navigation.navigate('Payments', { spaceId, initialFilter: 'pending' });
+  }, [navigation, spaceId]);
+
   const handleMealsPress = useCallback(() => {
     const tomorrow = tomorrowIsoDate();
-    const actions = [
+    const actions: QuickActionSheetOption[] = [
       {
         label: t('dashboard.quickActions.mealsPlanning'),
-        action: () => navigateMainStack('MenuPlanning', { spaceId }),
+        action: () => navigateFromTab('MenuPlanning', { spaceId }),
       },
       {
         label: t('meals.planning.shareTomorrow'),
-        action: () =>
-          navigateMainStack('MenuSharePreview', { spaceId, menuDate: tomorrow }),
+        action: () => navigateFromTab('MenuSharePreview', { spaceId, menuDate: tomorrow }),
       },
       {
         label: t('meals.todayMenu'),
-        action: () => navigateMainStack('DailyMenuToday', { spaceId }),
+        action: () => navigateFromTab('DailyMenuToday', { spaceId }),
       },
       {
         label: t('meals.library.title'),
-        action: () => navigateMainStack('MenuLibrary', { spaceId }),
+        action: () => navigateFromTab('MenuLibrary', { spaceId }),
       },
       {
         label: t('meals.subscriptionPlans.title'),
-        action: () => navigateMainStack('SubscriptionPlans', { spaceId }),
+        action: () => navigateFromTab('SubscriptionPlans', { spaceId }),
       },
     ];
     if (isMess) {
       actions.push({
         label: t('dashboard.quickActions.deliveryLocations'),
-        action: () => navigateMainStack('MealDeliveryLocations', { spaceId }),
+        action: () => navigateFromTab('MealDeliveryLocations', { spaceId }),
       });
     }
-    openActionSheet(t('dashboard.quickActions.meals'), actions);
-  }, [isMess, openActionSheet, spaceId, t]);
+    showQuickActionSheet(t('dashboard.quickActions.meals'), actions);
+  }, [isMess, navigateFromTab, showQuickActionSheet, spaceId, t]);
 
   const handleDeliveryLocationsPress = useCallback(() => {
-    navigateMainStack('MealDeliveryLocations', { spaceId });
-  }, [spaceId]);
+    navigateFromTab('MealDeliveryLocations', { spaceId });
+  }, [navigateFromTab, spaceId]);
 
   const handleMembersPress = useCallback(() => {
-    openActionSheet(t('dashboard.quickActions.members'), [
+    showQuickActionSheet(t('dashboard.quickActions.members'), [
       {
         label: t('dashboard.quickActions.addCustomer'),
-        action: () => navigateMainStack('AddMember', { spaceId }),
+        action: () => navigateFromTab('AddMember', { spaceId }),
       },
       {
         label: t('dashboard.quickActions.viewMembers'),
         action: () => navigateToMembersTab(spaceId),
       },
     ]);
-  }, [openActionSheet, spaceId, t]);
+  }, [navigateFromTab, showQuickActionSheet, spaceId, t]);
 
   const handlePaymentsPress = useCallback(() => {
     navigateToPaymentsTab(spaceId);
   }, [spaceId]);
 
   const handleResidentsPress = useCallback(() => {
-    openActionSheet(t('dashboard.quickActions.residents'), [
+    showQuickActionSheet(t('dashboard.quickActions.residents'), [
       {
         label: t('dashboard.quickActions.allocate'),
-        action: () => openOccupancyWizardFromRef({ spaceId, mode: 'ALLOCATE' }),
+        action: () => hierarchyPicker.openFromSpace('ALLOCATE'),
       },
       {
         label: t('dashboard.quickActions.reserve'),
-        action: () => openOccupancyWizardFromRef({ spaceId, mode: 'RESERVE' }),
+        action: () => hierarchyPicker.openFromSpace('RESERVE'),
       },
       {
         label: t('dashboard.quickActions.transfer'),
-        action: () => openOccupancyWizardFromRef({ spaceId, mode: 'TRANSFER' }),
+        action: () => navigateFromTab('OccupancyWizard', { spaceId, mode: 'TRANSFER' }),
       },
       {
         label: t('dashboard.quickActions.vacate'),
-        action: () => openOccupancyWizardFromRef({ spaceId, mode: 'VACATE' }),
+        action: () => navigateFromTab('OccupancyWizard', { spaceId, mode: 'VACATE' }),
         destructive: true,
       },
     ]);
-  }, [openActionSheet, spaceId, t]);
+  }, [hierarchyPicker, navigateFromTab, showQuickActionSheet, spaceId, t]);
+
+  const handleMyPaymentsPress = useCallback(() => {
+    if (!linkedMemberId || !linkedMember) {
+      return;
+    }
+    navigateFromTab('MemberPayments', {
+      spaceId,
+      memberId: linkedMemberId,
+      memberName: linkedMember.fullName,
+    });
+  }, [linkedMember, linkedMemberId, navigateFromTab, spaceId]);
 
   const handleMyStayPress = useCallback(() => {
     if (!linkedMemberId) {
       return;
     }
-    navigation.navigate('MemberDetails', { spaceId, memberId: linkedMemberId });
-  }, [linkedMemberId, navigation, spaceId]);
+    navigateFromTab('MemberDetails', { spaceId, memberId: linkedMemberId });
+  }, [linkedMemberId, navigateFromTab, spaceId]);
 
   const pendingActionsCard =
     showOwnerDashboard && pendingActionCount > 0 ? (
@@ -255,12 +294,13 @@ export function DashboardScreen() {
       return (
         <View style={styles.quickStack}>
           {pendingActionsCard}
-          <View style={styles.moduleRow}>
-            {showResidentsActions ? (
+          {showResidentsActions ? (
             <ModuleActionCard
               icon="👥"
               title={t('dashboard.quickActions.residents')}
               subtitle={t('dashboard.quickActions.residentsSubtitle')}
+              trailing="forward"
+              fullWidth
               onPress={handleResidentsPress}
             />
           ) : null}
@@ -269,6 +309,8 @@ export function DashboardScreen() {
               icon="🍽"
               title={t('dashboard.quickActions.meals')}
               subtitle={t('dashboard.quickActions.mealsSubtitle')}
+              trailing="forward"
+              fullWidth
               onPress={handleMealsPress}
             />
           ) : null}
@@ -277,21 +319,41 @@ export function DashboardScreen() {
               icon="💳"
               title={t('dashboard.quickActions.payments')}
               subtitle={t('dashboard.quickActions.paymentsSubtitle')}
+              trailing="forward"
+              fullWidth
               onPress={handlePaymentsPress}
             />
           ) : null}
-          </View>
         </View>
       );
     }
 
     if (showMyStay) {
       return (
+        <View style={styles.quickStack}>
+          <ModuleActionCard
+            icon="🏠"
+            title={t('permissions.myStay.title')}
+            subtitle={t('permissions.myStay.subtitle')}
+            onPress={handleMyStayPress}
+          />
+          <ModuleActionCard
+            icon="💳"
+            title={t('paymentCollection.memberPayments.dashboardTitle')}
+            subtitle={t('paymentCollection.memberPayments.dashboardSubtitle')}
+            onPress={handleMyPaymentsPress}
+          />
+        </View>
+      );
+    }
+
+    if ((isTenant || isCustomer) && linkedMemberId) {
+      return (
         <ModuleActionCard
-          icon="🏠"
-          title={t('permissions.myStay.title')}
-          subtitle={t('permissions.myStay.subtitle')}
-          onPress={handleMyStayPress}
+          icon="💳"
+          title={t('paymentCollection.memberPayments.dashboardTitle')}
+          subtitle={t('paymentCollection.memberPayments.dashboardSubtitle')}
+          onPress={handleMyPaymentsPress}
         />
       );
     }
@@ -305,10 +367,12 @@ export function DashboardScreen() {
     return null;
   }, [
     handleMealsPress,
+    handleMyPaymentsPress,
     handleMyStayPress,
     handlePaymentsPress,
     handleResidentsPress,
     isMess,
+    isCustomer,
     isTenant,
     linkedMemberId,
     pendingActionsCard,
@@ -322,8 +386,15 @@ export function DashboardScreen() {
   const quickActions = isMess ? messQuickActions : accommodationQuickActions;
   const showQuickSection = quickActions != null || pendingActionsCard != null;
 
+  const showInitialDashboardLoader = dashboard.loading && dashboard.summary == null;
+
   return (
-    <Screen scrollable contentStyle={styles.content}>
+    <Screen
+      scrollable
+      contentStyle={styles.content}
+      refreshing={dashboard.refreshing}
+      onRefresh={showOwnerDashboard ? handleDashboardRefresh : undefined}>
+      {hierarchyPicker.pickerModal}
       {spaceEntry && !showOwnerDashboard ? (
         <View style={styles.spaceDetails}>
           <Text style={styles.spaceName}>{spaceEntry.spaceName}</Text>
@@ -337,12 +408,14 @@ export function DashboardScreen() {
 
       {showOwnerDashboard ? (
         <>
-          {dashboard.loading && !dashboard.summary ? (
+          {showInitialDashboardLoader ? (
             <SkeletonCard />
-          ) : (
+          ) : null}
+
+          {dashboard.summary || !showInitialDashboardLoader ? (
             <>
               <DashboardFinancialSnapshot
-                loading={dashboard.financialLoading}
+                loading={dashboard.financialLoading && dashboard.financial == null}
                 financial={dashboard.financial}
                 onExpectedPress={
                   showPaymentsQuickAction ? () => handlePaymentsNavigate('all') : undefined
@@ -355,17 +428,39 @@ export function DashboardScreen() {
                 }
               />
 
-              {dashboard.messOperations ? (
-                <DashboardMealOperations spaceId={spaceId} />
+              {isMess && showMealOperations ? (
+                <DashboardMealOperations spaceId={spaceId} enabled={dashboard.summary != null} />
               ) : null}
 
               {dashboard.accommodationOperations ? (
                 <DashboardAccommodationOperations
                   operations={dashboard.accommodationOperations}
+                  onOccupiedPress={
+                    showResidentsActions || permissions.canViewSpaceOccupancies
+                      ? handleOccupiedBedsPress
+                      : undefined
+                  }
+                  onVacantPress={
+                    showResidentsActions || permissions.canViewSpaceOccupancies
+                      ? handleVacantBedsPress
+                      : undefined
+                  }
+                  onMoveInsPress={
+                    showResidentsActions || permissions.canViewSpaceOccupancies
+                      ? handleMoveInsPress
+                      : undefined
+                  }
+                  onPendingPaymentsPress={
+                    showPaymentsQuickAction ? handleAccommodationPendingPaymentsPress : undefined
+                  }
                 />
               ) : null}
+
+              {!isMess && showMealOperations ? (
+                <DashboardMealOperations spaceId={spaceId} enabled={dashboard.summary != null} />
+              ) : null}
             </>
-          )}
+          ) : null}
         </>
       ) : null}
 
@@ -387,11 +482,6 @@ const styles = StyleSheet.create({
   spaceName: { ...typography.h2, marginBottom: spacing.xs },
   spaceType: { ...typography.body, color: colors.muted },
   quickSection: { marginBottom: spacing.lg },
-  moduleRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-  },
   quickStack: {
     gap: spacing.sm,
   },

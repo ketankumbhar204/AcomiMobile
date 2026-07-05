@@ -1,8 +1,7 @@
 import React, { useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { useFocusEffect, useRoute } from '@react-navigation/native';
+import { useRoute } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { UUID } from '../../api/types';
 import { DashboardPendingActionsList } from '../../components/dashboard/DashboardAttentionCard';
@@ -36,23 +35,21 @@ export function DashboardPendingActionsScreen({
   const dashboard = useSpaceDashboard(spaceId, spaceType, true);
   const items = useDashboardAttentionItems(
     spaceId,
-    dashboard.attention ?? [],
+    dashboard.attention,
     permissions.canManageMeals === true && isMess,
   );
 
-  useFocusEffect(
-    useCallback(() => {
-      void dashboard.reload();
-    }, [dashboard.reload]),
+  const showInitialLoader = dashboard.loading && dashboard.summary == null;
+  const empty = useMemo(
+    () => !showInitialLoader && !dashboard.refreshing && items.length === 0,
+    [dashboard.refreshing, items.length, showInitialLoader],
   );
-
-  const empty = useMemo(() => !dashboard.loading && items.length === 0, [dashboard.loading, items.length]);
 
   return (
     <Screen scrollable contentStyle={styles.content}>
       <Text style={styles.subtitle}>{t('dashboard.pendingActions.screenSubtitle')}</Text>
 
-      {dashboard.loading ? (
+      {showInitialLoader ? (
         <ActivityIndicator color={colors.primary} style={styles.loader} />
       ) : empty ? (
         <View style={styles.emptyCard}>

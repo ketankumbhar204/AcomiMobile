@@ -1,20 +1,13 @@
 import { mealsApi } from '../api/mealsApi';
 import type { MealComboResponse, UUID } from '../api/types';
-import { hasComboPrice, parsePriceInput, validatePriceInput } from './comboPrice';
+import { hasComboPrice, parsePriceInput, validatePriceInput, getEffectivePriceDraft } from './comboPrice';
 
 export type ComboPriceDraftError = 'required' | 'invalid' | 'nonPositive';
 
 export type ComboPriceDraftErrors = Record<string, ComboPriceDraftError>;
 
 function priceDraftForCombo(combo: MealComboResponse, draftPrices: Record<string, string>): string {
-  const draft = draftPrices[combo.comboId]?.trim();
-  if (draft) {
-    return draft;
-  }
-  if (hasComboPrice(combo.price)) {
-    return String(combo.price);
-  }
-  return '';
+  return getEffectivePriceDraft(combo.comboId, draftPrices, combo.price);
 }
 
 export async function persistComboPriceDraft(

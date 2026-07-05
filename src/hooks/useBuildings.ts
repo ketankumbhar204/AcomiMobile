@@ -8,6 +8,10 @@ import {
   subscribeAccommodationInvalidation,
 } from '../utils/accommodationQueryCache';
 import { getAccommodationErrorMessage } from '../utils/accommodationErrors';
+import {
+  accommodationInactiveScopeKey,
+  mergeInactiveListItems,
+} from '../utils/accommodationInactiveRegistry';
 
 export function useBuildings(spaceId: UUID | null, options?: { enabled?: boolean }) {
   const enabled = options?.enabled ?? true;
@@ -35,7 +39,6 @@ export function useBuildings(spaceId: UUID | null, options?: { enabled?: boolean
     const queryKey = accommodationQueryKeys.buildings(spaceId);
     console.log('[useBuildings] queryKey', queryKeyLabel(queryKey));
 
-    setBuildings([]);
     setLoading(true);
     setError(null);
 
@@ -45,8 +48,14 @@ export function useBuildings(spaceId: UUID | null, options?: { enabled?: boolean
         console.log('[useBuildings] stale response ignored', { spaceId });
         return;
       }
-      setBuildings(data);
-      console.log('[useBuildings] loaded', data.length);
+      const scopeKey = accommodationInactiveScopeKey('building', { spaceId });
+      const merged = mergeInactiveListItems(
+        data.map(building => ({ ...building, active: building.active ?? true })),
+        scopeKey,
+        building => building.buildingId,
+      );
+      setBuildings(merged);
+      console.log('[useBuildings] loaded', merged.length);
     } catch (err) {
       if (seq !== requestSeq.current) {
         return;
@@ -62,6 +71,17 @@ export function useBuildings(spaceId: UUID | null, options?: { enabled?: boolean
     }
   }, [enabled, spaceId]);
 
+  const patchBuilding = useCallback(
+    (buildingId: UUID, patch: Partial<BuildingResponse>) => {
+      setBuildings(prev =>
+        prev.map(building =>
+          building.buildingId === buildingId ? { ...building, ...patch } : building,
+        ),
+      );
+    },
+    [],
+  );
+
   useEffect(() => {
     requestSeq.current += 1;
     if (!enabled || !spaceId) {
@@ -72,5 +92,9 @@ export function useBuildings(spaceId: UUID | null, options?: { enabled?: boolean
     void refresh();
   }, [cacheGeneration, enabled, refresh, spaceId]);
 
-  return { buildings, loading, error, refresh };
+  const removeBuilding = useCallback((buildingId: UUID) => {
+    setBuildings(prev => prev.filter(building => building.buildingId !== buildingId));
+  }, []);
+
+  return { buildings, loading, error, refresh, patchBuilding, removeBuilding };
 }

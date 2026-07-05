@@ -2,10 +2,19 @@ import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { setMemberMealAccess } from '../../api/mealsApi';
-import type { MemberMealParticipationSummary, UUID } from '../../api/types';
+import type {
+  MemberMealParticipationSummary,
+  MemberOccupancyStatus,
+  SpaceType,
+  UUID,
+} from '../../api/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
-import { isReceivingMeals } from '../../utils/mealAccess';
+import {
+  canEnableMealsForMember,
+  isReceivingMeals,
+  isReceivingMealsForMember,
+} from '../../utils/mealAccess';
 
 type MemberMealAccessBadgeProps = {
   receiving: boolean;
@@ -33,6 +42,8 @@ type MemberListMealAccessToggleProps = {
   canManage: boolean;
   onParticipationChanged: () => void;
   labelKey?: string;
+  spaceType?: SpaceType;
+  occupancyStatus?: MemberOccupancyStatus | null;
 };
 
 export function MemberListMealAccessToggle({
@@ -42,15 +53,22 @@ export function MemberListMealAccessToggle({
   canManage,
   onParticipationChanged,
   labelKey = 'meals.mealAccess.label',
+  spaceType,
+  occupancyStatus,
 }: MemberListMealAccessToggleProps) {
   const { t } = useTranslation();
   const showToast = useToastStore(state => state.showToast);
   const [loading, setLoading] = useState(false);
 
-  const receiving = isReceivingMeals(participation);
+  const receiving = isReceivingMealsForMember(participation, { spaceType, occupancyStatus });
+  const canEnable = canEnableMealsForMember({ spaceType, occupancyStatus });
 
   const onToggle = useCallback(
     async (enabled: boolean) => {
+      if (enabled && !canEnable) {
+        showToast(t('meals.errors.foodRequiresMoveIn'));
+        return;
+      }
       setLoading(true);
       try {
         await setMemberMealAccess(spaceId, memberId, enabled, participation);
@@ -64,7 +82,15 @@ export function MemberListMealAccessToggle({
         setLoading(false);
       }
     },
-    [memberId, onParticipationChanged, participation, showToast, spaceId, t],
+    [
+      canEnable,
+      memberId,
+      onParticipationChanged,
+      participation,
+      showToast,
+      spaceId,
+      t,
+    ],
   );
 
   return (
@@ -78,6 +104,7 @@ export function MemberListMealAccessToggle({
         ) : (
           <Switch
             value={receiving}
+            disabled={!canEnable && !receiving}
             onValueChange={value => void onToggle(value)}
             accessibilityLabel={t(labelKey)}
           />

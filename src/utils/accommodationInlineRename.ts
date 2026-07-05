@@ -1,25 +1,27 @@
 import { accommodationApi } from '../api/accommodationApi';
-import type { UUID } from '../api/types';
+import type {
+  BedResponse,
+  BuildingResponse,
+  UUID,
+} from '../api/types';
 import { getAccommodationErrorMessage } from './accommodationErrors';
-import { invalidateAccommodationQueries } from './accommodationQueryCache';
 
-async function afterRename() {
-  invalidateAccommodationQueries();
-}
+export type BuildingRenameSnapshot = Pick<BuildingResponse, 'code' | 'layoutMode'>;
 
 export async function renameBuildingName(
   spaceId: UUID,
   buildingId: UUID,
   name: string,
-): Promise<void> {
+  snapshot?: BuildingRenameSnapshot,
+): Promise<BuildingResponse> {
   try {
-    const building = await accommodationApi.getBuilding(spaceId, buildingId);
-    await accommodationApi.updateBuilding(spaceId, buildingId, {
+    const meta =
+      snapshot ?? (await accommodationApi.getBuilding(spaceId, buildingId));
+    return await accommodationApi.updateBuilding(spaceId, buildingId, {
       name,
-      code: building.code ?? undefined,
-      layoutMode: building.layoutMode,
+      code: meta.code ?? undefined,
+      layoutMode: meta.layoutMode,
     });
-    await afterRename();
   } catch (err) {
     throw new Error(getAccommodationErrorMessage(err, 'accommodation.errors.saveBuilding'));
   }
@@ -38,7 +40,6 @@ export async function renameFloorName(
       floorNumber: floor.floorNumber,
       sortOrder: floor.sortOrder,
     });
-    await afterRename();
   } catch (err) {
     throw new Error(getAccommodationErrorMessage(err, 'accommodation.errors.saveFloor'));
   }
@@ -58,7 +59,6 @@ export async function renameUnitName(
       status: unit.status,
       unitKind: unit.unitKind ?? undefined,
     });
-    await afterRename();
   } catch (err) {
     throw new Error(getAccommodationErrorMessage(err, 'accommodation.errors.saveUnit'));
   }
@@ -78,7 +78,6 @@ export async function renameRoomName(
       capacity: room.capacity,
       status: room.status,
     });
-    await afterRename();
   } catch (err) {
     throw new Error(getAccommodationErrorMessage(err, 'accommodation.errors.saveRoom'));
   }
@@ -90,15 +89,14 @@ export async function renameBedName(
   roomId: UUID,
   bedId: UUID,
   name: string,
-): Promise<void> {
+): Promise<BedResponse> {
   try {
     const bed = await accommodationApi.getBed(spaceId, roomId, bedId);
-    await accommodationApi.updateBed(spaceId, roomId, bedId, {
+    return await accommodationApi.updateBed(spaceId, roomId, bedId, {
       name,
       bedNumber: bed.bedNumber,
       status: bed.status,
     });
-    await afterRename();
   } catch (err) {
     throw new Error(getAccommodationErrorMessage(err, 'accommodation.errors.saveBed'));
   }
@@ -111,15 +109,14 @@ export async function renameBedNumber(
   roomId: UUID,
   bedId: UUID,
   bedNumber: string,
-): Promise<void> {
+): Promise<BedResponse> {
   try {
     const bed = await accommodationApi.getBed(spaceId, roomId, bedId);
-    await accommodationApi.updateBed(spaceId, roomId, bedId, {
+    return await accommodationApi.updateBed(spaceId, roomId, bedId, {
       name: bed.name,
       bedNumber,
       status: bed.status,
     });
-    await afterRename();
   } catch (err) {
     throw new Error(getAccommodationErrorMessage(err, 'accommodation.errors.saveBed'));
   }

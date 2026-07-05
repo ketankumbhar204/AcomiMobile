@@ -141,4 +141,31 @@ describe('normalizeDashboardSummary', () => {
     expect(result.messOperations?.todaysHeadcount).toBeNull();
     expect(result.attention[0].overdueCount).toBe(2);
   });
+
+  it('normalizes accommodation operation counts', () => {
+    const result = normalizeDashboardSummary({
+      spaceType: 'PG',
+      month: '2026-07',
+      financial: {
+        expectedCharges: 10000,
+        collected: null,
+        pending: 10000,
+        currencyCode: 'INR',
+      },
+      attention: [],
+      accommodationOperations: {
+        occupiedBeds: '1',
+        vacantBeds: '669',
+        moveInsThisMonth: '1',
+        pendingPaymentsCount: '1',
+      },
+    });
+
+    expect(result.accommodationOperations).toEqual({
+      occupiedBeds: 1,
+      vacantBeds: 669,
+      moveInsThisMonth: 1,
+      pendingPaymentsCount: 1,
+    });
+  });
 });

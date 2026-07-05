@@ -11,6 +11,11 @@ export { FoodTypePicker } from './FoodTypePicker';
 export { SpaceTypePicker } from './SpaceTypePicker';
 export { Button } from './Button';
 export { ConfirmDialogProvider, useConfirmDialog } from './ConfirmDialog';
+export {
+  QuickActionSheetProvider,
+  useQuickActionSheet,
+} from './QuickActionSheetProvider';
+export type { QuickActionSheetOption } from './QuickActionSheetModal';
 export { Card } from './Card';
 export { EmptyState } from './EmptyState';
 export { HeaderBackButton } from './HeaderBackButton';
@@ -28,6 +33,8 @@ export { ListSearchBar } from './ListSearchBar';
 export { ListSearchFilterBar } from './ListSearchFilterBar';
 export { ListFilterChips } from './ListFilterChips';
 export type { ListFilterChipOption } from './ListFilterChips';
+export { ListFilterToggleChips } from './ListFilterToggleChips';
+export type { ListFilterToggleChipOption } from './ListFilterToggleChips';
 export {
   ListFilterDrawer,
   FilterDrawerSection,

@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import {
   FlatList,
   RefreshControl,
@@ -18,36 +18,48 @@ import type {
   UnitListItemResponse,
 } from '../../api/types';
 import {
+  AccommodationContextTrail,
   AccommodationEntityRow,
   AccommodationListFooter,
   AccommodationSearchBar,
   AccommodationStatusBadge,
+  AccommodationViewModeToggle,
+  BuildingElevationLayout,
   BuildingSummaryHeader,
+  BuildingUnitElevation,
   BuilderRowLifecycleMenu,
   BulkUnitsModal,
   DuplicateBuildingModal,
   DuplicateFloorModal,
   HeaderMenuSlot,
+  UNIT_GRID_NUM_COLUMNS,
 } from '../../components/accommodation';
 import { Button, EmptyState, FAB, HeaderBackButton, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
+import { useHierarchyOccupancyPicker } from '../../hooks/useHierarchyOccupancyPicker';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useAccommodationUiProfile } from '../../hooks/useAccommodationUiProfile';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
+import { useAccommodationViewMode } from '../../hooks/useAccommodationViewMode';
+import { useAccommodationSearchScroll } from '../../hooks/useAccommodationSearchScroll';
 import { useBulkUnits } from '../../hooks/useBulkUnits';
 import { useDuplicateBuilding } from '../../hooks/useDuplicateBuilding';
 import { useDuplicateFloor } from '../../hooks/useDuplicateFloor';
 import { useFloors } from '../../hooks/useFloors';
 import { useUnits } from '../../hooks/useUnits';
+import { resetToAccommodationHome } from '../../navigation/navigationRef';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, spacing, typography } from '../../theme';
-import { formatFloorHeaderTitle } from '../../utils/accommodationLabels';
+import { buildAccommodationTrail } from '../../utils/accommodationContext';
+import { navigateToAccommodationTrailSegment } from '../../utils/accommodationNavigation';
 import { invalidateAccommodationQueries } from '../../utils/accommodationQueryCache';
 import {
   renameBuildingName,
   renameFloorName,
   renameUnitName,
 } from '../../utils/accommodationInlineRename';
+import { isAccommodationEntityActive } from '../../utils/accommodationEntityActive';
+import { applyAccommodationInactiveLifecycle } from '../../utils/accommodationInactiveLifecycle';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'AccommodationBuilder'>;
 type Route = NativeStackScreenProps<MainStackParamList, 'AccommodationBuilder'>['route'];
@@ -75,10 +87,15 @@ export function AccommodationBuilderScreen() {
     summaryLoading,
     summaryError,
     refreshSummary,
+    patchSummary,
   } = useAccommodationUiProfile(spaceId, spaceType, buildingId);
   const canManage = permissions.canManageAccommodation;
+  const canManageOccupancyActions = permissions.canManageOccupancy;
   const showFab = permissions.canManageAccommodation;
+  const hierarchyPicker = useHierarchyOccupancyPicker(spaceId, spaceType);
   const isRental = profile?.layoutMode === 'RENTAL';
+
+  const { isLayout, isList, setViewMode } = useAccommodationViewMode();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -104,6 +121,34 @@ export function AccommodationBuilderScreen() {
 
   const items: ListItem[] = profile?.showFloors ? floorsHook.floors : unitsHook.units;
 
+  const listRef = useAccommodationSearchScroll(
+    items,
+    searchQuery,
+    useCallback((item: ListItem) => item.name, []),
+  );
+
+  const trailContext = useMemo(
+    () => ({
+      spaceId,
+      buildingId,
+      buildingName: summary?.name,
+      layoutMode: profile?.layoutMode,
+    }),
+    [buildingId, profile?.layoutMode, spaceId, summary?.name],
+  );
+
+  const trailSegments = useMemo(
+    () => buildAccommodationTrail(trailContext, 'building'),
+    [trailContext],
+  );
+
+  const onTrailNavigate = useCallback(
+    (level: Parameters<typeof navigateToAccommodationTrailSegment>[2]) => {
+      navigateToAccommodationTrailSegment(navigation, trailContext, level);
+    },
+    [navigation, trailContext],
+  );
+
   const duplicateBuildingHook = useDuplicateBuilding();
   const duplicateFloorHook = useDuplicateFloor();
   const bulkUnitsHook = useBulkUnits();
@@ -126,12 +171,13 @@ export function AccommodationBuilderScreen() {
 
   const handleLifecycleSuccess = useCallback(
     (action: 'deactivate' | 'restore' | 'delete', entityType: string) => {
-      void refreshAll();
       if (action === 'delete' && entityType === 'building') {
-        navigation.goBack();
+        resetToAccommodationHome(spaceId);
+        return;
       }
+      void refreshAll();
     },
-    [navigation, refreshAll],
+    [refreshAll, spaceId],
   );
 
   useLayoutEffect(() => {
@@ -225,6 +271,8 @@ export function AccommodationBuilderScreen() {
 
   const showListLoading = listLoading && !refreshing && items.length === 0;
   const error = summaryError ?? listError;
+  const useUnitGrid = isLayout && profile?.showUnits;
+  const useFloorStack = isLayout && profile?.showFloors;
 
   const listHeader = (
     <View style={styles.header}>
@@ -236,11 +284,22 @@ export function AccommodationBuilderScreen() {
         loading={summaryLoading && !summary}
         editableName={showFab}
         onSaveName={async name => {
-          await renameBuildingName(spaceId, buildingId, name);
+          await renameBuildingName(
+            spaceId,
+            buildingId,
+            name,
+            summary
+              ? { code: summary.code, layoutMode: summary.layoutMode }
+              : undefined,
+          );
+          patchSummary({ name });
           showToast(t('accommodation.buildings.updateSuccess'));
-          await refreshAll();
         }}
       />
+
+      <AccommodationContextTrail segments={trailSegments} onNavigate={onTrailNavigate} />
+
+      <AccommodationViewModeToggle value={isLayout ? 'layout' : 'list'} onChange={setViewMode} />
 
       {canManage && profile?.showUnits && (spaceType === 'CO_LIVING' || spaceType === 'RENTAL') ? (
         <Button
@@ -261,12 +320,158 @@ export function AccommodationBuilderScreen() {
       ) : null}
 
       <AccommodationSearchBar value={searchQuery} onChangeText={setSearchQuery} />
+
       {showListLoading ? <SkeletonCard /> : null}
     </View>
   );
 
+  const floorItems = items.filter(isFloorItem);
+  const unitItems = items.filter((item): item is UnitListItemResponse => !isFloorItem(item));
+
+  const renderFloorMenu = (floor: FloorListItemResponse) => {
+    const inactive = !isAccommodationEntityActive(floor);
+    const occupancyOptions =
+      canManageOccupancyActions && !inactive
+        ? hierarchyPicker.buildMenuOptions(
+          {
+            buildingId,
+            buildingName: summary?.name ?? '',
+            layoutMode: profile?.layoutMode,
+            floorId: floor.floorId,
+            floorName: floor.name,
+          },
+          () => openFloorRooms(floor),
+        )
+      : [];
+
+    if (!canManage && occupancyOptions.length === 0) {
+      return undefined;
+    }
+
+    return (
+      <BuilderRowLifecycleMenu
+        spaceId={spaceId}
+        buildingId={buildingId}
+        entityType="floor"
+        entityId={floor.floorId}
+        role={permissions.membershipRole}
+        isInactive={inactive}
+        prependOptions={occupancyOptions}
+        forceShowTrigger={occupancyOptions.length > 0}
+        onEdit={() =>
+          navigation.navigate('FloorForm', {
+            spaceId,
+            buildingId,
+            mode: 'edit',
+            floorId: floor.floorId,
+          })
+        }
+        onDuplicate={() => setDuplicateFloorTarget(floor)}
+        duplicateLabel={t('accommodation.duplicate.floor.action')}
+        onSuccess={(action, entityType) => {
+          applyAccommodationInactiveLifecycle(
+            action,
+            'floor',
+            floorsHook.inactiveScopeKey ?? '',
+            floor.floorId,
+            floor,
+            {
+              patch: patch => floorsHook.patchFloor(floor.floorId, patch),
+              remove: () => floorsHook.removeFloor(floor.floorId),
+            },
+          );
+          handleLifecycleSuccess(action, entityType);
+        }}
+      />
+    );
+  };
+
+  const renderUnitMenu = (unit: UnitListItemResponse) => {
+    const inactive = !isAccommodationEntityActive(unit);
+    const occupancyOptions =
+      canManageOccupancyActions && !inactive
+        ? hierarchyPicker.buildMenuOptions(
+          {
+            buildingId,
+            buildingName: summary?.name ?? '',
+            layoutMode: profile?.layoutMode,
+            unitId: unit.unitId,
+            unitName: unit.name,
+          },
+          () => openUnit(unit),
+        )
+      : [];
+
+    if (!canManage && occupancyOptions.length === 0) {
+      return undefined;
+    }
+
+    return (
+      <BuilderRowLifecycleMenu
+        spaceId={spaceId}
+        buildingId={buildingId}
+        entityType="unit"
+        entityId={unit.unitId}
+        role={permissions.membershipRole}
+        isInactive={inactive}
+        prependOptions={occupancyOptions}
+        forceShowTrigger={occupancyOptions.length > 0}
+        onEdit={() =>
+          navigation.navigate('UnitForm', {
+            spaceId,
+            buildingId,
+            mode: 'edit',
+            unitId: unit.unitId,
+          })
+        }
+        onSuccess={(action, entityType) => {
+          applyAccommodationInactiveLifecycle(
+            action,
+            'unit',
+            unitsHook.inactiveScopeKey ?? '',
+            unit.unitId,
+            unit,
+            {
+              patch: patch => unitsHook.patchUnit(unit.unitId, patch),
+              remove: () => unitsHook.removeUnit(unit.unitId),
+            },
+          );
+          handleLifecycleSuccess(action, entityType);
+        }}
+      />
+    );
+  };
+
+  const layoutVisual =
+    isLayout && !showListLoading && floorItems.length > 0 ? (
+      <BuildingElevationLayout
+        buildingName={summary?.name}
+        buildingSummary={summary}
+        floors={floorItems}
+        layoutMode={profile?.layoutMode}
+        searchQuery={searchQuery}
+        onFloorPress={openFloorRooms}
+        renderFloorMenu={renderFloorMenu}
+      />
+    ) : isLayout && !showListLoading && unitItems.length > 0 ? (
+      <BuildingUnitElevation
+        buildingName={summary?.name}
+        buildingSummary={summary}
+        units={unitItems}
+        layoutMode={profile?.layoutMode}
+        searchQuery={searchQuery}
+        onUnitPress={openUnit}
+        renderUnitMenu={renderUnitMenu}
+      />
+    ) : null;
+
+  const hasLayoutContent =
+    isLayout &&
+    !showListLoading &&
+    (floorItems.length > 0 || unitItems.length > 0);
+
   const listEmpty =
-    !showListLoading && !error ? (
+    hasLayoutContent ? null : !showListLoading && !error ? (
       <EmptyState
         title={
           profile?.showFloors
@@ -284,6 +489,7 @@ export function AccommodationBuilderScreen() {
 
   const renderItem = ({ item }: { item: ListItem }) => {
     if (isFloorItem(item)) {
+      const floorMenu = renderFloorMenu(item);
       return (
         <AccommodationEntityRow
           title={item.name}
@@ -295,37 +501,19 @@ export function AccommodationBuilderScreen() {
           editableName={showFab}
           onSaveName={async name => {
             await renameFloorName(spaceId, buildingId, item.floorId, name);
+            floorsHook.patchFloor(item.floorId, { name });
             showToast(t('accommodation.floors.updateSuccess'));
-            await refreshAll();
           }}
+          active={item.active}
           onPress={() => openFloorRooms(item)}
-          menu={
-            canManage ? (
-              <BuilderRowLifecycleMenu
-                spaceId={spaceId}
-                buildingId={buildingId}
-                entityType="floor"
-                entityId={item.floorId}
-                role={permissions.membershipRole}
-                onEdit={() =>
-                  navigation.navigate('FloorForm', {
-                    spaceId,
-                    buildingId,
-                    mode: 'edit',
-                    floorId: item.floorId,
-                  })
-                }
-                onDuplicate={() => setDuplicateFloorTarget(item)}
-                duplicateLabel={t('accommodation.duplicate.floor.action')}
-                onSuccess={handleLifecycleSuccess}
-              />
-            ) : undefined
-          }
+          menu={floorMenu}
         />
       );
     }
 
     const unit = item as UnitListItemResponse;
+    const unitMenu = renderUnitMenu(unit);
+
     return (
       <AccommodationEntityRow
         title={unit.name}
@@ -338,34 +526,16 @@ export function AccommodationBuilderScreen() {
               })
         }
         iconLabel={unit.name.charAt(0).toUpperCase()}
-        badge={isRental ? <AccommodationStatusBadge status={unit.status} /> : undefined}
+        badge={isRental && isAccommodationEntityActive(unit) ? <AccommodationStatusBadge status={unit.status} /> : undefined}
         editableName={showFab}
         onSaveName={async name => {
           await renameUnitName(spaceId, buildingId, unit.unitId, name);
+          unitsHook.patchUnit(unit.unitId, { name });
           showToast(t('accommodation.units.updateSuccess'));
-          await refreshAll();
         }}
+        active={unit.active}
         onPress={() => openUnit(unit)}
-        menu={
-          canManage ? (
-            <BuilderRowLifecycleMenu
-              spaceId={spaceId}
-              buildingId={buildingId}
-              entityType="unit"
-              entityId={unit.unitId}
-              role={permissions.membershipRole}
-              onEdit={() =>
-                navigation.navigate('UnitForm', {
-                  spaceId,
-                  buildingId,
-                  mode: 'edit',
-                  unitId: unit.unitId,
-                })
-              }
-              onSuccess={handleLifecycleSuccess}
-            />
-          ) : undefined
-        }
+        menu={unitMenu}
       />
     );
   };
@@ -382,7 +552,11 @@ export function AccommodationBuilderScreen() {
     <RequireAccommodationAccess spaceId={spaceId}>
     <View style={styles.root}>
       <FlatList
-        data={showListLoading ? [] : items}
+        ref={listRef}
+        data={showListLoading || isLayout ? [] : items}
+        key={isLayout ? 'accommodation-layout' : useUnitGrid ? 'unit-grid' : 'accommodation-list'}
+        numColumns={!isLayout && useUnitGrid ? UNIT_GRID_NUM_COLUMNS : 1}
+        columnWrapperStyle={!isLayout && useUnitGrid ? styles.unitGridRow : undefined}
         keyExtractor={item =>
           isFloorItem(item) ? item.floorId : (item as UnitListItemResponse).unitId
         }
@@ -390,7 +564,12 @@ export function AccommodationBuilderScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
-        ListHeaderComponent={listHeader}
+        ListHeaderComponent={
+          <>
+            {listHeader}
+            {layoutVisual}
+          </>
+        }
         ListEmptyComponent={listEmpty}
         ListFooterComponent={<AccommodationListFooter loadingMore={loadingMore} />}
         onEndReached={() => {
@@ -497,6 +676,7 @@ export function AccommodationBuilderScreen() {
           void refreshAll();
         }}
       />
+      {hierarchyPicker.pickerModal}
     </View>
     </RequireAccommodationAccess>
   );
@@ -517,6 +697,21 @@ const styles = StyleSheet.create({
   },
   secondaryAction: {
     marginBottom: spacing.md,
+  },
+  buildingLayoutTitle: {
+    ...typography.bodyStrong,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  floorStackContainer: {
+    borderWidth: 2,
+    borderColor: colors.border,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: colors.white,
+  },
+  unitGridRow: {
+    gap: spacing.sm,
   },
   centered: {
     flex: 1,

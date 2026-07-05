@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -25,8 +25,14 @@ import type {
   SpaceType,
   UnitSetupConfig,
 } from '../../api/types';
-import { PropertyLayoutModePicker, RoomTypePicker } from '../../components/accommodation';
-import { SetupPreviewTree } from '../../components/accommodation/SetupPreviewTree';
+import {
+  PropertyLayoutModePicker,
+  RoomTypePicker,
+  SetupStructureEditor,
+  executeSetupStructure,
+} from '../../components/accommodation';
+import { expandToEditableStructure } from '../../components/accommodation/setup-preview/setupStructureModel';
+import type { EditableSetupStructure } from '../../components/accommodation/setup-preview/setupStructureTypes';
 import { Button, FormInput, HeaderBackButton } from '../../components/ui';
 import { useQuickSetup } from '../../hooks/useQuickSetup';
 import type { MainStackParamList } from '../../navigation/types';
@@ -35,7 +41,6 @@ import { useToastStore } from '../../store/toastStore';
 import { colors, radius, spacing, typography } from '../../theme';
 import {
   buildSetupRequest,
-  generateIdempotencyKey,
   validateCoLivingSetup,
   validatePgHostelSetup,
   validateRentalSetup,
@@ -102,7 +107,8 @@ export function QuickSetupWizardScreen() {
 
   const [stepError, setStepError] = useState<string | null>(null);
   const [preview, setPreview] = useState<AccommodationSetupPreviewResponse | null>(null);
-  const idempotencyKeyRef = useRef<string>(generateIdempotencyKey());
+  const [editableStructure, setEditableStructure] = useState<EditableSetupStructure | null>(null);
+  const [generating, setGenerating] = useState(false);
 
   const currentStep = steps[stepIndex] ?? 'building';
   const isApartmentPg = layoutMode === 'APARTMENT_PG';
@@ -116,7 +122,38 @@ export function QuickSetupWizardScreen() {
     setLayoutMode(defaultLayoutModeForSpaceType(spaceType));
   }, [spaceType]);
 
-  const { preview: previewSetup, execute, loading, error, setError } = useQuickSetup(spaceId);
+  const expandConfig = useMemo(
+    () => ({
+      roomsPerParent: Number(roomsPerParent) || 1,
+      bedsPerRoom: Number(bedsPerRoom) || 1,
+      capacityPerRoom: Number(capacityPerRoom) || 1,
+      includeGroundFloor,
+    }),
+    [bedsPerRoom, capacityPerRoom, includeGroundFloor, roomsPerParent],
+  );
+
+  const buildExpandConfig = useCallback(() => {
+    if (!spaceType) {
+      return null;
+    }
+    return {
+      buildingName: buildingName.trim(),
+      buildingCode: buildingCode.trim(),
+      layoutMode,
+      spaceType,
+      roomType: roomType ?? 'SHARED',
+      ...expandConfig,
+    };
+  }, [
+    buildingCode,
+    buildingName,
+    expandConfig,
+    layoutMode,
+    roomType,
+    spaceType,
+  ]);
+
+  const { preview: previewSetup, loading, error, setError } = useQuickSetup(spaceId);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -317,34 +354,47 @@ export function QuickSetupWizardScreen() {
 
     const result = await previewSetup(body);
     if (result) {
+      const config = buildExpandConfig();
+      if (config) {
+        setEditableStructure(expandToEditableStructure(result.sample, result.totals, config));
+      }
       setPreview(result);
       setStepIndex(steps.indexOf('preview'));
     }
   }
 
   async function handleGenerate() {
-    const body = buildRequest();
-    if (!body) {
+    if (!editableStructure || !spaceType) {
       return;
     }
 
-    const result = await execute(body, idempotencyKeyRef.current);
-    if (!result) {
+    if (!editableStructure.building.name.trim()) {
+      setStepError(t('accommodation.buildings.nameRequired'));
       return;
     }
 
-    const beds = result.totals.beds;
-    showToast(
-      t('accommodation.setup.success', {
-        beds,
-        name: buildingName.trim(),
-      }),
-    );
+    setStepError(null);
+    setError(null);
+    setGenerating(true);
 
-    navigation.replace('AccommodationBuilder', {
-      spaceId,
-      buildingId: result.buildingId,
-    });
+    try {
+      const result = await executeSetupStructure(spaceId, editableStructure);
+      showToast(
+        t('accommodation.setup.success', {
+          beds: result.totals.beds,
+          name: editableStructure.building.name.trim(),
+        }),
+      );
+      navigation.replace('AccommodationBuilder', {
+        spaceId,
+        buildingId: result.buildingId,
+      });
+    } catch (generateError) {
+      console.error('[QuickSetupWizard] generate structure failed', generateError);
+      setError(t('accommodation.setup.errors.generate'));
+    } finally {
+      setGenerating(false);
+    }
   }
 
   function goBack() {
@@ -356,6 +406,7 @@ export function QuickSetupWizardScreen() {
     setError(null);
     if (currentStep === 'preview') {
       setPreview(null);
+      setEditableStructure(null);
     }
     setStepIndex(index => Math.max(index - 1, 0));
   }
@@ -540,23 +591,19 @@ export function QuickSetupWizardScreen() {
             </View>
           ) : null}
 
-          {currentStep === 'preview' && preview ? (
+          {currentStep === 'preview' && preview && editableStructure ? (
             <View>
               <Text style={styles.sectionTitle}>{t('accommodation.setup.previewStep')}</Text>
-              <View style={styles.totalsCard}>
-                <Text style={styles.totalsLine}>
-                  {t('accommodation.setup.totals.floors', { count: preview.totals.floors })}
-                </Text>
-                <Text style={styles.totalsLine}>
-                  {t('accommodation.setup.totals.units', { count: preview.totals.units })}
-                </Text>
-                <Text style={styles.totalsLine}>
-                  {t('accommodation.setup.totals.rooms', { count: preview.totals.rooms })}
-                </Text>
-                <Text style={styles.totalsLine}>
-                  {t('accommodation.setup.totals.beds', { count: preview.totals.beds })}
-                </Text>
-              </View>
+              <SetupStructureEditor
+                structure={editableStructure}
+                onChange={setEditableStructure}
+                expandConfig={expandConfig}
+                layoutModeLabel={
+                  spaceType && isLayoutModeSelectable(spaceType)
+                    ? t(getLayoutModeLabelKey(layoutMode))
+                    : undefined
+                }
+              />
               {preview.warnings.length > 0 ? (
                 <View style={styles.warnings}>
                   {preview.warnings.map((warning, index) => (
@@ -566,8 +613,6 @@ export function QuickSetupWizardScreen() {
                   ))}
                 </View>
               ) : null}
-              <Text style={styles.sampleTitle}>{t('accommodation.setup.sampleTree')}</Text>
-              <SetupPreviewTree nodes={preview.sample} />
             </View>
           ) : null}
 
@@ -583,9 +628,9 @@ export function QuickSetupWizardScreen() {
             />
             {currentStep === 'preview' ? (
               <Button
-                label={t('accommodation.setup.generate')}
+                label={t('accommodation.setup.generateStructure')}
                 onPress={handleGenerate}
-                loading={loading}
+                loading={generating}
                 style={styles.actionBtn}
               />
             ) : (
@@ -664,29 +709,14 @@ const styles = StyleSheet.create({
     color: colors.muted,
     marginBottom: spacing.lg,
   },
-  totalsCard: {
-    backgroundColor: colors.white,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
-    gap: spacing.xs,
-  },
-  totalsLine: {
-    ...typography.bodyStrong,
-  },
   warnings: {
+    marginTop: spacing.lg,
     marginBottom: spacing.lg,
     gap: spacing.xs,
   },
   warningText: {
     ...typography.body,
     color: '#B45309',
-  },
-  sampleTitle: {
-    ...typography.bodyStrong,
-    marginBottom: spacing.md,
   },
   actions: {
     flexDirection: 'row',

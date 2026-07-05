@@ -19,9 +19,16 @@ import {
   AccommodationListFooter,
   AccommodationSearchBar,
   AccommodationStatusBadge,
-  ParentSummaryCard,
+  AccommodationViewModeToggle,
+  ApartmentFloorPlanLayout,
+  AccommodationMetadataCard,
+  BuilderRowLifecycleMenu,
 } from '../../components/accommodation';
-import { Button, EmptyState, FAB, HeaderBackButton, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
+import { EmptyState, FAB, HeaderBackButton, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
+import { useHierarchyOccupancyPicker } from '../../hooks/useHierarchyOccupancyPicker';
+import { useAccommodationUiProfile } from '../../hooks/useAccommodationUiProfile';
+import { useAccommodationViewMode } from '../../hooks/useAccommodationViewMode';
+import { useAccommodationSearchScroll } from '../../hooks/useAccommodationSearchScroll';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useUnitsByFloor } from '../../hooks/useUnitsByFloor';
@@ -50,9 +57,16 @@ export function AccommodationFloorApartmentsScreen() {
   const spaceId = useActiveSpaceId(route.params.spaceId);
 
   const permissions = useSpacePermissions(spaceId);
+  const spaceType = permissions.spaceType;
   const showFab = permissions.canManageAccommodation;
   const canManage = permissions.canManageAccommodation;
+  const canManageOccupancyActions = permissions.canManageOccupancy;
   const showToast = useToastStore(state => state.showToast);
+  const hierarchyPicker = useHierarchyOccupancyPicker(spaceId, spaceType);
+
+  const { profile } = useAccommodationUiProfile(spaceId, spaceType, buildingId);
+
+  const { isLayout, setViewMode } = useAccommodationViewMode();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -65,7 +79,14 @@ export function AccommodationFloorApartmentsScreen() {
     hasMore,
     refresh,
     loadMore,
+    patchUnit,
   } = useUnitsByFloor(spaceId, buildingId, floorId, { searchQuery });
+
+  const listRef = useAccommodationSearchScroll(
+    units,
+    searchQuery,
+    useCallback((unit: UnitListItemResponse) => unit.name, []),
+  );
 
   const trailContext = useMemo(
     () =>
@@ -82,16 +103,6 @@ export function AccommodationFloorApartmentsScreen() {
     () => buildAccommodationTrail(trailContext, 'floor'),
     [trailContext],
   );
-
-  const summaryCounts = useMemo(() => {
-    if (units.length === 0) {
-      return { roomCount: undefined, bedCount: undefined };
-    }
-    return {
-      roomCount: units.reduce((sum, unit) => sum + unit.roomCount, 0),
-      bedCount: units.reduce((sum, unit) => sum + unit.bedCount, 0),
-    };
-  }, [units]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -133,6 +144,51 @@ export function AccommodationFloorApartmentsScreen() {
     });
   };
 
+  const renderUnitMenu = (item: UnitListItemResponse) => {
+    const occupancyOptions = canManageOccupancyActions
+      ? hierarchyPicker.buildMenuOptions(
+          {
+            buildingId,
+            buildingName: buildingName ?? '',
+            layoutMode: profile?.layoutMode,
+            floorId,
+            floorName: floorName ?? '',
+            unitId: item.unitId,
+            unitName: item.name,
+          },
+          () => openUnitRooms(item),
+        )
+      : [];
+
+    if (!canManage && occupancyOptions.length === 0) {
+      return undefined;
+    }
+
+    return (
+      <BuilderRowLifecycleMenu
+        spaceId={spaceId}
+        buildingId={buildingId}
+        entityType="unit"
+        entityId={item.unitId}
+        role={permissions.membershipRole}
+        prependOptions={occupancyOptions}
+        forceShowTrigger={occupancyOptions.length > 0}
+        onEdit={() =>
+          navigation.navigate('UnitForm', {
+            spaceId,
+            buildingId,
+            floorId,
+            mode: 'edit',
+            unitId: item.unitId,
+          })
+        }
+        onSuccess={() => {
+          void refresh();
+        }}
+      />
+    );
+  };
+
   const renderItem = ({ item }: { item: UnitListItemResponse }) => (
     <AccommodationEntityRow
       title={item.name}
@@ -145,14 +201,26 @@ export function AccommodationFloorApartmentsScreen() {
       editableName={canManage}
       onSaveName={async name => {
         await renameUnitName(spaceId, buildingId, item.unitId, name);
+        patchUnit(item.unitId, { name });
         showToast(t('accommodation.units.updateSuccess'));
-        await refresh();
       }}
       onPress={() => openUnitRooms(item)}
+      menu={renderUnitMenu(item)}
     />
   );
 
   const showLoading = loading && !refreshing && units.length === 0;
+
+  const layoutVisual =
+    isLayout && !showLoading && units.length > 0 ? (
+      <ApartmentFloorPlanLayout
+        floorName={floorName}
+        units={units}
+        searchQuery={searchQuery}
+        onUnitPress={openUnitRooms}
+        renderUnitMenu={renderUnitMenu}
+      />
+    ) : null;
 
   const listHeader = (
     <View style={styles.header}>
@@ -160,16 +228,18 @@ export function AccommodationFloorApartmentsScreen() {
 
       <AccommodationContextTrail segments={trailSegments} onNavigate={onTrailNavigate} />
 
-      <ParentSummaryCard
-        roomCount={summaryCounts.roomCount}
-        bedCount={summaryCounts.bedCount}
-        loading={showLoading}
-      />
+      <AccommodationMetadataCard title={floorName ?? t('accommodation.floors.title')} />
 
-      <Text style={styles.sectionLabel}>{t('accommodation.apartments.onFloor')}</Text>
-      <Text style={styles.sectionCount}>
-        {t('accommodation.apartments.count', { count: units.length })}
-      </Text>
+      <AccommodationViewModeToggle value={isLayout ? 'layout' : 'list'} onChange={setViewMode} />
+
+      {!isLayout ? (
+        <>
+          <Text style={styles.sectionLabel}>{t('accommodation.apartments.onFloor')}</Text>
+          <Text style={styles.sectionCount}>
+            {t('accommodation.apartments.count', { count: units.length })}
+          </Text>
+        </>
+      ) : null}
 
       <AccommodationSearchBar value={searchQuery} onChangeText={setSearchQuery} />
       {showLoading ? <SkeletonCard /> : null}
@@ -180,10 +250,17 @@ export function AccommodationFloorApartmentsScreen() {
     <RequireAccommodationAccess spaceId={spaceId}>
     <View style={styles.container}>
       <FlatList
-        data={showLoading ? [] : units}
+        ref={listRef}
+        data={showLoading || isLayout ? [] : units}
+        key={isLayout ? 'floor-plan' : 'unit-list'}
         keyExtractor={item => item.unitId}
         renderItem={renderItem}
-        ListHeaderComponent={listHeader}
+        ListHeaderComponent={
+          <>
+            {listHeader}
+            {layoutVisual}
+          </>
+        }
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} />
         }
@@ -194,7 +271,9 @@ export function AccommodationFloorApartmentsScreen() {
         }}
         onEndReachedThreshold={0.3}
         ListEmptyComponent={
-          !showLoading && !error ? (
+          isLayout && layoutVisual
+            ? null
+            : !showLoading && !error ? (
             <EmptyState
               title={t('accommodation.apartments.emptyTitle')}
               description={t('accommodation.apartments.emptyMessage')}
@@ -219,6 +298,7 @@ export function AccommodationFloorApartmentsScreen() {
           accessibilityLabel={t('accommodation.units.addFab')}
         />
       ) : null}
+      {hierarchyPicker.pickerModal}
     </View>
     </RequireAccommodationAccess>
   );
@@ -250,5 +330,8 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: '#DC2626',
     marginBottom: spacing.lg,
+  },
+  unitGridRow: {
+    gap: spacing.sm,
   },
 });

@@ -22,6 +22,7 @@ import {
   useRestoreBuilding,
 } from '../../hooks/accommodationLifecycle';
 import { useAccommodationLifecycleConfirm } from '../../hooks/useAccommodationLifecycleConfirm';
+import { resetToAccommodationHome } from '../../navigation/navigationRef';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { spacing, typography } from '../../theme';
@@ -153,8 +154,8 @@ export function BuildingDetailScreen() {
                 'building',
                 () => deleteBuilding(spaceId, buildingId),
                 () => {
-                  showToast(t('accommodation.lifecycle.deleteSuccess'));
-                  navigation.goBack();
+                  showToast(t('accommodation.lifecycle.delete.building.success'));
+                  resetToAccommodationHome(spaceId);
                 },
               )
             }

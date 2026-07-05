@@ -7,10 +7,11 @@ import {
   subscribeAccommodationInvalidation,
 } from '../utils/accommodationQueryCache';
 import { getAccommodationErrorMessage } from '../utils/accommodationErrors';
+import { mergeInactiveListItems } from '../utils/accommodationInactiveRegistry';
 
 const SEARCH_DEBOUNCE_MS = 300;
 
-export type UseAccommodationPagedListOptions = {
+export type UseAccommodationPagedListOptions<T> = {
   enabled?: boolean;
   searchQuery?: string;
   pageSize?: number;
@@ -18,11 +19,13 @@ export type UseAccommodationPagedListOptions = {
   errorKey: string;
   logTag: string;
   queryKey: readonly unknown[];
+  inactiveScopeKey?: string | null;
+  getItemId?: (item: T) => string;
 };
 
-export function useAccommodationPagedList<T>(
+export function useAccommodationPagedList<T extends { active?: boolean }>(
   fetchPage: (params: ListQueryParams) => Promise<PagedResponse<T>>,
-  options: UseAccommodationPagedListOptions,
+  options: UseAccommodationPagedListOptions<T>,
 ) {
   const {
     enabled = true,
@@ -32,6 +35,8 @@ export function useAccommodationPagedList<T>(
     errorKey,
     logTag,
     queryKey,
+    inactiveScopeKey,
+    getItemId,
   } = options;
 
   const [items, setItems] = useState<T[]>([]);
@@ -75,6 +80,7 @@ export function useAccommodationPagedList<T>(
           page,
           size: pageSize,
           sort,
+          includeInactive: true,
         };
         if (debouncedQuery) {
           params.query = debouncedQuery;
@@ -90,7 +96,14 @@ export function useAccommodationPagedList<T>(
         pageRef.current = data.page;
         setHasMore(!data.last);
         setTotalElements(data.totalElements);
-        setItems(prev => (append ? [...prev, ...data.content] : data.content));
+        const nextPageItems = data.content;
+        setItems(prev => {
+          const merged = append ? [...prev, ...nextPageItems] : nextPageItems;
+          if (!append && inactiveScopeKey && getItemId) {
+            return mergeInactiveListItems(merged, inactiveScopeKey, getItemId);
+          }
+          return merged;
+        });
         console.log(`[${logTag}] loaded page`, data.page, 'items', data.content.length);
       } catch (err) {
         if (seq !== requestSeq.current) {
@@ -132,6 +145,12 @@ export function useAccommodationPagedList<T>(
     await loadPage(pageRef.current + 1, true);
   }, [enabled, hasMore, loading, loadingMore, loadPage]);
 
+  const patchItems = useCallback((predicate: (item: T) => boolean, patch: Partial<T>) => {
+    setItems(prev =>
+      prev.map(item => (predicate(item) ? { ...item, ...patch } : item)),
+    );
+  }, []);
+
   useEffect(() => {
     requestSeq.current += 1;
     if (!enabled) {
@@ -144,6 +163,10 @@ export function useAccommodationPagedList<T>(
     void loadPage(0, false);
   }, [cacheGeneration, debouncedQuery, enabled, loadPage]);
 
+  const removeItems = useCallback((predicate: (item: T) => boolean) => {
+    setItems(prev => prev.filter(item => !predicate(item)));
+  }, []);
+
   return {
     items,
     loading,
@@ -153,5 +176,7 @@ export function useAccommodationPagedList<T>(
     totalElements,
     refresh,
     loadMore,
+    patchItems,
+    removeItems,
   };
 }

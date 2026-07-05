@@ -12,6 +12,10 @@ import {
   isAccommodationNotFoundError,
 } from '../utils/accommodationErrors';
 import { DEFAULT_LIST_PAGE_SIZE } from '../api/accommodationListQuery';
+import {
+  accommodationInactiveScopeKey,
+  mergeInactiveListItems,
+} from '../utils/accommodationInactiveRegistry';
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -119,6 +123,7 @@ export function useBeds(
           page,
           size: DEFAULT_LIST_PAGE_SIZE,
           sort: 'bedNumber',
+          includeInactive: true,
         };
         if (debouncedQuery) {
           params.query = debouncedQuery;
@@ -135,7 +140,18 @@ export function useBeds(
 
         pageRef.current = data.page;
         setHasMore(!data.last);
-        setBeds(prev => (append ? [...prev, ...data.content] : data.content));
+        const inactiveScopeKey =
+          context != null
+            ? accommodationInactiveScopeKey('bed', {
+                spaceId: context.spaceId,
+                roomId: context.roomId,
+              })
+            : null;
+        const mergedBeds =
+          !append && inactiveScopeKey
+            ? mergeInactiveListItems(data.content, inactiveScopeKey, bed => bed.bedId)
+            : data.content;
+        setBeds(prev => (append ? [...prev, ...data.content] : mergedBeds));
       } catch (err) {
         if (seq !== requestSeq.current) {
           return;
@@ -177,6 +193,12 @@ export function useBeds(
     await loadPage(pageRef.current + 1, true);
   }, [enabled, hasMore, loadPage, loading, loadingMore]);
 
+  const patchBed = useCallback((bedId: UUID, patch: Partial<BedListItemResponse>) => {
+    setBeds(prev =>
+      prev.map(bed => (bed.bedId === bedId ? { ...bed, ...patch } : bed)),
+    );
+  }, []);
+
   useEffect(() => {
     requestSeq.current += 1;
     if (!enabled || !context) {
@@ -198,5 +220,9 @@ export function useBeds(
     loadPage,
   ]);
 
-  return { beds, loading, loadingMore, error, notFound, hasMore, refresh, loadMore };
+  const removeBed = useCallback((bedId: UUID) => {
+    setBeds(prev => prev.filter(bed => bed.bedId !== bedId));
+  }, []);
+
+  return { beds, loading, loadingMore, error, notFound, hasMore, refresh, loadMore, patchBed, removeBed };
 }

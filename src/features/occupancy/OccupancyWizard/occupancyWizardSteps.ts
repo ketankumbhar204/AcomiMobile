@@ -13,22 +13,22 @@ export function getWizardSteps(
   switch (mode) {
     case 'ALLOCATE': {
       const steps: OccupancyWizardStep[] = [];
-      if (!hasMember) {
-        steps.push('member');
-      }
       if (!hasTarget) {
         steps.push('target');
+      }
+      if (!hasMember) {
+        steps.push('member');
       }
       steps.push('contract', 'review');
       return steps;
     }
     case 'RESERVE': {
       const steps: OccupancyWizardStep[] = [];
-      if (!hasMember) {
-        steps.push('member');
-      }
       if (!hasTarget) {
         steps.push('target');
+      }
+      if (!hasMember) {
+        steps.push('member');
       }
       steps.push('reserve_dates', 'review');
       return steps;
@@ -70,5 +70,26 @@ export function getWizardTitleKey(mode: OccupancyWizardMode): string {
       return 'occupancyWizard.title.vacate';
     default:
       return 'occupancyWizard.title.default';
+  }
+}
+
+export function getWizardStepTitleKey(step: OccupancyWizardStep): string {
+  switch (step) {
+    case 'member':
+      return 'occupancyWizard.steps.member';
+    case 'target':
+      return 'occupancyWizard.steps.target';
+    case 'contract':
+      return 'occupancyWizard.steps.contract';
+    case 'reserve_dates':
+      return 'occupancyWizard.steps.reserveDates';
+    case 'transfer_current':
+      return 'occupancyWizard.steps.transferCurrent';
+    case 'vacate_confirm':
+      return 'occupancyWizard.steps.vacate';
+    case 'review':
+      return 'occupancyWizard.steps.review';
+    default:
+      return 'occupancyWizard.steps.review';
   }
 }

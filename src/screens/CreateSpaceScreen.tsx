@@ -12,10 +12,15 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import type { SpaceType } from '../api/types';
+import type { GenderPolicy, SpaceType } from '../api/types';
 import { Button, FormInput, SpaceTypePicker } from '../components/ui';
+import { SpaceAmenitiesField } from '../components/spaces/SpaceAmenitiesField';
+import { SpacePropertyCategoryPicker } from '../components/spaces/SpacePropertyCategoryPicker';
 import { HeaderBackButton } from '../components/ui/HeaderBackButton';
 import { useCreateSpace } from '../hooks/useCreateSpace';
+import type { AmenityAssignment } from '../api/types';
+import { normalizeAmenityAssignments, supportsSpaceAmenities, buildAllPresetAmenities, presetAmenityLabelKey } from '../utils/amenities';
+import { supportsSpacePropertyCategory } from '../utils/spacePropertyCategory';
 import type { MainStackParamList } from '../navigation/types';
 import { resetToDashboard } from '../navigation/navigationRef';
 import { useSpaceStore } from '../store/spaceStore';
@@ -41,6 +46,8 @@ export function CreateSpaceScreen() {
   const [type, setType] = useState<SpaceType | null>(null);
   const [address, setAddress] = useState('');
   const [contactNumber, setContactNumber] = useState('');
+  const [amenities, setAmenities] = useState<AmenityAssignment[]>([]);
+  const [genderPolicy, setGenderPolicy] = useState<GenderPolicy | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   useLayoutEffect(() => {
@@ -76,6 +83,10 @@ export function CreateSpaceScreen() {
       type: type!,
       address: address.trim() || undefined,
       contactNumber: contactNumber.trim() || undefined,
+      amenities: supportsSpaceAmenities(type)
+        ? normalizeAmenityAssignments(amenities)
+        : undefined,
+      genderPolicy: supportsSpacePropertyCategory(type) ? genderPolicy : undefined,
     });
 
     if (space) {
@@ -126,12 +137,30 @@ export function CreateSpaceScreen() {
             value={type}
             onChange={selected => {
               setType(selected);
+              if (!supportsSpaceAmenities(selected)) {
+                setAmenities([]);
+              } else if (amenities.length === 0) {
+                setAmenities(
+                  buildAllPresetAmenities(code => t(presetAmenityLabelKey(code))),
+                );
+              }
+              if (!supportsSpacePropertyCategory(selected)) {
+                setGenderPolicy(null);
+              }
               if (fieldErrors.type) {
                 setFieldErrors(prev => ({ ...prev, type: undefined }));
               }
             }}
             error={fieldErrors.type}
           />
+
+          {type && supportsSpacePropertyCategory(type) ? (
+            <SpacePropertyCategoryPicker
+              spaceType={type}
+              value={genderPolicy}
+              onChange={setGenderPolicy}
+            />
+          ) : null}
 
           <FormInput
             label={t('spaces.createSpace.addressLabel')}
@@ -153,6 +182,14 @@ export function CreateSpaceScreen() {
             returnKeyType="done"
             maxLength={15}
           />
+
+          {supportsSpaceAmenities(type) ? (
+            <SpaceAmenitiesField
+              value={amenities}
+              onChange={setAmenities}
+              selectAllByDefault
+            />
+          ) : null}
 
           <View style={styles.footer}>
             <Button

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 
 type ModuleActionCardProps = {
@@ -28,15 +28,15 @@ export function ModuleActionCard({
   fullWidth = false,
 }: ModuleActionCardProps) {
   return (
-    <Pressable
+    <TouchableOpacity
       onPress={disabled ? undefined : onPress}
-      disabled={disabled}
-      style={({ pressed }) => [
+      disabled={disabled || !onPress}
+      activeOpacity={0.72}
+      style={[
         styles.card,
         fullWidth && styles.cardFullWidth,
         highlight && styles.cardHighlight,
         disabled && styles.cardDisabled,
-        pressed && !disabled && styles.cardPressed,
       ]}
       accessibilityRole="button"
       accessibilityState={{ disabled }}>
@@ -64,7 +64,7 @@ export function ModuleActionCard({
       {!disabled ? (
         <Text style={styles.chevron}>{trailing === 'forward' ? '›' : '▾'}</Text>
       ) : null}
-    </Pressable>
+    </TouchableOpacity>
   );
 }
 

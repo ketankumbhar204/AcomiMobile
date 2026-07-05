@@ -1,6 +1,5 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { dashboardApi } from '../api/dashboardApi';
 import type {
   DashboardAccommodationOperations,
   DashboardAttentionItem,
@@ -11,16 +10,29 @@ import type {
   UUID,
 } from '../api/types';
 import { currentMonthKey } from '../utils/dashboardFinancial';
+import {
+  fetchDashboardSummaryCached,
+  getDashboardInvalidationGeneration,
+  peekDashboardSummary,
+  subscribeDashboardInvalidation,
+} from '../utils/dashboardQueryCache';
+import {
+  getOccupancyInvalidationGeneration,
+  subscribeOccupancyInvalidation,
+} from '../utils/occupancyQueryCache';
 
 export type SpaceDashboardState = {
+  /** True only on the first load when no cached summary exists yet. */
   loading: boolean;
+  /** True while a background refresh is in flight (stale data may still be shown). */
+  refreshing: boolean;
   financialLoading: boolean;
   summary: DashboardSummaryResponse | null;
   financial: DashboardFinancialSummary | null;
   attention: DashboardAttentionItem[];
   messOperations: DashboardMessOperations | null;
   accommodationOperations: DashboardAccommodationOperations | null;
-  reload: () => Promise<void>;
+  reload: (force?: boolean) => Promise<void>;
 };
 
 export function useSpaceDashboard(
@@ -28,42 +40,108 @@ export function useSpaceDashboard(
   spaceType: SpaceType | undefined,
   enabled: boolean,
 ): SpaceDashboardState {
-  const [loading, setLoading] = useState(true);
-  const [financialLoading, setFinancialLoading] = useState(true);
-  const [summary, setSummary] = useState<DashboardSummaryResponse | null>(null);
-
-  const load = useCallback(async () => {
+  const month = currentMonthKey();
+  const [summary, setSummary] = useState<DashboardSummaryResponse | null>(() =>
+    enabled && spaceType ? peekDashboardSummary(spaceId, month) : null,
+  );
+  const [loading, setLoading] = useState(() => {
     if (!enabled || !spaceType) {
-      setLoading(false);
-      setFinancialLoading(false);
-      setSummary(null);
+      return false;
+    }
+    return peekDashboardSummary(spaceId, month) == null;
+  });
+  const [refreshing, setRefreshing] = useState(false);
+  const [financialLoading, setFinancialLoading] = useState(loading);
+  const [cacheGeneration, setCacheGeneration] = useState(
+    getDashboardInvalidationGeneration() + getOccupancyInvalidationGeneration(),
+  );
+  const invalidationRef = useRef(cacheGeneration);
+
+  useEffect(() => {
+    const bumpDashboard = () => {
+      setCacheGeneration(getDashboardInvalidationGeneration() + getOccupancyInvalidationGeneration());
+    };
+    const unsubDashboard = subscribeDashboardInvalidation(bumpDashboard);
+    const unsubOccupancy = subscribeOccupancyInvalidation(bumpDashboard);
+    return () => {
+      unsubDashboard();
+      unsubOccupancy();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!enabled || !spaceType) {
       return;
     }
+    const cached = peekDashboardSummary(spaceId, month);
+    setSummary(cached);
+    setLoading(cached == null);
+    setFinancialLoading(cached == null);
+  }, [enabled, month, spaceId, spaceType]);
 
-    setLoading(true);
-    setFinancialLoading(true);
+  const load = useCallback(
+    async (force = false) => {
+      if (!enabled) {
+        setLoading(false);
+        setRefreshing(false);
+        setFinancialLoading(false);
+        return;
+      }
 
-    try {
-      const data = await dashboardApi.getDashboardSummary(
-        spaceId,
-        spaceType,
-        currentMonthKey(),
-      );
-      setSummary(data);
-    } finally {
-      setLoading(false);
-      setFinancialLoading(false);
-    }
-  }, [enabled, spaceId, spaceType]);
+      if (!spaceType) {
+        return;
+      }
+
+      const cached = peekDashboardSummary(spaceId, month);
+      const hasCachedData = cached != null;
+
+      if (force && hasCachedData) {
+        setRefreshing(true);
+        setFinancialLoading(false);
+      } else if (!hasCachedData) {
+        setLoading(true);
+        setFinancialLoading(true);
+      }
+
+      try {
+        const data = await fetchDashboardSummaryCached(spaceId, spaceType, month, { force });
+        setSummary(data);
+      } catch {
+        if (!peekDashboardSummary(spaceId, month)) {
+          setSummary(null);
+        }
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+        setFinancialLoading(false);
+      }
+    },
+    [enabled, month, spaceId, spaceType],
+  );
 
   useFocusEffect(
     useCallback(() => {
-      void load();
+      void load(false);
     }, [load]),
   );
 
+  useEffect(() => {
+    if (invalidationRef.current === cacheGeneration) {
+      return;
+    }
+    invalidationRef.current = cacheGeneration;
+    void load(true);
+  }, [cacheGeneration, load]);
+
+  useEffect(() => {
+    if (enabled && spaceType && summary == null && !loading && !refreshing) {
+      void load(false);
+    }
+  }, [enabled, load, loading, refreshing, spaceType, summary]);
+
   return {
     loading,
+    refreshing,
     financialLoading,
     summary,
     financial: summary?.financial ?? null,

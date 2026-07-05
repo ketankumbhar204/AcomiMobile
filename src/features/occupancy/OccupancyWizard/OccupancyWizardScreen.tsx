@@ -1,11 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { memberApi } from '../../../api/memberApi';
 import { occupancyApi } from '../../../api/occupancyApi';
 import type {
   AllocationTargetSearchResponse,
+  AmenityAssignment,
   MemberResponse,
   OccupancyResponse,
   TransferRentPolicy,
@@ -20,14 +21,21 @@ import {
   allocationTargetToSelection,
 } from '../../../utils/allocationTargetSearch';
 import { fetchSpaceFoodPolicy, type SpaceFoodPolicy } from '../../../utils/fetchSpaceFoodPolicy';
+import { fetchSpaceAmenities } from '../../../utils/fetchSpaceAmenities';
+import {
+  defaultAssignedAmenities,
+} from '../../../utils/amenities';
 import { fetchPrefilledAllocationTarget } from '../../../utils/fetchPrefilledAllocationTarget';
 import {
   emptyContractTermsFormValues,
   type ContractTermsFormValues,
 } from '../../../utils/occupancyContract';
-import { formatOccupancyTargetLines } from '../../../utils/occupancyBrowse';
 import type { OccupancyTargetSelection } from '../../../utils/occupancyRules';
-import { getWizardSteps, getWizardTitleKey } from './occupancyWizardSteps';
+import { hierarchyContextFromTarget, resolveOccupancySpaceTypeLabel, withSpaceHierarchyContext } from '../../../utils/occupancyHierarchyContext';
+import { ChevronLeftIcon } from '../../../components/ui/icons/ChevronLeftIcon';
+import { useBuildings } from '../../../hooks/useBuildings';
+import { OccupancyWizardStepHeader } from '../../../components/occupancy/OccupancyWizardStepHeader';
+import { getWizardSteps, getWizardStepTitleKey, getWizardTitleKey } from './occupancyWizardSteps';
 import { ContractTermsStep } from './steps/ContractTermsStep';
 import { getMembershipErrorMessage } from '../../../utils/membershipErrors';
 import {
@@ -35,7 +43,6 @@ import {
   validateNewMemberFields,
   type NewMemberFieldErrors,
 } from '../../../utils/validateNewMemberFields';
-import { WizardContextBanner } from './components/WizardContextBanner';
 import { MemberPickerStep, type MemberPickerMode } from './steps/MemberPickerStep';
 import { ReserveDatesStep } from './steps/ReserveDatesStep';
 import { ReviewStep } from './steps/ReviewStep';
@@ -63,6 +70,10 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
   const mySpaces = useSpaceStore(state => state.mySpaces);
   const spaceType = useMemo(
     () => mySpaces.find(space => space.spaceId === spaceId)?.spaceType,
+    [mySpaces, spaceId],
+  );
+  const spaceName = useMemo(
+    () => mySpaces.find(space => space.spaceId === spaceId)?.spaceName,
     [mySpaces, spaceId],
   );
 
@@ -109,6 +120,10 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
   const [newMemberMobile, setNewMemberMobile] = useState('');
   const [newMemberErrors, setNewMemberErrors] = useState<NewMemberFieldErrors>({});
   const [creatingMember, setCreatingMember] = useState(false);
+  const [spaceAmenities, setSpaceAmenities] = useState<AmenityAssignment[]>([]);
+  const [assignedAmenities, setAssignedAmenities] = useState<AmenityAssignment[]>([]);
+  const memberAutoSelectSuppressRef = useRef(false);
+  const memberAutoSelectKeyRef = useRef<string | null>(null);
 
   const allowAddNewMember = mode === 'ALLOCATE' || mode === 'RESERVE';
 
@@ -125,16 +140,25 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
   );
 
   const { submit, loading: submitting } = useOccupancyWizardSubmit(spaceId);
+  const { buildings } = useBuildings(spaceId);
+  const layoutMode = useMemo(() => {
+    const resolvedBuildingId =
+      targetSelection?.buildingId ?? buildingId ?? currentOccupancy?.buildingId;
+    return buildings.find(item => item.buildingId === resolvedBuildingId)?.layoutMode;
+  }, [buildingId, buildings, currentOccupancy?.buildingId, targetSelection?.buildingId]);
+  const spaceTypeLabel = useMemo(() => {
+    if (!spaceType) {
+      return undefined;
+    }
+    return resolveOccupancySpaceTypeLabel(spaceType, layoutMode, t);
+  }, [layoutMode, spaceType, t]);
 
-  const displayPath = useMemo(() => {
-    if (targetRow?.displayPath) {
-      return targetRow.displayPath;
-    }
+  const hierarchyContext = useMemo(() => {
+    let base;
     if (targetSelection) {
-      return formatOccupancyTargetLines(targetSelection).join(' · ');
-    }
-    if (currentOccupancy) {
-      return formatOccupancyTargetLines({
+      base = hierarchyContextFromTarget(targetSelection);
+    } else if (currentOccupancy) {
+      base = hierarchyContextFromTarget({
         targetType: currentOccupancy.targetType,
         buildingId: currentOccupancy.buildingId,
         buildingName: currentOccupancy.buildingName,
@@ -146,30 +170,32 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
         roomName: currentOccupancy.roomName ?? undefined,
         bedId: currentOccupancy.bedId ?? undefined,
         bedName: currentOccupancy.bedName ?? undefined,
-      }).join(' · ');
+      });
+    } else {
+      base = {};
     }
-    return undefined;
-  }, [currentOccupancy, targetRow, targetSelection]);
+    return withSpaceHierarchyContext(base, spaceName, spaceTypeLabel);
+  }, [currentOccupancy, spaceName, spaceTypeLabel, targetSelection]);
 
-  const showContextBanner = Boolean(member && currentStep !== 'member');
-  const showAccommodationInBanner = Boolean(
-    displayPath &&
-      (currentStep === 'reserve_dates' ||
-        currentStep === 'contract' ||
-        currentStep === 'review' ||
-        currentStep === 'vacate_confirm'),
-  );
+  const showMemberContext = Boolean(member && currentStep !== 'member');
+  const stepTitle = t(getWizardStepTitleKey(currentStep));
+  const showStepHeader = currentStep !== 'review' && currentStep !== 'vacate_confirm';
 
   useEffect(() => {
     let cancelled = false;
     async function bootstrap() {
       setBootLoading(true);
       try {
-        const [policy] = await Promise.all([fetchSpaceFoodPolicy(spaceId)]);
+        const [policy, amenities] = await Promise.all([
+          fetchSpaceFoodPolicy(spaceId),
+          fetchSpaceAmenities(spaceId),
+        ]);
         if (cancelled) {
           return;
         }
         setFoodPolicy(policy);
+        setSpaceAmenities(amenities);
+        setAssignedAmenities(defaultAssignedAmenities(amenities));
 
         if (initialMemberId) {
           const details = await memberApi.getMember(spaceId, initialMemberId);
@@ -192,6 +218,9 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
           if (!cancelled) {
             setCurrentOccupancy(occ);
             setOccupancyId(occ.occupancyId);
+            if (occ.amenities?.length) {
+              setAssignedAmenities(occ.amenities);
+            }
             if (!initialMemberId) {
               setMember({
                 memberId: occ.memberId,
@@ -285,14 +314,36 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
   const goBack = useCallback(() => {
     setFormError(null);
     if (stepIndex > 0) {
+      const prevStep = steps[stepIndex - 1];
+      if (prevStep === 'member') {
+        memberAutoSelectSuppressRef.current = true;
+      }
       setStepIndex(stepIndex - 1);
     } else {
       navigation.goBack();
     }
-  }, [navigation, stepIndex]);
+  }, [navigation, stepIndex, steps]);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerBackVisible: false,
+      title: t(getWizardTitleKey(mode)),
+      headerLeft: () => (
+        <Pressable
+          onPress={goBack}
+          style={({ pressed }) => [{ opacity: pressed ? 0.5 : 1, marginLeft: spacing.sm, padding: spacing.sm }]}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back')}>
+          <ChevronLeftIcon size={22} />
+        </Pressable>
+      ),
+    });
+  }, [goBack, mode, navigation, t]);
 
   const handleMemberSelect = useCallback(
     async (selected: MemberResponse) => {
+      memberAutoSelectSuppressRef.current = false;
       setMember(selected);
       if (mode === 'TRANSFER' || mode === 'VACATE') {
         const bundle = await occupancyApi.getMemberOccupancies(spaceId, selected.memberId);
@@ -306,11 +357,39 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
         }
         setCurrentOccupancy(active);
         setOccupancyId(active.occupancyId);
+        if (active.amenities?.length) {
+          setAssignedAmenities(active.amenities);
+        } else {
+          setAssignedAmenities(defaultAssignedAmenities(spaceAmenities));
+        }
       }
       goNext();
     },
-    [goNext, mode, spaceId, t],
+    [goNext, mode, spaceAmenities, spaceId, t],
   );
+
+  useEffect(() => {
+    if (currentStep !== 'member' || memberPickerMode !== 'search' || membersLoading) {
+      return;
+    }
+    if (memberAutoSelectSuppressRef.current || members.length !== 1) {
+      return;
+    }
+    const candidate = members[0];
+    const autoKey = `${candidate.memberId}:${memberQuery}`;
+    if (memberAutoSelectKeyRef.current === autoKey) {
+      return;
+    }
+    memberAutoSelectKeyRef.current = autoKey;
+    void handleMemberSelect(candidate);
+  }, [
+    currentStep,
+    handleMemberSelect,
+    memberPickerMode,
+    memberQuery,
+    members,
+    membersLoading,
+  ]);
 
   const handleTargetSelect = useCallback(
     (row: AllocationTargetSearchResponse) => {
@@ -395,6 +474,7 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
       allowEarlyMoveIn,
       occupancyId,
       currentOccupancy,
+      assignedAmenities,
       onSuccess: () => navigation.goBack(),
     });
   }, [
@@ -412,6 +492,7 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
     agreementSigned,
     allowEarlyMoveIn,
     rentPolicy,
+    assignedAmenities,
     spaceType,
     submit,
     t,
@@ -475,23 +556,30 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
       : t('common.continue');
 
   const usesListStep = currentStep === 'member' || currentStep === 'target';
+  const autoAdvanceStep =
+    (currentStep === 'member' && memberPickerMode === 'search') || currentStep === 'target';
 
   return (
     <Screen
       scrollable={!usesListStep}
       contentStyle={usesListStep ? styles.listScreenContent : styles.content}>
       <Text style={styles.heading}>{t(getWizardTitleKey(mode))}</Text>
-      <Text style={styles.stepIndicator}>
-        {t('occupancyWizard.stepProgress', {
-          current: stepIndex + 1,
-          total: steps.length,
-        })}
-      </Text>
 
-      {showContextBanner && member ? (
-        <WizardContextBanner
-          member={member}
-          accommodationPath={showAccommodationInBanner ? displayPath : undefined}
+      {showMemberContext && member ? (
+        <View style={styles.memberContext}>
+          <Text style={styles.memberLabel}>{t('occupancyWizard.context.member')}</Text>
+          <Text style={styles.memberValue}>
+            {member.fullName}
+            {member.mobileNumber ? ` · ${member.mobileNumber}` : ''}
+          </Text>
+        </View>
+      ) : null}
+
+      {showStepHeader ? (
+        <OccupancyWizardStepHeader
+          stepProgress={{ current: stepIndex + 1, total: steps.length }}
+          stepTitle={stepTitle}
+          hierarchyContext={hierarchyContext}
         />
       ) : null}
 
@@ -504,6 +592,7 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
           error={membersError}
           preferredStatus={memberSearchStatus}
           allowAddNew={allowAddNewMember}
+          hideTitle
           pickerMode={memberPickerMode}
           onPickerModeChange={mode => {
             setMemberPickerMode(mode);
@@ -526,6 +615,7 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
           }}
           newMemberErrors={newMemberErrors}
           creatingMember={creatingMember}
+          selectedMemberId={member?.memberId}
           onSelect={handleMemberSelect}
         />
       ) : null}
@@ -534,6 +624,7 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
         <TargetPickerStep
           spaceId={spaceId}
           selectableOnly={mode === 'ALLOCATE' || mode === 'RESERVE'}
+          hideTitle
           onSelect={handleTargetSelect}
         />
       ) : null}
@@ -543,7 +634,6 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
           moveInDate={moveInDate}
           expectedExitDate={expectedExitDate}
           remarks={remarks}
-          displayPath={displayPath}
           onMoveInDateChange={setMoveInDate}
           onExpectedExitDateChange={setExpectedExitDate}
           onRemarksChange={setRemarks}
@@ -569,12 +659,14 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
           rentPolicy={rentPolicy}
           onRentPolicyChange={setRentPolicy}
           currentOccupancy={currentOccupancy}
-          displayPath={displayPath}
           moveInDate={currentOccupancy?.moveInDate}
           agreementSigned={agreementSigned}
           onAgreementSignedChange={setAgreementSigned}
           allowEarlyMoveIn={allowEarlyMoveIn}
           onAllowEarlyMoveInChange={setAllowEarlyMoveIn}
+          spaceAmenities={spaceAmenities}
+          assignedAmenities={assignedAmenities}
+          onAssignedAmenitiesChange={setAssignedAmenities}
         />
       ) : null}
 
@@ -582,7 +674,7 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
         <ReviewStep
           mode={mode === 'MOVE_IN' ? 'MOVE_IN' : mode === 'TRANSFER' ? 'TRANSFER' : mode}
           member={member}
-          displayPath={displayPath}
+          hierarchyContext={hierarchyContext}
           contractValues={contractValues}
           foodPolicy={foodPolicy}
           rentPolicy={mode === 'TRANSFER' ? rentPolicy : undefined}
@@ -605,12 +697,14 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
       {formError ? <Text style={styles.error}>{formError}</Text> : null}
 
       <View style={styles.actions}>
-        <Button
-          label={primaryLabel}
-          onPress={handlePrimary}
-          loading={submitting || creatingMember}
-          disabled={submitting || creatingMember}
-        />
+        {!autoAdvanceStep ? (
+          <Button
+            label={primaryLabel}
+            onPress={handlePrimary}
+            loading={submitting || creatingMember}
+            disabled={submitting || creatingMember}
+          />
+        ) : null}
         <Button label={t('common.back')} variant="ghost" onPress={goBack} disabled={submitting} />
       </View>
     </Screen>
@@ -620,8 +714,21 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
 const styles = StyleSheet.create({
   content: { paddingBottom: spacing.section },
   listScreenContent: { paddingBottom: spacing.section, flex: 1 },
-  heading: { ...typography.h2, marginBottom: spacing.xs },
-  stepIndicator: { ...typography.caption, color: colors.muted, marginBottom: spacing.lg },
+  heading: { ...typography.h2, marginBottom: spacing.sm, paddingHorizontal: spacing.xl },
+  memberContext: {
+    marginBottom: spacing.sm,
+    gap: spacing.xs,
+    paddingHorizontal: spacing.xl,
+  },
+  memberLabel: {
+    ...typography.caption,
+    color: colors.muted,
+    fontWeight: '600',
+  },
+  memberValue: {
+    ...typography.bodyStrong,
+    color: colors.primaryDark,
+  },
   error: { ...typography.caption, color: '#DC2626', marginVertical: spacing.sm },
   actions: { marginTop: spacing.lg, gap: spacing.sm },
 });

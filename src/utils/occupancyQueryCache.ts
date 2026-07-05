@@ -1,5 +1,6 @@
 import type { OccupancyListFilters, UUID } from '../api/types';
 import { invalidateAccommodationQueries } from './accommodationQueryCache';
+import { invalidateDashboardQueries } from './dashboardQueryCache';
 
 export const occupancyKeys = {
   detail: (spaceId: UUID, occupancyId: UUID) =>
@@ -33,4 +34,5 @@ export function subscribeOccupancyInvalidation(listener: InvalidationListener): 
 export function invalidateAfterOccupancyChange(): void {
   invalidateOccupancyQueries();
   invalidateAccommodationQueries();
+  invalidateDashboardQueries();
 }

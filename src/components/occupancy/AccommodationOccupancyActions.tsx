@@ -75,15 +75,15 @@ export function AccommodationOccupancyActions({
         {isAvailable ? (
           <>
             <Button
-              label={t('occupancy.actions.reserve')}
-              onPress={() => flow.startReserve(context)}
+              label={t('occupancy.actions.allocate')}
+              onPress={() => flow.startWalkIn(context)}
               disabled={flow.loading}
               style={styles.actionBtn}
             />
             <Button
-              label={t('occupancy.actions.walkInAllocate')}
+              label={t('occupancy.actions.reserve')}
               variant="secondary"
-              onPress={() => flow.startWalkIn(context)}
+              onPress={() => flow.startReserve(context)}
               disabled={flow.loading}
               style={styles.actionBtn}
             />

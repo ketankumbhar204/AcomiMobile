@@ -42,7 +42,7 @@ export function FloorsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
-  const { floors, loading, loadingMore, error, hasMore, refresh, loadMore } = useFloors(
+  const { floors, loading, loadingMore, error, hasMore, refresh, loadMore, patchFloor } = useFloors(
     spaceId,
     buildingId,
     { searchQuery },
@@ -141,8 +141,8 @@ export function FloorsScreen() {
               editableName={canManage}
               onSaveName={async name => {
                 await renameFloorName(spaceId, buildingId, floor.floorId, name);
+                patchFloor(floor.floorId, { name });
                 showToast(t('accommodation.floors.updateSuccess'));
-                await refresh();
               }}
               onPress={() => openRooms(floor)}
               onLongPress={() => openFloorDetail(floor)}

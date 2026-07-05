@@ -4,7 +4,6 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuthStore } from '../store/authStore';
 import { useSpaceStore } from '../store/spaceStore';
-import { ConfirmDialogProvider } from '../components/ui/ConfirmDialog';
 import { colors } from '../theme';
 import { AuthNavigator } from './AuthNavigator';
 import { MainNavigator } from './MainNavigator';
@@ -56,7 +55,11 @@ export function RootNavigator() {
     isBootstrapping || (isAuthenticated && !hasSpaceBootstrapped) || isSpaceBootstrapping;
 
   useEffect(() => {
-    bootstrap();
+    bootstrap().then(() => {
+      if (useAuthStore.getState().isAuthenticated) {
+        void useAuthStore.getState().refreshUser();
+      }
+    });
     hydrateCurrentSpace();
   }, [bootstrap, hydrateCurrentSpace]);
 
@@ -102,21 +105,19 @@ export function RootNavigator() {
   }
 
   return (
-    <ConfirmDialogProvider>
-      <NavigationContainer ref={navigationRef} onReady={handleNavigationReady}>
-        <Stack.Navigator
-          key={rootStackKey}
-          screenOptions={{ headerShown: false }}>
-          {showBootstrap ? (
-            <Stack.Screen name="Bootstrap" component={BootstrapScreen} />
-          ) : isAuthenticated ? (
-            <Stack.Screen name="Main" component={MainNavigator} />
-          ) : (
-            <Stack.Screen name="Auth" component={AuthNavigator} />
-          )}
-        </Stack.Navigator>
-      </NavigationContainer>
-    </ConfirmDialogProvider>
+    <NavigationContainer ref={navigationRef} onReady={handleNavigationReady}>
+      <Stack.Navigator
+        key={rootStackKey}
+        screenOptions={{ headerShown: false }}>
+        {showBootstrap ? (
+          <Stack.Screen name="Bootstrap" component={BootstrapScreen} />
+        ) : isAuthenticated ? (
+          <Stack.Screen name="Main" component={MainNavigator} />
+        ) : (
+          <Stack.Screen name="Auth" component={AuthNavigator} />
+        )}
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
 

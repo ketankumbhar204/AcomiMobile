@@ -32,6 +32,8 @@ type MemberPickerStepProps = {
   onNewMemberMobileChange: (value: string) => void;
   newMemberErrors?: NewMemberFieldErrors;
   creatingMember?: boolean;
+  selectedMemberId?: string | null;
+  hideTitle?: boolean;
   onSelect: (member: MemberResponse) => void;
 };
 
@@ -43,6 +45,12 @@ function occupancyBadgeLabel(
     return t('occupancyWizard.occupancyStatus.VACATED');
   }
   return t(`occupancyWizard.occupancyStatus.${status}`);
+}
+
+function memberRoleLabel(role: string, t: (key: string) => string): string {
+  const key = `membership.roles.${role.toLowerCase()}.label`;
+  const translated = t(key);
+  return translated === key ? role : translated;
 }
 
 export function MemberPickerStep({
@@ -61,14 +69,20 @@ export function MemberPickerStep({
   onNewMemberMobileChange,
   newMemberErrors,
   creatingMember = false,
+  selectedMemberId,
+  hideTitle = false,
   onSelect,
 }: MemberPickerStepProps) {
   const { t } = useTranslation();
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.title}>{t('occupancyWizard.steps.member')}</Text>
-      <Text style={styles.hint}>{t('occupancyWizard.steps.memberHint')}</Text>
+      {!hideTitle ? (
+        <>
+          <Text style={styles.title}>{t('occupancyWizard.steps.member')}</Text>
+          <Text style={styles.hint}>{t('occupancyWizard.steps.memberHint')}</Text>
+        </>
+      ) : null}
 
       {allowAddNew ? (
         <View style={styles.modeRow}>
@@ -144,24 +158,27 @@ export function MemberPickerStep({
                 (item.occupancyStatus === 'ALLOCATED' || item.occupancyStatus === 'RESERVED');
               const warn =
                 preferredStatus === 'ALLOCATED' && item.occupancyStatus !== 'ALLOCATED';
+              const selected = selectedMemberId === item.memberId;
 
               return (
                 <Pressable
-                  style={[styles.row, blocked && styles.rowDisabled]}
+                  style={[
+                    styles.card,
+                    selected && styles.cardSelected,
+                    blocked && styles.cardDisabled,
+                  ]}
                   disabled={blocked}
                   onPress={() => onSelect(item)}>
-                  <View style={styles.rowCopy}>
+                  <Text style={styles.radio}>{selected ? '●' : '○'}</Text>
+                  <View style={styles.cardBody}>
                     <Text style={styles.name}>{item.fullName}</Text>
                     <Text style={styles.mobile}>{item.mobileNumber}</Text>
+                    <Text style={styles.role}>{memberRoleLabel(item.role, t)}</Text>
                     {warn ? (
                       <Text style={styles.warn}>{t('occupancyWizard.memberNotAllocated')}</Text>
                     ) : null}
                   </View>
-                  {item.occupancyStatus ? (
-                    <Badge label={occupancyBadgeLabel(item.occupancyStatus, t)} />
-                  ) : (
-                    <Badge label={t('occupancyWizard.occupancyStatus.VACATED')} />
-                  )}
+                  <Badge label={occupancyBadgeLabel(item.occupancyStatus, t)} />
                 </Pressable>
               );
             }}
@@ -180,7 +197,7 @@ export function MemberPickerStep({
 const styles = StyleSheet.create({
   wrap: { flex: 1, minHeight: 360 },
   list: { flex: 1 },
-  listContent: { paddingBottom: spacing.md },
+  listContent: { paddingBottom: spacing.md, gap: spacing.sm },
   title: { ...typography.h3, marginBottom: spacing.xs },
   hint: { ...typography.caption, color: colors.muted, marginBottom: spacing.md },
   modeRow: {
@@ -219,19 +236,30 @@ const styles = StyleSheet.create({
   },
   loader: { marginVertical: spacing.lg },
   error: { ...typography.caption, color: '#DC2626', marginBottom: spacing.sm },
-  row: {
+  card: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
     gap: spacing.md,
+    backgroundColor: colors.white,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
   },
-  rowDisabled: { opacity: 0.45 },
-  rowCopy: { flex: 1 },
+  cardSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.lightGreen,
+  },
+  cardDisabled: { opacity: 0.45 },
+  radio: {
+    ...typography.body,
+    width: 18,
+    color: colors.primaryDark,
+  },
+  cardBody: { flex: 1, gap: 2 },
   name: { ...typography.bodyStrong },
-  mobile: { ...typography.caption, color: colors.muted, marginTop: spacing.xs },
+  mobile: { ...typography.caption, color: colors.textSecondary },
+  role: { ...typography.caption, color: colors.muted },
   warn: { ...typography.caption, color: '#B45309', marginTop: spacing.xs },
   empty: {
     ...typography.body,

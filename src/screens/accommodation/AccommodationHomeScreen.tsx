@@ -19,9 +19,10 @@ import {
   View,
 } from 'react-native';
 import { accommodationApi } from '../../api/accommodationApi';
-import type { BuildingResponse, BuildingSummaryResponse } from '../../api/types';
-import { AccommodationSearchBar } from '../../components/accommodation';
-import { Button, EmptyState, FAB, ListCard, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
+import { getAccommodationInvalidationGeneration, subscribeAccommodationInvalidation } from '../../utils/accommodationQueryCache';
+import type { BuildingResponse, BuildingSummaryResponse, SpaceType } from '../../api/types';
+import { AccommodationSearchBar, BuildingListCard } from '../../components/accommodation';
+import { Button, EmptyState, FAB, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useBuildings } from '../../hooks/useBuildings';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
@@ -32,7 +33,6 @@ import { useToastStore } from '../../store/toastStore';
 import { colors, spacing, typography } from '../../theme';
 import { matchesSearch } from '../../utils/accommodationSearch';
 import { renameBuildingName } from '../../utils/accommodationInlineRename';
-import { getAccommodationUiProfile } from '../../utils/accommodationProfile';
 
 type AccommodationNav = CompositeNavigationProp<
   BottomTabNavigationProp<SpaceTabParamList, 'Accommodation'>,
@@ -44,42 +44,6 @@ type AccommodationRoute = NativeStackScreenProps<
   'Accommodation'
 >['route'];
 
-function formatBuildingSubtitle(
-  summary: BuildingSummaryResponse | undefined,
-  spaceType: string | undefined,
-  t: (key: string, options?: Record<string, unknown>) => string,
-): string | undefined {
-  if (!summary || !spaceType) {
-    return undefined;
-  }
-
-  const profile = getAccommodationUiProfile(
-    spaceType as Parameters<typeof getAccommodationUiProfile>[0],
-    summary.layoutMode,
-  );
-  if (!profile) {
-    return undefined;
-  }
-
-  const parts: string[] = [];
-  if (profile.showBeds && summary.beds > 0) {
-    parts.push(t('accommodation.home.beds', { count: summary.beds }));
-  }
-  if (profile.showFloors && summary.floors > 0) {
-    parts.push(t('accommodation.home.floors', { count: summary.floors }));
-  }
-  if (profile.showUnitsOnFloor && summary.visibleUnitCount > 0) {
-    parts.push(t('accommodation.home.apartments', { count: summary.visibleUnitCount }));
-  } else if (profile.showUnits && summary.visibleUnitCount > 0) {
-    parts.push(t('accommodation.home.units', { count: summary.visibleUnitCount }));
-  }
-  if (parts.length === 0 && summary.rooms > 0) {
-    parts.push(t('accommodation.home.rooms', { count: summary.rooms }));
-  }
-
-  return parts.length > 0 ? parts.join(' · ') : t('accommodation.home.manageHint');
-}
-
 export function AccommodationHomeScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<AccommodationNav>();
@@ -88,7 +52,7 @@ export function AccommodationHomeScreen() {
 
   const mySpaces = useSpaceStore(state => state.mySpaces);
   const spaceType = useMemo(
-    () => mySpaces.find(space => space.spaceId === spaceId)?.spaceType,
+    () => mySpaces.find(space => space.spaceId === spaceId)?.spaceType as SpaceType | undefined,
     [mySpaces, spaceId],
   );
   const permissions = useSpacePermissions(spaceId);
@@ -96,10 +60,28 @@ export function AccommodationHomeScreen() {
   const showFab = permissions.canManageAccommodation;
   const showToast = useToastStore(state => state.showToast);
 
-  const { buildings, loading, error, refresh } = useBuildings(spaceId);
+  const { buildings, loading, error, refresh, patchBuilding } = useBuildings(spaceId);
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [summaries, setSummaries] = useState<Record<string, BuildingSummaryResponse>>({});
+  const [summaryGeneration, setSummaryGeneration] = useState(
+    getAccommodationInvalidationGeneration(),
+  );
+
+  useEffect(() => {
+    return subscribeAccommodationInvalidation(() => {
+      setSummaryGeneration(getAccommodationInvalidationGeneration());
+    });
+  }, []);
+
+  const buildingIdsKey = useMemo(
+    () =>
+      buildings
+        .map(building => building.buildingId)
+        .sort()
+        .join('|'),
+    [buildings],
+  );
 
   useSpaceTabHeader(spaceId, { showProfileAndMenu: false });
 
@@ -111,21 +93,19 @@ export function AccommodationHomeScreen() {
   );
 
   useEffect(() => {
-    if (!spaceId || buildings.length === 0) {
+    if (!spaceId || buildingIdsKey.length === 0) {
       setSummaries({});
       return;
     }
 
+    const buildingIds = buildingIdsKey.split('|');
     let cancelled = false;
 
     void Promise.all(
-      buildings.map(async building => {
+      buildingIds.map(async buildingId => {
         try {
-          const summary = await accommodationApi.getBuildingSummary(
-            spaceId,
-            building.buildingId,
-          );
-          return [building.buildingId, summary] as const;
+          const summary = await accommodationApi.getBuildingSummary(spaceId, buildingId);
+          return [buildingId, summary] as const;
         } catch {
           return null;
         }
@@ -146,7 +126,7 @@ export function AccommodationHomeScreen() {
     return () => {
       cancelled = true;
     };
-  }, [buildings, spaceId]);
+  }, [buildingIdsKey, spaceId, summaryGeneration]);
 
   const filteredBuildings = useMemo(
     () =>
@@ -160,6 +140,7 @@ export function AccommodationHomeScreen() {
     console.log('[AccommodationHomeScreen] pull to refresh');
     setRefreshing(true);
     await refresh();
+    setSummaryGeneration(getAccommodationInvalidationGeneration());
     setRefreshing(false);
   }, [refresh]);
 
@@ -242,31 +223,34 @@ export function AccommodationHomeScreen() {
           </View>
         ) : (
           <View style={styles.list}>
-            {filteredBuildings.map(building => {
-              const summary = summaries[building.buildingId];
-              const subtitle = formatBuildingSubtitle(summary, spaceType, t);
-
-              return (
-                <ListCard
-                  key={building.buildingId}
-                  title={building.name}
-                  subtitle={
-                    subtitle ??
-                    (building.code
-                      ? t('accommodation.buildings.code', { value: building.code })
-                      : t('accommodation.home.manageHint'))
-                  }
-                  iconLabel={(building.name || '?').charAt(0).toUpperCase()}
-                  editableName={canManage}
-                  onSaveName={async name => {
-                    await renameBuildingName(spaceId, building.buildingId, name);
-                    showToast(t('accommodation.buildings.updateSuccess'));
-                    await refresh();
-                  }}
-                  onPress={() => openBuilder(building)}
-                />
-              );
-            })}
+            {filteredBuildings.map(building => (
+              <BuildingListCard
+                key={building.buildingId}
+                building={building}
+                summary={summaries[building.buildingId]}
+                spaceType={spaceType}
+                editableName={canManage}
+                onSaveName={async name => {
+                  await renameBuildingName(spaceId, building.buildingId, name, {
+                    code: building.code,
+                    layoutMode: building.layoutMode,
+                  });
+                  patchBuilding(building.buildingId, { name });
+                  setSummaries(prev => {
+                    const existing = prev[building.buildingId];
+                    if (!existing) {
+                      return prev;
+                    }
+                    return {
+                      ...prev,
+                      [building.buildingId]: { ...existing, name },
+                    };
+                  });
+                  showToast(t('accommodation.buildings.updateSuccess'));
+                }}
+                onPress={() => openBuilder(building)}
+              />
+            ))}
           </View>
         )}
       </ScrollView>

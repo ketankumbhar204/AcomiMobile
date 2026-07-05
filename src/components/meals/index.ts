@@ -1,6 +1,7 @@
 export { MealParticipationStatusBadge, MealPlanBadge } from './MealBadges';
 export { ComboPickerCard } from './ComboPickerCard';
 export { DailyMenuSlotCard } from './DailyMenuSlotCard';
+export { MenuPlanningDayOverview } from './MenuPlanningDayOverview';
 export { DashboardCustomerMealsSection } from './DashboardCustomerMealsSection';
 export { DashboardOwnerPollStatusCard } from './DashboardOwnerPollStatusCard';
 export { DashboardTodayMenuSection } from './DashboardTodayMenuSection';

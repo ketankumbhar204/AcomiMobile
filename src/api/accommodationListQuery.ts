@@ -25,6 +25,18 @@ export function buildListQuery(params?: ListQueryParams): string {
   if (params?.status) {
     q.set('status', params.status);
   }
+  if (params?.includeInactive != null) {
+    q.set('includeInactive', String(params.includeInactive));
+  }
+  if (params?.buildingId) {
+    q.set('buildingId', params.buildingId);
+  }
+  if (params?.floorId) {
+    q.set('floorId', params.floorId);
+  }
+  if (params?.unitId) {
+    q.set('unitId', params.unitId);
+  }
   const s = q.toString();
   return s ? `?${s}` : '';
 }

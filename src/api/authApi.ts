@@ -3,6 +3,7 @@ import apiClient from './client';
 import type {
   ApiResponse,
   AuthTokenResponse,
+  CompleteUserProfileRequest,
   SendOtpRequest,
   SendOtpResponse,
   UpdateUserRequest,
@@ -50,6 +51,25 @@ export const authApi = {
     }
     return unwrapApiResponse(
       apiClient.patch<ApiResponse<UserResponse>>('/auth/me', payload),
+    );
+  },
+
+  completeProfile: async (payload: CompleteUserProfileRequest): Promise<UserResponse> => {
+    if (__DEV__) {
+      console.log(`${LOG_TAG} completeProfile →`, {
+        ...payload,
+        profilePhotoUrl: payload.profilePhotoUrl ? '[redacted]' : null,
+        addressProofFileUrl: payload.addressProofFileUrl ? '[redacted]' : null,
+        identityProofFileUrl: payload.identityProofFileUrl ? '[redacted]' : null,
+        additionalDocumentFileUrl: payload.additionalDocumentFileUrl ? '[redacted]' : null,
+      });
+    }
+    return unwrapApiResponse(
+      apiClient.patch<ApiResponse<UserResponse>>('/auth/me/profile', {
+        ...payload,
+        profileCompleted: true,
+        profileStatus: 'COMPLETED',
+      }),
     );
   },
 };

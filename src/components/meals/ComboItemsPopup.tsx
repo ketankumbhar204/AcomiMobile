@@ -18,6 +18,7 @@ type ComboItemsPopupProps = {
   price?: number | null;
   currencyCode?: string | null;
   loading?: boolean;
+  singleItem?: boolean;
   onClose: () => void;
 };
 
@@ -28,14 +29,29 @@ export function ComboItemsPopup({
   price,
   currencyCode,
   loading = false,
+  singleItem = false,
   onClose,
 }: ComboItemsPopupProps) {
   const { t } = useTranslation();
 
+  if (!visible) {
+    return null;
+  }
+
+  const displayItems =
+    items.length > 0 ? items : singleItem && comboName.trim() ? [comboName.trim()] : [];
+  const sectionLabel = singleItem
+    ? t('meals.planning.itemDetailsLabel')
+    : t('meals.planning.comboItemsLabel');
+  const emptyMessage = singleItem
+    ? t('meals.planning.itemDetailsEmpty')
+    : t('meals.library.comboPreviewEmpty');
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={e => e.stopPropagation()}>
+      <View style={styles.backdrop}>
+        <Pressable style={styles.backdropTap} onPress={onClose} />
+        <View style={styles.sheet}>
           <View style={styles.header}>
             <Text style={styles.title} numberOfLines={2}>
               {formatComboNameWithPrice(comboName, price, currencyCode)}
@@ -45,15 +61,15 @@ export function ComboItemsPopup({
             </Pressable>
           </View>
 
-          <Text style={styles.sectionLabel}>{t('meals.planning.comboItemsLabel')}</Text>
+          <Text style={styles.sectionLabel}>{sectionLabel}</Text>
 
           {loading ? (
             <ActivityIndicator color={colors.primary} style={styles.loader} />
-          ) : items.length === 0 ? (
-            <Text style={styles.empty}>{t('meals.library.comboPreviewEmpty')}</Text>
+          ) : displayItems.length === 0 ? (
+            <Text style={styles.empty}>{emptyMessage}</Text>
           ) : (
             <View style={styles.itemList}>
-              {items.map((name, index) => (
+              {displayItems.map((name, index) => (
                 <View key={`${name}-${index}`} style={styles.itemRow}>
                   <Text style={styles.itemDot}>·</Text>
                   <Text style={styles.itemName}>{name}</Text>
@@ -61,8 +77,8 @@ export function ComboItemsPopup({
               ))}
             </View>
           )}
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }
@@ -73,6 +89,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.35)',
     justifyContent: 'center',
     padding: spacing.lg,
+  },
+  backdropTap: {
+    ...StyleSheet.absoluteFillObject,
   },
   sheet: {
     backgroundColor: colors.white,

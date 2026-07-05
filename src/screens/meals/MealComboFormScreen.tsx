@@ -160,6 +160,21 @@ export function MealComboFormScreen() {
     [showToast, spaceId, t],
   );
 
+  const addCategoryInline = useCallback(
+    async (name: string) => {
+      try {
+        const created = await mealsApi.createFoodCategory(spaceId, { name });
+        setCategories(current => [...current, created]);
+        showToast(t('meals.library.categoryCreateSuccess'));
+        return created;
+      } catch {
+        showToast(t('meals.errors.actionFailed'));
+        throw new Error('createFoodCategory failed');
+      }
+    },
+    [showToast, spaceId, t],
+  );
+
   if (!permissions.canManageMeals) {
     return <PermissionDeniedScreen spaceId={spaceId} />;
   }
@@ -229,8 +244,10 @@ export function MealComboFormScreen() {
               }}
               variant="planning"
               canAddItem
+              canAddCategory
               categories={categories}
               onAddItem={addItemInline}
+              onAddCategory={addCategoryInline}
             />
           </ScrollView>
 

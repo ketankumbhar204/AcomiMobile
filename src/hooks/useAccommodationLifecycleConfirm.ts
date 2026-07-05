@@ -45,7 +45,6 @@ export function useAccommodationLifecycleConfirm() {
             onSuccess?.();
           } catch (err) {
             showToast(getAccommodationErrorMessage(err, 'accommodation.errors.generic'));
-            throw err;
           }
         },
       });

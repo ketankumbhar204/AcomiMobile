@@ -5,7 +5,7 @@ import type { MemberResponse } from '../../../../api/types';
 import { colors, radius, spacing, typography } from '../../../../theme';
 
 type WizardContextBannerProps = {
-  member: MemberResponse;
+  member?: MemberResponse | null;
   accommodationPath?: string;
 };
 
@@ -17,13 +17,15 @@ export function WizardContextBanner({
 
   return (
     <View style={styles.banner}>
-      <View style={styles.row}>
-        <Text style={styles.label}>{t('occupancyWizard.context.member')}</Text>
-        <Text style={styles.value} numberOfLines={2}>
-          {member.fullName}
-          {member.mobileNumber ? ` · ${member.mobileNumber}` : ''}
-        </Text>
-      </View>
+      {member ? (
+        <View style={styles.row}>
+          <Text style={styles.label}>{t('occupancyWizard.context.member')}</Text>
+          <Text style={styles.value} numberOfLines={2}>
+            {member.fullName}
+            {member.mobileNumber ? ` · ${member.mobileNumber}` : ''}
+          </Text>
+        </View>
+      ) : null}
       {accommodationPath ? (
         <View style={styles.row}>
           <Text style={styles.label}>{t('occupancyWizard.context.accommodation')}</Text>

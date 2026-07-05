@@ -1,6 +1,7 @@
 import type {
   AllocationTargetType,
   AllocateOccupancyRequest,
+  AmenityAssignment,
   ContractSnapshotInput,
   CurrentOccupancySummaryResponse,
   MemberCategory,
@@ -120,6 +121,7 @@ export function buildAllocateRequest(
     expectedExitDate?: string;
     remarks?: string;
     contract?: ContractSnapshotInput;
+    amenities?: AmenityAssignment[];
   },
 ): { body: AllocateOccupancyRequest | null; errorKey: string | null } {
   const errorKey = validateTargetSelection(spaceType, targetType, ids);
@@ -137,6 +139,7 @@ export function buildAllocateRequest(
       expectedExitDate: getExpectedExitDate(options),
       remarks: options?.remarks?.trim() || null,
       ...options?.contract,
+      amenities: options?.amenities,
     },
     errorKey: null,
   };
@@ -150,6 +153,7 @@ export function buildTransferRequest(
     remarks?: string;
     rentPolicy?: TransferRentPolicy;
     contract?: ContractSnapshotInput;
+    amenities?: AmenityAssignment[];
   },
 ): { body: TransferOccupancyRequest | null; errorKey: string | null } {
   const errorKey = validateTargetSelection(spaceType, targetType, ids);
@@ -165,6 +169,7 @@ export function buildTransferRequest(
       remarks: options?.remarks?.trim() || null,
       rentPolicy: options?.rentPolicy ?? 'APPLY_NEW',
       ...options?.contract,
+      amenities: options?.amenities,
     },
     errorKey: null,
   };
