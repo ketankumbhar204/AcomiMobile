@@ -8,6 +8,8 @@ import { chunkIntoRows } from './visual/planLayoutUtils';
 import { LayoutSummaryCard } from './cards/LayoutSummaryCard';
 import { UnitLayoutCard } from './cards/UnitLayoutCard';
 import { calcOccupancyPercent } from './cards/occupancyUtils';
+import { getFloorIllustration } from './illustrations/illustrationAssets';
+import { aggregateUnitStatusCounts } from './layoutSummaryStats';
 const GRID_COLUMNS = 2;
 
 type ApartmentFloorPlanLayoutProps = {

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -8,16 +8,18 @@ import type { MealComboResponse, MealType, UUID } from '../../api/types';
 import { ComboPickerCard } from '../../components/meals/ComboPickerCard';
 import { PlanningSelectionSection } from '../../components/meals/PlanningSelectionSection';
 import { Button, PermissionDeniedScreen } from '../../components/ui';
+import { useMealPricingPolicy } from '../../hooks/useMealPricingPolicy';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, spacing, typography } from '../../theme';
 import { isPastMenuDate } from '../../utils/mealDates';
 import { loadMenuDraft, syncCombosOnMenu } from '../../utils/dailyMenuDraft';
-import { hasComboPrice } from '../../utils/comboPrice';
+import { hasComboPrice, getEffectivePriceDraft, parsePriceInput } from '../../utils/comboPrice';
 import {
   applyDraftPricesToCombos,
   comboPriceDraftErrorMessage,
+  persistComboPriceDraft,
   type ComboPriceDraftErrors,
 } from '../../utils/comboSelectionPricing';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
@@ -38,6 +40,7 @@ export function DailyMenuSelectComboScreen({
   const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const permissions = useSpacePermissions(spaceId);
+  const mealPricing = useMealPricingPolicy(spaceId);
   const showToast = useToastStore(state => state.showToast);
   const dateReadOnly = isPastMenuDate(menuDate);
 
@@ -54,6 +57,7 @@ export function DailyMenuSelectComboScreen({
   const [selectedComboIds, setSelectedComboIds] = useState<string[]>([]);
   const [draftPrices, setDraftPrices] = useState<Record<string, string>>({});
   const [priceErrors, setPriceErrors] = useState<ComboPriceDraftErrors>({});
+  const comboPriceSaveInFlightRef = useRef<Set<string>>(new Set());
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -144,6 +148,52 @@ export function DailyMenuSelectComboScreen({
     }
   };
 
+  const persistPriceOnBlur = async (combo: MealComboResponse, draftValue: string) => {
+    const normalizedDraft = draftValue.trim();
+    setDraftPrices(prev => ({ ...prev, [combo.comboId]: normalizedDraft }));
+
+    if (comboPriceSaveInFlightRef.current.has(combo.comboId)) {
+      return;
+    }
+
+    const parsedPrice = parsePriceInput(normalizedDraft);
+    if (
+      parsedPrice != null &&
+      hasComboPrice(combo.price) &&
+      Number(combo.price) === parsedPrice
+    ) {
+      return;
+    }
+
+    comboPriceSaveInFlightRef.current.add(combo.comboId);
+    try {
+      const draftsForSave = { ...draftPrices, [combo.comboId]: normalizedDraft };
+      const { combo: updated, error } = await persistComboPriceDraft(
+        spaceId,
+        combo,
+        draftsForSave,
+      );
+      if (error) {
+        if (error !== 'required') {
+          setPriceErrors(prev => ({ ...prev, [combo.comboId]: error }));
+        }
+        return;
+      }
+      setCombos(prev => prev.map(row => (row.comboId === updated.comboId ? updated : row)));
+      setDraftPrices(prev => ({
+        ...prev,
+        [combo.comboId]: hasComboPrice(updated.price) ? String(updated.price) : normalizedDraft,
+      }));
+      setPriceErrors(prev => {
+        const next = { ...prev };
+        delete next[combo.comboId];
+        return next;
+      });
+    } finally {
+      comboPriceSaveInFlightRef.current.delete(combo.comboId);
+    }
+  };
+
   const persistSelection = async (resolvedCombos: MealComboResponse[]) => {
     await syncCombosOnMenu(
       spaceId,
@@ -166,6 +216,7 @@ export function DailyMenuSelectComboScreen({
         spaceId,
         selectedCombos,
         draftPrices,
+        { requirePrices: mealPricing.requiresMealPrices },
       );
       if (Object.keys(errors).length > 0) {
         setPriceErrors(errors);
@@ -218,8 +269,8 @@ export function DailyMenuSelectComboScreen({
 
         {combos.map(combo => {
           const selected = selectedComboIds.includes(combo.comboId);
-          const requiresPriceInput = !hasComboPrice(combo.price);
           const errorKey = priceErrors[combo.comboId];
+          const priceDraft = getEffectivePriceDraft(combo.comboId, draftPrices, combo.price);
           return (
             <ComboPickerCard
               key={combo.comboId}
@@ -228,9 +279,18 @@ export function DailyMenuSelectComboScreen({
               price={combo.price}
               currencyCode={combo.currencyCode}
               selected={selected}
-              requiresPriceInput={requiresPriceInput}
-              priceDraft={draftPrices[combo.comboId] ?? ''}
+              editablePrice={selected && mealPricing.requiresMealPrices}
+              requiresPriceInput={false}
+              showMealPrices={mealPricing.showMealPrices}
+              priceDraft={priceDraft}
               onPriceDraftChange={text => updateDraftPrice(combo.comboId, text)}
+              onPriceBlur={
+                selected && mealPricing.requiresMealPrices
+                  ? draft => {
+                      void persistPriceOnBlur(combo, draft);
+                    }
+                  : undefined
+              }
               priceInputError={errorKey ? comboPriceDraftErrorMessage(errorKey, t) : null}
               onPress={() => toggleCombo(combo.comboId)}
             />

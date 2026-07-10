@@ -1,7 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { mealsApi } from '../api/mealsApi';
-import type { MealPollSlot, UUID } from '../api/types';
+import type { MealPollSlot, MealType, UUID } from '../api/types';
+import {
+  fetchEligibilitySummaryCached,
+  fetchMealPollsCached,
+} from '../utils/mealDayQueryCache';
 import { MEAL_TYPES } from '../utils/mealLabels';
 
 export function useOwnerMealPollStatus(spaceId: UUID, menuDate: string, enabled: boolean) {
@@ -15,6 +19,14 @@ export function useOwnerMealPollStatus(spaceId: UUID, menuDate: string, enabled:
     return MEAL_TYPES.map(mealType => open.find(poll => poll.mealType === mealType)).filter(
       (poll): poll is MealPollSlot => poll != null,
     );
+  }, [polls]);
+
+  const pollMap = useMemo(() => {
+    const map: Partial<Record<MealType, MealPollSlot>> = {};
+    for (const poll of polls) {
+      map[poll.mealType] = poll;
+    }
+    return map;
   }, [polls]);
 
   const respondedCount = useMemo(() => {
@@ -37,8 +49,11 @@ export function useOwnerMealPollStatus(spaceId: UUID, menuDate: string, enabled:
     setLoading(true);
     try {
       const [pollDay, eligibility] = await Promise.all([
-        mealsApi.getMealPolls(spaceId, menuDate).catch(() => ({ pollDate: menuDate, polls: [] })),
-        mealsApi.getEligibilitySummary(spaceId, menuDate).catch(() => null),
+        fetchMealPollsCached(spaceId, menuDate).catch(() => ({
+          pollDate: menuDate,
+          polls: [] as MealPollSlot[],
+        })),
+        fetchEligibilitySummaryCached(spaceId, menuDate).catch(() => null),
       ]);
       setPolls(pollDay.polls);
       setEligibleCount(
@@ -76,6 +91,7 @@ export function useOwnerMealPollStatus(spaceId: UUID, menuDate: string, enabled:
   return {
     loading,
     openPolls,
+    pollMap,
     eligibleCount,
     respondedCount,
     pendingCount,

@@ -4,6 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { SpaceTabBackButton } from '../components/ui';
+import { NotificationBellButton } from '../components/notifications/NotificationBellButton';
 import { useSpaceTabHeader } from '../hooks/useSpaceTabHeader';
 import { useSpacePermissions } from '../hooks/useSpacePermissions';
 import { AccommodationHomeScreen } from '../screens/accommodation/AccommodationHomeScreen';
@@ -14,9 +15,9 @@ import { navigateMainStack } from './mainStackNavigation';
 import { colors, tabBarOptions, tabHeaderOptions } from '../theme';
 import { MealsHomeScreen } from '../screens/meals/MealsHomeScreen';
 import { PermissionDeniedScreen } from '../components/ui/PermissionDeniedScreen';
-import { ScreenPlaceholder } from './ScreenPlaceholder';
 import { PaymentsScreen } from '../screens/payments/PaymentsScreen';
 import { TenantPaymentsTabScreen } from '../screens/payments/TenantPaymentsTabScreen';
+import { ComplaintsListScreen } from '../screens/complaints/ComplaintsListScreen';
 import type { SpaceTabParamList } from './types';
 import { canManagePayments } from '../utils/dashboardFinancial';
 
@@ -29,7 +30,10 @@ type SpaceTabNavigatorProps = {
 function DashboardTabScreen() {
   const route = useRoute<RouteProp<SpaceTabParamList, 'Dashboard'>>();
   const { spaceId } = route.params;
-  useSpaceTabHeader(spaceId, { showProfileAndMenu: true });
+  useSpaceTabHeader(spaceId, {
+    showProfileAndMenu: true,
+    headerRightExtra: <NotificationBellButton spaceId={spaceId} />,
+  });
   return <DashboardScreen />;
 }
 
@@ -67,11 +71,10 @@ function PaymentsTabScreen() {
 }
 
 function ComplaintsTabScreen() {
-  const { t } = useTranslation();
   const route = useRoute<RouteProp<SpaceTabParamList, 'Complaints'>>();
   const { spaceId } = route.params;
   useSpaceTabHeader(spaceId);
-  return <ScreenPlaceholder title={t('navigation.complaints')} />;
+  return <ComplaintsListScreen />;
 }
 
 const tabScreenOptions = {

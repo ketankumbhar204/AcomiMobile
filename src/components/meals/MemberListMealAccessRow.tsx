@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Switch, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { setMemberMealAccess } from '../../api/mealsApi';
 import type {
@@ -9,10 +9,9 @@ import type {
   UUID,
 } from '../../api/types';
 import { useToastStore } from '../../store/toastStore';
-import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { colors, radius, spacing, typography } from '../../theme';
 import {
   canEnableMealsForMember,
-  isReceivingMeals,
   isReceivingMealsForMember,
 } from '../../utils/mealAccess';
 
@@ -35,7 +34,7 @@ export function MemberMealAccessBadge({ receiving }: MemberMealAccessBadgeProps)
   );
 }
 
-type MemberListMealAccessToggleProps = {
+type MemberListMealAccessProps = {
   spaceId: UUID;
   memberId: UUID;
   participation?: MemberMealParticipationSummary | null;
@@ -46,16 +45,15 @@ type MemberListMealAccessToggleProps = {
   occupancyStatus?: MemberOccupancyStatus | null;
 };
 
-export function MemberListMealAccessToggle({
+function useMemberMealAccessToggle({
   spaceId,
   memberId,
   participation,
   canManage,
   onParticipationChanged,
-  labelKey = 'meals.mealAccess.label',
   spaceType,
   occupancyStatus,
-}: MemberListMealAccessToggleProps) {
+}: MemberListMealAccessProps) {
   const { t } = useTranslation();
   const showToast = useToastStore(state => state.showToast);
   const [loading, setLoading] = useState(false);
@@ -93,6 +91,16 @@ export function MemberListMealAccessToggle({
     ],
   );
 
+  return { canManage, canEnable, loading, onToggle, receiving, t };
+}
+
+export function MemberListMealAccessToggle({
+  labelKey = 'meals.mealAccess.label',
+  ...props
+}: MemberListMealAccessProps) {
+  const { canManage, canEnable, loading, onToggle, receiving, t } =
+    useMemberMealAccessToggle(props);
+
   return (
     <View style={styles.toggleCol}>
       <Text style={styles.toggleLabel} numberOfLines={1}>
@@ -116,6 +124,32 @@ export function MemberListMealAccessToggle({
   );
 }
 
+export function MemberListMealAccessSwitch({
+  labelKey = 'meals.foodIncluded.label',
+  ...props
+}: MemberListMealAccessProps) {
+  const { canManage, canEnable, loading, onToggle, receiving, t } =
+    useMemberMealAccessToggle({ labelKey, ...props });
+
+  if (!canManage) {
+    return null;
+  }
+
+  if (loading) {
+    return <ActivityIndicator color={colors.primary} size="small" />;
+  }
+
+  return (
+    <Switch
+      value={receiving}
+      disabled={!canEnable && !receiving}
+      onValueChange={value => void onToggle(value)}
+      accessibilityLabel={t(labelKey)}
+      style={styles.inlineSwitch}
+    />
+  );
+}
+
 const styles = StyleSheet.create({
   toggleCol: {
     alignItems: 'center',
@@ -130,6 +164,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.muted,
     textAlign: 'center',
+  },
+  inlineSwitch: {
+    transform: [{ scaleX: 0.85 }, { scaleY: 0.85 }],
   },
   badge: {
     borderRadius: radius.button,

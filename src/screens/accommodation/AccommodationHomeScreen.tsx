@@ -22,9 +22,13 @@ import { accommodationApi } from '../../api/accommodationApi';
 import { getAccommodationInvalidationGeneration, subscribeAccommodationInvalidation } from '../../utils/accommodationQueryCache';
 import type { BuildingResponse, BuildingSummaryResponse, SpaceType } from '../../api/types';
 import { AccommodationSearchBar, BuildingListCard } from '../../components/accommodation';
-import { Button, EmptyState, FAB, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
+import { AccommodationHomeSpeedDial } from '../../components/accommodation/AccommodationHomeSpeedDial';
+import { DashboardAccommodationOperations } from '../../components/dashboard/DashboardAccommodationOperations';
+import { Button, EmptyState, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useBuildings } from '../../hooks/useBuildings';
+import { useDashboardAccommodationOperationsQuick } from '../../hooks/useDashboardAccommodationOperationsQuick';
+import { useNavigateFromSpaceTab } from '../../hooks/useNavigateFromSpaceTab';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useSpaceTabHeader } from '../../hooks/useSpaceTabHeader';
 import type { MainStackParamList, SpaceTabParamList } from '../../navigation/types';
@@ -33,6 +37,8 @@ import { useToastStore } from '../../store/toastStore';
 import { colors, spacing, typography } from '../../theme';
 import { matchesSearch } from '../../utils/accommodationSearch';
 import { renameBuildingName } from '../../utils/accommodationInlineRename';
+import { currentMonthKey } from '../../utils/dashboardFinancial';
+import { peekDashboardSummary } from '../../utils/dashboardQueryCache';
 
 type AccommodationNav = CompositeNavigationProp<
   BottomTabNavigationProp<SpaceTabParamList, 'Accommodation'>,
@@ -58,9 +64,35 @@ export function AccommodationHomeScreen() {
   const permissions = useSpacePermissions(spaceId);
   const canManage = permissions.canManageAccommodation;
   const showFab = permissions.canManageAccommodation;
+  const canViewOccupancyDrilldown =
+    permissions.canManageOccupancy || permissions.canViewSpaceOccupancies === true;
+  const navigateFromTab = useNavigateFromSpaceTab();
   const showToast = useToastStore(state => state.showToast);
 
+  const [isFocused, setIsFocused] = useState(false);
   const { buildings, loading, error, refresh, patchBuilding } = useBuildings(spaceId);
+  const cachedAccommodationOps = peekDashboardSummary(
+    spaceId,
+    currentMonthKey(),
+  )?.accommodationOperations;
+  const quickAccommodation = useDashboardAccommodationOperationsQuick(
+    spaceId,
+    Boolean(spaceId) && isFocused && cachedAccommodationOps == null,
+  );
+  const accommodationOperations = useMemo(() => {
+    if (cachedAccommodationOps) {
+      return cachedAccommodationOps;
+    }
+    return quickAccommodation.operations;
+  }, [cachedAccommodationOps, quickAccommodation.operations]);
+
+  useEffect(() => {
+    if (!accommodationOperations) return;
+    // #region agent log
+    fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'AccommodationHomeScreen.tsx:accommodationOperations',message:'operations cards rendered',data:{occupied:accommodationOperations.occupiedBeds,vacant:accommodationOperations.vacantBeds,moveIns:accommodationOperations.moveInsThisMonth,canViewOccupancyDrilldown},timestamp:Date.now(),hypothesisId:'H3',runId:'accom-ui'})}).catch(()=>{});
+    // #endregion
+  }, [accommodationOperations, canViewOccupancyDrilldown]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [summaries, setSummaries] = useState<Record<string, BuildingSummaryResponse>>({});
@@ -88,11 +120,20 @@ export function AccommodationHomeScreen() {
   useFocusEffect(
     useCallback(() => {
       console.log('[AccommodationHomeScreen] focused', spaceId);
+      setIsFocused(true);
       void refresh();
+      return () => {
+        setIsFocused(false);
+      };
     }, [refresh, spaceId]),
   );
 
+  // Per-building summaries are heavy (status COUNTs). Only fetch while this tab is focused —
+  // the tab stays mounted after first visit, and invalidation must not storm the API from Dashboard.
   useEffect(() => {
+    if (!isFocused) {
+      return;
+    }
     if (!spaceId || buildingIdsKey.length === 0) {
       setSummaries({});
       return;
@@ -126,7 +167,7 @@ export function AccommodationHomeScreen() {
     return () => {
       cancelled = true;
     };
-  }, [buildingIdsKey, spaceId, summaryGeneration]);
+  }, [buildingIdsKey, isFocused, spaceId, summaryGeneration]);
 
   const filteredBuildings = useMemo(
     () =>
@@ -139,10 +180,31 @@ export function AccommodationHomeScreen() {
   const onRefresh = useCallback(async () => {
     console.log('[AccommodationHomeScreen] pull to refresh');
     setRefreshing(true);
-    await refresh();
+    await Promise.all([refresh(), quickAccommodation.reload()]);
     setSummaryGeneration(getAccommodationInvalidationGeneration());
     setRefreshing(false);
-  }, [refresh]);
+  }, [quickAccommodation, refresh]);
+
+  const handleOccupiedBedsPress = useCallback(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'AccommodationHomeScreen.tsx:handleOccupiedBedsPress',message:'occupancy card nav',data:{target:'DashboardOccupancyList',mode:'active',spaceId},timestamp:Date.now(),hypothesisId:'H1',runId:'accom-ui'})}).catch(()=>{});
+    // #endregion
+    navigateFromTab('DashboardOccupancyList', { spaceId, mode: 'active' });
+  }, [navigateFromTab, spaceId]);
+
+  const handleVacantBedsPress = useCallback(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'AccommodationHomeScreen.tsx:handleVacantBedsPress',message:'vacant card nav',data:{target:'DashboardBedInventory',status:'AVAILABLE',spaceId},timestamp:Date.now(),hypothesisId:'H1',runId:'accom-ui'})}).catch(()=>{});
+    // #endregion
+    navigateFromTab('DashboardBedInventory', { spaceId, status: 'AVAILABLE' });
+  }, [navigateFromTab, spaceId]);
+
+  const handleMoveInsPress = useCallback(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'AccommodationHomeScreen.tsx:handleMoveInsPress',message:'move-ins card nav',data:{target:'DashboardOccupancyList',mode:'moveInsThisMonth',spaceId},timestamp:Date.now(),hypothesisId:'H1',runId:'accom-ui'})}).catch(()=>{});
+    // #endregion
+    navigateFromTab('DashboardOccupancyList', { spaceId, mode: 'moveInsThisMonth' });
+  }, [navigateFromTab, spaceId]);
 
   const openBuilder = (building: BuildingResponse) => {
     console.log('[AccommodationHomeScreen] open builder', building.buildingId);
@@ -153,10 +215,16 @@ export function AccommodationHomeScreen() {
   };
 
   const openQuickSetup = () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'AccommodationHomeScreen.tsx:openQuickSetup',message:'floating quick setup',data:{spaceId},timestamp:Date.now(),hypothesisId:'H2',runId:'accom-ui'})}).catch(()=>{});
+    // #endregion
     navigation.navigate('QuickSetupWizard', { spaceId });
   };
 
   const openManualBuilding = () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'AccommodationHomeScreen.tsx:openManualBuilding',message:'add manually',data:{spaceId},timestamp:Date.now(),hypothesisId:'H2',runId:'accom-ui'})}).catch(()=>{});
+    // #endregion
     navigation.navigate('BuildingForm', { spaceId, mode: 'create' });
   };
 
@@ -180,14 +248,14 @@ export function AccommodationHomeScreen() {
         }>
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        {canManage ? (
-          <View style={styles.ctaRow}>
-            <Button
-              label={t('accommodation.home.quickSetup')}
-              onPress={openQuickSetup}
-              style={styles.ctaButton}
-            />
-          </View>
+        {accommodationOperations ? (
+          <DashboardAccommodationOperations
+            hideTitle
+            operations={accommodationOperations}
+            onOccupiedPress={canViewOccupancyDrilldown ? handleOccupiedBedsPress : undefined}
+            onVacantPress={canViewOccupancyDrilldown ? handleVacantBedsPress : undefined}
+            onMoveInsPress={canViewOccupancyDrilldown ? handleMoveInsPress : undefined}
+          />
         ) : null}
 
         {!isEmpty ? (
@@ -255,12 +323,11 @@ export function AccommodationHomeScreen() {
         )}
       </ScrollView>
 
-      {showFab && !isEmpty ? (
-        <FAB
-          onPress={openManualBuilding}
-          accessibilityLabel={t('accommodation.home.addBuildingManually')}
-        />
-      ) : null}
+      <AccommodationHomeSpeedDial
+        visible={showFab && !isEmpty}
+        onQuickSetup={openQuickSetup}
+        onAddManually={openManualBuilding}
+      />
       </View>
     </RequireAccommodationAccess>
   );
@@ -276,13 +343,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.xl,
-    paddingBottom: 96,
-  },
-  ctaRow: {
-    marginBottom: spacing.lg,
-  },
-  ctaButton: {
-    width: '100%',
+    paddingBottom: 120,
   },
   errorText: {
     ...typography.body,

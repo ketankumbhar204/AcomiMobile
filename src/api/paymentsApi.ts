@@ -49,6 +49,9 @@ function buildQuery(params?: ListSpacePaymentsParams): string {
   if (params.paymentCategory) {
     parts.push(`paymentCategory=${encodeURIComponent(params.paymentCategory)}`);
   }
+  if (params.sync === false) {
+    parts.push('sync=false');
+  }
   return parts.length > 0 ? `?${parts.join('&')}` : '';
 }
 

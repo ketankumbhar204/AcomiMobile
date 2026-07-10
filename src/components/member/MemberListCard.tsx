@@ -7,7 +7,12 @@ type MemberListCardProps = {
   subtitle?: string;
   iconLabel?: string;
   onPress: () => void;
-  trailing: React.ReactNode;
+  statusChip?: React.ReactNode;
+  metaLine?: string;
+  foodLine?: {
+    label: string;
+    manageControl?: React.ReactNode;
+  };
 };
 
 export function MemberListCard({
@@ -15,57 +20,72 @@ export function MemberListCard({
   subtitle,
   iconLabel,
   onPress,
-  trailing,
+  statusChip,
+  metaLine,
+  foodLine,
 }: MemberListCardProps) {
   return (
-    <View style={styles.card}>
-      <Pressable
-        onPress={onPress}
-        style={({ pressed }) => [styles.left, pressed && styles.leftPressed]}
-        accessibilityRole="button">
-        {iconLabel ? (
-          <View style={styles.icon}>
-            <Text style={styles.iconText}>{iconLabel}</Text>
-          </View>
-        ) : null}
-        <View style={styles.info}>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      accessibilityRole="button">
+      {iconLabel ? (
+        <View style={styles.icon}>
+          <Text style={styles.iconText}>{iconLabel}</Text>
+        </View>
+      ) : null}
+      <View style={styles.body}>
+        <View style={styles.titleRow}>
           <Text style={styles.title} numberOfLines={1}>
             {title}
           </Text>
-          {subtitle ? (
-            <Text style={styles.subtitle} numberOfLines={1}>
-              {subtitle}
-            </Text>
-          ) : null}
+          {statusChip ? <View style={styles.chipSlot}>{statusChip}</View> : null}
+          <Text style={styles.chevron}>›</Text>
         </View>
-      </Pressable>
-      <View style={styles.divider} />
-      <View style={styles.trailing}>{trailing}</View>
-    </View>
+        {subtitle ? (
+          <Text style={styles.subtitle} numberOfLines={1}>
+            {subtitle}
+          </Text>
+        ) : null}
+        {metaLine || foodLine ? (
+          <View style={styles.metaRow}>
+            {metaLine ? (
+              <Text style={styles.metaLine} numberOfLines={2}>
+                {metaLine}
+              </Text>
+            ) : (
+              <View style={styles.metaLineSpacer} />
+            )}
+            {foodLine ? (
+              <View style={styles.foodRow}>
+                <Text style={styles.foodLabel} numberOfLines={1}>
+                  {foodLine.label}
+                </Text>
+                {foodLine.manageControl}
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+      </View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
-    alignItems: 'stretch',
+    alignItems: 'flex-start',
     backgroundColor: colors.white,
     borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
-    minHeight: 72,
-    overflow: 'hidden',
-    ...shadows.sm,
-  },
-  left: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
     padding: spacing.lg,
     gap: spacing.md,
-    minWidth: 0,
+    minHeight: 72,
+    ...shadows.sm,
   },
-  leftPressed: {
+  cardPressed: {
+    borderColor: `${colors.primary}66`,
     backgroundColor: colors.surface,
   },
   icon: {
@@ -75,32 +95,67 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   iconText: {
     fontSize: 13,
     fontWeight: '700',
     color: colors.white,
   },
-  info: {
+  body: {
     flex: 1,
     minWidth: 0,
+    gap: 2,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   title: {
     ...typography.bodyStrong,
     fontSize: 16,
+    flex: 1,
+    minWidth: 0,
+  },
+  chipSlot: {
+    flexShrink: 0,
+  },
+  chevron: {
+    fontSize: 24,
+    fontWeight: '300',
+    color: colors.muted,
+    lineHeight: 24,
+    flexShrink: 0,
   },
   subtitle: {
     ...typography.caption,
-    marginTop: 2,
+    color: colors.muted,
   },
-  divider: {
-    width: 1,
-    backgroundColor: colors.border,
-    marginVertical: spacing.md,
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginTop: spacing.xxs,
   },
-  trailing: {
-    justifyContent: 'center',
-    paddingRight: spacing.md,
-    paddingVertical: spacing.sm,
+  metaLine: {
+    ...typography.caption,
+    color: colors.muted,
+    flex: 1,
+    minWidth: 0,
+  },
+  metaLineSpacer: {
+    flex: 1,
+  },
+  foodRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 0,
+    gap: spacing.xxs,
+  },
+  foodLabel: {
+    ...typography.caption,
+    color: colors.muted,
   },
 });

@@ -39,13 +39,32 @@ function parseAmount(value: string): number | null {
   return parsed;
 }
 
+export function hasSeparateFoodChargePolicy(foodPolicy?: SpaceFoodPolicy): boolean {
+  return (
+    Boolean(foodPolicy) &&
+    !foodPolicy!.foodIncludedInRent &&
+    foodPolicy!.defaultFoodCharge != null &&
+    foodPolicy!.defaultFoodCharge > 0
+  );
+}
+
+export function isFoodBundledWithRent(
+  values: ContractTermsFormValues,
+  foodPolicy?: SpaceFoodPolicy,
+): boolean {
+  if (!values.foodEnabled) {
+    return false;
+  }
+  if (foodPolicy?.foodIncludedInRent) {
+    return true;
+  }
+  return !hasSeparateFoodChargePolicy(foodPolicy);
+}
+
 export function emptyContractTermsFormValues(
   catalog?: TargetCatalogDefaults,
   foodPolicy?: SpaceFoodPolicy,
 ): ContractTermsFormValues {
-  const foodIncludedInRent = foodPolicy?.foodIncludedInRent ?? false;
-  const defaultFood = foodPolicy?.defaultFoodCharge;
-
   return {
     rentSnapshot:
       catalog?.defaultRent != null && catalog.defaultRent > 0
@@ -56,8 +75,7 @@ export function emptyContractTermsFormValues(
         ? String(catalog.defaultDeposit)
         : '0',
     foodEnabled: true,
-    foodChargeSnapshot:
-      !foodIncludedInRent && defaultFood != null ? String(defaultFood) : '',
+    foodChargeSnapshot: '',
     otherCharges: [],
   };
 }
@@ -107,7 +125,7 @@ export function computeMonthlyRentFoodTotal(
     return null;
   }
 
-  if (foodPolicy?.foodIncludedInRent) {
+  if (foodPolicy?.foodIncludedInRent || isFoodBundledWithRent(values, foodPolicy)) {
     return rent;
   }
 
@@ -125,10 +143,10 @@ export function monthlyTotalIncludesFoodFromForm(
   values: ContractTermsFormValues,
   foodPolicy?: SpaceFoodPolicy,
 ): boolean {
-  if (foodPolicy?.foodIncludedInRent) {
+  if (!values.foodEnabled) {
     return false;
   }
-  return values.foodEnabled;
+  return hasSeparateFoodChargePolicy(foodPolicy);
 }
 
 export function monthlyTotalIncludesFoodFromOccupancy(
@@ -173,12 +191,6 @@ export function validateContractTerms(
 
   if (values.foodEnabled && !foodIncludedInRent) {
     const foodCharge = parseAmount(values.foodChargeSnapshot);
-    const hasDefaultFood =
-      options.foodPolicy?.defaultFoodCharge != null &&
-      options.foodPolicy.defaultFoodCharge > 0;
-    if (foodCharge == null && !hasDefaultFood) {
-      return 'occupancy.contract.errors.foodChargeRequired';
-    }
     if (foodCharge != null && foodCharge < 0) {
       return 'occupancy.contract.errors.foodChargeInvalid';
     }
@@ -204,6 +216,21 @@ export function validateContractTerms(
   return null;
 }
 
+/** Resolve food charge for activation payloads: request → space default → 0. */
+export function resolveSubmitFoodChargeSnapshot(
+  values: ContractTermsFormValues,
+  foodPolicy?: SpaceFoodPolicy,
+): number {
+  const parsed = parseAmount(values.foodChargeSnapshot);
+  if (parsed != null) {
+    return parsed;
+  }
+  if (foodPolicy?.defaultFoodCharge != null && foodPolicy.defaultFoodCharge > 0) {
+    return foodPolicy.defaultFoodCharge;
+  }
+  return 0;
+}
+
 export function buildContractSnapshotPayload(
   values: ContractTermsFormValues,
   options?: {
@@ -216,7 +243,6 @@ export function buildContractSnapshotPayload(
   const includeRent = options?.includeRent !== false;
   const includeDeposit = options?.includeDeposit !== false;
   const includeFood = options?.includeFood !== false;
-  const foodIncludedInRent = options?.foodPolicy?.foodIncludedInRent ?? false;
 
   const payload: ContractSnapshotInput = {};
 
@@ -233,24 +259,18 @@ export function buildContractSnapshotPayload(
   }
 
   if (includeFood) {
-    if (foodIncludedInRent) {
+    if (isFoodBundledWithRent(values, options?.foodPolicy)) {
       payload.foodEnabled = true;
       payload.foodChargeSnapshot = null;
       payload.foodIncludedInRent = true;
-    } else {
-      payload.foodEnabled = values.foodEnabled;
+    } else if (values.foodEnabled) {
+      payload.foodEnabled = true;
       payload.foodIncludedInRent = false;
-      if (values.foodEnabled) {
-        const foodCharge =
-          parseAmount(values.foodChargeSnapshot) ??
-          options?.foodPolicy?.defaultFoodCharge ??
-          null;
-        if (foodCharge != null) {
-          payload.foodChargeSnapshot = foodCharge;
-        }
-      } else {
-        payload.foodChargeSnapshot = null;
-      }
+      payload.foodChargeSnapshot = resolveSubmitFoodChargeSnapshot(values, options?.foodPolicy);
+    } else {
+      payload.foodEnabled = false;
+      payload.foodIncludedInRent = false;
+      payload.foodChargeSnapshot = null;
     }
   }
 
@@ -281,14 +301,15 @@ export function buildTransferContractPayload(
   const foodIncludedInRent = foodPolicy?.foodIncludedInRent ?? false;
 
   if (rentPolicy === 'KEEP') {
+    const bundledFood = isFoodBundledWithRent(values, foodPolicy);
     return {
       rentPolicy,
-      foodEnabled: foodIncludedInRent ? true : values.foodEnabled,
-      foodIncludedInRent,
+      foodEnabled: values.foodEnabled,
+      foodIncludedInRent: bundledFood,
       foodChargeSnapshot:
-        foodIncludedInRent || !values.foodEnabled
+        bundledFood || !values.foodEnabled
           ? null
-          : parseAmount(values.foodChargeSnapshot),
+          : resolveSubmitFoodChargeSnapshot(values, foodPolicy),
       otherCharges:
         values.otherCharges.length > 0
           ? values.otherCharges.map(charge => ({
@@ -339,6 +360,42 @@ export function computeOccupancyMonthlyTotal(
   }
 
   return occupancy.rentSnapshot + (occupancy.foodChargeSnapshot ?? 0);
+}
+
+export function isOccupancyBillableInMonth(
+  occupancy: OccupancyResponse,
+  month: string,
+): boolean {
+  if (occupancy.status === 'RESERVED') {
+    return false;
+  }
+
+  const [year, monthNum] = month.split('-').map(Number);
+  const monthStart = `${month}-01`;
+  const lastDay = new Date(year, monthNum, 0).getDate();
+  const monthEnd = `${month}-${String(lastDay).padStart(2, '0')}`;
+
+  const startDate = (occupancy.actualMoveInAt ?? occupancy.moveInDate)?.slice(0, 10);
+  if (!startDate || startDate > monthEnd) {
+    return false;
+  }
+
+  const vacatedDate = occupancy.vacatedAt?.slice(0, 10);
+  if (vacatedDate && vacatedDate < monthStart) {
+    return false;
+  }
+
+  return occupancy.status === 'ACTIVE' || occupancy.status === 'VACATED';
+}
+
+export function computeOccupancyMonthlyTotalForMonth(
+  occupancy: OccupancyResponse,
+  month: string,
+): number | null {
+  if (!isOccupancyBillableInMonth(occupancy, month)) {
+    return null;
+  }
+  return computeOccupancyMonthlyTotal(occupancy);
 }
 
 export function hasContractSnapshot(occupancy: OccupancyResponse): boolean {

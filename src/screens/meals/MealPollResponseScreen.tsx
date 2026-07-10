@@ -8,6 +8,7 @@ import { MealPollDayContent } from '../../components/meals/MealPollDayContent';
 import { MealPollPaymentProofModal } from '../../components/meals/MealPollPaymentProofModal';
 import { Button, Screen } from '../../components/ui';
 import { useMealPollDay } from '../../hooks/useMealPollDay';
+import { useMealPricingPolicy } from '../../hooks/useMealPricingPolicy';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../../navigation/types';
 import { colors, spacing, typography } from '../../theme';
@@ -24,7 +25,9 @@ export function MealPollResponseScreen({ spaceId, menuDate }: MealPollResponseSc
   const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const permissions = useSpacePermissions(spaceId);
+  const mealPricing = useMealPricingPolicy(spaceId);
   const poll = useMealPollDay(spaceId, menuDate, permissions.spaceType, {
+    startInEditMode: true,
     onSaved: () => {
       navigation.goBack();
     },
@@ -111,12 +114,20 @@ export function MealPollResponseScreen({ spaceId, menuDate }: MealPollResponseSc
               variant="screen"
               hideSubmitButton
               readOnly={dateReadOnly}
+              showMealPrices={mealPricing.showMealPrices}
             />
             {!poll.loading && poll.openPolls.length > 0 && !poll.showSummary && !dateReadOnly ? (
               <Button
                 label={poll.saving ? t('meals.poll.submitting') : t('meals.poll.submit')}
                 onPress={() => void handleSavePress()}
                 loading={poll.saving}
+                style={styles.button}
+              />
+            ) : !poll.loading && poll.openPolls.length > 0 && poll.showSummary && !dateReadOnly ? (
+              <Button
+                label={t('meals.poll.updateChoices')}
+                onPress={poll.handleUpdateChoices}
+                variant="secondary"
                 style={styles.button}
               />
             ) : null}

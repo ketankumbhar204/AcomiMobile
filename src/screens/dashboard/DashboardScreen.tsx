@@ -14,16 +14,19 @@ import {
   DashboardAccommodationOperations,
   DashboardFinancialSnapshot,
   DashboardMealOperations,
+  DashboardMessOperations,
   DashboardSectionTitle,
 } from '../../components/dashboard';
 import { DashboardCustomerMealsSection } from '../../components/meals/DashboardCustomerMealsSection';
 import { ModuleActionCard, SkeletonCard, useQuickActionSheet } from '../../components/ui';
 import type { QuickActionSheetOption } from '../../components/ui';
 import { Screen } from '../../components/ui/Screen';
+import { useDashboardAccommodationOperationsQuick } from '../../hooks/useDashboardAccommodationOperationsQuick';
 import { useDashboardAttentionItems } from '../../hooks/useDashboardAttentionItems';
 import { useLinkedMember } from '../../hooks/useLinkedMember';
 import { useHierarchyOccupancyPicker } from '../../hooks/useHierarchyOccupancyPicker';
 import { useNavigateFromSpaceTab } from '../../hooks/useNavigateFromSpaceTab';
+import { usePendingActions } from '../../hooks/usePendingActions';
 import { useSpaceDashboard } from '../../hooks/useSpaceDashboard';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList, SpaceTabParamList } from '../../navigation/types';
@@ -34,7 +37,8 @@ import {
 import { useSpaceStore } from '../../store/spaceStore';
 import { colors, spacing, typography } from '../../theme';
 import { isAccommodationApplicable } from '../../utils/accommodationProfile';
-import { canManagePayments, canViewOperationalDashboard } from '../../utils/dashboardFinancial';
+import { canManagePayments, canViewOperationalDashboard, currentMonthKey } from '../../utils/dashboardFinancial';
+import { peekDashboardSummary } from '../../utils/dashboardQueryCache';
 import { tomorrowIsoDate } from '../../utils/mealDates';
 import { shouldShowDashboardMealOperations } from '../../utils/dashboardMealOperations';
 import { findMySpaceEntry } from '../../utils/spacePermissions';
@@ -101,9 +105,17 @@ export function DashboardScreen() {
   const showPaymentsQuickAction = canManagePayments(permissions.membershipRole);
 
   const dashboard = useSpaceDashboard(spaceId, spaceType, showOwnerDashboard);
+  const hasSummaryAccommodation = dashboard.accommodationOperations != null;
+  const quickAccommodation = useDashboardAccommodationOperationsQuick(
+    spaceId,
+    showOwnerDashboard && accommodationApplicable && !hasSummaryAccommodation,
+  );
+  const accommodationOperations =
+    dashboard.accommodationOperations ?? quickAccommodation.operations;
   const handleDashboardRefresh = useCallback(() => {
     void dashboard.reload(true);
-  }, [dashboard.reload]);
+    void quickAccommodation.reload();
+  }, [dashboard.reload, quickAccommodation.reload]);
   const showMealOperations = shouldShowDashboardMealOperations({
     showOwnerDashboard,
     canManageMeals: showMealsActions,
@@ -111,12 +123,26 @@ export function DashboardScreen() {
     accommodationApplicable,
     hasMessOperationsSummary: dashboard.messOperations != null,
   });
-  const pendingActionItems = useDashboardAttentionItems(
+  const cachedAttention =
+    peekDashboardSummary(spaceId, currentMonthKey())?.attention ?? [];
+  const attentionSource =
+    (dashboard.attention?.length ?? 0) > 0 ? dashboard.attention : cachedAttention;
+  const legacyAttentionItems = useDashboardAttentionItems(
     spaceId,
-    dashboard.attention ?? [],
-    showOwnerDashboard && showMealsActions && isMess,
+    attentionSource ?? [],
+    showOwnerDashboard && showMealsActions,
   );
-  const pendingActionCount = pendingActionItems.length;
+  const pendingActions =
+    dashboard.pendingActions ??
+    peekDashboardSummary(spaceId, currentMonthKey())?.pendingActions ??
+    null;
+  // Owners: prefer dashboard-summary.pendingActions (already synced once).
+  // Tenants: dedicated pending-actions fetch (filtered). Shared cache dedupes with the bell.
+  const tenantPendingActions = usePendingActions(spaceId, !showOwnerDashboard, false);
+  const pendingActionCount = showOwnerDashboard
+    ? (pendingActions?.totalCount ??
+      (pendingActions == null ? legacyAttentionItems.length : 0))
+    : tenantPendingActions.totalCount;
 
   const handlePendingActionsPress = useCallback(() => {
     navigateFromTab('DashboardPendingActions', { spaceId });
@@ -140,10 +166,6 @@ export function DashboardScreen() {
   const handleMoveInsPress = useCallback(() => {
     navigateFromTab('DashboardOccupancyList', { spaceId, mode: 'moveInsThisMonth' });
   }, [navigateFromTab, spaceId]);
-
-  const handleAccommodationPendingPaymentsPress = useCallback(() => {
-    navigation.navigate('Payments', { spaceId, initialFilter: 'pending' });
-  }, [navigation, spaceId]);
 
   const handleMealsPress = useCallback(() => {
     const tomorrow = tomorrowIsoDate();
@@ -240,7 +262,7 @@ export function DashboardScreen() {
   }, [linkedMemberId, navigateFromTab, spaceId]);
 
   const pendingActionsCard =
-    showOwnerDashboard && pendingActionCount > 0 ? (
+    pendingActionCount > 0 ? (
       <PendingActionsQuickCard count={pendingActionCount} onPress={handlePendingActionsPress} />
     ) : null;
 
@@ -331,6 +353,7 @@ export function DashboardScreen() {
     if (showMyStay) {
       return (
         <View style={styles.quickStack}>
+          {pendingActionsCard}
           <ModuleActionCard
             icon="🏠"
             title={t('permissions.myStay.title')}
@@ -349,12 +372,15 @@ export function DashboardScreen() {
 
     if ((isTenant || isCustomer) && linkedMemberId) {
       return (
-        <ModuleActionCard
-          icon="💳"
-          title={t('paymentCollection.memberPayments.dashboardTitle')}
-          subtitle={t('paymentCollection.memberPayments.dashboardSubtitle')}
-          onPress={handleMyPaymentsPress}
-        />
+        <View style={styles.quickStack}>
+          {pendingActionsCard}
+          <ModuleActionCard
+            icon="💳"
+            title={t('paymentCollection.memberPayments.dashboardTitle')}
+            subtitle={t('paymentCollection.memberPayments.dashboardSubtitle')}
+            onPress={handleMyPaymentsPress}
+          />
+        </View>
       );
     }
 
@@ -386,7 +412,10 @@ export function DashboardScreen() {
   const quickActions = isMess ? messQuickActions : accommodationQuickActions;
   const showQuickSection = quickActions != null || pendingActionsCard != null;
 
-  const showInitialDashboardLoader = dashboard.loading && dashboard.summary == null;
+  const showInitialDashboardLoader =
+    dashboard.loading &&
+    dashboard.summary == null &&
+    quickAccommodation.operations == null;
 
   return (
     <Screen
@@ -428,13 +457,39 @@ export function DashboardScreen() {
                 }
               />
 
-              {isMess && showMealOperations ? (
-                <DashboardMealOperations spaceId={spaceId} enabled={dashboard.summary != null} />
+              {isMess && dashboard.messOperations ? (
+                <DashboardMessOperations
+                  operations={dashboard.messOperations}
+                  onMembersPress={
+                    permissions.canManageMembers
+                      ? () => navigateToMembersTab(spaceId)
+                      : undefined
+                  }
+                  onMenusPress={
+                    showMealsActions
+                      ? () => navigateFromTab('MenuPlanning', { spaceId })
+                      : undefined
+                  }
+                  onPollsPress={
+                    showMealsActions
+                      ? () => navigateFromTab('MenuSharePreview', { spaceId })
+                      : undefined
+                  }
+                  onHeadcountPress={
+                    showMealsActions
+                      ? () => navigateFromTab('DailyMenuToday', { spaceId })
+                      : undefined
+                  }
+                />
               ) : null}
 
-              {dashboard.accommodationOperations ? (
+              {isMess && showMealOperations ? (
+                <DashboardMealOperations spaceId={spaceId} enabled={showMealOperations} />
+              ) : null}
+
+              {accommodationOperations ? (
                 <DashboardAccommodationOperations
-                  operations={dashboard.accommodationOperations}
+                  operations={accommodationOperations}
                   onOccupiedPress={
                     showResidentsActions || permissions.canViewSpaceOccupancies
                       ? handleOccupiedBedsPress
@@ -450,14 +505,11 @@ export function DashboardScreen() {
                       ? handleMoveInsPress
                       : undefined
                   }
-                  onPendingPaymentsPress={
-                    showPaymentsQuickAction ? handleAccommodationPendingPaymentsPress : undefined
-                  }
                 />
               ) : null}
 
               {!isMess && showMealOperations ? (
-                <DashboardMealOperations spaceId={spaceId} enabled={dashboard.summary != null} />
+                <DashboardMealOperations spaceId={spaceId} enabled={showMealOperations} />
               ) : null}
             </>
           ) : null}

@@ -11,6 +11,7 @@ export { MemberDocumentsSection, MemberDocumentsTab } from './MemberDocumentsSec
 export { MemberHistoryTab } from './MemberHistoryTab';
 export { MemberNotesSection, MemberNotesTab } from './MemberNotesSection';
 export { MemberProfileTab } from './MemberProfileTab';
+export { MemberOccupancyStatusBadge } from './MemberOccupancyStatusBadge';
 export { MemberStatusBadge } from './MemberStatusBadge';
 export { RoleBadge } from './RoleBadge';
 export { StatusPicker } from './StatusPicker';

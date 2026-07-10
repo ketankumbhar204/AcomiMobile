@@ -46,7 +46,6 @@ export function OccupancyWizardStepHeader({
 
 const styles = StyleSheet.create({
   wrap: {
-    paddingHorizontal: spacing.xl,
     marginBottom: spacing.sm,
   },
   stepProgress: {

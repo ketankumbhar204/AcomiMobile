@@ -2,65 +2,94 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { SpacePaymentResponse } from '../../api/types';
-import { Card } from '../ui';
 import { colors, radius, spacing, typography } from '../../theme';
 import { formatPaymentAmount, formatPaymentDueDate } from '../../utils/paymentHistory';
+import { PaymentStatusBadge } from './PaymentStatusBadge';
+import { PaymentStatusCardFrame } from './PaymentStatusCardFrame';
 
 type UniversalPaymentCardProps = {
   payment: SpacePaymentResponse;
   onPress?: () => void;
+  /** Opens the update/pay modal without navigating to detail. */
+  onUpdatePress?: () => void;
   showMember?: boolean;
 };
-
-function statusStyle(status: SpacePaymentResponse['paymentStatus']) {
-  switch (status) {
-    case 'PAID':
-      return styles.statusPaid;
-    case 'UNDER_REVIEW':
-    case 'PROOF_UPLOADED':
-      return styles.statusSubmitted;
-    case 'REJECTED':
-      return styles.statusRejected;
-    default:
-      return styles.statusPending;
-  }
-}
 
 export function UniversalPaymentCard({
   payment,
   onPress,
+  onUpdatePress,
   showMember = false,
 }: UniversalPaymentCardProps) {
   const { t } = useTranslation();
+  const needsUpdate = payment.paymentStatus === 'UPDATE_REQUESTED';
+  const canUpdate =
+    payment.paymentStatus === 'PENDING' ||
+    payment.paymentStatus === 'REJECTED' ||
+    payment.paymentStatus === 'UPDATE_REQUESTED';
+
+  const updateLabel =
+    payment.paymentStatus === 'PENDING'
+      ? t('paymentCollection.payNow')
+      : t('paymentCollection.updatePayment');
 
   const content = (
-    <Card style={styles.card}>
-      {showMember ? <Text style={styles.memberName}>{payment.memberName}</Text> : null}
-      {payment.targetLabel ? (
-        <Text style={styles.target}>{payment.targetLabel}</Text>
-      ) : null}
-      <Text style={styles.title}>{payment.title}</Text>
-      <View style={styles.amountRow}>
+    <PaymentStatusCardFrame status={payment.paymentStatus} style={styles.card}>
+      <View style={styles.cardInner}>
+        <View style={styles.headerRow}>
+          {showMember ? (
+            <Text style={styles.memberName} numberOfLines={1}>
+              {payment.memberName}
+            </Text>
+          ) : (
+            <Text style={styles.titleInline} numberOfLines={2}>
+              {payment.title}
+            </Text>
+          )}
+          <PaymentStatusBadge status={payment.paymentStatus} />
+        </View>
+        {payment.targetLabel ? <Text style={styles.target}>{payment.targetLabel}</Text> : null}
+        {showMember ? <Text style={styles.title}>{payment.title}</Text> : null}
         <Text style={styles.amount}>{formatPaymentAmount(payment.amount, payment.currencyCode)}</Text>
-        <Text style={[styles.status, statusStyle(payment.paymentStatus)]}>
-          {t(`paymentCollection.status.${payment.paymentStatus}`)}
+        <Text style={styles.due}>
+          {t('paymentCollection.dueDate', { date: formatPaymentDueDate(payment.dueDate) })}
         </Text>
+
+        {payment.paymentStatus === 'REJECTED' && payment.rejectionReason ? (
+          <View style={styles.messageBox}>
+            <Text style={styles.messageLabel}>{t('paymentCollection.rejectedTitle')}</Text>
+            <Text style={styles.messageText} numberOfLines={3}>
+              {payment.rejectionReason}
+            </Text>
+          </View>
+        ) : null}
+
+        {needsUpdate && payment.rejectionReason ? (
+          <View style={styles.messageBox}>
+            <Text style={styles.messageLabel}>{t('paymentCollection.ownerRequest')}</Text>
+            <Text style={styles.messageText} numberOfLines={3}>
+              {payment.rejectionReason}
+            </Text>
+          </View>
+        ) : null}
+
+        {canUpdate ? (
+          onUpdatePress ? (
+            <Pressable
+              onPress={e => {
+                e.stopPropagation?.();
+                onUpdatePress();
+              }}
+              hitSlop={8}
+              style={styles.ctaPressable}>
+              <Text style={styles.cta}>{updateLabel}</Text>
+            </Pressable>
+          ) : (
+            <Text style={styles.cta}>{updateLabel}</Text>
+          )
+        ) : null}
       </View>
-      <Text style={styles.due}>
-        {t('paymentCollection.dueDate', { date: formatPaymentDueDate(payment.dueDate) })}
-      </Text>
-      {payment.paymentStatus === 'REJECTED' && payment.rejectionReason ? (
-        <Text style={styles.rejection}>
-          {t('paymentCollection.rejectedReason', { reason: payment.rejectionReason })}
-        </Text>
-      ) : null}
-      {payment.paymentStatus === 'PENDING' ? (
-        <Text style={styles.cta}>{t('paymentCollection.payNow')}</Text>
-      ) : null}
-      {payment.paymentStatus === 'REJECTED' ? (
-        <Text style={styles.cta}>{t('paymentCollection.uploadAgain')}</Text>
-      ) : null}
-    </Card>
+    </PaymentStatusCardFrame>
   );
 
   if (!onPress) {
@@ -78,12 +107,28 @@ const styles = StyleSheet.create({
   card: {
     marginBottom: spacing.sm,
   },
+  cardInner: {
+    padding: spacing.md,
+  },
   pressed: {
     opacity: 0.92,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
   memberName: {
     ...typography.bodyStrong,
-    marginBottom: spacing.xs,
+    flex: 1,
+    minWidth: 0,
+  },
+  titleInline: {
+    ...typography.h3,
+    flex: 1,
+    minWidth: 0,
   },
   target: {
     ...typography.caption,
@@ -94,52 +139,40 @@ const styles = StyleSheet.create({
     ...typography.h3,
     marginBottom: spacing.xs,
   },
-  amountRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.xs,
-  },
   amount: {
     ...typography.bodyStrong,
     fontSize: 18,
-  },
-  status: {
-    ...typography.caption,
-    fontWeight: '600',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: radius.full,
-    overflow: 'hidden',
-  },
-  statusPending: {
-    backgroundColor: '#FEF3C7',
-    color: '#92400E',
-  },
-  statusSubmitted: {
-    backgroundColor: '#DBEAFE',
-    color: '#1D4ED8',
-  },
-  statusPaid: {
-    backgroundColor: '#D1FAE5',
-    color: '#065F46',
-  },
-  statusRejected: {
-    backgroundColor: '#FEE2E2',
-    color: '#991B1B',
+    marginBottom: spacing.xs,
   },
   due: {
     ...typography.caption,
     color: colors.muted,
   },
-  rejection: {
+  messageBox: {
+    marginTop: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.button,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.sm,
+  },
+  messageLabel: {
     ...typography.caption,
-    color: '#991B1B',
+    color: colors.muted,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  messageText: {
+    ...typography.caption,
+    color: colors.textPrimary,
+    lineHeight: 16,
+  },
+  ctaPressable: {
+    alignSelf: 'flex-start',
     marginTop: spacing.sm,
   },
   cta: {
     ...typography.bodyStrong,
     color: colors.primaryDark,
-    marginTop: spacing.sm,
   },
 });

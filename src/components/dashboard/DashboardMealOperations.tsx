@@ -1,15 +1,19 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { MealType, UUID } from '../../api/types';
-import { useMealDayMenuStatus } from '../../hooks/useMealDayMenuStatus';
+import { useDashboardMealDay } from '../../hooks/useDashboardMealDay';
 import { useOwnerMealHeadcount } from '../../hooks/useOwnerMealHeadcount';
-import { useOwnerMealPollStatus } from '../../hooks/useOwnerMealPollStatus';
 import { navigateMainStack } from '../../navigation/mainStackNavigation';
 import { colors, radius, spacing, typography } from '../../theme';
 import { addDaysIsoDate, formatMenuDate, isPastMenuDate, todayIsoDate } from '../../utils/mealDates';
-import type { MealOperationsEmptyKind } from '../../utils/dailyMenuDayStatus';
+import { buildDashboardMealSlotRows } from '../../utils/dashboardMealSlotDisplay';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
+import {
+  MENU_PLANNING_STATUS_BACKGROUNDS,
+  MENU_PLANNING_STATUS_COLORS,
+} from '../../utils/menuPlanningStatusVisual';
+import type { MenuPlanningStatusFilter } from '../../utils/menuPlanningFilter';
 import { MealHeadcountBottomSheet } from '../meals/MealHeadcountBottomSheet';
 import { MenuDateContextHints } from '../meals/MenuDateContextHints';
 import { MenuDatePickerModal } from '../meals/MenuDatePickerModal';
@@ -20,65 +24,92 @@ type DashboardMealOperationsProps = {
   enabled?: boolean;
 };
 
-function MealSlotChip({
-  label,
-  value,
+function MealOperationSlotCard({
+  mealLabel,
+  statusLabel,
+  caption,
+  status,
   onPress,
 }: {
-  label: string;
-  value: string;
+  mealLabel: string;
+  statusLabel: string;
+  caption: string;
+  status: MenuPlanningStatusFilter;
   onPress: () => void;
 }) {
+  const statusColor = MENU_PLANNING_STATUS_COLORS[status];
+  const backgroundColor = MENU_PLANNING_STATUS_BACKGROUNDS[status];
+
   return (
     <Pressable
-      style={({ pressed }) => [styles.mealChip, pressed && styles.mealChipPressed]}
+      style={({ pressed }) => [
+        styles.slotCard,
+        { backgroundColor, borderColor: statusColor },
+        pressed && styles.slotCardPressed,
+      ]}
       onPress={onPress}
-      accessibilityRole="button">
-      <Text style={styles.mealChipLabel}>{label}</Text>
-      <Text style={styles.mealChipValue}>{value}</Text>
+      accessibilityRole="button"
+      accessibilityLabel={`${mealLabel}, ${statusLabel}, ${caption}`}>
+      <Text style={styles.slotMealLabel} numberOfLines={1}>
+        {mealLabel}
+      </Text>
+      <Text style={[styles.slotStatusLabel, { color: statusColor }]} numberOfLines={1}>
+        {statusLabel}
+      </Text>
+      <Text style={styles.slotCaption} numberOfLines={2}>
+        {caption}
+      </Text>
     </Pressable>
   );
-}
-
-function emptyMessageKey(kind: MealOperationsEmptyKind): string {
-  switch (kind) {
-    case 'all_not_planned':
-      return 'dashboard.operations.emptyAllNotPlanned';
-    case 'none_published':
-      return 'dashboard.operations.emptyNonePublished';
-    default:
-      return 'dashboard.operations.emptyNoResponses';
-  }
 }
 
 export function DashboardMealOperations({ spaceId, enabled = true }: DashboardMealOperationsProps) {
   const { t, i18n } = useTranslation();
   const [menuDate, setMenuDate] = useState(todayIsoDate());
-  const headcount = useOwnerMealHeadcount(spaceId, menuDate, enabled);
-  const menuStatus = useMealDayMenuStatus(spaceId, menuDate, enabled);
-  const pollStatus = useOwnerMealPollStatus(spaceId, menuDate, enabled);
+  const [deferMealFetch, setDeferMealFetch] = useState(true);
+  const mealFetchEnabled = enabled && !deferMealFetch;
   const [sheetOpen, setSheetOpen] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [initialMealType, setInitialMealType] = useState<MealType>('BREAKFAST');
   const dateReadOnly = isPastMenuDate(menuDate);
 
-  const loading = headcount.loading || menuStatus.loading || pollStatus.loading;
+  // One coordinated load for menus + polls + eligibility (not 3 separate focus hooks).
+  const mealDay = useDashboardMealDay(spaceId, menuDate, mealFetchEnabled);
+  // Headcount only when the sheet is open — not on every dashboard paint.
+  const headcount = useOwnerMealHeadcount(spaceId, menuDate, mealFetchEnabled && sheetOpen);
+
+  useEffect(() => {
+    if (!enabled) {
+      setDeferMealFetch(true);
+      return;
+    }
+    const timer = setTimeout(() => setDeferMealFetch(false), 400);
+    return () => clearTimeout(timer);
+  }, [enabled, spaceId]);
+
+  const loading = mealDay.loading;
 
   const pollStatusLine = useMemo(() => {
-    if (pollStatus.hasOpenPolls) {
+    if (mealDay.hasOpenPolls) {
       return t('dashboard.operations.pollOpenLine', {
-        responded: pollStatus.respondedCount,
-        eligible: pollStatus.eligibleCount,
+        responded: mealDay.respondedCount,
+        eligible: mealDay.eligibleCount,
       });
     }
-    if (menuStatus.summary.published > 0) {
+    if (mealDay.summary.published > 0) {
       return t('dashboard.operations.pollClosed');
     }
-    if (menuStatus.summary.draft > 0) {
+    if (mealDay.summary.draft > 0) {
       return t('dashboard.operations.pollNotOpenDraft');
     }
     return t('dashboard.operations.pollNotOpen');
-  }, [menuStatus.summary, pollStatus.eligibleCount, pollStatus.hasOpenPolls, pollStatus.respondedCount, t]);
+  }, [
+    mealDay.eligibleCount,
+    mealDay.hasOpenPolls,
+    mealDay.respondedCount,
+    mealDay.summary,
+    t,
+  ]);
 
   const handleOpenMeal = useCallback((mealType: MealType) => {
     setInitialMealType(mealType);
@@ -89,12 +120,36 @@ export function DashboardMealOperations({ spaceId, enabled = true }: DashboardMe
     navigateMainStack('MenuPlanning', { spaceId, menuDate });
   }, [menuDate, spaceId]);
 
+  const mealSlotRows = useMemo(
+    () => buildDashboardMealSlotRows(mealDay.menuMap, mealDay.pollMap),
+    [mealDay.menuMap, mealDay.pollMap],
+  );
+
+  const handleSlotPress = useCallback(
+    (mealType: MealType, status: MenuPlanningStatusFilter) => {
+      if (status === 'published') {
+        handleOpenMeal(mealType);
+        return;
+      }
+      handleOpenMenuPlanning();
+    },
+    [handleOpenMeal, handleOpenMenuPlanning],
+  );
+
   const handleCloseSheet = useCallback(() => {
     setSheetOpen(false);
-    void headcount.reload();
-    void menuStatus.reload();
-    void pollStatus.reload();
-  }, [headcount, menuStatus, pollStatus]);
+    void mealDay.reload();
+  }, [mealDay]);
+
+  useEffect(() => {
+    if (!sheetOpen || headcount.loading) {
+      return;
+    }
+    if (headcount.slots.length === 0) {
+      setSheetOpen(false);
+      handleOpenMenuPlanning();
+    }
+  }, [handleOpenMenuPlanning, headcount.loading, headcount.slots.length, sheetOpen]);
 
   return (
     <View style={styles.wrap}>
@@ -133,12 +188,12 @@ export function DashboardMealOperations({ spaceId, enabled = true }: DashboardMe
         <View style={styles.statusBar}>
           <View style={styles.statusTextBlock}>
             <Text style={styles.dayStatusLine}>
-              {t('meals.planning.dayStatus', menuStatus.summary)}
+              {t('meals.planning.dayStatus', mealDay.summary)}
             </Text>
             <Text
               style={[
                 styles.pollStatusLine,
-                pollStatus.hasOpenPolls && styles.pollStatusLineOpen,
+                mealDay.hasOpenPolls && styles.pollStatusLineOpen,
               ]}>
               {pollStatusLine}
             </Text>
@@ -156,28 +211,28 @@ export function DashboardMealOperations({ spaceId, enabled = true }: DashboardMe
         </View>
       )}
 
-      {!loading && headcount.slots.length === 0 ? (
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyText}>{t(emptyMessageKey(menuStatus.emptyKind))}</Text>
-        </View>
-      ) : !loading ? (
+      {!loading ? (
         <>
-          <View style={styles.mealChipRow}>
-            {headcount.slots.map(slot => (
-              <MealSlotChip
-                key={slot.pollId}
-                label={t(mealTypeLabelKey(slot.mealType))}
-                value={String(slot.mealsToPrepare)}
-                onPress={() => handleOpenMeal(slot.mealType)}
+          <View style={styles.mealSlotRow}>
+            {mealSlotRows.map(row => (
+              <MealOperationSlotCard
+                key={row.mealType}
+                mealLabel={t(mealTypeLabelKey(row.mealType))}
+                statusLabel={t(row.statusLabelKey)}
+                caption={t(row.captionKey, row.captionParams)}
+                status={row.status}
+                onPress={() => handleSlotPress(row.mealType, row.status)}
               />
             ))}
           </View>
 
-          <Text style={styles.hint}>{t('dashboard.headcount.toggleMealHint')}</Text>
+          {mealDay.summary.published > 0 ? (
+            <Text style={styles.hint}>{t('dashboard.headcount.toggleMealHint')}</Text>
+          ) : null}
         </>
       ) : null}
 
-      {sheetOpen && headcount.slots.length > 0 ? (
+      {sheetOpen && !headcount.loading && headcount.slots.length > 0 ? (
         <MealHeadcountBottomSheet
           visible={sheetOpen}
           spaceId={spaceId}
@@ -188,8 +243,7 @@ export function DashboardMealOperations({ spaceId, enabled = true }: DashboardMe
           readOnly={dateReadOnly}
           onReload={() => {
             void headcount.reload();
-            void menuStatus.reload();
-            void pollStatus.reload();
+            void mealDay.reload();
           }}
         />
       ) : null}
@@ -296,42 +350,42 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     fontWeight: '700',
   },
-  emptyCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.md,
-  },
-  mealChipRow: {
+  mealSlotRow: {
     flexDirection: 'row',
     gap: spacing.sm,
   },
-  mealChip: {
+  slotCard: {
     flex: 1,
+    minHeight: 96,
     alignItems: 'center',
-    backgroundColor: colors.lightGreen,
+    justifyContent: 'center',
     borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: `${colors.primary}22`,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xs,
-    gap: 2,
+    gap: spacing.xxs,
   },
-  mealChipPressed: {
+  slotCardPressed: {
     opacity: 0.92,
   },
-  mealChipLabel: {
+  slotMealLabel: {
     ...typography.caption,
-    color: colors.muted,
+    color: colors.textPrimary,
+    fontWeight: '700',
     textAlign: 'center',
-    fontWeight: '600',
     fontSize: 11,
   },
-  mealChipValue: {
+  slotStatusLabel: {
     ...typography.bodyStrong,
-    color: colors.textPrimary,
-    fontSize: 18,
+    textAlign: 'center',
+    fontSize: 14,
+  },
+  slotCaption: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 16,
+    fontSize: 10,
   },
   hint: {
     ...typography.caption,
@@ -339,11 +393,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: spacing.sm,
     lineHeight: 18,
-  },
-  emptyText: {
-    ...typography.body,
-    color: colors.textPrimary,
-    textAlign: 'center',
-    lineHeight: 22,
   },
 });

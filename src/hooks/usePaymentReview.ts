@@ -1,28 +1,56 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PaymentServiceUnavailableError, paymentsApi } from '../api/paymentsApi';
-import type { PaymentRejectionReason, SpacePaymentResponse, UUID } from '../api/types';
+import type { PaymentRejectionReason, PaymentReviewAction, SpacePaymentResponse, UUID } from '../api/types';
 import { currentMonthKey } from '../utils/dashboardFinancial';
-import { isSubmittedForReview } from '../utils/paymentStatus';
+import {
+  isChangesRequested,
+  isSubmittedForReview,
+} from '../utils/paymentStatus';
 
-export type PaymentReviewTab = 'SUBMITTED' | 'PAID' | 'REJECTED';
+export type PaymentReviewQueue = 'PENDING' | 'HISTORY';
 
-function matchesTab(payment: SpacePaymentResponse, tab: PaymentReviewTab): boolean {
-  if (tab === 'SUBMITTED') {
-    return isSubmittedForReview(payment.paymentStatus);
+export type PendingReviewFilter = 'SUBMITTED' | 'NEEDS_UPDATE';
+
+export type HistoryReviewFilter = 'PAID' | 'REJECTED';
+
+function matchesPendingFilter(
+  payment: SpacePaymentResponse,
+  filter: PendingReviewFilter,
+): boolean {
+  if (filter === 'NEEDS_UPDATE') {
+    return isChangesRequested(payment.paymentStatus);
   }
-  if (tab === 'PAID') {
-    return payment.paymentStatus === 'PAID';
+  return isSubmittedForReview(payment.paymentStatus);
+}
+
+function matchesHistoryFilter(
+  payment: SpacePaymentResponse,
+  filter: HistoryReviewFilter,
+): boolean {
+  if (filter === 'REJECTED') {
+    return payment.paymentStatus === 'REJECTED';
   }
-  return payment.paymentStatus === 'REJECTED';
+  return payment.paymentStatus === 'PAID';
 }
 
 export function usePaymentReview(
   spaceId: UUID | null,
-  options?: { enabled?: boolean; month?: string },
+  options?: {
+    enabled?: boolean;
+    month?: string;
+    syncExpected?: boolean;
+    queue?: PaymentReviewQueue;
+    pendingFilter?: PendingReviewFilter;
+    historyFilter?: HistoryReviewFilter;
+  },
 ) {
   const enabled = options?.enabled ?? true;
   const month = options?.month ?? currentMonthKey();
-  const [tab, setTab] = useState<PaymentReviewTab>('SUBMITTED');
+  const syncExpected = options?.syncExpected ?? true;
+  const queue = options?.queue ?? 'PENDING';
+  const pendingFilter = options?.pendingFilter ?? 'SUBMITTED';
+  const historyFilter = options?.historyFilter ?? 'PAID';
+
   const [payments, setPayments] = useState<SpacePaymentResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +61,8 @@ export function usePaymentReview(
     if (!spaceId || !enabled) {
       setPayments([]);
       setServiceUnavailable(false);
+      setError(null);
+      setLoading(false);
       return;
     }
 
@@ -40,7 +70,7 @@ export function usePaymentReview(
     setError(null);
     setServiceUnavailable(false);
     try {
-      const response = await paymentsApi.listPayments(spaceId, { month });
+      const response = await paymentsApi.listPayments(spaceId, { month, sync: syncExpected });
       setPayments(response.payments);
     } catch (err) {
       if (err instanceof PaymentServiceUnavailableError) {
@@ -54,26 +84,47 @@ export function usePaymentReview(
     } finally {
       setLoading(false);
     }
-  }, [enabled, month, spaceId]);
+  }, [enabled, month, spaceId, syncExpected]);
 
   useEffect(() => {
     void reload();
   }, [reload]);
 
-  const filteredPayments = useMemo(
-    () => payments.filter(p => matchesTab(p, tab)),
-    [payments, tab],
-  );
+  const filteredPayments = useMemo(() => {
+    if (queue === 'PENDING') {
+      return payments.filter(p => matchesPendingFilter(p, pendingFilter));
+    }
+    return payments.filter(p => matchesHistoryFilter(p, historyFilter));
+  }, [payments, queue, pendingFilter, historyFilter]);
 
   const submittedCount = useMemo(
     () => payments.filter(p => isSubmittedForReview(p.paymentStatus)).length,
     [payments],
   );
 
+  const changesRequestedCount = useMemo(
+    () => payments.filter(p => isChangesRequested(p.paymentStatus)).length,
+    [payments],
+  );
+
+  const pendingReviewCount = submittedCount + changesRequestedCount;
+
+  const paidCount = useMemo(
+    () => payments.filter(p => p.paymentStatus === 'PAID').length,
+    [payments],
+  );
+
+  const rejectedCount = useMemo(
+    () => payments.filter(p => p.paymentStatus === 'REJECTED').length,
+    [payments],
+  );
+
+  const historyCount = paidCount + rejectedCount;
+
   const review = useCallback(
     async (
       paymentId: UUID,
-      action: 'APPROVE' | 'REJECT',
+      action: PaymentReviewAction,
       remarks?: string,
       rejectionCode?: PaymentRejectionReason,
     ) => {
@@ -97,11 +148,17 @@ export function usePaymentReview(
   );
 
   return {
-    tab,
-    setTab,
+    queue,
+    pendingFilter,
+    historyFilter,
     payments: filteredPayments,
     allPayments: payments,
     submittedCount,
+    changesRequestedCount,
+    pendingReviewCount,
+    paidCount,
+    rejectedCount,
+    historyCount,
     loading,
     error,
     serviceUnavailable,

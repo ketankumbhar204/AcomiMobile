@@ -63,14 +63,21 @@ export function DashboardFinancialSnapshot({
   const mixed = financial?.mixedMealBilling === true;
   const prepaidOnly =
     financial?.mealBillingType === 'PREPAID_BALANCE' && !mixed;
+  const prepaid = financial?.prepaidBalance;
   const showPayPerMealCards =
     mixed ||
     (!prepaidOnly &&
       (financial?.expectedCharges != null ||
         financial?.collected != null ||
         financial?.pending != null));
+  const showPrepaidCards =
+    prepaidOnly &&
+    (prepaid?.balanceSold != null ||
+      prepaid?.balanceConsumed != null ||
+      prepaid?.balanceRemaining != null ||
+      prepaid?.amountCollected != null);
 
-  if (!loading && !showPayPerMealCards) {
+  if (!loading && !showPayPerMealCards && !showPrepaidCards) {
     return null;
   }
 
@@ -79,11 +86,47 @@ export function DashboardFinancialSnapshot({
   const collected = formatComboPrice(financial?.collected ?? null, currencyCode) ?? '—';
   const pending = formatComboPrice(financial?.pending ?? null, currencyCode) ?? '—';
 
+  const balanceSold =
+    prepaid?.unit === 'MEALS'
+      ? t('dashboard.financial.mealsCount', { count: prepaid.balanceSold ?? 0 })
+      : formatComboPrice(prepaid?.balanceSold ?? null, prepaid?.currencyCode ?? currencyCode) ??
+        '—';
+  const balanceConsumed =
+    prepaid?.unit === 'MEALS'
+      ? t('dashboard.financial.mealsCount', { count: prepaid.balanceConsumed ?? 0 })
+      : formatComboPrice(prepaid?.balanceConsumed ?? null, prepaid?.currencyCode ?? currencyCode) ??
+        '—';
+  const balanceRemaining =
+    prepaid?.unit === 'MEALS'
+      ? t('dashboard.financial.mealsCount', { count: prepaid.balanceRemaining ?? 0 })
+      : formatComboPrice(prepaid?.balanceRemaining ?? null, prepaid?.currencyCode ?? currencyCode) ??
+        '—';
+
   return (
     <View style={styles.wrap}>
       <DashboardSectionTitle title={title ?? t('dashboard.financial.title')} />
       {loading ? (
         <ActivityIndicator color={colors.primary} style={styles.loader} />
+      ) : showPrepaidCards && !showPayPerMealCards ? (
+        <View style={styles.row}>
+          <SnapshotCard
+            value={balanceSold}
+            label={t('dashboard.financial.balanceSold')}
+            onPress={onExpectedPress}
+          />
+          <SnapshotCard
+            value={balanceConsumed}
+            label={t('dashboard.financial.balanceConsumed')}
+            valueStyle={styles.collected}
+            onPress={onCollectedPress}
+          />
+          <SnapshotCard
+            value={balanceRemaining}
+            label={t('dashboard.financial.balanceRemaining')}
+            valueStyle={styles.pending}
+            onPress={onPendingPress}
+          />
+        </View>
       ) : (
         <View style={styles.row}>
           <SnapshotCard

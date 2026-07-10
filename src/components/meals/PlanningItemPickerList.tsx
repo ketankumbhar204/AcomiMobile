@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { FoodCategoryResponse, FoodItemResponse, FoodType } from '../../api/types';
 import { FoodTypePicker } from '../ui/FoodTypePicker';
@@ -20,6 +20,8 @@ type PlanningItemPickerListProps = {
   priceErrors: ComboPriceDraftErrors;
   onToggle: (itemId: string) => void;
   onPriceChange: (itemId: string, text: string) => void;
+  onPriceBlur?: (item: FoodItemResponse, draftValue: string) => void;
+  showMealPrices?: boolean;
   canAddItem?: boolean;
   canAddCategory?: boolean;
   onAddItem?: (categoryId: string, name: string, foodType?: FoodType) => Promise<FoodItemResponse>;
@@ -35,6 +37,8 @@ export function PlanningItemPickerList({
   priceErrors,
   onToggle,
   onPriceChange,
+  onPriceBlur,
+  showMealPrices = true,
   canAddItem = false,
   canAddCategory = false,
   onAddItem,
@@ -119,6 +123,7 @@ export function PlanningItemPickerList({
                 variant="filter"
                 selected={effectiveCategoryId === category.categoryId}
                 onPress={() => {
+                  Keyboard.dismiss();
                   setSelectedCategoryId(category.categoryId);
                   setIsAddingCategory(false);
                 }}
@@ -157,18 +162,32 @@ export function PlanningItemPickerList({
         visibleItems.map(item => {
           const selected = selectedIds.includes(item.itemId);
           const errorKey = priceErrors[item.itemId];
-          const priceDraft = getEffectivePriceDraft(item.itemId, draftPrices, null);
+          const priceDraft = getEffectivePriceDraft(
+            item.itemId,
+            draftPrices,
+            item.defaultPrice ?? null,
+          );
           return (
             <ComboPickerCard
               key={item.itemId}
               name={item.name}
               itemNames={[]}
               foodType={item.foodType ?? 'VEG'}
+              price={item.defaultPrice ?? null}
+              currencyCode={item.currencyCode ?? 'INR'}
               selected={selected}
-              editablePrice={selected}
-              requiresPriceInput={selected}
+              editablePrice={selected && showMealPrices}
+              requiresPriceInput={selected && showMealPrices}
+              showMealPrices={showMealPrices}
               priceDraft={priceDraft}
               onPriceDraftChange={text => onPriceChange(item.itemId, text)}
+              onPriceBlur={
+                selected
+                  ? draft => {
+                      onPriceBlur?.(item, draft);
+                    }
+                  : undefined
+              }
               priceInputError={
                 errorKey ? comboPriceDraftErrorMessage(errorKey, t) : null
               }

@@ -8,12 +8,14 @@ type MemberMealActivityMonthNavProps = {
   month: string;
   onPreviousMonth: () => void;
   onNextMonth: () => void;
+  disableNext?: boolean;
 };
 
 export function MemberMealActivityMonthNav({
   month,
   onPreviousMonth,
   onNextMonth,
+  disableNext = false,
 }: MemberMealActivityMonthNavProps) {
   const { i18n } = useTranslation();
 
@@ -23,8 +25,11 @@ export function MemberMealActivityMonthNav({
         <Text style={styles.monthNavText}>◀</Text>
       </Pressable>
       <Text style={styles.monthLabel}>{formatMonthLabel(month, i18n.language)}</Text>
-      <Pressable style={styles.monthNavBtn} onPress={onNextMonth}>
-        <Text style={styles.monthNavText}>▶</Text>
+      <Pressable
+        style={[styles.monthNavBtn, disableNext && styles.monthNavBtnDisabled]}
+        onPress={onNextMonth}
+        disabled={disableNext}>
+        <Text style={[styles.monthNavText, disableNext && styles.monthNavTextDisabled]}>▶</Text>
       </Pressable>
     </View>
   );
@@ -36,6 +41,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
   monthNavBtn: {
     width: 32,
@@ -47,10 +53,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.white,
   },
+  monthNavBtnDisabled: {
+    opacity: 0.4,
+  },
   monthNavText: {
     ...typography.bodyStrong,
     color: colors.primaryDark,
     fontSize: 12,
+  },
+  monthNavTextDisabled: {
+    color: colors.muted,
   },
   monthLabel: {
     ...typography.bodyStrong,

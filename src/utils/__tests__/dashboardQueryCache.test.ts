@@ -4,6 +4,8 @@ import {
   invalidateDashboardQueries,
   peekDashboardSummary,
   resetDashboardQueryCacheForTests,
+  subscribeDashboardCacheUpdate,
+  subscribeDashboardInvalidation,
 } from '../dashboardQueryCache';
 
 jest.mock('../../api/dashboardApi', () => ({
@@ -80,5 +82,23 @@ describe('dashboardQueryCache', () => {
 
     await fetchDashboardSummaryCached(spaceId, spaceType, month, { force: true });
     expect(dashboardApi.getDashboardSummary).toHaveBeenCalledTimes(2);
+  });
+
+  it('notifies cache-update listeners on write, not invalidation listeners', async () => {
+    const onCacheUpdate = jest.fn();
+    const onInvalidation = jest.fn();
+    const unsubCache = subscribeDashboardCacheUpdate(onCacheUpdate);
+    const unsubInvalidation = subscribeDashboardInvalidation(onInvalidation);
+
+    await fetchDashboardSummaryCached(spaceId, spaceType, month);
+    expect(onCacheUpdate).toHaveBeenCalledTimes(1);
+    expect(onInvalidation).not.toHaveBeenCalled();
+
+    invalidateDashboardQueries();
+    expect(onInvalidation).toHaveBeenCalledTimes(1);
+    expect(onCacheUpdate).toHaveBeenCalledTimes(1);
+
+    unsubCache();
+    unsubInvalidation();
   });
 });

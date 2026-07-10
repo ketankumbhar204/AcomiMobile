@@ -107,6 +107,9 @@ export function useOccupancyWizardSubmit(spaceId: string) {
             showToast(t(errorKey ?? 'occupancy.errors.generic'));
             return;
           }
+          // #region agent log
+          fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'useOccupancyWizardSubmit.ts:ALLOCATE',message:'allocate payload',data:{foodEnabled:body.foodEnabled,foodIncludedInRent:body.foodIncludedInRent,foodChargeSnapshot:body.foodChargeSnapshot??null,foodPolicy},timestamp:Date.now(),hypothesisId:'H2',runId:'allocate-food'})}).catch(()=>{});
+          // #endregion
           if (shouldCreateMealParticipationFromContract(contract)) {
             body.createMealParticipation = true;
           }

@@ -9,6 +9,7 @@ type MealPollOptionRadioProps = {
   selected: boolean;
   onSelect: () => void;
   readOnly?: boolean;
+  showPrice?: boolean;
 };
 
 export function MealPollOptionRadio({
@@ -16,9 +17,10 @@ export function MealPollOptionRadio({
   selected,
   onSelect,
   readOnly = false,
+  showPrice = true,
 }: MealPollOptionRadioProps) {
   const isNotAvailable = option.optionType === 'NOT_AVAILABLE';
-  const priceLabel = formatComboPrice(option.price, option.currencyCode);
+  const priceLabel = showPrice ? formatComboPrice(option.price, option.currencyCode) : null;
 
   return (
     <Pressable

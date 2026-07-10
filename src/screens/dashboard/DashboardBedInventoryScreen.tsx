@@ -1,29 +1,16 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  RefreshControl,
-  StyleSheet,
-  Text,
-} from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { StyleSheet } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import type { AccommodationStatus, UUID } from '../../api/types';
-import {
-  countDashboardBedInventoryFilters,
-  DashboardBedInventoryFilterDrawer,
-  defaultDashboardBedInventoryFilters,
-  type DashboardBedInventoryFilters,
-} from '../../components/dashboard/DashboardBedInventoryFilterDrawer';
-import { DashboardBedInventoryRow } from '../../components/dashboard/DashboardBedInventoryRow';
-import { EmptyState, ListSearchFilterBar, SkeletonCard } from '../../components/ui';
+import type { AccommodationStatus, BedSpaceListItemResponse, UUID } from '../../api/types';
+import { BedInventoryBrowser } from '../../components/dashboard/BedInventoryBrowser';
 import { Screen } from '../../components/ui/Screen';
-import { useSpaceBedSearch } from '../../hooks/useSpaceBedSearch';
+import { useAccommodationOccupancyFlow } from '../../hooks/useAccommodationOccupancyFlow';
+import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../../navigation/types';
-import { colors, spacing, typography } from '../../theme';
-import { formatBedSpaceLocation } from '../../utils/bedSpaceLocation';
-import { shouldUseFilterDrawer } from '../../utils/filterUx';
+import { spacing } from '../../theme';
+import { buildBedOccupancyTarget } from '../../utils/buildOccupancyTarget';
 
 type Route = {
   key: string;
@@ -36,51 +23,47 @@ type Route = {
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'DashboardBedInventory'>;
 
-const BED_INVENTORY_FILTER_OPTION_COUNT = 3;
-
 export function DashboardBedInventoryScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { spaceId, status } = route.params;
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filters, setFilters] = useState<DashboardBedInventoryFilters>(
-    defaultDashboardBedInventoryFilters(),
-  );
-  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
 
-  const activeFilterCount = countDashboardBedInventoryFilters(filters);
+  const permissions = useSpacePermissions(spaceId);
+  const canManageOccupancy = permissions.canManageOccupancy;
+  const spaceType = permissions.spaceType ?? 'PG';
 
-  const beds = useSpaceBedSearch({
+  const [refreshToken, setRefreshToken] = useState(0);
+
+  const occupancyFlow = useAccommodationOccupancyFlow({
     spaceId,
-    status,
-    query: searchQuery,
-    buildingId: filters.buildingId,
-    floorId: filters.floorId,
-    unitId: filters.unitId,
+    spaceType,
+    canManage: canManageOccupancy,
+    onSuccess: () => setRefreshToken(token => token + 1),
   });
 
-  const subtitle =
-    status === 'AVAILABLE'
-      ? t('dashboard.drilldown.vacantBedsSubtitle')
-      : t('dashboard.drilldown.occupiedBedsSubtitle');
-
-  const hasActiveFilters = activeFilterCount > 0 || searchQuery.trim().length > 0;
-
-  const empty = useMemo(
-    () => ({
-      title: hasActiveFilters
-        ? t('list.emptyFiltered')
-        : status === 'AVAILABLE'
-          ? t('dashboard.drilldown.emptyVacantBeds')
-          : t('dashboard.drilldown.emptyOccupiedBeds'),
-      description: hasActiveFilters ? undefined : t('dashboard.drilldown.emptyBedsDescription'),
-    }),
-    [hasActiveFilters, status, t],
-  );
+  const buildOccupancyContext = useCallback((bed: BedSpaceListItemResponse) => {
+    const target = buildBedOccupancyTarget({
+      buildingId: bed.buildingId,
+      buildingName: bed.buildingName,
+      floorId: bed.floorId ?? undefined,
+      floorName: bed.floorName ?? undefined,
+      unitId: bed.unitId ?? undefined,
+      unitName: bed.unitName ?? undefined,
+      roomId: bed.roomId,
+      roomName: bed.roomName,
+      bedId: bed.bedId,
+      bedName: bed.label,
+    });
+    return {
+      target,
+      accommodationStatus: bed.status,
+      occupancy: null,
+    };
+  }, []);
 
   const handleBedPress = useCallback(
-    (bed: (typeof beds.items)[number]) => {
+    (bed: BedSpaceListItemResponse) => {
       navigation.navigate('BedDetail', {
         spaceId,
         buildingId: bed.buildingId,
@@ -98,54 +81,37 @@ export function DashboardBedInventoryScreen() {
     [navigation, spaceId],
   );
 
+  const handleAllocate = useCallback(
+    (bed: BedSpaceListItemResponse) => {
+      occupancyFlow.startWalkIn(buildOccupancyContext(bed));
+    },
+    [buildOccupancyContext, occupancyFlow],
+  );
+
+  const handleReserve = useCallback(
+    (bed: BedSpaceListItemResponse) => {
+      occupancyFlow.startReserve(buildOccupancyContext(bed));
+    },
+    [buildOccupancyContext, occupancyFlow],
+  );
+
   return (
     <Screen style={styles.screen} contentStyle={styles.content}>
-      <Text style={styles.subtitle}>{subtitle}</Text>
-      <ListSearchFilterBar
-          searchValue={searchQuery}
-          onSearchChange={setSearchQuery}
-          searchPlaceholder={t('dashboard.drilldown.searchBeds')}
-          onFilterPress={() => setFilterDrawerOpen(true)}
-          activeFilterCount={activeFilterCount}
-          showFilterButton={shouldUseFilterDrawer(BED_INVENTORY_FILTER_OPTION_COUNT)}
-        />
-
-      {beds.loading && beds.items.length === 0 ? (
-        <SkeletonCard />
-      ) : beds.error ? (
-        <EmptyState title={t('common.errors.generic')} description={beds.error} />
-      ) : beds.items.length === 0 ? (
-        <EmptyState title={empty.title} description={empty.description} />
-      ) : (
-        <FlatList
-          data={beds.items}
-          keyExtractor={item => item.bedId}
-          refreshControl={
-            <RefreshControl refreshing={beds.refreshing} onRefresh={() => void beds.refresh()} />
-          }
-          onEndReached={() => void beds.loadMore()}
-          onEndReachedThreshold={0.4}
-          ListFooterComponent={
-            beds.loadingMore ? (
-              <ActivityIndicator color={colors.primary} style={styles.footerLoader} />
-            ) : null
-          }
-          contentContainerStyle={styles.listContent}
-          renderItem={({ item }) => (
-            <DashboardBedInventoryRow
-              label={formatBedSpaceLocation(item)}
-              onPress={() => handleBedPress(item)}
-            />
-          )}
-        />
-      )}
-
-      <DashboardBedInventoryFilterDrawer
-        visible={filterDrawerOpen}
+      <BedInventoryBrowser
         spaceId={spaceId}
-        applied={filters}
-        onClose={() => setFilterDrawerOpen(false)}
-        onApply={setFilters}
+        spaceType={spaceType}
+        status={status}
+        flowAction="dashboard"
+        canManageOccupancy={canManageOccupancy}
+        onBedPress={handleBedPress}
+        onAllocate={handleAllocate}
+        onReserve={handleReserve}
+        refreshTrigger={refreshToken}
+        subtitle={
+          status === 'AVAILABLE'
+            ? t('dashboard.drilldown.vacantBedsSubtitle')
+            : t('dashboard.drilldown.occupiedBedsSubtitle')
+        }
       />
     </Screen>
   );
@@ -158,19 +124,6 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.xxl,
     paddingTop: 0,
-  },
-  subtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-    lineHeight: 20,
-  },
-  listContent: {
-    paddingBottom: spacing.xl,
-    gap: spacing.sm,
-  },
-  footerLoader: {
-    marginVertical: spacing.md,
+    flex: 1,
   },
 });

@@ -32,6 +32,7 @@ import {
 import { ReserveDatesStep } from '../../features/occupancy/OccupancyWizard/steps/ReserveDatesStep';
 import { ReviewStep } from '../../features/occupancy/OccupancyWizard/steps/ReviewStep';
 import { useOccupancyWizardSubmit } from '../../features/occupancy/OccupancyWizard/useOccupancyWizardSubmit';
+import { navigateToMemberDetailsAfterOccupancyFromRef } from '../../features/occupancy/OccupancyWizard/navigation';
 import { useMemberSearch } from '../../hooks/useMemberSearch';
 import { colors, radius, spacing, typography } from '../../theme';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
@@ -43,8 +44,10 @@ import { fetchSpaceFoodPolicy, type SpaceFoodPolicy } from '../../utils/fetchSpa
 import { getMembershipErrorMessage } from '../../utils/membershipErrors';
 import {
   emptyContractTermsFormValues,
+  resolveContractFoodPolicy,
   type ContractTermsFormValues,
 } from '../../utils/occupancyContract';
+import { agentDebugLog } from '../../utils/agentDebugLog';
 import {
   getHierarchySteps,
   getPostHierarchyWizardSteps,
@@ -244,6 +247,11 @@ export function HierarchyOccupancyPickerModal({
   const showUnitsOnFloor = profile?.showUnitsOnFloor ?? false;
 
   const { submit, loading: submitting } = useOccupancyWizardSubmit(spaceId);
+
+  const effectiveFoodPolicy = useMemo(
+    () => resolveContractFoodPolicy(foodPolicy, null),
+    [foodPolicy],
+  );
   const { members, loading: membersLoading, error: membersError } = useMemberSearch(
     spaceId,
     memberQuery,
@@ -355,12 +363,16 @@ export function HierarchyOccupancyPickerModal({
 
   const applyTargetDefaults = useCallback(
     async (target: OccupancyTargetSelection) => {
-      const prefilled = await fetchPrefilledAllocationTarget(spaceId, {
-        bedId: target.bedId,
-        roomId: target.roomId,
-        unitId: target.unitId,
-        buildingId: target.buildingId,
-      });
+      const [prefilled, policy] = await Promise.all([
+        fetchPrefilledAllocationTarget(spaceId, {
+          bedId: target.bedId,
+          roomId: target.roomId,
+          unitId: target.unitId,
+          buildingId: target.buildingId,
+        }),
+        fetchSpaceFoodPolicy(spaceId),
+      ]);
+      setFoodPolicy(policy);
       if (prefilled) {
         setCatalogRent(prefilled.row.defaultRent ?? null);
         setCatalogDeposit(prefilled.row.defaultDeposit ?? null);
@@ -370,12 +382,33 @@ export function HierarchyOccupancyPickerModal({
               defaultRent: prefilled.row.defaultRent,
               defaultDeposit: prefilled.row.defaultDeposit,
             },
-            foodPolicy,
+            policy,
           ),
         );
       }
+      // #region agent log
+      agentDebugLog({
+        hypothesisId: 'A',
+        location: 'HierarchyOccupancyPickerModal.tsx:applyTargetDefaults',
+        message: 'contract defaults seeded with food policy',
+        data: {
+          foodIncludedInRent: policy.foodIncludedInRent,
+          defaultFoodCharge: policy.defaultFoodCharge,
+          foodEnabled: emptyContractTermsFormValues(
+            prefilled
+              ? {
+                  defaultRent: prefilled.row.defaultRent,
+                  defaultDeposit: prefilled.row.defaultDeposit,
+                }
+              : undefined,
+            policy,
+          ).foodEnabled,
+        },
+        runId: 'movein-food',
+      });
+      // #endregion
     },
-    [foodPolicy, spaceId],
+    [spaceId],
   );
 
   const beginPostHierarchy = useCallback(
@@ -880,6 +913,21 @@ export function HierarchyOccupancyPickerModal({
       return;
     }
 
+    // #region agent log
+    agentDebugLog({
+      hypothesisId: 'B',
+      location: 'HierarchyOccupancyPickerModal.tsx:handleConfirm',
+      message: 'submitting occupancy with food policy',
+      data: {
+        wizardMode,
+        foodIncludedInRent: effectiveFoodPolicy.foodIncludedInRent,
+        foodEnabled: contractValues.foodEnabled,
+        foodChargeSnapshot: contractValues.foodChargeSnapshot || null,
+      },
+      runId: 'movein-food',
+    });
+    // #endregion
+
     await submit({
       mode: wizardMode,
       spaceType,
@@ -887,7 +935,7 @@ export function HierarchyOccupancyPickerModal({
       target: activeTarget,
       catalogRent,
       contractValues,
-      foodPolicy,
+      foodPolicy: effectiveFoodPolicy,
       moveInDate,
       expectedExitDate,
       remarks,
@@ -910,6 +958,9 @@ export function HierarchyOccupancyPickerModal({
         }
         reset();
         onClose();
+        if (wizardMode === 'ALLOCATE' || wizardMode === 'RESERVE') {
+          navigateToMemberDetailsAfterOccupancyFromRef(spaceId, member.memberId);
+        }
       },
     });
   }, [
@@ -922,12 +973,13 @@ export function HierarchyOccupancyPickerModal({
     catalogRent,
     contractValues,
     expectedExitDate,
-    foodPolicy,
+    effectiveFoodPolicy,
     member,
     moveInDate,
     onClose,
     remarks,
     reset,
+    spaceId,
     spaceType,
     submit,
     t,
@@ -1164,7 +1216,7 @@ export function HierarchyOccupancyPickerModal({
               hierarchyContext={hierarchyContext}
               hideTitle
               contractValues={wizardMode === 'ALLOCATE' ? contractValues : undefined}
-              foodPolicy={foodPolicy}
+              foodPolicy={effectiveFoodPolicy}
               moveInDate={moveInDate}
               expectedExitDate={expectedExitDate}
               remarks={remarks}

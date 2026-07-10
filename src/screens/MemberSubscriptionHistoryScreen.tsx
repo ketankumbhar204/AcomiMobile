@@ -16,10 +16,10 @@ import type { MainStackParamList } from '../navigation/types';
 import { colors, spacing, typography } from '../theme';
 import {
   countSubscriptionHistoryFilters,
+  defaultSubscriptionHistoryFilters,
   filterSubscriptionHistoryEvents,
   SUBSCRIPTION_HISTORY_FILTER_OPTION_COUNT,
-  type SubscriptionEventTypeFilter,
-  type SubscriptionMonthFilter,
+  type SubscriptionHistoryFilterState,
 } from '../utils/subscriptionHistoryFilter';
 import { shouldUseFilterDrawer } from '../utils/filterUx';
 
@@ -35,10 +35,9 @@ export function MemberSubscriptionHistoryScreen() {
   const [summary, setSummary] = useState<MemberSubscriptionLifetimeSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [eventTypeFilters, setEventTypeFilters] = useState<Set<SubscriptionEventTypeFilter>>(
-    new Set(),
+  const [filters, setFilters] = useState<SubscriptionHistoryFilterState>(() =>
+    defaultSubscriptionHistoryFilters(),
   );
-  const [monthFilters, setMonthFilters] = useState<Set<SubscriptionMonthFilter>>(new Set());
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
 
   const load = useCallback(async () => {
@@ -59,15 +58,11 @@ export function MemberSubscriptionHistoryScreen() {
   }, [memberId, spaceId]);
 
   const filteredEvents = useMemo(
-    () =>
-      filterSubscriptionHistoryEvents(events, {
-        eventTypes: eventTypeFilters,
-        months: monthFilters,
-      }),
-    [eventTypeFilters, events, monthFilters],
+    () => filterSubscriptionHistoryEvents(events, filters),
+    [events, filters],
   );
 
-  const activeFilterCount = countSubscriptionHistoryFilters(eventTypeFilters, monthFilters);
+  const activeFilterCount = countSubscriptionHistoryFilters(filters);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -101,13 +96,9 @@ export function MemberSubscriptionHistoryScreen() {
 
         <SubscriptionHistoryFilterDrawer
           visible={filterDrawerOpen}
-          appliedEventTypes={eventTypeFilters}
-          appliedMonths={monthFilters}
+          applied={filters}
           onClose={() => setFilterDrawerOpen(false)}
-          onApply={(nextEventTypes, nextMonths) => {
-            setEventTypeFilters(nextEventTypes);
-            setMonthFilters(nextMonths);
-          }}
+          onApply={setFilters}
         />
 
         {error ? <Text style={styles.error}>{t('meals.errors.loadFailed')}</Text> : null}

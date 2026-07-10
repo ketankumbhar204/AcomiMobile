@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Keyboard,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -18,6 +19,7 @@ import {
   type MenuSelectionSaveResult,
 } from '../../components/meals/MenuSelectionPanel';
 import { Button, PermissionDeniedScreen } from '../../components/ui';
+import { useMealPricingPolicy } from '../../hooks/useMealPricingPolicy';
 import { useScreenBackButton } from '../../hooks/useScreenBackButton';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { navigateMainStack } from '../../navigation/mainStackNavigation';
@@ -60,6 +62,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
   const { t, i18n } = useTranslation();
   const navigation = useNavigation<Nav>();
   const permissions = useSpacePermissions(spaceId);
+  const mealPricing = useMealPricingPolicy(spaceId);
   const showToast = useToastStore(state => state.showToast);
   const dateReadOnly = isPastMenuDate(menuDate);
 
@@ -258,6 +261,10 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
   }, [buildOptionsFromLatestSelection, options]);
 
   const syncPricesBeforeSave = async (optionsToSync: MenuDraftOption[]): Promise<boolean> => {
+    if (!mealPricing.requiresMealPrices) {
+      return true;
+    }
+
     const planned = optionsToSync.filter(
       option => option.entryType === 'COMBO' || option.entryType === 'PACKAGE',
     );
@@ -284,6 +291,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
       spaceId,
       comboResponses,
       priceDrafts,
+      { requirePrices: mealPricing.requiresMealPrices },
     );
     const mergedErrors = { ...comboErrors, ...packageErrors };
     if (Object.keys(mergedErrors).length > 0) {
@@ -403,7 +411,11 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
 
   return (
     <View style={styles.root}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        onScrollBeginDrag={Keyboard.dismiss}>
         <View style={styles.metaRow}>
           <View style={styles.metaLeft}>
             <Text style={styles.date}>{formatMenuDate(menuDate, i18n.language)}</Text>
@@ -454,6 +466,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
                 spaceId={spaceId}
                 initialOptions={options}
                 onChange={handleSelectCombos}
+                requiresMealPrices={mealPricing.requiresMealPrices}
               />
             ) : plannedCombos.length === 0 ? (
               <Text style={styles.emptySelection}>{t('meals.planning.noMenusSelectedYet')}</Text>
@@ -466,11 +479,13 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
                       ? ` ${t('meals.menu.entryKindComboSuffix')}`
                       : ''}
                   </Text>
-                  <Text style={styles.readOnlyPrice}>
-                    {resolveMenuOptionPrice(option, comboById) != null
-                      ? `₹${resolveMenuOptionPrice(option, comboById)}`
-                      : '—'}
-                  </Text>
+                  {mealPricing.showMealPrices ? (
+                    <Text style={styles.readOnlyPrice}>
+                      {resolveMenuOptionPrice(option, comboById) != null
+                        ? `₹${resolveMenuOptionPrice(option, comboById)}`
+                        : '—'}
+                    </Text>
+                  ) : null}
                 </View>
               ))
             )}

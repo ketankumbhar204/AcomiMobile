@@ -27,6 +27,9 @@ export function deriveSpacePermissions(
     canManageMembers: isOwner || isManager,
     canRemoveMember: isOwner,
     ...deriveMealPermissions(role),
+    canRaiseComplaint: isOwner || isManager || role === 'TENANT' || role === 'CUSTOMER',
+    canViewAllComplaints: isOwner || isManager,
+    canManageComplaints: isOwner || isManager,
   };
 }
 

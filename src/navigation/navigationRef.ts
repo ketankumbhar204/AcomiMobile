@@ -2,18 +2,22 @@ import {
   CommonActions,
   createNavigationContainerRef,
 } from '@react-navigation/native';
-import type { RootStackParamList } from './types';
+import type { RootStackParamList, SpaceTabParamList } from './types';
 import type { SpaceBootstrapResult } from '../store/spaceStore';
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
-function buildSpaceTabsState(spaceId: string, initialTab: string) {
+function buildSpaceTabsState(
+  spaceId: string,
+  initialTab: string,
+  paymentsParams?: SpaceTabParamList['Payments'],
+) {
   const routes = [
     { name: 'Dashboard' as const, params: { spaceId } },
     { name: 'Members' as const, params: { spaceId } },
     { name: 'Accommodation' as const, params: { spaceId } },
     { name: 'Meals' as const, params: { spaceId } },
-    { name: 'Payments' as const, params: { spaceId } },
+    { name: 'Payments' as const, params: paymentsParams ?? { spaceId } },
     { name: 'Complaints' as const, params: { spaceId } },
   ];
   const tabIndex = Math.max(
@@ -76,6 +80,35 @@ export function resetToDashboard(spaceId: string): void {
   );
 }
 
+/** Open a space and land on Pending Actions (from My Spaces attention rows). */
+export function openSpaceToPendingActions(spaceId: string): void {
+  if (!navigationRef.isReady()) {
+    return;
+  }
+
+  navigationRef.dispatch(
+    CommonActions.reset({
+      index: 0,
+      routes: [
+        {
+          name: 'Main',
+          state: {
+            index: 1,
+            routes: [
+              {
+                name: 'SpaceTabs',
+                params: { spaceId },
+                state: buildSpaceTabsState(spaceId, 'Dashboard'),
+              },
+              { name: 'DashboardPendingActions', params: { spaceId } },
+            ],
+          },
+        },
+      ],
+    }),
+  );
+}
+
 export function navigateToMembersTab(spaceId: string): void {
   if (!navigationRef.isReady()) {
     return;
@@ -103,7 +136,10 @@ export function navigateToMembersTab(spaceId: string): void {
   );
 }
 
-export function navigateToPaymentsTab(spaceId: string): void {
+export function navigateToPaymentsTab(
+  spaceId: string,
+  paymentsParams?: Omit<SpaceTabParamList['Payments'], 'spaceId'>,
+): void {
   if (!navigationRef.isReady()) {
     return;
   }
@@ -120,7 +156,10 @@ export function navigateToPaymentsTab(spaceId: string): void {
               {
                 name: 'SpaceTabs',
                 params: { spaceId },
-                state: buildSpaceTabsState(spaceId, 'Payments'),
+                state: buildSpaceTabsState(spaceId, 'Payments', {
+                  spaceId,
+                  ...paymentsParams,
+                }),
               },
             ],
           },

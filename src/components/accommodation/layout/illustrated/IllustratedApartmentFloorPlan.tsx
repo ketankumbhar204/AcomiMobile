@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import type { UnitListItemResponse } from '../../../../api/types';
 import { colors, typography } from '../../../../theme';
+import { inferUnitListStatus } from '../../../../utils/inferAggregateOccupancyStatus';
 import { StatusDot } from '../StatusDot';
 import { getAccommodationSprite } from './spriteAssets';
 import { statusBorderColor, statusFacadeFill } from './layoutStatusUtils';
@@ -43,8 +44,9 @@ function FloorPlanUnitOverlay({
   onLongPress,
   menu,
 }: FloorPlanUnitOverlayProps) {
-  const fill = statusFacadeFill(unit.status);
-  const border = statusBorderColor(unit.status);
+  const displayStatus = inferUnitListStatus(unit) ?? unit.status;
+  const fill = statusFacadeFill(displayStatus);
+  const border = statusBorderColor(displayStatus);
 
   return (
     <Pressable
@@ -70,7 +72,7 @@ function FloorPlanUnitOverlay({
       ) : null}
       {ratioLabel ? (
         <View style={styles.ratioRow}>
-          <StatusDot status={unit.status} size={8} />
+          <StatusDot status={displayStatus} size={8} />
           <Text style={styles.ratio}>{ratioLabel}</Text>
         </View>
       ) : null}

@@ -10,6 +10,7 @@ import {
   OCCUPANCY_CHARGE_CODES,
   computeMonthlyRentFoodTotal,
   formatContractAmount,
+  isFoodBundledWithRent,
   monthlyTotalIncludesFoodFromForm,
   monthlyTotalLabelKey,
   type ContractTermsFormValues,
@@ -73,6 +74,10 @@ export function ContractTermsForm({
   const monthlyTotalLabel = monthlyTotalLabelKey(
     monthlyTotalIncludesFoodFromForm(values, foodPolicy),
   );
+
+  // #region agent log
+  fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'ContractTermsForm.tsx:render',message:'contract food ui state',data:{foodIncludedInRent,foodEnabled:values.foodEnabled,bundledWithRent:isFoodBundledWithRent(values,foodPolicy)},timestamp:Date.now(),hypothesisId:'H1',runId:'food-toggle'})}).catch(()=>{});
+  // #endregion
 
   function updateCharge(index: number, patch: Partial<ContractTermsFormValues['otherCharges'][0]>) {
     const next = values.otherCharges.map((charge, i) => {
@@ -145,41 +150,27 @@ export function ContractTermsForm({
             />
           )}
 
-          {foodIncludedInRent ? (
-            <View style={styles.bundledFoodBanner}>
-              <Text style={styles.bundledFoodTitle}>
-                {t('occupancy.contract.foodBundledTitle')}
-              </Text>
-              <Text style={styles.bundledFoodHint}>
-                {t('occupancy.contract.foodBundledHint')}
+          <View style={styles.switchRow}>
+            <View style={styles.switchCopy}>
+              <Text style={styles.switchLabel}>{t('occupancy.contract.foodEnabled')}</Text>
+              <Text style={styles.switchHint}>
+                {values.foodEnabled
+                  ? t('occupancy.contract.foodBundledHint')
+                  : t('occupancy.contract.foodEnabledHint')}
               </Text>
             </View>
-          ) : (
-            <>
-              <View style={styles.switchRow}>
-                <View style={styles.switchCopy}>
-                  <Text style={styles.switchLabel}>{t('occupancy.contract.foodEnabled')}</Text>
-                  <Text style={styles.switchHint}>
-                    {t('occupancy.contract.foodEnabledHint')}
-                  </Text>
-                </View>
-                <Switch
-                  value={values.foodEnabled}
-                  onValueChange={foodEnabled =>
-                    onChange({
-                      ...values,
-                      foodEnabled,
-                      foodChargeSnapshot:
-                        foodEnabled && foodPolicy?.defaultFoodCharge != null
-                          ? String(foodPolicy.defaultFoodCharge)
-                          : '',
-                    })
-                  }
-                  trackColor={{ false: colors.border, true: colors.primary }}
-                />
-              </View>
-            </>
-          )}
+            <Switch
+              value={values.foodEnabled}
+              onValueChange={foodEnabled =>
+                onChange({
+                  ...values,
+                  foodEnabled,
+                  foodChargeSnapshot: '',
+                })
+              }
+              trackColor={{ false: colors.border, true: colors.primary }}
+            />
+          </View>
 
           {monthlyTotal != null ? (
             <View style={styles.totalRow}>
@@ -296,23 +287,6 @@ const styles = StyleSheet.create({
   rentFoodGroup: {
     gap: spacing.xs,
     marginBottom: spacing.sm,
-  },
-  bundledFoodBanner: {
-    borderWidth: 1,
-    borderColor: `${colors.primary}33`,
-    backgroundColor: `${colors.primary}0D`,
-    borderRadius: radius.input,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  bundledFoodTitle: {
-    ...typography.bodyStrong,
-    color: colors.primaryDark,
-  },
-  bundledFoodHint: {
-    ...typography.caption,
-    color: colors.muted,
-    marginTop: spacing.xs,
   },
   totalRow: {
     flexDirection: 'row',

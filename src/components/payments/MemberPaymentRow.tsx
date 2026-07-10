@@ -4,26 +4,13 @@ import { useTranslation } from 'react-i18next';
 import type { MemberPaymentLedgerRow, PrepaidBalanceUnit } from '../../api/types';
 import { colors, radius, spacing, typography } from '../../theme';
 import { formatComboPrice } from '../../utils/comboPrice';
-import { Badge } from '../ui';
+import { PaymentStatusBadge } from './PaymentStatusBadge';
 
 type MemberPaymentRowProps = {
   row: MemberPaymentLedgerRow;
   prepaidMode?: boolean;
   onPress: () => void;
 };
-
-function statusLabel(status: MemberPaymentLedgerRow['status'], t: (key: string) => string): string {
-  switch (status) {
-    case 'PAID':
-      return t('payments.status.paid');
-    case 'PARTIAL':
-      return t('payments.status.partial');
-    case 'PENDING':
-      return t('payments.status.pending');
-    default:
-      return t('payments.status.none');
-  }
-}
 
 function formatBalanceValue(
   amount: number | null | undefined,
@@ -50,7 +37,7 @@ export function MemberPaymentRow({ row, prepaidMode, onPress }: MemberPaymentRow
     return (
       <Pressable
         onPress={onPress}
-        style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+        style={({ pressed }) => [styles.card, styles.cardRow, pressed && styles.cardPressed]}
         accessibilityRole="button">
         <View style={styles.main}>
           <Text style={styles.name} numberOfLines={1}>
@@ -75,32 +62,36 @@ export function MemberPaymentRow({ row, prepaidMode, onPress }: MemberPaymentRow
 
   const pendingDisplay = formatComboPrice(row.pending, currencyCode) ?? '—';
   const collectedDisplay = formatComboPrice(row.collected, currencyCode);
+  const expectedDisplay = formatComboPrice(row.expectedCharges, currencyCode) ?? '—';
+  const hasPending = (row.pending ?? 0) > 0;
+  const trailingAmount = hasPending
+    ? pendingDisplay
+    : (collectedDisplay ?? expectedDisplay);
+  const trailingStyle = hasPending ? styles.pendingAmount : styles.settledAmount;
 
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
       accessibilityRole="button">
-      <View style={styles.main}>
+      <View style={styles.headerRow}>
         <Text style={styles.name} numberOfLines={1}>
           {row.memberName}
         </Text>
+        <PaymentStatusBadge status={row.status} />
+      </View>
+      <View style={styles.bodyRow}>
         <Text style={styles.meta} numberOfLines={1}>
           {collectedDisplay
             ? t('payments.row.collectedOfExpected', {
                 collected: collectedDisplay,
-                expected: formatComboPrice(row.expectedCharges, currencyCode) ?? '—',
+                expected: expectedDisplay,
               })
             : t('payments.row.expected', {
-                expected: formatComboPrice(row.expectedCharges, currencyCode) ?? '—',
+                expected: expectedDisplay,
               })}
         </Text>
-      </View>
-      <View style={styles.trailing}>
-        {(row.pending ?? 0) > 0 ? (
-          <Text style={styles.pendingAmount}>{pendingDisplay}</Text>
-        ) : null}
-        <Badge label={statusLabel(row.status, t)} />
+        <Text style={trailingStyle}>{trailingAmount}</Text>
       </View>
     </Pressable>
   );
@@ -108,9 +99,6 @@ export function MemberPaymentRow({ row, prepaidMode, onPress }: MemberPaymentRow
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
     backgroundColor: colors.white,
     borderRadius: radius.card,
     borderWidth: 1,
@@ -118,9 +106,27 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     marginBottom: spacing.sm,
+    gap: spacing.xs,
+  },
+  cardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   cardPressed: {
     opacity: 0.92,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  bodyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
   },
   main: {
     flex: 1,
@@ -130,10 +136,14 @@ const styles = StyleSheet.create({
   name: {
     ...typography.bodyStrong,
     color: colors.textPrimary,
+    flex: 1,
+    minWidth: 0,
   },
   meta: {
     ...typography.caption,
     color: colors.muted,
+    flex: 1,
+    minWidth: 0,
   },
   trailing: {
     alignItems: 'flex-end',
@@ -142,6 +152,11 @@ const styles = StyleSheet.create({
   pendingAmount: {
     ...typography.bodyStrong,
     color: '#EAB308',
+    fontSize: 14,
+  },
+  settledAmount: {
+    ...typography.bodyStrong,
+    color: colors.primaryDark,
     fontSize: 14,
   },
   purchased: {

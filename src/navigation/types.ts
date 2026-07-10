@@ -15,6 +15,14 @@ export type SpaceTabParamList = {
   Payments: {
     spaceId: UUID;
     initialFilter?: 'all' | 'pending' | 'collected';
+    initialSection?:
+      | 'members'
+      | 'pendingReview'
+      | 'history'
+      | 'submitted'
+      | 'changesRequested'
+      | 'paid'
+      | 'rejected';
   };
   Complaints: { spaceId: UUID };
 };
@@ -203,6 +211,11 @@ export type MainStackParamList = {
   };
   PaymentReview: { spaceId: UUID };
   PaymentHistory: { spaceId: UUID; paymentId: UUID };
+  SpaceNotifications: { spaceId: UUID };
+  RaiseComplaint: { spaceId: UUID };
+  ComplaintDetail: { spaceId: UUID; complaintId: UUID };
+  GlobalAttentionList: undefined;
+  GlobalActivityList: undefined;
 };
 
 export type RootStackParamList = {

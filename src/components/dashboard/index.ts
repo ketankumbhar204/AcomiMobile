@@ -2,4 +2,5 @@ export { DashboardAttentionCard, DashboardAttentionCardsRow, DashboardPendingAct
 export { DashboardAccommodationOperations } from './DashboardAccommodationOperations';
 export { DashboardFinancialSnapshot } from './DashboardFinancialSnapshot';
 export { DashboardMealOperations } from './DashboardMealOperations';
+export { DashboardMessOperations } from './DashboardMessOperations';
 export { DashboardSectionTitle } from './DashboardSectionTitle';

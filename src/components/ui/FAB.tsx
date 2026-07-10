@@ -5,17 +5,28 @@ import { colors, shadows } from '../../theme';
 type FABProps = {
   onPress: () => void;
   accessibilityLabel?: string;
+  inline?: boolean;
+  open?: boolean;
 };
 
-export function FAB({ onPress, accessibilityLabel = 'Action' }: FABProps) {
+export function FAB({
+  onPress,
+  accessibilityLabel = 'Action',
+  inline = false,
+  open = false,
+}: FABProps) {
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
+      style={({ pressed }) => [
+        styles.fab,
+        inline && styles.fabInline,
+        pressed && styles.fabPressed,
+      ]}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}>
-      <Text style={styles.icon} allowFontScaling={false}>
-        +
+      <Text style={[styles.icon, open && styles.iconOpen]} allowFontScaling={false}>
+        {open ? '×' : '+'}
       </Text>
     </Pressable>
   );
@@ -34,6 +45,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...shadows.lg,
   },
+  fabInline: {
+    position: 'relative',
+    bottom: undefined,
+    right: undefined,
+  },
   fabPressed: {
     backgroundColor: colors.primaryHover,
     transform: [{ scale: 0.95 }],
@@ -45,5 +61,10 @@ const styles = StyleSheet.create({
     color: colors.white,
     includeFontPadding: false,
     textAlignVertical: 'center',
+  },
+  iconOpen: {
+    fontSize: 32,
+    lineHeight: 32,
+    fontWeight: '400',
   },
 });

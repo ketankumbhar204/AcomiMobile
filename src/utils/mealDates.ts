@@ -72,6 +72,61 @@ export function headcountTitleUsesDateParam(isoDate: string): boolean {
   return relativeMenuDateKind(isoDate) == null;
 }
 
+export type PollCardVisualState = 'empty' | 'active' | 'partial' | 'complete';
+
+export function pollCardTitleKey(isoDate: string, cardState: PollCardVisualState): string {
+  if (cardState === 'complete' || cardState === 'partial') {
+    switch (relativeMenuDateKind(isoDate)) {
+      case 'today':
+        return 'dashboard.pollCard.titleMealsToday';
+      case 'tomorrow':
+        return 'dashboard.pollCard.titleMealsTomorrow';
+      default:
+        return 'dashboard.pollCard.titleMealsDate';
+    }
+  }
+
+  const kind = relativeMenuDateKind(isoDate);
+  if (cardState === 'empty') {
+    switch (kind) {
+      case 'today':
+        return 'dashboard.pollCard.titleToday';
+      case 'tomorrow':
+        return 'dashboard.pollCard.titleTomorrow';
+      default:
+        return 'dashboard.pollCard.titleDate';
+    }
+  }
+
+  switch (kind) {
+    case 'today':
+      return 'dashboard.pollCard.titleReadyToday';
+    case 'tomorrow':
+      return 'dashboard.pollCard.titleReadyTomorrow';
+    default:
+      return 'dashboard.pollCard.titleReadyDate';
+  }
+}
+
+export function pollCardTitleUsesDateParam(isoDate: string, cardState: PollCardVisualState): boolean {
+  return pollCardTitleKey(isoDate, cardState).endsWith('Date');
+}
+
+export function pollCardSelectPromptKey(isoDate: string, mealCount: number): string {
+  const kind = relativeMenuDateKind(isoDate);
+  if (mealCount >= 3) {
+    switch (kind) {
+      case 'today':
+        return 'dashboard.pollCard.selectPromptToday';
+      case 'tomorrow':
+        return 'dashboard.pollCard.selectPromptTomorrow';
+      default:
+        return 'dashboard.pollCard.selectPromptDate';
+    }
+  }
+  return 'dashboard.pollCard.selectPrompt';
+}
+
 export function addDaysIsoDate(isoDate: string, days: number): string {
   const [year, month, day] = isoDate.split('-').map(Number);
   const date = new Date(year, month - 1, day);

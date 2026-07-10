@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { accommodationApi } from '../api/accommodationApi';
 import type { AccommodationStatus, BedSpaceListItemResponse, UUID } from '../api/types';
+import { dedupeBedsById } from '../utils/groupBedsByRoom';
+
+const PAGE_SIZE = 100;
 
 type UseSpaceBedSearchOptions = {
   spaceId: UUID;
@@ -10,6 +13,8 @@ type UseSpaceBedSearchOptions = {
   floorId?: UUID;
   unitId?: UUID;
   enabled?: boolean;
+  /** Fetch all pages for client-side grouping (dashboard bed browser). */
+  loadAll?: boolean;
 };
 
 export function useSpaceBedSearch({
@@ -20,6 +25,7 @@ export function useSpaceBedSearch({
   floorId,
   unitId,
   enabled = true,
+  loadAll = false,
 }: UseSpaceBedSearchOptions) {
   const [items, setItems] = useState<BedSpaceListItemResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,6 +34,22 @@ export function useSpaceBedSearch({
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [totalElements, setTotalElements] = useState(0);
+
+  const fetchPage = useCallback(
+    async (pageNum: number) => {
+      return accommodationApi.searchBeds(spaceId, {
+        status,
+        query: query.trim() || undefined,
+        buildingId,
+        floorId,
+        unitId,
+        page: pageNum,
+        size: PAGE_SIZE,
+      });
+    },
+    [buildingId, floorId, query, spaceId, status, unitId],
+  );
 
   const loadPage = useCallback(
     async (pageNum: number, append: boolean, silent = false) => {
@@ -43,23 +65,43 @@ export function useSpaceBedSearch({
       }
 
       try {
-        const response = await accommodationApi.searchBeds(spaceId, {
-          status,
-          query: query.trim() || undefined,
-          buildingId,
-          floorId,
-          unitId,
-          page: pageNum,
-          size: 20,
-        });
-        setItems(prev => (append ? [...prev, ...response.content] : response.content));
+        if (loadAll && pageNum === 0) {
+          let pageIndex = 0;
+          let merged: BedSpaceListItemResponse[] = [];
+          let last = false;
+          let total = 0;
+
+          while (!last) {
+            const response = await fetchPage(pageIndex);
+            merged = dedupeBedsById(
+              pageIndex === 0 ? response.content : [...merged, ...response.content],
+            );
+            last = response.last;
+            total = response.totalElements;
+            pageIndex += 1;
+          }
+
+          setItems(merged);
+          setPage(pageIndex - 1);
+          setHasMore(false);
+          setTotalElements(total);
+          setError(null);
+          return;
+        }
+
+        const response = await fetchPage(pageNum);
+        setItems(prev =>
+          dedupeBedsById(append ? [...prev, ...response.content] : response.content),
+        );
         setPage(pageNum);
         setHasMore(!response.last);
+        setTotalElements(response.totalElements);
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load beds');
         if (!append) {
           setItems([]);
+          setTotalElements(0);
         }
       } finally {
         setLoading(false);
@@ -67,7 +109,7 @@ export function useSpaceBedSearch({
         setRefreshing(false);
       }
     },
-    [buildingId, enabled, floorId, query, spaceId, status, unitId],
+    [enabled, fetchPage, loadAll],
   );
 
   useEffect(() => {
@@ -80,11 +122,11 @@ export function useSpaceBedSearch({
   }, [loadPage]);
 
   const loadMore = useCallback(async () => {
-    if (loadingMore || !hasMore) {
+    if (loadingMore || !hasMore || loadAll) {
       return;
     }
     await loadPage(page + 1, true, true);
-  }, [hasMore, loadPage, loadingMore, page]);
+  }, [hasMore, loadAll, loadPage, loadingMore, page]);
 
   return {
     items,
@@ -92,6 +134,7 @@ export function useSpaceBedSearch({
     refreshing,
     loadingMore,
     hasMore,
+    totalElements,
     error,
     refresh,
     loadMore,

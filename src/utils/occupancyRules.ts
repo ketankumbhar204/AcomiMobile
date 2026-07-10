@@ -241,3 +241,37 @@ export function formatOccupancyLocation(
   }
   return parts.join(' · ');
 }
+
+/** Building/floor on line 1; unit/room/bed on line 2 — for compact stay cards. */
+export function formatOccupancyLocationHierarchy(
+  summary: CurrentOccupancySummaryResponse | null | undefined,
+): { primary: string; secondary: string | null } {
+  if (!summary) {
+    return { primary: '', secondary: null };
+  }
+  const primary = [summary.buildingName, summary.floorName].filter(Boolean).join(' • ');
+  const secondaryParts = [summary.unitName, summary.roomName, summary.bedName].filter(Boolean);
+  return {
+    primary,
+    secondary: secondaryParts.length > 0 ? secondaryParts.join(' • ') : null,
+  };
+}
+
+/** Inclusive calendar days from move-in through today (min 1 when move-in is today). */
+export function getOccupiedDayCount(moveInDate?: string | null): number | null {
+  if (!moveInDate) {
+    return null;
+  }
+  const start = new Date(moveInDate);
+  if (Number.isNaN(start.getTime())) {
+    return null;
+  }
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  start.setHours(0, 0, 0, 0);
+  const diffMs = today.getTime() - start.getTime();
+  if (diffMs < 0) {
+    return null;
+  }
+  return Math.floor(diffMs / (24 * 60 * 60 * 1000)) + 1;
+}

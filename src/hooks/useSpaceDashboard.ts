@@ -6,6 +6,7 @@ import type {
   DashboardFinancialSummary,
   DashboardMessOperations,
   DashboardSummaryResponse,
+  PendingActionsSummary,
   SpaceType,
   UUID,
 } from '../api/types';
@@ -16,6 +17,7 @@ import {
   peekDashboardSummary,
   subscribeDashboardInvalidation,
 } from '../utils/dashboardQueryCache';
+import { seedPendingActionsCache } from '../utils/pendingActionsQueryCache';
 import {
   getOccupancyInvalidationGeneration,
   subscribeOccupancyInvalidation,
@@ -30,6 +32,7 @@ export type SpaceDashboardState = {
   summary: DashboardSummaryResponse | null;
   financial: DashboardFinancialSummary | null;
   attention: DashboardAttentionItem[];
+  pendingActions: PendingActionsSummary | null;
   messOperations: DashboardMessOperations | null;
   accommodationOperations: DashboardAccommodationOperations | null;
   reload: (force?: boolean) => Promise<void>;
@@ -105,6 +108,9 @@ export function useSpaceDashboard(
 
       try {
         const data = await fetchDashboardSummaryCached(spaceId, spaceType, month, { force });
+        if (data.pendingActions) {
+          seedPendingActionsCache(spaceId, data.pendingActions, month);
+        }
         setSummary(data);
       } catch {
         if (!peekDashboardSummary(spaceId, month)) {
@@ -133,12 +139,6 @@ export function useSpaceDashboard(
     void load(true);
   }, [cacheGeneration, load]);
 
-  useEffect(() => {
-    if (enabled && spaceType && summary == null && !loading && !refreshing) {
-      void load(false);
-    }
-  }, [enabled, load, loading, refreshing, spaceType, summary]);
-
   return {
     loading,
     refreshing,
@@ -146,6 +146,7 @@ export function useSpaceDashboard(
     summary,
     financial: summary?.financial ?? null,
     attention: summary?.attention ?? [],
+    pendingActions: summary?.pendingActions ?? null,
     messOperations: summary?.messOperations ?? null,
     accommodationOperations: summary?.accommodationOperations ?? null,
     reload: load,

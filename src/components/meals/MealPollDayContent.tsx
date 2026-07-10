@@ -6,7 +6,7 @@ import { Button } from '../ui';
 import { colors, spacing, typography } from '../../theme';
 import { formatComboNameWithPrice } from '../../utils/comboPrice';
 import { formatMenuDate } from '../../utils/mealDates';
-import { mealTypeLabelKey } from '../../utils/mealLabels';
+import { MEAL_TYPES, mealTypeLabelKey } from '../../utils/mealLabels';
 import { MealDeliveryLocationCompact } from './MealDeliveryLocationCompact';
 import { MealPollOptionRadio } from './MealPollOptionRadio';
 import { MealPollQuantityRow } from './MealPollQuantityRow';
@@ -34,6 +34,7 @@ type MealPollDayContentProps = {
   dateLabel?: string;
   hideSubmitButton?: boolean;
   readOnly?: boolean;
+  showMealPrices?: boolean;
 };
 
 export function MealPollDayContent({
@@ -59,6 +60,7 @@ export function MealPollDayContent({
   dateLabel: dateLabelProp,
   hideSubmitButton = false,
   readOnly = false,
+  showMealPrices = true,
 }: MealPollDayContentProps) {
   const { t, i18n } = useTranslation();
   const isDashboard = variant === 'dashboard';
@@ -76,6 +78,9 @@ export function MealPollDayContent({
 
   const title = isDashboard ? t('dashboard.tomorrowMeals') : null;
   const dateLabel = dateLabelProp ?? formatMenuDate(menuDate, i18n.language);
+  const sortedPolls = [...openPolls].sort(
+    (a, b) => MEAL_TYPES.indexOf(a.mealType) - MEAL_TYPES.indexOf(b.mealType),
+  );
 
   return (
     <View>
@@ -96,7 +101,7 @@ export function MealPollDayContent({
       ) : null}
 
       {showSummary
-        ? openPolls.map(poll => {
+        ? sortedPolls.map(poll => {
             if (multiQuantity) {
               const activeSelections =
                 poll.mySelections?.filter(selection => selection.quantity > 0) ?? [];
@@ -107,7 +112,12 @@ export function MealPollDayContent({
                     activeSelections.map(selection => {
                       const option = poll.options.find(row => row.id === selection.optionId);
                       const label = option
-                        ? formatComboNameWithPrice(option.label, option.price, option.currencyCode)
+                        ? formatComboNameWithPrice(
+                            option.label,
+                            option.price,
+                            option.currencyCode,
+                            showMealPrices,
+                          )
                         : t('meals.poll.notSelected');
                       return (
                         <Text key={selection.optionId} style={styles.summaryChoice}>
@@ -134,7 +144,12 @@ export function MealPollDayContent({
                 {selected ? (
                   <Text style={styles.summaryChoice}>
                     ✓{' '}
-                    {formatComboNameWithPrice(selected.label, selected.price, selected.currencyCode)}
+                    {formatComboNameWithPrice(
+                      selected.label,
+                      selected.price,
+                      selected.currencyCode,
+                      showMealPrices,
+                    )}
                   </Text>
                 ) : (
                   <Text style={styles.summaryMissing}>{t('meals.poll.notSelected')}</Text>
@@ -142,7 +157,7 @@ export function MealPollDayContent({
               </View>
             );
           })
-        : openPolls.map(poll => {
+        : sortedPolls.map(poll => {
             const mealPlates = totalPlatesForMeal?.(poll.mealType) ?? 0;
             return (
               <View key={poll.id} style={styles.section}>
@@ -157,6 +172,7 @@ export function MealPollDayContent({
                           quantity={quantitySelections[poll.mealType]?.[option.id] ?? 0}
                           onChange={qty => onQuantityChange?.(poll.mealType, option.id, qty)}
                           readOnly={readOnly}
+                          showPrice={showMealPrices}
                         />
                       ))
                   : poll.options.map(option => (
@@ -166,6 +182,7 @@ export function MealPollDayContent({
                         selected={selections[poll.mealType] === option.id}
                         onSelect={() => onSelect(poll.mealType, option.id)}
                         readOnly={readOnly}
+                        showPrice={showMealPrices}
                       />
                     ))}
                 {showDeliveryForMeal && mealPlates > 0 ? (

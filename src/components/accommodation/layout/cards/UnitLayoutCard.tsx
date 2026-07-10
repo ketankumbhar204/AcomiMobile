@@ -3,12 +3,14 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { UnitListItemResponse } from '../../../../api/types';
 import { colors, radius, shadows, spacing, typography } from '../../../../theme';
+import { isAccommodationEntityActive } from '../../../../utils/accommodationEntityActive';
+import { inferUnitListStatus } from '../../../../utils/inferAggregateOccupancyStatus';
 import { AccommodationStatusBadge } from '../../AccommodationStatusBadge';
 import { getUnitIllustration } from '../illustrations/illustrationAssets';
 import { CircularOccupancyIndicator } from './CircularOccupancyIndicator';
 import { LayoutCardShell } from './LayoutCardShell';
 import { LayoutIllustration } from './LayoutIllustration';
-import { occupancyPercentFromStatus } from './occupancyUtils';
+import { calcOccupancyPercent } from './occupancyUtils';
 
 type UnitLayoutCardProps = {
   unit: UnitListItemResponse;
@@ -26,8 +28,18 @@ export function UnitLayoutCard({
   menu,
 }: UnitLayoutCardProps) {
   const { t } = useTranslation();
-  const percent = occupancyPercentFromStatus(unit.status);
+  const inactive = !isAccommodationEntityActive(unit);
+  const percent = inactive
+    ? 0
+    : calcOccupancyPercent(unit.occupiedBeds ?? 0, unit.bedCount);
+  const status = inactive ? null : inferUnitListStatus(unit);
   const illustration = getUnitIllustration(unit.roomCount, unit.bedCount);
+
+  // #region agent log
+  if (!inactive && unit.bedCount > 0) {
+    fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'UnitLayoutCard.tsx:render',message:'unit occupancy display',data:{unitId:unit.unitId,unitName:unit.name,apiStatus:unit.status,displayStatus:status,percent,occupiedBeds:unit.occupiedBeds??0,availableBeds:unit.availableBeds,bedCount:unit.bedCount},timestamp:Date.now(),hypothesisId:'H1',runId:'unit-occupancy'})}).catch(()=>{});
+  }
+  // #endregion
 
   return (
     <LayoutCardShell
@@ -49,8 +61,8 @@ export function UnitLayoutCard({
         })}
       </Text>
       <View style={styles.footer}>
-        <AccommodationStatusBadge status={unit.status} />
-        <CircularOccupancyIndicator percent={percent} size={44} />
+        {status ? <AccommodationStatusBadge status={status} /> : null}
+        {!inactive ? <CircularOccupancyIndicator percent={percent} size={44} /> : null}
       </View>
     </LayoutCardShell>
   );

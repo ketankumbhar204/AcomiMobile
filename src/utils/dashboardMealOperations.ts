@@ -1,8 +1,9 @@
 /**
  * Whether the owner/manager dashboard should render the Meal operations block.
  *
- * Mess: unchanged — requires summary.messOperations from dashboard-summary.
- * PG / accommodation: same meal-management permission as the Meals quick action.
+ * Mess and accommodation spaces: show when the caller can manage meals.
+ * (Mess previously required summary.messOperations, which hid the whole block
+ * when the summary payload was empty/failed — leaving only Quick Actions.)
  */
 export function shouldShowDashboardMealOperations(input: {
   showOwnerDashboard: boolean;
@@ -16,7 +17,7 @@ export function shouldShowDashboardMealOperations(input: {
   }
 
   if (input.isMess) {
-    return input.hasMessOperationsSummary;
+    return true;
   }
 
   return input.accommodationApplicable;

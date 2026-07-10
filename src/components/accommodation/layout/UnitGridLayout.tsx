@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { UnitListItemResponse } from '../../../api/types';
 import { colors, spacing, typography } from '../../../theme';
+import { inferUnitListStatus } from '../../../utils/inferAggregateOccupancyStatus';
 import { matchesAccommodationSearch } from '../../../utils/accommodationLayoutSearch';
 import { IllustratedUnitSlot } from './illustrated/IllustratedUnitSlot';
 
@@ -27,7 +28,7 @@ export function UnitGridTile({
     <View style={styles.cell}>
       <IllustratedUnitSlot
         label={unit.name}
-        status={unit.status}
+        status={inferUnitListStatus(unit) ?? unit.status}
         ratioLabel={unit.bedCount > 0 ? `${unit.roomCount} r · ${unit.bedCount} b` : undefined}
         highlighted={highlighted}
         onPress={onPress}

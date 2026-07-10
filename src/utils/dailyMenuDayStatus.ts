@@ -1,4 +1,4 @@
-import type { DailyMenuResponse } from '../api/types';
+import type { DailyMenuResponse, MealType } from '../api/types';
 import { MEAL_TYPES } from './mealLabels';
 
 function hasPlannedMenu(menu: DailyMenuResponse): boolean {
@@ -12,6 +12,13 @@ export type DailyMenuDaySummary = {
 };
 
 export type MealOperationsEmptyKind = 'all_not_planned' | 'none_published' | 'no_responses_yet';
+
+export function listPlannedMealTypes(menus: DailyMenuResponse[]): MealType[] {
+  return MEAL_TYPES.filter(mealType => {
+    const menu = menus.find(row => row.mealType === mealType);
+    return menu != null && hasPlannedMenu(menu);
+  });
+}
 
 export function summarizeDailyMenuDay(menus: DailyMenuResponse[]): DailyMenuDaySummary {
   let published = 0;

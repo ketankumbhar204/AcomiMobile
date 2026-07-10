@@ -4,15 +4,13 @@ import { useRoute } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import type { UUID } from '../../api/types';
-import { DashboardPendingActionsList } from '../../components/dashboard/DashboardAttentionCard';
+import { PendingActionsList } from '../../components/dashboard/PendingActionGroupCard';
 import { Screen } from '../../components/ui/Screen';
-import { useDashboardAttentionItems } from '../../hooks/useDashboardAttentionItems';
-import { useSpaceDashboard } from '../../hooks/useSpaceDashboard';
+import { usePendingActions } from '../../hooks/usePendingActions';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
-import { useSpaceStore } from '../../store/spaceStore';
 import type { MainStackParamList } from '../../navigation/types';
 import { colors, spacing, typography } from '../../theme';
-import { findMySpaceEntry } from '../../utils/spacePermissions';
+import { canViewOperationalDashboard } from '../../utils/dashboardFinancial';
 
 type Route = NativeStackScreenProps<MainStackParamList, 'DashboardPendingActions'>['route'];
 
@@ -26,24 +24,27 @@ export function DashboardPendingActionsScreen({
   const { t } = useTranslation();
   const route = useRoute<Route>();
   const spaceId = spaceIdProp ?? route.params.spaceId;
-  const mySpaces = useSpaceStore(state => state.mySpaces);
-  const spaceEntry = findMySpaceEntry(mySpaces, spaceId);
   const permissions = useSpacePermissions(spaceId);
-  const spaceType = permissions.spaceType ?? spaceEntry?.spaceType;
-  const isMess = spaceType === 'MESS';
+  const showOwnerDashboard = canViewOperationalDashboard({
+    canManageMembers: permissions.canManageMembers,
+    canManageMeals: permissions.canManageMeals === true,
+    canManageOccupancy: permissions.canManageOccupancy,
+    canViewSpaceOccupancies: permissions.canViewSpaceOccupancies === true,
+  });
 
-  const dashboard = useSpaceDashboard(spaceId, spaceType, true);
-  const items = useDashboardAttentionItems(
-    spaceId,
-    dashboard.attention,
-    permissions.canManageMeals === true && isMess,
-  );
+  // Always load from pending-actions API (syncs payments + meal ops) so the list
+  // matches the dashboard badge. Owners must not use the tenant filter.
+  const pending = usePendingActions(spaceId, true, showOwnerDashboard);
+  const pendingActions = pending.summary;
 
-  const showInitialLoader = dashboard.loading && dashboard.summary == null;
-  const empty = useMemo(
-    () => !showInitialLoader && !dashboard.refreshing && items.length === 0,
-    [dashboard.refreshing, items.length, showInitialLoader],
-  );
+  const showInitialLoader = pending.loading && pending.summary == null;
+
+  const empty = useMemo(() => {
+    if (showInitialLoader) {
+      return false;
+    }
+    return (pendingActions?.totalCount ?? 0) === 0;
+  }, [pendingActions?.totalCount, showInitialLoader]);
 
   return (
     <Screen scrollable contentStyle={styles.content}>
@@ -56,7 +57,7 @@ export function DashboardPendingActionsScreen({
           <Text style={styles.emptyText}>{t('dashboard.pendingActions.empty')}</Text>
         </View>
       ) : (
-        <DashboardPendingActionsList spaceId={spaceId} items={items} />
+        <PendingActionsList spaceId={spaceId} groups={pendingActions?.groups ?? []} />
       )}
     </Screen>
   );

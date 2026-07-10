@@ -3,33 +3,14 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { PaymentTimelineEventResponse } from '../../api/types';
 import { colors, spacing, typography } from '../../theme';
+import {
+  PAYMENT_STATUS_THEME,
+  resolveTimelineEventVariant,
+} from '../../utils/paymentStatusTheme';
 
 type PaymentHistoryTimelineProps = {
   events: PaymentTimelineEventResponse[];
 };
-
-function eventIcon(eventType: PaymentTimelineEventResponse['eventType']): string {
-  switch (eventType) {
-    case 'CREATED':
-      return '📋';
-    case 'PROOF_UPLOADED':
-      return '📤';
-    case 'UNDER_REVIEW':
-      return '🔍';
-    case 'APPROVED':
-      return '✓';
-    case 'PAID':
-      return '✅';
-    case 'REJECTED':
-      return '❌';
-    case 'RESUBMITTED':
-      return '🔄';
-    case 'REFUNDED':
-      return '↩️';
-    default:
-      return '•';
-  }
-}
 
 function formatEventTime(value: string): string {
   const date = new Date(value);
@@ -52,21 +33,26 @@ export function PaymentHistoryTimeline({ events }: PaymentHistoryTimelineProps) 
 
   return (
     <View style={styles.container}>
-      {events.map((event, index) => (
-        <View key={event.eventId} style={styles.row}>
-          <View style={styles.rail}>
-            <Text style={styles.icon}>{eventIcon(event.eventType)}</Text>
-            {index < events.length - 1 ? <View style={styles.line} /> : null}
+      {events.map((event, index) => {
+        const variant = resolveTimelineEventVariant(event.eventType);
+        const accent = PAYMENT_STATUS_THEME[variant].accent;
+
+        return (
+          <View key={event.eventId} style={styles.row}>
+            <View style={styles.rail}>
+              <View style={[styles.dot, { backgroundColor: accent }]} />
+              {index < events.length - 1 ? <View style={[styles.line, { backgroundColor: accent }]} /> : null}
+            </View>
+            <View style={styles.content}>
+              <Text style={styles.eventType}>
+                {t(`paymentCollection.timeline.${event.eventType}`)}
+              </Text>
+              <Text style={styles.time}>{formatEventTime(event.performedAt)}</Text>
+              {event.remarks ? <Text style={styles.remarks}>{event.remarks}</Text> : null}
+            </View>
           </View>
-          <View style={styles.content}>
-            <Text style={styles.eventType}>
-              {t(`paymentCollection.timeline.${event.eventType}`)}
-            </Text>
-            <Text style={styles.time}>{formatEventTime(event.performedAt)}</Text>
-            {event.remarks ? <Text style={styles.remarks}>{event.remarks}</Text> : null}
-          </View>
-        </View>
-      ))}
+        );
+      })}
     </View>
   );
 }
@@ -83,15 +69,17 @@ const styles = StyleSheet.create({
     width: 36,
     alignItems: 'center',
   },
-  icon: {
-    fontSize: 18,
+  dot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
   line: {
     flex: 1,
     width: 2,
-    backgroundColor: colors.border,
     marginTop: spacing.xs,
     minHeight: 24,
+    opacity: 0.35,
   },
   content: {
     flex: 1,

@@ -11,6 +11,7 @@ import type {
   SpaceType,
 } from '../../api/types';
 import { Button, Card, useConfirmDialog } from '../ui';
+import { MemberOccupancyStatusBadge } from '../member/MemberOccupancyStatusBadge';
 import type { MainStackParamList } from '../../navigation/types';
 import { openOccupancyWizardFromRef } from '../../features/occupancy/OccupancyWizard';
 import { useMemberOccupancies } from '../../hooks/useMemberOccupancies';
@@ -19,7 +20,7 @@ import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useMemberStore } from '../../store/memberStore';
 import { useToastStore } from '../../store/toastStore';
 import { useAuthStore } from '../../store/authStore';
-import { colors, spacing, typography } from '../../theme';
+import { colors, radius, spacing, typography } from '../../theme';
 import { isAccommodationApplicable } from '../../utils/accommodationProfile';
 import { supportsSpaceAmenities } from '../../utils/amenities';
 import {
@@ -29,6 +30,8 @@ import {
 } from '../../utils/occupancyPermissions';
 import {
   formatOccupancyAllocatedDate,
+  formatOccupancyLocationHierarchy,
+  getOccupiedDayCount,
   getOccupancyExitDate,
 } from '../../utils/occupancyRules';
 import { OccupancyContractSnapshotCard } from './OccupancyContractSnapshotCard';
@@ -41,18 +44,6 @@ type MemberAccommodationSectionProps = {
   member: MemberDetailsResponse;
   currentRole?: MembershipRole;
 };
-
-function LocationLine({ label, value }: { label: string; value?: string | null }) {
-  if (!value) {
-    return null;
-  }
-  return (
-    <View style={styles.locationRow}>
-      <Text style={styles.locationLabel}>{label}</Text>
-      <Text style={styles.locationValue}>{value}</Text>
-    </View>
-  );
-}
 
 function summaryFromOccupancy(
   occupancy: OccupancyResponse,
@@ -75,45 +66,83 @@ function summaryFromOccupancy(
   };
 }
 
-function AccommodationLocationDetails({
+function StayLocationBlock({
   occupancy,
 }: {
   occupancy: CurrentOccupancySummaryResponse;
 }) {
-  const { t } = useTranslation();
-
-  return (
-    <View style={styles.locationBlock}>
-      <LocationLine label={t('occupancy.section.building')} value={occupancy.buildingName} />
-      <LocationLine label={t('occupancy.section.floor')} value={occupancy.floorName} />
-      <LocationLine label={t('occupancy.section.unit')} value={occupancy.unitName} />
-      <LocationLine label={t('occupancy.section.room')} value={occupancy.roomName} />
-      <LocationLine label={t('occupancy.section.bed')} value={occupancy.bedName} />
-    </View>
-  );
-}
-
-function OccupancyDateRow({ label, value }: { label: string; value?: string | null }) {
-  if (!value) {
+  const { primary, secondary } = formatOccupancyLocationHierarchy(occupancy);
+  if (!primary && !secondary) {
     return null;
   }
   return (
-    <View style={styles.dateRow}>
-      <Text style={styles.locationLabel}>{label}</Text>
-      <Text style={styles.dateValue}>{formatOccupancyAllocatedDate(value)}</Text>
+    <View style={styles.locationBlock}>
+      {primary ? (
+        <Text style={styles.locationPrimary} numberOfLines={2}>
+          📍 {primary}
+        </Text>
+      ) : null}
+      {secondary ? (
+        <Text style={styles.locationSecondary} numberOfLines={2}>
+          {secondary}
+        </Text>
+      ) : null}
     </View>
   );
 }
 
-function AssignedAmenitiesList({ amenities }: { amenities: { label: string }[] }) {
+function TimelineCell({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.timelineCell}>
+      <Text style={styles.timelineLabel}>{label}</Text>
+      <Text style={styles.timelineValue} numberOfLines={2}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+function StayTimeline({
+  moveInLabel,
+  moveInValue,
+  middleLabel,
+  middleValue,
+  exitLabel,
+  exitValue,
+}: {
+  moveInLabel: string;
+  moveInValue: string;
+  middleLabel: string;
+  middleValue: string;
+  exitLabel: string;
+  exitValue: string;
+}) {
+  return (
+    <View style={styles.timelineRow}>
+      <TimelineCell label={moveInLabel} value={moveInValue} />
+      <TimelineCell label={middleLabel} value={middleValue} />
+      <TimelineCell label={exitLabel} value={exitValue} />
+    </View>
+  );
+}
+
+function AssignedAmenityChips({ amenities }: { amenities: { label: string }[] }) {
   const { t } = useTranslation();
   if (amenities.length === 0) {
     return null;
   }
   return (
     <View style={styles.amenitiesBlock}>
-      <Text style={styles.locationLabel}>{t('occupancy.amenities.assigned')}</Text>
-      <Text style={styles.amenitiesValue}>{amenities.map(item => item.label).join(', ')}</Text>
+      <Text style={styles.amenitiesTitle}>{t('occupancy.amenities.assigned')}</Text>
+      <View style={styles.amenityChipRow}>
+        {amenities.map(item => (
+          <View key={item.label} style={styles.amenityChip}>
+            <Text style={styles.amenityChipLabel} numberOfLines={1}>
+              {item.label}
+            </Text>
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
@@ -190,6 +219,8 @@ export function MemberAccommodationSection({
           ? reservedOccupancy.amenities
           : [];
 
+  const dash = t('occupancy.section.timelineEmpty');
+
   function openWizard(mode: 'ALLOCATE' | 'RESERVE' | 'MOVE_IN' | 'TRANSFER' | 'VACATE') {
     openOccupancyWizardFromRef({
       spaceId,
@@ -230,61 +261,70 @@ export function MemberAccommodationSection({
     });
   }
 
+  const moveInRaw =
+    activeOccupancy?.actualMoveInAt ??
+    activeOccupancy?.moveInDate ??
+    activeSummary?.moveInDate;
+  const occupiedDays = getOccupiedDayCount(moveInRaw);
+  const occupiedForLabel =
+    occupiedDays == null
+      ? dash
+      : t('occupancy.section.occupiedDays', { count: occupiedDays });
+
+  const exitRaw = getOccupancyExitDate(activeOccupancy) ?? getOccupancyExitDate(reservedOccupancy);
+
   return (
     <View style={styles.wrap}>
       <Text style={styles.sectionTitle}>{t('occupancy.section.title')}</Text>
-      <Card style={styles.card}>
+
+      <Card style={styles.stayCard}>
         {isAllocated && activeSummary ? (
           <>
-            <Text style={styles.cardHeading}>{t('occupancy.section.currentAccommodation')}</Text>
-            <Text style={styles.statusBadge}>{t('occupancy.status.ACTIVE')}</Text>
-            <AccommodationLocationDetails occupancy={activeSummary} />
-            <OccupancyDateRow
-              label={t('occupancy.section.moveInDate')}
-              value={activeOccupancy?.actualMoveInAt ?? activeOccupancy?.moveInDate}
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardHeading}>{t('occupancy.section.currentlyStaying')}</Text>
+              <MemberOccupancyStatusBadge status={member.occupancyStatus} />
+            </View>
+            <StayLocationBlock occupancy={activeSummary} />
+            <StayTimeline
+              moveInLabel={t('occupancy.section.movedIn')}
+              moveInValue={formatOccupancyAllocatedDate(moveInRaw)}
+              middleLabel={t('occupancy.section.occupiedFor')}
+              middleValue={occupiedForLabel}
+              exitLabel={t('occupancy.section.expectedMoveOut')}
+              exitValue={formatOccupancyAllocatedDate(exitRaw)}
             />
-            <OccupancyDateRow
-              label={t('occupancy.section.allocatedOn')}
-              value={activeOccupancy?.allocatedAt}
-            />
-            <OccupancyDateRow
-              label={t('occupancy.fields.expectedExit')}
-              value={getOccupancyExitDate(activeOccupancy)}
-            />
-            {activeOccupancy ? (
-              <OccupancyContractSnapshotCard occupancy={activeOccupancy} />
-            ) : null}
             {supportsSpaceAmenities(spaceType) ? (
-              <AssignedAmenitiesList amenities={assignedAmenities} />
+              <AssignedAmenityChips amenities={assignedAmenities} />
             ) : null}
           </>
         ) : isReserved && reservedSummary ? (
           <>
-            <Text style={styles.cardHeading}>{t('occupancy.section.reservedAccommodation')}</Text>
-            <Text style={[styles.statusBadge, styles.statusReserved]}>
-              {t('occupancy.status.RESERVED')}
-            </Text>
-            <AccommodationLocationDetails occupancy={reservedSummary} />
-            <OccupancyDateRow
-              label={t('occupancy.section.moveInDate')}
-              value={reservedOccupancy?.moveInDate ?? reservedSummary.moveInDate}
-            />
-            <OccupancyDateRow
-              label={t('occupancy.section.reservedOn')}
-              value={reservedOccupancy?.reservedAt}
-            />
-            <OccupancyDateRow
-              label={t('occupancy.fields.expectedExit')}
-              value={getOccupancyExitDate(reservedOccupancy)}
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardHeading}>{t('occupancy.section.reservedStay')}</Text>
+              <MemberOccupancyStatusBadge status={member.occupancyStatus} />
+            </View>
+            <StayLocationBlock occupancy={reservedSummary} />
+            <StayTimeline
+              moveInLabel={t('occupancy.section.movedIn')}
+              moveInValue={formatOccupancyAllocatedDate(
+                reservedOccupancy?.moveInDate ?? reservedSummary.moveInDate,
+              )}
+              middleLabel={t('occupancy.section.reservedOnShort')}
+              middleValue={formatOccupancyAllocatedDate(reservedOccupancy?.reservedAt)}
+              exitLabel={t('occupancy.section.expectedMoveOut')}
+              exitValue={formatOccupancyAllocatedDate(getOccupancyExitDate(reservedOccupancy))}
             />
             {supportsSpaceAmenities(spaceType) ? (
-              <AssignedAmenitiesList amenities={assignedAmenities} />
+              <AssignedAmenityChips amenities={assignedAmenities} />
             ) : null}
           </>
         ) : (
           <>
-            <Text style={styles.cardHeading}>{t('occupancy.section.noAccommodationTitle')}</Text>
-            <Text style={styles.notAllocated}>{t('occupancy.section.noAccommodationBody')}</Text>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardHeading}>{t('occupancy.section.noStayTitle')}</Text>
+              <MemberOccupancyStatusBadge status={member.occupancyStatus ?? 'VACATED'} />
+            </View>
+            <Text style={styles.notAllocated}>{t('occupancy.section.noStayBody')}</Text>
           </>
         )}
 
@@ -346,7 +386,7 @@ export function MemberAccommodationSection({
         ) : null}
 
         <Button
-          label={t('occupancy.actions.viewHistory')}
+          label={t('occupancy.actions.viewHistoryShort')}
           variant="ghost"
           onPress={() =>
             navigation.navigate('MemberOccupancyHistory', {
@@ -358,6 +398,10 @@ export function MemberAccommodationSection({
           style={styles.historyBtn}
         />
       </Card>
+
+      {isAllocated && activeOccupancy ? (
+        <OccupancyContractSnapshotCard occupancy={activeOccupancy} />
+      ) : null}
     </View>
   );
 }
@@ -365,73 +409,102 @@ export function MemberAccommodationSection({
 const styles = StyleSheet.create({
   wrap: {
     marginBottom: spacing.lg,
+    gap: spacing.md,
   },
   sectionTitle: {
     ...typography.bodyStrong,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
-  card: {
-    gap: spacing.xs,
+  stayCard: {
+    gap: spacing.md,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
   },
   cardHeading: {
     ...typography.bodyStrong,
-    marginBottom: spacing.sm,
-  },
-  statusBadge: {
-    ...typography.caption,
-    color: colors.primaryDark,
-    fontWeight: '600',
-    marginBottom: spacing.sm,
-  },
-  statusReserved: {
-    color: '#B45309',
+    flexShrink: 1,
   },
   locationBlock: {
-    gap: spacing.xs,
-    marginBottom: spacing.sm,
+    gap: 4,
   },
-  locationRow: {
+  locationPrimary: {
+    ...typography.bodyStrong,
+    color: colors.textPrimary,
+  },
+  locationSecondary: {
+    ...typography.body,
+    color: colors.textSecondary,
+    paddingLeft: 22,
+  },
+  timelineRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingTop: spacing.xs,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  timelineCell: {
+    flex: 1,
     gap: 2,
   },
-  locationLabel: {
+  timelineLabel: {
     ...typography.caption,
     color: colors.muted,
   },
-  locationValue: {
-    ...typography.body,
-  },
-  dateRow: {
-    marginTop: spacing.xs,
-    gap: 2,
-  },
-  dateValue: {
+  timelineValue: {
     ...typography.bodyStrong,
+    fontSize: 13,
   },
   amenitiesBlock: {
-    marginTop: spacing.sm,
-    gap: 2,
+    gap: spacing.sm,
   },
-  amenitiesValue: {
-    ...typography.body,
+  amenitiesTitle: {
+    ...typography.caption,
+    color: colors.muted,
+    fontWeight: '600',
+  },
+  amenityChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  amenityChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: radius.button,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.lightGreen,
+  },
+  amenityChipLabel: {
+    ...typography.caption,
+    color: colors.textPrimary,
+    fontWeight: '600',
   },
   notAllocated: {
     ...typography.body,
     color: colors.muted,
-    marginBottom: spacing.sm,
   },
   actions: {
-    marginTop: spacing.md,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.sm,
   },
   actionBtn: {
-    width: '100%',
+    flexGrow: 1,
+    flexBasis: '40%',
+    minWidth: 120,
   },
   historyBtn: {
-    marginTop: spacing.sm,
+    marginTop: -spacing.xs,
   },
   errorText: {
     ...typography.caption,
     color: '#DC2626',
-    marginTop: spacing.sm,
   },
 });

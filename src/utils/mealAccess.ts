@@ -45,6 +45,21 @@ export function canEnableMealsForMember(options?: {
   return isTenantMovedIn(options.occupancyStatus);
 }
 
+export function getMemberListFoodLabel(
+  receiving: boolean,
+  spaceType: SpaceType | undefined,
+  t: (key: string) => string,
+): string {
+  if (spaceType === 'MESS') {
+    return receiving
+      ? t('meals.accessStatus.receiving')
+      : t('meals.accessStatus.notReceiving');
+  }
+  return receiving
+    ? t('meals.foodIncluded.label')
+    : t('meals.foodIncluded.notIncluded');
+}
+
 export function shouldCreateMealParticipationFromContract(contract?: {
   foodEnabled?: boolean;
   foodIncludedInRent?: boolean;

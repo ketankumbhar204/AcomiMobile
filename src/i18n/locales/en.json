@@ -5,10 +5,12 @@
     "yes": "Yes",
     "no": "No",
     "cancel": "Cancel",
+    "close": "Close",
     "back": "Back",
     "next": "Next",
     "retry": "Retry",
     "continue": "Continue",
+    "select": "Select",
     "save": "Save",
     "edit": "Edit",
     "saving": "Saving…",
@@ -23,6 +25,11 @@
       "incorrectOtp": "Incorrect OTP. Please try again.",
       "accountDisabled": "Your account has been disabled. Please contact support."
     }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "emptyTitle": "No notifications",
+    "emptyDescription": "Updates about payments, meals, and your stay will appear here."
   },
   "list": {
     "search": {
@@ -51,6 +58,8 @@
       "nameAsc": "Name A–Z",
       "nameDesc": "Name Z–A",
       "recent": "Recently added",
+      "createdDesc": "Created date (newest)",
+      "createdAsc": "Created date (oldest)",
       "role": "Role",
       "dueAmount": "Due amount"
     },
@@ -138,6 +147,18 @@
       "searchEmptyDescription": "Try a different search term.",
       "defaultBadge": "Default",
       "loading": "Loading spaces..."
+    },
+    "globalDashboard": {
+      "attentionTitle": "Attention required ({{count}})",
+      "attentionEmptyTitle": "No pending actions",
+      "attentionEmptyBody": "Everything is up to date across your spaces.",
+      "attentionListTitle": "Attention required",
+      "activityTitle": "Recent activity",
+      "activityEmptyTitle": "No recent activity",
+      "activityEmptyBody": "Updates across your spaces will appear here.",
+      "activityListTitle": "Recent activity",
+      "viewAll": "View all →",
+      "pendingActions": "{{count}} pending actions"
     },
     "switcher": {
       "open": "Switch space",
@@ -657,6 +678,7 @@
       "emptyDescription": "Describe your property in a few steps or create manually.",
       "quickSetup": "Quick Setup",
       "addBuildingManually": "Add Building Manually",
+      "addManually": "Add Manually",
       "manageHint": "Tap to manage",
       "beds": "{{count}} beds",
       "floors": "{{count}} floors",
@@ -1084,7 +1106,7 @@
       "member": "Select member",
       "memberHint": "Search by name or mobile number",
       "target": "Select accommodation",
-      "targetHint": "Search by room, bed, or building — full paths are shown",
+      "targetHint": "Browse units and rooms, then select a bed",
       "contract": "Contract terms",
       "reserveDates": "Reservation details",
       "reserveDatesHint": "No charges are collected when reserving.",
@@ -1111,16 +1133,21 @@
     "errors": {
       "searchMembers": "Failed to search members.",
       "searchTargets": "Failed to search accommodation.",
-      "memberRequired": "Select a tenant or add a new one to continue."
+      "memberRequired": "Select a tenant or add a new one to continue.",
+      "targetRequired": "Select a bed to continue."
     }
   },
   "occupancy": {
     "section": {
-      "title": "Accommodation",
+      "title": "Current Stay",
       "currentAccommodation": "Current Accommodation",
+      "currentlyStaying": "Currently staying",
       "reservedAccommodation": "Reserved Accommodation",
+      "reservedStay": "Reserved stay",
       "noAccommodationTitle": "No Accommodation Assigned",
       "noAccommodationBody": "This member is currently not occupying any accommodation.",
+      "noStayTitle": "No stay assigned",
+      "noStayBody": "This member is not occupying any accommodation right now.",
       "space": "Space",
       "type": "Type",
       "building": "Building",
@@ -1130,13 +1157,20 @@
       "bed": "Bed",
       "allocatedOn": "Allocated On",
       "moveInDate": "Move-in date",
+      "movedIn": "Moved in",
+      "occupiedFor": "Occupied for",
+      "occupiedDays_one": "{{count}} day",
+      "occupiedDays_other": "{{count}} days",
+      "expectedMoveOut": "Expected move-out",
       "reservedOn": "Reserved on",
+      "reservedOnShort": "Reserved",
+      "timelineEmpty": "—",
       "status": "Occupancy status",
       "location": "Current location",
       "notAllocated": "Not allocated to any bed, room, or unit."
     },
     "memberStatus": {
-      "ALLOCATED": "Allocated",
+      "ALLOCATED": "Moved in",
       "RESERVED": "Reserved",
       "VACATED": "Vacated"
     },
@@ -1167,7 +1201,8 @@
       "cancelShort": "Cancel",
       "transfer": "Transfer",
       "vacate": "Vacate",
-      "viewHistory": "View occupancy history"
+      "viewHistory": "View occupancy history",
+      "viewHistoryShort": "View History"
     },
     "accommodationActions": {
       "title": "Occupancy actions"
@@ -1249,7 +1284,7 @@
       "hint": "Agreed monthly rent and charges at activation. Not billing or payments.",
       "stepTitle": "Contract terms",
       "continueToTerms": "Continue to contract terms",
-      "snapshotTitle": "Agreed charges",
+      "snapshotTitle": "Contract",
       "lockedAt": "Locked on {{date}}",
       "rent": "Monthly rent",
       "rentRequired": "Monthly rent (required)",
@@ -1259,13 +1294,16 @@
       "catalogRentHint": "Catalog default: ₹{{amount}}",
       "catalogDepositHint": "Catalog default: ₹{{amount}}",
       "food": "Food",
+      "foodIncluded": "Food included",
+      "foodYes": "Yes",
+      "foodNo": "No",
       "foodEnabled": "Include food charges",
-      "foodEnabledHint": "When enabled, agree a separate monthly food charge",
+      "foodEnabledHint": "Turn off if meals are not included with this stay",
       "foodCharge": "Food charge",
       "foodChargeHint": "Leave blank if your space has a default food charge on the server",
       "foodChargeDefaultHint": "Space default: ₹{{amount}} (used if left blank)",
       "foodBundledTitle": "Food included in rent",
-      "foodBundledHint": "This property charges mandatory food as part of monthly rent. There is no separate food line.",
+      "foodBundledHint": "Food is included in the monthly rent amount above. There is no separate food line.",
       "monthlyTotal": "Monthly total",
       "monthlyTotalWithFood": "Monthly total (rent + food)",
       "foodDisabled": "Not included",
@@ -1422,12 +1460,26 @@
     "tomorrowMeals": "Tomorrow's meals",
     "pollCard": {
       "title": "Tomorrow's Menu",
+      "titleToday": "Today's Menu",
+      "titleTomorrow": "Tomorrow's Menu",
+      "titleDate": "Menu for {{date}}",
       "titleReady": "Tomorrow's Menu Ready",
+      "titleReadyToday": "Today's Menu Ready",
+      "titleReadyTomorrow": "Tomorrow's Menu Ready",
+      "titleReadyDate": "Menu ready for {{date}}",
+      "titleMealsToday": "Today's Meals",
+      "titleMealsTomorrow": "Tomorrow's Meals",
+      "titleMealsDate": "Meals for {{date}}",
+      "statusSelected": "✓ Meals selected",
+      "statusPartial": "Selection incomplete",
+      "statusReady": "Choose your meals",
       "selectedTitle": "Your Meals Are Selected",
       "pendingTitle": "Meal Selection Pending",
       "menusReady": "{{meals}} menus are ready",
       "chooseNow": "Choose your meals now",
       "selectPromptTomorrow": "Please select your meals for tomorrow.",
+      "selectPromptToday": "Please select your meals for today.",
+      "selectPromptDate": "Please select your meals for this date.",
       "selectPrompt": "Please select your meals.",
       "completeRemaining": "Complete your remaining selections.",
       "notPublished": "No menus have been published yet.",
@@ -1477,8 +1529,17 @@
       "shareMenu": "Share menu",
       "deliveryBreakdown": "Delivery by location",
       "locationPlates": "{{count}} Plates",
+      "plateBadge_one": "{{count}} Plate",
+      "plateBadge_other": "{{count}} Plates",
       "memberPlates": "{{count}} Plates",
       "noDeliveryLocation": "⚠ Delivery Location Not Set",
+      "servingLocationHeading": "Serving Location",
+      "locationHeading": "Location",
+      "editServingLocation": "Edit serving location",
+      "servingLocationPlaceholder": "Dining Hall",
+      "servingLocationSave": "Save",
+      "servingLocationCancel": "Cancel",
+      "servingLocationSaved": "Serving location updated",
       "noDeliveryData": "No delivery orders for this meal yet."
     },
     "mealsHint": "↓ 18% less waste vs last week",
@@ -1543,6 +1604,16 @@
       "moveInsThisMonth": "Move-ins this month",
       "pendingPayments": "Pending payments"
     },
+    "messOperations": {
+      "title": "Mess operations",
+      "membersReceivingMeals": "Members on meals",
+      "menusPublished": "Menus published",
+      "openPolls": "Open polls",
+      "openPollsCount": "{{count}} open polls",
+      "pollResponses": "{{responded}} / {{eligible}} responses",
+      "pollBanner": "{{open}} open polls · {{responded}} / {{eligible}} responded",
+      "todaysHeadcount": "Today's headcount"
+    },
     "drilldown": {
       "occupiedBedsTitle": "Occupied beds",
       "occupiedBedsSubtitle": "Active residents and their bed assignments.",
@@ -1558,7 +1629,15 @@
       "emptyMoveIns": "No move-ins this month",
       "emptyBedsDescription": "Counts update when beds are allocated, reserved, or vacated.",
       "emptyOccupancyDescription": "Active occupancies appear here after move-in.",
-      "filterTitle": "Filter beds"
+      "filterTitle": "Filter beds",
+      "allBuildings": "All Buildings",
+      "allFloors": "All Floors",
+      "allUnits": "All Units",
+      "showingAvailableBeds": "Showing {{count}} available beds",
+      "showingBeds": "Showing {{count}} beds",
+      "roomBedCount": "{{count}} beds · {{available}} available",
+      "unitBedCount": "{{count}} beds · {{available}} available",
+      "roomAvailableCount": "{{available}} of {{count}} available"
     },
     "operations": {
       "title": "Meal operations",
@@ -1574,6 +1653,15 @@
       "emptyNonePublished": "Menus are still in draft. Publish and share to start collecting responses.",
       "emptyNoResponses": "Menus are published but no member responses yet.",
       "planMenuCta": "Plan menu",
+      "draftChip": "Draft",
+      "statusNotPlanned": "Not planned",
+      "statusDraft": "Draft",
+      "statusPublished": "Published",
+      "ctaPlanMenu": "Plan menu",
+      "ctaPublishShare": "Publish and share",
+      "ctaResponsesCollecting": "Responses collecting",
+      "responsesCount": "{{count}} responses",
+      "pollClosedResponses": "Poll closed · {{count}} responses",
       "pollOpenLine": "Poll open · {{responded}} / {{eligible}} responded",
       "pollClosed": "Polls closed for this date",
       "pollNotOpenDraft": "Publish and share menu to open poll",
@@ -1607,14 +1695,36 @@
     },
     "pendingActions": {
       "screenSubtitle": "Review and complete these items to keep operations running smoothly.",
-      "empty": "No pending actions right now."
+      "empty": "No pending actions right now.",
+      "tapToOpen": "Tap to open",
+      "groups": {
+        "PAYMENT_NEEDS_REVIEW": "Payment Reviews",
+        "PAYMENT_NEEDS_UPDATE": "Needs Update",
+        "PAYMENT_UPDATE_REQUESTED": "Payment requires update",
+        "PAYMENT_OVERDUE": "Payments Due",
+        "MENU_NOT_PLANNED": "Menu Not Planned",
+        "MENU_DRAFT_PENDING_PUBLISH": "Menu Ready to Publish",
+        "MEAL_POLL_NOT_PUBLISHED": "Meal Not Published",
+        "MEAL_RESPONSES_BELOW_THRESHOLD": "Meal Responses Pending",
+        "SUBSCRIPTION_ACTIVATION_PENDING": "Subscription Activations",
+        "PENDING_INVITATION": "Pending Invitations",
+        "MOVE_IN_SCHEDULED_TODAY": "Today's Move-ins",
+        "MOVE_OUT_SCHEDULED_TODAY": "Today's Move-outs",
+        "RESERVATION_STARTING_TODAY": "Reservations Starting Today",
+        "COMPLAINT_PENDING": "Complaints Pending",
+        "COMPLAINT_OVERDUE": "Complaints Overdue"
+      }
     }
   },
   "paymentCollection": {
     "payNow": "Pay Now",
-    "uploadAgain": "Upload Again",
+    "uploadAgain": "Update Payment",
+    "updatePayment": "Update Payment",
     "dueDate": "Due: {{date}}",
     "waitingApproval": "Payment submitted — waiting for owner approval.",
+    "updateRequestedTitle": "Update requested",
+    "updateRequestedHint": "The owner asked for changes before approving this payment.",
+    "ownerRequest": "Owner's request",
     "rejectedTitle": "Payment rejected",
     "rejectedReason": "Reason: {{reason}}",
     "status": {
@@ -1622,7 +1732,8 @@
       "PROOF_UPLOADED": "Proof uploaded",
       "UNDER_REVIEW": "Under review",
       "PAID": "Paid",
-      "REJECTED": "Rejected"
+      "REJECTED": "Rejected",
+      "UPDATE_REQUESTED": "Changes requested"
     },
     "type": {
       "MEAL": "Meal",
@@ -1663,32 +1774,93 @@
       "emptyDescription": "You have no pending or submitted payments for this month.",
       "noLinkedMember": "Your member profile is not linked yet. Contact the property manager if this persists."
     },
+    "tenantFilters": {
+      "all": "All ({{count}})",
+      "needsUpdate": "Needs Update ({{count}})",
+      "underReview": "Under Review ({{count}})",
+      "paid": "Paid ({{count}})",
+      "rejected": "Rejected ({{count}})",
+      "pending": "Pending ({{count}})"
+    },
+    "tenantSections": {
+      "actionNeeded": "Action needed ({{count}})",
+      "underReview": "Under review ({{count}})",
+      "history": "History ({{count}})",
+      "empty": {
+        "actionNeeded": "Nothing needs your action right now.",
+        "underReview": "No payments are under review.",
+        "history": "No paid payments in history yet."
+      }
+    },
     "detail": {
       "title": "Payment"
     },
     "proof": {
       "title": "Submit payment proof",
-      "hint": "Upload a screenshot of your payment and optionally add UTR or reference number.",
+      "hint": "Screenshot and UTR are optional. Remarks are pre-filled — edit if needed.",
       "uploadScreenshot": "Upload screenshot",
+      "uploadOptional": "Optional",
       "changeScreenshot": "Change screenshot",
       "paymentMethod": "Payment method",
       "utrPlaceholder": "UTR / reference number (optional)",
+      "remarksLabel": "Remarks for Owner/Vendor",
+      "remarksHelper": "This message will be shared with the owner/vendor along with your payment proof. You can edit it before submitting.",
       "remarksPlaceholder": "Remarks (optional)",
-      "submit": "Submit payment proof",
-      "submitted": "Payment proof submitted"
+      "submit": "Submit",
+      "submitted": "Payment proof submitted",
+      "updated": "Payment details updated",
+      "editTitle": "Edit payment details",
+      "editHint": "Update your screenshot, UTR, payment method, or message before the owner reviews.",
+      "saveChanges": "Save changes",
+      "viewProof": "View payment proof",
+      "viewTitle": "Payment proof",
+      "noProofAvailable": "No screenshot uploaded yet.",
+      "replaceProof": "Replace payment proof",
+      "editDetails": "Edit payment details",
+      "screenshotRequired": "Screenshot is required for this payment.",
+      "utrRequired": "UTR / reference number is required for this payment.",
+      "defaultRemark": {
+        "rent": "Rent payment of {{amount}} for {{period}} paid via {{method}} on {{date}}. Please confirm.",
+        "meal": "{{title}} payment of {{amount}} paid via {{method}} on {{date}}. Please confirm.",
+        "deposit": "Security deposit of {{amount}} paid via {{method}} on {{date}}. Please confirm.",
+        "maintenance": "{{type}} payment of {{amount}} for {{period}} paid via {{method}} on {{date}}. Please confirm.",
+        "other": "Payment of {{amount}} paid via {{method}} on {{date}}. Please confirm."
+      }
     },
     "review": {
       "title": "Payments review",
       "subtitle": "Review submitted payment proofs from members.",
       "open": "Review payments ({{count}} submitted)",
       "openAll": "Payments review",
+      "tabPendingReview": "Pending Review ({{count}})",
+      "tabHistory": "History ({{count}})",
+      "chips": {
+        "all": "All",
+        "submitted": "Submitted ({{count}})",
+        "needsUpdate": "Needs Update ({{count}})",
+        "paid": "Paid ({{count}})",
+        "rejected": "Rejected ({{count}})"
+      },
       "tabSubmitted": "Submitted ({{count}})",
-      "tabPAID": "Paid",
-      "tabREJECTED": "Rejected",
+      "tabChangesRequested": "Changes Requested ({{count}})",
+      "tabPAID": "Paid ({{count}})",
+      "tabREJECTED": "Rejected ({{count}})",
       "approved": "Payment marked as paid",
       "rejected": "Payment rejected",
+      "updateRequested": "Update requested from tenant",
       "empty": {
+        "pending": {
+          "ALL": "No payments awaiting your review.",
+          "SUBMITTED": "No submitted payments awaiting review.",
+          "NEEDS_UPDATE": "No payments awaiting tenant updates."
+        },
+        "history": {
+          "ALL": "No completed payment reviews yet.",
+          "PAID": "No paid payments this month.",
+          "REJECTED": "No rejected payments this month."
+        },
         "SUBMITTED": "No payments awaiting review.",
+        "CHANGES_REQUESTED": "No payments awaiting tenant updates.",
         "PAID": "No paid payments this month.",
         "REJECTED": "No rejected payments."
       }
@@ -1696,8 +1868,21 @@
     "approval": {
       "approve": "Approve",
       "reject": "Reject",
+      "requestUpdate": "Request Update",
       "utr": "UTR",
-      "method": "Method"
+      "method": "Method",
+      "methodUnknown": "—",
+      "utrMissing": "—",
+      "submitted": "Submitted",
+      "proofUploaded": "Proof Uploaded",
+      "screenshotUploaded": "Screenshot uploaded",
+      "viewScreenshot": "View Screenshot",
+      "tenantMessage": "Message from Tenant"
+    },
+    "requestUpdate": {
+      "title": "Request update",
+      "hint": "Tell the tenant what to fix. They can edit and resubmit without starting over.",
+      "placeholder": "e.g. Please upload a clearer screenshot. The UTR is not visible."
     },
     "rejection": {
       "title": "Rejection reason",
@@ -1718,7 +1903,8 @@
       "REJECTED": "Rejected",
       "RESUBMITTED": "Resubmitted",
       "PAID": "Paid",
-      "REFUNDED": "Refunded"
+      "REFUNDED": "Refunded",
+      "UPDATE_REQUESTED": "Changes requested"
     },
     "errors": {
       "loadPayments": "Failed to load payments.",
@@ -1732,6 +1918,12 @@
   "payments": {
     "title": "Payments",
     "subtitle": "Expected charges, collections, and outstanding balances for this month.",
+    "tabs": {
+      "members": "Members",
+      "submitted": "Submitted ({{count}})",
+      "paid": "Paid",
+      "rejected": "Rejected"
+    },
     "accessDenied": {
       "title": "Payments unavailable",
       "description": "Only space owners and managers can view payment summaries."
@@ -1750,6 +1942,12 @@
       "description": "Everyone is up to date for this month."
     },
     "occupancyHint": "Rent expected charges come from occupancy contracts. Payment collection tracking will appear when rent payments are recorded.",
+    "errors": {
+      "title": "Payments unavailable",
+      "loadLedger": "Failed to load payments for this month.",
+      "network": "Could not reach CountIn. Check your connection and try again.",
+      "forbidden": "You do not have permission to view payments."
+    },
     "filterDrawer": {
       "statusSection": "Payment status",
       "paid": "Paid",
@@ -1765,6 +1963,10 @@
       "paid": "Paid",
       "partial": "Partial",
       "pending": "Pending",
+      "submitted": "Submitted",
+      "underReview": "Under review",
+      "needsUpdate": "Needs update",
+      "rejected": "Rejected",
       "none": "No charges"
     },
     "row": {
@@ -1809,6 +2011,7 @@
   "meals": {
     "title": "Meals",
     "todayMenu": "Today's menu",
+    "todayMealsTitle": "Today's Meals",
     "planMenu": "Plan menu",
     "dates": {
       "today": "Today",
@@ -2279,6 +2482,7 @@
     },
     "foodIncluded": {
       "label": "Food included",
+      "notIncluded": "Food not included",
       "noActiveStay": "No active stay. Food is set when the tenant moves in.",
       "activeStayHint": "Also set during move-in. Turning off stops menu sharing."
     },
@@ -2810,6 +3014,130 @@
         "te": "తెలుగు",
         "ta": "தமிழ்"
       }
+    }
+  },
+  "complaints": {
+    "raise": "Raise complaint",
+    "raiseTitle": "Raise complaint",
+    "detailTitle": "Complaint",
+    "submit": "Submit complaint",
+    "created": "Complaint submitted",
+    "updated": "Complaint updated",
+    "reopened": "Complaint reopened",
+    "commentAdded": "Comment added",
+    "timeline": "Timeline",
+    "comments": "Comments",
+    "operator": "Operator",
+    "internal": "Internal",
+    "operatorActions": "Operator actions",
+    "counts": "{{total}} total · {{open}} open · {{inProgress}} in progress",
+    "filters": {
+      "all": "All"
+    },
+    "empty": {
+      "title": "No complaints yet",
+      "description": "Raise a complaint to track maintenance, food, or service issues."
+    },
+    "fields": {
+      "category": "Category",
+      "priority": "Priority",
+      "title": "Subject",
+      "description": "Description",
+      "photos": "Photos",
+      "mealDate": "Meal date",
+      "mealType": "Meal type",
+      "meal": "Related meal",
+      "resolution": "Resolution",
+      "comment": "Add a comment",
+      "internalNote": "Internal note"
+    },
+    "hints": {
+      "internalNoteOn": "Only owners and managers can see this note.",
+      "internalNoteOff": "Visible to the member who raised the complaint."
+    },
+    "placeholders": {
+      "subject": {
+        "MAINTENANCE": "e.g. AC not cooling in Room 203",
+        "HOUSEKEEPING": "e.g. Bathroom not cleaned today",
+        "FOOD": "e.g. Lunch was undercooked",
+        "FOOD_QUALITY": "e.g. Stale chapati in dinner",
+        "FOOD_SERVICE": "e.g. Meal served very late",
+        "BILLING": "e.g. Wrong rent amount charged",
+        "SAFETY": "e.g. Broken railing on Floor 2",
+        "SERVICE": "e.g. Staff not responding to requests",
+        "OTHER": "Brief summary of the issue"
+      },
+      "description": {
+        "MAINTENANCE": "Describe the issue, when it started, and your room/unit.",
+        "HOUSEKEEPING": "Share what was missed, which area, and when you noticed it.",
+        "FOOD": "Mention the meal, what was wrong, and when it was served.",
+        "FOOD_QUALITY": "Describe the food item, taste/smell/freshness issue, and meal time.",
+        "FOOD_SERVICE": "Share timing, portion, or service problem and which meal.",
+        "BILLING": "Mention the charge, amount expected vs charged, and the month.",
+        "SAFETY": "Describe the hazard, exact location, and if anyone is at risk.",
+        "SERVICE": "Explain what happened, who was involved, and when.",
+        "OTHER": "Add details so we can understand and fix the issue quickly."
+      }
+    },
+    "actions": {
+      "addComment": "Post comment",
+      "internalNote": "Switch to internal note",
+      "publicComment": "Switch to public comment",
+      "start": "Mark in progress",
+      "resolve": "Resolve",
+      "close": "Close",
+      "cancel": "Cancel complaint",
+      "reopen": "Reopen",
+      "addPhoto": "Add photo"
+    },
+    "status": {
+      "OPEN": "Open",
+      "IN_PROGRESS": "In progress",
+      "RESOLVED": "Resolved",
+      "CLOSED": "Closed",
+      "CANCELLED": "Cancelled"
+    },
+    "priority": {
+      "LOW": "Low",
+      "MEDIUM": "Medium",
+      "HIGH": "High",
+      "URGENT": "Urgent"
+    },
+    "category": {
+      "MAINTENANCE": "Maintenance",
+      "HOUSEKEEPING": "Housekeeping",
+      "FOOD": "Food",
+      "FOOD_QUALITY": "Food quality",
+      "FOOD_SERVICE": "Food service",
+      "BILLING": "Billing",
+      "SAFETY": "Safety",
+      "SERVICE": "Service",
+      "OTHER": "Other"
+    },
+    "mealType": {
+      "BREAKFAST": "Breakfast",
+      "LUNCH": "Lunch",
+      "DINNER": "Dinner"
+    },
+    "timelineEvent": {
+      "CREATED": "Created",
+      "STATUS_CHANGED": "Status changed",
+      "COMMENTED": "Commented",
+      "INTERNAL_NOTE": "Internal note",
+      "ATTACHMENT_ADDED": "Photo added",
+      "ASSIGNED": "Assigned",
+      "PRIORITY_CHANGED": "Priority changed",
+      "REOPENED": "Reopened",
+      "RESOLVED": "Resolved",
+      "CLOSED": "Closed",
+      "CANCELLED": "Cancelled"
+    },
+    "errors": {
+      "requiredFields": "Subject and description are required.",
+      "create": "Failed to create complaint.",
+      "load": "Failed to load complaint.",
+      "action": "Action failed.",
+      "maxPhotos": "You can attach up to 5 photos."
     }
   }
 }

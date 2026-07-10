@@ -5,8 +5,14 @@ import type {
   PendingInvitationResponse,
   SpaceType,
 } from '../api/types';
+import { compareByCreatedAt, type CreatedDateSortOption } from './listSort';
 
-export type MemberSortOption = 'name_asc' | 'name_desc' | 'recent' | 'role';
+export type MemberSortOption =
+  | 'name_asc'
+  | 'name_desc'
+  | 'created_desc'
+  | 'created_asc'
+  | 'role';
 
 export const MEMBER_STATUSES: MemberStatus[] = [
   'ACTIVE',
@@ -46,7 +52,13 @@ export function rolesForSpace(spaceType: SpaceType | undefined): MembershipRole[
   return ['TENANT', 'STAFF', 'MANAGER', 'OWNER'];
 }
 
-const MEMBER_SORT_OPTIONS: MemberSortOption[] = ['name_asc', 'name_desc', 'recent', 'role'];
+const MEMBER_SORT_OPTIONS: MemberSortOption[] = [
+  'name_asc',
+  'name_desc',
+  'created_desc',
+  'created_asc',
+  'role',
+];
 
 export function memberFilterOptionCount(spaceType: SpaceType | undefined): number {
   return rolesForSpace(spaceType).length + MEMBER_STATUSES.length + MEMBER_SORT_OPTIONS.length;
@@ -126,8 +138,9 @@ export function filterAndSortMembers(
     switch (options.filters.sort) {
       case 'name_desc':
         return b.fullName.localeCompare(a.fullName);
-      case 'recent':
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      case 'created_desc':
+      case 'created_asc':
+        return compareByCreatedAt(a.createdAt, b.createdAt, options.filters.sort);
       case 'role': {
         const roleDiff = ROLE_SORT_ORDER[a.role] - ROLE_SORT_ORDER[b.role];
         return roleDiff !== 0 ? roleDiff : a.fullName.localeCompare(b.fullName);

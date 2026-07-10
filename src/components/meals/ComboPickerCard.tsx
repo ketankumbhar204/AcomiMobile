@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { FoodType } from '../../api/types';
@@ -21,6 +21,7 @@ type ComboPickerCardProps = {
   onPriceBlur?: (priceDraft: string) => void;
   priceInputError?: string | null;
   editablePrice?: boolean;
+  showMealPrices?: boolean;
   onPress: () => void;
 };
 
@@ -39,13 +40,49 @@ export function ComboPickerCard({
   onPriceBlur,
   priceInputError,
   editablePrice = false,
+  showMealPrices = true,
   onPress,
 }: ComboPickerCardProps) {
   const { t } = useTranslation();
   const preview = itemNames.join(' · ');
-  const priceLabel = formatComboPrice(price, currencyCode);
-  const showInlinePriceInput = selected && editablePrice && onPriceDraftChange;
-  const showExpandedPriceInput = selected && requiresPriceInput && onPriceDraftChange && !editablePrice;
+  const priceLabel = showMealPrices ? formatComboPrice(price, currencyCode) : null;
+  const showInlinePriceInput =
+    showMealPrices && selected && editablePrice && onPriceDraftChange;
+  const showExpandedPriceInput =
+    showMealPrices && selected && requiresPriceInput && onPriceDraftChange && !editablePrice;
+
+  const priceDraftRef = useRef(priceDraft);
+  useEffect(() => {
+    priceDraftRef.current = priceDraft;
+  }, [priceDraft]);
+
+  const handlePriceDraftChange = useCallback(
+    (text: string) => {
+      priceDraftRef.current = text;
+      onPriceDraftChange?.(text);
+    },
+    [onPriceDraftChange],
+  );
+
+  const commitPriceBlur = useCallback(() => {
+    onPriceBlur?.(priceDraftRef.current);
+  }, [onPriceBlur]);
+
+  const renderInlinePriceInput = () => (
+    <View style={[styles.inlinePriceRow, priceInputError ? styles.priceInputRowError : null]}>
+      <Text style={styles.inlineCurrency}>₹</Text>
+      <TextInput
+        style={styles.inlinePriceInput}
+        value={priceDraft}
+        onChangeText={handlePriceDraftChange}
+        onBlur={commitPriceBlur}
+        onEndEditing={commitPriceBlur}
+        keyboardType="decimal-pad"
+        placeholder={t('meals.pricing.pricePlaceholder')}
+        placeholderTextColor={colors.muted}
+      />
+    </View>
+  );
 
   return (
     <View
@@ -54,53 +91,44 @@ export function ComboPickerCard({
         compact && styles.cardCompact,
         selectable && selected && styles.cardSelected,
       ]}>
-      <Pressable
-        onPress={onPress}
-        accessibilityRole="checkbox"
-        accessibilityState={{ checked: selectable ? selected : undefined }}
-        style={({ pressed }) => [styles.row, pressed && styles.cardPressed]}>
-        {selectable ? (
-          <View style={[styles.checkbox, selected && styles.checkboxSelected]}>
-            <Text style={[styles.checkboxMark, selected && styles.checkboxMarkSelected]}>
-              {selected ? '✓' : ''}
-            </Text>
-          </View>
-        ) : null}
-        <View style={styles.content}>
-          <View style={styles.nameRow}>
-            <FoodTypeIcon foodType={foodType} size={14} />
-            <Text
-              style={[styles.name, selectable && selected && styles.nameSelected]}
-              numberOfLines={1}>
-              {name}
-            </Text>
-            {showInlinePriceInput ? (
-              <View style={[styles.inlinePriceRow, priceInputError ? styles.priceInputRowError : null]}>
-                <Text style={styles.inlineCurrency}>₹</Text>
-                <TextInput
-                  style={styles.inlinePriceInput}
-                  value={priceDraft}
-                  onChangeText={onPriceDraftChange}
-                  onBlur={() => onPriceBlur?.(priceDraft)}
-                  keyboardType="decimal-pad"
-                  placeholder={t('meals.pricing.pricePlaceholder')}
-                  placeholderTextColor={colors.muted}
-                />
-              </View>
-            ) : priceLabel ? (
-              <Text style={styles.price}>{priceLabel}</Text>
+      <View style={styles.row}>
+        <Pressable
+          onPress={onPress}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: selectable ? selected : undefined }}
+          style={({ pressed }) => [styles.selectablePressable, pressed && styles.cardPressed]}>
+          {selectable ? (
+            <View style={[styles.checkbox, selected && styles.checkboxSelected]}>
+              <Text style={[styles.checkboxMark, selected && styles.checkboxMarkSelected]}>
+                {selected ? '✓' : ''}
+              </Text>
+            </View>
+          ) : null}
+          <View style={styles.content}>
+            <View style={styles.nameRow}>
+              <FoodTypeIcon foodType={foodType} size={14} />
+              <Text
+                style={[styles.name, selectable && selected && styles.nameSelected]}
+                numberOfLines={1}>
+                {name}
+              </Text>
+            </View>
+            {priceInputError && showInlinePriceInput ? (
+              <Text style={styles.inlinePriceError}>{priceInputError}</Text>
+            ) : null}
+            {preview.length > 0 ? (
+              <Text style={styles.items} numberOfLines={1}>
+                {preview}
+              </Text>
             ) : null}
           </View>
-          {priceInputError && showInlinePriceInput ? (
-            <Text style={styles.inlinePriceError}>{priceInputError}</Text>
-          ) : null}
-          {preview.length > 0 ? (
-            <Text style={styles.items} numberOfLines={1}>
-              {preview}
-            </Text>
-          ) : null}
-        </View>
-      </Pressable>
+        </Pressable>
+        {showInlinePriceInput ? (
+          renderInlinePriceInput()
+        ) : priceLabel ? (
+          <Text style={styles.price}>{priceLabel}</Text>
+        ) : null}
+      </View>
 
       {showExpandedPriceInput ? (
         <View style={styles.priceInputBlock}>
@@ -110,8 +138,9 @@ export function ComboPickerCard({
             <TextInput
               style={styles.priceInput}
               value={priceDraft}
-              onChangeText={onPriceDraftChange}
-              onBlur={() => onPriceBlur?.(priceDraft)}
+              onChangeText={handlePriceDraftChange}
+              onBlur={commitPriceBlur}
+              onEndEditing={commitPriceBlur}
               keyboardType="decimal-pad"
               placeholder={t('meals.pricing.pricePlaceholder')}
             />
@@ -184,6 +213,13 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: spacing.sm,
   },
+  selectablePressable: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    minWidth: 0,
+  },
   checkbox: {
     width: 22,
     height: 22,
@@ -218,7 +254,12 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   name: { ...typography.bodyStrong, flex: 1, minWidth: 0 },
-  price: { ...typography.bodyStrong, color: colors.textSecondary, flexShrink: 0 },
+  price: {
+    ...typography.bodyStrong,
+    color: colors.textSecondary,
+    flexShrink: 0,
+    marginTop: 1,
+  },
   inlinePriceRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -228,6 +269,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
     backgroundColor: colors.white,
     flexShrink: 0,
+    marginTop: 1,
   },
   inlineCurrency: {
     ...typography.caption,

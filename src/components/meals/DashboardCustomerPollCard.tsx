@@ -3,8 +3,15 @@ import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { useTranslation } from 'react-i18next';
 import type { MealPollPaymentStatus, MealPollSlot } from '../../api/types';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { ChevronLeftIcon } from '../ui/icons/ChevronLeftIcon';
+import { ChevronRightIcon } from '../ui/icons/ChevronRightIcon';
 import { formatComboNameWithPrice } from '../../utils/comboPrice';
-import { formatMenuDate } from '../../utils/mealDates';
+import {
+  formatMenuDate,
+  pollCardSelectPromptKey,
+  pollCardTitleKey,
+  pollCardTitleUsesDateParam,
+} from '../../utils/mealDates';
 import { hasPrepaidOverflow } from '../../utils/mealPollPayment';
 import { MEAL_TYPES, mealTypeLabelKey } from '../../utils/mealLabels';
 
@@ -22,11 +29,16 @@ type DashboardCustomerPollCardProps = {
   prepaidDebitedAmount?: number | null;
   prepaidOverflowPayment?: boolean | null;
   justSaved?: boolean;
+  onPreviousDate?: () => void;
+  onNextDate?: () => void;
+  canGoPrevious?: boolean;
+  canGoNext?: boolean;
   onAction?: () => void;
   onUploadProof?: () => void;
   onDismissSuccess?: () => void;
   actionDisabled?: boolean;
   actionDisabledReason?: string;
+  showMealPrices?: boolean;
 };
 
 function paymentStatusLabel(status: MealPollPaymentStatus, t: (key: string) => string): string {
@@ -72,6 +84,7 @@ function selectionLabel(
   poll: MealPollSlot,
   multiQuantity: boolean,
   notSelectedLabel: string,
+  showMealPrices: boolean,
 ): string {
   if (multiQuantity) {
     const activeSelections = poll.mySelections?.filter(selection => selection.quantity > 0) ?? [];
@@ -82,7 +95,12 @@ function selectionLabel(
       .map(selection => {
         const option = poll.options.find(row => row.id === selection.optionId);
         const name = option
-          ? formatComboNameWithPrice(option.label, option.price, option.currencyCode)
+          ? formatComboNameWithPrice(
+              option.label,
+              option.price,
+              option.currencyCode,
+              showMealPrices,
+            )
           : notSelectedLabel;
         return `${name} × ${selection.quantity}`;
       })
@@ -91,7 +109,12 @@ function selectionLabel(
 
   const selected = poll.options.find(option => option.id === poll.mySelectedOptionId);
   return selected
-    ? formatComboNameWithPrice(selected.label, selected.price, selected.currencyCode)
+    ? formatComboNameWithPrice(
+        selected.label,
+        selected.price,
+        selected.currencyCode,
+        showMealPrices,
+      )
     : notSelectedLabel;
 }
 
@@ -100,27 +123,32 @@ function publishedMealsLine(polls: MealPollSlot[], t: (key: string) => string): 
   return labels.join(' • ');
 }
 
-function cardTitle(cardState: DashboardPollCardState, t: (key: string) => string): string {
-  switch (cardState) {
-    case 'complete':
-      return t('dashboard.pollCard.selectedTitle');
-    case 'partial':
-      return t('dashboard.pollCard.pendingTitle');
-    case 'empty':
-      return t('dashboard.pollCard.title');
-    default:
-      return t('dashboard.pollCard.titleReady');
+function cardTitle(
+  menuDate: string,
+  cardState: DashboardPollCardState,
+  locale: string,
+  t: (key: string, options?: Record<string, string>) => string,
+): string {
+  const key = pollCardTitleKey(menuDate, cardState);
+  if (pollCardTitleUsesDateParam(menuDate, cardState)) {
+    return t(key, { date: formatMenuDate(menuDate, locale) });
   }
+  return t(key);
 }
 
-function cardIcon(cardState: DashboardPollCardState): string {
+function cardStatusLabel(
+  cardState: DashboardPollCardState,
+  t: (key: string) => string,
+): string | null {
   switch (cardState) {
     case 'complete':
-      return '✅';
+      return t('dashboard.pollCard.statusSelected');
     case 'partial':
-      return '⚠️';
+      return t('dashboard.pollCard.statusPartial');
+    case 'active':
+      return t('dashboard.pollCard.statusReady');
     default:
-      return '🍽';
+      return null;
   }
 }
 
@@ -138,14 +166,20 @@ function actionLabel(cardState: DashboardPollCardState, t: (key: string) => stri
 type MealSlotRowProps = {
   poll: MealPollSlot;
   multiQuantity: boolean;
-  showCheckmark: boolean;
   notSelectedLabel: string;
+  showMealPrices: boolean;
   t: (key: string) => string;
 };
 
-function MealSlotRow({ poll, multiQuantity, showCheckmark, notSelectedLabel, t }: MealSlotRowProps) {
+function MealSlotRow({
+  poll,
+  multiQuantity,
+  notSelectedLabel,
+  showMealPrices,
+  t,
+}: MealSlotRowProps) {
   const hasSelection = pollHasSelection(poll, multiQuantity);
-  const label = selectionLabel(poll, multiQuantity, notSelectedLabel);
+  const label = selectionLabel(poll, multiQuantity, notSelectedLabel, showMealPrices);
 
   return (
     <View style={styles.mealRow}>
@@ -154,9 +188,9 @@ function MealSlotRow({ poll, multiQuantity, showCheckmark, notSelectedLabel, t }
         style={[
           styles.mealChoice,
           !hasSelection && styles.mealChoiceMissing,
-        ]}>
+        ]}
+        numberOfLines={2}>
         {label}
-        {showCheckmark && hasSelection ? ' ✓' : ''}
       </Text>
     </View>
   );
@@ -174,14 +208,21 @@ export function DashboardCustomerPollCard({
   prepaidDebitedAmount = null,
   prepaidOverflowPayment = null,
   justSaved = false,
+  onPreviousDate,
+  onNextDate,
+  canGoPrevious = false,
+  canGoNext = false,
   onAction,
   onUploadProof,
   onDismissSuccess,
   actionDisabled = false,
   actionDisabledReason,
+  showMealPrices = true,
 }: DashboardCustomerPollCardProps) {
   const { t, i18n } = useTranslation();
   const dateLabel = formatMenuDate(menuDate, i18n.language);
+  const title = cardTitle(menuDate, cardState, i18n.language, t);
+  const statusLabel = cardStatusLabel(cardState, t);
   const sortedPolls = useMemo(() => sortPolls(openPolls), [openPolls]);
   const notSelectedLabel = t('dashboard.pollCard.notSelected');
   const showAction = cardState !== 'empty' && onAction != null;
@@ -199,7 +240,7 @@ export function DashboardCustomerPollCard({
   const canUploadProof =
     cardState === 'complete' &&
     paymentStatus != null &&
-    (paymentStatus === 'PENDING' || paymentStatus === 'REJECTED') &&
+    (paymentStatus === 'PENDING' || paymentStatus === 'REJECTED' || paymentStatus === 'UPDATE_REQUESTED') &&
     onUploadProof != null;
   const showPrepaidOverflow = hasPrepaidOverflow(prepaidOverflowPayment, prepaidOverflowAmount);
 
@@ -212,11 +253,35 @@ export function DashboardCustomerPollCard({
       ) : null}
 
       <View style={styles.header}>
-        <Text style={styles.headerIcon}>{cardIcon(cardState)}</Text>
-        <View style={styles.headerText}>
-          <Text style={styles.title}>{cardTitle(cardState, t)}</Text>
+        <Text style={styles.title}>{title}</Text>
+        <View style={styles.dateRow}>
+          <TouchableOpacity
+            style={[styles.dateNavBtn, !canGoPrevious && styles.dateNavBtnDisabled]}
+            onPress={onPreviousDate}
+            disabled={!canGoPrevious}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.back')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <ChevronLeftIcon
+              size={18}
+              color={canGoPrevious ? colors.primaryDark : colors.muted}
+            />
+          </TouchableOpacity>
           <Text style={styles.date}>{dateLabel}</Text>
+          <TouchableOpacity
+            style={[styles.dateNavBtn, !canGoNext && styles.dateNavBtnDisabled]}
+            onPress={onNextDate}
+            disabled={!canGoNext}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.next')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <ChevronRightIcon
+              size={18}
+              color={canGoNext ? colors.primaryDark : colors.muted}
+            />
+          </TouchableOpacity>
         </View>
+        {statusLabel ? <Text style={styles.statusBadge}>{statusLabel}</Text> : null}
       </View>
 
       {loading ? (
@@ -234,21 +299,19 @@ export function DashboardCustomerPollCard({
             })}
           </Text>
           <Text style={styles.bodySubtext}>
-            {sortedPolls.length >= 3
-              ? t('dashboard.pollCard.selectPromptTomorrow')
-              : t('dashboard.pollCard.selectPrompt')}
+            {t(pollCardSelectPromptKey(menuDate, sortedPolls.length))}
           </Text>
           <Text style={styles.chooseNow}>{t('dashboard.pollCard.chooseNow')}</Text>
         </View>
       ) : (
-        <View style={styles.body}>
+        <View style={[styles.body, styles.mealsBody]}>
           {sortedPolls.map(poll => (
             <MealSlotRow
               key={poll.id}
               poll={poll}
               multiQuantity={multiQuantity}
-              showCheckmark={cardState === 'partial'}
               notSelectedLabel={notSelectedLabel}
+              showMealPrices={showMealPrices}
               t={t}
             />
           ))}
@@ -395,30 +458,50 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
+    gap: spacing.xs,
     marginBottom: spacing.md,
-  },
-  headerIcon: {
-    fontSize: 28,
-    lineHeight: 32,
-  },
-  headerText: {
-    flex: 1,
   },
   title: {
     ...typography.h3,
     color: colors.textPrimary,
-    marginBottom: spacing.xxs,
+  },
+  statusBadge: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    fontWeight: '600',
+    marginTop: spacing.xxs,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  dateNavBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.button,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+  },
+  dateNavBtnDisabled: {
+    opacity: 0.4,
   },
   date: {
     ...typography.bodyStrong,
-    fontSize: 16,
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 15,
     color: colors.textSecondary,
   },
   body: {
     gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  mealsBody: {
+    gap: spacing.xs,
     marginBottom: spacing.md,
   },
   publishedLine: {
@@ -443,18 +526,24 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   mealRow: {
-    gap: spacing.xxs,
-    paddingVertical: spacing.xxs,
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    paddingVertical: spacing.xs,
   },
   mealType: {
     ...typography.bodyStrong,
-    fontSize: 15,
-    color: colors.textPrimary,
+    fontSize: 14,
+    color: colors.muted,
+    minWidth: 84,
   },
   mealChoice: {
-    ...typography.body,
-    fontSize: 15,
-    color: colors.textSecondary,
+    ...typography.bodyStrong,
+    fontSize: 16,
+    color: colors.textPrimary,
+    flex: 1,
+    textAlign: 'right',
     lineHeight: 22,
   },
   mealChoiceMissing: {

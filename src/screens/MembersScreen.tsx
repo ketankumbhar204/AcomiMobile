@@ -21,16 +21,12 @@ import type {
 import { useTranslation } from 'react-i18next';
 import type { MemberResponse, MembershipRole, PendingInvitationResponse } from '../api/types';
 import { MemberListCard } from '../components/member/MemberListCard';
-import { MemberStatusBadge, RoleBadge } from '../components/member';
+import { MemberOccupancyStatusBadge, MemberStatusBadge } from '../components/member';
+import { MemberListMealAccessSwitch } from '../components/meals/MemberListMealAccessRow';
 import {
-  MemberListMealAccessToggle,
-} from '../components/meals/MemberListMealAccessRow';
-import {
-  Badge,
   Button,
   EmptyState,
   FAB,
-  ListCard,
   ListSearchFilterBar,
   SkeletonCard,
   useConfirmDialog,
@@ -45,6 +41,8 @@ import { useAccommodationActionSheetStore } from '../store/accommodationActionSh
 import { useMemberStore } from '../store/memberStore';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 import { memberCountInBadgeLabel } from '../utils/memberAppStatus';
+import { getMemberListFoodLabel, isReceivingMealsForMember } from '../utils/mealAccess';
+import { getMemberStatusLabelKey } from '../utils/memberStatus';
 import {
   countMemberListFilters,
   defaultMemberListFilters,
@@ -54,6 +52,7 @@ import {
   type MemberListFilterState,
 } from '../utils/memberListQuery';
 import { shouldUseFilterDrawer } from '../utils/filterUx';
+import { isAccommodationApplicable } from '../utils/accommodationProfile';
 
 type MembersNavigation = CompositeNavigationProp<
   BottomTabNavigationProp<SpaceTabParamList, 'Members'>,
@@ -85,6 +84,28 @@ function buildMemberSubtitle(
   return formatRoleLabel(member.role, t);
 }
 
+function buildMemberMetaLine(
+  member: MemberResponse,
+  t: (key: string, options?: Record<string, string>) => string,
+): string {
+  const statusLabel = t(getMemberStatusLabelKey(member.status ?? 'ACTIVE'));
+  const countInLabel = memberCountInBadgeLabel(member, t);
+  return `${statusLabel} • ${countInLabel}`;
+}
+
+function buildMemberStatusChip(
+  member: MemberResponse,
+  showTenantOccupancyStatus: boolean,
+): React.ReactNode | undefined {
+  if (showTenantOccupancyStatus && member.role === 'TENANT') {
+    return <MemberOccupancyStatusBadge status={member.occupancyStatus} />;
+  }
+  if (member.status !== 'ACTIVE') {
+    return <MemberStatusBadge status={member.status} />;
+  }
+  return undefined;
+}
+
 export function MembersScreen() {
   const { t, i18n } = useTranslation();
   const navigation = useNavigation<MembersNavigation>();
@@ -114,6 +135,8 @@ export function MembersScreen() {
   const showMealAccess = permissions.canViewMeals === true;
   const canManageMeals = permissions.canManageMeals === true;
   const isMess = permissions.spaceType === 'MESS';
+  const showTenantOccupancyStatus =
+    permissions.spaceType != null && isAccommodationApplicable(permissions.spaceType);
   const { participationByMemberId, reloadParticipations } = useMealParticipationMap(
     spaceId,
     showMealAccess,
@@ -295,47 +318,52 @@ export function MembersScreen() {
             <View style={styles.list}>
               {sortedMembers.map(member => {
                 const participation = participationByMemberId.get(member.memberId);
-                const showMealColumn =
+                const showFoodLine =
                   showMealAccess &&
                   ((isMess && member.role === 'CUSTOMER') ||
                     (!isMess && member.role === 'TENANT'));
+                const receiving = isReceivingMealsForMember(participation, {
+                  spaceType: permissions.spaceType,
+                  occupancyStatus: member.occupancyStatus,
+                });
 
                 return (
                   <View key={member.memberId} style={styles.listItem}>
-                    <View style={styles.badgeRow}>
-                      <RoleBadge role={member.role} />
-                      <MemberStatusBadge status={member.status ?? 'ACTIVE'} />
-                      <Badge label={memberCountInBadgeLabel(member, t)} />
-                    </View>
-                    {showMealColumn ? (
-                      <MemberListCard
-                        title={member.fullName}
-                        subtitle={buildMemberSubtitle(member, t)}
-                        iconLabel={member.fullName.charAt(0).toUpperCase()}
-                        onPress={() => openMemberDetails(member)}
-                        trailing={
-                          <MemberListMealAccessToggle
-                            spaceId={spaceId}
-                            memberId={member.memberId}
-                            participation={participation}
-                            canManage={canManageMeals}
-                            spaceType={permissions.spaceType}
-                            occupancyStatus={member.occupancyStatus}
-                            onParticipationChanged={() => void reloadParticipations()}
-                            labelKey={
-                              isMess ? 'meals.mealAccess.label' : 'meals.foodIncluded.label'
+                    <MemberListCard
+                      title={member.fullName}
+                      subtitle={buildMemberSubtitle(member, t)}
+                      iconLabel={member.fullName.charAt(0).toUpperCase()}
+                      onPress={() => openMemberDetails(member)}
+                      statusChip={buildMemberStatusChip(member, showTenantOccupancyStatus)}
+                      metaLine={buildMemberMetaLine(member, t)}
+                      foodLine={
+                        showFoodLine
+                          ? {
+                              label: getMemberListFoodLabel(
+                                receiving,
+                                permissions.spaceType,
+                                t,
+                              ),
+                              manageControl: (
+                                <MemberListMealAccessSwitch
+                                  spaceId={spaceId}
+                                  memberId={member.memberId}
+                                  participation={participation}
+                                  canManage={canManageMeals}
+                                  spaceType={permissions.spaceType}
+                                  occupancyStatus={member.occupancyStatus}
+                                  onParticipationChanged={() => void reloadParticipations()}
+                                  labelKey={
+                                    isMess
+                                      ? 'meals.mealAccess.label'
+                                      : 'meals.foodIncluded.label'
+                                  }
+                                />
+                              ),
                             }
-                          />
-                        }
-                      />
-                    ) : (
-                      <ListCard
-                        title={member.fullName}
-                        subtitle={buildMemberSubtitle(member, t)}
-                        iconLabel={member.fullName.charAt(0).toUpperCase()}
-                        onPress={() => openMemberDetails(member)}
-                      />
-                    )}
+                          : undefined
+                      }
+                    />
                     <Text style={styles.createdMeta}>
                       {t('membership.members.created', {
                         date: formatDate(member.createdAt),
@@ -463,12 +491,6 @@ const styles = StyleSheet.create({
   },
   listItem: {
     gap: spacing.xs,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-    marginBottom: spacing.xs,
   },
   createdMeta: {
     ...typography.caption,

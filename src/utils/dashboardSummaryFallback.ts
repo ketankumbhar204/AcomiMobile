@@ -27,7 +27,7 @@ import {
 } from './dashboardFinancial';
 import { resolveDashboardAttention } from './dashboardTomorrowMenu';
 import { isAccommodationApplicable } from './accommodationProfile';
-import { computeOccupancyMonthlyTotal } from './occupancyContract';
+import { computeOccupancyMonthlyTotalForMonth, isOccupancyBillableInMonth } from './occupancyContract';
 import { todayIsoDate, tomorrowIsoDate } from './mealDates';
 
 async function aggregateMealFinancial(
@@ -65,18 +65,27 @@ async function loadActiveOccupancies(spaceId: UUID): Promise<OccupancyResponse[]
 
 function aggregateOccupancyFinancial(
   occupancies: OccupancyResponse[],
+  month: string,
 ): DashboardFinancialSummary {
+  const billable = occupancies.filter(occupancy => isOccupancyBillableInMonth(occupancy, month));
   const expected = sumNullable(
-    occupancies.map(occupancy => computeOccupancyMonthlyTotal(occupancy)),
+    billable.map(occupancy => computeOccupancyMonthlyTotalForMonth(occupancy, month)),
   );
   return buildFinancialSummary(expected, null, 'INR', 'OCCUPANCY');
 }
 
 function countMoveInsThisMonth(occupancies: OccupancyResponse[], month: string): number {
-  const prefix = `${month}-`;
+  const [year, monthNum] = month.split('-').map(Number);
+  const monthStart = `${month}-01`;
+  const lastDay = new Date(year, monthNum, 0).getDate();
+  const monthEnd = `${month}-${String(lastDay).padStart(2, '0')}`;
+
   return occupancies.filter(occupancy => {
-    const moveIn = occupancy.moveInDate ?? occupancy.actualMoveInAt?.slice(0, 10);
-    return moveIn?.startsWith(prefix);
+    const moveIn = (occupancy.actualMoveInAt ?? occupancy.moveInDate)?.slice(0, 10);
+    if (!moveIn) {
+      return false;
+    }
+    return moveIn >= monthStart && moveIn <= monthEnd;
   }).length;
 }
 
@@ -86,25 +95,19 @@ async function loadAccommodationOperations(
   month: string,
   pendingPaymentsCount: number,
 ): Promise<DashboardAccommodationOperations> {
-  const buildings = await accommodationApi.getBuildings(spaceId).catch(() => []);
-  const summaries = await Promise.all(
-    buildings.map(building =>
-      accommodationApi.getBuildingSummary(spaceId, building.buildingId).catch(() => null),
-    ),
-  );
-
-  const occupiedBeds = summaries.reduce(
-    (total, row) => total + (row?.occupiedBeds ?? row?.occupied ?? 0),
-    0,
-  );
-  const vacantBeds = summaries.reduce(
-    (total, row) => total + (row?.availableBeds ?? row?.available ?? 0),
-    0,
-  );
+  // Space-level bed totals only — never N× getBuildingSummary (that is the COUNT storm).
+  const [availablePage, occupiedPage] = await Promise.all([
+    accommodationApi
+      .searchBeds(spaceId, { status: 'AVAILABLE', page: 0, size: 1 })
+      .catch(() => null),
+    accommodationApi
+      .searchBeds(spaceId, { status: 'OCCUPIED', page: 0, size: 1 })
+      .catch(() => null),
+  ]);
 
   return {
-    occupiedBeds,
-    vacantBeds,
+    occupiedBeds: occupiedPage?.totalElements ?? 0,
+    vacantBeds: availablePage?.totalElements ?? 0,
     moveInsThisMonth: countMoveInsThisMonth(occupancies, month),
     pendingPaymentsCount,
   };
@@ -143,23 +146,6 @@ async function loadMessOperations(spaceId: UUID): Promise<DashboardMessOperation
     pollRespondedCount:
       openPolls.length > 0 ? Math.max(...openPolls.map(poll => poll.responseCount)) : 0,
     pollEligibleCount: eligibleCount,
-  };
-}
-
-function resolvePaymentsAttention(
-  pendingCount: number,
-  overdueAmount: number | null,
-  currencyCode: string,
-): DashboardAttentionItem | null {
-  if (pendingCount <= 0) {
-    return null;
-  }
-
-  return {
-    kind: 'payments_overdue',
-    overdueCount: pendingCount,
-    overdueAmount,
-    currencyCode,
   };
 }
 
@@ -222,7 +208,7 @@ export async function buildDashboardSummaryFallback(
   let activeOccupancies: OccupancyResponse[] = [];
   if (accommodationApplicable) {
     activeOccupancies = await loadActiveOccupancies(spaceId);
-    financialParts.push(aggregateOccupancyFinancial(activeOccupancies));
+    financialParts.push(aggregateOccupancyFinancial(activeOccupancies, month));
   }
 
   const financial = mergeFinancialSummaries(financialParts);
@@ -234,16 +220,8 @@ export async function buildDashboardSummaryFallback(
     mealMemberIds,
     activeOccupancies,
   );
-  const pendingPaymentsCount = ledger.members.filter(row => row.status === 'PENDING' || row.status === 'PARTIAL').length;
-
-  const paymentsAttention = resolvePaymentsAttention(
-    pendingPaymentsCount,
-    financial.pending,
-    financial.currencyCode,
-  );
-  if (paymentsAttention) {
-    attention.push(paymentsAttention);
-  }
+  // Payment pending actions come from the notification/payment sync path on the live API.
+  // Do not invent a separate payments_overdue attention count in the client fallback.
 
   if (isMess) {
     messOperations = await loadMessOperations(spaceId);
@@ -257,6 +235,14 @@ export async function buildDashboardSummaryFallback(
   }
 
   if (accommodationApplicable) {
+    const pendingPaymentsCount = ledger.members.filter(
+      row =>
+        row.status === 'PENDING' ||
+        row.status === 'PARTIAL' ||
+        row.status === 'UNDER_REVIEW' ||
+        row.status === 'UPDATE_REQUESTED' ||
+        row.status === 'REJECTED',
+    ).length;
     accommodationOperations = await loadAccommodationOperations(
       spaceId,
       activeOccupancies,
@@ -272,6 +258,7 @@ export async function buildDashboardSummaryFallback(
     messOperations,
     accommodationOperations,
     attention,
+    pendingActions: null,
   };
 }
 
@@ -307,7 +294,9 @@ export async function buildMemberPaymentLedgerFallback(
     participations.forEach(memberId => relevantMemberIds.add(memberId));
   }
   if (accommodationApplicable) {
-    occupancies.forEach(occupancy => relevantMemberIds.add(occupancy.memberId));
+    occupancies
+      .filter(occupancy => isOccupancyBillableInMonth(occupancy, month))
+      .forEach(occupancy => relevantMemberIds.add(occupancy.memberId));
   }
 
   const rows: MemberPaymentLedgerRow[] = [];
@@ -335,7 +324,7 @@ export async function buildMemberPaymentLedgerFallback(
 
     const occupancy = occupancyByMember.get(memberId);
     if (occupancy && accommodationApplicable) {
-      expectedParts.push(computeOccupancyMonthlyTotal(occupancy));
+      expectedParts.push(computeOccupancyMonthlyTotalForMonth(occupancy, month));
     }
 
     const expectedCharges = sumNullable(expectedParts);

@@ -58,3 +58,18 @@ export function inferFloorListStatus(floor: {
     occupied: floor.occupied,
   });
 }
+
+export function inferUnitListStatus(unit: {
+  bedCount: number;
+  availableBeds?: number;
+  occupiedBeds?: number;
+}): AccommodationStatus | null {
+  const occupied = unit.occupiedBeds ?? 0;
+  const available =
+    unit.availableBeds ?? Math.max(0, unit.bedCount - occupied);
+  return inferAggregateOccupancyStatus({
+    total: unit.bedCount,
+    available,
+    occupied,
+  });
+}

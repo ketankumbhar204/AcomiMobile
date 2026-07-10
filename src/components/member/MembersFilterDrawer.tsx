@@ -15,6 +15,7 @@ import {
   type MemberListFilterState,
   type MemberSortOption,
 } from '../../utils/memberListQuery';
+import { createdDateSortLabelKey } from '../../utils/listSort';
 import { toggleSetValue } from '../../utils/filterCount';
 
 type MembersFilterDrawerProps = {
@@ -54,7 +55,8 @@ export function MembersFilterDrawer({
   const sortOptions: { id: MemberSortOption; label: string }[] = [
     { id: 'name_asc', label: t('list.sort.nameAsc') },
     { id: 'name_desc', label: t('list.sort.nameDesc') },
-    { id: 'recent', label: t('list.sort.recent') },
+    { id: 'created_desc', label: t(createdDateSortLabelKey('created_desc')) },
+    { id: 'created_asc', label: t(createdDateSortLabelKey('created_asc')) },
     { id: 'role', label: t('list.sort.role') },
   ];
 

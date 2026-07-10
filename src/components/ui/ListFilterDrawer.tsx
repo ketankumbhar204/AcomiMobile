@@ -8,6 +8,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { colors, radius, spacing, typography } from '../../theme';
 import { Button } from './Button';
@@ -30,6 +31,7 @@ export function ListFilterDrawer({
   children,
 }: ListFilterDrawerProps) {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const panelWidth = Math.min(Math.round(windowWidth * 0.88), 400);
 
@@ -48,10 +50,17 @@ export function ListFilterDrawer({
           accessibilityRole="button"
           accessibilityLabel={t('common.close')}
         />
-        <View style={[styles.panel, { width: panelWidth }]}>
-          <View style={styles.header}>
-            <Text style={styles.title}>{title ?? t('list.filterDrawer.title')}</Text>
-            <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button">
+        <View style={[styles.panel, { width: panelWidth, paddingBottom: insets.bottom }]}>
+          <View style={[styles.header, { paddingTop: spacing.md + insets.top }]}>
+            <Text style={styles.title} numberOfLines={1}>
+              {title ?? t('list.filterDrawer.title')}
+            </Text>
+            <Pressable
+              onPress={onClose}
+              hitSlop={12}
+              style={styles.closeButton}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.close')}>
               <Text style={styles.close}>✕</Text>
             </Pressable>
           </View>
@@ -146,44 +155,49 @@ export function FilterDrawerDivider() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    flexDirection: 'row',
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
-    zIndex: 0,
   },
   panel: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1,
-    elevation: 24,
     backgroundColor: colors.white,
     shadowColor: '#000',
     shadowOffset: { width: -2, height: 0 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
+    elevation: 24,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingBottom: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    gap: spacing.md,
   },
   title: {
     ...typography.bodyStrong,
     fontSize: 17,
     color: colors.textPrimary,
+    flex: 1,
+    minWidth: 0,
+  },
+  closeButton: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   close: {
-    ...typography.body,
-    fontSize: 20,
+    fontSize: 22,
+    lineHeight: 24,
     color: colors.muted,
-    paddingHorizontal: spacing.xs,
+    fontWeight: '300',
   },
   scroll: {
     flex: 1,

@@ -17,6 +17,22 @@ type OccupancyContractSnapshotCardProps = {
   occupancy: OccupancyResponse;
 };
 
+function foodDisplay(
+  occupancy: OccupancyResponse,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  if (occupancy.foodIncludedInRent) {
+    return t('occupancy.contract.foodYes');
+  }
+  if (!occupancy.foodEnabled) {
+    return t('occupancy.contract.foodNo');
+  }
+  return formatContractAmount(
+    occupancy.foodChargeSnapshot,
+    t('occupancy.contract.foodIncludedNoAmount'),
+  );
+}
+
 export function OccupancyContractSnapshotCard({
   occupancy,
 }: OccupancyContractSnapshotCardProps) {
@@ -51,27 +67,9 @@ export function OccupancyContractSnapshotCard({
       </View>
 
       <View style={styles.row}>
-        <Text style={styles.label}>{t('occupancy.contract.food')}</Text>
-        <Text style={styles.value}>
-          {occupancy.foodIncludedInRent
-            ? t('occupancy.contract.foodIncludedInRent')
-            : occupancy.foodEnabled
-              ? formatContractAmount(
-                  occupancy.foodChargeSnapshot,
-                  t('occupancy.contract.foodIncludedNoAmount'),
-                )
-              : t('occupancy.contract.foodDisabled')}
-        </Text>
+        <Text style={styles.label}>{t('occupancy.contract.foodIncluded')}</Text>
+        <Text style={styles.value}>{foodDisplay(occupancy, t)}</Text>
       </View>
-
-      {monthlyTotal != null ? (
-        <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>{t(monthlyTotalLabel)}</Text>
-          <Text style={styles.totalValue}>
-            {formatContractAmount(monthlyTotal, notRecorded)}
-          </Text>
-        </View>
-      ) : null}
 
       <View style={styles.row}>
         <Text style={styles.label}>{t('occupancy.contract.deposit')}</Text>
@@ -94,6 +92,15 @@ export function OccupancyContractSnapshotCard({
         </View>
       ) : null}
 
+      {monthlyTotal != null ? (
+        <View style={styles.totalRow}>
+          <Text style={styles.totalLabel}>{t(monthlyTotalLabel)}</Text>
+          <Text style={styles.totalValue}>
+            {formatContractAmount(monthlyTotal, notRecorded)}
+          </Text>
+        </View>
+      ) : null}
+
       {!hasContractSnapshot(occupancy) ? (
         <Text style={styles.legacyHint}>{t('occupancy.contract.legacyNoSnapshot')}</Text>
       ) : null}
@@ -104,7 +111,6 @@ export function OccupancyContractSnapshotCard({
 const styles = StyleSheet.create({
   card: {
     gap: spacing.sm,
-    marginTop: spacing.md,
   },
   title: {
     ...typography.bodyStrong,
@@ -133,7 +139,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: spacing.md,
-    paddingVertical: spacing.xs,
+    paddingTop: spacing.xs,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
   },
   totalLabel: {
     ...typography.bodyStrong,

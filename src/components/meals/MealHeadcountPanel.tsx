@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type {
   MealHeadcountDetailResponse,
@@ -12,12 +12,23 @@ import type {
 } from '../../api/types';
 import { mealsApi } from '../../api/mealsApi';
 import { useMealHeadcountDetail } from '../../hooks/useMealHeadcountDetail';
+import { useMealPricingPolicy } from '../../hooks/useMealPricingPolicy';
+import { useServingLocationName } from '../../hooks/useServingLocationName';
+import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { navigateMainStack } from '../../navigation/mainStackNavigation';
 import { useToastStore } from '../../store/toastStore';
+import { Badge } from '../ui/Badge';
 import { canSendPaymentReminder } from '../../utils/mealPollPayment';
 import { colors, radius, spacing, typography } from '../../theme';
 import { formatComboNameWithPrice } from '../../utils/comboPrice';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
+import {
+  servingLocationMode,
+  showsServingLocationSection,
+  usesDeliveryLocations,
+  usesPropertyServingLocation,
+  type ServingLocationMode,
+} from '../../utils/servingLocationPolicy';
 import { MealPollPaymentReviewModal } from './MealPollPaymentReviewModal';
 import { SheetPrimaryButton, SheetSecondaryButton } from './MenuPlanningBottomSheet';
 
@@ -181,7 +192,11 @@ function PaymentStatusBadge({ status }: { status: MealPollPaymentStatus }) {
 function buildLocationComboHierarchy(
   options: MealHeadcountOption[],
   deliveryBreakdown: MealHeadcountDetailResponse['deliveryBreakdown'],
-  noLocationLabel: string,
+  config: {
+    mode: ServingLocationMode;
+    noLocationLabel: string;
+    propertyServingLocationName: string;
+  },
 ): DeliveryLocationHierarchy[] {
   const locationMap = new Map<
     string,
@@ -201,8 +216,19 @@ function buildLocationComboHierarchy(
 
     for (const member of option.members) {
       const locationId = member.deliveryLocationId ?? null;
-      const locationKey = locationId ?? '__none__';
-      const locationName = member.deliveryLocationName ?? noLocationLabel;
+      let locationKey: string;
+      let locationName: string;
+
+      if (usesPropertyServingLocation(config.mode)) {
+        locationKey = '__property__';
+        locationName = config.propertyServingLocationName;
+      } else if (locationId) {
+        locationKey = locationId;
+        locationName = member.deliveryLocationName ?? config.noLocationLabel;
+      } else {
+        locationKey = '__none__';
+        locationName = config.noLocationLabel;
+      }
       const quantity = member.quantity ?? 1;
 
       let location = locationMap.get(locationKey);
@@ -271,6 +297,46 @@ function buildLocationComboHierarchy(
     });
 }
 
+function buildFlatComboList(options: MealHeadcountOption[]): ComboAtLocation[] {
+  const comboMap = new Map<UUID, ComboAtLocation>();
+
+  for (const option of options) {
+    if (option.optionType !== 'MENU_ENTRY') {
+      continue;
+    }
+
+    let combo = comboMap.get(option.optionId);
+    if (!combo) {
+      combo = {
+        optionId: option.optionId,
+        label: option.label,
+        detail: option.detail,
+        price: option.price,
+        currencyCode: option.currencyCode,
+        sortOrder: option.sortOrder,
+        totalPlates: 0,
+        members: [],
+      };
+      comboMap.set(option.optionId, combo);
+    }
+
+    for (const member of option.members) {
+      const quantity = member.quantity ?? 1;
+      combo.totalPlates += quantity;
+      combo.members.push({ ...member, quantity });
+    }
+  }
+
+  return [...comboMap.values()]
+    .map(combo => ({
+      ...combo,
+      members: [...combo.members].sort((left, right) =>
+        left.memberName.localeCompare(right.memberName),
+      ),
+    }))
+    .sort((left, right) => left.sortOrder - right.sortOrder);
+}
+
 function CustomerRow({
   member,
   onReviewMember,
@@ -321,11 +387,13 @@ function CustomerRow({
 
 function ComboAtLocationBlock({
   combo,
+  showMealPrices = true,
   onReviewMember,
   onRemindMember,
   remindingMemberId,
 }: {
   combo: ComboAtLocation;
+  showMealPrices?: boolean;
   onReviewMember?: (member: MealHeadcountMember) => void;
   onRemindMember?: (member: MealHeadcountMember) => void;
   remindingMemberId?: UUID | null;
@@ -339,12 +407,18 @@ function ComboAtLocationBlock({
   return (
     <View style={styles.comboBlock}>
       <View style={styles.comboHeader}>
-        <Text style={styles.comboLabel}>
-          {formatComboNameWithPrice(combo.label, combo.price, combo.currencyCode)}
+        <Text style={styles.comboLabel} numberOfLines={2}>
+          {formatComboNameWithPrice(
+            combo.label,
+            combo.price,
+            combo.currencyCode,
+            showMealPrices,
+          )}
         </Text>
-        <Text style={styles.comboPlates}>
-          {t('dashboard.headcount.locationPlates', { count: combo.totalPlates })}
-        </Text>
+        <Badge
+          label={t('dashboard.headcount.plateBadge', { count: combo.totalPlates })}
+          showDot={false}
+        />
       </View>
       {combo.detail ? (
         <Text style={styles.comboDetail} numberOfLines={2}>
@@ -368,12 +442,20 @@ function ComboAtLocationBlock({
 
 function DeliveryLocationHierarchyAccordion({
   group,
+  locationMode,
+  showMealPrices = true,
+  editableServingLocation = false,
+  onSaveServingLocation,
   defaultExpanded = true,
   onReviewMember,
   onRemindMember,
   remindingMemberId,
 }: {
   group: DeliveryLocationHierarchy;
+  locationMode: ServingLocationMode;
+  showMealPrices?: boolean;
+  editableServingLocation?: boolean;
+  onSaveServingLocation?: (name: string) => void | Promise<void>;
   defaultExpanded?: boolean;
   onReviewMember?: (member: MealHeadcountMember) => void;
   onRemindMember?: (member: MealHeadcountMember) => void;
@@ -381,32 +463,116 @@ function DeliveryLocationHierarchyAccordion({
 }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(defaultExpanded);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(group.locationName);
+  const isUnsetWarning = usesDeliveryLocations(locationMode) && group.locationKey === '__none__';
+  const locationPrefix = usesPropertyServingLocation(locationMode)
+    ? t('dashboard.headcount.servingLocationHeading')
+    : t('dashboard.headcount.locationHeading');
+  const mealsLabel = t('dashboard.headcount.locationMeals', { count: group.totalMeals });
+
+  useEffect(() => {
+    if (!editing) {
+      setDraft(group.locationName);
+    }
+  }, [editing, group.locationName]);
+
+  const handleSaveServingLocation = useCallback(() => {
+    const nextName = draft.trim();
+    if (!nextName) {
+      return;
+    }
+    void Promise.resolve(onSaveServingLocation?.(nextName)).finally(() => {
+      setEditing(false);
+    });
+  }, [draft, onSaveServingLocation]);
+
+  const startEditing = useCallback(() => {
+    setDraft(group.locationName);
+    setEditing(true);
+    setExpanded(true);
+  }, [group.locationName]);
 
   return (
     <View style={styles.locationSection}>
-      <Pressable
-        style={styles.locationHeader}
-        onPress={() => setExpanded(prev => !prev)}
-        accessibilityRole="button"
-        accessibilityState={{ expanded }}>
-        <View style={styles.locationHeaderMain}>
-          <Text style={styles.locationTitle} numberOfLines={1}>
-            📍 {group.locationName}{' '}
-            <Text style={styles.locationMealsInline}>
-              {t('dashboard.headcount.locationMeals', { count: group.totalMeals })}
-            </Text>
-          </Text>
-        </View>
-        <Text style={styles.chevron}>{expanded ? '▾' : '▸'}</Text>
-      </Pressable>
+      <View style={styles.locationHeader}>
+        {editing ? (
+          <>
+            <Text style={styles.locationPrefix}>{locationPrefix}:</Text>
+            <TextInput
+              style={styles.servingLocationInput}
+              value={draft}
+              onChangeText={setDraft}
+              placeholder={t('dashboard.headcount.servingLocationPlaceholder')}
+              placeholderTextColor={colors.muted}
+              autoFocus
+            />
+            <View style={styles.servingLocationEditActions}>
+              <Pressable
+                style={styles.servingLocationSaveBtn}
+                onPress={handleSaveServingLocation}
+                accessibilityRole="button">
+                <Text style={styles.servingLocationSaveText}>
+                  {t('dashboard.headcount.servingLocationSave')}
+                </Text>
+              </Pressable>
+              <Pressable
+                style={styles.servingLocationCancelBtn}
+                onPress={() => {
+                  setDraft(group.locationName);
+                  setEditing(false);
+                }}
+                accessibilityRole="button">
+                <Text style={styles.servingLocationCancelText}>
+                  {t('dashboard.headcount.servingLocationCancel')}
+                </Text>
+              </Pressable>
+            </View>
+          </>
+        ) : (
+          <Pressable
+            style={styles.locationHeaderMainPressable}
+            onPress={() => setExpanded(prev => !prev)}
+            accessibilityRole="button"
+            accessibilityState={{ expanded }}>
+            <Text style={styles.locationPrefix}>{locationPrefix}:</Text>
+            {editableServingLocation ? (
+              <Pressable
+                style={styles.locationNameEditGroup}
+                onPress={startEditing}
+                accessibilityRole="button"
+                accessibilityLabel={t('dashboard.headcount.editServingLocation')}>
+                <Text
+                  style={[styles.locationName, isUnsetWarning && styles.locationTitleWarning]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail">
+                  {group.locationName}
+                </Text>
+                <Text style={styles.servingLocationEditIcon}>✏️</Text>
+              </Pressable>
+            ) : (
+              <Text
+                style={[styles.locationName, isUnsetWarning && styles.locationTitleWarning]}
+                numberOfLines={1}
+                ellipsizeMode="tail">
+                {group.locationName}
+              </Text>
+            )}
+            <Text style={styles.locationSeparator}>:</Text>
+            <View style={styles.locationHeaderSpacer} />
+            <Text style={styles.locationMealsInline}>{mealsLabel}</Text>
+            <Text style={styles.chevron}>{expanded ? '▾' : '›'}</Text>
+          </Pressable>
+        )}
+      </View>
 
-      {expanded ? (
+      {expanded && !editing ? (
         <View style={styles.locationBody}>
           {group.combos.map((combo, index) => (
             <React.Fragment key={combo.optionId}>
-              {index > 0 ? <View style={styles.comboDivider} /> : null}
               <ComboAtLocationBlock
                 combo={combo}
+                showMealPrices={showMealPrices}
                 onReviewMember={onReviewMember}
                 onRemindMember={onRemindMember}
                 remindingMemberId={remindingMemberId}
@@ -421,11 +587,19 @@ function DeliveryLocationHierarchyAccordion({
 
 function MealHeadcountDetailBody({
   detail,
+  locationMode,
+  showMealPrices = true,
+  propertyServingLocationName,
+  onSaveServingLocation,
   onReviewMember,
   onRemindMember,
   remindingMemberId,
 }: {
   detail: MealHeadcountDetailResponse;
+  locationMode: ServingLocationMode;
+  showMealPrices?: boolean;
+  propertyServingLocationName: string;
+  onSaveServingLocation?: (name: string) => void | Promise<void>;
   onReviewMember?: (member: MealHeadcountMember) => void;
   onRemindMember?: (member: MealHeadcountMember) => void;
   remindingMemberId?: UUID | null;
@@ -434,12 +608,17 @@ function MealHeadcountDetailBody({
 
   const locationHierarchy = useMemo(
     () =>
-      buildLocationComboHierarchy(
-        detail.options,
-        detail.deliveryBreakdown,
-        t('dashboard.headcount.noDeliveryLocation'),
-      ),
-    [detail.deliveryBreakdown, detail.options, t],
+      buildLocationComboHierarchy(detail.options, detail.deliveryBreakdown, {
+        mode: locationMode,
+        noLocationLabel: t('dashboard.headcount.noDeliveryLocation'),
+        propertyServingLocationName,
+      }),
+    [detail.deliveryBreakdown, detail.options, locationMode, propertyServingLocationName, t],
+  );
+
+  const flatCombos = useMemo(
+    () => (showsServingLocationSection(locationMode) ? [] : buildFlatComboList(detail.options)),
+    [detail.options, locationMode],
   );
 
   const notAvailableOption = useMemo(
@@ -448,17 +627,22 @@ function MealHeadcountDetailBody({
   );
 
   const isPollClosed = detail.pollStatus === 'CLOSED';
+  const showLocationSections = showsServingLocationSection(locationMode);
 
   return (
     <View>
       {isPollClosed ? <Text style={styles.closedBadge}>{t('meals.poll.pollClosed')}</Text> : null}
 
-      {locationHierarchy.length > 0 ? (
+      {showLocationSections && locationHierarchy.length > 0 ? (
         <View style={styles.locationHierarchyList}>
           {locationHierarchy.map(group => (
             <DeliveryLocationHierarchyAccordion
               key={group.locationKey}
               group={group}
+              locationMode={locationMode}
+              showMealPrices={showMealPrices}
+              editableServingLocation={usesPropertyServingLocation(locationMode)}
+              onSaveServingLocation={onSaveServingLocation}
               defaultExpanded
               onReviewMember={onReviewMember}
               onRemindMember={onRemindMember}
@@ -466,9 +650,31 @@ function MealHeadcountDetailBody({
             />
           ))}
         </View>
-      ) : (
+      ) : null}
+
+      {!showLocationSections && flatCombos.length > 0 ? (
+        <View style={styles.flatComboList}>
+          {flatCombos.map((combo, index) => (
+            <React.Fragment key={combo.optionId}>
+              <ComboAtLocationBlock
+                combo={combo}
+                showMealPrices={showMealPrices}
+                onReviewMember={onReviewMember}
+                onRemindMember={onRemindMember}
+                remindingMemberId={remindingMemberId}
+              />
+            </React.Fragment>
+          ))}
+        </View>
+      ) : null}
+
+      {showLocationSections && locationHierarchy.length === 0 && flatCombos.length === 0 ? (
         <Text style={styles.emptyText}>{t('dashboard.headcount.noDeliveryData')}</Text>
-      )}
+      ) : null}
+
+      {!showLocationSections && flatCombos.length === 0 ? (
+        <Text style={styles.emptyText}>{t('dashboard.headcount.noDeliveryData')}</Text>
+      ) : null}
 
       <CollapsibleSection
         title={t('dashboard.headcount.notAvailable')}
@@ -533,6 +739,10 @@ export function MealHeadcountPanel({
   readOnly = false,
 }: MealHeadcountPanelProps) {
   const { t } = useTranslation();
+  const { spaceType } = useSpacePermissions(spaceId);
+  const mealPricing = useMealPricingPolicy(spaceId);
+  const locationMode = servingLocationMode(spaceType);
+  const { servingLocationName, updateServingLocationName } = useServingLocationName(spaceId);
   const [activeMealType, setActiveMealType] = useState<MealType>(initialMealType);
   const [reviewMember, setReviewMember] = useState<MealHeadcountMember | null>(null);
   const [reviewing, setReviewing] = useState(false);
@@ -618,6 +828,14 @@ export function MealHeadcountPanel({
     [menuDate, refreshAll, showToast, spaceId, t],
   );
 
+  const handleSaveServingLocation = useCallback(
+    async (name: string) => {
+      await updateServingLocationName(name);
+      showToast(t('dashboard.headcount.servingLocationSaved'));
+    },
+    [showToast, t, updateServingLocationName],
+  );
+
   const handleRejectPayment = useCallback(
     async (memberId: UUID, rejectionReason?: string) => {
       setReviewing(true);
@@ -679,6 +897,10 @@ export function MealHeadcountPanel({
       ) : (
         <MealHeadcountDetailBody
           detail={detail}
+          locationMode={locationMode}
+          showMealPrices={mealPricing.showMealPrices}
+          propertyServingLocationName={servingLocationName}
+          onSaveServingLocation={readOnly ? undefined : handleSaveServingLocation}
           onReviewMember={readOnly ? undefined : handleReviewMember}
           onRemindMember={readOnly ? undefined : handleRemindMember}
           remindingMemberId={remindingMemberId}
@@ -799,23 +1021,102 @@ const styles = StyleSheet.create({
   locationHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    gap: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.sm,
     backgroundColor: colors.surface,
   },
-  locationHeaderMain: {
+  locationHeaderMainPressable: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    minWidth: 0,
   },
-  locationTitle: {
+  locationPrefix: {
+    ...typography.caption,
+    color: colors.muted,
+    fontWeight: '600',
+    flexShrink: 0,
+  },
+  locationNameEditGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+    minWidth: 0,
+    gap: spacing.xxs,
+  },
+  locationName: {
     ...typography.bodyStrong,
-    fontSize: 16,
+    fontSize: 15,
     color: colors.textPrimary,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  locationTitleWarning: {
+    color: '#B45309',
+  },
+  locationSeparator: {
+    ...typography.bodyStrong,
+    fontSize: 15,
+    color: colors.muted,
+    flexShrink: 0,
   },
   locationMealsInline: {
     ...typography.bodyStrong,
+    fontSize: 14,
     color: colors.primaryDark,
+    flexShrink: 0,
+  },
+  locationHeaderSpacer: {
+    flex: 1,
+    minWidth: spacing.sm,
+  },
+  servingLocationEditIcon: {
+    fontSize: 14,
+    flexShrink: 0,
+  },
+  servingLocationInput: {
+    flex: 1,
+    ...typography.bodyStrong,
+    fontSize: 15,
+    color: colors.textPrimary,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.button,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.white,
+    minWidth: 0,
+  },
+  servingLocationEditActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  servingLocationSaveBtn: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.button,
+    backgroundColor: colors.primary,
+  },
+  servingLocationSaveText: {
+    ...typography.caption,
+    color: colors.white,
+    fontWeight: '700',
+  },
+  servingLocationCancelBtn: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  servingLocationCancelText: {
+    ...typography.caption,
+    color: colors.muted,
+    fontWeight: '600',
+  },
+  flatComboList: {
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
   },
   locationBody: {
     paddingHorizontal: spacing.lg,
@@ -823,46 +1124,46 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
   },
   comboBlock: {
-    gap: spacing.sm,
-    paddingBottom: spacing.sm,
+    gap: spacing.xs,
+    paddingBottom: spacing.md,
+    marginBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   comboHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.md,
+    gap: spacing.sm,
+    backgroundColor: '#F0FAF5',
+    borderRadius: radius.button,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
   comboLabel: {
     ...typography.bodyStrong,
     flex: 1,
+    fontSize: 16,
     color: colors.textPrimary,
-  },
-  comboPlates: {
-    ...typography.bodyStrong,
-    color: colors.primaryDark,
   },
   comboDetail: {
     ...typography.caption,
     color: colors.muted,
-    marginTop: -spacing.xxs,
-  },
-  comboDivider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginVertical: spacing.md,
+    lineHeight: 18,
+    paddingHorizontal: spacing.xxs,
+    marginTop: spacing.xxs,
   },
   customerList: {
     gap: spacing.xxs,
-    marginTop: spacing.xs,
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.xxs,
   },
   customerRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
     gap: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
   customerInfo: {
     flex: 1,

@@ -1,8 +1,20 @@
 import type { MemberMealBalanceActivityEvent } from '../api/types';
+import {
+  compareByCreatedAt,
+  CREATED_DATE_SORT_OPTIONS,
+  DEFAULT_CREATED_DATE_SORT,
+  type CreatedDateSortOption,
+} from './listSort';
 
 export type SubscriptionEventTypeFilter = 'created' | 'added_meals' | 'ended';
 
 export type SubscriptionMonthFilter = 'current' | 'previous';
+
+export type SubscriptionHistorySortOption = CreatedDateSortOption;
+
+export const SUBSCRIPTION_HISTORY_SORT_OPTIONS = CREATED_DATE_SORT_OPTIONS;
+
+export const DEFAULT_SUBSCRIPTION_HISTORY_SORT = DEFAULT_CREATED_DATE_SORT;
 
 export const SUBSCRIPTION_EVENT_TYPES: SubscriptionEventTypeFilter[] = [
   'created',
@@ -13,7 +25,23 @@ export const SUBSCRIPTION_EVENT_TYPES: SubscriptionEventTypeFilter[] = [
 export const SUBSCRIPTION_MONTH_FILTERS: SubscriptionMonthFilter[] = ['current', 'previous'];
 
 export const SUBSCRIPTION_HISTORY_FILTER_OPTION_COUNT =
-  SUBSCRIPTION_EVENT_TYPES.length + SUBSCRIPTION_MONTH_FILTERS.length;
+  SUBSCRIPTION_EVENT_TYPES.length +
+  SUBSCRIPTION_MONTH_FILTERS.length +
+  SUBSCRIPTION_HISTORY_SORT_OPTIONS.length;
+
+export type SubscriptionHistoryFilterState = {
+  eventTypes: Set<SubscriptionEventTypeFilter>;
+  months: Set<SubscriptionMonthFilter>;
+  sort: SubscriptionHistorySortOption;
+};
+
+export function defaultSubscriptionHistoryFilters(): SubscriptionHistoryFilterState {
+  return {
+    eventTypes: new Set(),
+    months: new Set(),
+    sort: DEFAULT_SUBSCRIPTION_HISTORY_SORT,
+  };
+}
 
 function monthKeyFromDate(iso: string): string {
   const date = new Date(iso);
@@ -44,12 +72,14 @@ export function filterSubscriptionHistoryEvents(
   options: {
     eventTypes: Set<SubscriptionEventTypeFilter>;
     months: Set<SubscriptionMonthFilter>;
+    sort?: SubscriptionHistorySortOption;
   },
 ): MemberMealBalanceActivityEvent[] {
   const current = currentMonthKey();
   const previous = previousMonthKey();
+  const sort = options.sort ?? DEFAULT_SUBSCRIPTION_HISTORY_SORT;
 
-  return events.filter(event => {
+  const filtered = events.filter(event => {
     if (
       options.eventTypes.size > 0 &&
       options.eventTypes.size < SUBSCRIPTION_EVENT_TYPES.length &&
@@ -71,17 +101,21 @@ export function filterSubscriptionHistoryEvents(
     }
     return false;
   });
+
+  return [...filtered].sort((a, b) => compareByCreatedAt(a.createdAt, b.createdAt, sort));
 }
 
 export function countSubscriptionHistoryFilters(
-  eventTypes: Set<SubscriptionEventTypeFilter>,
-  months: Set<SubscriptionMonthFilter>,
+  filters: SubscriptionHistoryFilterState,
 ): number {
   let count = 0;
-  if (eventTypes.size > 0 && eventTypes.size < SUBSCRIPTION_EVENT_TYPES.length) {
+  if (filters.eventTypes.size > 0 && filters.eventTypes.size < SUBSCRIPTION_EVENT_TYPES.length) {
     count += 1;
   }
-  if (months.size === 1) {
+  if (filters.months.size === 1) {
+    count += 1;
+  }
+  if (filters.sort !== DEFAULT_SUBSCRIPTION_HISTORY_SORT) {
     count += 1;
   }
   return count;

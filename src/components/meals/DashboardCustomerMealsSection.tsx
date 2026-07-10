@@ -4,12 +4,17 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import type { UUID } from '../../api/types';
 import { useCustomerSubscriptionStatus } from '../../hooks/useCustomerSubscriptionStatus';
+import { useMealPricingPolicy } from '../../hooks/useMealPricingPolicy';
 import { useLinkedMember } from '../../hooks/useLinkedMember';
-import { tomorrowIsoDate } from '../../utils/mealDates';
 import { useMealPollDay } from '../../hooks/useMealPollDay';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../../navigation/types';
 import { navigateMainStack } from '../../navigation/mainStackNavigation';
+import {
+  canShiftCustomerMealDate,
+  resolveCustomerMealFocusDate,
+} from '../../utils/customerMealFocusDate';
+import { addDaysIsoDate, todayIsoDate } from '../../utils/mealDates';
 import {
   DashboardCustomerPollCard,
   type DashboardPollCardState,
@@ -43,7 +48,9 @@ function resolveCardState(
 
 export function DashboardCustomerMealsSection({ spaceId }: DashboardCustomerMealsSectionProps) {
   const { t, i18n } = useTranslation();
-  const menuDate = tomorrowIsoDate();
+  const [menuDate, setMenuDate] = useState(todayIsoDate);
+  const [userPickedDate, setUserPickedDate] = useState(false);
+  const mealPricing = useMealPricingPolicy(spaceId);
   const permissions = useSpacePermissions(spaceId);
   const navigation = useNavigation();
   const stackNavigation =
@@ -57,6 +64,23 @@ export function DashboardCustomerMealsSection({ spaceId }: DashboardCustomerMeal
     useCallback(() => {
       void reloadSubscriptionStatus();
     }, [reloadSubscriptionStatus]),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      if (userPickedDate) {
+        return;
+      }
+      let cancelled = false;
+      void resolveCustomerMealFocusDate(spaceId, permissions.spaceType).then(date => {
+        if (!cancelled) {
+          setMenuDate(date);
+        }
+      });
+      return () => {
+        cancelled = true;
+      };
+    }, [permissions.spaceType, spaceId, userPickedDate]),
   );
 
   const poll = useMealPollDay(spaceId, menuDate, permissions.spaceType);
@@ -92,12 +116,25 @@ export function DashboardCustomerMealsSection({ spaceId }: DashboardCustomerMeal
     return t('meals.subscription.customer.selectionRequiredHint');
   }, [mealSelectionBlocked, subscriptionStatus, t]);
 
+  const handlePreviousDate = useCallback(() => {
+    if (!canShiftCustomerMealDate(menuDate, -1)) {
+      return;
+    }
+    setUserPickedDate(true);
+    setMenuDate(prev => addDaysIsoDate(prev, -1));
+  }, [menuDate]);
+
+  const handleNextDate = useCallback(() => {
+    if (!canShiftCustomerMealDate(menuDate, 1)) {
+      return;
+    }
+    setUserPickedDate(true);
+    setMenuDate(prev => addDaysIsoDate(prev, 1));
+  }, [menuDate]);
+
   const handleOpenPoll = useCallback(() => {
     if (mealSelectionBlocked) {
       return;
-    }
-    if (poll.allResponded) {
-      poll.handleUpdateChoices();
     }
 
     const params = { spaceId, menuDate };
@@ -110,8 +147,6 @@ export function DashboardCustomerMealsSection({ spaceId }: DashboardCustomerMeal
   }, [
     mealSelectionBlocked,
     menuDate,
-    poll.allResponded,
-    poll.handleUpdateChoices,
     spaceId,
     stackNavigation,
   ]);
@@ -159,9 +194,14 @@ export function DashboardCustomerMealsSection({ spaceId }: DashboardCustomerMeal
         prepaidOverflowAmount={poll.myPrepaidOverflowAmount}
         prepaidDebitedAmount={poll.myPrepaidDebitedAmount}
         prepaidOverflowPayment={poll.myPrepaidOverflowPayment}
+        onPreviousDate={handlePreviousDate}
+        onNextDate={handleNextDate}
+        canGoPrevious={canShiftCustomerMealDate(menuDate, -1)}
+        canGoNext={canShiftCustomerMealDate(menuDate, 1)}
         onAction={cardState === 'empty' ? undefined : handleOpenPoll}
         actionDisabled={mealSelectionBlocked && cardState !== 'empty'}
         actionDisabledReason={mealSelectionDisabledReason}
+        showMealPrices={mealPricing.showMealPrices}
         onUploadProof={
           poll.myPaymentStatus === 'PENDING' || poll.myPaymentStatus === 'REJECTED'
             ? () => setProofModalOpen(true)

@@ -7,10 +7,10 @@ import { DashboardSectionTitle } from './DashboardSectionTitle';
 
 type DashboardAccommodationOperationsProps = {
   operations: DashboardAccommodationOperations;
+  hideTitle?: boolean;
   onOccupiedPress?: () => void;
   onVacantPress?: () => void;
   onMoveInsPress?: () => void;
-  onPendingPaymentsPress?: () => void;
 };
 
 function OperationCard({
@@ -25,7 +25,9 @@ function OperationCard({
   const content = (
     <>
       <Text style={styles.value}>{value}</Text>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.label} numberOfLines={2}>
+        {label}
+      </Text>
       {onPress ? <Text style={styles.chevron}>›</Text> : null}
     </>
   );
@@ -46,16 +48,18 @@ function OperationCard({
 
 export function DashboardAccommodationOperations({
   operations,
+  hideTitle = false,
   onOccupiedPress,
   onVacantPress,
   onMoveInsPress,
-  onPendingPaymentsPress,
 }: DashboardAccommodationOperationsProps) {
   const { t } = useTranslation();
 
   return (
     <View style={styles.wrap}>
-      <DashboardSectionTitle title={t('dashboard.accommodationOperations.title')} />
+      {hideTitle ? null : (
+        <DashboardSectionTitle title={t('dashboard.accommodationOperations.title')} />
+      )}
       <View style={styles.row}>
         <OperationCard
           value={String(operations.occupiedBeds)}
@@ -67,17 +71,10 @@ export function DashboardAccommodationOperations({
           label={t('dashboard.accommodationOperations.vacantBeds')}
           onPress={onVacantPress}
         />
-      </View>
-      <View style={styles.row}>
         <OperationCard
           value={String(operations.moveInsThisMonth)}
           label={t('dashboard.accommodationOperations.moveInsThisMonth')}
           onPress={onMoveInsPress}
-        />
-        <OperationCard
-          value={String(operations.pendingPaymentsCount)}
-          label={t('dashboard.accommodationOperations.pendingPayments')}
-          onPress={onPendingPaymentsPress}
         />
       </View>
     </View>
@@ -91,7 +88,7 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   card: {
     flex: 1,

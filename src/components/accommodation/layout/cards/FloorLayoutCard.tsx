@@ -49,7 +49,9 @@ export function FloorLayoutCard({
   editableName = false,
   onSaveName,
 }: FloorLayoutCardProps) {
-  if (isCorridorFloorCardLayout(layoutMode, floorIllustrationType)) {
+  const { t } = useTranslation();
+  const isCorridor = isCorridorFloorCardLayout(layoutMode, floorIllustrationType);
+  if (isCorridor) {
     return (
       <CorridorFloorLayoutCard
         floor={floor}
@@ -61,7 +63,6 @@ export function FloorLayoutCard({
     );
   }
 
-  const { t } = useTranslation();
   const inactive = !isAccommodationEntityActive(floor);
   const percent = inactive
     ? 0

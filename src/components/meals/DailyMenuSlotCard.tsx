@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { DailyMenuResponse, MealComboResponse, MealType, UUID } from '../../api/types';
 import { Card } from '../ui/Card';
+import { useMealPricingPolicy } from '../../hooks/useMealPricingPolicy';
 import { colors, radius, spacing, typography } from '../../theme';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
 import {
@@ -63,6 +64,7 @@ export function DailyMenuSlotCard({
   readOnly = false,
 }: DailyMenuSlotCardProps) {
   const { t } = useTranslation();
+  const mealPricing = useMealPricingPolicy(spaceId);
   const library = comboById ?? EMPTY_COMBO_MAP;
   const [expanded, setExpanded] = useState(false);
   const [comboPreviewOpen, setComboPreviewOpen] = useState(false);
@@ -178,6 +180,7 @@ export function DailyMenuSlotCard({
               itemNames={itemNames}
               price={price}
               currencyCode={currencyCode}
+              showPrice={mealPricing.showMealPrices}
               onPress={
                 getPlannedEntryKind(option) === 'combo'
                   ? () => openOptionPreview(option, itemNames, price, currencyCode)

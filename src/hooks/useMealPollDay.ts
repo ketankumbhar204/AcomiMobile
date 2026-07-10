@@ -43,6 +43,8 @@ function sumQuantities(quantities: Record<UUID, number> | undefined): number {
 type UseMealPollDayOptions = {
   onSaved?: () => void;
   autoReload?: boolean;
+  /** When true, the poll screen opens in edit mode even if the tenant already responded. */
+  startInEditMode?: boolean;
 };
 
 export function useMealPollDay(
@@ -220,7 +222,7 @@ export function useMealPollDay(
 
       const open = day.polls.filter(poll => poll.status === 'OPEN');
       const responded = open.length > 0 && open.every(poll => pollHasResponse(poll));
-      setEditing(!responded);
+      setEditing(options?.startInEditMode ? true : !responded);
     } catch {
       setPolls([]);
       setMyPaymentStatus(null);
@@ -235,7 +237,7 @@ export function useMealPollDay(
     } finally {
       setLoading(false);
     }
-  }, [menuDate, multiQuantity, pollHasResponse, showToast, spaceId, t]);
+  }, [menuDate, multiQuantity, options?.startInEditMode, pollHasResponse, showToast, spaceId, t]);
 
   useNavigationFocusReload(load, options?.autoReload !== false);
 

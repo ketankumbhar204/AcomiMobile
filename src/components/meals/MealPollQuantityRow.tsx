@@ -9,6 +9,7 @@ type MealPollQuantityRowProps = {
   quantity: number;
   onChange: (quantity: number) => void;
   readOnly?: boolean;
+  showPrice?: boolean;
 };
 
 export function MealPollQuantityRow({
@@ -16,9 +17,10 @@ export function MealPollQuantityRow({
   quantity,
   onChange,
   readOnly = false,
+  showPrice = true,
 }: MealPollQuantityRowProps) {
   const selected = quantity > 0;
-  const priceLabel = formatComboPrice(option.price, option.currencyCode);
+  const priceLabel = showPrice ? formatComboPrice(option.price, option.currencyCode) : null;
 
   const toggleSelected = () => {
     if (readOnly) {

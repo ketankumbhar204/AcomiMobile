@@ -12,6 +12,7 @@ type PlannedComboPreviewRowProps = {
   price?: number | null;
   currencyCode?: string | null;
   onPress?: () => void;
+  showPrice?: boolean;
 };
 
 export function PlannedComboPreviewRow({
@@ -20,9 +21,10 @@ export function PlannedComboPreviewRow({
   price,
   currencyCode = 'INR',
   onPress,
+  showPrice = true,
 }: PlannedComboPreviewRowProps) {
   const { t } = useTranslation();
-  const priceLabel = formatComboPrice(price, currencyCode);
+  const priceLabel = showPrice ? formatComboPrice(price, currencyCode) : null;
   const isCombo = getPlannedEntryKind(option) === 'combo';
   const comboSuffix = isCombo ? t('meals.menu.entryKindComboSuffix') : null;
   const canOpenDetails = isCombo && Boolean(onPress);

@@ -19,9 +19,11 @@ import {
 import {
   buildContractSnapshotPayload,
   emptyContractTermsFormValues,
+  resolveContractFoodPolicy,
   validateContractTerms,
   type ContractTermsFormValues,
 } from '../../utils/occupancyContract';
+import { agentDebugLog } from '../../utils/agentDebugLog';
 import { isMoveInDateInFuture } from '../../utils/occupancyRules';
 import { ContractTermsForm } from './ContractTermsForm';
 import { Button, FormInput } from '../ui';
@@ -123,15 +125,29 @@ export function MoveInModal({
   }
 
   function handleConfirm() {
+    const effectiveFoodPolicy = resolveContractFoodPolicy(foodPolicy, null);
     const validationError = validateContractTerms(contractValues, {
       rentRequired: true,
       catalogDefaultRent: catalogRent,
-      foodPolicy,
+      foodPolicy: effectiveFoodPolicy,
     });
     if (validationError) {
       setFormError(t(validationError));
       return;
     }
+
+    // #region agent log
+    agentDebugLog({
+      hypothesisId: 'C',
+      location: 'MoveInModal.tsx:handleConfirm',
+      message: 'move-in modal confirm',
+      data: {
+        foodIncludedInRent: effectiveFoodPolicy.foodIncludedInRent,
+        foodEnabled: contractValues.foodEnabled,
+      },
+      runId: 'movein-food',
+    });
+    // #endregion
 
     onConfirm({
       expectedExitDate: expectedExitDate.trim() || undefined,
@@ -139,7 +155,7 @@ export function MoveInModal({
       allowEarlyMoveIn: needsEarlyMoveIn ? allowEarlyMoveIn : false,
       remarks: remarks.trim() || undefined,
       contract: contractValues,
-      foodPolicy,
+      foodPolicy: effectiveFoodPolicy,
     });
   }
 
@@ -227,7 +243,7 @@ export function MoveInModal({
                         ? Number(contractValues.depositSnapshot)
                         : null
                     }
-                    foodPolicy={foodPolicy}
+                    foodPolicy={resolveContractFoodPolicy(foodPolicy, null)}
                   />
                 )}
 

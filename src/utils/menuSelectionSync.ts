@@ -14,7 +14,19 @@ export function isMenuSelectionFullyResolved(
   combos: MealComboResponse[],
   draftPrices: Record<string, string>,
   adHocPackages: MenuAdHocPackage[],
+  requiresMealPrices = true,
 ): boolean {
+  for (const comboId of selectedComboIds) {
+    const combo = combos.find(row => row.comboId === comboId);
+    if (!combo) {
+      return false;
+    }
+  }
+
+  if (!requiresMealPrices) {
+    return true;
+  }
+
   for (const comboId of selectedComboIds) {
     const combo = combos.find(row => row.comboId === comboId);
     if (!combo) {

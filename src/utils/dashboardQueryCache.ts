@@ -16,22 +16,31 @@ const cache = new Map<string, CacheEntry>();
 const inflight = new Map<string, Promise<DashboardSummaryResponse>>();
 
 let invalidationGeneration = 0;
-type InvalidationListener = () => void;
-const listeners = new Set<InvalidationListener>();
+type Listener = () => void;
+/** Fired only by invalidateDashboardQueries — subscribers should force-refresh. */
+const invalidationListeners = new Set<Listener>();
+/** Fired when cache is written — subscribers may re-read peek() without refetching. */
+const cacheUpdateListeners = new Set<Listener>();
 
 export function getDashboardInvalidationGeneration(): number {
   return invalidationGeneration;
 }
 
-/** Marks dashboard data stale and notifies subscribers; keeps cached summaries for instant UI. */
+/** Marks dashboard data stale and notifies invalidation subscribers; keeps cached summaries. */
 export function invalidateDashboardQueries(): void {
   invalidationGeneration += 1;
-  listeners.forEach(listener => listener());
+  invalidationListeners.forEach(listener => listener());
 }
 
-export function subscribeDashboardInvalidation(listener: InvalidationListener): () => void {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
+export function subscribeDashboardInvalidation(listener: Listener): () => void {
+  invalidationListeners.add(listener);
+  return () => invalidationListeners.delete(listener);
+}
+
+/** Observe successful cache writes (e.g. bell badge) without triggering force reloads. */
+export function subscribeDashboardCacheUpdate(listener: Listener): () => void {
+  cacheUpdateListeners.add(listener);
+  return () => cacheUpdateListeners.delete(listener);
 }
 
 export function peekDashboardSummary(
@@ -70,6 +79,8 @@ export async function fetchDashboardSummaryCached(
     .then(data => {
       const normalized = normalizeDashboardSummary(data);
       cache.set(key, { summary: normalized, fetchedAt: Date.now() });
+      // Notify observers only — never invalidation listeners (that caused force-refetch loops).
+      cacheUpdateListeners.forEach(listener => listener());
       return normalized;
     })
     .finally(() => {
@@ -87,5 +98,6 @@ export function resetDashboardQueryCacheForTests(): void {
   invalidationGeneration = 0;
   cache.clear();
   inflight.clear();
-  listeners.clear();
+  invalidationListeners.clear();
+  cacheUpdateListeners.clear();
 }

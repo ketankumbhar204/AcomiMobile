@@ -34,6 +34,7 @@ import type {
   SubmitMealPollSelection,
   UpdateMealParticipationRequest,
   UpdateFoodItemRequest,
+  UpdateFoodItemDefaultPriceRequest,
   UpdateMealComboRequest,
   UpsertDailyMenuRequest,
   UUID,
@@ -212,6 +213,20 @@ export const mealsApi = {
     );
   },
 
+  updateMealComboPrice: async (
+    spaceId: UUID,
+    comboId: UUID,
+    body: UpdateFoodItemDefaultPriceRequest,
+  ): Promise<MealComboResponse> => {
+    console.log(`${LOG_TAG} PUT /spaces/${spaceId}/meal-combos/${comboId}/price`, body);
+    return unwrapApiResponse(
+      apiClient.put<ApiResponse<MealComboResponse>>(
+        `/spaces/${spaceId}/meal-combos/${comboId}/price`,
+        body,
+      ),
+    );
+  },
+
   deactivateMealCombo: async (spaceId: UUID, comboId: UUID): Promise<void> => {
     console.log(`${LOG_TAG} POST /spaces/${spaceId}/meal-combos/${comboId}/deactivate`);
     await unwrapVoidResponse(
@@ -277,6 +292,20 @@ export const mealsApi = {
     return unwrapApiResponse(
       apiClient.put<ApiResponse<FoodItemResponse>>(
         `/spaces/${spaceId}/food-items/${itemId}`,
+        body,
+      ),
+    );
+  },
+
+  updateFoodItemDefaultPrice: async (
+    spaceId: UUID,
+    itemId: UUID,
+    body: UpdateFoodItemDefaultPriceRequest,
+  ): Promise<FoodItemResponse> => {
+    console.log(`${LOG_TAG} PUT /spaces/${spaceId}/food-items/${itemId}/default-price`, body);
+    return unwrapApiResponse(
+      apiClient.put<ApiResponse<FoodItemResponse>>(
+        `/spaces/${spaceId}/food-items/${itemId}/default-price`,
         body,
       ),
     );

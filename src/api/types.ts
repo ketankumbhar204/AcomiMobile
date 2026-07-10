@@ -114,6 +114,9 @@ export interface SpacePermissionsResponse {
   canViewMeals?: boolean;
   canManageMealParticipation?: boolean;
   canViewOwnMealParticipation?: boolean;
+  canRaiseComplaint?: boolean;
+  canViewAllComplaints?: boolean;
+  canManageComplaints?: boolean;
 }
 
 export type MealPlanCode =
@@ -180,6 +183,13 @@ export interface FoodItemResponse {
   isCustom: boolean;
   isActive: boolean;
   foodType?: FoodType;
+  defaultPrice?: number | null;
+  currencyCode?: string | null;
+}
+
+export interface UpdateFoodItemDefaultPriceRequest {
+  price: number;
+  currencyCode?: string | null;
 }
 
 export interface CreateFoodCategoryRequest {
@@ -1649,6 +1659,7 @@ export interface MoveInOccupancyRequest {
   depositSnapshot?: number | null;
   foodEnabled?: boolean;
   foodChargeSnapshot?: number | null;
+  foodIncludedInRent?: boolean;
   otherCharges?: OccupancyChargeLine[];
   createMealParticipation?: boolean;
   amenities?: AmenityAssignment[];
@@ -1671,6 +1682,7 @@ export interface AllocateOccupancyRequest {
   depositSnapshot?: number | null;
   foodEnabled?: boolean;
   foodChargeSnapshot?: number | null;
+  foodIncludedInRent?: boolean;
   otherCharges?: OccupancyChargeLine[];
   createMealParticipation?: boolean;
   amenities?: AmenityAssignment[];
@@ -1687,6 +1699,7 @@ export interface TransferOccupancyRequest {
   depositSnapshot?: number | null;
   foodEnabled?: boolean;
   foodChargeSnapshot?: number | null;
+  foodIncludedInRent?: boolean;
   otherCharges?: OccupancyChargeLine[];
   amenities?: AmenityAssignment[];
 }
@@ -1779,9 +1792,151 @@ export interface DashboardSummaryResponse {
   messOperations?: DashboardMessOperations | null;
   accommodationOperations?: DashboardAccommodationOperations | null;
   attention: DashboardAttentionItem[];
+  pendingActions?: PendingActionsSummary | null;
 }
 
-export type MemberPaymentStatus = 'PAID' | 'PARTIAL' | 'PENDING' | 'NONE';
+export type NotificationType =
+  | 'PAYMENT_NEEDS_REVIEW'
+  | 'PAYMENT_NEEDS_UPDATE'
+  | 'PAYMENT_OVERDUE'
+  | 'PAYMENT_SUBMITTED'
+  | 'PAYMENT_APPROVED'
+  | 'PAYMENT_REJECTED'
+  | 'PAYMENT_UPDATE_REQUESTED'
+  | 'MEAL_POLL_NOT_PUBLISHED'
+  | 'MEAL_RESPONSES_BELOW_THRESHOLD'
+  | 'MENU_NOT_PLANNED'
+  | 'MENU_DRAFT_PENDING_PUBLISH'
+  | 'SUBSCRIPTION_ACTIVATION_PENDING'
+  | 'MEAL_POLL_PUBLISHED'
+  | 'MEAL_POLL_REMINDER'
+  | 'RESERVATION_STARTING_TODAY'
+  | 'MOVE_IN_SCHEDULED_TODAY'
+  | 'MOVE_OUT_SCHEDULED_TODAY'
+  | 'VACANT_RESERVED_BED'
+  | 'EXPIRED_RESERVATION'
+  | 'RESERVATION_CREATED'
+  | 'MOVE_IN_COMPLETED'
+  | 'MOVE_OUT_COMPLETED'
+  | 'PENDING_INVITATION'
+  | 'TENANT_PROFILE_INCOMPLETE'
+  | 'MISSING_KYC_DOCUMENTS'
+  | 'MISSING_ADDRESS_PROOF'
+  | 'INVITATION_ACCEPTED'
+  | 'TENANT_PROFILE_COMPLETED'
+  | 'COMPLAINT_PENDING'
+  | 'COMPLAINT_OVERDUE'
+  | 'COMPLAINT_CREATED'
+  | 'COMPLAINT_RESOLVED';
+
+export type NotificationCategory =
+  | 'INFORMATION'
+  | 'SUCCESS'
+  | 'WARNING'
+  | 'ACTION_REQUIRED'
+  | 'ERROR';
+
+export type NotificationPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+
+export type NotificationStatus = 'UNREAD' | 'READ' | 'RESOLVED' | 'DISMISSED';
+
+export interface SpaceNotification {
+  notificationId: UUID;
+  spaceId: UUID;
+  organizationId?: UUID | null;
+  userId: UUID;
+  actorId?: UUID | null;
+  entityType: string;
+  entityId?: UUID | null;
+  notificationType: NotificationType;
+  category: NotificationCategory;
+  priority: NotificationPriority;
+  title: string;
+  message?: string | null;
+  actionLabel?: string | null;
+  actionRoute?: string | null;
+  status: NotificationStatus;
+  readAt?: string | null;
+  resolvedAt?: string | null;
+  deliveryChannels: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PendingActionGroup {
+  actionType: NotificationType;
+  title: string;
+  actionLabel?: string | null;
+  actionRoute?: string | null;
+  priority: NotificationPriority;
+  count: number;
+  items: SpaceNotification[];
+}
+
+export interface PendingActionsSummary {
+  totalCount: number;
+  groups: PendingActionGroup[];
+}
+
+export interface GlobalAttentionItem {
+  actionType: NotificationType;
+  title: string;
+  message?: string | null;
+  count: number;
+  priority: NotificationPriority;
+  actionLabel?: string | null;
+  actionRoute?: string | null;
+  sampleEntityId?: UUID | null;
+}
+
+export interface GlobalAttentionSpace {
+  spaceId: UUID;
+  spaceName: string;
+  spaceType?: SpaceType | string | null;
+  count: number;
+  items: GlobalAttentionItem[];
+}
+
+export interface GlobalActivityItem {
+  notificationId: UUID;
+  spaceId: UUID;
+  spaceName?: string | null;
+  notificationType: NotificationType;
+  category: NotificationCategory;
+  title: string;
+  message?: string | null;
+  actionRoute?: string | null;
+  entityId?: UUID | null;
+  createdAt: string;
+}
+
+export interface GlobalSpaceStatus {
+  spaceId: UUID;
+  spaceName: string;
+  spaceType?: SpaceType | string | null;
+  membershipRole: MembershipRole | string;
+  pendingActionCount: number;
+  needsAttention: boolean;
+}
+
+export interface GlobalDashboardResponse {
+  totalAttentionCount: number;
+  unreadNotificationCount: number;
+  attentionRequired: GlobalAttentionSpace[];
+  attentionHasMore: boolean;
+  recentActivity: GlobalActivityItem[];
+  activityHasMore: boolean;
+  spaceSummaries: GlobalSpaceStatus[];
+}
+
+export type MemberPaymentStatus =
+  | 'PAID'
+  | 'PARTIAL'
+  | 'PENDING'
+  | 'UNDER_REVIEW'
+  | 'UPDATE_REQUESTED'
+  | 'REJECTED'
+  | 'NONE';
 
 export interface MemberPaymentLedgerRow {
   memberId: UUID;
@@ -1889,15 +2044,17 @@ export type UniversalPaymentType = 'MEAL' | 'RENT' | 'DEPOSIT' | 'MAINTENANCE' |
 export type UniversalPaymentMethod = 'UPI' | 'BANK_TRANSFER' | 'CASH' | 'CHEQUE' | 'OTHER';
 
 /**
- * PENDING → (proof upload) → UNDER_REVIEW → PAID | REJECTED
+ * PENDING → (proof upload) → UNDER_REVIEW → PAID | REJECTED | UPDATE_REQUESTED
  * PROOF_UPLOADED may appear transiently before UNDER_REVIEW.
+ * UPDATE_REQUESTED → tenant resubmits → UNDER_REVIEW
  */
 export type UniversalPaymentStatus =
   | 'PENDING'
   | 'PROOF_UPLOADED'
   | 'UNDER_REVIEW'
   | 'PAID'
-  | 'REJECTED';
+  | 'REJECTED'
+  | 'UPDATE_REQUESTED';
 
 /** Reporting sub-category; valid combinations depend on paymentType. */
 export type PaymentCategory =
@@ -1926,7 +2083,8 @@ export type PaymentTimelineEventType =
   | 'REJECTED'
   | 'RESUBMITTED'
   | 'PAID'
-  | 'REFUNDED';
+  | 'REFUNDED'
+  | 'UPDATE_REQUESTED';
 
 export interface SpacePaymentResponse {
   paymentId: UUID;
@@ -1981,16 +2139,18 @@ export interface ListSpacePaymentsParams {
   memberId?: UUID;
   paymentType?: UniversalPaymentType;
   paymentCategory?: PaymentCategory;
+  /** When false, skips server-side expected-payment sync (faster read for badges). */
+  sync?: boolean;
 }
 
 export interface SubmitPaymentProofRequest {
-  proofImageBase64: string;
+  proofImageBase64?: string;
   referenceNumber?: string;
   remarks?: string;
   paymentMethod?: UniversalPaymentMethod;
 }
 
-export type PaymentReviewAction = 'APPROVE' | 'REJECT';
+export type PaymentReviewAction = 'APPROVE' | 'REJECT' | 'REQUEST_UPDATE';
 
 export interface ReviewPaymentRequest {
   action: PaymentReviewAction;
@@ -2007,6 +2167,150 @@ export interface ApprovePaymentRequest {
 export interface RejectPaymentRequest {
   rejectionCode: PaymentRejectionReason;
   rejectionReason?: string;
+}
+
+export type ComplaintStatus =
+  | 'OPEN'
+  | 'IN_PROGRESS'
+  | 'RESOLVED'
+  | 'CLOSED'
+  | 'CANCELLED';
+
+export type ComplaintPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+
+export type ComplaintCategory =
+  | 'MAINTENANCE'
+  | 'HOUSEKEEPING'
+  | 'FOOD'
+  | 'FOOD_QUALITY'
+  | 'FOOD_SERVICE'
+  | 'BILLING'
+  | 'SAFETY'
+  | 'SERVICE'
+  | 'OTHER';
+
+export type ComplaintTimelineEventType =
+  | 'CREATED'
+  | 'STATUS_CHANGED'
+  | 'COMMENTED'
+  | 'INTERNAL_NOTE'
+  | 'ATTACHMENT_ADDED'
+  | 'ASSIGNED'
+  | 'PRIORITY_CHANGED'
+  | 'REOPENED'
+  | 'RESOLVED'
+  | 'CLOSED'
+  | 'CANCELLED';
+
+export interface ComplaintTimelineEvent {
+  eventId: UUID;
+  eventType: ComplaintTimelineEventType;
+  performedAt: string;
+  remarks?: string | null;
+  performedBy?: UUID | null;
+}
+
+export interface ComplaintComment {
+  commentId: UUID;
+  authorMemberId?: UUID | null;
+  authorName?: string | null;
+  authorUserId: UUID;
+  body: string;
+  internal: boolean;
+  createdAt: string;
+}
+
+export interface ComplaintAttachment {
+  attachmentId: UUID;
+  storageUrl: string;
+  contentType?: string | null;
+  fileName?: string | null;
+  createdByUserId: UUID;
+  createdAt: string;
+}
+
+export interface ComplaintResponse {
+  complaintId: UUID;
+  spaceId: UUID;
+  createdByMemberId: UUID;
+  createdByMemberName?: string | null;
+  createdByUserId: UUID;
+  category: ComplaintCategory;
+  priority: ComplaintPriority;
+  status: ComplaintStatus;
+  title: string;
+  description: string;
+  assignedToMembershipId?: UUID | null;
+  assignedToName?: string | null;
+  resolutionSummary?: string | null;
+  resolvedAt?: string | null;
+  resolvedByUserId?: UUID | null;
+  reopenedAt?: string | null;
+  closedAt?: string | null;
+  cancelledAt?: string | null;
+  mealDate?: string | null;
+  mealType?: MealType | null;
+  createdAt: string;
+  updatedAt: string;
+  canReopen: boolean;
+  comments?: ComplaintComment[] | null;
+  attachments?: ComplaintAttachment[] | null;
+  timeline?: ComplaintTimelineEvent[] | null;
+}
+
+export interface ComplaintListResponse {
+  totalCount: number;
+  openCount: number;
+  inProgressCount: number;
+  resolvedCount: number;
+  complaints: ComplaintResponse[];
+}
+
+export interface ListComplaintsParams {
+  status?: ComplaintStatus;
+  priority?: ComplaintPriority;
+  category?: ComplaintCategory;
+  assigneeMembershipId?: UUID;
+  mine?: boolean;
+}
+
+export interface CreateComplaintRequest {
+  category: ComplaintCategory;
+  priority: ComplaintPriority;
+  title: string;
+  description: string;
+  mealDate?: string;
+  mealType?: MealType;
+  attachmentImagesBase64?: string[];
+}
+
+export interface UpdateComplaintStatusRequest {
+  status: ComplaintStatus;
+  note?: string;
+}
+
+export interface AddComplaintCommentRequest {
+  body: string;
+  internal?: boolean;
+}
+
+export interface AddComplaintAttachmentRequest {
+  imageBase64: string;
+  fileName?: string;
+  contentType?: string;
+}
+
+export interface AssignComplaintRequest {
+  assigneeMembershipId?: UUID | null;
+}
+
+export interface UpdateComplaintResolutionRequest {
+  resolutionSummary: string;
+  markResolved?: boolean;
+}
+
+export interface ReopenComplaintRequest {
+  reason?: string;
 }
 
 export class ApiError extends Error {

@@ -23,6 +23,7 @@ import { DailyMenuSlotCard, MealHeadcountBottomSheet, MenuPlanningDayOverview } 
 import { MenuDateContextHints } from '../../components/meals/MenuDateContextHints';
 import { MenuDatePickerModal } from '../../components/meals/MenuDatePickerModal';
 import { navigateToMembersTab } from '../../navigation/navigationRef';
+import { PermissionDeniedScreen } from '../../components/ui/PermissionDeniedScreen';
 import { useMainStackNavigation } from '../../hooks/useMainStackNavigation';
 import { useOwnerMealHeadcount } from '../../hooks/useOwnerMealHeadcount';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
@@ -84,9 +85,10 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
   const { navigate: navigateMain } = useMainStackNavigation();
   const permissions = useSpacePermissions(spaceId);
   const showToast = useToastStore(state => state.showToast);
+  const canManage = permissions.canManageMeals === true;
 
   const [menuDate, setMenuDate] = useState(initialDate ?? todayIsoDate());
-  const headcount = useOwnerMealHeadcount(spaceId, menuDate, permissions.canManageMeals);
+  const headcount = useOwnerMealHeadcount(spaceId, menuDate, canManage);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [menus, setMenus] = useState<DailyMenuResponse[]>([]);
@@ -238,6 +240,10 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
     setHeadcountMealType(null);
     void headcount.reload();
   }, [headcount]);
+
+  if (!canManage) {
+    return <PermissionDeniedScreen spaceId={spaceId} />;
+  }
 
   return (
     <View style={styles.root}>

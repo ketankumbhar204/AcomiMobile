@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { FoodItemResponse, FoodType } from '../../../api/types';
 import { FoodTypePicker } from '../../ui/FoodTypePicker';
 import { colors, spacing, typography } from '../../../theme';
+import { formatComboNameWithPrice } from '../../../utils/comboPrice';
 import { InlineChipEditor } from './InlineChipEditor';
 import { MenuChip } from './MenuChip';
 
@@ -136,7 +137,11 @@ export function ItemChipGrid({
             return (
               <MenuChip
                 key={item.itemId}
-                label={item.name}
+                label={formatComboNameWithPrice(
+                  item.name,
+                  item.defaultPrice,
+                  item.currencyCode ?? 'INR',
+                )}
                 variant="item"
                 size="compact"
                 isCustom={item.isCustom}

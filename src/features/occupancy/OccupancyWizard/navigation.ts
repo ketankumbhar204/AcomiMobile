@@ -16,6 +16,29 @@ export type OccupancyWizardNavParams = {
   occupancyId?: UUID;
 };
 
+export function navigateToMemberDetailsAfterOccupancy(
+  navigation: NativeStackNavigationProp<MainStackParamList>,
+  spaceId: UUID,
+  memberId: UUID,
+) {
+  navigation.replace('MemberDetails', { spaceId, memberId });
+}
+
+export function navigateToMemberDetailsAfterOccupancyFromRef(
+  spaceId: UUID,
+  memberId: UUID,
+) {
+  if (!navigationRef.isReady()) {
+    return;
+  }
+  navigationRef.dispatch(
+    CommonActions.navigate({
+      name: 'MemberDetails',
+      params: { spaceId, memberId },
+    }),
+  );
+}
+
 export function openOccupancyWizard(
   navigation: NativeStackNavigationProp<MainStackParamList>,
   params: OccupancyWizardNavParams,

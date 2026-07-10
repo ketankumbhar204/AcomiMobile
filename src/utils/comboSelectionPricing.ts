@@ -1,5 +1,7 @@
 import { mealsApi } from '../api/mealsApi';
+import { ApiError } from '../api/types';
 import type { MealComboResponse, UUID } from '../api/types';
+import { agentDebugLog } from './agentDebugLog';
 import { hasComboPrice, parsePriceInput, validatePriceInput, getEffectivePriceDraft } from './comboPrice';
 
 export type ComboPriceDraftError = 'required' | 'invalid' | 'nonPositive';
@@ -27,7 +29,9 @@ export async function applyDraftPricesToCombos(
   spaceId: UUID,
   combos: MealComboResponse[],
   draftPrices: Record<string, string>,
+  options?: { requirePrices?: boolean },
 ): Promise<{ updatedCombos: MealComboResponse[]; errors: ComboPriceDraftErrors }> {
+  const requirePrices = options?.requirePrices ?? true;
   const errors: ComboPriceDraftErrors = {};
   const updatedCombos: MealComboResponse[] = [];
 
@@ -35,7 +39,9 @@ export async function applyDraftPricesToCombos(
     const draft = priceDraftForCombo(combo, draftPrices);
 
     if (!draft) {
-      errors[combo.comboId] = 'required';
+      if (requirePrices) {
+        errors[combo.comboId] = 'required';
+      }
       updatedCombos.push(combo);
       continue;
     }
@@ -59,15 +65,48 @@ export async function applyDraftPricesToCombos(
       continue;
     }
 
+    agentDebugLog({
+      hypothesisId: 'A',
+      location: 'comboSelectionPricing.ts:applyDraftPricesToCombos',
+      message: 'Saving space-scoped combo price',
+      data: {
+        spaceId,
+        comboId: combo.comboId,
+        comboName: combo.name,
+        previousPrice: combo.price ?? null,
+        nextPrice: price,
+      },
+    });
+
     try {
-      const updated = await mealsApi.updateMealCombo(spaceId, combo.comboId, {
-        name: combo.name,
-        itemIds: combo.items?.map(item => item.itemId) ?? [],
+      const updated = await mealsApi.updateMealComboPrice(spaceId, combo.comboId, {
         price,
         currencyCode: combo.currencyCode ?? 'INR',
       });
+      agentDebugLog({
+        hypothesisId: 'E',
+        location: 'comboSelectionPricing.ts:applyDraftPricesToCombos',
+        message: 'Combo price save succeeded',
+        data: {
+          spaceId,
+          comboId: updated.comboId,
+          savedPrice: updated.price ?? null,
+        },
+      });
       updatedCombos.push(updated);
-    } catch {
+    } catch (error) {
+      agentDebugLog({
+        hypothesisId: 'C',
+        location: 'comboSelectionPricing.ts:applyDraftPricesToCombos',
+        message: 'Combo price save failed',
+        data: {
+          spaceId,
+          comboId: combo.comboId,
+          attemptedPrice: price,
+          apiStatus: error instanceof ApiError ? error.status : null,
+          apiMessage: error instanceof ApiError ? error.message : String(error),
+        },
+      });
       errors[combo.comboId] = 'invalid';
       updatedCombos.push(combo);
     }

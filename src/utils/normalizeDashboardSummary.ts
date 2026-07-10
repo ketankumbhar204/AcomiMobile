@@ -5,8 +5,11 @@ import type {
   DashboardSummaryResponse,
   MemberPaymentLedgerResponse,
   MemberPaymentLedgerRow,
+  PendingActionGroup,
+  PendingActionsSummary,
   PrepaidBalanceSummary,
   PrepaidBalanceUnit,
+  SpaceNotification,
 } from '../api/types';
 import { computePending } from './dashboardFinancial';
 
@@ -98,6 +101,56 @@ function normalizeAccommodationOperations(
   };
 }
 
+function normalizeNotification(raw: unknown): SpaceNotification {
+  const row = (raw ?? {}) as Record<string, unknown>;
+  return {
+    notificationId: String(row.notificationId ?? ''),
+    spaceId: String(row.spaceId ?? ''),
+    organizationId: row.organizationId != null ? String(row.organizationId) : null,
+    userId: String(row.userId ?? ''),
+    actorId: row.actorId != null ? String(row.actorId) : null,
+    entityType: String(row.entityType ?? ''),
+    entityId: row.entityId != null ? String(row.entityId) : null,
+    notificationType: row.notificationType as SpaceNotification['notificationType'],
+    category: row.category as SpaceNotification['category'],
+    priority: row.priority as SpaceNotification['priority'],
+    title: String(row.title ?? ''),
+    message: row.message != null ? String(row.message) : null,
+    actionLabel: row.actionLabel != null ? String(row.actionLabel) : null,
+    actionRoute: row.actionRoute != null ? String(row.actionRoute) : null,
+    status: row.status as SpaceNotification['status'],
+    readAt: row.readAt != null ? String(row.readAt) : null,
+    resolvedAt: row.resolvedAt != null ? String(row.resolvedAt) : null,
+    deliveryChannels: Array.isArray(row.deliveryChannels)
+      ? (row.deliveryChannels as string[])
+      : ['IN_APP'],
+    createdAt: String(row.createdAt ?? ''),
+    updatedAt: String(row.updatedAt ?? ''),
+  };
+}
+
+function normalizePendingActionGroup(raw: unknown): PendingActionGroup {
+  const row = (raw ?? {}) as Record<string, unknown>;
+  return {
+    actionType: row.actionType as PendingActionGroup['actionType'],
+    title: String(row.title ?? ''),
+    actionLabel: row.actionLabel != null ? String(row.actionLabel) : null,
+    actionRoute: row.actionRoute != null ? String(row.actionRoute) : null,
+    priority: (row.priority as PendingActionGroup['priority']) ?? 'MEDIUM',
+    count: toNumber(row.count) ?? 0,
+    items: Array.isArray(row.items) ? row.items.map(normalizeNotification) : [],
+  };
+}
+
+export function normalizePendingActionsSummary(raw: unknown): PendingActionsSummary {
+  const row = (raw ?? {}) as Record<string, unknown>;
+  const groups = Array.isArray(row.groups) ? row.groups.map(normalizePendingActionGroup) : [];
+  return {
+    totalCount: toNumber(row.totalCount) ?? groups.reduce((sum, g) => sum + g.count, 0),
+    groups,
+  };
+}
+
 export function normalizeDashboardSummary(raw: DashboardSummaryResponse): DashboardSummaryResponse {
   const messOperations = raw.messOperations
     ? {
@@ -112,6 +165,9 @@ export function normalizeDashboardSummary(raw: DashboardSummaryResponse): Dashbo
     messOperations,
     accommodationOperations: normalizeAccommodationOperations(raw.accommodationOperations),
     attention: (raw.attention ?? []).map(normalizeAttentionItem),
+    pendingActions: raw.pendingActions
+      ? normalizePendingActionsSummary(raw.pendingActions)
+      : null,
   };
 }
 

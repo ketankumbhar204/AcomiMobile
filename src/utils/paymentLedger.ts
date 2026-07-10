@@ -61,7 +61,13 @@ export function isPrepaidOnlyLedger(summary: DashboardFinancialSummary | null | 
 }
 
 export function isPendingPaymentRow(row: MemberPaymentLedgerRow): boolean {
-  return row.status === 'PENDING' || row.status === 'PARTIAL';
+  return (
+    row.status === 'PENDING' ||
+    row.status === 'PARTIAL' ||
+    row.status === 'UNDER_REVIEW' ||
+    row.status === 'UPDATE_REQUESTED' ||
+    row.status === 'REJECTED'
+  );
 }
 
 /** Members with money collected this month (pack sales for prepaid, dues for pay-per-meal). */

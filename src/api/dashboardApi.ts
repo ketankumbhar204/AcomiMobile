@@ -3,6 +3,7 @@ import apiClient from './client';
 import type {
   ApiResponse,
   DashboardSummaryResponse,
+  GlobalDashboardResponse,
   MemberPaymentLedgerResponse,
   SpaceType,
   UUID,
@@ -21,8 +22,18 @@ import {
 const LOG_TAG = '[DashboardApi]';
 
 function shouldUseFallback(error: unknown): boolean {
+  // Only fall back when the endpoint is missing (older backends).
+  // Never fall back on network/timeout — that triggers N× building-summary COUNT storms
+  // while the connection pool is already saturated.
   if (error instanceof ApiError) {
-    return error.status === 404 || error.isNetworkError;
+    return error.status === 404;
+  }
+  return false;
+}
+
+function shouldUseLedgerFallback(error: unknown): boolean {
+  if (error instanceof ApiError) {
+    return error.status === 404;
   }
   return false;
 }
@@ -64,11 +75,20 @@ export const dashboardApi = {
       );
       return normalizePaymentLedger(response);
     } catch (error) {
-      if (!shouldUseFallback(error)) {
+      if (!shouldUseLedgerFallback(error)) {
         throw error;
       }
       console.log(`${LOG_TAG} payments ledger unavailable, using client fallback`, error);
       return buildMemberPaymentLedgerFallback(spaceId, spaceType, month);
     }
+  },
+
+  getGlobalDashboard: async (
+    month = currentMonthKey(),
+    sync = true,
+  ): Promise<GlobalDashboardResponse> => {
+    const path = `/dashboard/global?month=${encodeURIComponent(month)}&sync=${sync}`;
+    console.log(`${LOG_TAG} GET ${path}`);
+    return unwrapApiResponse(apiClient.get<ApiResponse<GlobalDashboardResponse>>(path));
   },
 };

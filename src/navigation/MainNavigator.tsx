@@ -54,6 +54,11 @@ import { MemberPaymentsScreen } from '../screens/payments/MemberPaymentsScreen';
 import { PaymentReviewScreen } from '../screens/payments/PaymentReviewScreen';
 import { PaymentDetailScreen } from '../screens/payments/PaymentDetailScreen';
 import { PaymentHistoryScreen } from '../screens/payments/PaymentHistoryScreen';
+import { SpaceNotificationsScreen } from '../screens/notifications/SpaceNotificationsScreen';
+import { RaiseComplaintScreen } from '../screens/complaints/RaiseComplaintScreen';
+import { ComplaintDetailScreen } from '../screens/complaints/ComplaintDetailScreen';
+import { GlobalAttentionListScreen } from '../screens/spaces/GlobalAttentionListScreen';
+import { GlobalActivityListScreen } from '../screens/spaces/GlobalActivityListScreen';
 import { stackHeaderOptions } from '../theme';
 import { useSpaceStore } from '../store/spaceStore';
 import { useProfileCompletionGate } from '../hooks/useProfileCompletionGate';
@@ -363,6 +368,11 @@ export function MainNavigator() {
       <Stack.Screen name="PaymentDetail" component={PaymentDetailScreen} />
       <Stack.Screen name="PaymentReview" component={PaymentReviewScreen} />
       <Stack.Screen name="PaymentHistory" component={PaymentHistoryScreen} />
+      <Stack.Screen name="SpaceNotifications" component={SpaceNotificationsScreen} />
+      <Stack.Screen name="RaiseComplaint" component={RaiseComplaintScreen} />
+      <Stack.Screen name="ComplaintDetail" component={ComplaintDetailScreen} />
+      <Stack.Screen name="GlobalAttentionList" component={GlobalAttentionListScreen} />
+      <Stack.Screen name="GlobalActivityList" component={GlobalActivityListScreen} />
       <Stack.Screen
         name="SpaceTabs"
         options={{ headerShown: false }}

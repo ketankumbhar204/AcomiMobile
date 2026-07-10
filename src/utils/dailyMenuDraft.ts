@@ -11,7 +11,7 @@ import type {
 export type MenuSelectionItemPackage = {
   itemId: string;
   name: string;
-  price: number;
+  price: number | null;
   currencyCode?: string | null;
   foodType?: import('../api/types').FoodType | null;
 };

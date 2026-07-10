@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Keyboard,
   Pressable,
   StyleSheet,
   Text,
@@ -30,6 +31,8 @@ import {
   persistComboPriceDraft,
   type ComboPriceDraftErrors,
 } from '../../utils/comboSelectionPricing';
+import { persistItemPriceDraft } from '../../utils/itemSelectionPricing';
+import { agentDebugLog } from '../../utils/agentDebugLog';
 import { ComboPickerCard } from './ComboPickerCard';
 import { CreateComboSheet } from './CreateComboSheet';
 import { PlanningItemPickerList } from './PlanningItemPickerList';
@@ -46,6 +49,7 @@ type MenuSelectionPanelProps = {
   spaceId: UUID;
   initialOptions: MenuDraftOption[];
   onChange: (result: MenuSelectionSaveResult) => void;
+  requiresMealPrices?: boolean;
 };
 
 function adHocPackageChipId(label: string): string {
@@ -111,6 +115,7 @@ export function MenuSelectionPanel({
   spaceId,
   initialOptions,
   onChange,
+  requiresMealPrices = true,
 }: MenuSelectionPanelProps) {
   const seed = seedFromOptions(initialOptions);
   const { t } = useTranslation();
@@ -128,6 +133,13 @@ export function MenuSelectionPanel({
   const [priceErrors, setPriceErrors] = useState<ComboPriceDraftErrors>({});
   const [comboSearch, setComboSearch] = useState('');
   const [itemSearch, setItemSearch] = useState('');
+  const itemPriceSaveInFlightRef = useRef<Set<string>>(new Set());
+  const comboPriceSaveInFlightRef = useRef<Set<string>>(new Set());
+
+  const handleTabChange = useCallback((tab: MenuSelectionTab) => {
+    Keyboard.dismiss();
+    setActiveTab(tab);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -144,6 +156,24 @@ export function MenuSelectionPanel({
         setCombos(comboList.filter(combo => combo.isActive));
         setFoodItems(items.filter(item => item.isActive));
         setCategories(cats.filter(category => category.isActive));
+        agentDebugLog({
+          hypothesisId: 'D',
+          location: 'MenuSelectionPanel.tsx:loadCatalog',
+          message: 'Loaded space-scoped menu catalog',
+          data: {
+            spaceId,
+            comboSample: comboList.slice(0, 3).map(combo => ({
+              comboId: combo.comboId,
+              name: combo.name,
+              price: combo.price ?? null,
+            })),
+            itemSample: items.slice(0, 3).map(item => ({
+              itemId: item.itemId,
+              name: item.name,
+              defaultPrice: item.defaultPrice ?? null,
+            })),
+          },
+        });
       })
       .catch(() => {})
       .finally(() => {
@@ -155,6 +185,27 @@ export function MenuSelectionPanel({
       active = false;
     };
   }, [spaceId]);
+
+  useEffect(() => {
+    if (loading) {
+      return;
+    }
+    setDraftPrices(prev => {
+      const next = { ...prev };
+      let changed = false;
+      for (const itemId of selectedItemIds) {
+        if (next[itemId]?.trim()) {
+          continue;
+        }
+        const item = foodItems.find(row => row.itemId === itemId);
+        if (item && hasComboPrice(item.defaultPrice)) {
+          next[itemId] = String(item.defaultPrice);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [foodItems, loading, selectedItemIds]);
 
   const addItemInline = useCallback(
     async (categoryId: string, itemName: string, foodType: FoodType = 'VEG') => {
@@ -237,7 +288,7 @@ export function MenuSelectionPanel({
     for (const item of selectedItems) {
       const draft = getEffectivePriceDraft(item.itemId, draftPrices, null);
       const price = draft ? parsePriceInput(draft) : null;
-      if (price == null) {
+      if (requiresMealPrices && price == null) {
         continue;
       }
       itemPackages.push({
@@ -253,7 +304,7 @@ export function MenuSelectionPanel({
       itemPackages,
       adHocPackages,
     };
-  }, [adHocPackages, draftPrices, selectedCombos, selectedItems]);
+  }, [adHocPackages, draftPrices, requiresMealPrices, selectedCombos, selectedItems]);
 
   useEffect(() => {
     if (loading) {
@@ -269,6 +320,7 @@ export function MenuSelectionPanel({
         combos,
         draftPrices,
         adHocPackages,
+        requiresMealPrices,
       )
     ) {
       return;
@@ -283,6 +335,7 @@ export function MenuSelectionPanel({
     onChange,
     selectedComboIds,
     selectedItemIds,
+    requiresMealPrices,
   ]);
 
   const filteredCombos = useMemo(() => {
@@ -336,6 +389,15 @@ export function MenuSelectionPanel({
         });
         return prev.filter(id => id !== itemId);
       }
+
+      const item = foodItems.find(row => row.itemId === itemId);
+      if (item && hasComboPrice(item.defaultPrice)) {
+        setDraftPrices(current => ({
+          ...current,
+          [itemId]: current[itemId] ?? String(item.defaultPrice),
+        }));
+      }
+
       return [...prev, itemId];
     });
   };
@@ -367,21 +429,99 @@ export function MenuSelectionPanel({
   };
 
   const persistPriceOnBlur = async (combo: MealComboResponse, draftValue: string) => {
-    const draftsForSave = { ...draftPrices, [combo.comboId]: draftValue };
-    const { combo: updated, error } = await persistComboPriceDraft(
-      spaceId,
-      combo,
-      draftsForSave,
-    );
-    if (error) {
-      setPriceErrors(prev => ({ ...prev, [combo.comboId]: error }));
+    const normalizedDraft = draftValue.trim();
+    setDraftPrices(prev => ({ ...prev, [combo.comboId]: normalizedDraft }));
+
+    if (comboPriceSaveInFlightRef.current.has(combo.comboId)) {
       return;
     }
-    setCombos(prev => prev.map(row => (row.comboId === updated.comboId ? updated : row)));
-    setDraftPrices(prev => ({
-      ...prev,
-      [combo.comboId]: hasComboPrice(updated.price) ? String(updated.price) : draftValue,
-    }));
+
+    const parsedPrice = parsePriceInput(normalizedDraft);
+    if (
+      parsedPrice != null &&
+      hasComboPrice(combo.price) &&
+      Number(combo.price) === parsedPrice
+    ) {
+      return;
+    }
+
+    comboPriceSaveInFlightRef.current.add(combo.comboId);
+    try {
+      const draftsForSave = { ...draftPrices, [combo.comboId]: normalizedDraft };
+      const { combo: updated, error } = await persistComboPriceDraft(
+        spaceId,
+        combo,
+        draftsForSave,
+      );
+      if (error) {
+        if (error !== 'required') {
+          setPriceErrors(prev => ({ ...prev, [combo.comboId]: error }));
+          if (error === 'invalid') {
+            showToast(t('meals.errors.saveFailed'));
+          }
+        }
+        return;
+      }
+      setCombos(prev => prev.map(row => (row.comboId === updated.comboId ? updated : row)));
+      setDraftPrices(prev => ({
+        ...prev,
+        [combo.comboId]: hasComboPrice(updated.price) ? String(updated.price) : normalizedDraft,
+      }));
+      setPriceErrors(prev => {
+        const next = { ...prev };
+        delete next[combo.comboId];
+        return next;
+      });
+    } finally {
+      comboPriceSaveInFlightRef.current.delete(combo.comboId);
+    }
+  };
+
+  const persistItemPriceOnBlur = async (item: FoodItemResponse, draftValue: string) => {
+    const normalizedDraft = draftValue.trim();
+    setDraftPrices(prev => ({ ...prev, [item.itemId]: normalizedDraft }));
+
+    if (itemPriceSaveInFlightRef.current.has(item.itemId)) {
+      return;
+    }
+
+    const parsedPrice = parsePriceInput(normalizedDraft);
+    if (
+      parsedPrice != null &&
+      hasComboPrice(item.defaultPrice) &&
+      Number(item.defaultPrice) === parsedPrice
+    ) {
+      return;
+    }
+
+    itemPriceSaveInFlightRef.current.add(item.itemId);
+    try {
+      const draftsForSave = { ...draftPrices, [item.itemId]: normalizedDraft };
+      const { item: updated, error } = await persistItemPriceDraft(spaceId, item, draftsForSave);
+      if (error) {
+        if (error !== 'required') {
+          setPriceErrors(prev => ({ ...prev, [item.itemId]: error }));
+          if (error === 'invalid') {
+            showToast(t('meals.errors.saveFailed'));
+          }
+        }
+        return;
+      }
+      setFoodItems(prev => prev.map(row => (row.itemId === updated.itemId ? updated : row)));
+      setDraftPrices(prev => ({
+        ...prev,
+        [item.itemId]: hasComboPrice(updated.defaultPrice)
+          ? String(updated.defaultPrice)
+          : normalizedDraft,
+      }));
+      setPriceErrors(prev => {
+        const next = { ...prev };
+        delete next[item.itemId];
+        return next;
+      });
+    } finally {
+      itemPriceSaveInFlightRef.current.delete(item.itemId);
+    }
   };
 
   const handleComboCreated = (combo: MealComboResponse) => {
@@ -458,7 +598,7 @@ export function MenuSelectionPanel({
         onRemove={removeSelection}
       />
 
-      <MenuSelectionTabBar activeTab={activeTab} onTabChange={setActiveTab} />
+      <MenuSelectionTabBar activeTab={activeTab} onTabChange={handleTabChange} />
 
       <View style={styles.divider} />
 
@@ -477,7 +617,6 @@ export function MenuSelectionPanel({
 
           {filteredCombos.map(combo => {
             const selected = selectedComboIds.includes(combo.comboId);
-            const requiresPriceInput = !hasComboPrice(combo.price);
             const errorKey = priceErrors[combo.comboId];
             const priceDraft = getEffectivePriceDraft(combo.comboId, draftPrices, combo.price);
             return (
@@ -489,12 +628,13 @@ export function MenuSelectionPanel({
                 price={combo.price}
                 currencyCode={combo.currencyCode}
                 selected={selected}
-                editablePrice={selected && requiresPriceInput}
-                requiresPriceInput={requiresPriceInput}
+                editablePrice={selected && requiresMealPrices}
+                requiresPriceInput={false}
+                showMealPrices={requiresMealPrices}
                 priceDraft={priceDraft}
                 onPriceDraftChange={text => updateDraftPrice(combo.comboId, text)}
                 onPriceBlur={
-                  selected
+                  selected && requiresMealPrices
                     ? draft => {
                         void persistPriceOnBlur(combo, draft);
                       }
@@ -540,6 +680,10 @@ export function MenuSelectionPanel({
             priceErrors={priceErrors}
             onToggle={toggleItem}
             onPriceChange={updateDraftPrice}
+            onPriceBlur={(item, draft) => {
+              void persistItemPriceOnBlur(item, draft);
+            }}
+            showMealPrices={requiresMealPrices}
             canAddItem
             canAddCategory
             onAddItem={addItemInline}
