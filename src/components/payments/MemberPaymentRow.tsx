@@ -61,13 +61,22 @@ export function MemberPaymentRow({ row, prepaidMode, onPress }: MemberPaymentRow
   }
 
   const pendingDisplay = formatComboPrice(row.pending, currencyCode) ?? '—';
+  const underReviewDisplay = formatComboPrice(row.underReview, currencyCode);
   const collectedDisplay = formatComboPrice(row.collected, currencyCode);
   const expectedDisplay = formatComboPrice(row.expectedCharges, currencyCode) ?? '—';
   const hasPending = (row.pending ?? 0) > 0;
+  const hasUnderReview =
+    row.status === 'UNDER_REVIEW' || ((row.underReview ?? 0) > 0 && !hasPending);
   const trailingAmount = hasPending
     ? pendingDisplay
-    : (collectedDisplay ?? expectedDisplay);
-  const trailingStyle = hasPending ? styles.pendingAmount : styles.settledAmount;
+    : hasUnderReview
+      ? (underReviewDisplay ?? '—')
+      : (collectedDisplay ?? expectedDisplay);
+  const trailingStyle = hasPending
+    ? styles.pendingAmount
+    : hasUnderReview
+      ? styles.underReviewAmount
+      : styles.settledAmount;
 
   return (
     <Pressable
@@ -78,7 +87,13 @@ export function MemberPaymentRow({ row, prepaidMode, onPress }: MemberPaymentRow
         <Text style={styles.name} numberOfLines={1}>
           {row.memberName}
         </Text>
-        <PaymentStatusBadge status={row.status} />
+        <PaymentStatusBadge
+          status={
+            row.status === 'PENDING' && (row.underReview ?? 0) > 0 && (row.pending ?? 0) <= 0
+              ? 'UNDER_REVIEW'
+              : row.status
+          }
+        />
       </View>
       <View style={styles.bodyRow}>
         <Text style={styles.meta} numberOfLines={1}>
@@ -152,6 +167,11 @@ const styles = StyleSheet.create({
   pendingAmount: {
     ...typography.bodyStrong,
     color: '#EAB308',
+    fontSize: 14,
+  },
+  underReviewAmount: {
+    ...typography.bodyStrong,
+    color: colors.primary,
     fontSize: 14,
   },
   settledAmount: {

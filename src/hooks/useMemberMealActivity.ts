@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { mealsApi } from '../api/mealsApi';
 import type { MemberMealActivityMonth, UUID } from '../api/types';
@@ -15,48 +15,76 @@ export function shiftMonthKey(month: string, delta: number): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
+function normalizeMonthActivity(data: MemberMealActivityMonth): MemberMealActivityMonth {
+  const summary = data.summary ?? {
+    acceptedMeals: 0,
+    pendingResponses: 0,
+    skippedMeals: 0,
+    amountGenerated: null,
+    paidAmount: null,
+    pendingAmount: null,
+    currencyCode: 'INR',
+  };
+  return {
+    ...data,
+    summary: {
+      ...summary,
+      amountGenerated:
+        summary.amountGenerated != null ? Number(summary.amountGenerated) : null,
+      paidAmount: summary.paidAmount != null ? Number(summary.paidAmount) : null,
+      pendingAmount: summary.pendingAmount != null ? Number(summary.pendingAmount) : null,
+      balanceRemaining:
+        summary.balanceRemaining != null ? Number(summary.balanceRemaining) : null,
+      balancePurchased:
+        summary.balancePurchased != null ? Number(summary.balancePurchased) : null,
+      balanceConsumed:
+        summary.balanceConsumed != null ? Number(summary.balanceConsumed) : null,
+      amountPaidThisMonth:
+        summary.amountPaidThisMonth != null ? Number(summary.amountPaidThisMonth) : null,
+    },
+    days: normalizeActivityMonthDays(data.days ?? []),
+  };
+}
+
 export function useMemberMealActivity(spaceId: UUID, memberId: UUID, enabled = true) {
   const { t } = useTranslation();
   const [month, setMonth] = useState(currentMonthKey);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activity, setActivity] = useState<MemberMealActivityMonth | null>(null);
+  const requestIdRef = useRef(0);
 
   const load = useCallback(async () => {
     if (!enabled) {
       return;
     }
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
     try {
       const data = await mealsApi.getMemberMealActivity(spaceId, memberId, month);
-      setActivity({
-        ...data,
-        summary: {
-          ...data.summary,
-          amountGenerated:
-            data.summary.amountGenerated != null ? Number(data.summary.amountGenerated) : null,
-          paidAmount: data.summary.paidAmount != null ? Number(data.summary.paidAmount) : null,
-          pendingAmount:
-            data.summary.pendingAmount != null ? Number(data.summary.pendingAmount) : null,
-          balanceRemaining:
-            data.summary.balanceRemaining != null ? Number(data.summary.balanceRemaining) : null,
-          balancePurchased:
-            data.summary.balancePurchased != null ? Number(data.summary.balancePurchased) : null,
-          balanceConsumed:
-            data.summary.balanceConsumed != null ? Number(data.summary.balanceConsumed) : null,
-          amountPaidThisMonth:
-            data.summary.amountPaidThisMonth != null
-              ? Number(data.summary.amountPaidThisMonth)
-              : null,
-        },
-        days: normalizeActivityMonthDays(data.days ?? []),
-      });
-    } catch {
+      if (requestId !== requestIdRef.current) {
+        return;
+      }
+      setActivity(normalizeMonthActivity(data));
+    } catch (err) {
+      if (requestId !== requestIdRef.current) {
+        return;
+      }
+      if (__DEV__) {
+        console.warn('[useMemberMealActivity] load failed', {
+          spaceId,
+          memberId,
+          month,
+          err,
+        });
+      }
       setError(t('meals.activity.loadError'));
       setActivity(null);
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [enabled, memberId, month, spaceId, t]);
 

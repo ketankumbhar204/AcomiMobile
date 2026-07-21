@@ -2,6 +2,8 @@ import type { DashboardSummaryResponse, SpaceType, UUID } from '../api/types';
 import { dashboardApi } from '../api/dashboardApi';
 import { currentMonthKey } from './dashboardFinancial';
 import { normalizeDashboardSummary } from './normalizeDashboardSummary';
+import { clearPendingActionsCache } from './pendingActionsQueryCache';
+import { clearGlobalDashboardCache } from './globalDashboardQueryCache';
 
 export function dashboardCacheKey(spaceId: UUID, month: string): string {
   return `${spaceId}:${month}`;
@@ -15,6 +17,9 @@ type CacheEntry = {
 const cache = new Map<string, CacheEntry>();
 const inflight = new Map<string, Promise<DashboardSummaryResponse>>();
 
+/** Soft TTL so cross-user events (e.g. customer complaint) surface without pull-to-refresh. */
+const TTL_MS = 30_000;
+
 let invalidationGeneration = 0;
 type Listener = () => void;
 /** Fired only by invalidateDashboardQueries — subscribers should force-refresh. */
@@ -26,9 +31,15 @@ export function getDashboardInvalidationGeneration(): number {
   return invalidationGeneration;
 }
 
-/** Marks dashboard data stale and notifies invalidation subscribers; keeps cached summaries. */
+/**
+ * Marks Action Center data stale: bumps generation, clears dashboard-summary + pending-actions
+ * caches, and notifies subscribers to force-refresh.
+ */
 export function invalidateDashboardQueries(): void {
   invalidationGeneration += 1;
+  cache.clear();
+  clearPendingActionsCache();
+  clearGlobalDashboardCache();
   invalidationListeners.forEach(listener => listener());
 }
 
@@ -60,7 +71,7 @@ export async function fetchDashboardSummaryCached(
 
   if (!options?.force) {
     const cached = cache.get(key);
-    if (cached) {
+    if (cached && Date.now() - cached.fetchedAt < TTL_MS) {
       return cached.summary;
     }
     const pending = inflight.get(key);

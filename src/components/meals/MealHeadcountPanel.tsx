@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type {
   MealHeadcountDetailResponse,
@@ -7,6 +7,7 @@ import type {
   MealHeadcountOption,
   MealHeadcountSlot,
   MealPollPaymentStatus,
+  MealPollStatus,
   MealType,
   UUID,
 } from '../../api/types';
@@ -30,12 +31,24 @@ import {
   type ServingLocationMode,
 } from '../../utils/servingLocationPolicy';
 import { MealPollPaymentReviewModal } from './MealPollPaymentReviewModal';
+import { MealOperationSlotCard } from './MealOperationSlotCard';
 import { SheetPrimaryButton, SheetSecondaryButton } from './MenuPlanningBottomSheet';
+import type { DashboardMealSlotRow } from '../../utils/dashboardMealSlotDisplay';
+import type { MealStatusKind } from '../../utils/mealStatusTheme';
+import { MEAL_TYPES } from '../../utils/mealLabels';
+
+export type MealHeadcountFooterState = {
+  statusKind: MealStatusKind;
+  pollStatus: MealPollStatus | null;
+  hasHeadcountSlot: boolean;
+};
 
 type MealHeadcountPanelProps = {
   spaceId: UUID;
   menuDate: string;
   slots: MealHeadcountSlot[];
+  /** Dashboard-style rows for Breakfast / Lunch / Dinner strip (status + captions). */
+  slotRows?: DashboardMealSlotRow[];
   slotsLoading?: boolean;
   initialMealType?: MealType;
   enabled?: boolean;
@@ -45,7 +58,14 @@ type MealHeadcountPanelProps = {
   showActions?: boolean;
   onReload?: () => void;
   onActiveMealTypeChange?: (mealType: MealType) => void;
+  /** Active meal footer context for the sticky drawer actions. */
+  onFooterStateChange?: (state: MealHeadcountFooterState) => void;
+  /** @deprecated Prefer onFooterStateChange. */
   onPollStatusChange?: (closed: boolean) => void;
+  /** Close the host drawer before navigating to plan/share. */
+  onBeforeNavigate?: () => void;
+  /** Bump to force-refetch the active meal headcount detail (e.g. after Close Poll). */
+  detailRefreshToken?: number;
   readOnly?: boolean;
 };
 
@@ -68,12 +88,41 @@ type DeliveryLocationHierarchy = {
   combos: ComboAtLocation[];
 };
 
+function fallbackSlotRowsFromHeadcount(slots: MealHeadcountSlot[]): DashboardMealSlotRow[] {
+  return MEAL_TYPES.map(mealType => {
+    const slot = slots.find(row => row.mealType === mealType);
+    if (!slot) {
+      return {
+        mealType,
+        status: 'not_planned' as const,
+        statusKind: 'empty' as const,
+        statusLabelKey: 'meals.status.empty',
+        captionKey: 'meals.planning.cardHintEmpty',
+        captionTone: 'muted' as const,
+      };
+    }
+    const closed = slot.pollStatus === 'CLOSED';
+    return {
+      mealType,
+      status: 'published' as const,
+      statusKind: 'shared' as const,
+      statusLabelKey: 'meals.status.shared',
+      captionKey: closed
+        ? 'meals.planning.cardHintPollClosed'
+        : 'meals.planning.cardHintShared',
+      countPrimary: String(slot.mealsToPrepare),
+      countUnitKey: 'dashboard.headcount.totalMeals',
+      captionTone: closed ? ('muted' as const) : ('progress' as const),
+    };
+  });
+}
+
 function MealHeadcountMealSelector({
-  slots,
+  slotRows,
   activeMealType,
   onSelect,
 }: {
-  slots: MealHeadcountSlot[];
+  slotRows: DashboardMealSlotRow[];
   activeMealType: MealType;
   onSelect: (mealType: MealType) => void;
 }) {
@@ -81,24 +130,20 @@ function MealHeadcountMealSelector({
 
   return (
     <View style={styles.mealSelectorRow}>
-      {slots.map(slot => {
-        const selected = slot.mealType === activeMealType;
-        return (
-          <Pressable
-            key={slot.pollId}
-            style={[styles.mealSelectorCard, selected && styles.mealSelectorCardActive]}
-            onPress={() => onSelect(slot.mealType)}
-            accessibilityRole="button"
-            accessibilityState={{ selected }}>
-            <Text style={[styles.mealSelectorLabel, selected && styles.mealSelectorLabelActive]}>
-              {t(mealTypeLabelKey(slot.mealType))}
-            </Text>
-            <Text style={[styles.mealSelectorValue, selected && styles.mealSelectorValueActive]}>
-              {slot.mealsToPrepare}
-            </Text>
-          </Pressable>
-        );
-      })}
+      {slotRows.map(row => (
+        <MealOperationSlotCard
+          key={row.mealType}
+          mealLabel={t(mealTypeLabelKey(row.mealType))}
+          caption={t(row.captionKey, row.captionParams)}
+          countPrimary={row.countPrimary}
+          countUnit={row.countUnitKey ? t(row.countUnitKey) : undefined}
+          captionTone={row.captionTone}
+          statusKind={row.statusKind}
+          selected={row.mealType === activeMealType}
+          compact
+          onPress={() => onSelect(row.mealType)}
+        />
+      ))}
     </View>
   );
 }
@@ -643,7 +688,7 @@ function MealHeadcountDetailBody({
               showMealPrices={showMealPrices}
               editableServingLocation={usesPropertyServingLocation(locationMode)}
               onSaveServingLocation={onSaveServingLocation}
-              defaultExpanded
+              defaultExpanded={locationHierarchy.length === 1}
               onReviewMember={onReviewMember}
               onRemindMember={onRemindMember}
               remindingMemberId={remindingMemberId}
@@ -695,31 +740,152 @@ export function MealHeadcountActionButtons({
   spaceId,
   menuDate,
   activeMealType,
-  pollClosed,
+  statusKind,
+  pollStatus,
+  isMess,
+  readOnly = false,
+  onBeforeNavigate,
+  onAfterClosePoll,
 }: {
   spaceId: UUID;
   menuDate: string;
   activeMealType: MealType;
-  pollClosed?: boolean;
+  statusKind: MealStatusKind;
+  pollStatus: MealPollStatus | null;
+  isMess: boolean;
+  readOnly?: boolean;
+  onBeforeNavigate?: () => void;
+  onAfterClosePoll?: () => void;
 }) {
   const { t } = useTranslation();
+  const showToast = useToastStore(state => state.showToast);
+  const [closingPoll, setClosingPoll] = useState(false);
 
   const handleRemind = useCallback(() => {
+    onBeforeNavigate?.();
     navigateMainStack('MenuSharePreview', { spaceId, menuDate, mealType: activeMealType });
-  }, [activeMealType, menuDate, spaceId]);
+  }, [activeMealType, menuDate, onBeforeNavigate, spaceId]);
 
-  const handleShare = useCallback(() => {
+  const handleShareMenu = useCallback(() => {
+    onBeforeNavigate?.();
+    navigateMainStack('MenuSharePreview', {
+      spaceId,
+      menuDate,
+      mealType: activeMealType,
+    });
+  }, [activeMealType, menuDate, onBeforeNavigate, spaceId]);
+
+  const handleShareDay = useCallback(() => {
+    onBeforeNavigate?.();
     navigateMainStack('MenuSharePreview', { spaceId, menuDate });
-  }, [menuDate, spaceId]);
+  }, [menuDate, onBeforeNavigate, spaceId]);
 
-  if (pollClosed) {
+  const runClosePoll = useCallback(async () => {
+    setClosingPoll(true);
+    try {
+      await mealsApi.closeMealPoll(spaceId, menuDate, activeMealType);
+      showToast(t('meals.poll.closeSuccess'));
+      onAfterClosePoll?.();
+    } catch {
+      showToast(t('meals.errors.saveFailed'));
+    } finally {
+      setClosingPoll(false);
+    }
+  }, [activeMealType, menuDate, onAfterClosePoll, showToast, spaceId, t]);
+
+  const handleClosePoll = useCallback(() => {
+    Alert.alert(t('meals.poll.closeConfirmTitle'), t('meals.poll.closeConfirmMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('meals.poll.closePoll'),
+        style: 'destructive',
+        onPress: () => {
+          void runClosePoll();
+        },
+      },
+    ]);
+  }, [runClosePoll, t]);
+
+  if (readOnly) {
+    return null;
+  }
+
+  // Mess lifecycle-aligned actions
+  if (isMess) {
+    if (statusKind === 'draft' || statusKind === 'needs_reshare') {
+      return (
+        <View style={styles.actionsRow}>
+          <SheetPrimaryButton
+            label={t('dashboard.headcount.shareMenu')}
+            onPress={handleShareMenu}
+          />
+        </View>
+      );
+    }
+
+    if (statusKind === 'empty') {
+      return (
+        <View style={styles.actionsRow}>
+          <SheetPrimaryButton
+            label={t('dashboard.operations.planMenuCta')}
+            onPress={() => {
+              onBeforeNavigate?.();
+              navigateMainStack('MenuPlanning', {
+                spaceId,
+                menuDate,
+                mealType: activeMealType,
+              });
+            }}
+          />
+        </View>
+      );
+    }
+
+    if (statusKind === 'shared' && pollStatus === 'CLOSED') {
+      return (
+        <View style={styles.actionsRow}>
+          <SheetPrimaryButton
+            label={t('dashboard.headcount.shareAgain')}
+            onPress={handleShareMenu}
+          />
+        </View>
+      );
+    }
+
+    // Shared + open (or open status not yet resolved) → remind + close poll
+    if (statusKind === 'shared') {
+      return (
+        <View style={styles.actionsRowHorizontal}>
+          <View style={styles.actionFlex}>
+            <SheetPrimaryButton
+              label={t('dashboard.headcount.remindMembers')}
+              onPress={handleRemind}
+              disabled={closingPoll}
+            />
+          </View>
+          <View style={styles.actionFlex}>
+            <SheetSecondaryButton
+              label={t('meals.poll.closePoll')}
+              onPress={handleClosePoll}
+              disabled={closingPoll}
+            />
+          </View>
+        </View>
+      );
+    }
+
+    return null;
+  }
+
+  // Non-Mess: keep prior remind + share while poll is open
+  if (pollStatus === 'CLOSED') {
     return null;
   }
 
   return (
     <View style={styles.actionsRow}>
       <SheetPrimaryButton label={t('dashboard.headcount.remindMembers')} onPress={handleRemind} />
-      <SheetSecondaryButton label={t('dashboard.headcount.shareMenu')} onPress={handleShare} />
+      <SheetSecondaryButton label={t('dashboard.headcount.shareMenu')} onPress={handleShareDay} />
     </View>
   );
 }
@@ -728,6 +894,7 @@ export function MealHeadcountPanel({
   spaceId,
   menuDate,
   slots,
+  slotRows: slotRowsProp,
   slotsLoading = false,
   initialMealType = 'BREAKFAST',
   enabled = true,
@@ -735,11 +902,15 @@ export function MealHeadcountPanel({
   showActions = false,
   onReload,
   onActiveMealTypeChange,
+  onFooterStateChange,
   onPollStatusChange,
+  onBeforeNavigate,
+  detailRefreshToken = 0,
   readOnly = false,
 }: MealHeadcountPanelProps) {
   const { t } = useTranslation();
   const { spaceType } = useSpacePermissions(spaceId);
+  const isMess = spaceType === 'MESS';
   const mealPricing = useMealPricingPolicy(spaceId);
   const locationMode = servingLocationMode(spaceType);
   const { servingLocationName, updateServingLocationName } = useServingLocationName(spaceId);
@@ -749,7 +920,16 @@ export function MealHeadcountPanel({
   const [remindingMemberId, setRemindingMemberId] = useState<UUID | null>(null);
   const showToast = useToastStore(state => state.showToast);
 
-  const panelEnabled = enabled && slots.length > 0;
+  const slotRows = useMemo(
+    () =>
+      slotRowsProp && slotRowsProp.length > 0
+        ? slotRowsProp
+        : fallbackSlotRowsFromHeadcount(slots),
+    [slotRowsProp, slots],
+  );
+
+  const activeHasHeadcountSlot = slots.some(slot => slot.mealType === activeMealType);
+  const panelEnabled = enabled && activeHasHeadcountSlot;
   const { loading, detail, error, reload } = useMealHeadcountDetail(
     spaceId,
     menuDate,
@@ -762,24 +942,47 @@ export function MealHeadcountPanel({
     [slots],
   );
 
+  const activeRow = slotRows.find(row => row.mealType === activeMealType);
+  const activeSlot = slots.find(slot => slot.mealType === activeMealType);
+  const resolvedPollStatus: MealPollStatus | null =
+    detail?.pollStatus ?? activeSlot?.pollStatus ?? null;
+  const statusKind: MealStatusKind = activeRow?.statusKind ?? 'empty';
+
   useEffect(() => {
-    if (slots.length === 0) {
+    if (slotRows.length === 0) {
       return;
     }
-    const preferred = slots.some(slot => slot.mealType === initialMealType)
+    const preferred = slotRows.some(row => row.mealType === initialMealType)
       ? initialMealType
-      : slots[0].mealType;
+      : slotRows[0].mealType;
     setActiveMealType(preferred);
-  }, [initialMealType, menuDate, slots]);
+  }, [initialMealType, menuDate, slotRows]);
 
   useEffect(() => {
     onActiveMealTypeChange?.(activeMealType);
   }, [activeMealType, onActiveMealTypeChange]);
 
   useEffect(() => {
-    onPollStatusChange?.(detail?.pollStatus === 'CLOSED');
-  }, [detail?.pollStatus, onPollStatusChange]);
+    onFooterStateChange?.({
+      statusKind,
+      pollStatus: resolvedPollStatus,
+      hasHeadcountSlot: activeHasHeadcountSlot,
+    });
+    onPollStatusChange?.(resolvedPollStatus === 'CLOSED');
+  }, [
+    activeHasHeadcountSlot,
+    onFooterStateChange,
+    onPollStatusChange,
+    resolvedPollStatus,
+    statusKind,
+  ]);
 
+  useEffect(() => {
+    if (detailRefreshToken <= 0) {
+      return;
+    }
+    void reload();
+  }, [detailRefreshToken, reload]);
   const handleReviewMember = useCallback((member: MealHeadcountMember) => {
     setReviewMember(member);
   }, []);
@@ -853,6 +1056,25 @@ export function MealHeadcountPanel({
     [menuDate, refreshAll, showToast, spaceId, t],
   );
 
+  const handleOpenShareOrPlan = useCallback(() => {
+    onBeforeNavigate?.();
+    const kind = activeRow?.statusKind;
+    if (kind === 'empty') {
+      navigateMainStack('MenuPlanning', {
+        spaceId,
+        menuDate,
+        mealType: activeMealType,
+      });
+      return;
+    }
+    // Draft / needs reshare / shared-without-poll → share preview for this meal.
+    navigateMainStack('MenuSharePreview', {
+      spaceId,
+      menuDate,
+      mealType: activeMealType,
+    });
+  }, [activeMealType, activeRow?.statusKind, menuDate, onBeforeNavigate, spaceId]);
+
   if (slotsLoading) {
     return (
       <View style={styles.centered}>
@@ -861,7 +1083,7 @@ export function MealHeadcountPanel({
     );
   }
 
-  if (slots.length === 0) {
+  if (slots.length === 0 && slotRows.every(row => row.statusKind === 'empty')) {
     return (
       <View style={styles.emptyWrap}>
         <Text style={styles.emptyText}>{t('dashboard.headcount.noData')}</Text>
@@ -881,12 +1103,41 @@ export function MealHeadcountPanel({
       ) : null}
 
       <MealHeadcountMealSelector
-        slots={slots}
+        slotRows={slotRows}
         activeMealType={activeMealType}
         onSelect={setActiveMealType}
       />
 
-      {loading ? (
+      {!activeHasHeadcountSlot ? (
+        <View style={styles.emptyActionWrap}>
+          <Text style={styles.emptyText}>
+            {activeRow?.statusKind === 'shared'
+              ? t('dashboard.headcount.noData')
+              : t('dashboard.headcount.notSharedYet', {
+                  meal: t(mealTypeLabelKey(activeMealType)),
+                })}
+          </Text>
+          {!readOnly && activeRow?.statusKind === 'empty' && !isMess ? (
+            <View style={styles.emptyActionButton}>
+              <SheetPrimaryButton
+                label={t('dashboard.operations.planMenuCta')}
+                onPress={handleOpenShareOrPlan}
+              />
+            </View>
+          ) : null}
+          {!readOnly &&
+          activeRow?.statusKind !== 'shared' &&
+          activeRow?.statusKind !== 'empty' &&
+          !isMess ? (
+            <View style={styles.emptyActionButton}>
+              <SheetPrimaryButton
+                label={t('dashboard.headcount.shareMenu')}
+                onPress={handleOpenShareOrPlan}
+              />
+            </View>
+          ) : null}
+        </View>
+      ) : loading ? (
         <View style={styles.centered}>
           <ActivityIndicator color={colors.primary} />
         </View>
@@ -912,7 +1163,12 @@ export function MealHeadcountPanel({
           spaceId={spaceId}
           menuDate={menuDate}
           activeMealType={activeMealType}
-          pollClosed={detail?.pollStatus === 'CLOSED'}
+          statusKind={statusKind}
+          pollStatus={resolvedPollStatus}
+          isMess={isMess}
+          readOnly={readOnly}
+          onBeforeNavigate={onBeforeNavigate}
+          onAfterClosePoll={refreshAll}
         />
       ) : null}
 
@@ -938,6 +1194,13 @@ const styles = StyleSheet.create({
   emptyWrap: {
     paddingVertical: spacing.md,
   },
+  emptyActionWrap: {
+    paddingVertical: spacing.md,
+    gap: spacing.md,
+  },
+  emptyActionButton: {
+    marginTop: spacing.xs,
+  },
   summaryRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -954,51 +1217,9 @@ const styles = StyleSheet.create({
   },
   mealSelectorRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'stretch',
     gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  mealSelectorCard: {
-    flex: 1,
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: radius.button,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.xxs,
-    gap: 2,
-    minHeight: 48,
-    justifyContent: 'center',
-  },
-  mealSelectorCardActive: {
-    backgroundColor: colors.lightGreen,
-    borderColor: colors.primary,
-    borderWidth: 2,
-    paddingVertical: spacing.sm,
-    minHeight: 52,
-  },
-  mealSelectorLabel: {
-    ...typography.caption,
-    color: colors.muted,
-    textAlign: 'center',
-    fontWeight: '600',
-    fontSize: 11,
-  },
-  mealSelectorLabelActive: {
-    color: colors.primaryDark,
-    fontSize: 12,
-  },
-  mealSelectorValue: {
-    ...typography.bodyStrong,
-    color: colors.textSecondary,
-    fontSize: 18,
-    lineHeight: 22,
-  },
-  mealSelectorValueActive: {
-    ...typography.h3,
-    color: colors.textPrimary,
-    lineHeight: 24,
+    marginBottom: spacing.md,
   },
   closedBadge: {
     ...typography.caption,
@@ -1273,5 +1494,14 @@ const styles = StyleSheet.create({
   actionsRow: {
     gap: spacing.sm,
     marginTop: spacing.md,
+  },
+  actionsRowHorizontal: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  actionFlex: {
+    flex: 1,
   },
 });

@@ -7,131 +7,139 @@ import { colors, radius, spacing, typography } from '../../theme';
 import type { DailyMenuDaySummary } from '../../utils/dailyMenuDayStatus';
 import { mealTypeLabelKey, MEAL_TYPES } from '../../utils/mealLabels';
 import {
-  MENU_PLANNING_STATUSES,
-  type MenuPlanningStatusFilter,
-} from '../../utils/menuPlanningFilter';
-import { toggleSetValue } from '../../utils/filterCount';
-import {
-  menuPlanningStatusFilterLabelKey,
-  MENU_PLANNING_STATUS_COLORS,
-  MENU_PLANNING_STATUS_SYMBOLS,
-  resolveMealSlotOverviewDetail,
+  MENU_PLANNING_POLL_OPEN_COLOR,
+  resolveMealSlotCardHint,
 } from '../../utils/menuPlanningStatusVisual';
+import { mealStatusTheme, resolveMealStatusKind } from '../../utils/mealStatusTheme';
+import { MealStatusBadge } from './MealStatusBadge';
 
 type MenuPlanningDayOverviewProps = {
   menuMap: Partial<Record<MealType, DailyMenuResponse>>;
   pollMap: Partial<Record<MealType, MealPollSlot>>;
+  eligibilityByMeal?: Partial<Record<MealType, number>>;
   statusSummary: DailyMenuDaySummary;
   eligibleCount: number;
-  selectedFilters: Set<MenuPlanningStatusFilter>;
-  onFilterChange: (selected: Set<MenuPlanningStatusFilter>) => void;
+  selectedMealType: MealType;
+  onSelectMealType: (mealType: MealType) => void;
   shareDisabled?: boolean;
   onShare?: () => void;
   dateReadOnly?: boolean;
+  hasOpenPolls?: boolean;
+  respondedCount?: number;
 };
-
-function isFilterActive(selected: Set<MenuPlanningStatusFilter>, id: MenuPlanningStatusFilter) {
-  return selected.size === 0 || selected.has(id);
-}
 
 function CompactMealSlotCell({
   mealType,
   menu,
   poll,
+  eligibleCount,
+  selected,
+  onPress,
 }: {
   mealType: MealType;
   menu?: DailyMenuResponse | null;
   poll?: MealPollSlot | null;
+  eligibleCount: number;
+  selected: boolean;
+  onPress: () => void;
 }) {
   const { t } = useTranslation();
-  const { status } = resolveMealSlotOverviewDetail(menu, poll);
-  const color = MENU_PLANNING_STATUS_COLORS[status];
-  const symbol = MENU_PLANNING_STATUS_SYMBOLS[status];
-  const statusLabel = t(menuPlanningStatusFilterLabelKey(status));
-  const responseCount = poll?.responseCount ?? 0;
-  const showResponses = status === 'published';
+  const hint = resolveMealSlotCardHint(menu, poll, eligibleCount);
+  const statusKind = resolveMealStatusKind(menu);
+  const theme = mealStatusTheme(statusKind);
+  const secondary = t(hint.hintKey, hint.hintParams);
+  const backgroundColor = selected ? theme.background : colors.white;
+  const borderColor = selected ? colors.primary : theme.color;
+  const secondaryColor = hint.pollOpen ? MENU_PLANNING_POLL_OPEN_COLOR : colors.muted;
 
   return (
-    <View style={[styles.slotCell, { borderColor: color }]}>
-      <Text style={styles.slotName} numberOfLines={1}>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.slotCell,
+        {
+          borderColor,
+          backgroundColor,
+          borderWidth: selected ? 2 : 1,
+        },
+        selected && styles.slotCellSelected,
+        pressed && styles.slotCellPressed,
+      ]}
+      accessibilityRole="tab"
+      accessibilityState={{ selected }}
+      accessibilityLabel={`${t(mealTypeLabelKey(mealType))}, ${t(theme.labelKey)}, ${secondary}`}>
+      <Text style={[styles.slotName, selected && styles.slotNameSelected]} numberOfLines={1}>
         {t(mealTypeLabelKey(mealType))}
       </Text>
-      <View style={styles.slotStatusRow}>
-        <Text style={[styles.slotSymbol, { color }]}>{symbol}</Text>
-        <Text style={[styles.slotStatus, { color }]} numberOfLines={1}>
-          {statusLabel}
-        </Text>
-      </View>
-      {showResponses ? (
-        <Text style={styles.slotResponses} numberOfLines={1}>
-          {t('meals.planning.slotChoseShort', { count: responseCount })}
-        </Text>
-      ) : null}
-    </View>
+      <MealStatusBadge kind={statusKind} size="compact" style={styles.slotBadge} />
+      <Text style={[styles.slotHint, { color: secondaryColor }]} numberOfLines={1}>
+        {hint.pollOpen ? `👥 ${secondary}` : secondary}
+      </Text>
+    </Pressable>
   );
 }
 
 export function MenuPlanningDayOverview({
   menuMap,
   pollMap,
+  eligibilityByMeal = {},
   statusSummary,
   eligibleCount,
-  selectedFilters,
-  onFilterChange,
+  selectedMealType,
+  onSelectMealType,
   shareDisabled = false,
   onShare,
   dateReadOnly = false,
+  hasOpenPolls = false,
+  respondedCount = 0,
 }: MenuPlanningDayOverviewProps) {
   const { t } = useTranslation();
+  const notShared = statusSummary.draft + statusSummary.modified;
+
+  const pollLine = hasOpenPolls
+    ? t('dashboard.operations.pollOpenLine', {
+        responded: respondedCount,
+        eligible: eligibleCount,
+      })
+    : statusSummary.published > 0
+      ? t('dashboard.operations.pollClosed')
+      : statusSummary.draft > 0
+        ? t('dashboard.operations.pollNotOpenDraft')
+        : t('dashboard.operations.pollNotOpen');
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.mealStrip}>
+      <View style={styles.mealStrip} accessibilityRole="tablist">
         {MEAL_TYPES.map(mealType => (
           <CompactMealSlotCell
             key={mealType}
             mealType={mealType}
             menu={menuMap[mealType]}
             poll={pollMap[mealType]}
+            eligibleCount={eligibilityByMeal[mealType] ?? eligibleCount}
+            selected={selectedMealType === mealType}
+            onPress={() => onSelectMealType(mealType)}
           />
         ))}
       </View>
 
       <View style={styles.toolbar}>
-        <View style={styles.countRow}>
-          {MENU_PLANNING_STATUSES.map(status => {
-            const active = isFilterActive(selectedFilters, status);
-            const count =
-              status === 'published'
-                ? statusSummary.published
-                : status === 'draft'
-                  ? statusSummary.draft
-                  : statusSummary.notPlanned;
-            const color = MENU_PLANNING_STATUS_COLORS[status];
-            const label = t(menuPlanningStatusFilterLabelKey(status));
-
-            return (
-              <Pressable
-                key={status}
-                onPress={() => onFilterChange(toggleSetValue(selectedFilters, status))}
-                style={[styles.countChip, active && styles.countChipActive]}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                accessibilityLabel={`${label}, ${count}`}>
-                <View style={[styles.dot, { backgroundColor: color }]} />
-                <Text style={[styles.count, active && styles.countActive]}>{count}</Text>
-              </Pressable>
-            );
-          })}
-
-          <View style={styles.divider} />
-
-          <View
-            style={styles.membersChip}
-            accessibilityLabel={t('meals.planning.eligibleMembers', { count: eligibleCount })}>
-            <Text style={styles.membersCount}>{eligibleCount}</Text>
-            <Text style={styles.membersLabel}>{t('meals.planning.membersShort')}</Text>
-          </View>
+        <View style={styles.summaryBlock}>
+          <Text style={styles.dayStatusLine} numberOfLines={1}>
+            {t('meals.planning.dayStatusVisual', {
+              shared: statusSummary.published,
+              notShared,
+              empty: statusSummary.notPlanned,
+            })}
+          </Text>
+          <Text
+            style={[styles.pollLine, hasOpenPolls && styles.pollLineOpen]}
+            numberOfLines={2}>
+            {pollLine}
+            {eligibleCount > 0
+              ? ` · ${eligibleCount} ${t('meals.planning.membersShort')}`
+              : ''}
+          </Text>
         </View>
 
         {onShare && !dateReadOnly ? (
@@ -150,7 +158,6 @@ export function MenuPlanningDayOverview({
 const styles = StyleSheet.create({
   wrap: {
     gap: spacing.sm,
-    marginBottom: spacing.md,
   },
   mealStrip: {
     flexDirection: 'row',
@@ -166,6 +173,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
     gap: 2,
   },
+  slotCellSelected: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  slotCellPressed: {
+    opacity: 0.9,
+  },
   slotName: {
     ...typography.caption,
     fontWeight: '700',
@@ -173,26 +190,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 11,
   },
-  slotStatusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 3,
+  slotNameSelected: {
+    color: colors.primaryDark,
   },
-  slotSymbol: {
-    fontSize: 11,
-    fontWeight: '800',
-    lineHeight: 14,
+  slotBadge: {
+    alignSelf: 'center',
+    maxWidth: '100%',
   },
-  slotStatus: {
+  slotHint: {
     ...typography.caption,
-    fontWeight: '700',
-    fontSize: 11,
-    lineHeight: 14,
-  },
-  slotResponses: {
-    ...typography.caption,
-    color: colors.muted,
     fontSize: 10,
     lineHeight: 12,
     textAlign: 'center',
@@ -202,64 +208,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  countRow: {
+  summaryBlock: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
     minWidth: 0,
+    gap: 2,
   },
-  countChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.full,
-    backgroundColor: colors.white,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
-  },
-  countChipActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.lightGreen,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  count: {
-    ...typography.bodyStrong,
-    fontSize: 13,
-    color: colors.textPrimary,
-    minWidth: 10,
-    textAlign: 'center',
-  },
-  countActive: {
-    color: colors.primaryDark,
-  },
-  divider: {
-    width: 1,
-    height: 16,
-    backgroundColor: colors.border,
-    marginHorizontal: spacing.xxs,
-  },
-  membersChip: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 3,
-  },
-  membersCount: {
-    ...typography.bodyStrong,
-    fontSize: 13,
-    color: colors.primaryDark,
-  },
-  membersLabel: {
+  dayStatusLine: {
     ...typography.caption,
     color: colors.muted,
     fontWeight: '600',
+  },
+  pollLine: {
+    ...typography.caption,
+    color: colors.textSecondary,
     fontSize: 11,
+    lineHeight: 14,
+  },
+  pollLineOpen: {
+    color: MENU_PLANNING_POLL_OPEN_COLOR,
+    fontWeight: '600',
   },
   shareButton: {
     minHeight: 36,

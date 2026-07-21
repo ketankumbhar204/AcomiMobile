@@ -26,7 +26,7 @@ export function MenuSelectionTabBar({ activeTab, onTabChange }: MenuSelectionTab
               style={({ pressed }) => [styles.tab, pressed && styles.tabPressed]}
               accessibilityRole="tab"
               accessibilityState={{ selected: isActive }}>
-              <Text style={[styles.label, isActive && styles.labelActive]}>
+              <Text style={[styles.label, isActive && styles.labelActive]} numberOfLines={1}>
                 {tab === 'combos'
                   ? t('meals.planning.tabCombos')
                   : t('meals.planning.tabIndividualItems')}
@@ -54,15 +54,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: spacing.sm,
     paddingBottom: spacing.xs,
+    paddingHorizontal: spacing.xxs,
   },
   tabPressed: {
     opacity: 0.85,
   },
   label: {
     ...typography.body,
+    fontSize: 13,
     color: colors.muted,
     fontWeight: '500',
     marginBottom: spacing.sm,
+    textAlign: 'center',
   },
   labelActive: {
     color: colors.primary,
@@ -71,8 +74,8 @@ const styles = StyleSheet.create({
   indicator: {
     position: 'absolute',
     bottom: 0,
-    left: spacing.lg,
-    right: spacing.lg,
+    left: spacing.sm,
+    right: spacing.sm,
     height: 2,
     borderRadius: 1,
     backgroundColor: colors.primary,

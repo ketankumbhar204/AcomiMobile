@@ -6,16 +6,15 @@ import { useDashboardMealDay } from '../../hooks/useDashboardMealDay';
 import { useOwnerMealHeadcount } from '../../hooks/useOwnerMealHeadcount';
 import { navigateMainStack } from '../../navigation/mainStackNavigation';
 import { colors, radius, spacing, typography } from '../../theme';
-import { addDaysIsoDate, formatMenuDate, isPastMenuDate, todayIsoDate } from '../../utils/mealDates';
+import { isPastMenuDate, todayIsoDate } from '../../utils/mealDates';
 import { buildDashboardMealSlotRows } from '../../utils/dashboardMealSlotDisplay';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
-import {
-  MENU_PLANNING_STATUS_BACKGROUNDS,
-  MENU_PLANNING_STATUS_COLORS,
-} from '../../utils/menuPlanningStatusVisual';
+import { MENU_PLANNING_POLL_OPEN_COLOR } from '../../utils/menuPlanningStatusVisual';
 import type { MenuPlanningStatusFilter } from '../../utils/menuPlanningFilter';
+import type { MealStatusKind } from '../../utils/mealStatusTheme';
 import { MealHeadcountBottomSheet } from '../meals/MealHeadcountBottomSheet';
-import { MenuDateContextHints } from '../meals/MenuDateContextHints';
+import { MealOperationSlotCard } from '../meals/MealOperationSlotCard';
+import { MenuDateNavRow } from '../meals/MenuDateNavRow';
 import { MenuDatePickerModal } from '../meals/MenuDatePickerModal';
 import { DashboardSectionTitle } from './DashboardSectionTitle';
 
@@ -24,47 +23,8 @@ type DashboardMealOperationsProps = {
   enabled?: boolean;
 };
 
-function MealOperationSlotCard({
-  mealLabel,
-  statusLabel,
-  caption,
-  status,
-  onPress,
-}: {
-  mealLabel: string;
-  statusLabel: string;
-  caption: string;
-  status: MenuPlanningStatusFilter;
-  onPress: () => void;
-}) {
-  const statusColor = MENU_PLANNING_STATUS_COLORS[status];
-  const backgroundColor = MENU_PLANNING_STATUS_BACKGROUNDS[status];
-
-  return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.slotCard,
-        { backgroundColor, borderColor: statusColor },
-        pressed && styles.slotCardPressed,
-      ]}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`${mealLabel}, ${statusLabel}, ${caption}`}>
-      <Text style={styles.slotMealLabel} numberOfLines={1}>
-        {mealLabel}
-      </Text>
-      <Text style={[styles.slotStatusLabel, { color: statusColor }]} numberOfLines={1}>
-        {statusLabel}
-      </Text>
-      <Text style={styles.slotCaption} numberOfLines={2}>
-        {caption}
-      </Text>
-    </Pressable>
-  );
-}
-
 export function DashboardMealOperations({ spaceId, enabled = true }: DashboardMealOperationsProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [menuDate, setMenuDate] = useState(todayIsoDate());
   const [deferMealFetch, setDeferMealFetch] = useState(true);
   const mealFetchEnabled = enabled && !deferMealFetch;
@@ -75,8 +35,13 @@ export function DashboardMealOperations({ spaceId, enabled = true }: DashboardMe
 
   // One coordinated load for menus + polls + eligibility (not 3 separate focus hooks).
   const mealDay = useDashboardMealDay(spaceId, menuDate, mealFetchEnabled);
-  // Headcount only when the sheet is open — not on every dashboard paint.
-  const headcount = useOwnerMealHeadcount(spaceId, menuDate, mealFetchEnabled && sheetOpen);
+  const hasSharedMeals = mealDay.summary.published > 0;
+  // Prefetch headcount whenever shared meals exist so Shared-card taps open instantly.
+  const headcount = useOwnerMealHeadcount(
+    spaceId,
+    menuDate,
+    mealFetchEnabled && (sheetOpen || hasSharedMeals),
+  );
 
   useEffect(() => {
     if (!enabled) {
@@ -94,6 +59,11 @@ export function DashboardMealOperations({ spaceId, enabled = true }: DashboardMe
       return t('dashboard.operations.pollOpenLine', {
         responded: mealDay.respondedCount,
         eligible: mealDay.eligibleCount,
+      });
+    }
+    if (mealDay.summary.modified > 0) {
+      return t('meals.planning.dayHintNeedsReshare', {
+        count: mealDay.summary.modified,
       });
     }
     if (mealDay.summary.published > 0) {
@@ -116,22 +86,42 @@ export function DashboardMealOperations({ spaceId, enabled = true }: DashboardMe
     setSheetOpen(true);
   }, []);
 
-  const handleOpenMenuPlanning = useCallback(() => {
-    navigateMainStack('MenuPlanning', { spaceId, menuDate });
-  }, [menuDate, spaceId]);
+  const handleOpenMenuPlanning = useCallback(
+    (mealType?: MealType) => {
+      navigateMainStack('MenuPlanning', {
+        spaceId,
+        menuDate,
+        ...(mealType ? { mealType } : {}),
+      });
+    },
+    [menuDate, spaceId],
+  );
 
   const mealSlotRows = useMemo(
-    () => buildDashboardMealSlotRows(mealDay.menuMap, mealDay.pollMap),
-    [mealDay.menuMap, mealDay.pollMap],
+    () =>
+      buildDashboardMealSlotRows(
+        mealDay.menuMap,
+        mealDay.pollMap,
+        mealDay.eligibleByMeal,
+        mealDay.platesByMeal,
+        mealDay.eligibleCount,
+      ),
+    [
+      mealDay.eligibleByMeal,
+      mealDay.eligibleCount,
+      mealDay.menuMap,
+      mealDay.platesByMeal,
+      mealDay.pollMap,
+    ],
   );
 
   const handleSlotPress = useCallback(
-    (mealType: MealType, status: MenuPlanningStatusFilter) => {
-      if (status === 'published') {
+    (mealType: MealType, status: MenuPlanningStatusFilter, statusKind: MealStatusKind) => {
+      if (status === 'published' || statusKind === 'shared') {
         handleOpenMeal(mealType);
         return;
       }
-      handleOpenMenuPlanning();
+      handleOpenMenuPlanning(mealType);
     },
     [handleOpenMeal, handleOpenMenuPlanning],
   );
@@ -141,46 +131,54 @@ export function DashboardMealOperations({ spaceId, enabled = true }: DashboardMe
     void mealDay.reload();
   }, [mealDay]);
 
-  useEffect(() => {
-    if (!sheetOpen || headcount.loading) {
-      return;
-    }
-    if (headcount.slots.length === 0) {
-      setSheetOpen(false);
-      handleOpenMenuPlanning();
-    }
-  }, [handleOpenMenuPlanning, headcount.loading, headcount.slots.length, sheetOpen]);
+  const orderedPrefetchedSlots = useMemo(
+    () =>
+      (['BREAKFAST', 'LUNCH', 'DINNER'] as MealType[])
+        .map(mealType => mealDay.headcountSlots.find(slot => slot.mealType === mealType))
+        .filter((slot): slot is NonNullable<typeof slot> => slot != null),
+    [mealDay.headcountSlots],
+  );
+
+  /** If headcount day is empty but polls exist, still open the drawer with poll-backed slots. */
+  const fallbackSlotsFromPolls = useMemo(() => {
+    return (['BREAKFAST', 'LUNCH', 'DINNER'] as MealType[])
+      .map(mealType => {
+        const poll = mealDay.pollMap[mealType];
+        if (!poll) {
+          return null;
+        }
+        return {
+          mealType,
+          pollId: poll.id,
+          pollStatus: poll.status,
+          mealsToPrepare: mealDay.platesByMeal[mealType] ?? poll.responseCount ?? 0,
+        };
+      })
+      .filter((slot): slot is NonNullable<typeof slot> => slot != null);
+  }, [mealDay.platesByMeal, mealDay.pollMap]);
+
+  const sheetSlots =
+    headcount.slots.length > 0
+      ? headcount.slots
+      : orderedPrefetchedSlots.length > 0
+        ? orderedPrefetchedSlots
+        : fallbackSlotsFromPolls;
+
+  const sheetSlotsLoading =
+    sheetOpen && sheetSlots.length === 0 && (!headcount.ready || headcount.loading);
 
   return (
     <View style={styles.wrap}>
       <DashboardSectionTitle title={t('dashboard.operations.title')} />
 
-      <View style={styles.dateRow}>
-        <Pressable
-          style={styles.dateNavBtn}
-          onPress={() => setMenuDate(prev => addDaysIsoDate(prev, -1))}
-          accessibilityRole="button">
-          <Text style={styles.dateNavText}>◀</Text>
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [styles.dateCenter, pressed && styles.dateCenterPressed]}
-          onPress={() => setDatePickerOpen(true)}
-          accessibilityRole="button"
-          accessibilityLabel={formatMenuDate(menuDate, i18n.language)}
-          accessibilityHint={t('meals.planning.openCalendar')}>
-          <Text style={styles.dateLabel}>{formatMenuDate(menuDate, i18n.language)}</Text>
-          <MenuDateContextHints
-            menuDate={menuDate}
-            onJumpToToday={() => setMenuDate(todayIsoDate())}
-          />
-        </Pressable>
-        <Pressable
-          style={styles.dateNavBtn}
-          onPress={() => setMenuDate(prev => addDaysIsoDate(prev, 1))}
-          accessibilityRole="button">
-          <Text style={styles.dateNavText}>▶</Text>
-        </Pressable>
-      </View>
+      {!sheetOpen ? (
+        <MenuDateNavRow
+          menuDate={menuDate}
+          onMenuDateChange={setMenuDate}
+          onOpenCalendar={() => setDatePickerOpen(true)}
+          onJumpToToday={() => setMenuDate(todayIsoDate())}
+        />
+      ) : null}
 
       {loading ? (
         <ActivityIndicator color={colors.primary} style={styles.loader} />
@@ -188,7 +186,11 @@ export function DashboardMealOperations({ spaceId, enabled = true }: DashboardMe
         <View style={styles.statusBar}>
           <View style={styles.statusTextBlock}>
             <Text style={styles.dayStatusLine}>
-              {t('meals.planning.dayStatus', mealDay.summary)}
+              {t('meals.planning.dayStatusVisual', {
+                shared: mealDay.summary.published,
+                notShared: mealDay.summary.draft + mealDay.summary.modified,
+                empty: mealDay.summary.notPlanned,
+              })}
             </Text>
             <Text
               style={[
@@ -201,7 +203,7 @@ export function DashboardMealOperations({ spaceId, enabled = true }: DashboardMe
           {!dateReadOnly ? (
             <Pressable
               style={({ pressed }) => [styles.planLink, pressed && styles.planLinkPressed]}
-              onPress={handleOpenMenuPlanning}
+              onPress={() => handleOpenMenuPlanning()}
               accessibilityRole="button">
               <Text style={styles.planLinkText}>
                 {t('dashboard.operations.planMenuCta')} ›
@@ -218,35 +220,37 @@ export function DashboardMealOperations({ spaceId, enabled = true }: DashboardMe
               <MealOperationSlotCard
                 key={row.mealType}
                 mealLabel={t(mealTypeLabelKey(row.mealType))}
-                statusLabel={t(row.statusLabelKey)}
                 caption={t(row.captionKey, row.captionParams)}
-                status={row.status}
-                onPress={() => handleSlotPress(row.mealType, row.status)}
+                countPrimary={row.countPrimary}
+                countUnit={row.countUnitKey ? t(row.countUnitKey) : undefined}
+                captionTone={row.captionTone}
+                statusKind={row.statusKind}
+                onPress={() => handleSlotPress(row.mealType, row.status, row.statusKind)}
               />
             ))}
           </View>
 
-          {mealDay.summary.published > 0 ? (
+          {mealDay.summary.published > 0 || mealDay.summary.modified > 0 ? (
             <Text style={styles.hint}>{t('dashboard.headcount.toggleMealHint')}</Text>
           ) : null}
         </>
       ) : null}
 
-      {sheetOpen && !headcount.loading && headcount.slots.length > 0 ? (
-        <MealHeadcountBottomSheet
-          visible={sheetOpen}
-          spaceId={spaceId}
-          menuDate={menuDate}
-          openSlots={headcount.slots}
-          initialMealType={initialMealType}
-          onClose={handleCloseSheet}
-          readOnly={dateReadOnly}
-          onReload={() => {
-            void headcount.reload();
-            void mealDay.reload();
-          }}
-        />
-      ) : null}
+      <MealHeadcountBottomSheet
+        visible={sheetOpen}
+        spaceId={spaceId}
+        menuDate={menuDate}
+        openSlots={sheetSlots}
+        slotRows={mealSlotRows}
+        initialMealType={initialMealType}
+        onClose={handleCloseSheet}
+        readOnly={dateReadOnly}
+        slotsLoading={sheetSlotsLoading}
+        onReload={() => {
+          void headcount.reload();
+          void mealDay.reload();
+        }}
+      />
 
       <MenuDatePickerModal
         visible={datePickerOpen}
@@ -264,48 +268,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     gap: spacing.xs,
   },
-  dateRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: spacing.sm,
-  },
-  dateNavBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.button,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.white,
-  },
-  dateNavText: {
-    ...typography.bodyStrong,
-    color: colors.primaryDark,
-    fontSize: 12,
-  },
-  dateCenter: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.xs,
-    borderRadius: radius.button,
-  },
-  dateCenterPressed: {
-    backgroundColor: colors.surface,
-  },
-  dateLabel: {
-    ...typography.caption,
-    color: colors.primaryDark,
-    fontWeight: '700',
-    textAlign: 'center',
-    textDecorationLine: 'underline',
-  },
   loader: {
     marginVertical: spacing.md,
-  },
-  statusBar: {
+  },  statusBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -334,7 +299,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   pollStatusLineOpen: {
-    color: colors.success,
+    color: MENU_PLANNING_POLL_OPEN_COLOR,
     fontWeight: '600',
   },
   planLink: {
@@ -353,39 +318,6 @@ const styles = StyleSheet.create({
   mealSlotRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-  },
-  slotCard: {
-    flex: 1,
-    minHeight: 96,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.card,
-    borderWidth: 1,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xs,
-    gap: spacing.xxs,
-  },
-  slotCardPressed: {
-    opacity: 0.92,
-  },
-  slotMealLabel: {
-    ...typography.caption,
-    color: colors.textPrimary,
-    fontWeight: '700',
-    textAlign: 'center',
-    fontSize: 11,
-  },
-  slotStatusLabel: {
-    ...typography.bodyStrong,
-    textAlign: 'center',
-    fontSize: 14,
-  },
-  slotCaption: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 16,
-    fontSize: 10,
   },
   hint: {
     ...typography.caption,

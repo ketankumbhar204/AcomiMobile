@@ -9,10 +9,7 @@ import type {
   UUID,
 } from './types';
 import { ApiError } from './types';
-import {
-  buildDashboardSummaryFallback,
-  buildMemberPaymentLedgerFallback,
-} from '../utils/dashboardSummaryFallback';
+import { buildMemberPaymentLedgerFallback } from '../utils/dashboardSummaryFallback';
 import { currentMonthKey } from '../utils/dashboardFinancial';
 import {
   normalizeDashboardSummary,
@@ -21,19 +18,13 @@ import {
 
 const LOG_TAG = '[DashboardApi]';
 
-function shouldUseFallback(error: unknown): boolean {
-  // Only fall back when the endpoint is missing (older backends).
-  // Never fall back on network/timeout — that triggers N× building-summary COUNT storms
-  // while the connection pool is already saturated.
-  if (error instanceof ApiError) {
-    return error.status === 404;
-  }
-  return false;
-}
+/** Align with payments summary timeout when cold snapshot ensure runs once. */
+const DASHBOARD_SUMMARY_TIMEOUT_MS = 120_000;
 
 function shouldUseLedgerFallback(error: unknown): boolean {
   if (error instanceof ApiError) {
-    return error.status === 404;
+    // Match docs: fall back on missing endpoint (404) or transport failure (timeout / offline).
+    return error.status === 404 || error.isNetworkError;
   }
   return false;
 }
@@ -41,24 +32,18 @@ function shouldUseLedgerFallback(error: unknown): boolean {
 export const dashboardApi = {
   getDashboardSummary: async (
     spaceId: UUID,
-    spaceType: SpaceType,
+    _spaceType: SpaceType,
     month = currentMonthKey(),
   ): Promise<DashboardSummaryResponse> => {
     const path = `/spaces/${spaceId}/dashboard-summary?month=${month}`;
     console.log(`${LOG_TAG} GET ${path}`);
-
-    try {
-      const response = await unwrapApiResponse(
-        apiClient.get<ApiResponse<DashboardSummaryResponse>>(path),
-      );
-      return normalizeDashboardSummary(response);
-    } catch (error) {
-      if (!shouldUseFallback(error)) {
-        throw error;
-      }
-      console.log(`${LOG_TAG} dashboard-summary unavailable, using client fallback`, error);
-      return buildDashboardSummaryFallback(spaceId, spaceType, month);
-    }
+    // Pending Actions is the Action Center SoT — no client-side attention fallback.
+    const response = await unwrapApiResponse(
+      apiClient.get<ApiResponse<DashboardSummaryResponse>>(path, {
+        timeout: DASHBOARD_SUMMARY_TIMEOUT_MS,
+      }),
+    );
+    return normalizeDashboardSummary(response);
   },
 
   getMemberPaymentLedger: async (

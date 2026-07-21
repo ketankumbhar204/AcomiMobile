@@ -7,6 +7,7 @@ import type {
   UUID,
 } from '../api/types';
 import { getAuthRequiredMessage, useAuthenticatedUserId } from './useAuth';
+import { invalidateDashboardQueries } from '../utils/dashboardQueryCache';
 
 export type CreateInvitationInput = Omit<
   CreateInvitationRequest,
@@ -38,10 +39,12 @@ export function useCreateInvitation(): UseCreateInvitationResult {
       setError(null);
 
       try {
-        return await memberApi.createInvitation({
+        const created = await memberApi.createInvitation({
           ...payload,
           invitedByUserId: userId,
         });
+        invalidateDashboardQueries();
+        return created;
       } catch (err) {
         const message =
           err instanceof ApiError
@@ -84,7 +87,9 @@ export function useAcceptInvitation(): UseAcceptInvitationResult {
       setError(null);
 
       try {
-        return await memberApi.acceptInvitation(invitationId, { userId });
+        const membership = await memberApi.acceptInvitation(invitationId, { userId });
+        invalidateDashboardQueries();
+        return membership;
       } catch (err) {
         const message =
           err instanceof ApiError

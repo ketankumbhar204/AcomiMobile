@@ -111,17 +111,21 @@ Financial cards use generic labels everywhere: **Expected Charges**, **Collected
     "pollEligibleCount": 42
   },
   "accommodationOperations": null,
-  "attention": [
-    {
-      "kind": "poll_open",
-      "scheduledCount": 3,
-      "totalMeals": 3,
-      "missingMealTypes": [],
-      "respondedCount": 28,
-      "eligibleCount": 42,
-      "openPollCount": 1
-    }
-  ]
+  "attention": [],
+  "pendingActions": {
+    "totalCount": 2,
+    "groups": [
+      {
+        "actionType": "PAYMENT_NEEDS_REVIEW",
+        "title": "Payment Reviews",
+        "actionLabel": "Review",
+        "actionRoute": "Payments",
+        "priority": "HIGH",
+        "count": 1,
+        "items": []
+      }
+    ]
+  }
 }
 ```
 
@@ -130,7 +134,8 @@ Financial cards use generic labels everywhere: **Expected Charges**, **Collected
 | `financial.source` | `MEAL_ACTIVITY` (Mess), `OCCUPANCY` (PG/hostel/rental), `HYBRID` (accommodation + meal participation) |
 | `messOperations` | Present for `MESS` spaces only |
 | `accommodationOperations` | Present for PG / HOSTEL / CO_LIVING / RENTAL |
-| `attention` | Mess menu/poll items + `payments_overdue` when pending member payments exist |
+| `attention` | **Always `[]`** (compat field). Action Center SoT is `pendingActions` / `GET …/pending-actions` |
+| `pendingActions` | Aggregated open `ACTION_REQUIRED` rows for the caller (may be omitted for some roles) |
 
 **Expected charges by space type**
 
@@ -356,7 +361,7 @@ Returns an empty array if the user has no memberships (not an error).
 }
 ```
 
-Invitations expire after **7 days** (`expiresAt`).
+Invitations expire after **365 days** (`expiresAt`).
 
 **Failure examples**
 
@@ -428,15 +433,86 @@ Invitations expire after **7 days** (`expiresAt`).
 
 ## Endpoints not fully documented here
 
-This file documents core space/membership flows and Phase 7 dashboard APIs. Additional implemented modules (auth, members, accommodation, occupancy, meals, polls, headcount) are covered in module-specific docs under `docs/`.
+This file documents core space/membership flows and Phase 7–9 dashboard / Action Center APIs. Additional modules are covered in module-specific docs under `docs/`.
 
 | Resource | Doc |
 |----------|-----|
 | Auth (OTP + JWT) | [auth-ui-integration.md](./auth-ui-integration.md) |
 | Meals & polls | [meals-phase-5-backend.md](./meals-phase-5-backend.md), [meals-phase-6-handoff.md](./meals-phase-6-handoff.md) |
 | Dashboard & payments | [payments-phase-7-dashboard.md](./payments-phase-7-dashboard.md) |
+| Notifications / Pending Actions (event catalog) | [notification-event-catalog.md](./notification-event-catalog.md) |
 | Permissions | [permissions-backend-spec.md](./permissions-backend-spec.md) |
 | Accommodation & occupancy | [accommodation-domain-model.md](./accommodation-domain-model.md), [occupancy-phase-4.3b-backend.md](./occupancy-phase-4.3b-backend.md) |
+| Schema (DDL) | Flyway under backend `db/migration` (V1–V77); no separate schema doc |
+
+---
+
+## Action Center — notifications & pending actions
+
+Canonical event → type → recipient → deep-link map: [notification-event-catalog.md](./notification-event-catalog.md).
+
+### Get pending actions
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/v1/spaces/{spaceId}/pending-actions` |
+| **Query** | `month` — optional `YYYY-MM` |
+| **Auth** | Bearer JWT |
+| **Access** | Active membership (operator vs participant filtering applied) |
+
+Returns open `ACTION_REQUIRED` notifications grouped by type. Syncs payments / complaints / invitations / occupancy / meal ops before aggregate.
+
+### List notifications
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/v1/spaces/{spaceId}/notifications` |
+| **Auth** | Bearer JWT |
+
+### Mark notification read
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/v1/spaces/{spaceId}/notifications/{notificationId}/read` |
+
+### Resolve notification
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/v1/spaces/{spaceId}/notifications/{notificationId}/resolve` |
+
+### Global dashboard
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/v1/dashboard/global` |
+| **Query** | `month` — optional `YYYY-MM`; `sync` — default `true` |
+| **Auth** | Bearer JWT |
+
+Cross-space attention / pending counts for My Spaces. Prefer `sync=true` when refreshing after mutations.
+
+---
+
+## Complaints (MVP)
+
+| Method | Path | Notes |
+|--------|------|-------|
+| `POST` | `/api/v1/spaces/{spaceId}/complaints` | Create |
+| `GET` | `/api/v1/spaces/{spaceId}/complaints` | List (filters: status, priority, category, assignee, mine) |
+| `GET` | `/api/v1/spaces/{spaceId}/complaints/{complaintId}` | Detail |
+| `PATCH` | `…/complaints/{complaintId}/status` | Status transition |
+| `POST` | `…/complaints/{complaintId}/comments` | Comment → publishes `COMPLAINT_COMMENTED` |
+| `POST` | `…/complaints/{complaintId}/attachments` | Attachment |
+| `POST` | `…/complaints/{complaintId}/reopen` | Reopen |
+| `POST` | `…/complaints/{complaintId}/assign` | Assign (staff assignee → `COMPLAINT_PENDING`) |
+| `PATCH` | `…/complaints/{complaintId}/resolution` | Resolution notes |
+
+Notification types: `COMPLAINT_CREATED`, `COMPLAINT_PENDING`, `COMPLAINT_COMMENTED`, `COMPLAINT_RESOLVED` (`COMPLAINT_OVERDUE` reserved / P2).
 
 ---
 

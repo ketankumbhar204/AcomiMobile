@@ -1,0 +1,23 @@
+diff --git a/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreensModule.kt b/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreensModule.kt
+index 5a6245c..f3f23ab 100644
+--- a/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreensModule.kt
++++ b/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreensModule.kt
+@@ -55,10 +55,15 @@ class ScreensModule(
+     }
+ 
+     private fun setupFabric() {
+-        val fabricUIManager =
+-            UIManagerHelper.getUIManager(reactContext, UIManagerType.FABRIC) as FabricUIManager
++        // Soft Metro reload can run initialize() before FabricUIManager is ready.
++        // Unsafe cast here blanked the app with: Cannot read property 'ScreenStack' of undefined
++        val uiManager = UIManagerHelper.getUIManager(reactContext, UIManagerType.FABRIC)
++        if (uiManager !is FabricUIManager) {
++            Log.w("[RNScreens]", "FabricUIManager not ready; deferring ScreensModule setup")
++            return
++        }
+         proxy?.apply {
+-            nativeAddMutationsListener(fabricUIManager)
++            nativeAddMutationsListener(uiManager)
+         }
+     }
+ 

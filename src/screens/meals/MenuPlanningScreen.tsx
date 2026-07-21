@@ -1,10 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  LayoutAnimation,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  UIManager,
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -22,12 +25,14 @@ import type {
 import { DailyMenuSlotCard, MealHeadcountBottomSheet, MenuPlanningDayOverview } from '../../components/meals';
 import { MenuDateContextHints } from '../../components/meals/MenuDateContextHints';
 import { MenuDatePickerModal } from '../../components/meals/MenuDatePickerModal';
+import { PollCloseAtPickerModal } from '../../components/meals/PollCloseAtPickerModal';
 import { navigateToMembersTab } from '../../navigation/navigationRef';
 import { PermissionDeniedScreen } from '../../components/ui/PermissionDeniedScreen';
 import { useMainStackNavigation } from '../../hooks/useMainStackNavigation';
 import { useOwnerMealHeadcount } from '../../hooks/useOwnerMealHeadcount';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useToastStore } from '../../store/toastStore';
+import { formatPollCloseLabel } from '../../utils/pollCloseDisplay';
 import { colors, radius, spacing, typography } from '../../theme';
 import {
   addDaysIsoDate,
@@ -36,16 +41,19 @@ import {
   todayIsoDate,
   tomorrowIsoDate,
 } from '../../utils/mealDates';
-import { summarizeDailyMenuDay } from '../../utils/dailyMenuDayStatus';
-import {
-  filterMealTypesByPlanningStatus,
-  type MenuPlanningStatusFilter,
-} from '../../utils/menuPlanningFilter';
+import { summarizeDailyMenuDay, type DailyMenuDaySummary } from '../../utils/dailyMenuDayStatus';
+import { buildDashboardMealSlotRows } from '../../utils/dashboardMealSlotDisplay';
+import { fetchSpaceMenuCatalog } from '../../utils/fetchSpaceMenuCatalog';
 import { MEAL_TYPES } from '../../utils/mealLabels';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 type MenuPlanningScreenProps = {
   spaceId: UUID;
   initialDate?: string;
+  initialMealType?: MealType;
 };
 
 function menusByType(menus: DailyMenuResponse[]): Partial<Record<MealType, DailyMenuResponse>> {
@@ -71,15 +79,15 @@ function hasPlannedMenu(menu?: DailyMenuResponse | null): boolean {
   return (menu?.options?.filter(option => option.isAvailable) ?? []).length > 0;
 }
 
-function dayStatusSummary(menus: DailyMenuResponse[]): {
-  published: number;
-  draft: number;
-  notPlanned: number;
-} {
+function dayStatusSummary(menus: DailyMenuResponse[]): DailyMenuDaySummary {
   return summarizeDailyMenuDay(menus);
 }
 
-export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenProps) {
+export function MenuPlanningScreen({
+  spaceId,
+  initialDate,
+  initialMealType,
+}: MenuPlanningScreenProps) {
   const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const { navigate: navigateMain } = useMainStackNavigation();
@@ -98,22 +106,36 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
   const [pollActionMealType, setPollActionMealType] = useState<MealType | null>(null);
   const [headcountMealType, setHeadcountMealType] = useState<MealType | null>(null);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
-  const [planningStatusFilters, setPlanningStatusFilters] = useState<
-    Set<MenuPlanningStatusFilter>
-  >(new Set());
+  const [closeAtEditMealType, setCloseAtEditMealType] = useState<MealType | null>(null);
+  const [closeAtSaving, setCloseAtSaving] = useState(false);
+  const [copyYesterdayLoading, setCopyYesterdayLoading] = useState(false);
+  /** Remembers the active meal while this screen stays mounted. */
+  const [selectedMealType, setSelectedMealType] = useState<MealType>(
+    initialMealType ?? 'BREAKFAST',
+  );
+
+  useEffect(() => {
+    if (initialMealType) {
+      setSelectedMealType(initialMealType);
+    }
+  }, [initialMealType]);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [menuList, summary, pollDay, comboList] = await Promise.all([
+      const [menuList, summary, pollDay, catalog] = await Promise.all([
         mealsApi.getDailyMenusByDate(spaceId, menuDate),
         mealsApi.getEligibilitySummary(spaceId, menuDate),
         mealsApi.getMealPolls(spaceId, menuDate).catch(() => ({ pollDate: menuDate, polls: [] })),
-        mealsApi.getMealCombos(spaceId).catch(() => []),
+        fetchSpaceMenuCatalog(spaceId).catch(() => ({
+          categories: [],
+          items: [],
+          combos: [],
+        })),
       ]);
       setMenus(menuList);
-      setCombos(comboList.filter(combo => combo.isActive));
+      setCombos(catalog.combos.filter(combo => combo.isActive));
       setEligibility(summary);
       setPolls(pollDay.polls);
     } catch {
@@ -151,11 +173,21 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
     [polls],
   );
   const eligibilityMap = useMemo(() => eligibilityByType(eligibility), [eligibility]);
+  const eligibleCountByMeal = useMemo(() => {
+    const map: Partial<Record<MealType, number>> = {};
+    for (const mealType of MEAL_TYPES) {
+      map[mealType] = eligibilityMap[mealType]?.eligibleCount ?? 0;
+    }
+    return map;
+  }, [eligibilityMap]);
+  const platesByMeal = useMemo(() => {
+    const map: Partial<Record<MealType, number>> = {};
+    for (const slot of headcount.slots) {
+      map[slot.mealType] = slot.mealsToPrepare;
+    }
+    return map;
+  }, [headcount.slots]);
   const statusSummary = useMemo(() => dayStatusSummary(menus), [menus]);
-  const visibleMealTypes = useMemo(
-    () => filterMealTypesByPlanningStatus(MEAL_TYPES, menuMap, planningStatusFilters),
-    [menuMap, planningStatusFilters],
-  );
   const dateReadOnly = isPastMenuDate(menuDate);
   const canShareMenu = !dateReadOnly && MEAL_TYPES.some(type => hasPlannedMenu(menuMap[type]));
   const distinctEligible = useMemo(() => {
@@ -170,6 +202,17 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
       0,
     );
   }, [eligibility]);
+  const headcountSlotRows = useMemo(
+    () =>
+      buildDashboardMealSlotRows(
+        menuMap,
+        pollMap,
+        eligibleCountByMeal,
+        platesByMeal,
+        distinctEligible,
+      ),
+    [distinctEligible, eligibleCountByMeal, menuMap, platesByMeal, pollMap],
+  );
 
   const guardEditable = useCallback(() => {
     if (!dateReadOnly) {
@@ -232,6 +275,26 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
     [guardEditable, load, menuDate, showToast, spaceId, t],
   );
 
+  const savePollCloseAt = useCallback(
+    async (pollCloseAt: string) => {
+      if (!closeAtEditMealType || !guardEditable()) {
+        return;
+      }
+      setCloseAtSaving(true);
+      try {
+        await mealsApi.updateMealPollCloseAt(spaceId, menuDate, closeAtEditMealType, pollCloseAt);
+        showToast(t('meals.poll.closeAtSaved'));
+        setCloseAtEditMealType(null);
+        await load();
+      } catch {
+        showToast(t('meals.errors.saveFailed'));
+      } finally {
+        setCloseAtSaving(false);
+      }
+    },
+    [closeAtEditMealType, guardEditable, load, menuDate, showToast, spaceId, t],
+  );
+
   const openHeadcount = useCallback((mealType: MealType) => {
     setHeadcountMealType(mealType);
   }, []);
@@ -241,12 +304,106 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
     void headcount.reload();
   }, [headcount]);
 
+  const selectMealType = useCallback((mealType: MealType) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setSelectedMealType(mealType);
+  }, []);
+
+  const copyYesterdayForSelected = useCallback(async () => {
+    if (!guardEditable()) {
+      return;
+    }
+    setCopyYesterdayLoading(true);
+    try {
+      await mealsApi.copyDailyMenu(
+        spaceId,
+        menuDate,
+        selectedMealType,
+        addDaysIsoDate(menuDate, -1),
+      );
+      showToast(t('meals.planning.copySuccess'));
+      await load();
+    } catch {
+      showToast(t('meals.planning.copyFailed'));
+    } finally {
+      setCopyYesterdayLoading(false);
+    }
+  }, [guardEditable, load, menuDate, selectedMealType, showToast, spaceId, t]);
+
+  const openPolls = useMemo(
+    () => polls.filter(poll => poll.status === 'OPEN'),
+    [polls],
+  );
+  const hasOpenPolls = openPolls.length > 0;
+  const respondedCount = useMemo(() => {
+    if (openPolls.length === 0) {
+      return 0;
+    }
+    return Math.max(...openPolls.map(poll => poll.responseCount));
+  }, [openPolls]);
+
+  const selectedPoll = pollMap[selectedMealType];
+  const selectedEligibility = eligibilityMap[selectedMealType];
+
   if (!canManage) {
     return <PermissionDeniedScreen spaceId={spaceId} />;
   }
 
   return (
     <View style={styles.root}>
+      <View style={styles.stickyHeader}>
+        <Text style={styles.subtitle}>{t('meals.planning.subtitle')}</Text>
+
+        <View style={styles.dateRow}>
+          <Pressable
+            style={styles.dateNavBtn}
+            onPress={() => setMenuDate(prev => addDaysIsoDate(prev, -1))}>
+            <Text style={styles.dateNavText}>◀</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.dateCenter, pressed && styles.dateCenterPressed]}
+            onPress={() => setDatePickerOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel={formatMenuDate(menuDate, i18n.language)}
+            accessibilityHint={t('meals.planning.openCalendar')}>
+            <Text style={styles.dateLabel}>{formatMenuDate(menuDate, i18n.language)}</Text>
+            <MenuDateContextHints
+              menuDate={menuDate}
+              onJumpToToday={() => setMenuDate(todayIsoDate())}
+              onJumpToTomorrow={() => setMenuDate(tomorrowIsoDate())}
+            />
+          </Pressable>
+          <Pressable
+            style={styles.dateNavBtn}
+            onPress={() => setMenuDate(prev => addDaysIsoDate(prev, 1))}>
+            <Text style={styles.dateNavText}>▶</Text>
+          </Pressable>
+        </View>
+
+        {dateReadOnly ? (
+          <View style={styles.readOnlyBanner}>
+            <Text style={styles.readOnlyBannerText}>{t('meals.planning.pastDateReadOnly')}</Text>
+          </View>
+        ) : null}
+
+        {!loading && !error ? (
+          <MenuPlanningDayOverview
+            menuMap={menuMap}
+            pollMap={pollMap}
+            eligibilityByMeal={eligibleCountByMeal}
+            statusSummary={statusSummary}
+            eligibleCount={distinctEligible}
+            selectedMealType={selectedMealType}
+            onSelectMealType={selectMealType}
+            shareDisabled={!canShareMenu}
+            onShare={permissions.canManageMeals ? () => openShare() : undefined}
+            dateReadOnly={dateReadOnly}
+            hasOpenPolls={hasOpenPolls}
+            respondedCount={respondedCount}
+          />
+        ) : null}
+      </View>
+
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[
@@ -256,131 +413,129 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled
         showsVerticalScrollIndicator={false}>
-      <Text style={styles.subtitle}>{t('meals.planning.subtitle')}</Text>
+        {loading ? <ActivityIndicator color={colors.primary} style={styles.loader} /> : null}
+        {error ? (
+          <View style={styles.errorBlock}>
+            <Text style={styles.error}>{error}</Text>
+            <Pressable
+              style={({ pressed }) => [styles.retryButton, pressed && styles.retryButtonPressed]}
+              onPress={() => void load()}
+              accessibilityRole="button">
+              <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
+            </Pressable>
+          </View>
+        ) : null}
 
-      <View style={styles.dateRow}>
-        <Pressable
-          style={styles.dateNavBtn}
-          onPress={() => setMenuDate(prev => addDaysIsoDate(prev, -1))}>
-          <Text style={styles.dateNavText}>◀</Text>
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [styles.dateCenter, pressed && styles.dateCenterPressed]}
-          onPress={() => setDatePickerOpen(true)}
-          accessibilityRole="button"
-          accessibilityLabel={formatMenuDate(menuDate, i18n.language)}
-          accessibilityHint={t('meals.planning.openCalendar')}>
-          <Text style={styles.dateLabel}>{formatMenuDate(menuDate, i18n.language)}</Text>
-          <MenuDateContextHints
-            menuDate={menuDate}
-            onJumpToToday={() => setMenuDate(todayIsoDate())}
-            onJumpToTomorrow={() => setMenuDate(tomorrowIsoDate())}
-          />
-        </Pressable>
-        <Pressable
-          style={styles.dateNavBtn}
-          onPress={() => setMenuDate(prev => addDaysIsoDate(prev, 1))}>
-          <Text style={styles.dateNavText}>▶</Text>
-        </Pressable>
-      </View>
+        {!loading && !error && permissions.canManageMeals && distinctEligible === 0 ? (
+          <Pressable
+            style={styles.enrollBanner}
+            onPress={() => navigateToMembersTab(spaceId)}>
+            <Text style={styles.enrollBannerTitle}>{t('meals.planning.noEligibleMembersCta')}</Text>
+            <Text style={styles.enrollBannerHint}>{t('meals.planning.noEligibleMembersHint')}</Text>
+          </Pressable>
+        ) : null}
 
-      {dateReadOnly ? (
-        <View style={styles.readOnlyBanner}>
-          <Text style={styles.readOnlyBannerText}>{t('meals.planning.pastDateReadOnly')}</Text>
-        </View>
-      ) : null}
-
-      {!loading && !error ? (
-        <MenuPlanningDayOverview
-          menuMap={menuMap}
-          pollMap={pollMap}
-          statusSummary={statusSummary}
-          eligibleCount={distinctEligible}
-          selectedFilters={planningStatusFilters}
-          onFilterChange={setPlanningStatusFilters}
-          shareDisabled={!canShareMenu}
-          onShare={permissions.canManageMeals ? () => openShare() : undefined}
-          dateReadOnly={dateReadOnly}
-        />
-      ) : null}
-
-      {loading ? <ActivityIndicator color={colors.primary} style={styles.loader} /> : null}
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-
-      {!loading && !error && permissions.canManageMeals && distinctEligible === 0 ? (
-        <Pressable
-          style={styles.enrollBanner}
-          onPress={() => navigateToMembersTab(spaceId)}>
-          <Text style={styles.enrollBannerTitle}>{t('meals.planning.noEligibleMembersCta')}</Text>
-          <Text style={styles.enrollBannerHint}>{t('meals.planning.noEligibleMembersHint')}</Text>
-        </Pressable>
-      ) : null}
-
-      {visibleMealTypes.map(mealType => {
-        const slotEligibility = eligibilityMap[mealType];
-        const slotPoll = pollMap[mealType];
-        return (
-          <View key={mealType}>
+        {!loading && !error ? (
+          <View style={styles.detailPanel}>
             <DailyMenuSlotCard
-              mealType={mealType}
-              menu={menuMap[mealType]}
+              mealType={selectedMealType}
+              menu={menuMap[selectedMealType]}
               spaceId={spaceId}
               comboById={comboById}
               readOnly={dateReadOnly}
-              onSelectMenu={() => openSelectMenu(mealType)}
-              onEdit={() => openEdit(mealType)}
+              onSelectMenu={() => openSelectMenu(selectedMealType)}
+              onEdit={() => openEdit(selectedMealType)}
+              onCopyYesterday={
+                !dateReadOnly && permissions.canManageMeals
+                  ? () => void copyYesterdayForSelected()
+                  : undefined
+              }
+              copyYesterdayLoading={copyYesterdayLoading}
               onShare={
-                permissions.canManageMeals && hasPlannedMenu(menuMap[mealType])
-                  ? () => openShare(mealType)
+                permissions.canManageMeals && hasPlannedMenu(menuMap[selectedMealType])
+                  ? () => openShare(selectedMealType)
                   : undefined
               }
               onClosePoll={
-                permissions.canManageMeals && slotPoll?.status === 'OPEN'
-                  ? () => void closePoll(mealType)
+                permissions.canManageMeals && selectedPoll?.status === 'OPEN'
+                  ? () => void closePoll(selectedMealType)
+                  : undefined
+              }
+              onEditPollCloseAt={
+                permissions.canManageMeals && selectedPoll?.status === 'OPEN' && !dateReadOnly
+                  ? () => setCloseAtEditMealType(selectedMealType)
                   : undefined
               }
               onViewHeadcount={
-                permissions.canManageMeals && slotPoll ? () => openHeadcount(mealType) : undefined
+                permissions.canManageMeals && selectedPoll
+                  ? () => openHeadcount(selectedMealType)
+                  : undefined
               }
-              pollStatus={slotPoll?.status ?? null}
-              pollResponseCount={slotPoll?.responseCount ?? 0}
-              pollActionLoading={pollActionMealType === mealType}
+              pollStatus={selectedPoll?.status ?? null}
+              pollResponseCount={selectedPoll?.responseCount ?? 0}
+              pollActionLoading={pollActionMealType === selectedMealType}
+              pollCloseAtLabel={
+                selectedPoll?.pollCloseAt
+                  ? formatPollCloseLabel(
+                      selectedPoll.pollCloseAt,
+                      selectedPoll.timezone,
+                      i18n.language,
+                    )
+                  : null
+              }
+              pollClosedAtLabel={
+                selectedPoll?.closedAt
+                  ? formatPollCloseLabel(
+                      selectedPoll.closedAt,
+                      selectedPoll.timezone,
+                      i18n.language,
+                    )
+                  : null
+              }
+              pollCloseSource={selectedPoll?.closeSource ?? null}
             />
-            {slotEligibility ? (
+            {selectedEligibility ? (
               <Text style={styles.eligibleLine}>
-                {t('meals.planning.eligibleSlot', { count: slotEligibility.eligibleCount })}
+                {t('meals.planning.eligibleSlot', {
+                  count: selectedEligibility.eligibleCount,
+                })}
               </Text>
             ) : null}
           </View>
-        );
-      })}
+        ) : null}
 
-      {permissions.canManageMeals ? (
-        <View style={styles.actions}>
-          <Pressable
-            style={styles.linkRow}
-            onPress={() => navigateMain('MenuLibrary', { spaceId })}>
-            <Text style={styles.linkText}>{t('meals.library.title')}</Text>
-          </Pressable>
-          <Pressable
-            style={styles.linkRow}
-            onPress={() => navigateMain('DailyMenuToday', { spaceId })}>
-            <Text style={styles.linkText}>{t('meals.todayMenu')}</Text>
-          </Pressable>
-          {permissions.spaceType === 'MESS' ? (
+        {permissions.canManageMeals ? (
+          <View style={styles.actions}>
             <Pressable
               style={styles.linkRow}
-              onPress={() => navigateMain('MealDeliveryLocations', { spaceId })}>
-              <Text style={styles.linkText}>{t('meals.deliveryLocations.manage')}</Text>
+              onPress={() => navigateMain('MenuLibrary', { spaceId })}>
+              <Text style={styles.linkText}>{t('meals.library.title')}</Text>
             </Pressable>
-          ) : null}
-          <Pressable
-            style={styles.linkRow}
-            onPress={() => navigateMain('SubscriptionPlans', { spaceId })}>
-            <Text style={styles.linkText}>{t('meals.subscriptionPlans.title')}</Text>
-          </Pressable>
-        </View>
-      ) : null}
+            <Pressable
+              style={styles.linkRow}
+              onPress={() =>
+                navigateMain('DailyMenuToday', { spaceId, menuDate })
+              }>
+              <Text style={styles.linkText}>
+                {menuDate === todayIsoDate()
+                  ? t('meals.todayMenu')
+                  : t('meals.menuDetails.heading')}
+              </Text>
+            </Pressable>
+            {permissions.spaceType === 'MESS' ? (
+              <Pressable
+                style={styles.linkRow}
+                onPress={() => navigateMain('MealDeliveryLocations', { spaceId })}>
+                <Text style={styles.linkText}>{t('meals.deliveryLocations.manage')}</Text>
+              </Pressable>
+            ) : null}
+            <Pressable
+              style={styles.linkRow}
+              onPress={() => navigateMain('SubscriptionPlans', { spaceId })}>
+              <Text style={styles.linkText}>{t('meals.subscriptionPlans.title')}</Text>
+            </Pressable>
+          </View>
+        ) : null}
       </ScrollView>
 
       {headcountMealType && headcount.openSlots.length > 0 ? (
@@ -389,6 +544,7 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
           spaceId={spaceId}
           menuDate={menuDate}
           openSlots={headcount.openSlots}
+          slotRows={headcountSlotRows}
           initialMealType={headcountMealType}
           onClose={closeHeadcount}
           readOnly={dateReadOnly}
@@ -402,20 +558,40 @@ export function MenuPlanningScreen({ spaceId, initialDate }: MenuPlanningScreenP
         onClose={() => setDatePickerOpen(false)}
         onConfirm={setMenuDate}
       />
+
+      <PollCloseAtPickerModal
+        visible={closeAtEditMealType != null}
+        initialCloseAt={
+          closeAtEditMealType
+            ? pollMap[closeAtEditMealType]?.pollCloseAt ?? null
+            : null
+        }
+        saving={closeAtSaving}
+        onCancel={() => setCloseAtEditMealType(null)}
+        onSave={value => void savePollCloseAt(value)}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
+  stickyHeader: {
+    paddingHorizontal: spacing.xxl,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
+    backgroundColor: colors.background,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+    gap: spacing.sm,
+  },
   scroll: { flex: 1 },
-  content: { padding: spacing.xxl },
-  subtitle: { ...typography.body, color: colors.muted, marginBottom: spacing.lg },
+  content: { paddingHorizontal: spacing.xxl, paddingTop: spacing.md },
+  subtitle: { ...typography.body, color: colors.muted },
   dateRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    marginBottom: spacing.md,
   },
   dateNavBtn: {
     width: 40,
@@ -452,7 +628,29 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   loader: { marginVertical: spacing.lg },
-  error: { ...typography.caption, color: '#DC2626', marginBottom: spacing.md },
+  error: { ...typography.caption, color: '#DC2626', marginBottom: spacing.sm },
+  errorBlock: {
+    marginBottom: spacing.md,
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  retryButton: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.button,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: colors.lightGreen,
+  },
+  retryButtonPressed: {
+    opacity: 0.85,
+  },
+  retryButtonText: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    fontWeight: '700',
+  },
   enrollBanner: {
     backgroundColor: colors.white,
     borderWidth: 1,
@@ -463,6 +661,9 @@ const styles = StyleSheet.create({
   },
   enrollBannerTitle: { ...typography.bodyStrong, color: colors.primaryDark, marginBottom: spacing.xxs },
   enrollBannerHint: { ...typography.caption, color: colors.muted },
+  detailPanel: {
+    marginBottom: spacing.sm,
+  },
   eligibleLine: {
     ...typography.caption,
     color: colors.muted,

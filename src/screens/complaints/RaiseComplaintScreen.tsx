@@ -29,6 +29,7 @@ import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, spacing, typography } from '../../theme';
 import { categoriesForSpaceType } from '../../utils/complaintPermissions';
+import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
 import { pickPaymentProofImage } from '../../utils/pickPaymentProofImage';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'RaiseComplaint'>;
@@ -101,6 +102,7 @@ export function RaiseComplaintScreen() {
         attachmentImagesBase64: photos.length > 0 ? photos : undefined,
       });
       showToast(t('complaints.created'));
+      invalidateDashboardQueries();
       navigation.replace('ComplaintDetail', {
         spaceId,
         complaintId: created.complaintId,

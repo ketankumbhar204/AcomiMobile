@@ -1,4 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   ActivityIndicator,
   Keyboard,
@@ -24,8 +32,13 @@ import {
   getEffectivePriceDraft,
   hasComboPrice,
   parsePriceInput,
+  validatePriceInput,
 } from '../../utils/comboPrice';
 import { isMenuSelectionFullyResolved } from '../../utils/menuSelectionSync';
+import {
+  collectSelectionPriceErrors,
+  firstPriceErrorTarget,
+} from '../../utils/menuSelectionPriceValidation';
 import {
   comboPriceDraftErrorMessage,
   persistComboPriceDraft,
@@ -33,6 +46,8 @@ import {
 } from '../../utils/comboSelectionPricing';
 import { persistItemPriceDraft } from '../../utils/itemSelectionPricing';
 import { agentDebugLog } from '../../utils/agentDebugLog';
+import { fetchSpaceMenuCatalog } from '../../utils/fetchSpaceMenuCatalog';
+import { formatComboIncludeLine } from '../../utils/comboIncludes';
 import { ComboPickerCard } from './ComboPickerCard';
 import { CreateComboSheet } from './CreateComboSheet';
 import { PlanningItemPickerList } from './PlanningItemPickerList';
@@ -42,7 +57,16 @@ import { MenuSelectionTabBar, type MenuSelectionTab } from './MenuSelectionTabBa
 export type MenuSelectionSaveResult = {
   combos: MealComboResponse[];
   itemPackages: MenuSelectionItemPackage[];
+  extraPackages: MenuSelectionItemPackage[];
   adHocPackages: MenuAdHocPackage[];
+};
+
+export type MenuSelectionPanelHandle = {
+  /** Mess-only: validate selected price fields; highlights errors and focuses first invalid. */
+  validatePrices: () => boolean;
+  hasSelection: () => boolean;
+  getSelectionResult: () => MenuSelectionSaveResult;
+  getDraftPrices: () => Record<string, string>;
 };
 
 type MenuSelectionPanelProps = {
@@ -50,6 +74,7 @@ type MenuSelectionPanelProps = {
   initialOptions: MenuDraftOption[];
   onChange: (result: MenuSelectionSaveResult) => void;
   requiresMealPrices?: boolean;
+  onSelectionPresenceChange?: (hasSelection: boolean) => void;
 };
 
 function adHocPackageChipId(label: string): string {
@@ -72,51 +97,62 @@ function seedFromOptions(options: MenuDraftOption[]) {
     .filter(option => option.entryType === 'COMBO' && option.comboId)
     .map(option => option.comboId as string);
   const existingItemPackages = options.filter(
-    option => option.entryType === 'PACKAGE' && option.itemIds?.length === 1,
+    option =>
+      option.entryType === 'PACKAGE' &&
+      option.isExtra !== true &&
+      option.itemIds?.length === 1,
   );
   const existingAdHocPackages = options.filter(
-    option => option.entryType === 'PACKAGE' && (option.itemIds?.length ?? 0) > 1,
+    option =>
+      option.entryType === 'PACKAGE' &&
+      option.isExtra !== true &&
+      (option.itemIds?.length ?? 0) > 1,
   );
   const existingItemIds = existingItemPackages
     .map(option => option.itemIds?.[0])
     .filter((id): id is string => Boolean(id));
 
-    return {
-      selectedComboIds: existingComboIds,
-      selectedItemIds: existingItemIds,
-      adHocPackages: existingAdHocPackages.map(option => ({
-        label: option.label,
-        itemIds: option.itemIds ?? [],
-        price: option.price ?? null,
-        currencyCode: option.currencyCode ?? 'INR',
-      })),
-      draftPrices: {
-        ...existingItemPackages.reduce<Record<string, string>>((acc, option) => {
-          const itemId = option.itemIds?.[0];
-          if (itemId && option.price != null) {
-            acc[itemId] = String(option.price);
+  return {
+    selectedComboIds: existingComboIds,
+    selectedItemIds: existingItemIds,
+    adHocPackages: existingAdHocPackages.map(option => ({
+      label: option.label,
+      itemIds: option.itemIds ?? [],
+      price: option.price ?? null,
+      currencyCode: option.currencyCode ?? 'INR',
+    })),
+    draftPrices: {
+      ...existingItemPackages.reduce<Record<string, string>>((acc, option) => {
+        const itemId = option.itemIds?.[0];
+        if (itemId && option.price != null) {
+          acc[itemId] = String(option.price);
+        }
+        return acc;
+      }, {}),
+      ...options
+        .filter(option => option.entryType === 'COMBO' && option.comboId)
+        .reduce<Record<string, string>>((acc, option) => {
+          const comboId = option.comboId as string;
+          if (option.price != null) {
+            acc[comboId] = String(option.price);
           }
           return acc;
         }, {}),
-        ...options
-          .filter(option => option.entryType === 'COMBO' && option.comboId)
-          .reduce<Record<string, string>>((acc, option) => {
-            const comboId = option.comboId as string;
-            if (option.price != null) {
-              acc[comboId] = String(option.price);
-            }
-            return acc;
-          }, {}),
-      },
-    };
+    },
+  };
 }
 
-export function MenuSelectionPanel({
-  spaceId,
-  initialOptions,
-  onChange,
-  requiresMealPrices = true,
-}: MenuSelectionPanelProps) {
+export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelectionPanelProps>(
+  function MenuSelectionPanel(
+    {
+      spaceId,
+      initialOptions,
+      onChange,
+      requiresMealPrices = true,
+      onSelectionPresenceChange,
+    },
+    ref,
+  ) {
   const seed = seedFromOptions(initialOptions);
   const { t } = useTranslation();
   const showToast = useToastStore(state => state.showToast);
@@ -131,10 +167,12 @@ export function MenuSelectionPanel({
   const [adHocPackages, setAdHocPackages] = useState<MenuAdHocPackage[]>(seed.adHocPackages);
   const [draftPrices, setDraftPrices] = useState<Record<string, string>>(seed.draftPrices);
   const [priceErrors, setPriceErrors] = useState<ComboPriceDraftErrors>({});
+  const [focusPriceInputId, setFocusPriceInputId] = useState<string | null>(null);
   const [comboSearch, setComboSearch] = useState('');
   const [itemSearch, setItemSearch] = useState('');
   const itemPriceSaveInFlightRef = useRef<Set<string>>(new Set());
   const comboPriceSaveInFlightRef = useRef<Set<string>>(new Set());
+  const focusClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleTabChange = useCallback((tab: MenuSelectionTab) => {
     Keyboard.dismiss();
@@ -144,30 +182,26 @@ export function MenuSelectionPanel({
   useEffect(() => {
     let active = true;
     setLoading(true);
-    Promise.all([
-      mealsApi.getMealCombos(spaceId),
-      mealsApi.getFoodItems(spaceId),
-      mealsApi.getFoodCategories(spaceId),
-    ])
-      .then(([comboList, items, cats]) => {
+    void fetchSpaceMenuCatalog(spaceId)
+      .then(catalog => {
         if (!active) {
           return;
         }
-        setCombos(comboList.filter(combo => combo.isActive));
-        setFoodItems(items.filter(item => item.isActive));
-        setCategories(cats.filter(category => category.isActive));
+        setCombos(catalog.combos.filter(combo => combo.isActive));
+        setFoodItems(catalog.items.filter(item => item.isActive));
+        setCategories(catalog.categories.filter(category => category.isActive));
         agentDebugLog({
           hypothesisId: 'D',
           location: 'MenuSelectionPanel.tsx:loadCatalog',
           message: 'Loaded space-scoped menu catalog',
           data: {
             spaceId,
-            comboSample: comboList.slice(0, 3).map(combo => ({
+            comboSample: catalog.combos.slice(0, 3).map(combo => ({
               comboId: combo.comboId,
               name: combo.name,
               price: combo.price ?? null,
             })),
-            itemSample: items.slice(0, 3).map(item => ({
+            itemSample: catalog.items.slice(0, 3).map(item => ({
               itemId: item.itemId,
               name: item.name,
               defaultPrice: item.defaultPrice ?? null,
@@ -286,9 +320,9 @@ export function MenuSelectionPanel({
   const buildSelectionResult = useMemo((): MenuSelectionSaveResult => {
     const itemPackages: MenuSelectionItemPackage[] = [];
     for (const item of selectedItems) {
-      const draft = getEffectivePriceDraft(item.itemId, draftPrices, null);
+      const draft = getEffectivePriceDraft(item.itemId, draftPrices, item.defaultPrice ?? null);
       const price = draft ? parsePriceInput(draft) : null;
-      if (requiresMealPrices && price == null) {
+      if (requiresMealPrices && (price == null || price <= 0)) {
         continue;
       }
       itemPackages.push({
@@ -302,18 +336,87 @@ export function MenuSelectionPanel({
     return {
       combos: selectedCombos,
       itemPackages,
+      extraPackages: [],
       adHocPackages,
     };
   }, [adHocPackages, draftPrices, requiresMealPrices, selectedCombos, selectedItems]);
+
+  const hasAnySelection =
+    selectedComboIds.length > 0 ||
+    selectedItemIds.length > 0 ||
+    adHocPackages.length > 0;
+
+  useEffect(() => {
+    onSelectionPresenceChange?.(hasAnySelection);
+  }, [hasAnySelection, onSelectionPresenceChange]);
+
+  useEffect(() => {
+    return () => {
+      if (focusClearTimerRef.current) {
+        clearTimeout(focusClearTimerRef.current);
+      }
+    };
+  }, []);
+
+  const requestFocusPriceInput = useCallback((id: string) => {
+    if (focusClearTimerRef.current) {
+      clearTimeout(focusClearTimerRef.current);
+    }
+    setFocusPriceInputId(id);
+    focusClearTimerRef.current = setTimeout(() => {
+      setFocusPriceInputId(null);
+      focusClearTimerRef.current = null;
+    }, 600);
+  }, []);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      validatePrices: () => {
+        if (!requiresMealPrices) {
+          setPriceErrors({});
+          return true;
+        }
+        const errors = collectSelectionPriceErrors({
+          requiresMealPrices,
+          selectedCombos,
+          selectedItems,
+          adHocPackages,
+          draftPrices,
+        });
+        setPriceErrors(errors);
+        const target = firstPriceErrorTarget(errors, selectedComboIds, selectedItemIds);
+        if (!target) {
+          return true;
+        }
+        setActiveTab(target.tab);
+        requestFocusPriceInput(target.id);
+        return false;
+      },
+      hasSelection: () => hasAnySelection,
+      getSelectionResult: () => buildSelectionResult,
+      getDraftPrices: () => ({ ...draftPrices }),
+    }),
+    [
+      adHocPackages,
+      buildSelectionResult,
+      draftPrices,
+      hasAnySelection,
+      requestFocusPriceInput,
+      requiresMealPrices,
+      selectedComboIds,
+      selectedCombos,
+      selectedItemIds,
+      selectedItems,
+    ],
+  );
 
   useEffect(() => {
     if (loading) {
       return;
     }
-    const hasSelection =
-      selectedComboIds.length > 0 || selectedItemIds.length > 0 || adHocPackages.length > 0;
     if (
-      hasSelection &&
+      hasAnySelection &&
       !isMenuSelectionFullyResolved(
         selectedComboIds,
         selectedItemIds,
@@ -331,6 +434,7 @@ export function MenuSelectionPanel({
     buildSelectionResult,
     combos,
     draftPrices,
+    hasAnySelection,
     loading,
     onChange,
     selectedComboIds,
@@ -419,13 +523,25 @@ export function MenuSelectionPanel({
 
   const updateDraftPrice = (id: string, text: string) => {
     setDraftPrices(prev => ({ ...prev, [id]: text }));
-    if (priceErrors[id]) {
-      setPriceErrors(prev => {
+    setPriceErrors(prev => {
+      if (!prev[id]) {
+        return prev;
+      }
+      const trimmed = text.trim();
+      if (!trimmed) {
+        return { ...prev, [id]: 'required' };
+      }
+      const validation = validatePriceInput(trimmed);
+      if (!validation) {
         const next = { ...prev };
         delete next[id];
         return next;
-      });
-    }
+      }
+      return {
+        ...prev,
+        [id]: validation === 'nonPositive' ? 'nonPositive' : 'invalid',
+      };
+    });
   };
 
   const persistPriceOnBlur = async (combo: MealComboResponse, draftValue: string) => {
@@ -454,11 +570,12 @@ export function MenuSelectionPanel({
         draftsForSave,
       );
       if (error) {
-        if (error !== 'required') {
-          setPriceErrors(prev => ({ ...prev, [combo.comboId]: error }));
-          if (error === 'invalid') {
-            showToast(t('meals.errors.saveFailed'));
-          }
+        if (error === 'required' && !requiresMealPrices) {
+          return;
+        }
+        setPriceErrors(prev => ({ ...prev, [combo.comboId]: error }));
+        if (error === 'invalid') {
+          showToast(t('meals.errors.saveFailed'));
         }
         return;
       }
@@ -499,20 +616,22 @@ export function MenuSelectionPanel({
       const draftsForSave = { ...draftPrices, [item.itemId]: normalizedDraft };
       const { item: updated, error } = await persistItemPriceDraft(spaceId, item, draftsForSave);
       if (error) {
-        if (error !== 'required') {
-          setPriceErrors(prev => ({ ...prev, [item.itemId]: error }));
-          if (error === 'invalid') {
-            showToast(t('meals.errors.saveFailed'));
-          }
+        if (error === 'required' && !requiresMealPrices) {
+          return;
+        }
+        setPriceErrors(prev => ({ ...prev, [item.itemId]: error }));
+        if (error === 'invalid') {
+          showToast(t('meals.errors.saveFailed'));
         }
         return;
       }
       setFoodItems(prev => prev.map(row => (row.itemId === updated.itemId ? updated : row)));
+      const nextDraft = hasComboPrice(updated.defaultPrice)
+        ? String(updated.defaultPrice)
+        : normalizedDraft;
       setDraftPrices(prev => ({
         ...prev,
-        [item.itemId]: hasComboPrice(updated.defaultPrice)
-          ? String(updated.defaultPrice)
-          : normalizedDraft,
+        [item.itemId]: nextDraft,
       }));
       setPriceErrors(prev => {
         const next = { ...prev };
@@ -561,6 +680,7 @@ export function MenuSelectionPanel({
     itemIds: string[],
     saveToLibrary: boolean,
     price?: number | null,
+    itemQuantities?: Array<{ itemId: string; quantity: number }>,
   ) => {
     try {
       if (saveToLibrary) {
@@ -568,6 +688,7 @@ export function MenuSelectionPanel({
           name,
           description: null,
           itemIds,
+          ...(itemQuantities?.length ? { itemQuantities } : {}),
           price: price ?? null,
           currencyCode: 'INR',
         });
@@ -577,12 +698,10 @@ export function MenuSelectionPanel({
         handleAdHocPackageCreated({ label: name, itemIds, price: price ?? null });
         showToast(t('meals.planning.comboAdded', { name }));
       }
-      const [items, cats] = await Promise.all([
-        mealsApi.getFoodItems(spaceId),
-        mealsApi.getFoodCategories(spaceId),
-      ]);
-      setFoodItems(items.filter(item => item.isActive));
-      setCategories(cats.filter(category => category.isActive));
+      const catalog = await fetchSpaceMenuCatalog(spaceId, { force: true });
+      setFoodItems(catalog.items.filter(item => item.isActive));
+      setCategories(catalog.categories.filter(category => category.isActive));
+      setCombos(catalog.combos.filter(combo => combo.isActive));
     } catch {
       showToast(t('meals.errors.saveFailed'));
       throw new Error('createCombo failed');
@@ -598,7 +717,10 @@ export function MenuSelectionPanel({
         onRemove={removeSelection}
       />
 
-      <MenuSelectionTabBar activeTab={activeTab} onTabChange={handleTabChange} />
+      <MenuSelectionTabBar
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+      />
 
       <View style={styles.divider} />
 
@@ -623,7 +745,11 @@ export function MenuSelectionPanel({
               <ComboPickerCard
                 key={combo.comboId}
                 name={combo.name}
-                itemNames={combo.items?.map(item => item.name).filter(Boolean) ?? []}
+                itemNames={
+                  combo.items
+                    ?.map(item => formatComboIncludeLine(item.name, item.quantity))
+                    .filter(Boolean) ?? []
+                }
                 foodType={combo.foodType ?? 'VEG'}
                 price={combo.price}
                 currencyCode={combo.currencyCode}
@@ -643,6 +769,7 @@ export function MenuSelectionPanel({
                 priceInputError={
                   errorKey ? comboPriceDraftErrorMessage(errorKey, t) : null
                 }
+                focusPriceInput={focusPriceInputId === combo.comboId}
                 onPress={() => toggleCombo(combo.comboId)}
               />
             );
@@ -678,6 +805,7 @@ export function MenuSelectionPanel({
             searchQuery={itemSearch}
             draftPrices={draftPrices}
             priceErrors={priceErrors}
+            focusPriceInputId={focusPriceInputId}
             onToggle={toggleItem}
             onPriceChange={updateDraftPrice}
             onPriceBlur={(item, draft) => {
@@ -703,7 +831,8 @@ export function MenuSelectionPanel({
     />
     </>
   );
-}
+});
+
 
 const styles = StyleSheet.create({
   panel: {

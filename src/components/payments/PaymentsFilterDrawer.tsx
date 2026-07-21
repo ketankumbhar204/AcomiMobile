@@ -55,6 +55,8 @@ export function PaymentsFilterDrawer({
         return t('payments.filterDrawer.pending');
       case 'PARTIAL':
         return t('payments.filterDrawer.partial');
+      case 'UNDER_REVIEW':
+        return t('payments.filterDrawer.underReview');
       default:
         return status;
     }

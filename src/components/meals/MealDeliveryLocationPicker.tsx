@@ -10,6 +10,8 @@ type MealDeliveryLocationPickerProps = {
   lastUsedLocationId?: UUID | null;
   onSelect: (locationId: UUID) => void;
   readOnly?: boolean;
+  /** When editable, show ✏ instead of ▾. */
+  showEditAffordance?: boolean;
 };
 
 export function MealDeliveryLocationPicker({
@@ -18,6 +20,7 @@ export function MealDeliveryLocationPicker({
   lastUsedLocationId,
   onSelect,
   readOnly = false,
+  showEditAffordance = false,
 }: MealDeliveryLocationPickerProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -68,7 +71,9 @@ export function MealDeliveryLocationPicker({
             <Text style={styles.placeholder}>{t('meals.poll.selectDeliveryLocation')}</Text>
           )}
         </View>
-        <Text style={styles.chevron}>▾</Text>
+        {!readOnly ? (
+          <Text style={styles.chevron}>{showEditAffordance ? '✏' : '▾'}</Text>
+        ) : null}
       </Pressable>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>

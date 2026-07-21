@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { MemberMealActivityMonth } from '../../api/types';
 import { colors, spacing, typography } from '../../theme';
@@ -14,6 +14,7 @@ type MemberMealActivityCalendarPanelProps = {
   activity: MemberMealActivityMonth | null;
   selectedDate?: string | null;
   onSelectDate: (date: string) => void;
+  onRetry?: () => void;
 };
 
 const LEGEND_ITEMS = [
@@ -31,12 +32,22 @@ export function MemberMealActivityCalendarPanel({
   activity,
   selectedDate,
   onSelectDate,
+  onRetry,
 }: MemberMealActivityCalendarPanelProps) {
   const { t } = useTranslation();
   const days = useMemo(() => activity?.days ?? [], [activity?.days]);
 
   if (error) {
-    return <Text style={styles.error}>{error}</Text>;
+    return (
+      <View style={styles.errorWrap}>
+        <Text style={styles.error}>{error}</Text>
+        {onRetry ? (
+          <Pressable onPress={onRetry} accessibilityRole="button">
+            <Text style={styles.retry}>{t('common.retry')}</Text>
+          </Pressable>
+        ) : null}
+      </View>
+    );
   }
 
   if (loading) {
@@ -77,9 +88,17 @@ const styles = StyleSheet.create({
   wrap: {
     gap: spacing.sm,
   },
+  errorWrap: {
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
   error: {
     ...typography.caption,
     color: '#DC2626',
+  },
+  retry: {
+    ...typography.bodyStrong,
+    color: colors.primaryDark,
   },
   legend: {
     flexDirection: 'row',

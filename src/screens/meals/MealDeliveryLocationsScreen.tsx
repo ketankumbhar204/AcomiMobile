@@ -15,6 +15,7 @@ import type { MealDeliveryLocation, UUID } from '../../api/types';
 import { Button, Screen } from '../../components/ui';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, spacing, typography } from '../../theme';
+import { formatDeliveryLocationSecondary } from '../../utils/deliveryLocationLabel';
 
 type MealDeliveryLocationsScreenProps = {
   spaceId: UUID;
@@ -178,17 +179,20 @@ export function MealDeliveryLocationsScreen({ spaceId }: MealDeliveryLocationsSc
         <Text style={styles.empty}>{t('meals.deliveryLocations.empty')}</Text>
       ) : (
         <View style={styles.list}>
-          {locations.map((location, index) => (
+          {locations.map((location, index) => {
+            const secondary = formatDeliveryLocationSecondary(location);
+            return (
             <View
               key={location.id}
               style={[styles.row, !location.active && styles.rowInactive]}>
               <View style={styles.rowText}>
-                <Text style={styles.rowName}>{location.name}</Text>
-                {location.address ? (
-                  <Text style={styles.rowAddress}>{location.address}</Text>
-                ) : null}
-                {location.description ? (
-                  <Text style={styles.rowDescription}>{location.description}</Text>
+                <Text style={styles.rowName} numberOfLines={1}>
+                  {location.name}
+                </Text>
+                {secondary ? (
+                  <Text style={styles.rowAddress} numberOfLines={2}>
+                    {secondary}
+                  </Text>
                 ) : null}
               </View>
               <View style={styles.rowActions}>
@@ -209,7 +213,8 @@ export function MealDeliveryLocationsScreen({ spaceId }: MealDeliveryLocationsSc
                 </Pressable>
               </View>
             </View>
-          ))}
+            );
+          })}
         </View>
       )}
 

@@ -37,6 +37,8 @@ export function MenuPlanningFilterDrawer({
     switch (status) {
       case 'published':
         return t('meals.planning.filterDrawer.published');
+      case 'modified':
+        return t('meals.planning.filterDrawer.modified');
       case 'draft':
         return t('meals.planning.filterDrawer.draft');
       case 'not_planned':

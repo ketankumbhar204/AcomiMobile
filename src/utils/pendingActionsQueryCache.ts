@@ -75,6 +75,21 @@ export function seedPendingActionsCache(
   cache.set(cacheKey(spaceId, month), { summary, fetchedAt: Date.now() });
 }
 
+/** Drop cached pending-actions so the next read hits the API (or a fresh dashboard seed). */
+export function clearPendingActionsCache(): void {
+  cache.clear();
+  inflight.clear();
+}
+
+/** Age of the cached pending-actions entry in ms, or null when missing. */
+export function pendingActionsCacheAgeMs(
+  spaceId: UUID,
+  month = currentMonthKey(),
+): number | null {
+  const entry = cache.get(cacheKey(spaceId, month));
+  return entry ? Date.now() - entry.fetchedAt : null;
+}
+
 /** Test-only helper. */
 export function resetPendingActionsCacheForTests(): void {
   cache.clear();

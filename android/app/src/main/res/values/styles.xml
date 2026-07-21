@@ -1,8 +1,9 @@
 <resources>
 
     <!-- Base application theme. -->
-    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
-        <!-- Customize your theme here. -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <!-- Mint splash so reloads never flash the system black window. -->
+        <item name="android:windowBackground">@color/app_background</item>
         <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
     </style>
 

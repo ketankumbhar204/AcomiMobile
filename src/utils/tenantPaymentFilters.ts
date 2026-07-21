@@ -68,6 +68,28 @@ export function countTenantPaymentSection(
   return paymentsInTenantSection(payments, section).length;
 }
 
+const TENANT_PAYMENT_SECTION_ORDER: TenantPaymentsSection[] = [
+  'actionNeeded',
+  'underReview',
+  'history',
+];
+
+/** Prefer the first section that has items (Action needed → Under review → History). */
+export function resolvePreferredTenantPaymentsSection(
+  payments: SpacePaymentResponse[],
+  current: TenantPaymentsSection = 'actionNeeded',
+): TenantPaymentsSection {
+  if (countTenantPaymentSection(payments, current) > 0) {
+    return current;
+  }
+  for (const section of TENANT_PAYMENT_SECTION_ORDER) {
+    if (countTenantPaymentSection(payments, section) > 0) {
+      return section;
+    }
+  }
+  return current;
+}
+
 export function filterTenantPayments(
   payments: SpacePaymentResponse[],
   filter: TenantPaymentFilter,

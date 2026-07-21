@@ -41,7 +41,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
-    marginBottom: spacing.sm,
   },
   monthNavBtn: {
     width: 32,

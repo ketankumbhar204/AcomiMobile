@@ -34,7 +34,7 @@ const styles = StyleSheet.create({
   },
   input: {
     minHeight: 44,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: radius.input,
     borderWidth: 1,
     borderColor: colors.border,

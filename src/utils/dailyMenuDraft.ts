@@ -7,6 +7,7 @@ import type {
   UpsertDailyMenuRequest,
   UUID,
 } from '../api/types';
+import { formatComboIncludeLine } from './comboIncludes';
 
 export type MenuSelectionItemPackage = {
   itemId: string;
@@ -33,6 +34,8 @@ export type MenuDraftOption = {
   label: string;
   sortOrder: number;
   isAvailable: boolean;
+  /** Mess-only add-on; independent from the same item as a main dish. */
+  isExtra?: boolean;
   price?: number | null;
   currencyCode?: string | null;
   /** Client-only hint for PACKAGE rows in the planner UI */
@@ -61,6 +64,7 @@ export function toMenuDraftOption(option: DailyMenuOptionResponse, index: number
     label: option.label,
     sortOrder: option.sortOrder ?? index + 1,
     isAvailable: option.isAvailable,
+    isExtra: option.isExtra === true,
     price: option.price ?? null,
     currencyCode: option.currencyCode ?? 'INR',
   };
@@ -76,6 +80,7 @@ export function toUpsertOptions(options: MenuDraftOption[]): UpsertDailyMenuRequ
     label: option.label,
     sortOrder: option.sortOrder,
     isAvailable: option.isAvailable,
+    isExtra: option.entryType === 'PACKAGE' ? option.isExtra === true : false,
     price: option.entryType === 'PACKAGE' ? (option.price ?? null) : null,
     currencyCode: option.entryType === 'PACKAGE' ? (option.currencyCode ?? 'INR') : null,
   }));
@@ -86,7 +91,12 @@ export function getDraftOptionItemNames(
   comboById: Map<string, MealComboResponse>,
 ): string[] {
   if (option.entryType === 'COMBO' && option.comboId) {
-    return comboById.get(option.comboId)?.items?.map(item => item.name).filter(Boolean) ?? [];
+    return (
+      comboById
+        .get(option.comboId)
+        ?.items?.map(item => formatComboIncludeLine(item.name, item.quantity))
+        .filter(Boolean) ?? []
+    );
   }
   if (option.entryType === 'PACKAGE' && option.itemIds?.length === 1) {
     return [];
@@ -269,6 +279,7 @@ export function mergeSelectionIntoOptions(
   combos: Array<{ comboId: string; name: string; price?: number | null; currencyCode?: string | null }>,
   itemPackages: MenuSelectionItemPackage[],
   adHocPackages: MenuAdHocPackage[] = [],
+  extraPackages: MenuSelectionItemPackage[] = [],
 ): MenuDraftOption[] {
   const comboOptions: MenuDraftOption[] = combos.map(combo => ({
     optionId:
@@ -280,6 +291,7 @@ export function mergeSelectionIntoOptions(
     label: combo.name,
     sortOrder: 0,
     isAvailable: true,
+    isExtra: false,
     price: combo.price ?? null,
     currencyCode: combo.currencyCode ?? 'INR',
   }));
@@ -287,7 +299,10 @@ export function mergeSelectionIntoOptions(
     optionId:
       prev.find(
         option =>
-          option.entryType === 'PACKAGE' && option.itemIds?.length === 1 && option.itemIds[0] === item.itemId,
+          option.entryType === 'PACKAGE' &&
+          option.isExtra !== true &&
+          option.itemIds?.length === 1 &&
+          option.itemIds[0] === item.itemId,
       )?.optionId ?? null,
     entryType: 'PACKAGE',
     comboId: null,
@@ -296,6 +311,28 @@ export function mergeSelectionIntoOptions(
     label: item.name,
     sortOrder: 0,
     isAvailable: true,
+    isExtra: false,
+    price: item.price,
+    currencyCode: item.currencyCode ?? 'INR',
+    foodType: item.foodType ?? null,
+  }));
+  const extraItemPackages: MenuDraftOption[] = extraPackages.map(item => ({
+    optionId:
+      prev.find(
+        option =>
+          option.entryType === 'PACKAGE' &&
+          option.isExtra === true &&
+          option.itemIds?.length === 1 &&
+          option.itemIds[0] === item.itemId,
+      )?.optionId ?? null,
+    entryType: 'PACKAGE',
+    comboId: null,
+    itemId: null,
+    itemIds: [item.itemId],
+    label: item.name,
+    sortOrder: 0,
+    isAvailable: true,
+    isExtra: true,
     price: item.price,
     currencyCode: item.currencyCode ?? 'INR',
     foodType: item.foodType ?? null,
@@ -305,6 +342,7 @@ export function mergeSelectionIntoOptions(
       prev.find(
         option =>
           option.entryType === 'PACKAGE' &&
+          option.isExtra !== true &&
           (option.itemIds?.length ?? 0) > 1 &&
           option.label === pkg.label,
       )?.optionId ?? null,
@@ -315,6 +353,7 @@ export function mergeSelectionIntoOptions(
     label: pkg.label,
     sortOrder: 0,
     isAvailable: true,
+    isExtra: false,
     price: pkg.price ?? null,
     currencyCode: pkg.currencyCode ?? 'INR',
   }));
@@ -322,6 +361,7 @@ export function mergeSelectionIntoOptions(
     ...comboOptions,
     ...multiItemPackages,
     ...singleItemPackages,
+    ...extraItemPackages,
   ]);
 }
 
@@ -391,13 +431,19 @@ export async function appendComboAndItemsToMenu(
   return saveMenuDraft(spaceId, menuDate, mealType, next, notes);
 }
 
+/** Draft / chip key for a single-item PACKAGE offered as an extra. */
+export function extraItemDraftId(itemId: string): string {
+  return `extra:${itemId}`;
+}
+
 /** Stable key for planned-row price drafts and list keys. */
 export function optionChipId(option: MenuDraftOption): string {
   if (option.entryType === 'COMBO') {
     return option.comboId ?? option.label;
   }
   if (option.entryType === 'PACKAGE' && option.itemIds?.length === 1) {
-    return option.itemIds[0];
+    const itemId = option.itemIds[0];
+    return option.isExtra === true ? extraItemDraftId(itemId) : itemId;
   }
   if (option.entryType === 'PACKAGE') {
     return `package:${option.label}`;
@@ -428,7 +474,11 @@ export async function resolvePlannedComboItemNames(
   if (option.entryType === 'COMBO' && option.comboId) {
     const combos = await mealsApi.getMealCombos(spaceId);
     const combo = combos.find(row => row.comboId === option.comboId);
-    return combo?.items?.map(item => item.name).filter(Boolean) ?? [];
+    return (
+      combo?.items
+        ?.map(item => formatComboIncludeLine(item.name, item.quantity))
+        .filter(Boolean) ?? []
+    );
   }
   return [];
 }

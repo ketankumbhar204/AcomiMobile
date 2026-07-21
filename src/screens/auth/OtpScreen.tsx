@@ -1,12 +1,9 @@
 import React, { useLayoutEffect, useState } from 'react';
 import {
   Keyboard,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -54,65 +51,61 @@ export function OtpScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}>
+    <View style={styles.flex}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}>
+        <Text style={styles.eyebrow}>{t('auth.otp.eyebrow')}</Text>
+        <Text style={styles.heading}>{t('auth.otp.heading')}</Text>
+        <Text style={styles.subheading}>
+          {t('auth.otp.subheading')}{' '}
+          <Text style={styles.mobile}>+91 {mobileNumber}</Text>
+        </Text>
 
-          <Text style={styles.eyebrow}>{t('auth.otp.eyebrow')}</Text>
-          <Text style={styles.heading}>{t('auth.otp.heading')}</Text>
-          <Text style={styles.subheading}>
-            {t('auth.otp.subheading')}{' '}
-            <Text style={styles.mobile}>+91 {mobileNumber}</Text>
+        {error ? (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorBannerText}>{error}</Text>
+          </View>
+        ) : null}
+
+        <OtpInput
+          value={otp}
+          onChange={value => {
+            setOtp(value);
+            if (error) {
+              clearError();
+            }
+          }}
+          disabled={isLoading}
+        />
+
+        {__DEV__ ? (
+          <View style={styles.devHint}>
+            <Text style={styles.devHintText}>{t('auth.otp.devHint')}</Text>
+          </View>
+        ) : null}
+
+        <Button
+          label={t('auth.otp.verifyContinue')}
+          onPress={handleVerify}
+          loading={isLoading}
+          disabled={isLoading || !isComplete}
+          style={styles.button}
+        />
+
+        <Text style={styles.changeNumber}>
+          {t('auth.otp.wrongNumber')}{' '}
+          <Text
+            style={styles.changeNumberLink}
+            onPress={() => !isLoading && navigation.goBack()}>
+            {t('auth.otp.changeIt')}
           </Text>
-
-          {error ? (
-            <View style={styles.errorBanner}>
-              <Text style={styles.errorBannerText}>{error}</Text>
-            </View>
-          ) : null}
-
-          <OtpInput
-            value={otp}
-            onChange={value => {
-              setOtp(value);
-              if (error) {
-                clearError();
-              }
-            }}
-            disabled={isLoading}
-          />
-
-          {__DEV__ ? (
-            <View style={styles.devHint}>
-              <Text style={styles.devHintText}>{t('auth.otp.devHint')}</Text>
-            </View>
-          ) : null}
-
-          <Button
-            label={t('auth.otp.verifyContinue')}
-            onPress={handleVerify}
-            loading={isLoading}
-            disabled={isLoading || !isComplete}
-            style={styles.button}
-          />
-
-          <Text style={styles.changeNumber}>
-            {t('auth.otp.wrongNumber')}{' '}
-            <Text
-              style={styles.changeNumberLink}
-              onPress={() => !isLoading && navigation.goBack()}>
-              {t('auth.otp.changeIt')}
-            </Text>
-          </Text>
-        </ScrollView>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+        </Text>
+      </ScrollView>
+    </View>
   );
 }
 

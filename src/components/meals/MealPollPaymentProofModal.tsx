@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -37,6 +37,12 @@ export function MealPollPaymentProofModal({
     setPicking(false);
   };
 
+  useEffect(() => {
+    if (!visible) {
+      reset();
+    }
+  }, [visible]);
+
   const handleClose = () => {
     if (submitting) {
       return;
@@ -65,12 +71,8 @@ export function MealPollPaymentProofModal({
     onSubmit(proofImageBase64);
   };
 
-  if (!visible) {
-    return null;
-  }
-
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={handleClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
           <Text style={styles.title}>{t('meals.poll.paymentProofTitle')}</Text>

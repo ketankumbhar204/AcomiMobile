@@ -17,16 +17,11 @@ import {
   showLessI18nKey,
 } from '../../utils/plannedMenuSummary';
 import {
-  menuPlanningStatusFilterLabelKey,
-  MENU_PLANNING_STATUS_COLORS,
-  MENU_PLANNING_STATUS_SYMBOLS,
-} from '../../utils/menuPlanningStatusVisual';
-import { slotPlanningStatus } from '../../utils/menuPlanningFilter';
-import {
   resolveMenuOptionCurrency,
   resolveMenuOptionPrice,
 } from '../../utils/comboPrice';
 import { ComboItemsPopup } from './ComboItemsPopup';
+import { MealStatusBadge } from './MealStatusBadge';
 import { PlannedComboPreviewRow } from './PlannedComboPreviewRow';
 
 const MAX_VISIBLE = 2;
@@ -40,10 +35,16 @@ type DailyMenuSlotCardProps = {
   onSelectMenu?: () => void;
   onEdit?: () => void;
   onShare?: () => void;
+  onCopyYesterday?: () => void;
+  copyYesterdayLoading?: boolean;
   onClosePoll?: () => void;
+  onEditPollCloseAt?: () => void;
   pollStatus?: 'OPEN' | 'CLOSED' | null;
   pollResponseCount?: number;
   pollActionLoading?: boolean;
+  pollCloseAtLabel?: string | null;
+  pollClosedAtLabel?: string | null;
+  pollCloseSource?: 'MANUAL' | 'AUTOMATIC' | null;
   onViewHeadcount?: () => void;
   readOnly?: boolean;
 };
@@ -56,10 +57,16 @@ export function DailyMenuSlotCard({
   onSelectMenu,
   onEdit,
   onShare,
+  onCopyYesterday,
+  copyYesterdayLoading = false,
   onClosePoll,
+  onEditPollCloseAt,
   pollStatus,
   pollResponseCount = 0,
   pollActionLoading = false,
+  pollCloseAtLabel,
+  pollClosedAtLabel,
+  pollCloseSource,
   onViewHeadcount,
   readOnly = false,
 }: DailyMenuSlotCardProps) {
@@ -75,14 +82,10 @@ export function DailyMenuSlotCard({
   const [comboPreviewCurrency, setComboPreviewCurrency] = useState<string | null | undefined>();
   const [comboPreviewSingleItem, setComboPreviewSingleItem] = useState(false);
   const published = menu?.status === 'PUBLISHED';
+  const modified = menu?.status === 'MODIFIED';
   const options = menu?.options?.filter(option => option.isAvailable) ?? [];
   const hasPlan = options.length > 0;
   const canShare = hasPlan && onShare;
-
-  const slotStatus = slotPlanningStatus(menu);
-  const statusColor = MENU_PLANNING_STATUS_COLORS[slotStatus];
-  const statusSymbol = MENU_PLANNING_STATUS_SYMBOLS[slotStatus];
-  const statusLabel = t(menuPlanningStatusFilterLabelKey(slotStatus));
 
   const hiddenCount = options.length - MAX_VISIBLE;
 
@@ -140,8 +143,9 @@ export function DailyMenuSlotCard({
   const menuCtaAction = readOnly ? undefined : hasPlan ? onEdit : onSelectMenu;
   const canShareAction = !readOnly && canShare;
 
-  const shareLabel =
-    published && pollStatus === 'OPEN'
+  const shareLabel = modified
+    ? t('meals.planning.shareChanges')
+    : published && pollStatus === 'OPEN'
       ? t('meals.planning.shareSlotAgain')
       : t('meals.planning.shareSlot');
 
@@ -152,14 +156,28 @@ export function DailyMenuSlotCard({
     <Card style={styles.card}>
       <View style={styles.header}>
         <Text style={styles.slotTitle}>{t(mealTypeLabelKey(mealType))}</Text>
-        <View style={[styles.statusBadge, { borderColor: statusColor }]}>
-          <Text style={[styles.statusSymbol, { color: statusColor }]}>{statusSymbol}</Text>
-          <Text style={[styles.statusLabel, { color: statusColor }]}>{statusLabel}</Text>
-        </View>
+        <MealStatusBadge menu={menu} />
       </View>
 
       {!hasPlan ? (
-        <Text style={styles.empty}>{t('meals.menu.noItemsYet')}</Text>
+        <View style={styles.emptyBlock}>
+          <Text style={styles.emptyTitle}>
+            {t('meals.menu.emptyTitle', { meal: t(mealTypeLabelKey(mealType)) })}
+          </Text>
+          <Text style={styles.emptyHint}>{t('meals.menu.emptyHint')}</Text>
+          {!readOnly && onCopyYesterday ? (
+            <Pressable
+              style={[styles.copyYesterdayButton, copyYesterdayLoading && styles.buttonDisabled]}
+              onPress={onCopyYesterday}
+              disabled={copyYesterdayLoading}>
+              <Text style={styles.copyYesterdayText}>
+                {copyYesterdayLoading
+                  ? t('common.loading', { defaultValue: 'Loading…' })
+                  : t('meals.planning.copyYesterday')}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
       ) : (
         <View style={styles.choicesBlock}>
           <View style={styles.choicesHeader}>
@@ -213,9 +231,24 @@ export function DailyMenuSlotCard({
         </Pressable>
       ) : null}
 
-      {(canShareAction || (published && pollStatus)) ? <View style={styles.divider} /> : null}
+      {(canShareAction || modified || (published && pollStatus)) ? (
+        <View style={styles.divider} />
+      ) : null}
 
-      {published && pollStatus === 'OPEN' ? (
+      {modified ? (
+        <View style={styles.shareFooter}>
+          <Text style={styles.priorPollHint}>
+            {pollStatus
+              ? t('meals.planning.priorPollResponsesHint', { count: pollResponseCount })
+              : t('meals.planning.shareNeedsReshareHint')}
+          </Text>
+          {canShareAction ? (
+            <Pressable style={styles.shareLink} onPress={onShare}>
+              <Text style={styles.shareLinkText}>{shareLabel}</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : published && pollStatus === 'OPEN' ? (
         <View style={styles.shareFooter}>
           <View style={styles.pollStatusRow}>
             <Text style={styles.pollStatusMuted}>{t('meals.poll.pollOpenPrefix')}</Text>
@@ -242,7 +275,7 @@ export function DailyMenuSlotCard({
         </Pressable>
       ) : null}
 
-      {published && pollStatus === 'CLOSED' ? (
+      {published && !modified && pollStatus === 'CLOSED' ? (
         <View style={styles.closedPollFooter}>
           <View style={styles.pollStatusRow}>
             <Text style={styles.pollStatusMuted}>{t('meals.poll.pollClosedPrefix')}</Text>
@@ -257,18 +290,45 @@ export function DailyMenuSlotCard({
               <Text style={styles.pollStatusClosed}>{respondedLabel}</Text>
             )}
           </View>
+          {pollCloseSource === 'MANUAL' ? (
+            <Text style={styles.closeAtMeta}>{t('meals.poll.closedManually')}</Text>
+          ) : pollClosedAtLabel ? (
+            <Text style={styles.closeAtMeta}>
+              {t('meals.poll.closedAt', { when: pollClosedAtLabel })}
+            </Text>
+          ) : null}
         </View>
       ) : null}
 
       {published && pollStatus === 'OPEN' && onClosePoll && !readOnly ? (
-        <Pressable
-          style={[styles.pollCloseButton, pollActionLoading && styles.buttonDisabled]}
-          onPress={onClosePoll}
-          disabled={pollActionLoading}>
-          <Text style={styles.pollCloseButtonText}>
-            {pollActionLoading ? t('meals.poll.submitting') : t('meals.poll.closePoll')}
-          </Text>
-        </Pressable>
+        <View style={styles.closePollRow}>
+          <Pressable
+            style={[styles.pollCloseButton, styles.pollCloseButtonFlex, pollActionLoading && styles.buttonDisabled]}
+            onPress={onClosePoll}
+            disabled={pollActionLoading}>
+            <Text style={styles.pollCloseButtonText}>
+              {pollActionLoading ? t('meals.poll.submitting') : t('meals.poll.closePoll')}
+            </Text>
+          </Pressable>
+          {pollCloseAtLabel ? (
+            <Pressable
+              style={styles.closeAtChip}
+              onPress={onEditPollCloseAt}
+              disabled={!onEditPollCloseAt || pollActionLoading}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel={t('meals.poll.editCloseAtA11y', { when: pollCloseAtLabel })}>
+              <Text style={styles.closeAtChipText} numberOfLines={2}>
+                {t('meals.poll.closesAt', { when: pollCloseAtLabel })}
+                {onEditPollCloseAt ? ' ✏️' : ''}
+              </Text>
+            </Pressable>
+          ) : onEditPollCloseAt ? (
+            <Pressable style={styles.closeAtChip} onPress={onEditPollCloseAt} hitSlop={6}>
+              <Text style={styles.closeAtChipText}>{t('meals.poll.setCloseAt')} ✏️</Text>
+            </Pressable>
+          ) : null}
+        </View>
       ) : null}
     </Card>
 
@@ -310,6 +370,34 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   statusLabel: { ...typography.caption, fontWeight: '700' },
+  emptyBlock: {
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  emptyTitle: {
+    ...typography.bodyStrong,
+    color: colors.textPrimary,
+  },
+  emptyHint: {
+    ...typography.caption,
+    color: colors.muted,
+    lineHeight: 18,
+  },
+  copyYesterdayButton: {
+    alignSelf: 'flex-start',
+    marginTop: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: radius.button,
+    backgroundColor: colors.lightGreen,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  copyYesterdayText: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    fontWeight: '700',
+  },
   empty: { ...typography.body, color: colors.muted, marginBottom: spacing.sm },
   choicesBlock: { marginBottom: spacing.sm },
   choicesHeader: {
@@ -353,6 +441,12 @@ const styles = StyleSheet.create({
     marginVertical: spacing.md,
   },
   buttonDisabled: { opacity: 0.6 },
+  priorPollHint: {
+    ...typography.caption,
+    color: '#C2410C',
+    flex: 1,
+    fontWeight: '600',
+  },
   shareFooter: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -397,14 +491,41 @@ const styles = StyleSheet.create({
   },
   closedPollFooter: {
     marginTop: spacing.sm,
+    gap: spacing.xs,
+  },
+  closePollRow: {
+    marginTop: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   pollCloseButton: {
-    marginTop: spacing.sm,
     borderRadius: radius.button,
     borderWidth: 1,
     borderColor: colors.border,
     paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
     alignItems: 'center',
   },
+  pollCloseButtonFlex: {
+    flexShrink: 0,
+    minWidth: 112,
+  },
   pollCloseButtonText: { ...typography.bodyStrong, color: colors.muted, fontSize: 14 },
+  closeAtChip: {
+    flex: 1,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.xs,
+  },
+  closeAtChipText: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  closeAtMeta: {
+    ...typography.caption,
+    color: colors.muted,
+    fontWeight: '600',
+  },
 });

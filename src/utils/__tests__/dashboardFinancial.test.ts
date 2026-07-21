@@ -21,18 +21,23 @@ describe('computePending', () => {
     expect(computePending(5000, 3000)).toBe(2000);
   });
 
+  it('excludes under-review from pending', () => {
+    expect(computePending(750, 0, 180)).toBe(570);
+  });
+
   it('never returns negative pending', () => {
     expect(computePending(1000, 1500)).toBe(0);
   });
 });
 
 describe('buildFinancialSummary', () => {
-  it('derives pending from expected and collected', () => {
-    const summary = buildFinancialSummary(10000, 4000, 'INR', 'OCCUPANCY');
+  it('derives pending from expected, collected, and under review', () => {
+    const summary = buildFinancialSummary(10000, 4000, 'INR', 'OCCUPANCY', 2000);
     expect(summary).toEqual({
       expectedCharges: 10000,
       collected: 4000,
-      pending: 6000,
+      underReview: 2000,
+      pending: 4000,
       currencyCode: 'INR',
       source: 'OCCUPANCY',
     });
@@ -41,13 +46,14 @@ describe('buildFinancialSummary', () => {
 
 describe('mergeFinancialSummaries', () => {
   it('sums meal and occupancy parts for hybrid PG+food', () => {
-    const meal = buildFinancialSummary(1500, 500, 'INR', 'MEAL_ACTIVITY');
+    const meal = buildFinancialSummary(1500, 500, 'INR', 'MEAL_ACTIVITY', 200);
     const occupancy = buildFinancialSummary(8000, null, 'INR', 'OCCUPANCY');
     const merged = mergeFinancialSummaries([meal, occupancy]);
 
     expect(merged.expectedCharges).toBe(9500);
     expect(merged.collected).toBe(500);
-    expect(merged.pending).toBe(9000);
+    expect(merged.underReview).toBe(200);
+    expect(merged.pending).toBe(8800);
     expect(merged.source).toBe('HYBRID');
   });
 
@@ -63,9 +69,10 @@ describe('aggregateFinancialFromRows', () => {
       {
         memberId: 'a',
         memberName: 'Alice',
-        expectedCharges: 8000,
+        expectedCharges: 750,
         collected: null,
-        pending: 8000,
+        underReview: 180,
+        pending: 570,
         currencyCode: 'INR',
         status: 'PENDING',
       },
@@ -74,6 +81,7 @@ describe('aggregateFinancialFromRows', () => {
         memberName: 'Bob',
         expectedCharges: 500,
         collected: 500,
+        underReview: null,
         pending: 0,
         currencyCode: 'INR',
         status: 'PAID',
@@ -81,9 +89,10 @@ describe('aggregateFinancialFromRows', () => {
     ];
 
     const summary = aggregateFinancialFromRows(rows, 'HYBRID');
-    expect(summary.expectedCharges).toBe(8500);
+    expect(summary.expectedCharges).toBe(1250);
     expect(summary.collected).toBe(500);
-    expect(summary.pending).toBe(8000);
+    expect(summary.underReview).toBe(180);
+    expect(summary.pending).toBe(570);
     expect(summary.source).toBe('HYBRID');
   });
 });
@@ -99,6 +108,14 @@ describe('derivePaymentStatus', () => {
 
   it('marks partial payments correctly', () => {
     expect(derivePaymentStatus(1000, 400)).toBe('PARTIAL');
+  });
+
+  it('marks under review when all outstanding is submitted', () => {
+    expect(derivePaymentStatus(750, 570, 180)).toBe('UNDER_REVIEW');
+  });
+
+  it('prefers pending when customer action remains alongside under review', () => {
+    expect(derivePaymentStatus(750, 420, 180)).toBe('PENDING');
   });
 
   it('marks fully paid rows', () => {

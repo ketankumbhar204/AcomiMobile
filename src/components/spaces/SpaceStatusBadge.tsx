@@ -7,7 +7,7 @@ type SpaceStatusBadgeProps = {
   pendingActionCount: number;
 };
 
-/** Subtle pending-actions hint for My Spaces cards. Hidden when count is 0. */
+/** Pending-actions hint for My Spaces cards. Hidden when count is 0. */
 export function SpaceStatusBadge({ pendingActionCount }: SpaceStatusBadgeProps) {
   const { t } = useTranslation();
   if (pendingActionCount <= 0) {
@@ -15,7 +15,7 @@ export function SpaceStatusBadge({ pendingActionCount }: SpaceStatusBadgeProps) 
   }
 
   return (
-    <View style={styles.badge}>
+    <View style={styles.badge} accessibilityRole="text">
       <View style={styles.dot} />
       <Text style={styles.label}>
         {t('spaces.globalDashboard.pendingActions', { count: pendingActionCount })}
@@ -30,23 +30,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'flex-start',
     gap: spacing.xs,
-    marginTop: spacing.xs,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderRadius: radius.full,
     backgroundColor: '#FFF7ED',
     borderWidth: 1,
     borderColor: '#FDBA7444',
   },
   dot: {
-    width: 7,
-    height: 7,
+    width: 8,
+    height: 8,
     borderRadius: 4,
     backgroundColor: '#EA580C',
   },
   label: {
     ...typography.caption,
     color: '#C2410C',
-    fontWeight: '600',
+    fontWeight: '700',
+    fontSize: 13,
   },
 });

@@ -2,72 +2,48 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { GlobalActivityItem } from '../../api/types';
-import { colors, radius, shadows, spacing, typography } from '../../theme';
-import { formatComplaintDateTime } from '../../utils/complaintStatus';
-
-const PREVIEW_LIMIT = 5;
+import { colors, radius, spacing, typography } from '../../theme';
 
 type RecentActivityCardProps = {
   items: GlobalActivityItem[];
-  onPressItem: (item: GlobalActivityItem) => void;
-  onViewAll?: () => void;
+  onPress: () => void;
 };
 
-function activityIcon(category: GlobalActivityItem['category']): string {
-  switch (category) {
-    case 'SUCCESS':
-      return '✓';
-    case 'WARNING':
-      return '!';
-    case 'ERROR':
-      return '✕';
-    default:
-      return '•';
-  }
-}
-
-export function RecentActivityCard({
-  items,
-  onPressItem,
-  onViewAll,
-}: RecentActivityCardProps) {
+/**
+ * Low-priority recent activity strip for My Spaces.
+ * Shows at most one line — full history opens on tap.
+ */
+export function RecentActivityCard({ items, onPress }: RecentActivityCardProps) {
   const { t } = useTranslation();
-  const preview = items.slice(0, PREVIEW_LIMIT);
-  const hasMore = items.length > PREVIEW_LIMIT;
+  const latest = items[0];
+  const count = items.length;
+
+  if (count === 0) {
+    return (
+      <View style={styles.card} accessibilityRole="summary">
+        <Text style={styles.title}>{t('spaces.globalDashboard.activityTitle')}</Text>
+        <Text style={styles.empty}>{t('spaces.globalDashboard.activityEmptyTitle')}</Text>
+      </View>
+    );
+  }
+
+  // Prefer the concrete latest title — easier to glance than a count alone.
+  const summary = latest.title || t('spaces.globalDashboard.activityNewUpdates', { count });
 
   return (
-    <View style={styles.card}>
-      <Text style={styles.sectionTitle}>{t('spaces.globalDashboard.activityTitle')}</Text>
-      {preview.length === 0 ? (
-        <>
-          <Text style={styles.emptyTitle}>{t('spaces.globalDashboard.activityEmptyTitle')}</Text>
-          <Text style={styles.emptyBody}>{t('spaces.globalDashboard.activityEmptyBody')}</Text>
-        </>
-      ) : (
-        preview.map(item => (
-          <Pressable
-            key={item.notificationId}
-            onPress={() => onPressItem(item)}
-            style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
-            <Text style={styles.icon}>{activityIcon(item.category)}</Text>
-            <View style={styles.body}>
-              <Text style={styles.title} numberOfLines={1}>
-                {item.title}
-              </Text>
-              <Text style={styles.meta} numberOfLines={1}>
-                {item.spaceName ?? ''}
-                {item.createdAt ? ` · ${formatComplaintDateTime(item.createdAt)}` : ''}
-              </Text>
-            </View>
-          </Pressable>
-        ))
-      )}
-      {hasMore && onViewAll ? (
-        <Pressable onPress={onViewAll} hitSlop={8}>
-          <Text style={styles.viewAll}>{t('spaces.globalDashboard.viewAll')}</Text>
-        </Pressable>
-      ) : null}
-    </View>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${t('spaces.globalDashboard.activityTitle')}. ${summary}`}
+      style={({ pressed }) => [styles.card, styles.pressable, pressed && styles.pressed]}>
+      <View style={styles.textCol}>
+        <Text style={styles.title}>{t('spaces.globalDashboard.activityTitle')}</Text>
+        <Text style={styles.summary} numberOfLines={1}>
+          {summary}
+        </Text>
+      </View>
+      <Text style={styles.cta}>{t('spaces.globalDashboard.viewArrow')}</Text>
+    </Pressable>
   );
 }
 
@@ -77,51 +53,48 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.lg,
-    gap: spacing.sm,
-    ...shadows.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.xs,
+    minHeight: 64,
   },
-  sectionTitle: {
-    ...typography.h3,
-    marginBottom: spacing.xs,
-  },
-  row: {
+  pressable: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
+    alignItems: 'center',
+    gap: spacing.md,
   },
   pressed: {
-    opacity: 0.75,
+    opacity: 0.8,
+    backgroundColor: colors.surface,
   },
-  icon: {
-    ...typography.body,
-    color: colors.success,
-    fontWeight: '700',
-    width: 18,
-  },
-  body: {
+  textCol: {
     flex: 1,
+    minWidth: 0,
     gap: 2,
   },
   title: {
+    ...typography.caption,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    fontSize: 12,
+  },
+  summary: {
     ...typography.body,
     fontWeight: '600',
+    color: colors.textPrimary,
+    fontSize: 16,
   },
-  meta: {
-    ...typography.caption,
-  },
-  viewAll: {
+  empty: {
     ...typography.body,
+    color: colors.textSecondary,
+    fontSize: 15,
+  },
+  cta: {
+    ...typography.body,
+    fontWeight: '700',
     color: colors.primaryDark,
-    fontWeight: '600',
-    marginTop: spacing.xs,
-  },
-  emptyTitle: {
-    ...typography.body,
-    fontWeight: '600',
-  },
-  emptyBody: {
-    ...typography.caption,
+    fontSize: 15,
   },
 });

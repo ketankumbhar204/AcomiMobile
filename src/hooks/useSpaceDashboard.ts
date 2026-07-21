@@ -4,7 +4,6 @@ import type {
   DashboardAccommodationOperations,
   DashboardAttentionItem,
   DashboardFinancialSummary,
-  DashboardMessOperations,
   DashboardSummaryResponse,
   PendingActionsSummary,
   SpaceType,
@@ -17,7 +16,8 @@ import {
   peekDashboardSummary,
   subscribeDashboardInvalidation,
 } from '../utils/dashboardQueryCache';
-import { seedPendingActionsCache } from '../utils/pendingActionsQueryCache';
+import { seedPendingActionsCache, peekPendingActions } from '../utils/pendingActionsQueryCache';
+import { seedPaymentsUnderReviewFromPendingActions } from '../utils/paymentsReviewAttentionCache';
 import {
   getOccupancyInvalidationGeneration,
   subscribeOccupancyInvalidation,
@@ -33,7 +33,6 @@ export type SpaceDashboardState = {
   financial: DashboardFinancialSummary | null;
   attention: DashboardAttentionItem[];
   pendingActions: PendingActionsSummary | null;
-  messOperations: DashboardMessOperations | null;
   accommodationOperations: DashboardAccommodationOperations | null;
   reload: (force?: boolean) => Promise<void>;
 };
@@ -109,7 +108,17 @@ export function useSpaceDashboard(
       try {
         const data = await fetchDashboardSummaryCached(spaceId, spaceType, month, { force });
         if (data.pendingActions) {
-          seedPendingActionsCache(spaceId, data.pendingActions, month);
+          const existingPending = peekPendingActions(spaceId, month);
+          // Do not let a stale empty summary wipe a warmer pending-actions cache
+          // (Global Dashboard can refresh notifications without invalidating summary TTL).
+          if (
+            data.pendingActions.totalCount > 0 ||
+            existingPending == null ||
+            existingPending.totalCount === 0
+          ) {
+            seedPendingActionsCache(spaceId, data.pendingActions, month);
+            seedPaymentsUnderReviewFromPendingActions(spaceId, month, data.pendingActions);
+          }
         }
         setSummary(data);
       } catch {
@@ -147,7 +156,6 @@ export function useSpaceDashboard(
     financial: summary?.financial ?? null,
     attention: summary?.attention ?? [],
     pendingActions: summary?.pendingActions ?? null,
-    messOperations: summary?.messOperations ?? null,
     accommodationOperations: summary?.accommodationOperations ?? null,
     reload: load,
   };
@@ -158,4 +166,3 @@ export function useMessOwnerDashboard(spaceId: UUID, enabled: boolean) {
   return useSpaceDashboard(spaceId, 'MESS', enabled);
 }
 
-export type { DashboardMessOperations };

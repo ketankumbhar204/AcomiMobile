@@ -2,11 +2,9 @@ import React, { useCallback } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { PendingActionGroup, UUID } from '../../api/types';
-import { navigateMainStack } from '../../navigation/mainStackNavigation';
-import { navigateToPaymentsTab } from '../../navigation/navigationRef';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
-import { tomorrowIsoDate } from '../../utils/mealDates';
-import { isOwnerOnlyNotificationType } from '../../utils/ownerOnlyNotifications';
+import { navigateFromPendingActionGroup } from '../../utils/notificationDeepLinks';
+import { canManageNotifications } from '../../utils/spaceOperator';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 
 type PendingActionGroupCardProps = {
@@ -42,68 +40,10 @@ function actionIcon(actionType: PendingActionGroup['actionType']): string {
   }
 }
 
-function navigateForAction(spaceId: UUID, group: PendingActionGroup, canManageMeals: boolean) {
-  if (!canManageMeals && isOwnerOnlyNotificationType(group.actionType)) {
-    return;
-  }
-  const tomorrow = tomorrowIsoDate();
-  switch (group.actionType) {
-    case 'PAYMENT_NEEDS_REVIEW':
-      navigateToPaymentsTab(spaceId, { initialSection: 'submitted' });
-      return;
-    case 'PAYMENT_NEEDS_UPDATE':
-      navigateToPaymentsTab(spaceId, { initialSection: 'changesRequested' });
-      return;
-    case 'PAYMENT_UPDATE_REQUESTED': {
-      const paymentId = group.items[0]?.entityId;
-      if (paymentId) {
-        navigateMainStack('PaymentDetail', { spaceId, paymentId });
-      } else {
-        navigateToPaymentsTab(spaceId);
-      }
-      return;
-    }
-    case 'PAYMENT_OVERDUE':
-      navigateToPaymentsTab(spaceId, { initialSection: 'members' });
-      return;
-    case 'MENU_NOT_PLANNED':
-    case 'MEAL_RESPONSES_BELOW_THRESHOLD':
-      navigateMainStack('MenuPlanning', { spaceId, menuDate: tomorrow });
-      return;
-    case 'MENU_DRAFT_PENDING_PUBLISH':
-      navigateMainStack('MenuSharePreview', { spaceId, menuDate: tomorrow });
-      return;
-    case 'SUBSCRIPTION_ACTIVATION_PENDING':
-      navigateMainStack('SubscriptionActivationRequests', { spaceId });
-      return;
-    case 'COMPLAINT_PENDING':
-    case 'COMPLAINT_OVERDUE': {
-      const complaintId = group.items[0]?.entityId;
-      if (complaintId) {
-        navigateMainStack('ComplaintDetail', { spaceId, complaintId });
-      }
-      return;
-    }
-    default:
-      if (canManageMeals && group.actionRoute === 'MenuPlanning') {
-        navigateMainStack('MenuPlanning', { spaceId, menuDate: tomorrow });
-      } else if (canManageMeals && group.actionRoute === 'MenuSharePreview') {
-        navigateMainStack('MenuSharePreview', { spaceId, menuDate: tomorrow });
-      } else if (canManageMeals && group.actionRoute === 'SubscriptionActivationRequests') {
-        navigateMainStack('SubscriptionActivationRequests', { spaceId });
-      } else if (group.actionRoute === 'ComplaintDetail') {
-        const complaintId = group.items[0]?.entityId;
-        if (complaintId) {
-          navigateMainStack('ComplaintDetail', { spaceId, complaintId });
-        }
-      }
-  }
-}
-
 export function PendingActionGroupCard({ spaceId, group }: PendingActionGroupCardProps) {
   const { t } = useTranslation();
   const permissions = useSpacePermissions(spaceId);
-  const canManageMeals = permissions.canManageMeals === true;
+  const isOperator = canManageNotifications(permissions);
   const title =
     t(`dashboard.pendingActions.groups.${group.actionType}`, {
       defaultValue: group.title,
@@ -115,8 +55,8 @@ export function PendingActionGroupCard({ spaceId, group }: PendingActionGroupCar
     t('dashboard.pendingActions.tapToOpen');
 
   const onPress = useCallback(() => {
-    navigateForAction(spaceId, group, canManageMeals);
-  }, [canManageMeals, group, spaceId]);
+    navigateFromPendingActionGroup(spaceId, group, isOperator);
+  }, [group, isOperator, spaceId]);
 
   return (
     <Pressable

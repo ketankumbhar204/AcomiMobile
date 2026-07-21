@@ -19,10 +19,17 @@ import { ComboPriceInput } from '../../components/meals/ComboPriceInput';
 import { Button, FormInput, PermissionDeniedScreen } from '../../components/ui';
 import { Screen } from '../../components/ui/Screen';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
+import { useMealPricingPolicy } from '../../hooks/useMealPricingPolicy';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, spacing, typography } from '../../theme';
 import { parsePriceInput, validatePriceInput } from '../../utils/comboPrice';
+import {
+  buildItemQuantitiesPayload,
+  syncItemQuantities,
+} from '../../utils/comboIncludes';
+import { fetchSpaceMenuCatalog } from '../../utils/fetchSpaceMenuCatalog';
+import { ComboItemQuantityEditor } from '../../components/meals/ComboItemQuantityEditor';
 
 type Nav = NativeStackNavigationProp<MainStackParamList>;
 type Route = NativeStackScreenProps<MainStackParamList, 'MealComboForm'>['route'];
@@ -33,7 +40,9 @@ export function MealComboFormScreen() {
   const route = useRoute<Route>();
   const { spaceId, mode, comboId } = route.params;
   const permissions = useSpacePermissions(spaceId);
+  const mealPricing = useMealPricingPolicy(spaceId);
   const showToast = useToastStore(state => state.showToast);
+  const enableItemQuantities = mealPricing.requiresMealPrices;
 
   const isEdit = mode === 'edit';
 
@@ -44,6 +53,7 @@ export function MealComboFormScreen() {
   const [priceText, setPriceText] = useState('');
   const [priceError, setPriceError] = useState<string | null>(null);
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({});
   const [nameError, setNameError] = useState<string | null>(null);
   const [itemsError, setItemsError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,16 +63,12 @@ export function MealComboFormScreen() {
   useEffect(() => {
     void (async () => {
       try {
-        const [itemList, categoryList, comboList] = await Promise.all([
-          mealsApi.getFoodItems(spaceId),
-          mealsApi.getFoodCategories(spaceId),
-          mealsApi.getMealCombos(spaceId),
-        ]);
-        setItems(itemList);
-        setCategories(categoryList);
+        const catalog = await fetchSpaceMenuCatalog(spaceId);
+        setItems(catalog.items);
+        setCategories(catalog.categories);
 
         if (isEdit && comboId) {
-          const combo = comboList.find(row => row.comboId === comboId);
+          const combo = catalog.combos.find(row => row.comboId === comboId);
           if (combo) {
             setName(combo.name);
             setDescription(combo.description ?? '');
@@ -70,6 +76,11 @@ export function MealComboFormScreen() {
               combo.price != null && combo.price > 0 ? String(combo.price) : '',
             );
             setSelectedItemIds(combo.items?.map(item => item.itemId) ?? []);
+            const qty: Record<string, number> = {};
+            for (const item of combo.items ?? []) {
+              qty[item.itemId] = item.quantity != null && item.quantity >= 1 ? item.quantity : 1;
+            }
+            setItemQuantities(qty);
           }
         }
       } catch {
@@ -121,6 +132,9 @@ export function MealComboFormScreen() {
       name: name.trim(),
       description: description.trim() || null,
       itemIds: selectedItemIds,
+      ...(enableItemQuantities
+        ? { itemQuantities: buildItemQuantitiesPayload(selectedItemIds, itemQuantities) }
+        : {}),
       price: parsePriceInput(priceText),
       currencyCode: 'INR',
     };
@@ -139,7 +153,20 @@ export function MealComboFormScreen() {
     } finally {
       setSubmitting(false);
     }
-  }, [comboId, description, isEdit, name, navigation, priceText, selectedItemIds, showToast, spaceId, t]);
+  }, [
+    comboId,
+    description,
+    enableItemQuantities,
+    isEdit,
+    itemQuantities,
+    name,
+    navigation,
+    priceText,
+    selectedItemIds,
+    showToast,
+    spaceId,
+    t,
+  ]);
 
   const addItemInline = useCallback(
     async (categoryId: string, itemName: string, foodType: FoodType = 'VEG') => {
@@ -238,6 +265,7 @@ export function MealComboFormScreen() {
               selectedIds={selectedItemIds}
               onChange={ids => {
                 setSelectedItemIds(ids);
+                setItemQuantities(prev => syncItemQuantities(prev, ids));
                 if (itemsError && ids.length > 0) {
                   setItemsError(null);
                 }
@@ -249,6 +277,20 @@ export function MealComboFormScreen() {
               onAddItem={addItemInline}
               onAddCategory={addCategoryInline}
             />
+
+            {enableItemQuantities && selectedItemIds.length > 0 ? (
+              <View style={styles.quantitySection}>
+                <Text style={styles.quantityTitle}>{t('meals.combo.itemQuantitiesTitle')}</Text>
+                <ComboItemQuantityEditor
+                  items={items}
+                  selectedIds={selectedItemIds}
+                  quantities={itemQuantities}
+                  onQuantityChange={(itemId, quantity) =>
+                    setItemQuantities(prev => ({ ...prev, [itemId]: quantity }))
+                  }
+                />
+              </View>
+            ) : null}
           </ScrollView>
 
           <View style={styles.footer}>
@@ -257,9 +299,13 @@ export function MealComboFormScreen() {
               description={description}
               items={items}
               selectedIds={selectedItemIds}
-              onRemoveItem={itemId =>
-                setSelectedItemIds(current => current.filter(id => id !== itemId))
-              }
+              onRemoveItem={itemId => {
+                setSelectedItemIds(current => {
+                  const next = current.filter(id => id !== itemId);
+                  setItemQuantities(prev => syncItemQuantities(prev, next));
+                  return next;
+                });
+              }}
               error={itemsError}
             />
             {submitError ? <Text style={styles.footerError}>{submitError}</Text> : null}
@@ -284,6 +330,14 @@ const styles = StyleSheet.create({
   },
   formFields: {
     marginBottom: spacing.sm,
+  },
+  quantitySection: {
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  quantityTitle: {
+    ...typography.bodyStrong,
+    marginBottom: spacing.xs,
   },
   footer: {
     backgroundColor: colors.surface,

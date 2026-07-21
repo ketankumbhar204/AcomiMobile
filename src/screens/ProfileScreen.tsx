@@ -28,6 +28,7 @@ import { useSpaceStore } from '../store/spaceStore';
 import { useToastStore } from '../store/toastStore';
 import { colors, spacing, typography } from '../theme';
 import { buildCompleteProfilePayloadFromUser } from '../utils/buildCompleteProfilePayload';
+import { invalidateDashboardQueries } from '../utils/dashboardQueryCache';
 import { isConsumerMembershipRole } from '../utils/profileCompletion';
 import {
   findPrimaryIdentityDocument,
@@ -183,6 +184,7 @@ export function ProfileScreen() {
       await updateUser(updated);
       await loadProfileContext();
       setDocumentsRefreshKey(key => key + 1);
+      invalidateDashboardQueries();
       showToast(t('settings.profile.saveSuccess'));
     } catch {
       showToast(t('common.errors.generic'));

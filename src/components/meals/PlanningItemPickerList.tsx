@@ -18,6 +18,9 @@ type PlanningItemPickerListProps = {
   searchQuery: string;
   draftPrices: Record<string, string>;
   priceErrors: ComboPriceDraftErrors;
+  focusPriceInputId?: string | null;
+  /** Defaults to itemId; use for Extras drafts (`extra:itemId`). */
+  resolveDraftId?: (itemId: string) => string;
   onToggle: (itemId: string) => void;
   onPriceChange: (itemId: string, text: string) => void;
   onPriceBlur?: (item: FoodItemResponse, draftValue: string) => void;
@@ -35,6 +38,8 @@ export function PlanningItemPickerList({
   searchQuery,
   draftPrices,
   priceErrors,
+  focusPriceInputId = null,
+  resolveDraftId = (itemId: string) => itemId,
   onToggle,
   onPriceChange,
   onPriceBlur,
@@ -161,9 +166,10 @@ export function PlanningItemPickerList({
       ) : (
         visibleItems.map(item => {
           const selected = selectedIds.includes(item.itemId);
-          const errorKey = priceErrors[item.itemId];
+          const draftId = resolveDraftId(item.itemId);
+          const errorKey = priceErrors[draftId];
           const priceDraft = getEffectivePriceDraft(
-            item.itemId,
+            draftId,
             draftPrices,
             item.defaultPrice ?? null,
           );
@@ -191,6 +197,7 @@ export function PlanningItemPickerList({
               priceInputError={
                 errorKey ? comboPriceDraftErrorMessage(errorKey, t) : null
               }
+              focusPriceInput={focusPriceInputId === draftId}
               onPress={() => onToggle(item.itemId)}
             />
           );

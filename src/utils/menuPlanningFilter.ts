@@ -1,10 +1,11 @@
 import type { DailyMenuResponse, MealType } from '../api/types';
 import { MEAL_TYPES } from './mealLabels';
 
-export type MenuPlanningStatusFilter = 'published' | 'draft' | 'not_planned';
+export type MenuPlanningStatusFilter = 'published' | 'modified' | 'draft' | 'not_planned';
 
 export const MENU_PLANNING_STATUSES: MenuPlanningStatusFilter[] = [
   'published',
+  'modified',
   'draft',
   'not_planned',
 ];
@@ -21,6 +22,9 @@ export function slotPlanningStatus(menu?: DailyMenuResponse | null): MenuPlannin
   }
   if (menu.status === 'PUBLISHED') {
     return 'published';
+  }
+  if (menu.status === 'MODIFIED') {
+    return 'modified';
   }
   return 'draft';
 }

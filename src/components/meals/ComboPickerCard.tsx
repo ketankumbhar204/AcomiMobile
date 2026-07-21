@@ -20,6 +20,8 @@ type ComboPickerCardProps = {
   onPriceDraftChange?: (text: string) => void;
   onPriceBlur?: (priceDraft: string) => void;
   priceInputError?: string | null;
+  /** When true, focuses the price field (e.g. after Save/Share validation). */
+  focusPriceInput?: boolean;
   editablePrice?: boolean;
   showMealPrices?: boolean;
   onPress: () => void;
@@ -39,6 +41,7 @@ export function ComboPickerCard({
   onPriceDraftChange,
   onPriceBlur,
   priceInputError,
+  focusPriceInput = false,
   editablePrice = false,
   showMealPrices = true,
   onPress,
@@ -52,9 +55,20 @@ export function ComboPickerCard({
     showMealPrices && selected && requiresPriceInput && onPriceDraftChange && !editablePrice;
 
   const priceDraftRef = useRef(priceDraft);
+  const priceInputRef = useRef<TextInput>(null);
   useEffect(() => {
     priceDraftRef.current = priceDraft;
   }, [priceDraft]);
+
+  useEffect(() => {
+    if (!focusPriceInput) {
+      return;
+    }
+    const timer = setTimeout(() => {
+      priceInputRef.current?.focus();
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [focusPriceInput]);
 
   const handlePriceDraftChange = useCallback(
     (text: string) => {
@@ -69,18 +83,26 @@ export function ComboPickerCard({
   }, [onPriceBlur]);
 
   const renderInlinePriceInput = () => (
-    <View style={[styles.inlinePriceRow, priceInputError ? styles.priceInputRowError : null]}>
-      <Text style={styles.inlineCurrency}>₹</Text>
-      <TextInput
-        style={styles.inlinePriceInput}
-        value={priceDraft}
-        onChangeText={handlePriceDraftChange}
-        onBlur={commitPriceBlur}
-        onEndEditing={commitPriceBlur}
-        keyboardType="decimal-pad"
-        placeholder={t('meals.pricing.pricePlaceholder')}
-        placeholderTextColor={colors.muted}
-      />
+    <View style={styles.inlinePriceBlock}>
+      <View style={[styles.inlinePriceRow, priceInputError ? styles.priceInputRowError : null]}>
+        <Text style={styles.inlineCurrency}>₹</Text>
+        <TextInput
+          ref={priceInputRef}
+          style={styles.inlinePriceInput}
+          value={priceDraft}
+          onChangeText={handlePriceDraftChange}
+          onBlur={commitPriceBlur}
+          onEndEditing={commitPriceBlur}
+          keyboardType="decimal-pad"
+          placeholder={t('meals.pricing.pricePlaceholder')}
+          placeholderTextColor={colors.muted}
+        />
+      </View>
+      {priceInputError ? (
+        <Text style={styles.inlinePriceError} numberOfLines={2}>
+          {priceInputError}
+        </Text>
+      ) : null}
     </View>
   );
 
@@ -113,9 +135,6 @@ export function ComboPickerCard({
                 {name}
               </Text>
             </View>
-            {priceInputError && showInlinePriceInput ? (
-              <Text style={styles.inlinePriceError}>{priceInputError}</Text>
-            ) : null}
             {preview.length > 0 ? (
               <Text style={styles.items} numberOfLines={1}>
                 {preview}
@@ -136,6 +155,7 @@ export function ComboPickerCard({
           <View style={[styles.priceInputRow, priceInputError ? styles.priceInputRowError : null]}>
             <Text style={styles.currency}>₹</Text>
             <TextInput
+              ref={priceInputRef}
               style={styles.priceInput}
               value={priceDraft}
               onChangeText={handlePriceDraftChange}
@@ -195,7 +215,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   priceInputRowError: {
-    borderColor: '#DC2626',
+    borderColor: '#F87171',
+    backgroundColor: '#FFF5F5',
   },
   currency: { ...typography.bodyStrong, marginRight: spacing.xs },
   priceInput: {
@@ -260,6 +281,12 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     marginTop: 1,
   },
+  inlinePriceBlock: {
+    flexShrink: 0,
+    alignItems: 'flex-end',
+    maxWidth: 110,
+    marginTop: 1,
+  },
   inlinePriceRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -268,8 +295,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.button,
     paddingHorizontal: spacing.xs,
     backgroundColor: colors.white,
-    flexShrink: 0,
-    marginTop: 1,
   },
   inlineCurrency: {
     ...typography.caption,
@@ -287,6 +312,8 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: '#DC2626',
     marginTop: 2,
+    textAlign: 'right',
+    alignSelf: 'stretch',
   },
   nameSelected: { color: colors.primaryDark },
   items: {

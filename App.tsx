@@ -51,6 +51,7 @@ function App() {
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
+    backgroundColor: colors.background,
   },
   splash: {
     flex: 1,

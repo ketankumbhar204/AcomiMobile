@@ -58,7 +58,11 @@ export function normalizeFinancialSummary(raw: unknown): DashboardFinancialSumma
   return {
     expectedCharges,
     collected: collectedAmount,
-    pending: usePrepaidOnly ? null : toNumber(row.pending) ?? computePending(expectedCharges, collectedAmount),
+    underReview: usePrepaidOnly ? null : toNumber(row.underReview),
+    pending: usePrepaidOnly
+      ? null
+      : toNumber(row.pending)
+        ?? computePending(expectedCharges, collectedAmount, toNumber(row.underReview)),
     currencyCode: typeof row.currencyCode === 'string' ? row.currencyCode : 'INR',
     source: row.source as DashboardFinancialSummary['source'],
     mealBillingType,
@@ -174,11 +178,13 @@ export function normalizeDashboardSummary(raw: DashboardSummaryResponse): Dashbo
 function normalizeLedgerRow(raw: MemberPaymentLedgerRow): MemberPaymentLedgerRow {
   const expectedCharges = toNumber(raw.expectedCharges);
   const collected = toNumber(raw.collected);
+  const underReview = toNumber(raw.underReview);
   return {
     ...raw,
     expectedCharges,
     collected,
-    pending: toNumber(raw.pending) ?? computePending(expectedCharges, collected),
+    underReview,
+    pending: toNumber(raw.pending) ?? computePending(expectedCharges, collected, underReview),
     currencyCode: raw.currencyCode ?? 'INR',
     mealBalanceRemaining: toNumber(raw.mealBalanceRemaining),
     mealBalancePurchased: toNumber(raw.mealBalancePurchased),

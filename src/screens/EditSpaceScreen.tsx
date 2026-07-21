@@ -17,12 +17,22 @@ import type {
 import { useTranslation } from 'react-i18next';
 import { formatSpaceType } from '../api';
 import { mealBillingApi } from '../api/mealBillingApi';
-import type { GenderPolicy, MealBillingType, PrepaidBalanceUnit, SpaceType } from '../api/types';
+import { mealPollClosingApi } from '../api/mealPollClosingApi';
+import type {
+  GenderPolicy,
+  MealBillingType,
+  PrepaidBalanceUnit,
+  SpaceType,
+} from '../api/types';
 import { Button, Card, FormInput, HeaderBackButton, useConfirmDialog } from '../components/ui';
 import {
   MealBillingSettingsSection,
   type MealBillingSettingsFormValues,
 } from '../components/settings/MealBillingSettingsSection';
+import {
+  PollClosingDefaultsSection,
+  type PollClosingDefaultsFormValues,
+} from '../components/settings/PollClosingDefaultsSection';
 import { SpaceAmenitiesField } from '../components/spaces/SpaceAmenitiesField';
 import { SpacePropertyCategoryPicker } from '../components/spaces/SpacePropertyCategoryPicker';
 import { useDeactivateSpace } from '../hooks/useDeactivateSpace';
@@ -47,6 +57,39 @@ const DEFAULT_BILLING: MealBillingSettingsFormValues = {
   prepaidBalanceUnit: 'MEALS',
   fallbackToPayPerMeal: true,
 };
+
+const DEFAULT_POLL_CLOSING: PollClosingDefaultsFormValues = {
+  timezone: 'Asia/Kolkata',
+  breakfastDayOffset: 'PREVIOUS_DAY',
+  breakfastTime: '20:00',
+  lunchDayOffset: 'SAME_DAY',
+  lunchTime: '08:00',
+  dinnerDayOffset: 'SAME_DAY',
+  dinnerTime: '13:00',
+};
+
+function normalizeTime(value: string): string {
+  const match = value.trim().match(/^(\d{1,2}):(\d{2})/);
+  if (!match) {
+    return value.trim();
+  }
+  return `${String(Number(match[1])).padStart(2, '0')}:${match[2]}`;
+}
+
+function pollClosingChanged(
+  current: PollClosingDefaultsFormValues,
+  initial: PollClosingDefaultsFormValues,
+): boolean {
+  return (
+    current.timezone !== initial.timezone ||
+    current.breakfastDayOffset !== initial.breakfastDayOffset ||
+    normalizeTime(current.breakfastTime) !== normalizeTime(initial.breakfastTime) ||
+    current.lunchDayOffset !== initial.lunchDayOffset ||
+    normalizeTime(current.lunchTime) !== normalizeTime(initial.lunchTime) ||
+    current.dinnerDayOffset !== initial.dinnerDayOffset ||
+    normalizeTime(current.dinnerTime) !== normalizeTime(initial.dinnerTime)
+  );
+}
 
 function billingFromSpace(
   mealBillingType?: MealBillingType,
@@ -95,6 +138,10 @@ export function EditSpaceScreen() {
   const [billingValues, setBillingValues] = useState<MealBillingSettingsFormValues>(DEFAULT_BILLING);
   const [initialBillingValues, setInitialBillingValues] =
     useState<MealBillingSettingsFormValues>(DEFAULT_BILLING);
+  const [pollClosingValues, setPollClosingValues] =
+    useState<PollClosingDefaultsFormValues>(DEFAULT_POLL_CLOSING);
+  const [initialPollClosingValues, setInitialPollClosingValues] =
+    useState<PollClosingDefaultsFormValues>(DEFAULT_POLL_CLOSING);
   const [spaceType, setSpaceType] = useState<string | null>(null);
   const [amenities, setAmenities] = useState<AmenityAssignment[]>([]);
   const [genderPolicy, setGenderPolicy] = useState<GenderPolicy | null>(null);
@@ -146,9 +193,29 @@ export function EditSpaceScreen() {
               setInitialBillingValues(fallback);
             }
           }
+
+          if (owner) {
+            try {
+              const closing = await mealPollClosingApi.getSettings(spaceId);
+              const nextClosing: PollClosingDefaultsFormValues = {
+                timezone: closing.timezone || 'Asia/Kolkata',
+                breakfastDayOffset: closing.breakfastDayOffset,
+                breakfastTime: normalizeTime(closing.breakfastTime).slice(0, 5),
+                lunchDayOffset: closing.lunchDayOffset,
+                lunchTime: normalizeTime(closing.lunchTime).slice(0, 5),
+                dinnerDayOffset: closing.dinnerDayOffset,
+                dinnerTime: normalizeTime(closing.dinnerTime).slice(0, 5),
+              };
+              setPollClosingValues(nextClosing);
+              setInitialPollClosingValues(nextClosing);
+            } catch {
+              setPollClosingValues(DEFAULT_POLL_CLOSING);
+              setInitialPollClosingValues(DEFAULT_POLL_CLOSING);
+            }
+          }
         }
       });
-    }, [loadSpaceDetails, spaceId]),
+    }, [loadSpaceDetails, owner, spaceId]),
   );
 
   function validate(): boolean {
@@ -194,6 +261,24 @@ export function EditSpaceScreen() {
           fallbackToPayPerMeal: billingValues.fallbackToPayPerMeal,
         });
         setInitialBillingValues(billingValues);
+      } catch {
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
+    if (owner && pollClosingChanged(pollClosingValues, initialPollClosingValues)) {
+      try {
+        await mealPollClosingApi.updateSettings(spaceId, {
+          timezone: pollClosingValues.timezone.trim() || 'Asia/Kolkata',
+          breakfastDayOffset: pollClosingValues.breakfastDayOffset,
+          breakfastTime: normalizeTime(pollClosingValues.breakfastTime),
+          lunchDayOffset: pollClosingValues.lunchDayOffset,
+          lunchTime: normalizeTime(pollClosingValues.lunchTime),
+          dinnerDayOffset: pollClosingValues.dinnerDayOffset,
+          dinnerTime: normalizeTime(pollClosingValues.dinnerTime),
+        });
+        setInitialPollClosingValues(pollClosingValues);
       } catch {
         setIsSubmitting(false);
         return;
@@ -296,6 +381,14 @@ export function EditSpaceScreen() {
             <MealBillingSettingsSection
               values={billingValues}
               onChange={setBillingValues}
+              disabled={isSubmitting || isLoading}
+            />
+          ) : null}
+
+          {owner ? (
+            <PollClosingDefaultsSection
+              values={pollClosingValues}
+              onChange={setPollClosingValues}
               disabled={isSubmitting || isLoading}
             />
           ) : null}

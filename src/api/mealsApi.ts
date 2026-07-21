@@ -3,6 +3,7 @@ import apiClient from './client';
 import { normalizeMemberMealActivityDayDetail } from '../utils/memberMealActivityDayDetail';
 import type {
   ApiResponse,
+  BulkMealPollPaymentProofResponse,
   CreateMealPlanRequest,
   CreateMealParticipationRequest,
   CreateFoodCategoryRequest,
@@ -12,6 +13,7 @@ import type {
   FoodCategoryResponse,
   FoodItemResponse,
   MealComboResponse,
+  UpdateFoodItemExtraRequest,
   MealEligibilitySummaryResponse,
   MealEligibleParticipantResponse,
   MealDeliveryLocation,
@@ -32,6 +34,7 @@ import type {
   PagedResponse,
   MealType,
   SubmitMealPollSelection,
+  SubmitPaymentProofRequest,
   UpdateMealParticipationRequest,
   UpdateFoodItemRequest,
   UpdateFoodItemDefaultPriceRequest,
@@ -311,6 +314,20 @@ export const mealsApi = {
     );
   },
 
+  updateFoodItemExtra: async (
+    spaceId: UUID,
+    itemId: UUID,
+    body: UpdateFoodItemExtraRequest,
+  ): Promise<FoodItemResponse> => {
+    console.log(`${LOG_TAG} PUT /spaces/${spaceId}/food-items/${itemId}/extra`, body);
+    return unwrapApiResponse(
+      apiClient.put<ApiResponse<FoodItemResponse>>(
+        `/spaces/${spaceId}/food-items/${itemId}/extra`,
+        body,
+      ),
+    );
+  },
+
   deactivateFoodItem: async (spaceId: UUID, itemId: UUID): Promise<void> => {
     console.log(`${LOG_TAG} POST /spaces/${spaceId}/food-items/${itemId}/deactivate`);
     await unwrapVoidResponse(
@@ -493,6 +510,19 @@ export const mealsApi = {
     return unwrapApiResponse(apiClient.post<ApiResponse<MealPollSlot>>(path));
   },
 
+  updateMealPollCloseAt: async (
+    spaceId: UUID,
+    menuDate: string,
+    mealType: MealType,
+    pollCloseAt: string,
+  ): Promise<MealPollSlot> => {
+    const path = `/spaces/${spaceId}/meal-polls/${menuDate}/${mealType}/close-at`;
+    console.log(`${LOG_TAG} PUT ${path}`, pollCloseAt);
+    return unwrapApiResponse(
+      apiClient.put<ApiResponse<MealPollSlot>>(path, { pollCloseAt }),
+    );
+  },
+
   submitMealPollResponses: async (
     spaceId: UUID,
     menuDate: string,
@@ -514,12 +544,31 @@ export const mealsApi = {
   submitMealPollPaymentProof: async (
     spaceId: UUID,
     menuDate: string,
-    proofImageBase64: string,
+    proof: string | SubmitPaymentProofRequest,
   ): Promise<MealPollDayResponse> => {
     const path = `/spaces/${spaceId}/meal-polls/${menuDate}/payment-proof`;
+    const body: SubmitPaymentProofRequest =
+      typeof proof === 'string' ? { proofImageBase64: proof } : proof;
     console.log(`${LOG_TAG} POST ${path}`);
     return unwrapApiResponse(
-      apiClient.post<ApiResponse<MealPollDayResponse>>(path, { proofImageBase64 }),
+      apiClient.post<ApiResponse<MealPollDayResponse>>(path, body),
+    );
+  },
+
+  submitBulkMealPollPaymentProof: async (
+    spaceId: UUID,
+    dates: string[],
+    proof: string | SubmitPaymentProofRequest,
+  ): Promise<BulkMealPollPaymentProofResponse> => {
+    const path = `/spaces/${spaceId}/meal-polls/payment-proof/bulk`;
+    const body: SubmitPaymentProofRequest =
+      typeof proof === 'string' ? { proofImageBase64: proof } : proof;
+    console.log(`${LOG_TAG} POST ${path}`, { dates });
+    return unwrapApiResponse(
+      apiClient.post<ApiResponse<BulkMealPollPaymentProofResponse>>(path, {
+        dates,
+        ...body,
+      }),
     );
   },
 

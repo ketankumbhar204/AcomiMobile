@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   CompositeNavigationProp,
@@ -18,10 +18,12 @@ import {
   MenuLibraryTabBar,
   type MenuLibraryTab,
 } from '../../components/meals';
+import { ConfigureLibraryExtrasSheet } from '../../components/meals/ConfigureLibraryExtrasSheet';
 import { PermissionDeniedScreen } from '../../components/ui';
 import { Screen } from '../../components/ui/Screen';
 import { useMenuLibrary } from '../../hooks/useMenuLibrary';
 import { useMainStackNavigation } from '../../hooks/useMainStackNavigation';
+import { useMealPricingPolicy } from '../../hooks/useMealPricingPolicy';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList, SpaceTabParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
@@ -43,11 +45,14 @@ export function MenuLibraryScreen({ spaceId }: MenuLibraryScreenProps) {
   const navigation = useNavigation<MenuLibraryNav>();
   const { navigate: navigateMain } = useMainStackNavigation();
   const permissions = useSpacePermissions(spaceId);
+  const mealPricing = useMealPricingPolicy(spaceId);
+  const showExtrasTab = mealPricing.requiresMealPrices;
   const showToast = useToastStore(state => state.showToast);
 
   const {
     loading,
     loadFailed,
+    items,
     activeCategories,
     activeCombos,
     selectedCategoryId,
@@ -57,13 +62,43 @@ export function MenuLibraryScreen({ spaceId }: MenuLibraryScreenProps) {
     setSelectedComboId,
     selectedCombo,
     filteredItems,
+    extraItems,
+    extraCategories,
     stats,
     reload,
+    patchItem,
   } = useMenuLibrary(spaceId);
 
   const [inlineEditor, setInlineEditor] = useState<InlineEditor>(null);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<MenuLibraryTab>('items');
+  const [configureExtrasOpen, setConfigureExtrasOpen] = useState(false);
+
+  const extrasSelectedCategoryId = useMemo(() => {
+    if (extraCategories.length === 0) {
+      return null;
+    }
+    if (
+      selectedCategoryId &&
+      extraCategories.some(category => category.categoryId === selectedCategoryId)
+    ) {
+      return selectedCategoryId;
+    }
+    return extraCategories[0].categoryId;
+  }, [extraCategories, selectedCategoryId]);
+
+  const extrasVisibleItems = useMemo(() => {
+    if (!extrasSelectedCategoryId) {
+      return extraItems;
+    }
+    return extraItems.filter(item => item.categoryId === extrasSelectedCategoryId);
+  }, [extraItems, extrasSelectedCategoryId]);
+
+  const extrasSelectedCategory = useMemo(
+    () =>
+      extraCategories.find(category => category.categoryId === extrasSelectedCategoryId) ?? null,
+    [extraCategories, extrasSelectedCategoryId],
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -83,19 +118,35 @@ export function MenuLibraryScreen({ spaceId }: MenuLibraryScreenProps) {
     if (activeTab === 'combos') {
       return t('meals.library.statsCombos', { combos: stats.comboCount });
     }
+    if (activeTab === 'extras') {
+      return t('meals.library.statsExtras', { count: stats.extraCount });
+    }
     return t('meals.library.statsItems', {
       categories: stats.categoryCount,
       items: stats.itemCount,
     });
-  }, [activeTab, stats.categoryCount, stats.comboCount, stats.itemCount, t]);
+  }, [activeTab, stats.categoryCount, stats.comboCount, stats.extraCount, stats.itemCount, t]);
 
   const handleTabChange = useCallback(
     (tab: MenuLibraryTab) => {
       closeInlineEditors();
+      if (!showExtrasTab && tab === 'extras') {
+        setActiveTab('items');
+        return;
+      }
+      if (tab !== 'extras') {
+        setConfigureExtrasOpen(false);
+      }
       setActiveTab(tab);
     },
-    [closeInlineEditors],
+    [closeInlineEditors, showExtrasTab],
   );
+
+  useEffect(() => {
+    if (!showExtrasTab && activeTab === 'extras') {
+      setActiveTab('items');
+    }
+  }, [activeTab, showExtrasTab]);
 
   const saveCategory = useCallback(
     async (name: string) => {
@@ -122,15 +173,20 @@ export function MenuLibraryScreen({ spaceId }: MenuLibraryScreenProps) {
           categoryId: selectedCategoryId,
           name,
           foodType,
+          ...(activeTab === 'extras' ? { isExtra: true } : {}),
         });
-        showToast(t('meals.library.itemCreateSuccess'));
+        showToast(
+          activeTab === 'extras'
+            ? t('meals.library.extraCreateSuccess')
+            : t('meals.library.itemCreateSuccess'),
+        );
         closeInlineEditors();
         await reload();
       } catch {
         showToast(t('meals.errors.actionFailed'));
       }
     },
-    [closeInlineEditors, reload, selectedCategoryId, showToast, spaceId, t],
+    [activeTab, closeInlineEditors, reload, selectedCategoryId, showToast, spaceId, t],
   );
 
   const updateItem = useCallback(
@@ -145,6 +201,34 @@ export function MenuLibraryScreen({ spaceId }: MenuLibraryScreenProps) {
       }
     },
     [closeInlineEditors, reload, showToast, spaceId, t],
+  );
+
+  const removeExtra = useCallback(
+    (item: FoodItemResponse) => {
+      Alert.alert(
+        t('meals.library.removeExtra'),
+        t('meals.library.removeExtraConfirm'),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          {
+            text: t('meals.library.removeExtra'),
+            style: 'destructive',
+            onPress: () => {
+              void (async () => {
+                try {
+                  await mealsApi.updateFoodItemExtra(spaceId, item.itemId, { isExtra: false });
+                  showToast(t('meals.library.extraRemoveSuccess'));
+                  await reload();
+                } catch {
+                  showToast(t('meals.errors.actionFailed'));
+                }
+              })();
+            },
+          },
+        ],
+      );
+    },
+    [reload, showToast, spaceId, t],
   );
 
   const removeItem = useCallback(
@@ -246,6 +330,7 @@ export function MenuLibraryScreen({ spaceId }: MenuLibraryScreenProps) {
   }
 
   return (
+    <>
     <Screen scrollable contentStyle={styles.content}>
       <Text style={styles.title}>{t('meals.library.title')}</Text>
       <Text style={styles.subtitle}>{t('meals.library.subtitle')}</Text>
@@ -269,7 +354,11 @@ export function MenuLibraryScreen({ spaceId }: MenuLibraryScreenProps) {
       {!loading && !loadFailed ? (
         <>
           <Text style={styles.statsSummary}>{statsSummary}</Text>
-          <MenuLibraryTabBar activeTab={activeTab} onTabChange={handleTabChange} />
+          <MenuLibraryTabBar
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+            showExtras={showExtrasTab}
+          />
         </>
       ) : null}
 
@@ -354,6 +443,75 @@ export function MenuLibraryScreen({ spaceId }: MenuLibraryScreenProps) {
         </>
       ) : null}
 
+      {!loading && !loadFailed && showExtrasTab && activeTab === 'extras' ? (
+        <>
+          <Text style={styles.extrasHint}>{t('meals.library.extrasTabHint')}</Text>
+
+          {stats.extraCount === 0 ? (
+            <View style={styles.extrasEmptyCard}>
+              <Text style={styles.extrasEmptyTitle}>{t('meals.library.extrasEmpty')}</Text>
+              <Text style={styles.extrasEmptyBody}>{t('meals.library.extrasEmptyBody')}</Text>
+              {canManage ? (
+                <Pressable
+                  style={styles.configureExtrasButton}
+                  onPress={() => setConfigureExtrasOpen(true)}
+                  accessibilityRole="button">
+                  <Text style={styles.configureExtrasButtonText}>
+                    {t('meals.library.configureExtrasCta')}
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : (
+            <>
+              {canManage ? (
+                <Pressable
+                  style={styles.configureExtrasButtonSecondary}
+                  onPress={() => setConfigureExtrasOpen(true)}
+                  accessibilityRole="button">
+                  <Text style={styles.configureExtrasButtonSecondaryText}>
+                    {t('meals.library.configureExtrasManageCta')}
+                  </Text>
+                </Pressable>
+              ) : null}
+
+              {extraCategories.length > 0 ? (
+                <>
+                  <CategoryChipRail
+                    categories={extraCategories}
+                    selectedCategoryId={extrasSelectedCategoryId}
+                    onSelect={categoryId => {
+                      closeInlineEditors();
+                      setSelectedCategoryId(categoryId);
+                    }}
+                    canManage={false}
+                  />
+
+                  {extrasSelectedCategoryId ? (
+                    <ItemChipGrid
+                      items={extrasVisibleItems}
+                      categoryName={extrasSelectedCategory?.name}
+                      canManage={canManage}
+                      isAdding={false}
+                      editingItemId={editingItemId}
+                      onCancelAdd={closeInlineEditors}
+                      onSaveItem={saveItem}
+                      onStartEdit={item => {
+                        setInlineEditor(null);
+                        setEditingItemId(item.itemId);
+                      }}
+                      onCancelEdit={closeInlineEditors}
+                      onUpdateItem={updateItem}
+                      onRemoveItem={canManage ? removeExtra : undefined}
+                    />
+                  ) : null}
+                </>
+              ) : null}
+            </>
+          )}
+        </>
+      ) : null}
+
       {canManage ? (
         <View style={styles.links}>
           <Pressable
@@ -366,6 +524,18 @@ export function MenuLibraryScreen({ spaceId }: MenuLibraryScreenProps) {
 
       <Text style={styles.footerHint}>{t('meals.library.dailyMenuLaterHint')}</Text>
     </Screen>
+
+    {showExtrasTab && configureExtrasOpen ? (
+      <ConfigureLibraryExtrasSheet
+        visible
+        spaceId={spaceId}
+        items={items}
+        categories={activeCategories}
+        onClose={() => setConfigureExtrasOpen(false)}
+        onItemUpdated={patchItem}
+      />
+    ) : null}
+    </>
   );
 }
 
@@ -400,6 +570,52 @@ const styles = StyleSheet.create({
     color: colors.muted,
     textAlign: 'center',
     marginVertical: spacing.md,
+  },
+  extrasHint: {
+    ...typography.caption,
+    color: colors.muted,
+    marginBottom: spacing.sm,
+  },
+  extrasEmptyCard: {
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  extrasEmptyTitle: {
+    ...typography.bodyStrong,
+  },
+  extrasEmptyBody: {
+    ...typography.caption,
+    color: colors.muted,
+  },
+  configureExtrasButton: {
+    marginTop: spacing.xs,
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+  },
+  configureExtrasButtonText: {
+    ...typography.bodyStrong,
+    color: colors.white,
+  },
+  configureExtrasButtonSecondary: {
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: 10,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+  },
+  configureExtrasButtonSecondaryText: {
+    ...typography.bodyStrong,
+    color: colors.primaryDark,
   },
   footerHint: {
     ...typography.caption,

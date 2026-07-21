@@ -5,6 +5,7 @@ import type { MealComboResponse } from '../../../api/types';
 import { FoodTypeIcon } from '../../ui/FoodTypeIcon';
 import { colors, radius, spacing, typography } from '../../../theme';
 import { formatComboPrice } from '../../../utils/comboPrice';
+import { formatComboIncludesCompact } from '../../../utils/comboIncludes';
 
 type ComboPreviewBarProps = {
   combo: MealComboResponse | null;
@@ -20,7 +21,9 @@ export function ComboPreviewBar({ combo, canManage = false, onEdit, onRemove }: 
     return null;
   }
 
-  const itemNames = combo.items?.map(item => item.name).filter(Boolean) ?? [];
+  const includes = formatComboIncludesCompact(
+    (combo.items ?? []).map(item => ({ name: item.name, quantity: item.quantity })),
+  );
   const priceLabel = formatComboPrice(combo.price, combo.currencyCode);
 
   return (
@@ -56,9 +59,9 @@ export function ComboPreviewBar({ combo, canManage = false, onEdit, onRemove }: 
           </View>
         ) : null}
       </View>
-      {itemNames.length > 0 ? (
+      {includes ? (
         <Text style={styles.preview} numberOfLines={3}>
-          {itemNames.join(' · ')}
+          {t('meals.combo.includesLabel')}: {includes}
         </Text>
       ) : (
         <Text style={styles.previewEmpty}>{t('meals.library.comboPreviewEmpty')}</Text>

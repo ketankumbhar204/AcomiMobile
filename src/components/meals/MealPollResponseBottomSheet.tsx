@@ -1,10 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import type { MealDeliveryLocation, MealPollPaymentChoice, MealPollSlot, MealType, UUID } from '../../api/types';
+import type {
+  MealDeliveryLocation,
+  MealPollPaymentChoice,
+  MealPollSlot,
+  MealType,
+  UUID,
+} from '../../api/types';
 import { formatMenuDate, isPastMenuDate } from '../../utils/mealDates';
+import { buildMealSummaryFromDraftSelections } from '../../utils/mealSelectionSummary';
 import { MealPollDayContent } from './MealPollDayContent';
 import { MealPollPaymentProofModal } from './MealPollPaymentProofModal';
+import { MealSelectionSummary } from './MealSelectionSummary';
 import {
   MenuPlanningBottomSheet,
   SheetPrimaryButton,
@@ -65,6 +73,26 @@ export function MealPollResponseBottomSheet({
   const dateReadOnly = isPastMenuDate(menuDate);
   const [paymentStep, setPaymentStep] = useState(false);
   const [proofModalOpen, setProofModalOpen] = useState(false);
+
+  const paymentSummary = useMemo(
+    () =>
+      buildMealSummaryFromDraftSelections(
+        openPolls,
+        multiQuantity,
+        selections,
+        quantitySelections,
+        deliverySelections,
+        deliveryLocations,
+      ),
+    [
+      deliveryLocations,
+      deliverySelections,
+      multiQuantity,
+      openPolls,
+      quantitySelections,
+      selections,
+    ],
+  );
 
   useEffect(() => {
     if (!visible) {
@@ -128,8 +156,17 @@ export function MealPollResponseBottomSheet({
         footer={footer}>
         {paymentStep ? (
           <View style={styles.paymentBody}>
+            <MealSelectionSummary
+              model={paymentSummary}
+              variant="detailed"
+              showTotals
+              title={t('meals.poll.paymentReviewTitle')}
+            />
+            <View style={styles.paymentMeta}>
+              <Text style={styles.paymentDate}>{dateLabel}</Text>
+              <Text style={styles.paymentType}>{t('meals.poll.paymentTypeMeal')}</Text>
+            </View>
             <Text style={styles.paymentHint}>{t('meals.poll.paymentHint')}</Text>
-            <Text style={styles.paymentDate}>{dateLabel}</Text>
           </View>
         ) : (
           <MealPollDayContent
@@ -180,8 +217,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xxs,
   },
   paymentBody: {
-    gap: spacing.sm,
+    gap: spacing.md,
     paddingVertical: spacing.md,
+  },
+  paymentMeta: {
+    gap: spacing.xxs,
   },
   paymentHint: {
     ...typography.body,
@@ -191,6 +231,10 @@ const styles = StyleSheet.create({
   paymentDate: {
     ...typography.bodyStrong,
     color: colors.textSecondary,
+  },
+  paymentType: {
+    ...typography.caption,
+    color: colors.muted,
   },
   backLink: {
     ...typography.bodyStrong,

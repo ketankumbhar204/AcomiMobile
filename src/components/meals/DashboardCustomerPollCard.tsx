@@ -1,19 +1,20 @@
 import React, { useEffect, useMemo } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { MealPollPaymentStatus, MealPollSlot } from '../../api/types';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { ChevronLeftIcon } from '../ui/icons/ChevronLeftIcon';
 import { ChevronRightIcon } from '../ui/icons/ChevronRightIcon';
-import { formatComboNameWithPrice } from '../../utils/comboPrice';
 import {
   formatMenuDate,
-  pollCardSelectPromptKey,
   pollCardTitleKey,
   pollCardTitleUsesDateParam,
 } from '../../utils/mealDates';
 import { hasPrepaidOverflow } from '../../utils/mealPollPayment';
 import { MEAL_TYPES, mealTypeLabelKey } from '../../utils/mealLabels';
+import { buildMealSummaryFromPolls } from '../../utils/mealSelectionSummary';
+import { buildMenuPreviewFromPolls } from '../../utils/mealMenuPreview';
+import { MealSelectionSummary } from './MealSelectionSummary';
 
 export type DashboardPollCardState = 'empty' | 'active' | 'partial' | 'complete';
 
@@ -23,6 +24,8 @@ type DashboardCustomerPollCardProps = {
   openPolls: MealPollSlot[];
   multiQuantity: boolean;
   cardState: DashboardPollCardState;
+  /** When true, CTA becomes View Menus and copy is review-oriented. */
+  isPastDate?: boolean;
   paymentStatus?: MealPollPaymentStatus | null;
   rejectionReason?: string | null;
   prepaidOverflowAmount?: number | null;
@@ -33,6 +36,8 @@ type DashboardCustomerPollCardProps = {
   onNextDate?: () => void;
   canGoPrevious?: boolean;
   canGoNext?: boolean;
+  /** Opens calendar picker (same pattern as owner dashboard). */
+  onOpenCalendar?: () => void;
   onAction?: () => void;
   onUploadProof?: () => void;
   onDismissSuccess?: () => void;
@@ -73,54 +78,47 @@ function sortPolls(polls: MealPollSlot[]): MealPollSlot[] {
   );
 }
 
-function pollHasSelection(poll: MealPollSlot, multiQuantity: boolean): boolean {
-  if (multiQuantity) {
-    return poll.mySelections?.some(selection => selection.quantity > 0) ?? false;
-  }
-  return poll.mySelectedOptionId != null;
-}
-
-function selectionLabel(
-  poll: MealPollSlot,
-  multiQuantity: boolean,
-  notSelectedLabel: string,
-  showMealPrices: boolean,
-): string {
-  if (multiQuantity) {
-    const activeSelections = poll.mySelections?.filter(selection => selection.quantity > 0) ?? [];
-    if (activeSelections.length === 0) {
-      return notSelectedLabel;
-    }
-    return activeSelections
-      .map(selection => {
-        const option = poll.options.find(row => row.id === selection.optionId);
-        const name = option
-          ? formatComboNameWithPrice(
-              option.label,
-              option.price,
-              option.currencyCode,
-              showMealPrices,
-            )
-          : notSelectedLabel;
-        return `${name} × ${selection.quantity}`;
-      })
-      .join(', ');
-  }
-
-  const selected = poll.options.find(option => option.id === poll.mySelectedOptionId);
-  return selected
-    ? formatComboNameWithPrice(
-        selected.label,
-        selected.price,
-        selected.currencyCode,
-        showMealPrices,
-      )
-    : notSelectedLabel;
-}
-
 function publishedMealsLine(polls: MealPollSlot[], t: (key: string) => string): string {
   const labels = sortPolls(polls).map(poll => t(mealTypeLabelKey(poll.mealType)));
   return labels.join(' • ');
+}
+
+function MenuPreviewBody({
+  polls,
+  t,
+}: {
+  polls: MealPollSlot[];
+  t: (key: string, options?: Record<string, string | number>) => string;
+}) {
+  const sections = useMemo(() => buildMenuPreviewFromPolls(polls), [polls]);
+  if (sections.length === 0) {
+    return (
+      <Text style={styles.publishedLine}>
+        {t('dashboard.pollCard.menusReady', {
+          meals: publishedMealsLine(polls, t),
+        })}
+      </Text>
+    );
+  }
+  return (
+    <View style={styles.previewWrap}>
+      {sections.map(section => (
+        <View key={section.mealType} style={styles.previewSection}>
+          <Text style={styles.previewMealTitle}>{t(mealTypeLabelKey(section.mealType))}</Text>
+          {section.labels.map(label => (
+            <Text key={label} style={styles.previewItem} numberOfLines={1}>
+              • {label}
+            </Text>
+          ))}
+          {section.remainingCount > 0 ? (
+            <Text style={styles.previewMore}>
+              {t('dashboard.pollCard.previewMore', { count: section.remainingCount })}
+            </Text>
+          ) : null}
+        </View>
+      ))}
+    </View>
+  );
 }
 
 function cardTitle(
@@ -139,7 +137,20 @@ function cardTitle(
 function cardStatusLabel(
   cardState: DashboardPollCardState,
   t: (key: string) => string,
+  isPastDate: boolean,
 ): string | null {
+  if (isPastDate) {
+    switch (cardState) {
+      case 'complete':
+        return t('dashboard.pollCard.statusSelected');
+      case 'partial':
+        return t('dashboard.pollCard.statusPastPartial');
+      case 'active':
+        return t('dashboard.pollCard.statusPastMenus');
+      default:
+        return null;
+    }
+  }
   switch (cardState) {
     case 'complete':
       return t('dashboard.pollCard.statusSelected');
@@ -152,7 +163,14 @@ function cardStatusLabel(
   }
 }
 
-function actionLabel(cardState: DashboardPollCardState, t: (key: string) => string): string {
+function actionLabel(
+  cardState: DashboardPollCardState,
+  t: (key: string) => string,
+  isPastDate: boolean,
+): string {
+  if (isPastDate) {
+    return t('dashboard.pollCard.viewMenus');
+  }
   switch (cardState) {
     case 'complete':
       return t('dashboard.pollCard.updateChoices');
@@ -163,45 +181,13 @@ function actionLabel(cardState: DashboardPollCardState, t: (key: string) => stri
   }
 }
 
-type MealSlotRowProps = {
-  poll: MealPollSlot;
-  multiQuantity: boolean;
-  notSelectedLabel: string;
-  showMealPrices: boolean;
-  t: (key: string) => string;
-};
-
-function MealSlotRow({
-  poll,
-  multiQuantity,
-  notSelectedLabel,
-  showMealPrices,
-  t,
-}: MealSlotRowProps) {
-  const hasSelection = pollHasSelection(poll, multiQuantity);
-  const label = selectionLabel(poll, multiQuantity, notSelectedLabel, showMealPrices);
-
-  return (
-    <View style={styles.mealRow}>
-      <Text style={styles.mealType}>{t(mealTypeLabelKey(poll.mealType))}</Text>
-      <Text
-        style={[
-          styles.mealChoice,
-          !hasSelection && styles.mealChoiceMissing,
-        ]}
-        numberOfLines={2}>
-        {label}
-      </Text>
-    </View>
-  );
-}
-
 export function DashboardCustomerPollCard({
   menuDate,
   loading,
   openPolls,
   multiQuantity,
   cardState,
+  isPastDate = false,
   paymentStatus = null,
   rejectionReason = null,
   prepaidOverflowAmount = null,
@@ -212,6 +198,7 @@ export function DashboardCustomerPollCard({
   onNextDate,
   canGoPrevious = false,
   canGoNext = false,
+  onOpenCalendar,
   onAction,
   onUploadProof,
   onDismissSuccess,
@@ -222,9 +209,13 @@ export function DashboardCustomerPollCard({
   const { t, i18n } = useTranslation();
   const dateLabel = formatMenuDate(menuDate, i18n.language);
   const title = cardTitle(menuDate, cardState, i18n.language, t);
-  const statusLabel = cardStatusLabel(cardState, t);
+  const statusLabel = cardStatusLabel(cardState, t, isPastDate);
+  const ctaLabel = actionLabel(cardState, t, isPastDate);
   const sortedPolls = useMemo(() => sortPolls(openPolls), [openPolls]);
-  const notSelectedLabel = t('dashboard.pollCard.notSelected');
+  const selectionSummary = useMemo(
+    () => buildMealSummaryFromPolls(sortedPolls, multiQuantity),
+    [multiQuantity, sortedPolls],
+  );
   const showAction = cardState !== 'empty' && onAction != null;
 
   useEffect(() => {
@@ -236,11 +227,17 @@ export function DashboardCustomerPollCard({
   }, [justSaved, onDismissSuccess]);
 
   const isPressable = showAction && !loading && onAction != null && !actionDisabled;
-  const ctaVariant = cardState === 'complete' ? 'secondary' : 'primary';
+  const ctaVariant = cardState === 'complete' || cardState === 'partial' ? 'secondary' : 'primary';
+  const hasOrders = selectionSummary.totalPlates > 0;
+  const showOrdersBody =
+    cardState === 'partial' || cardState === 'complete' || hasOrders;
+  const showPaymentStatus =
+    paymentStatus != null && (showOrdersBody || cardState === 'complete' || cardState === 'partial');
   const canUploadProof =
-    cardState === 'complete' &&
-    paymentStatus != null &&
-    (paymentStatus === 'PENDING' || paymentStatus === 'REJECTED' || paymentStatus === 'UPDATE_REQUESTED') &&
+    showPaymentStatus &&
+    (paymentStatus === 'PENDING' ||
+      paymentStatus === 'REJECTED' ||
+      (paymentStatus as string) === 'UPDATE_REQUESTED') &&
     onUploadProof != null;
   const showPrepaidOverflow = hasPrepaidOverflow(prepaidOverflowPayment, prepaidOverflowAmount);
 
@@ -267,7 +264,22 @@ export function DashboardCustomerPollCard({
               color={canGoPrevious ? colors.primaryDark : colors.muted}
             />
           </TouchableOpacity>
-          <Text style={styles.date}>{dateLabel}</Text>
+          <Pressable
+            style={({ pressed }) => [
+              styles.dateCenter,
+              pressed && onOpenCalendar && styles.dateCenterPressed,
+            ]}
+            onPress={onOpenCalendar}
+            disabled={!onOpenCalendar}
+            accessibilityRole={onOpenCalendar ? 'button' : undefined}
+            accessibilityLabel={dateLabel}
+            accessibilityHint={onOpenCalendar ? t('meals.planning.openCalendar') : undefined}>
+            <Text
+              style={[styles.date, onOpenCalendar && styles.dateLink]}
+              numberOfLines={1}>
+              {dateLabel}
+            </Text>
+          </Pressable>
           <TouchableOpacity
             style={[styles.dateNavBtn, !canGoNext && styles.dateNavBtnDisabled]}
             onPress={onNextDate}
@@ -281,7 +293,9 @@ export function DashboardCustomerPollCard({
             />
           </TouchableOpacity>
         </View>
-        {statusLabel ? <Text style={styles.statusBadge}>{statusLabel}</Text> : null}
+        {statusLabel && !(cardState === 'active' && !isPastDate) ? (
+          <Text style={styles.statusBadge}>{statusLabel}</Text>
+        ) : null}
       </View>
 
       {loading ? (
@@ -289,52 +303,48 @@ export function DashboardCustomerPollCard({
       ) : cardState === 'empty' ? (
         <View style={styles.body}>
           <Text style={styles.bodyText}>{t('dashboard.pollCard.notPublished')}</Text>
-          <Text style={styles.bodySubtext}>{t('dashboard.pollCard.checkLater')}</Text>
+          {!isPastDate ? (
+            <Text style={styles.bodySubtext}>{t('dashboard.pollCard.checkLater')}</Text>
+          ) : null}
         </View>
-      ) : cardState === 'active' ? (
+      ) : !showOrdersBody && cardState === 'active' ? (
         <View style={styles.body}>
-          <Text style={styles.publishedLine}>
-            {t('dashboard.pollCard.menusReady', {
-              meals: publishedMealsLine(sortedPolls, t),
-            })}
-          </Text>
-          <Text style={styles.bodySubtext}>
-            {t(pollCardSelectPromptKey(menuDate, sortedPolls.length))}
-          </Text>
-          <Text style={styles.chooseNow}>{t('dashboard.pollCard.chooseNow')}</Text>
+          <MenuPreviewBody polls={sortedPolls} t={t} />
+          {isPastDate ? (
+            <Text style={styles.bodySubtext}>{t('dashboard.pollCard.viewPastPrompt')}</Text>
+          ) : null}
         </View>
       ) : (
         <View style={[styles.body, styles.mealsBody]}>
-          {sortedPolls.map(poll => (
-            <MealSlotRow
-              key={poll.id}
-              poll={poll}
-              multiQuantity={multiQuantity}
-              notSelectedLabel={notSelectedLabel}
-              showMealPrices={showMealPrices}
-              t={t}
+          {hasOrders ? (
+            <MealSelectionSummary
+              model={selectionSummary}
+              variant="compact"
+              showTotals={selectionSummary.totalPlates > 0}
             />
-          ))}
-          {cardState === 'partial' ? (
+          ) : showPaymentStatus ? (
+            <Text style={styles.bodySubtext}>{t('dashboard.pollCard.ordersOnFile')}</Text>
+          ) : null}
+          {cardState === 'partial' && !isPastDate ? (
             <Text style={styles.bodySubtext}>{t('dashboard.pollCard.completeRemaining')}</Text>
           ) : null}
-          {cardState === 'complete' && paymentStatus ? (
+          {showPaymentStatus ? (
             <View style={styles.paymentStatusRow}>
               <Text style={styles.paymentStatusLabel}>{t('meals.poll.paymentStatusLabel')}</Text>
-              <Text style={[styles.paymentStatusValue, paymentStatusStyle(paymentStatus)]}>
-                {paymentStatusLabel(paymentStatus, t)}
+              <Text style={[styles.paymentStatusValue, paymentStatusStyle(paymentStatus!)]}>
+                {paymentStatusLabel(paymentStatus!, t)}
               </Text>
             </View>
           ) : null}
-          {cardState === 'complete' && paymentStatus === 'REJECTED' && rejectionReason ? (
+          {showPaymentStatus && paymentStatus === 'REJECTED' && rejectionReason ? (
             <Text style={styles.rejectionReason}>
               {t('meals.poll.rejectionReason', { reason: rejectionReason })}
             </Text>
           ) : null}
-          {cardState === 'complete' && paymentStatus === 'PENDING_APPROVAL' ? (
+          {showPaymentStatus && paymentStatus === 'PENDING_APPROVAL' ? (
             <Text style={styles.bodySubtext}>{t('meals.poll.awaitingApprovalHint')}</Text>
           ) : null}
-          {cardState === 'complete' && showPrepaidOverflow ? (
+          {showPaymentStatus && showPrepaidOverflow ? (
             <View style={styles.overflowBanner}>
               <Text style={styles.overflowTitle}>{t('meals.poll.prepaidOverflowTitle')}</Text>
               <Text style={styles.overflowText}>
@@ -373,13 +383,13 @@ export function DashboardCustomerPollCard({
               styles.ctaLabel,
               ctaVariant === 'secondary' ? styles.ctaLabelSecondary : styles.ctaLabelPrimary,
             ]}>
-            {actionLabel(cardState, t)}
+            {ctaLabel}
           </Text>
         </View>
       ) : showAction && actionDisabled ? (
         <View style={[styles.cta, styles.ctaDisabled]}>
           <Text style={[styles.ctaLabel, styles.ctaLabelDisabled]}>
-            {actionLabel(cardState, t)}
+            {ctaLabel}
           </Text>
           {actionDisabledReason ? (
             <Text style={styles.ctaDisabledHint}>{actionDisabledReason}</Text>
@@ -395,12 +405,14 @@ export function DashboardCustomerPollCard({
         activeOpacity={0.92}
         onPress={onAction}
         accessibilityRole="button"
-        accessibilityLabel={actionLabel(cardState, t)}
+        accessibilityLabel={ctaLabel}
         style={[
           styles.card,
-          cardState === 'complete' && styles.cardComplete,
-          cardState === 'partial' && styles.cardPartial,
-          cardState === 'active' && styles.cardActive,
+          !isPastDate && cardState === 'complete' && styles.cardComplete,
+          !isPastDate && cardState === 'partial' && styles.cardPartial,
+          !isPastDate && cardState === 'active' && styles.cardActive,
+          isPastDate && styles.cardPast,
+          isPastDate && (cardState === 'complete' || cardState === 'partial') && styles.cardPastOrdered,
         ]}>
         {cardBody}
       </TouchableOpacity>
@@ -411,9 +423,11 @@ export function DashboardCustomerPollCard({
     <View
       style={[
         styles.card,
-        cardState === 'complete' && styles.cardComplete,
-        cardState === 'partial' && styles.cardPartial,
-        cardState === 'active' && styles.cardActive,
+        !isPastDate && cardState === 'complete' && styles.cardComplete,
+        !isPastDate && cardState === 'partial' && styles.cardPartial,
+        !isPastDate && cardState === 'active' && styles.cardActive,
+        isPastDate && styles.cardPast,
+        isPastDate && (cardState === 'complete' || cardState === 'partial') && styles.cardPastOrdered,
       ]}>
       {cardBody}
     </View>
@@ -429,6 +443,14 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: spacing.lg,
     ...shadows.sm,
+  },
+  cardPast: {
+    backgroundColor: '#F3F4F6',
+    borderColor: '#D1D5DB',
+  },
+  cardPastOrdered: {
+    borderColor: '#9CA3AF',
+    backgroundColor: '#EEF2F7',
   },
   cardActive: {
     borderColor: `${colors.primary}55`,
@@ -489,12 +511,28 @@ const styles = StyleSheet.create({
   dateNavBtnDisabled: {
     opacity: 0.4,
   },
+  dateCenter: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.button,
+    minHeight: 40,
+  },
+  dateCenterPressed: {
+    backgroundColor: colors.surface,
+  },
   date: {
     ...typography.bodyStrong,
-    flex: 1,
+    fontSize: 18,
+    lineHeight: 24,
     textAlign: 'center',
-    fontSize: 15,
-    color: colors.textSecondary,
+    color: colors.textPrimary,
+  },
+  dateLink: {
+    color: colors.primaryDark,
+    textDecorationLine: 'underline',
   },
   body: {
     gap: spacing.sm,
@@ -510,10 +548,26 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     lineHeight: 24,
   },
-  chooseNow: {
-    ...typography.body,
+  previewWrap: {
+    gap: spacing.md,
+  },
+  previewSection: {
+    gap: 2,
+  },
+  previewMealTitle: {
+    ...typography.bodyStrong,
     color: colors.primaryDark,
-    fontWeight: '600',
+    marginBottom: 2,
+  },
+  previewItem: {
+    ...typography.body,
+    color: colors.textPrimary,
+    lineHeight: 22,
+  },
+  previewMore: {
+    ...typography.caption,
+    color: colors.muted,
+    marginTop: 2,
   },
   bodyText: {
     ...typography.bodyStrong,
@@ -524,31 +578,6 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.muted,
     lineHeight: 22,
-  },
-  mealRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  mealType: {
-    ...typography.bodyStrong,
-    fontSize: 14,
-    color: colors.muted,
-    minWidth: 84,
-  },
-  mealChoice: {
-    ...typography.bodyStrong,
-    fontSize: 16,
-    color: colors.textPrimary,
-    flex: 1,
-    textAlign: 'right',
-    lineHeight: 22,
-  },
-  mealChoiceMissing: {
-    color: colors.muted,
-    fontStyle: 'italic',
   },
   loader: {
     marginVertical: spacing.lg,

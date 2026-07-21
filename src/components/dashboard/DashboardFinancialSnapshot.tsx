@@ -10,8 +10,11 @@ type DashboardFinancialSnapshotProps = {
   loading: boolean;
   financial: DashboardFinancialSummary | null;
   title?: string;
+  /** When true, always render This month cards (show —) even if all amounts are null. */
+  alwaysShow?: boolean;
   onExpectedPress?: () => void;
   onCollectedPress?: () => void;
+  onUnderReviewPress?: () => void;
   onPendingPress?: () => void;
 };
 
@@ -54,8 +57,10 @@ export function DashboardFinancialSnapshot({
   loading,
   financial,
   title,
+  alwaysShow = false,
   onExpectedPress,
   onCollectedPress,
+  onUnderReviewPress,
   onPendingPress,
 }: DashboardFinancialSnapshotProps) {
   const { t } = useTranslation();
@@ -64,18 +69,21 @@ export function DashboardFinancialSnapshot({
   const prepaidOnly =
     financial?.mealBillingType === 'PREPAID_BALANCE' && !mixed;
   const prepaid = financial?.prepaidBalance;
+  const hasPayPerMealAmounts =
+    financial?.expectedCharges != null ||
+    financial?.collected != null ||
+    financial?.underReview != null ||
+    financial?.pending != null;
+  const hasPrepaidAmounts =
+    prepaid?.balanceSold != null ||
+    prepaid?.balanceConsumed != null ||
+    prepaid?.balanceRemaining != null ||
+    prepaid?.amountCollected != null;
+  // Owner dashboards always keep This month visible (show — when empty).
+  // Prepaid Mess spaces keep prepaid cards; others use expected/collected/pending.
   const showPayPerMealCards =
-    mixed ||
-    (!prepaidOnly &&
-      (financial?.expectedCharges != null ||
-        financial?.collected != null ||
-        financial?.pending != null));
-  const showPrepaidCards =
-    prepaidOnly &&
-    (prepaid?.balanceSold != null ||
-      prepaid?.balanceConsumed != null ||
-      prepaid?.balanceRemaining != null ||
-      prepaid?.amountCollected != null);
+    mixed || (!prepaidOnly && (alwaysShow || hasPayPerMealAmounts));
+  const showPrepaidCards = prepaidOnly && (alwaysShow || hasPrepaidAmounts);
 
   if (!loading && !showPayPerMealCards && !showPrepaidCards) {
     return null;
@@ -84,6 +92,7 @@ export function DashboardFinancialSnapshot({
   const expected =
     formatComboPrice(financial?.expectedCharges ?? null, currencyCode) ?? '—';
   const collected = formatComboPrice(financial?.collected ?? null, currencyCode) ?? '—';
+  const underReview = formatComboPrice(financial?.underReview ?? null, currencyCode) ?? '—';
   const pending = formatComboPrice(financial?.pending ?? null, currencyCode) ?? '—';
 
   const balanceSold =
@@ -128,10 +137,10 @@ export function DashboardFinancialSnapshot({
           />
         </View>
       ) : (
-        <View style={styles.row}>
+        <View style={styles.grid}>
           <SnapshotCard
             value={expected}
-            label={t('dashboard.financial.expectedCharges')}
+            label={t('dashboard.financial.expected')}
             onPress={onExpectedPress}
           />
           <SnapshotCard
@@ -139,6 +148,12 @@ export function DashboardFinancialSnapshot({
             label={t('dashboard.financial.collected')}
             valueStyle={styles.collected}
             onPress={onCollectedPress}
+          />
+          <SnapshotCard
+            value={underReview}
+            label={t('dashboard.financial.underReview')}
+            valueStyle={styles.underReview}
+            onPress={onUnderReviewPress}
           />
           <SnapshotCard
             value={pending}
@@ -163,8 +178,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.xs,
   },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
   card: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: '47%',
     minWidth: 0,
     backgroundColor: colors.white,
     borderRadius: radius.card,
@@ -188,6 +209,9 @@ const styles = StyleSheet.create({
   },
   collected: {
     color: colors.success,
+  },
+  underReview: {
+    color: colors.primary,
   },
   pending: {
     color: '#EAB308',

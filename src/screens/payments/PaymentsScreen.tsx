@@ -1,9 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   CompositeNavigationProp,
   RouteProp,
-  useFocusEffect,
   useNavigation,
   useRoute,
 } from '@react-navigation/native';
@@ -11,7 +10,6 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { DashboardFinancialSnapshot } from '../../components/dashboard';
-import { MemberMealActivityMonthNav } from '../../components/meals/MemberMealActivityMonthNav';
 import { MemberPaymentRow } from '../../components/payments/MemberPaymentRow';
 import { PaymentsFilterDrawer } from '../../components/payments/PaymentsFilterDrawer';
 import { PaymentsReviewList } from '../../components/payments/PaymentsReviewList';
@@ -19,20 +17,23 @@ import {
   PaymentsSectionTabBar,
   type PaymentsSection,
 } from '../../components/payments/PaymentsSectionTabBar';
-import { EmptyState, ListFilterChips, ListSearchFilterBar, SkeletonCard } from '../../components/ui';
 import {
-  usePaymentReview,
-  type HistoryReviewFilter,
-  type PendingReviewFilter,
-} from '../../hooks/usePaymentReview';
-import { usePaymentsLedger } from '../../hooks/usePaymentsLedger';
+  EmptyState,
+  ListFilterChips,
+  ListSearchFilterBar,
+  MonthlySummaryHeader,
+  SkeletonCard,
+} from '../../components/ui';
+import { usePaymentsMembers } from '../../hooks/usePaymentsMembers';
+import { usePaymentsReviewList } from '../../hooks/usePaymentsReviewList';
+import { usePaymentsSummary } from '../../hooks/usePaymentsSummary';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useSpaceTabHeader } from '../../hooks/useSpaceTabHeader';
 import type { MainStackParamList, SpaceTabParamList } from '../../navigation/types';
-import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
 import { colors, spacing, typography } from '../../theme';
 import { canManagePayments, currentMonthKey } from '../../utils/dashboardFinancial';
+import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
 import {
   countPaymentListFilters,
   isPrepaidOnlyLedger,
@@ -40,7 +41,10 @@ import {
   type PaymentLedgerFilter,
 } from '../../utils/paymentLedger';
 import { shouldUseFilterDrawer } from '../../utils/filterUx';
-import { findMySpaceEntry } from '../../utils/spacePermissions';
+import { invalidatePaymentsMonthCaches } from '../../utils/paymentsMonthCache';
+import { paymentsApi } from '../../api/paymentsApi';
+import type { HistoryReviewFilter, PendingReviewFilter } from '../../utils/ownerPaymentFilters';
+import { resolveMemberMonthPaymentTarget } from '../../utils/resolveMemberMonthPaymentTarget';
 
 type PaymentsRoute = RouteProp<SpaceTabParamList, 'Payments'>;
 type PaymentsNav = CompositeNavigationProp<
@@ -89,79 +93,109 @@ export function PaymentsScreen() {
   useSpaceTabHeader(spaceId);
   const showToast = useToastStore(state => state.showToast);
 
-  const mySpaces = useSpaceStore(state => state.mySpaces);
-  const currentSpace = useSpaceStore(state => state.currentSpace);
-  const spaceEntry = findMySpaceEntry(mySpaces, spaceId);
   const permissions = useSpacePermissions(spaceId);
-  const spaceType =
-    permissions.spaceType ??
-    spaceEntry?.spaceType ??
-    (currentSpace?.spaceId === spaceId ? currentSpace.spaceType : undefined);
   const canManage = canManagePayments(permissions.membershipRole);
 
   const [section, setSection] = useState<PaymentsSection>('members');
-  const [pendingFilter, setPendingFilter] = useState<PendingReviewFilter>('SUBMITTED');
-  const [historyFilter, setHistoryFilter] = useState<HistoryReviewFilter>('PAID');
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  const [autoOpenedReviewHint, setAutoOpenedReviewHint] = useState(false);
+  const autoEntryResolvedRef = useRef(false);
 
-  const ledger = usePaymentsLedger(spaceId, spaceType, canManage);
-  // Review list must load independently of ledger so Pending Review / History
-  // still fetch when the members ledger is slow or fails.
-  const reviewSyncExpected = section !== 'members';
-  const review = usePaymentReview(spaceId, {
-    enabled: canManage,
-    month: ledger.month,
-    syncExpected: reviewSyncExpected,
-    queue: section === 'history' ? 'HISTORY' : 'PENDING',
-    pendingFilter,
-    historyFilter,
-  });
-  const isCurrentMonth = ledger.month >= currentMonthKey();
-
-  useFocusEffect(
-    useCallback(() => {
-      if (!canManage) {
-        return;
-      }
-      void ledger.reload();
-      void review.reload();
-    }, [canManage, ledger.reload, review.reload]),
+  const summary = usePaymentsSummary(spaceId, canManage);
+  // Lists wait until the first summary attempt settles (success or error).
+  const summarySettled = summary.hasData || Boolean(summary.error) || !summary.loading;
+  const members = usePaymentsMembers(
+    spaceId,
+    summary.month,
+    canManage && section === 'members' && summarySettled,
   );
+  const reviewList = usePaymentsReviewList(
+    spaceId,
+    summary.month,
+    section === 'history' ? 'history' : 'pendingReview',
+    canManage && section !== 'members' && summarySettled,
+  );
+
+  const isCurrentMonth = summary.month >= currentMonthKey();
 
   useEffect(() => {
     const initialFilter = route.params.initialFilter;
-    if (initialFilter) {
-      ledger.setFilter(initialFilter);
+    if (!initialFilter) {
+      return;
     }
-  }, [ledger.setFilter, route.params.initialFilter]);
+    autoEntryResolvedRef.current = true;
+    setAutoOpenedReviewHint(false);
+    setSection('members');
+    members.setFilter(initialFilter);
+    navigation.setParams({ initialFilter: undefined });
+  }, [members.setFilter, navigation, route.params.initialFilter]);
 
   useEffect(() => {
     const initialSection = route.params.initialSection;
     if (!initialSection) {
       return;
     }
+    autoEntryResolvedRef.current = true;
+    setAutoOpenedReviewHint(false);
     const resolved = resolveInitialSection(initialSection);
     setSection(resolved.section);
-    setPendingFilter(resolved.pendingFilter);
-    setHistoryFilter(resolved.historyFilter);
+    reviewList.setPendingFilter(resolved.pendingFilter);
+    reviewList.setHistoryFilter(resolved.historyFilter);
     navigation.setParams({ initialSection: undefined });
-  }, [navigation, route.params.initialSection]);
+  }, [
+    navigation,
+    reviewList.setHistoryFilter,
+    reviewList.setPendingFilter,
+    route.params.initialSection,
+  ]);
+
+  // One-shot entry: open Pending Review when current month has under-review payments.
+  useEffect(() => {
+    if (autoEntryResolvedRef.current) {
+      return;
+    }
+    if (route.params.initialSection || route.params.initialFilter) {
+      return;
+    }
+    if (!summary.hasData || summary.loading) {
+      return;
+    }
+    autoEntryResolvedRef.current = true;
+    const isCurrent = summary.month === currentMonthKey();
+    const underReviewCount = summary.counts.submitted ?? 0;
+    if (isCurrent && underReviewCount > 0) {
+      setSection('pendingReview');
+      setAutoOpenedReviewHint(true);
+    }
+  }, [
+    route.params.initialFilter,
+    route.params.initialSection,
+    summary.counts.submitted,
+    summary.hasData,
+    summary.loading,
+    summary.month,
+  ]);
+
+  const handleSectionChange = useCallback((nextSection: PaymentsSection) => {
+    setAutoOpenedReviewHint(false);
+    setSection(nextSection);
+  }, []);
 
   const activeFilterCount = useMemo(
-    () => countPaymentListFilters(ledger.filters),
-    [ledger.filters],
+    () => countPaymentListFilters(members.filters),
+    [members.filters],
   );
 
-  const prepaidOnly = isPrepaidOnlyLedger(ledger.summary);
+  const prepaidOnly = isPrepaidOnlyLedger(summary.financial);
 
   const paymentEmptyState = useMemo(() => {
-    if (ledger.filters.preset === 'pending') {
+    if (members.filters.preset === 'pending') {
       return {
         title: t('payments.emptyPending.title'),
         description: t('payments.emptyPending.description'),
       };
     }
-    if (ledger.filters.preset === 'collected') {
+    if (members.filters.preset === 'collected') {
       return {
         title: t('payments.emptyCollected.title'),
         description: prepaidOnly
@@ -172,15 +206,15 @@ export function PaymentsScreen() {
 
     return {
       title:
-        ledger.search.trim() || activeFilterCount > 0
+        members.search.trim() || activeFilterCount > 0
           ? t('list.emptyFiltered')
           : t('payments.empty.title'),
       description:
-        ledger.search.trim() || activeFilterCount > 0
+        members.search.trim() || activeFilterCount > 0
           ? undefined
           : t('payments.empty.description'),
     };
-  }, [activeFilterCount, ledger.filters.preset, ledger.search, prepaidOnly, t]);
+  }, [activeFilterCount, members.filters.preset, members.search, prepaidOnly, t]);
 
   const sectionTabs = useMemo(
     () => [
@@ -188,94 +222,155 @@ export function PaymentsScreen() {
       {
         id: 'pendingReview' as const,
         label: t('paymentCollection.review.tabPendingReview', {
-          count: review.pendingReviewCount ?? 0,
+          count: summary.counts.pendingReview ?? 0,
         }),
       },
       {
         id: 'history' as const,
-        label: t('paymentCollection.review.tabHistory', { count: review.historyCount ?? 0 }),
+        label: t('paymentCollection.review.tabHistory', {
+          count: summary.counts.history ?? 0,
+        }),
       },
     ],
-    [review.historyCount, review.pendingReviewCount, t],
+    [summary.counts.history, summary.counts.pendingReview, t],
   );
 
   const pendingChipOptions = useMemo(
     () => [
       {
         id: 'SUBMITTED' as const,
-        label: t('paymentCollection.review.chips.submitted', { count: review.submittedCount }),
+        label: t('paymentCollection.review.chips.submitted', {
+          count: summary.counts.submitted,
+        }),
       },
       {
         id: 'NEEDS_UPDATE' as const,
-        label: t('paymentCollection.review.chips.needsUpdate', { count: review.changesRequestedCount }),
+        label: t('paymentCollection.review.chips.needsUpdate', {
+          count: summary.counts.changesRequested,
+        }),
       },
     ],
-    [review.changesRequestedCount, review.submittedCount, t],
+    [summary.counts.changesRequested, summary.counts.submitted, t],
   );
 
   const historyChipOptions = useMemo(
     () => [
-      { id: 'PAID' as const, label: t('paymentCollection.review.chips.paid', { count: review.paidCount }) },
+      {
+        id: 'PAID' as const,
+        label: t('paymentCollection.review.chips.paid', { count: summary.counts.paid }),
+      },
       {
         id: 'REJECTED' as const,
-        label: t('paymentCollection.review.chips.rejected', { count: review.rejectedCount }),
+        label: t('paymentCollection.review.chips.rejected', {
+          count: summary.counts.rejected,
+        }),
       },
     ],
-    [review.paidCount, review.rejectedCount, t],
+    [summary.counts.paid, summary.counts.rejected, t],
   );
 
   const handleFilterNavigate = useCallback(
     (nextFilter: PaymentLedgerFilter) => {
-      ledger.setFilter(nextFilter);
+      setAutoOpenedReviewHint(false);
+      setSection('members');
+      members.setFilter(nextFilter);
     },
-    [ledger.setFilter],
+    [members.setFilter],
   );
 
   const handleMemberPress = useCallback(
-    (memberId: string) => {
-      navigation.navigate('MemberDetails', { spaceId, memberId });
+    async (memberId: string, memberName: string) => {
+      try {
+        const target = await resolveMemberMonthPaymentTarget(
+          spaceId,
+          memberId,
+          memberName,
+          summary.month,
+        );
+        if (target.kind === 'detail') {
+          navigation.navigate('PaymentDetail', {
+            spaceId,
+            paymentId: target.paymentId,
+            memberId: target.memberId,
+            memberName: target.memberName,
+          });
+          return;
+        }
+        navigation.navigate('MemberPayments', {
+          spaceId,
+          memberId: target.memberId,
+          memberName: target.memberName,
+          month: target.month,
+        });
+      } catch {
+        showToast(t('paymentCollection.errors.loadPayment'));
+      }
+    },
+    [navigation, showToast, spaceId, summary.month, t],
+  );
+
+  const handleOpenPaymentDetail = useCallback(
+    (paymentId: string, memberId?: string, memberName?: string) => {
+      navigation.navigate('PaymentDetail', {
+        spaceId,
+        paymentId,
+        memberId,
+        memberName,
+      });
     },
     [navigation, spaceId],
   );
 
   const handlePrevMonth = useCallback(() => {
-    ledger.setMonth(shiftMonth(ledger.month, -1));
-  }, [ledger.month, ledger.setMonth]);
+    summary.setMonth(shiftMonth(summary.month, -1));
+  }, [summary.month, summary.setMonth]);
 
   const handleNextMonth = useCallback(() => {
     if (isCurrentMonth) {
       return;
     }
-    ledger.setMonth(shiftMonth(ledger.month, 1));
-  }, [isCurrentMonth, ledger.month, ledger.setMonth]);
+    summary.setMonth(shiftMonth(summary.month, 1));
+  }, [isCurrentMonth, summary.month, summary.setMonth]);
 
-  const handleSectionChange = useCallback((nextSection: PaymentsSection) => {
-    setSection(nextSection);
-    if (nextSection === 'pendingReview') {
-      setPendingFilter('SUBMITTED');
-    } else if (nextSection === 'history') {
-      setHistoryFilter('PAID');
+  const handleRefresh = useCallback(async () => {
+    try {
+      // Explicit sync command (write) — not part of default open.
+      await paymentsApi.syncPaymentsMonth(spaceId, summary.month);
+    } catch {
+      // Still refresh reads even if sync fails.
     }
-  }, []);
+    invalidatePaymentsMonthCaches(spaceId, summary.month);
+    await Promise.all([
+      summary.reload(),
+      section === 'members' ? members.reload() : reviewList.reload(),
+    ]);
+  }, [members, reviewList, section, spaceId, summary]);
 
-  const handleRefresh = useCallback(() => {
-    void ledger.reload();
-    if (section !== 'members') {
-      void review.reload();
+  const afterReview = useCallback(async () => {
+    invalidatePaymentsMonthCaches(spaceId, summary.month);
+    invalidateDashboardQueries();
+    // KPIs / members only. Review cards are patched from the review API response —
+    // soft-refetching the queue here races snapshot rebuild and restores stale cards.
+    await summary.reload();
+    if (section === 'members') {
+      await members.reload();
     }
-  }, [ledger.reload, review.reload, section]);
+  }, [members, section, spaceId, summary]);
 
   const handleApprove = useCallback(
     async (paymentId: string) => {
       try {
-        await review.review(paymentId, 'APPROVE');
+        const updated = await reviewList.review(paymentId, 'APPROVE');
+        if (updated) {
+          summary.applyReviewOutcome('APPROVE', updated.amount);
+        }
         showToast(t('paymentCollection.review.approved'));
-        void ledger.reload();
+        await afterReview();
       } catch {
         showToast(t('paymentCollection.errors.review'));
       }
     },
-    [ledger.reload, review, showToast, t],
+    [afterReview, reviewList, showToast, summary, t],
   );
 
   const handleReject = useCallback(
@@ -285,30 +380,35 @@ export function PaymentsScreen() {
       reason?: string,
     ) => {
       try {
-        await review.review(paymentId, 'REJECT', reason, code);
+        const updated = await reviewList.review(paymentId, 'REJECT', reason, code);
+        if (updated) {
+          summary.applyReviewOutcome('REJECT', updated.amount);
+        }
         showToast(t('paymentCollection.review.rejected'));
-        void ledger.reload();
+        await afterReview();
       } catch {
         showToast(t('paymentCollection.errors.review'));
       }
     },
-    [ledger.reload, review, showToast, t],
+    [afterReview, reviewList, showToast, summary, t],
   );
 
   const handleRequestUpdate = useCallback(
     async (paymentId: string, message: string) => {
       try {
-        await review.review(paymentId, 'REQUEST_UPDATE', message);
+        const updated = await reviewList.review(paymentId, 'REQUEST_UPDATE', message);
+        if (updated) {
+          summary.applyReviewOutcome('REQUEST_UPDATE', updated.amount);
+        }
         showToast(t('paymentCollection.review.updateRequested'));
-        void ledger.reload();
-      } catch {
+        await afterReview();
+      } catch (err) {
         showToast(t('paymentCollection.errors.review'));
+        throw err;
       }
     },
-    [ledger.reload, review, showToast, t],
+    [afterReview, reviewList, showToast, summary, t],
   );
-
-  const refreshing = ledger.loading || review.loading;
 
   if (!canManage) {
     return (
@@ -323,6 +423,14 @@ export function PaymentsScreen() {
     );
   }
 
+  const showFullPageError =
+    !summary.hasData && !summary.loading && Boolean(summary.error);
+  const listRefreshError =
+    section === 'members' ? members.refreshError : reviewList.refreshError;
+  const refreshing =
+    summary.refreshing ||
+    (section === 'members' ? members.refreshing : reviewList.refreshing);
+
   return (
     <View style={styles.screen}>
       <ScrollView
@@ -331,98 +439,152 @@ export function PaymentsScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} />
         }>
-        <MemberMealActivityMonthNav
-          month={ledger.month}
+        <MonthlySummaryHeader
+          month={summary.month}
           onPreviousMonth={handlePrevMonth}
           onNextMonth={handleNextMonth}
-          disableNext={isCurrentMonth}
-        />
+          disableNext={isCurrentMonth}>
+          <DashboardFinancialSnapshot
+            loading={summary.loading}
+            financial={summary.financial}
+            onExpectedPress={() => handleFilterNavigate('all')}
+            onCollectedPress={() => handleFilterNavigate('collected')}
+            onUnderReviewPress={() => handleFilterNavigate('underReview')}
+            onPendingPress={() => handleFilterNavigate('pending')}
+          />
+        </MonthlySummaryHeader>
 
-        <PaymentsSectionTabBar
-          sections={sectionTabs}
-          activeSection={section}
-          onSectionChange={id => handleSectionChange(id as PaymentsSection)}
-        />
-
-        {section === 'members' ? (
-          <>
-            <DashboardFinancialSnapshot
-              loading={ledger.loading}
-              financial={ledger.summary}
-              onExpectedPress={() => handleFilterNavigate('all')}
-              onCollectedPress={() => handleFilterNavigate('collected')}
-              onPendingPress={() => handleFilterNavigate('pending')}
-            />
-
-            <ListSearchFilterBar
-              searchValue={ledger.search}
-              onSearchChange={ledger.setSearch}
-              searchPlaceholder={t('list.search.membersPayments')}
-              onFilterPress={() => setFilterDrawerOpen(true)}
-              activeFilterCount={activeFilterCount}
-              showFilterButton={shouldUseFilterDrawer(PAYMENT_FILTER_OPTION_COUNT)}
-            />
-
-            {ledger.error && !ledger.loading ? (
-              <EmptyState
-                title={t('payments.errors.title')}
-                description={t(ledger.error)}
-              />
-            ) : ledger.loading && ledger.members.length === 0 ? (
-              <SkeletonCard />
-            ) : ledger.filteredMembers.length === 0 ? (
-              <EmptyState
-                title={paymentEmptyState.title}
-                description={paymentEmptyState.description}
-              />
-            ) : (
-              ledger.filteredMembers.map(row => (
-                <MemberPaymentRow
-                  key={row.memberId}
-                  row={row}
-                  onPress={() => handleMemberPress(row.memberId)}
-                />
-              ))
-            )}
-
-            {ledger.summary?.source === 'OCCUPANCY' ? (
-              <Text style={styles.hint}>{t('payments.occupancyHint')}</Text>
-            ) : null}
-          </>
+        {showFullPageError ? (
+          <EmptyState
+            title={
+              summary.serviceUnavailable
+                ? t('paymentCollection.serviceUnavailable.title')
+                : t('payments.errors.title')
+            }
+            description={t(summary.error ?? 'payments.errors.loadLedger')}
+            icon="⚠️"
+          />
         ) : (
           <>
-            {section === 'pendingReview' ? (
-              <ListFilterChips
-                options={pendingChipOptions}
-                value={pendingFilter}
-                onChange={setPendingFilter}
-              />
-            ) : (
-              <ListFilterChips
-                options={historyChipOptions}
-                value={historyFilter}
-                onChange={setHistoryFilter}
-              />
-            )}
-
-            <PaymentsReviewList
-              review={review}
-              showActions
-              onApprove={paymentId => void handleApprove(paymentId)}
-              onReject={(paymentId, code, reason) => void handleReject(paymentId, code, reason)}
-              onRequestUpdate={(paymentId, message) => void handleRequestUpdate(paymentId, message)}
+            <PaymentsSectionTabBar
+              sections={sectionTabs}
+              activeSection={section}
+              onSectionChange={id => handleSectionChange(id as PaymentsSection)}
             />
+
+            {autoOpenedReviewHint &&
+            section === 'pendingReview' &&
+            (summary.counts.submitted ?? 0) > 0 ? (
+              <Text style={styles.autoOpenHint}>
+                {t('paymentCollection.review.autoOpenHint', {
+                  count: summary.counts.submitted ?? 0,
+                })}
+              </Text>
+            ) : null}
+
+            {(summary.refreshError || listRefreshError) ? (
+              <Text
+                style={styles.refreshError}
+                onPress={() => void handleRefresh()}>
+                {t(summary.refreshError ?? listRefreshError ?? '')} ·{' '}
+                {t('common.retry', { defaultValue: 'Tap to retry' })}
+              </Text>
+            ) : null}
+
+            {section === 'members' ? (
+              <>
+                <ListSearchFilterBar
+                  searchValue={members.search}
+                  onSearchChange={members.setSearch}
+                  searchPlaceholder={t('list.search.membersPayments')}
+                  onFilterPress={() => setFilterDrawerOpen(true)}
+                  activeFilterCount={activeFilterCount}
+                  showFilterButton={shouldUseFilterDrawer(PAYMENT_FILTER_OPTION_COUNT)}
+                />
+
+                {members.loading ? (
+                  <SkeletonCard />
+                ) : members.error ? (
+                  <EmptyState
+                    title={t('payments.errors.title')}
+                    description={t(members.error)}
+                    icon="⚠️"
+                  />
+                ) : members.filteredMembers.length === 0 ? (
+                  <EmptyState
+                    title={paymentEmptyState.title}
+                    description={paymentEmptyState.description}
+                  />
+                ) : (
+                  <>
+                    {members.filteredMembers.map(row => (
+                      <MemberPaymentRow
+                        key={row.memberId}
+                        row={row}
+                        onPress={() => void handleMemberPress(row.memberId, row.memberName)}
+                      />
+                    ))}
+                    {members.hasMore ? (
+                      <Text style={styles.loadMore} onPress={() => void members.loadMore()}>
+                        {t('common.loadMore', { defaultValue: 'Load more' })}
+                      </Text>
+                    ) : null}
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                {section === 'pendingReview' ? (
+                  <ListFilterChips
+                    options={pendingChipOptions}
+                    value={reviewList.pendingFilter}
+                    onChange={reviewList.setPendingFilter}
+                  />
+                ) : (
+                  <ListFilterChips
+                    options={historyChipOptions}
+                    value={reviewList.historyFilter}
+                    onChange={reviewList.setHistoryFilter}
+                  />
+                )}
+
+                <PaymentsReviewList
+                  review={reviewList}
+                  showActions
+                  spaceType={permissions.spaceType}
+                  onApprove={paymentId => void handleApprove(paymentId)}
+                  onReject={(paymentId, code, reason) =>
+                    void handleReject(paymentId, code, reason)
+                  }
+                  onRequestUpdate={(paymentId, message) =>
+                    handleRequestUpdate(paymentId, message)
+                  }
+                  onOpenDetail={payment =>
+                    handleOpenPaymentDetail(
+                      payment.paymentId,
+                      payment.memberId,
+                      payment.memberName,
+                    )
+                  }
+                />
+                {reviewList.hasMore ? (
+                  <Text style={styles.loadMore} onPress={() => void reviewList.loadMore()}>
+                    {t('common.loadMore', { defaultValue: 'Load more' })}
+                  </Text>
+                ) : null}
+              </>
+            )}
           </>
         )}
       </ScrollView>
 
       <PaymentsFilterDrawer
         visible={filterDrawerOpen}
-        applied={ledger.filters}
+        applied={members.filters}
         onClose={() => setFilterDrawerOpen(false)}
-        onApply={ledger.setFilters}
+        onApply={members.setFilters}
       />
     </View>
   );
@@ -439,11 +601,22 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.lg,
     paddingBottom: spacing.section,
+    gap: spacing.sm,
   },
-  hint: {
+  refreshError: {
+    ...typography.caption,
+    color: '#DC2626',
+    marginBottom: spacing.xs,
+  },
+  autoOpenHint: {
     ...typography.caption,
     color: colors.muted,
-    marginTop: spacing.md,
-    lineHeight: 18,
+    marginBottom: spacing.xs,
+  },
+  loadMore: {
+    ...typography.bodyStrong,
+    color: colors.primary,
+    textAlign: 'center',
+    paddingVertical: spacing.md,
   },
 });

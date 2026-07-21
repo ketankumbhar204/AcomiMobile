@@ -1,5 +1,6 @@
 import { mealsApi } from '../api/mealsApi';
 import type { DailyMenuOptionResponse, MealComboResponse, UUID } from '../api/types';
+import { formatComboIncludeLine } from './comboIncludes';
 
 function inferOptionEntryType(
   option: DailyMenuOptionResponse,
@@ -28,6 +29,14 @@ export function isSingleItemMenuOption(option: DailyMenuOptionResponse): boolean
   return false;
 }
 
+function comboItemIncludeLines(combo: MealComboResponse | undefined): string[] {
+  return (
+    combo?.items
+      ?.map(item => formatComboIncludeLine(item.name, item.quantity))
+      .filter(Boolean) ?? []
+  );
+}
+
 export function getMenuOptionItemNames(
   option: DailyMenuOptionResponse,
   comboById: Map<string, MealComboResponse>,
@@ -36,7 +45,7 @@ export function getMenuOptionItemNames(
     return option.packageItems.map(item => item.name).filter(Boolean);
   }
   if (option.comboId) {
-    return comboById.get(option.comboId)?.items?.map(item => item.name).filter(Boolean) ?? [];
+    return comboItemIncludeLines(comboById.get(option.comboId));
   }
   const entryType = inferOptionEntryType(option);
   if ((entryType === 'ITEM' || entryType === 'PACKAGE') && option.label.trim()) {
@@ -60,7 +69,7 @@ export async function resolveMenuOptionItemNames(
   if (entryType === 'COMBO' && option.comboId) {
     const combos = await mealsApi.getMealCombos(spaceId);
     const combo = combos.find(row => row.comboId === option.comboId);
-    return combo?.items?.map(item => item.name).filter(Boolean) ?? [];
+    return comboItemIncludeLines(combo);
   }
 
   if (entryType === 'PACKAGE') {

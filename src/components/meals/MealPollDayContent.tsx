@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { MealDeliveryLocation, MealPollSlot, MealType, UUID } from '../../api/types';
@@ -8,6 +8,7 @@ import { formatComboNameWithPrice } from '../../utils/comboPrice';
 import { formatMenuDate } from '../../utils/mealDates';
 import { MEAL_TYPES, mealTypeLabelKey } from '../../utils/mealLabels';
 import { MealDeliveryLocationCompact } from './MealDeliveryLocationCompact';
+import { MealPollMealTypeTabs } from './MealPollMealTypeTabs';
 import { MealPollOptionRadio } from './MealPollOptionRadio';
 import { MealPollQuantityRow } from './MealPollQuantityRow';
 
@@ -36,6 +37,12 @@ type MealPollDayContentProps = {
   readOnly?: boolean;
   showMealPrices?: boolean;
 };
+
+function sortPolls(polls: MealPollSlot[]): MealPollSlot[] {
+  return [...polls].sort(
+    (a, b) => MEAL_TYPES.indexOf(a.mealType) - MEAL_TYPES.indexOf(b.mealType),
+  );
+}
 
 export function MealPollDayContent({
   menuDate,
@@ -66,7 +73,35 @@ export function MealPollDayContent({
   const isDashboard = variant === 'dashboard';
   const isSheet = variant === 'sheet';
 
-  const showDeliveryForMeal = multiQuantity && deliveryLocations.length > 0 && !showSummary;
+  const showDeliveryForMeal =
+    multiQuantity && deliveryLocations.length > 0 && !showSummary;
+  const sortedPolls = useMemo(() => sortPolls(openPolls), [openPolls]);
+
+  const [selectedMealType, setSelectedMealType] = useState<MealType | null>(
+    () => sortedPolls[0]?.mealType ?? null,
+  );
+
+  useEffect(() => {
+    if (sortedPolls.length === 0) {
+      setSelectedMealType(null);
+      return;
+    }
+    setSelectedMealType(prev => {
+      if (prev && sortedPolls.some(poll => poll.mealType === prev)) {
+        return prev;
+      }
+      return sortedPolls[0].mealType;
+    });
+  }, [sortedPolls]);
+
+  const activePoll = useMemo(() => {
+    if (showSummary) {
+      return null;
+    }
+    return (
+      sortedPolls.find(poll => poll.mealType === selectedMealType) ?? sortedPolls[0] ?? null
+    );
+  }, [selectedMealType, showSummary, sortedPolls]);
 
   if (loading) {
     return <ActivityIndicator color={colors.primary} style={styles.loader} />;
@@ -78,9 +113,82 @@ export function MealPollDayContent({
 
   const title = isDashboard ? t('dashboard.tomorrowMeals') : null;
   const dateLabel = dateLabelProp ?? formatMenuDate(menuDate, i18n.language);
-  const sortedPolls = [...openPolls].sort(
-    (a, b) => MEAL_TYPES.indexOf(a.mealType) - MEAL_TYPES.indexOf(b.mealType),
-  );
+  const useTabs = !showSummary && sortedPolls.length > 1;
+
+  const renderPollEditor = (poll: MealPollSlot) => {
+    const menuEntries = poll.options.filter(option => option.optionType === 'MENU_ENTRY');
+    const mainOptions = menuEntries.filter(option => option.isExtra !== true);
+    const extraOptions = menuEntries.filter(option => option.isExtra === true);
+    const showExtrasSection = multiQuantity && extraOptions.length > 0;
+
+    const renderQuantityRows = (
+      options: typeof menuEntries,
+      rowVariant: 'default' | 'extra' = 'default',
+    ) =>
+      options.map(option => (
+        <MealPollQuantityRow
+          key={option.id}
+          option={option}
+          quantity={quantitySelections[poll.mealType]?.[option.id] ?? 0}
+          onChange={qty => onQuantityChange?.(poll.mealType, option.id, qty)}
+          readOnly={readOnly}
+          showPrice={showMealPrices}
+          variant={rowVariant}
+        />
+      ));
+
+    return (
+      <View key={poll.id} style={styles.section}>
+        {!useTabs ? (
+          <Text style={styles.sectionTitle}>{t(mealTypeLabelKey(poll.mealType))}</Text>
+        ) : null}
+
+        {showDeliveryForMeal ? (
+          <View style={styles.deliveryBelowTabs}>
+            <MealDeliveryLocationCompact
+              locations={deliveryLocations}
+              selectedId={deliverySelections[poll.mealType]}
+              lastUsedLocationId={lastDeliveryLocations[poll.mealType]}
+              onSelect={locationId => onDeliveryLocationChange?.(poll.mealType, locationId)}
+              readOnly={readOnly}
+            />
+          </View>
+        ) : null}
+
+        {multiQuantity ? (
+          <>
+            {showExtrasSection ? (
+              <Text style={styles.optionGroupLabel}>{t('meals.poll.menuSection')}</Text>
+            ) : null}
+            {renderQuantityRows(mainOptions)}
+            {showExtrasSection ? (
+              <View style={styles.extrasPanel}>
+                <View style={styles.extrasPanelHeader}>
+                  <View style={styles.extrasPanelAccent} />
+                  <View style={styles.extrasPanelHeaderText}>
+                    <Text style={styles.extrasPanelTitle}>{t('meals.poll.extrasSection')}</Text>
+                    <Text style={styles.extrasPanelHint}>{t('meals.poll.extrasSectionHint')}</Text>
+                  </View>
+                </View>
+                {renderQuantityRows(extraOptions, 'extra')}
+              </View>
+            ) : null}
+          </>
+        ) : (
+          poll.options.map(option => (
+            <MealPollOptionRadio
+              key={option.id}
+              option={option}
+              selected={selections[poll.mealType] === option.id}
+              onSelect={() => onSelect(poll.mealType, option.id)}
+              readOnly={readOnly}
+              showPrice={showMealPrices}
+            />
+          ))
+        )}
+      </View>
+    );
+  };
 
   return (
     <View>
@@ -105,26 +213,47 @@ export function MealPollDayContent({
             if (multiQuantity) {
               const activeSelections =
                 poll.mySelections?.filter(selection => selection.quantity > 0) ?? [];
+              const mainSelections = activeSelections.filter(selection => {
+                const option = poll.options.find(row => row.id === selection.optionId);
+                return option?.isExtra !== true;
+              });
+              const extraSelections = activeSelections.filter(selection => {
+                const option = poll.options.find(row => row.id === selection.optionId);
+                return option?.isExtra === true;
+              });
+              const renderSelectionLine = (
+                selection: (typeof activeSelections)[number],
+              ) => {
+                const option = poll.options.find(row => row.id === selection.optionId);
+                const label = option
+                  ? formatComboNameWithPrice(
+                      option.label,
+                      option.price,
+                      option.currencyCode,
+                      showMealPrices,
+                    )
+                  : t('meals.poll.notSelected');
+                return (
+                  <Text key={selection.optionId} style={styles.summaryChoice}>
+                    ✓ {label} × {selection.quantity}
+                  </Text>
+                );
+              };
               return (
                 <View key={poll.id} style={styles.section}>
                   <Text style={styles.sectionTitle}>{t(mealTypeLabelKey(poll.mealType))}</Text>
                   {activeSelections.length > 0 ? (
-                    activeSelections.map(selection => {
-                      const option = poll.options.find(row => row.id === selection.optionId);
-                      const label = option
-                        ? formatComboNameWithPrice(
-                            option.label,
-                            option.price,
-                            option.currencyCode,
-                            showMealPrices,
-                          )
-                        : t('meals.poll.notSelected');
-                      return (
-                        <Text key={selection.optionId} style={styles.summaryChoice}>
-                          ✓ {label} × {selection.quantity}
-                        </Text>
-                      );
-                    })
+                    <>
+                      {mainSelections.map(renderSelectionLine)}
+                      {extraSelections.length > 0 ? (
+                        <>
+                          <Text style={[styles.optionGroupLabel, styles.extrasGroupLabel]}>
+                            {t('meals.poll.extrasSection')}
+                          </Text>
+                          {extraSelections.map(renderSelectionLine)}
+                        </>
+                      ) : null}
+                    </>
                   ) : (
                     <Text style={styles.summaryMissing}>{t('meals.poll.notSelected')}</Text>
                   )}
@@ -157,46 +286,22 @@ export function MealPollDayContent({
               </View>
             );
           })
-        : sortedPolls.map(poll => {
-            const mealPlates = totalPlatesForMeal?.(poll.mealType) ?? 0;
-            return (
-              <View key={poll.id} style={styles.section}>
-                <Text style={styles.sectionTitle}>{t(mealTypeLabelKey(poll.mealType))}</Text>
-                {multiQuantity
-                  ? poll.options
-                      .filter(option => option.optionType === 'MENU_ENTRY')
-                      .map(option => (
-                        <MealPollQuantityRow
-                          key={option.id}
-                          option={option}
-                          quantity={quantitySelections[poll.mealType]?.[option.id] ?? 0}
-                          onChange={qty => onQuantityChange?.(poll.mealType, option.id, qty)}
-                          readOnly={readOnly}
-                          showPrice={showMealPrices}
-                        />
-                      ))
-                  : poll.options.map(option => (
-                      <MealPollOptionRadio
-                        key={option.id}
-                        option={option}
-                        selected={selections[poll.mealType] === option.id}
-                        onSelect={() => onSelect(poll.mealType, option.id)}
-                        readOnly={readOnly}
-                        showPrice={showMealPrices}
-                      />
-                    ))}
-                {showDeliveryForMeal && mealPlates > 0 ? (
-                  <MealDeliveryLocationCompact
-                    locations={deliveryLocations}
-                    selectedId={deliverySelections[poll.mealType]}
-                    lastUsedLocationId={lastDeliveryLocations[poll.mealType]}
-                    onSelect={locationId => onDeliveryLocationChange?.(poll.mealType, locationId)}
-                    readOnly={readOnly}
-                  />
-                ) : null}
-              </View>
-            );
-          })}
+        : (
+          <>
+            {useTabs && selectedMealType ? (
+              <MealPollMealTypeTabs
+                polls={sortedPolls}
+                selectedMealType={selectedMealType}
+                onSelectMealType={setSelectedMealType}
+                multiQuantity={multiQuantity}
+                selections={selections}
+                quantitySelections={quantitySelections}
+                totalPlatesForMeal={totalPlatesForMeal}
+              />
+            ) : null}
+            {activePoll ? renderPollEditor(activePoll) : null}
+          </>
+        )}
 
       {showSummary && multiQuantity ? (
         <View style={styles.summaryFooter}>
@@ -205,7 +310,8 @@ export function MealPollDayContent({
             {t('meals.poll.totalPlatesAll', {
               count: openPolls.reduce(
                 (sum, poll) =>
-                  sum + (poll.mySelections?.reduce((mealSum, row) => mealSum + row.quantity, 0) ?? 0),
+                  sum +
+                  (poll.mySelections?.reduce((mealSum, row) => mealSum + row.quantity, 0) ?? 0),
                 0,
               ),
             })}
@@ -249,6 +355,51 @@ const styles = StyleSheet.create({
   subtitle: { ...typography.body, color: colors.muted, marginBottom: spacing.lg },
   section: { marginBottom: spacing.lg },
   sectionTitle: { ...typography.bodyStrong, fontSize: 18, marginBottom: spacing.sm },
+  optionGroupLabel: {
+    ...typography.caption,
+    color: colors.muted,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginBottom: spacing.sm,
+  },
+  deliveryBelowTabs: {
+    marginBottom: spacing.md,
+  },
+  extrasPanel: {
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: 12,
+    backgroundColor: '#EEF6F1',
+    borderWidth: 1,
+    borderColor: colors.primaryDark,
+  },
+  extrasPanelHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  extrasPanelAccent: {
+    width: 3,
+    alignSelf: 'stretch',
+    minHeight: 28,
+    borderRadius: 2,
+    backgroundColor: colors.primaryDark,
+  },
+  extrasPanelHeaderText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  extrasPanelTitle: {
+    ...typography.bodyStrong,
+    color: colors.primaryDark,
+  },
+  extrasPanelHint: {
+    ...typography.caption,
+    color: colors.muted,
+  },
   summaryChoice: { ...typography.bodyStrong, marginBottom: spacing.xxs },
   summaryMissing: { ...typography.body, color: colors.muted, marginBottom: spacing.xxs },
   deliverySummary: {

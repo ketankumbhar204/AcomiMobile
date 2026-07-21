@@ -131,7 +131,7 @@ export type MealParticipationStatus = 'ACTIVE' | 'PAUSED' | 'STOPPED';
 
 export type MealType = 'BREAKFAST' | 'LUNCH' | 'DINNER';
 
-export type DailyMenuStatus = 'DRAFT' | 'PUBLISHED';
+export type DailyMenuStatus = 'DRAFT' | 'PUBLISHED' | 'MODIFIED';
 
 export type DailyMenuEntryType = 'COMBO' | 'ITEM' | 'PACKAGE';
 
@@ -185,6 +185,8 @@ export interface FoodItemResponse {
   foodType?: FoodType;
   defaultPrice?: number | null;
   currencyCode?: string | null;
+  /** Mess Menu Library: item can be enabled as a meal extra. */
+  isExtra?: boolean;
 }
 
 export interface UpdateFoodItemDefaultPriceRequest {
@@ -200,6 +202,8 @@ export interface CreateFoodItemRequest {
   categoryId: UUID;
   name: string;
   foodType?: FoodType;
+  /** Mess-only: create already marked as a library extra. */
+  isExtra?: boolean;
 }
 
 export interface UpdateFoodItemRequest {
@@ -208,10 +212,16 @@ export interface UpdateFoodItemRequest {
   foodType?: FoodType;
 }
 
+export interface UpdateFoodItemExtraRequest {
+  isExtra: boolean;
+}
+
 export interface CreateMealComboRequest {
   name: string;
   description?: string | null;
   itemIds: UUID[];
+  /** Mess-only optional quantities; missing items default to 1. */
+  itemQuantities?: Array<{ itemId: UUID; quantity: number }>;
   price?: number | null;
   currencyCode?: string | null;
   foodType?: FoodType;
@@ -221,6 +231,8 @@ export interface UpdateMealComboRequest {
   name?: string;
   description?: string | null;
   itemIds?: UUID[];
+  /** Mess-only optional quantities; missing items default to 1. */
+  itemQuantities?: Array<{ itemId: UUID; quantity: number }>;
   price?: number | null;
   currencyCode?: string | null;
   foodType?: FoodType;
@@ -235,7 +247,7 @@ export interface MealComboResponse {
   price?: number | null;
   currencyCode?: string | null;
   foodType?: FoodType;
-  items?: Array<{ itemId: UUID; name: string; foodType?: FoodType }>;
+  items?: Array<{ itemId: UUID; name: string; foodType?: FoodType; quantity?: number }>;
 }
 
 export interface DailyMenuOptionResponse {
@@ -246,6 +258,8 @@ export interface DailyMenuOptionResponse {
   label: string;
   sortOrder: number;
   isAvailable: boolean;
+  /** Mess-only add-on; same catalog item may also appear as a main dish. */
+  isExtra?: boolean;
   price?: number | null;
   currencyCode?: string | null;
   packageItems?: Array<{ itemId: UUID; name: string }> | null;
@@ -272,6 +286,8 @@ export interface UpsertDailyMenuRequest {
     label: string;
     sortOrder: number;
     isAvailable: boolean;
+    /** Mess-only add-on flag for PACKAGE entries. */
+    isExtra?: boolean;
     price?: number | null;
     currencyCode?: string | null;
   }>;
@@ -359,7 +375,13 @@ export interface MealPollOption {
   dailyMenuEntryId?: UUID | null;
   price?: number | null;
   currencyCode?: string | null;
+  foodType?: FoodType | null;
+  /** Mess-only add-on from daily menu extras. */
+  isExtra?: boolean;
 }
+
+export type MealPollCloseSource = 'MANUAL' | 'AUTOMATIC';
+export type PollCloseDayOffset = 'PREVIOUS_DAY' | 'SAME_DAY';
 
 export interface MealPollSlot {
   id: UUID;
@@ -374,6 +396,31 @@ export interface MealPollSlot {
   responseCount: number;
   myDeliveryLocationId?: UUID | null;
   myDeliveryLocationName?: string | null;
+  timezone?: string | null;
+  pollCloseAt?: string | null;
+  closedAt?: string | null;
+  openedAt?: string | null;
+  closeSource?: MealPollCloseSource | null;
+}
+
+export interface MealPollClosingSettings {
+  timezone: string;
+  breakfastDayOffset: PollCloseDayOffset;
+  breakfastTime: string;
+  lunchDayOffset: PollCloseDayOffset;
+  lunchTime: string;
+  dinnerDayOffset: PollCloseDayOffset;
+  dinnerTime: string;
+}
+
+export interface UpdateMealPollClosingSettingsRequest {
+  timezone: string;
+  breakfastDayOffset: PollCloseDayOffset;
+  breakfastTime: string;
+  lunchDayOffset: PollCloseDayOffset;
+  lunchTime: string;
+  dinnerDayOffset: PollCloseDayOffset;
+  dinnerTime: string;
 }
 
 export interface MealDeliveryLocation {
@@ -406,6 +453,10 @@ export interface MealPollDayResponse {
   myPrepaidOverflowAmount?: number | null;
   myPrepaidDebitedAmount?: number | null;
   myPrepaidOverflowPayment?: boolean | null;
+  /** Persisted meal total for this member/day. */
+  myPaymentChargedAmount?: number | null;
+  /** Ephemeral delta from this submit only (Paid edits). Not stored. */
+  myPaymentAdjustment?: number | null;
 }
 
 export type MealPollPaymentEventType =
@@ -619,15 +670,28 @@ export interface MemberMealActivitySelection {
 }
 
 export interface MemberMealActivityDayPayment {
+  id?: UUID | null;
+  pollDate?: string | null;
   paymentChoice?: MealPollPaymentChoice | null;
   paymentStatus?: MealPollPaymentStatus | null;
+  chargedAmount?: number | null;
+  paymentBatchId?: string | null;
   proofImageUrl?: string | null;
+  referenceNumber?: string | null;
+  remarks?: string | null;
+  paymentMethod?: UniversalPaymentMethod | null;
   rejectionReason?: string | null;
   proofSubmittedAt?: string | null;
   proofReviewedAt?: string | null;
   prepaidOverflowAmount?: number | null;
   prepaidDebitedAmount?: number | null;
   prepaidOverflowPayment?: boolean;
+}
+
+export interface BulkMealPollPaymentProofResponse {
+  paymentBatchId: string;
+  dates: string[];
+  updatedCount: number;
 }
 
 export interface MemberMealActivitySlotDetail {
@@ -1739,6 +1803,8 @@ export type DashboardFinancialSource = 'API' | 'MEAL_ACTIVITY' | 'OCCUPANCY' | '
 export interface DashboardFinancialSummary {
   expectedCharges: number | null;
   collected: number | null;
+  /** Submitted proofs awaiting owner review — excluded from pending. */
+  underReview?: number | null;
   pending: number | null;
   currencyCode: string;
   source?: DashboardFinancialSource;
@@ -1827,6 +1893,7 @@ export type NotificationType =
   | 'COMPLAINT_PENDING'
   | 'COMPLAINT_OVERDUE'
   | 'COMPLAINT_CREATED'
+  | 'COMPLAINT_COMMENTED'
   | 'COMPLAINT_RESOLVED';
 
 export type NotificationCategory =
@@ -1943,6 +2010,7 @@ export interface MemberPaymentLedgerRow {
   memberName: string;
   expectedCharges: number | null;
   collected: number | null;
+  underReview?: number | null;
   pending: number | null;
   currencyCode: string;
   status: MemberPaymentStatus;
@@ -2110,6 +2178,10 @@ export interface SpacePaymentResponse {
   reviewedAt?: string | null;
   paymentDate?: string | null;
   targetLabel?: string | null;
+  /** Present when multiple meal days were paid with one bulk proof. */
+  paymentBatchId?: string | null;
+  /** Meal day dates covered by this payment (what was paid). */
+  mealDates?: string[] | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -2117,6 +2189,53 @@ export interface SpacePaymentResponse {
 export interface SpacePaymentListResponse {
   month: string;
   payments: SpacePaymentResponse[];
+}
+
+export interface OwnerPaymentsMonthCounts {
+  pendingReview: number;
+  submitted: number;
+  changesRequested: number;
+  paid: number;
+  rejected: number;
+  history: number;
+  pendingMembers: number;
+}
+
+/** Aggregated owner Payments screen payload (legacy / deprecated). Prefer split APIs. */
+export interface OwnerPaymentsMonthResponse {
+  month: string;
+  spaceType: SpaceType;
+  summary: DashboardFinancialSummary;
+  members: MemberPaymentLedgerRow[];
+  payments: SpacePaymentResponse[];
+  counts: OwnerPaymentsMonthCounts;
+}
+
+/** Lightweight Payments KPIs + tab counts. */
+export interface PaymentsSummaryResponse {
+  month: string;
+  spaceType: SpaceType;
+  financial: DashboardFinancialSummary;
+  counts: OwnerPaymentsMonthCounts;
+}
+
+export interface PaymentsMembersPageResponse {
+  month: string;
+  page: PagedResponse<MemberPaymentLedgerRow>;
+}
+
+export type PaymentsReviewQueueParam =
+  | 'SUBMITTED'
+  | 'NEEDS_UPDATE'
+  | 'PENDING_REVIEW'
+  | 'PAID'
+  | 'REJECTED'
+  | 'HISTORY';
+
+export interface PaymentsCardsPageResponse {
+  month: string;
+  queue: PaymentsReviewQueueParam | string;
+  page: PagedResponse<SpacePaymentResponse>;
 }
 
 export interface PaymentTimelineEventResponse {

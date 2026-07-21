@@ -1,17 +1,16 @@
 import React, { useState } from 'react';
 import {
   Keyboard,
-  KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../components/ui';
 import { useSendOtp } from '../../hooks/useAuth';
@@ -23,6 +22,7 @@ type LoginNav = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 
 export function LoginScreen() {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<LoginNav>();
   const { sendOtp, isLoading, error, clearError } = useSendOtp();
 
@@ -62,74 +62,79 @@ export function LoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}>
-
-          <View style={styles.brandSection}>
-            <View style={styles.logoWrap}>
-              <Text style={styles.logoText}>C</Text>
-            </View>
-            <Text style={styles.appName}>{t('common.appName')}</Text>
+    <View
+      style={[
+        styles.flex,
+        {
+          paddingTop: insets.top,
+          paddingBottom: insets.bottom,
+        },
+      ]}
+      collapsable={false}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
+        collapsable={false}>
+        <View style={styles.brandSection} collapsable={false}>
+          <View style={styles.logoWrap} collapsable={false}>
+            <Text style={styles.logoText}>C</Text>
           </View>
+          <Text style={styles.appName}>{t('common.appName')}</Text>
+        </View>
 
-          <Text style={styles.heading}>{t('auth.login.heading')}</Text>
-          <Text style={styles.subheading}>{t('auth.login.subheading')}</Text>
+        <Text style={styles.heading}>{t('auth.login.heading')}</Text>
+        <Text style={styles.subheading}>{t('auth.login.subheading')}</Text>
 
-          {error ? (
-            <View style={styles.errorBanner}>
-              <Text style={styles.errorBannerText}>{error}</Text>
-            </View>
-          ) : null}
-
-          <View style={styles.phoneField}>
-            <View style={styles.inputRow}>
-              <View style={styles.prefix}>
-                <Text style={styles.prefixText}>+91</Text>
-              </View>
-              <TextInput
-                style={[styles.phoneInput, fieldError ? styles.phoneInputError : null]}
-                placeholder={t('auth.login.mobilePlaceholder')}
-                placeholderTextColor={colors.muted}
-                value={mobileNumber}
-                onChangeText={text => {
-                  const digits = normalizeIndianMobileDigits(text);
-                  setMobileNumber(digits);
-                  if (mobileError) {
-                    setMobileError(null);
-                  }
-                  if (error) {
-                    clearError();
-                  }
-                }}
-                keyboardType="phone-pad"
-                returnKeyType="done"
-                maxLength={10}
-                onSubmitEditing={handleSendOtp}
-                autoCorrect={false}
-              />
-            </View>
-            {fieldError ? <Text style={styles.fieldError}>{fieldError}</Text> : null}
+        {error ? (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorBannerText}>{error}</Text>
           </View>
+        ) : null}
 
-          <Button
-            label={t('auth.login.sendOtp')}
-            onPress={handleSendOtp}
-            loading={isLoading}
-            disabled={isLoading || !isValid}
-            style={styles.button}
-          />
+        <View style={styles.phoneField}>
+          <View style={styles.inputRow}>
+            <View style={styles.prefix}>
+              <Text style={styles.prefixText}>+91</Text>
+            </View>
+            <TextInput
+              style={[styles.phoneInput, fieldError ? styles.phoneInputError : null]}
+              placeholder={t('auth.login.mobilePlaceholder')}
+              placeholderTextColor={colors.muted}
+              value={mobileNumber}
+              onChangeText={text => {
+                const digits = normalizeIndianMobileDigits(text);
+                setMobileNumber(digits);
+                if (mobileError) {
+                  setMobileError(null);
+                }
+                if (error) {
+                  clearError();
+                }
+              }}
+              keyboardType="phone-pad"
+              returnKeyType="done"
+              maxLength={10}
+              onSubmitEditing={handleSendOtp}
+              autoCorrect={false}
+            />
+          </View>
+          {fieldError ? <Text style={styles.fieldError}>{fieldError}</Text> : null}
+        </View>
 
-          <Text style={styles.disclaimer}>{t('auth.login.disclaimer')}</Text>
-        </ScrollView>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+        <Button
+          label={t('auth.login.sendOtp')}
+          onPress={handleSendOtp}
+          loading={isLoading}
+          disabled={isLoading || !isValid}
+          style={styles.button}
+        />
+
+        <Text style={styles.disclaimer}>{t('auth.login.disclaimer')}</Text>
+      </ScrollView>
+    </View>
   );
 }
 

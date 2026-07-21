@@ -1,65 +1,69 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import type { GlobalAttentionSpace } from '../../api/types';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 
-const PREVIEW_LIMIT = 3;
-
 type GlobalAttentionCardProps = {
-  spaces: GlobalAttentionSpace[];
+  /** Spaces that currently have pending actions. */
+  spaceCount: number;
+  /** Total pending-action items across spaces. */
   totalCount: number;
-  onPressSpace: (space: GlobalAttentionSpace) => void;
-  onViewAll?: () => void;
+  onPress: () => void;
 };
 
+/**
+ * Compact Needs Attention summary for My Spaces.
+ * Numbers only — no per-item bullet lists (those live inside each space).
+ */
 export function GlobalAttentionCard({
-  spaces,
+  spaceCount,
   totalCount,
-  onPressSpace,
-  onViewAll,
+  onPress,
 }: GlobalAttentionCardProps) {
   const { t } = useTranslation();
-  const preview = spaces.slice(0, PREVIEW_LIMIT);
-  const hasMore = spaces.length > PREVIEW_LIMIT;
 
-  if (spaces.length === 0) {
+  if (totalCount <= 0) {
     return (
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>
-          {t('spaces.globalDashboard.attentionTitle', { count: 0 })}
-        </Text>
-        <Text style={styles.emptyTitle}>{t('spaces.globalDashboard.attentionEmptyTitle')}</Text>
-        <Text style={styles.emptyBody}>{t('spaces.globalDashboard.attentionEmptyBody')}</Text>
+      <View
+        style={styles.okCard}
+        accessibilityRole="summary"
+        accessibilityLabel={t('spaces.globalDashboard.attentionOk')}>
+        <Text style={styles.okIcon}>✅</Text>
+        <Text style={styles.okTitle}>{t('spaces.globalDashboard.attentionOk')}</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.card}>
-      <Text style={styles.sectionTitle}>
-        {t('spaces.globalDashboard.attentionTitle', { count: totalCount })}
-      </Text>
-      {preview.map(space => (
-        <Pressable
-          key={space.spaceId}
-          onPress={() => onPressSpace(space)}
-          style={({ pressed }) => [styles.spaceRow, pressed && styles.pressed]}>
-          <Text style={styles.spaceName}>{space.spaceName}</Text>
-          {space.items.map(item => (
-            <Text key={`${space.spaceId}-${item.actionType}`} style={styles.itemLine}>
-              • {item.count > 1 ? `${item.count} ` : ''}
-              {item.title}
-            </Text>
-          ))}
-        </Pressable>
-      ))}
-      {hasMore && onViewAll ? (
-        <Pressable onPress={onViewAll} hitSlop={8}>
-          <Text style={styles.viewAll}>{t('spaces.globalDashboard.viewAll')}</Text>
-        </Pressable>
-      ) : null}
-    </View>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={t('spaces.globalDashboard.attentionA11y', {
+        spaces: spaceCount,
+        count: totalCount,
+      })}
+      style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
+      <View style={styles.headerRow}>
+        <Text style={styles.icon}>⚠</Text>
+        <Text style={styles.title}>{t('spaces.globalDashboard.needsAttention')}</Text>
+      </View>
+      <View style={styles.statsRow}>
+        <View style={styles.stat}>
+          <Text style={styles.statNumber}>{spaceCount}</Text>
+          <Text style={styles.statLabel}>
+            {t('spaces.globalDashboard.spacesLabel', { count: spaceCount })}
+          </Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.stat}>
+          <Text style={styles.statNumber}>{totalCount}</Text>
+          <Text style={styles.statLabel}>
+            {t('spaces.globalDashboard.pendingActionsShort', { count: totalCount })}
+          </Text>
+        </View>
+      </View>
+      <Text style={styles.cta}>{t('spaces.globalDashboard.viewArrow')}</Text>
+    </Pressable>
   );
 }
 
@@ -67,45 +71,86 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFBEB',
     borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: '#F59E0B55',
-    padding: spacing.lg,
-    gap: spacing.sm,
+    borderWidth: 1.5,
+    borderColor: '#F59E0B',
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    gap: spacing.md,
+    minHeight: 112,
     ...shadows.sm,
   },
-  sectionTitle: {
-    ...typography.h3,
-    color: '#B45309',
-    marginBottom: spacing.xs,
-  },
-  spaceRow: {
-    gap: 2,
-    paddingVertical: spacing.xs,
-  },
   pressed: {
-    opacity: 0.75,
+    opacity: 0.88,
   },
-  spaceName: {
-    ...typography.body,
-    fontWeight: '700',
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  icon: {
+    fontSize: 22,
+    color: '#B45309',
+  },
+  title: {
+    ...typography.h2,
+    color: '#92400E',
+    fontSize: 22,
+    lineHeight: 28,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
+  },
+  stat: {
+    flex: 1,
+    gap: 2,
+  },
+  statNumber: {
+    fontSize: 32,
+    lineHeight: 38,
+    fontWeight: '800',
     color: colors.textPrimary,
   },
-  itemLine: {
+  statLabel: {
     ...typography.caption,
-    color: colors.textSecondary,
-    marginLeft: spacing.xs,
+    fontSize: 14,
+    lineHeight: 18,
+    color: '#92400E',
+    fontWeight: '600',
   },
-  viewAll: {
+  statDivider: {
+    width: 1,
+    alignSelf: 'stretch',
+    backgroundColor: '#F59E0B55',
+  },
+  cta: {
     ...typography.body,
+    fontWeight: '700',
     color: colors.primaryDark,
-    fontWeight: '600',
-    marginTop: spacing.xs,
+    fontSize: 16,
   },
-  emptyTitle: {
+  okCard: {
+    backgroundColor: colors.white,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    minHeight: 72,
+    ...shadows.sm,
+  },
+  okIcon: {
+    fontSize: 22,
+  },
+  okTitle: {
     ...typography.body,
-    fontWeight: '600',
-  },
-  emptyBody: {
-    ...typography.caption,
+    fontWeight: '700',
+    color: colors.success,
+    fontSize: 17,
+    flex: 1,
   },
 });

@@ -13,12 +13,16 @@ import { useTranslation } from 'react-i18next';
 import { mealsApi } from '../../api/mealsApi';
 import type { DailyMenuResponse, MealPollSlot, MealType, UUID } from '../../api/types';
 import { ShareMealSlotCheckbox } from '../../components/meals/ShareMealSlotCheckbox';
+import { ChevronRightIcon } from '../../components/ui/icons/ChevronRightIcon';
 import { Screen } from '../../components/ui/Screen';
+import { resetToDashboard } from '../../navigation/navigationRef';
 import type { MainStackParamList } from '../../navigation/types';
+import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
-import { colors, spacing, typography } from '../../theme';
+import { colors, radius, spacing, typography } from '../../theme';
 import { formatMenuDate, isPastMenuDate } from '../../utils/mealDates';
 import { MEAL_TYPES } from '../../utils/mealLabels';
+import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
 import {
   buildShareMessageForSelection,
   defaultSelectedMealTypes,
@@ -27,6 +31,12 @@ import {
   openPollsForMealTypes,
   publishDraftMenusForTypes,
 } from '../../utils/shareMenuSelection';
+import {
+  listOtherShareTargetSpaces,
+  shareMenusToSpace,
+  validateShareMenusToSpace,
+} from '../../utils/shareMenuToSpaces';
+import { formatSpaceDisplayName } from '../../utils/spaceLabels';
 
 type MenuSharePreviewScreenProps = {
   spaceId: UUID;
@@ -44,6 +54,9 @@ export function MenuSharePreviewScreen({
   const { t, i18n } = useTranslation();
   const navigation = useNavigation<Nav>();
   const showToast = useToastStore(state => state.showToast);
+  const mySpaces = useSpaceStore(state => state.mySpaces);
+  const loadMySpaces = useSpaceStore(state => state.loadMySpaces);
+  const spacesLoading = useSpaceStore(state => state.loading);
   const dateReadOnly = isPastMenuDate(menuDate);
 
   const [loadingMenus, setLoadingMenus] = useState(true);
@@ -54,17 +67,27 @@ export function MenuSharePreviewScreen({
   const [messageText, setMessageText] = useState('');
   const [initialized, setInitialized] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [otherSpaceIds, setOtherSpaceIds] = useState<UUID[]>([]);
+  const [showOtherSpaces, setShowOtherSpaces] = useState(false);
 
   const menuMap = useMemo(() => menusByMealType(menus), [menus]);
-  const sharedMealTypes = useMemo(
-    () =>
-      new Set(
-        polls.filter(poll => poll.status === 'OPEN').map(poll => poll.mealType),
-      ),
-    [polls],
-  );
+  const pollMap = useMemo(() => {
+    const map: Partial<Record<MealType, MealPollSlot>> = {};
+    for (const poll of polls) {
+      map[poll.mealType] = poll;
+    }
+    return map;
+  }, [polls]);
   const hasShareableSlot = MEAL_TYPES.some(
     type => getSlotShareState(menuMap[type]) === 'shareable',
+  );
+  const otherTargets = useMemo(
+    () => listOtherShareTargetSpaces(mySpaces, spaceId),
+    [mySpaces, spaceId],
+  );
+  const currentSpace = useMemo(
+    () => mySpaces.find(space => space.spaceId === spaceId),
+    [mySpaces, spaceId],
   );
 
   useLayoutEffect(() => {
@@ -99,6 +122,16 @@ export function MenuSharePreviewScreen({
     }, [loadMenus]),
   );
 
+  const handleToggleOtherSpaces = useCallback(() => {
+    setShowOtherSpaces(prev => {
+      const next = !prev;
+      if (next) {
+        void loadMySpaces();
+      }
+      return next;
+    });
+  }, [loadMySpaces]);
+
   useEffect(() => {
     if (!initialized || selectedTypes.length === 0) {
       setMessageText('');
@@ -107,7 +140,7 @@ export function MenuSharePreviewScreen({
 
     let active = true;
     setLoadingPreview(true);
-    void buildShareMessageForSelection(spaceId, menuDate, selectedTypes)
+    void buildShareMessageForSelection(spaceId, menuDate, selectedTypes, menuMap)
       .then(text => {
         if (active) {
           setMessageText(text);
@@ -128,7 +161,7 @@ export function MenuSharePreviewScreen({
     return () => {
       active = false;
     };
-  }, [initialized, menuDate, selectedTypes, showToast, spaceId, t]);
+  }, [initialized, menuDate, menuMap, selectedTypes, showToast, spaceId, t]);
 
   const toggleMealType = (type: MealType) => {
     setSelectedTypes(prev => {
@@ -138,6 +171,23 @@ export function MenuSharePreviewScreen({
       return MEAL_TYPES.filter(meal => next.includes(meal));
     });
   };
+
+  const toggleOtherSpace = (targetId: UUID) => {
+    setOtherSpaceIds(prev =>
+      prev.includes(targetId)
+        ? prev.filter(id => id !== targetId)
+        : [...prev, targetId],
+    );
+  };
+
+  const leaveAfterShare = useCallback(() => {
+    // Prefer Menu Planning (where share usually starts). Soft-navigate to avoid Fabric reset crashes.
+    if (navigation.canGoBack()) {
+      navigation.navigate('MenuPlanning', { spaceId, menuDate });
+      return;
+    }
+    resetToDashboard(spaceId);
+  }, [menuDate, navigation, spaceId]);
 
   const shareMessage = async () => {
     if (dateReadOnly) {
@@ -150,23 +200,75 @@ export function MenuSharePreviewScreen({
     }
     setSharing(true);
     try {
+      const selectedOthers = otherTargets.filter(space =>
+        otherSpaceIds.includes(space.spaceId),
+      );
+
+      // Validate additional spaces before mutating the current space share flow.
+      const validations = await Promise.all(
+        selectedOthers.map(async space => ({
+          space,
+          result: await validateShareMenusToSpace(menuMap, selectedTypes, space),
+        })),
+      );
+      const failed = validations.find(row => !row.result.ok);
+      if (failed && !failed.result.ok) {
+        showToast(
+          t('meals.planning.shareToSpaceIncompatible', {
+            space: failed.result.spaceName,
+            items: failed.result.missingLabels.slice(0, 3).join(', '),
+          }),
+        );
+        return;
+      }
+
       await publishDraftMenusForTypes(spaceId, menuDate, selectedTypes, menuMap);
+      invalidateDashboardQueries();
       const refreshed = await mealsApi.getDailyMenusByDate(spaceId, menuDate);
       setMenus(refreshed);
       const latestMessage = await buildShareMessageForSelection(
         spaceId,
         menuDate,
         selectedTypes,
+        menusByMealType(refreshed),
       );
       const opened = await openPollsForMealTypes(spaceId, menuDate, selectedTypes);
       if (opened > 0) {
         showToast(t('meals.poll.autoOpened', { count: opened }));
       }
-      await Share.share({ message: latestMessage || messageText });
-      const pollDay = await mealsApi.getMealPolls(spaceId, menuDate).catch(() => null);
-      if (pollDay) {
-        setPolls(pollDay.polls);
+
+      let extraShared = 0;
+      for (const row of validations) {
+        if (!row.result.ok) {
+          continue;
+        }
+        try {
+          await shareMenusToSpace(row.space.spaceId, menuDate, selectedTypes, row.result);
+          extraShared += 1;
+        } catch {
+          showToast(
+            t('meals.planning.shareToSpaceFailed', {
+              space: formatSpaceDisplayName(row.space),
+            }),
+          );
+        }
       }
+      if (extraShared > 0) {
+        showToast(
+          t('meals.planning.shareToSpacesSuccess', {
+            count: extraShared,
+          }),
+        );
+      }
+
+      // Native share sheet dismiss must not block leaving this screen (iOS throws on cancel).
+      try {
+        await Share.share({ message: latestMessage || messageText });
+      } catch {
+        // ignored — user cancelled the system share sheet
+      }
+
+      leaveAfterShare();
     } catch {
       showToast(t('meals.errors.actionFailed'));
     } finally {
@@ -203,13 +305,117 @@ export function MenuSharePreviewScreen({
               state={getSlotShareState(menuMap[type])}
               selected={selectedTypes.includes(type)}
               onToggle={() => toggleMealType(type)}
-              alreadyShared={sharedMealTypes.has(type)}
+              menu={menuMap[type]}
+              poll={pollMap[type]}
               disabled={dateReadOnly}
             />
           ))}
 
           {selectedTypes.length === 0 ? (
             <Text style={styles.selectHint}>{t('meals.planning.shareSelectAtLeastOne')}</Text>
+          ) : null}
+
+          {!dateReadOnly ? (
+            <View style={styles.otherSpacesBlock}>
+              <Pressable
+                onPress={handleToggleOtherSpaces}
+                style={({ pressed }) => [
+                  styles.otherSpacesRow,
+                  showOtherSpaces && styles.otherSpacesRowExpanded,
+                  pressed && styles.otherSpacesRowPressed,
+                ]}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: showOtherSpaces }}
+                accessibilityLabel={t(
+                  showOtherSpaces
+                    ? 'meals.planning.shareToOtherSpacesHide'
+                    : 'meals.planning.shareToOtherSpacesShow',
+                )}
+                accessibilityHint={t('meals.planning.shareToOtherSpacesHint')}>
+                <Text style={styles.otherSpacesPlus}>{showOtherSpaces ? '−' : '+'}</Text>
+                <View style={styles.otherSpacesTextCol}>
+                  <Text style={styles.otherSpacesTitle}>
+                    {t(
+                      showOtherSpaces
+                        ? 'meals.planning.shareToOtherSpacesHide'
+                        : 'meals.planning.shareToOtherSpacesShow',
+                    )}
+                  </Text>
+                  <Text style={styles.otherSpacesSubtitle}>
+                    {showOtherSpaces
+                      ? otherSpaceIds.length > 0
+                        ? t('meals.planning.shareToOtherSpacesSelected', {
+                            count: otherSpaceIds.length,
+                          })
+                        : t('meals.planning.shareToOtherSpacesOpenHint')
+                      : t('meals.planning.shareToOtherSpacesHint')}
+                  </Text>
+                </View>
+                <View
+                  style={[
+                    styles.otherSpacesChevron,
+                    showOtherSpaces && styles.otherSpacesChevronExpanded,
+                  ]}>
+                  <ChevronRightIcon
+                    size={18}
+                    color={colors.primaryDark}
+                    strokeWidth={2.5}
+                  />
+                </View>
+              </Pressable>
+
+              {showOtherSpaces ? (
+                <>
+                  <Text style={[styles.sectionLabel, styles.shareToSectionLabel]}>
+                    {t('meals.planning.shareToSection')}
+                  </Text>
+                  <Text style={styles.shareToHint}>{t('meals.planning.shareToHint')}</Text>
+
+                  <View style={styles.spaceRowLocked}>
+                    <View style={[styles.checkbox, styles.checkboxSelected]}>
+                      <Text style={styles.checkmark}>✓</Text>
+                    </View>
+                    <Text style={styles.spaceLabel}>
+                      {currentSpace
+                        ? formatSpaceDisplayName(currentSpace)
+                        : t('meals.planning.shareToCurrentSpace')}
+                    </Text>
+                    <Text style={styles.currentTag}>{t('meals.planning.shareToCurrent')}</Text>
+                  </View>
+
+                  {spacesLoading && otherTargets.length === 0 ? (
+                    <ActivityIndicator color={colors.primary} style={styles.loader} />
+                  ) : null}
+
+                  {!spacesLoading && otherTargets.length === 0 ? (
+                    <Text style={styles.selectHint}>
+                      {t('meals.planning.shareToNoOtherSpaces')}
+                    </Text>
+                  ) : null}
+
+                  {otherTargets.map(space => {
+                    const selected = otherSpaceIds.includes(space.spaceId);
+                    return (
+                      <Pressable
+                        key={space.spaceId}
+                        style={styles.spaceRow}
+                        onPress={() => toggleOtherSpace(space.spaceId)}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: selected }}>
+                        <View
+                          style={[
+                            styles.checkbox,
+                            selected && styles.checkboxSelected,
+                          ]}>
+                          {selected ? <Text style={styles.checkmark}>✓</Text> : null}
+                        </View>
+                        <Text style={styles.spaceLabel}>{formatSpaceDisplayName(space)}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </>
+              ) : null}
+            </View>
           ) : null}
 
           {loadingPreview ? (
@@ -256,6 +462,113 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.muted,
     marginBottom: spacing.md,
+  },
+  otherSpacesBlock: {
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  otherSpacesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.card,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  otherSpacesRowExpanded: {
+    backgroundColor: colors.lightGreen,
+    borderColor: colors.primary,
+  },
+  otherSpacesRowPressed: {
+    opacity: 0.92,
+  },
+  otherSpacesPlus: {
+    ...typography.bodyStrong,
+    color: colors.primaryDark,
+    fontSize: 20,
+    lineHeight: 24,
+    width: 20,
+    textAlign: 'center',
+  },
+  otherSpacesTextCol: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  otherSpacesTitle: {
+    ...typography.bodyStrong,
+    color: colors.textPrimary,
+  },
+  otherSpacesSubtitle: {
+    ...typography.caption,
+    color: colors.muted,
+  },
+  otherSpacesChevron: {
+    transform: [{ rotate: '0deg' }],
+  },
+  otherSpacesChevronExpanded: {
+    transform: [{ rotate: '90deg' }],
+  },
+  shareToSectionLabel: {
+    marginTop: spacing.xs,
+  },
+  shareToHint: {
+    ...typography.caption,
+    color: colors.muted,
+    marginBottom: spacing.sm,
+    lineHeight: 18,
+  },
+  spaceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.card,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  spaceRowLocked: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.lightGreen,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: radius.card,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxSelected: {
+    backgroundColor: colors.primary,
+  },
+  checkmark: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  spaceLabel: {
+    ...typography.bodyStrong,
+    flex: 1,
+  },
+  currentTag: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    fontWeight: '700',
   },
   loader: { marginVertical: spacing.lg },
   empty: { ...typography.body, color: colors.muted },

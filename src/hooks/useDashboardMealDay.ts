@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import type {
   DailyMenuResponse,
+  MealHeadcountSlot,
   MealPollSlot,
   MealType,
   UUID,
@@ -22,6 +23,12 @@ export type DashboardMealDayState = {
   plannedMealTypes: MealType[];
   menuMap: Partial<Record<MealType, DailyMenuResponse>>;
   pollMap: Partial<Record<MealType, MealPollSlot>>;
+  /** Prefetched headcount slots for opening the drawer without a blank race. */
+  headcountSlots: MealHeadcountSlot[];
+  /** Per-meal eligible active members (from eligibility API). */
+  eligibleByMeal: Partial<Record<MealType, number>>;
+  /** Per-meal plates to prepare (from headcount day API). */
+  platesByMeal: Partial<Record<MealType, number>>;
   emptyKind: MealOperationsEmptyKind;
   eligibleCount: number;
   respondedCount: number;
@@ -30,7 +37,7 @@ export type DashboardMealDayState = {
 };
 
 /**
- * Single load for dashboard meal ops (menus + polls + eligibility).
+ * Single load for dashboard meal ops (menus + polls + eligibility + headcount).
  * Reloads when `enabled` flips true (deferred mount) and on screen focus.
  */
 export function useDashboardMealDay(
@@ -42,6 +49,9 @@ export function useDashboardMealDay(
   const [menus, setMenus] = useState<DailyMenuResponse[]>([]);
   const [polls, setPolls] = useState<MealPollSlot[]>([]);
   const [eligibleCount, setEligibleCount] = useState(0);
+  const [eligibleByMeal, setEligibleByMeal] = useState<Partial<Record<MealType, number>>>({});
+  const [platesByMeal, setPlatesByMeal] = useState<Partial<Record<MealType, number>>>({});
+  const [headcountSlots, setHeadcountSlots] = useState<MealHeadcountSlot[]>([]);
 
   const load = useCallback(async () => {
     if (!enabled) {
@@ -54,6 +64,12 @@ export function useDashboardMealDay(
       const bundle = await fetchDashboardMealDayBundle(spaceId, menuDate);
       setMenus(bundle.menus);
       setPolls(bundle.polls.polls);
+
+      const nextEligibleByMeal: Partial<Record<MealType, number>> = {};
+      for (const slot of bundle.eligibility?.slots ?? []) {
+        nextEligibleByMeal[slot.mealType] = slot.eligibleCount;
+      }
+      setEligibleByMeal(nextEligibleByMeal);
       setEligibleCount(
         bundle.eligibility?.distinctEligibleMemberCount ??
           bundle.eligibility?.slots.reduce(
@@ -62,11 +78,22 @@ export function useDashboardMealDay(
           ) ??
           0,
       );
+
+      const slots = bundle.headcount?.slots ?? [];
+      setHeadcountSlots(slots);
+      const nextPlates: Partial<Record<MealType, number>> = {};
+      for (const slot of slots) {
+        nextPlates[slot.mealType] = slot.mealsToPrepare;
+      }
+      setPlatesByMeal(nextPlates);
     } catch (error) {
       console.warn('[useDashboardMealDay] load failed', error);
       setMenus([]);
       setPolls([]);
       setEligibleCount(0);
+      setEligibleByMeal({});
+      setPlatesByMeal({});
+      setHeadcountSlots([]);
     } finally {
       setLoading(false);
     }
@@ -127,6 +154,9 @@ export function useDashboardMealDay(
     plannedMealTypes,
     menuMap,
     pollMap,
+    headcountSlots,
+    eligibleByMeal,
+    platesByMeal,
     emptyKind,
     eligibleCount,
     respondedCount,

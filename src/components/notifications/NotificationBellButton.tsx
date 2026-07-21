@@ -7,7 +7,8 @@ import type { UUID } from '../../api/types';
 import { useSpaceNotifications } from '../../hooks/useSpaceNotifications';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { colors, typography } from '../../theme';
-import { canViewOperationalDashboard, currentMonthKey } from '../../utils/dashboardFinancial';
+import { currentMonthKey } from '../../utils/dashboardFinancial';
+import { canManageNotifications } from '../../utils/spaceOperator';
 import {
   peekDashboardSummary,
   subscribeDashboardCacheUpdate,
@@ -35,12 +36,7 @@ function readOperatorBadgeCount(spaceId: UUID): number {
 export function NotificationBellButton({ spaceId }: NotificationBellButtonProps) {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const permissions = useSpacePermissions(spaceId);
-  const isOperator = canViewOperationalDashboard({
-    canManageMembers: permissions.canManageMembers,
-    canManageMeals: permissions.canManageMeals === true,
-    canManageOccupancy: permissions.canManageOccupancy,
-    canViewSpaceOccupancies: permissions.canViewSpaceOccupancies === true,
-  });
+  const isOperator = canManageNotifications(permissions);
 
   const [operatorCount, setOperatorCount] = useState(() =>
     isOperator ? readOperatorBadgeCount(spaceId) : 0,

@@ -42,7 +42,7 @@ export function ComboItemsPopup({
     items.length > 0 ? items : singleItem && comboName.trim() ? [comboName.trim()] : [];
   const sectionLabel = singleItem
     ? t('meals.planning.itemDetailsLabel')
-    : t('meals.planning.comboItemsLabel');
+    : t('meals.combo.includesLabel');
   const emptyMessage = singleItem
     ? t('meals.planning.itemDetailsEmpty')
     : t('meals.library.comboPreviewEmpty');
@@ -71,7 +71,7 @@ export function ComboItemsPopup({
             <View style={styles.itemList}>
               {displayItems.map((name, index) => (
                 <View key={`${name}-${index}`} style={styles.itemRow}>
-                  <Text style={styles.itemDot}>·</Text>
+                  <Text style={styles.itemDot}>{singleItem ? '·' : '•'}</Text>
                   <Text style={styles.itemName}>{name}</Text>
                 </View>
               ))}

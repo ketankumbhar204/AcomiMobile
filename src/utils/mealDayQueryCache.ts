@@ -64,7 +64,7 @@ export function fetchMealHeadcountDayCached(
   );
 }
 
-/** One round-trip bundle for dashboard meal operations (3 parallel, deduped). */
+/** One round-trip bundle for dashboard meal operations (parallel, deduped). */
 export async function fetchDashboardMealDayBundle(
   spaceId: UUID,
   menuDate: string,
@@ -72,8 +72,9 @@ export async function fetchDashboardMealDayBundle(
   menus: DailyMenuResponse[];
   polls: MealPollDayResponse;
   eligibility: MealEligibilitySummaryResponse | null;
+  headcount: MealHeadcountDayResponse | null;
 }> {
-  const [menus, polls, eligibility] = await Promise.all([
+  const [menus, polls, eligibility, headcount] = await Promise.all([
     fetchDailyMenusByDateCached(spaceId, menuDate).catch(error => {
       console.warn('[mealDayQueryCache] daily menus failed', error);
       return [] as DailyMenuResponse[];
@@ -89,8 +90,12 @@ export async function fetchDashboardMealDayBundle(
       console.warn('[mealDayQueryCache] eligibility failed', error);
       return null;
     }),
+    fetchMealHeadcountDayCached(spaceId, menuDate).catch(error => {
+      console.warn('[mealDayQueryCache] headcount failed', error);
+      return null;
+    }),
   ]);
-  return { menus, polls, eligibility };
+  return { menus, polls, eligibility, headcount };
 }
 
 export function resetMealDayQueryCacheForTests(): void {

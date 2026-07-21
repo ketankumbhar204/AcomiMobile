@@ -19,7 +19,11 @@ import { PaymentsScreen } from '../screens/payments/PaymentsScreen';
 import { TenantPaymentsTabScreen } from '../screens/payments/TenantPaymentsTabScreen';
 import { ComplaintsListScreen } from '../screens/complaints/ComplaintsListScreen';
 import type { SpaceTabParamList } from './types';
-import { canManagePayments } from '../utils/dashboardFinancial';
+import { canManagePayments, currentMonthKey } from '../utils/dashboardFinancial';
+import { usePaymentsUnderReviewBadge } from '../hooks/usePaymentsUnderReviewBadge';
+import { seedPaymentsUnderReviewFromPendingActions } from '../utils/paymentsReviewAttentionCache';
+import { peekPendingActions } from '../utils/pendingActionsQueryCache';
+import { peekDashboardSummary } from '../utils/dashboardQueryCache';
 
 const Tab = createBottomTabNavigator<SpaceTabParamList>();
 
@@ -30,9 +34,14 @@ type SpaceTabNavigatorProps = {
 function DashboardTabScreen() {
   const route = useRoute<RouteProp<SpaceTabParamList, 'Dashboard'>>();
   const { spaceId } = route.params;
+  // Stable element — a fresh JSX node each render retriggers setOptions forever.
+  const notificationBell = useMemo(
+    () => <NotificationBellButton spaceId={spaceId} />,
+    [spaceId],
+  );
   useSpaceTabHeader(spaceId, {
     showProfileAndMenu: true,
-    headerRightExtra: <NotificationBellButton spaceId={spaceId} />,
+    headerRightExtra: notificationBell,
   });
   return <DashboardScreen />;
 }
@@ -88,6 +97,8 @@ export function SpaceTabNavigator({ spaceId }: SpaceTabNavigatorProps) {
   const { t, i18n } = useTranslation();
   const permissions = useSpacePermissions(spaceId);
   const { blocked: profileBlocked } = useProfileCompletionGate();
+  const canManagePay = canManagePayments(permissions.membershipRole);
+  const paymentsReviewBadge = usePaymentsUnderReviewBadge(spaceId, canManagePay);
 
   const showAccommodation = useMemo(
     () => permissions.canViewAccommodation,
@@ -95,6 +106,19 @@ export function SpaceTabNavigator({ spaceId }: SpaceTabNavigatorProps) {
   );
 
   const showMembersTab = permissions.canManageMembers;
+
+  // Seed badge from dashboard/pending-actions already in memory (no new fetch).
+  useEffect(() => {
+    if (!canManagePay) {
+      return;
+    }
+    const month = currentMonthKey();
+    const pending =
+      peekPendingActions(spaceId, month) ??
+      peekDashboardSummary(spaceId, month)?.pendingActions ??
+      null;
+    seedPaymentsUnderReviewFromPendingActions(spaceId, month, pending);
+  }, [canManagePay, spaceId]);
 
   useEffect(() => {
     if (profileBlocked) {
@@ -112,7 +136,10 @@ export function SpaceTabNavigator({ spaceId }: SpaceTabNavigatorProps) {
 
   return (
     <Tab.Navigator
-      key={`${spaceId}-${i18n.language}-${showAccommodation}-${showMembersTab}`}
+      key={`${spaceId}-${i18n.language}`}
+      // Fabric + react-native-screens: remounting inactive screens causes
+      // addViewAt "child already has a parent" when opening Mess (fewer tabs).
+      detachInactiveScreens={false}
       screenOptions={tabScreenOptions}>
       <Tab.Screen
         name="Dashboard"
@@ -146,7 +173,24 @@ export function SpaceTabNavigator({ spaceId }: SpaceTabNavigatorProps) {
         name="Payments"
         component={PaymentsTabScreen}
         initialParams={{ spaceId }}
-        options={{ title: t('navigation.payments') }}
+        options={{
+          title: t('navigation.payments'),
+          tabBarBadge:
+            canManagePay && paymentsReviewBadge > 0
+              ? paymentsReviewBadge > 99
+                ? '99+'
+                : paymentsReviewBadge
+              : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: '#DC2626',
+            color: colors.white,
+            fontSize: 10,
+            fontWeight: '700',
+            minWidth: 16,
+            height: 16,
+            lineHeight: 14,
+          },
+        }}
       />
       <Tab.Screen
         name="Complaints"

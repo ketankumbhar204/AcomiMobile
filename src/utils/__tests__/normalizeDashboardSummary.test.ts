@@ -18,6 +18,19 @@ describe('normalizeFinancialSummary', () => {
     expect(result.collected).toBe(2000);
   });
 
+  it('excludes under-review from pending when recomputing', () => {
+    const result = normalizeFinancialSummary({
+      expectedCharges: 750,
+      collected: 0,
+      underReview: 180,
+      currencyCode: 'INR',
+      source: 'MEAL_ACTIVITY',
+    });
+
+    expect(result.underReview).toBe(180);
+    expect(result.pending).toBe(570);
+  });
+
   it('treats missing collected as full pending for occupancy', () => {
     const result = normalizeFinancialSummary({
       expectedCharges: 8000,

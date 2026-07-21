@@ -42,6 +42,8 @@ type UniversalPaymentProofModalProps = {
   visible: boolean;
   payment?: SpacePaymentResponse | null;
   mode?: 'submit' | 'edit';
+  /** modal = overlay (default); inline = embed form in a screen without Modal chrome */
+  presentation?: 'modal' | 'inline';
   proofRequirements?: PaymentProofRequirements;
   submitting?: boolean;
   onClose: () => void;
@@ -52,6 +54,7 @@ export function UniversalPaymentProofModal({
   visible,
   payment = null,
   mode = 'submit',
+  presentation = 'modal',
   proofRequirements,
   submitting = false,
   onClose,
@@ -184,103 +187,111 @@ export function UniversalPaymentProofModal({
     return null;
   }
 
+  const form = (
+    <View style={presentation === 'inline' ? styles.inlineSheet : styles.sheet}>
+      <Text style={styles.title}>
+        {isEditMode
+          ? t('paymentCollection.proof.editTitle')
+          : t('paymentCollection.proof.title')}
+      </Text>
+      <Text style={styles.hint}>
+        {isEditMode
+          ? t('paymentCollection.proof.editHint')
+          : t('paymentCollection.proof.hint')}
+      </Text>
+
+      {previewUri ? (
+        <Image source={{ uri: previewUri }} style={styles.preview} resizeMode="contain" />
+      ) : (
+        <Pressable
+          style={styles.pickArea}
+          onPress={() => void handlePickImage()}
+          disabled={picking}>
+          {picking ? (
+            <ActivityIndicator color={colors.primary} />
+          ) : (
+            <>
+              <Text style={styles.pickIcon}>📷</Text>
+              <Text style={styles.pickLabel}>{t('paymentCollection.proof.uploadScreenshot')}</Text>
+              <Text style={styles.pickOptional}>{t('paymentCollection.proof.uploadOptional')}</Text>
+            </>
+          )}
+        </Pressable>
+      )}
+
+      {previewUri ? (
+        <Pressable onPress={() => void handlePickImage()} disabled={picking || submitting}>
+          <Text style={styles.changeLink}>{t('paymentCollection.proof.changeScreenshot')}</Text>
+        </Pressable>
+      ) : null}
+
+      <Text style={styles.label}>{t('paymentCollection.proof.paymentMethod')}</Text>
+      <View style={styles.methodRow}>
+        {PAYMENT_METHODS.map(method => (
+          <Pressable
+            key={method}
+            style={[styles.methodChip, paymentMethod === method && styles.methodChipActive]}
+            onPress={() => handlePaymentMethodChange(method)}>
+            <Text
+              style={[
+                styles.methodChipText,
+                paymentMethod === method && styles.methodChipTextActive,
+              ]}>
+              {t(`paymentCollection.method.${method}`)}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      <TextInput
+        style={styles.input}
+        placeholder={t('paymentCollection.proof.utrPlaceholder')}
+        value={referenceNumber}
+        onChangeText={setReferenceNumber}
+        autoCapitalize="characters"
+      />
+      <View style={styles.remarksField}>
+        <Text style={styles.label}>{t('paymentCollection.proof.remarksLabel')}</Text>
+        <Text style={styles.remarksHelper}>{t('paymentCollection.proof.remarksHelper')}</Text>
+        <TextInput
+          style={[styles.input, styles.remarksInput]}
+          placeholder={t('paymentCollection.proof.remarksPlaceholder')}
+          value={remarks}
+          onChangeText={handleRemarksChange}
+          multiline
+        />
+      </View>
+
+      <View style={styles.actions}>
+        <Button
+          label={
+            isEditMode
+              ? t('paymentCollection.proof.saveChanges')
+              : t('paymentCollection.proof.submit')
+          }
+          onPress={handleSubmit}
+          loading={submitting}
+          disabled={submitting}
+        />
+        <Button
+          label={t('common.cancel')}
+          variant="ghost"
+          onPress={handleClose}
+          disabled={submitting}
+        />
+      </View>
+    </View>
+  );
+
+  if (presentation === 'inline') {
+    return form;
+  }
+
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={handleClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <View style={styles.backdrop}>
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-          <View style={styles.sheet}>
-            <Text style={styles.title}>
-              {isEditMode
-                ? t('paymentCollection.proof.editTitle')
-                : t('paymentCollection.proof.title')}
-            </Text>
-            <Text style={styles.hint}>
-              {isEditMode
-                ? t('paymentCollection.proof.editHint')
-                : t('paymentCollection.proof.hint')}
-            </Text>
-
-            {previewUri ? (
-              <Image source={{ uri: previewUri }} style={styles.preview} resizeMode="contain" />
-            ) : (
-              <Pressable
-                style={styles.pickArea}
-                onPress={() => void handlePickImage()}
-                disabled={picking}>
-                {picking ? (
-                  <ActivityIndicator color={colors.primary} />
-                ) : (
-                  <>
-                    <Text style={styles.pickIcon}>📷</Text>
-                    <Text style={styles.pickLabel}>{t('paymentCollection.proof.uploadScreenshot')}</Text>
-                    <Text style={styles.pickOptional}>{t('paymentCollection.proof.uploadOptional')}</Text>
-                  </>
-                )}
-              </Pressable>
-            )}
-
-            {previewUri ? (
-              <Pressable onPress={() => void handlePickImage()} disabled={picking || submitting}>
-                <Text style={styles.changeLink}>{t('paymentCollection.proof.changeScreenshot')}</Text>
-              </Pressable>
-            ) : null}
-
-            <Text style={styles.label}>{t('paymentCollection.proof.paymentMethod')}</Text>
-            <View style={styles.methodRow}>
-              {PAYMENT_METHODS.map(method => (
-                <Pressable
-                  key={method}
-                  style={[styles.methodChip, paymentMethod === method && styles.methodChipActive]}
-                  onPress={() => handlePaymentMethodChange(method)}>
-                  <Text
-                    style={[
-                      styles.methodChipText,
-                      paymentMethod === method && styles.methodChipTextActive,
-                    ]}>
-                    {t(`paymentCollection.method.${method}`)}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-
-            <TextInput
-              style={styles.input}
-              placeholder={t('paymentCollection.proof.utrPlaceholder')}
-              value={referenceNumber}
-              onChangeText={setReferenceNumber}
-              autoCapitalize="characters"
-            />
-            <View style={styles.remarksField}>
-              <Text style={styles.label}>{t('paymentCollection.proof.remarksLabel')}</Text>
-              <Text style={styles.remarksHelper}>{t('paymentCollection.proof.remarksHelper')}</Text>
-              <TextInput
-                style={[styles.input, styles.remarksInput]}
-                placeholder={t('paymentCollection.proof.remarksPlaceholder')}
-                value={remarks}
-                onChangeText={handleRemarksChange}
-                multiline
-              />
-            </View>
-
-            <View style={styles.actions}>
-              <Button
-                label={
-                  isEditMode
-                    ? t('paymentCollection.proof.saveChanges')
-                    : t('paymentCollection.proof.submit')
-                }
-                onPress={handleSubmit}
-                loading={submitting}
-                disabled={submitting}
-              />
-              <Button
-                label={t('common.cancel')}
-                variant="ghost"
-                onPress={handleClose}
-                disabled={submitting}
-              />
-            </View>
-          </View>
+          {form}
         </ScrollView>
       </View>
     </Modal>
@@ -301,6 +312,14 @@ const styles = StyleSheet.create({
   sheet: {
     backgroundColor: colors.white,
     borderRadius: radius.card,
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  inlineSheet: {
+    backgroundColor: colors.white,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: spacing.lg,
     gap: spacing.md,
   },

@@ -1,9 +1,8 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   CompositeNavigationProp,
   RouteProp,
-  useFocusEffect,
   useNavigation,
   useRoute,
 } from '@react-navigation/native';
@@ -12,20 +11,26 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { PaymentServiceUnavailableError, paymentsApi } from '../../api/paymentsApi';
 import type { SpacePaymentResponse } from '../../api/types';
+import { DayMealPaymentsPanel } from '../../components/payments/DayMealPaymentsPanel';
 import { PaymentsSectionTabBar } from '../../components/payments/PaymentsSectionTabBar';
 import { UniversalPaymentCard } from '../../components/payments/UniversalPaymentCard';
 import { UniversalPaymentProofModal } from '../../components/payments/UniversalPaymentProofModal';
 import { Button, EmptyState, ListFilterChips, SkeletonCard } from '../../components/ui';
+import { useCustomerSubscriptionStatus } from '../../hooks/useCustomerSubscriptionStatus';
 import { useLinkedMember } from '../../hooks/useLinkedMember';
+import { useMealPaymentActivitySummaries } from '../../hooks/useMealPaymentActivitySummaries';
 import { useSpaceTabHeader } from '../../hooks/useSpaceTabHeader';
 import { useToastStore } from '../../store/toastStore';
-import { useUniversalPayments } from '../../hooks/useUniversalPayments';
+import { useTenantPaymentsMonth } from '../../hooks/useTenantPaymentsMonth';
 import type { MainStackParamList, SpaceTabParamList } from '../../navigation/types';
 import { colors, spacing, typography } from '../../theme';
+import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
+import { invalidatePaymentsMonthCaches } from '../../utils/paymentsMonthCache';
 import {
   countTenantPaymentFilterInSection,
   countTenantPaymentSection,
   filterTenantPaymentsInSection,
+  resolvePreferredTenantPaymentsSection,
   type TenantPaymentFilter,
   type TenantPaymentsSection,
 } from '../../utils/tenantPaymentFilters';
@@ -50,31 +55,53 @@ export function TenantPaymentsTabScreen() {
   const showToast = useToastStore(state => state.showToast);
 
   const { memberId, member, loading: memberLoading } = useLinkedMember(spaceId);
-  const { payments, loading, error, serviceUnavailable, reload } = useUniversalPayments(spaceId, {
+  const { status: subscriptionStatus, loading: billingLoading } = useCustomerSubscriptionStatus(
+    spaceId,
+    memberId,
+  );
+
+  const isPayPerMeal =
+    !subscriptionStatus?.prepaidBilling &&
+    (subscriptionStatus?.mealBillingType == null ||
+      subscriptionStatus.mealBillingType === 'PAY_PER_MEAL');
+
+  const {
+    payments,
+    loading,
+    error,
+    serviceUnavailable,
+    refreshError,
+    refreshing,
+    reload,
+    replacePayment,
+    month,
+  } = useTenantPaymentsMonth(spaceId, {
     memberId: memberId ?? undefined,
-    enabled: Boolean(memberId),
+    enabled: Boolean(memberId) && !isPayPerMeal,
   });
-  const [refreshing, setRefreshing] = useState(false);
+  const { summaryByPaymentId, reload: reloadMealSummaries } = useMealPaymentActivitySummaries(
+    spaceId,
+    memberId,
+    payments,
+    Boolean(memberId) && !isPayPerMeal,
+  );
   const [section, setSection] = useState<TenantPaymentsSection>('actionNeeded');
   const [actionFilter, setActionFilter] = useState<SectionChipFilter>('ALL');
   const [historyFilter, setHistoryFilter] = useState<SectionChipFilter>('ALL');
   const [updatePayment, setUpdatePayment] = useState<SpacePaymentResponse | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      void reload();
-    }, [reload]),
-  );
+  useEffect(() => {
+    if (loading && payments.length === 0) {
+      return;
+    }
+    setSection(prev => resolvePreferredTenantPaymentsSection(payments, prev));
+  }, [loading, month, payments]);
 
   const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await reload();
-    } finally {
-      setRefreshing(false);
-    }
-  }, [reload]);
+    await reload();
+    await reloadMealSummaries();
+  }, [reload, reloadMealSummaries]);
 
   const sectionTabs = useMemo(
     () => [
@@ -171,8 +198,11 @@ export function TenantPaymentsTabScreen() {
       }
       setSubmitting(true);
       try {
-        await paymentsApi.submitProof(spaceId, updatePayment.paymentId, payload);
+        const updated = await paymentsApi.submitProof(spaceId, updatePayment.paymentId, payload);
         setUpdatePayment(null);
+        replacePayment(updated);
+        invalidatePaymentsMonthCaches(spaceId, month);
+        invalidateDashboardQueries();
         showToast(t('paymentCollection.proof.submitted'));
         await reload();
       } catch (err) {
@@ -185,10 +215,10 @@ export function TenantPaymentsTabScreen() {
         setSubmitting(false);
       }
     },
-    [reload, showToast, spaceId, t, updatePayment],
+    [month, reload, replacePayment, showToast, spaceId, t, updatePayment],
   );
 
-  if (memberLoading && !memberId) {
+  if ((memberLoading || billingLoading) && !memberId) {
     return (
       <View style={styles.screen}>
         <View style={styles.content}>
@@ -209,6 +239,16 @@ export function TenantPaymentsTabScreen() {
           />
         </View>
       </View>
+    );
+  }
+
+  if (isPayPerMeal) {
+    return (
+      <DayMealPaymentsPanel
+        spaceId={spaceId}
+        memberId={memberId}
+        memberName={member?.fullName}
+      />
     );
   }
 
@@ -260,6 +300,12 @@ export function TenantPaymentsTabScreen() {
           </View>
         ) : null}
 
+        {refreshError && payments.length > 0 ? (
+          <Text style={styles.errorText} onPress={() => void reload()}>
+            {t(refreshError)} · {t('common.retry', { defaultValue: 'Tap to retry' })}
+          </Text>
+        ) : null}
+
         {!serviceUnavailable && !error && loading && payments.length === 0 ? (
           <SkeletonCard />
         ) : null}
@@ -277,6 +323,7 @@ export function TenantPaymentsTabScreen() {
               <UniversalPaymentCard
                 key={payment.paymentId}
                 payment={payment}
+                mealSummary={summaryByPaymentId[payment.paymentId] ?? null}
                 onPress={() => openPayment(payment.paymentId)}
                 onUpdatePress={() => setUpdatePayment(payment)}
               />

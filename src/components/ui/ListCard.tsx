@@ -6,6 +6,10 @@ import { colors, radius, shadows, spacing, typography } from '../../theme';
 type ListCardProps = {
   title: string;
   subtitle?: string;
+  /** Optional status row under the subtitle (e.g. pending actions). */
+  status?: React.ReactNode;
+  /** Optional badge rendered on the trailing edge before the chevron. */
+  trailingBadge?: React.ReactNode;
   iconLabel?: string;
   onPress?: () => void;
   onLongPress?: () => void;
@@ -17,6 +21,8 @@ type ListCardProps = {
 export function ListCard({
   title,
   subtitle,
+  status,
+  trailingBadge,
   iconLabel,
   onPress,
   onLongPress,
@@ -41,7 +47,9 @@ export function ListCard({
           onSave={onSaveName}
         />
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+        {status ? <View style={styles.status}>{status}</View> : null}
       </View>
+      {trailingBadge ? <View style={styles.trailingBadge}>{trailingBadge}</View> : null}
       {onPress ? <Text style={styles.chevron}>›</Text> : null}
     </Pressable>
   );
@@ -84,6 +92,13 @@ const styles = StyleSheet.create({
   subtitle: {
     ...typography.caption,
     marginTop: 2,
+  },
+  status: {
+    marginTop: spacing.sm,
+  },
+  trailingBadge: {
+    flexShrink: 0,
+    marginRight: spacing.xxs,
   },
   chevron: {
     fontSize: 24,

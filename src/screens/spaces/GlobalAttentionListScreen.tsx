@@ -1,6 +1,6 @@
-import React, { useCallback, useLayoutEffect } from 'react';
+import React, { useLayoutEffect } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import type { GlobalAttentionSpace } from '../../api/types';
@@ -18,7 +18,7 @@ export function GlobalAttentionListScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const switchSpace = useSpaceStore(state => state.switchSpace);
-  const { data, loading, reload } = useGlobalDashboard(true);
+  const { data, loading } = useGlobalDashboard(true);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -27,12 +27,6 @@ export function GlobalAttentionListScreen() {
       headerLeft: () => <HeaderBackButton />,
     });
   }, [navigation, t]);
-
-  useFocusEffect(
-    useCallback(() => {
-      void reload(false);
-    }, [reload]),
-  );
 
   const onPressSpace = async (space: GlobalAttentionSpace) => {
     const success = await switchSpace(space.spaceId);

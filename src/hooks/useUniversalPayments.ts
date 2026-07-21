@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
-import { PaymentServiceUnavailableError, paymentsApi } from '../api/paymentsApi';
-import type { ListSpacePaymentsParams, SpacePaymentResponse, UUID } from '../api/types';
-import { currentMonthKey } from '../utils/dashboardFinancial';
+/**
+ * @deprecated Prefer `useTenantPaymentsMonth`. Thin adapter for MemberPaymentsScreen etc.
+ */
+import { useTenantPaymentsMonth } from './useTenantPaymentsMonth';
+import type { ListSpacePaymentsParams, UUID } from '../api/types';
 
 export function useUniversalPayments(
   spaceId: UUID | null,
@@ -12,47 +13,26 @@ export function useUniversalPayments(
     status?: ListSpacePaymentsParams['status'];
   },
 ) {
-  const enabled = options?.enabled ?? true;
-  const month = options?.month ?? currentMonthKey();
-  const [payments, setPayments] = useState<SpacePaymentResponse[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [serviceUnavailable, setServiceUnavailable] = useState(false);
+  const tenant = useTenantPaymentsMonth(spaceId, {
+    enabled: options?.enabled,
+    memberId: options?.memberId,
+    initialMonth: options?.month,
+  });
 
-  const reload = useCallback(async () => {
-    if (!spaceId || !enabled) {
-      setPayments([]);
-      setServiceUnavailable(false);
-      return;
-    }
+  const payments =
+    options?.status != null
+      ? tenant.payments.filter(p => p.paymentStatus === options.status)
+      : tenant.payments;
 
-    setLoading(true);
-    setError(null);
-    setServiceUnavailable(false);
-    try {
-      const response = await paymentsApi.listPayments(spaceId, {
-        month,
-        memberId: options?.memberId,
-        status: options?.status,
-      });
-      setPayments(response.payments);
-    } catch (err) {
-      if (err instanceof PaymentServiceUnavailableError) {
-        setServiceUnavailable(true);
-        setPayments([]);
-        return;
-      }
-      console.error('[useUniversalPayments] failed', err);
-      setError('paymentCollection.errors.loadPayments');
-      setPayments([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [enabled, month, options?.memberId, options?.status, spaceId]);
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
-
-  return { payments, loading, error, serviceUnavailable, month, reload };
+  return {
+    payments,
+    loading: tenant.loading,
+    error: tenant.error,
+    serviceUnavailable: tenant.serviceUnavailable,
+    month: tenant.month,
+    reload: tenant.reload,
+    refreshing: tenant.refreshing,
+    refreshError: tenant.refreshError,
+    replacePayment: tenant.replacePayment,
+  };
 }

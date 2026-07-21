@@ -10,69 +10,13 @@ import type { SpaceNotification } from '../../api/types';
 import { EmptyState, HeaderBackButton, Screen } from '../../components/ui';
 import { useSpaceNotifications } from '../../hooks/useSpaceNotifications';
 import type { MainStackParamList } from '../../navigation/types';
-import { navigateToPaymentsTab } from '../../navigation/navigationRef';
 import { colors, radius, spacing, typography } from '../../theme';
-import { tomorrowIsoDate } from '../../utils/mealDates';
-import { navigateMainStack } from '../../navigation/mainStackNavigation';
-import { isOwnerOnlyNotificationType } from '../../utils/ownerOnlyNotifications';
+import { navigateFromNotificationType } from '../../utils/notificationDeepLinks';
+import { canManageNotifications } from '../../utils/spaceOperator';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'SpaceNotifications'>;
 type Route = NativeStackScreenProps<MainStackParamList, 'SpaceNotifications'>['route'];
-
-function navigateFromNotification(
-  spaceId: string,
-  notification: SpaceNotification,
-  navigation: Nav,
-  canManageMeals: boolean,
-) {
-  const entityId = notification.entityId;
-  if (!canManageMeals && isOwnerOnlyNotificationType(notification.notificationType)) {
-    return;
-  }
-  switch (notification.notificationType) {
-    case 'PAYMENT_UPDATE_REQUESTED':
-    case 'PAYMENT_APPROVED':
-    case 'PAYMENT_REJECTED':
-    case 'PAYMENT_SUBMITTED':
-      if (entityId) {
-        navigation.navigate('PaymentDetail', { spaceId, paymentId: entityId });
-      } else {
-        navigateToPaymentsTab(spaceId);
-      }
-      return;
-    case 'PAYMENT_NEEDS_REVIEW':
-      navigateToPaymentsTab(spaceId, { initialSection: 'submitted' });
-      return;
-    case 'PAYMENT_NEEDS_UPDATE':
-      navigateToPaymentsTab(spaceId, { initialSection: 'changesRequested' });
-      return;
-    case 'MENU_NOT_PLANNED':
-    case 'MEAL_RESPONSES_BELOW_THRESHOLD':
-      navigateMainStack('MenuPlanning', { spaceId, menuDate: tomorrowIsoDate() });
-      return;
-    case 'MENU_DRAFT_PENDING_PUBLISH':
-      navigateMainStack('MenuSharePreview', { spaceId, menuDate: tomorrowIsoDate() });
-      return;
-    case 'SUBSCRIPTION_ACTIVATION_PENDING':
-      navigateMainStack('SubscriptionActivationRequests', { spaceId });
-      return;
-    case 'COMPLAINT_PENDING':
-    case 'COMPLAINT_OVERDUE':
-    case 'COMPLAINT_CREATED':
-    case 'COMPLAINT_RESOLVED':
-      if (entityId) {
-        navigation.navigate('ComplaintDetail', { spaceId, complaintId: entityId });
-      }
-      return;
-    default:
-      if (notification.actionRoute === 'PaymentDetail' && entityId) {
-        navigation.navigate('PaymentDetail', { spaceId, paymentId: entityId });
-      } else if (notification.actionRoute === 'ComplaintDetail' && entityId) {
-        navigation.navigate('ComplaintDetail', { spaceId, complaintId: entityId });
-      }
-  }
-}
 
 export function SpaceNotificationsScreen() {
   const { t } = useTranslation();
@@ -80,7 +24,7 @@ export function SpaceNotificationsScreen() {
   const route = useRoute<Route>();
   const { spaceId } = route.params;
   const permissions = useSpacePermissions(spaceId);
-  const canManageMeals = permissions.canManageMeals === true;
+  const isOperator = canManageNotifications(permissions);
   const { notifications, loading, markRead } = useSpaceNotifications(spaceId, true);
 
   React.useLayoutEffect(() => {
@@ -100,9 +44,9 @@ export function SpaceNotificationsScreen() {
           // Still navigate even if mark-read fails.
         }
       }
-      navigateFromNotification(spaceId, notification, navigation, canManageMeals);
+      navigateFromNotificationType(spaceId, notification, isOperator);
     },
-    [canManageMeals, markRead, navigation, spaceId],
+    [isOperator, markRead, spaceId],
   );
 
   return (
@@ -126,20 +70,17 @@ export function SpaceNotificationsScreen() {
                 pressed && styles.cardPressed,
               ]}
               onPress={() => void onPress(notification)}>
-              <View style={styles.row}>
+              <View style={styles.cardBody}>
                 <Text style={styles.title} numberOfLines={2}>
                   {notification.title}
                 </Text>
-                {notification.status === 'UNREAD' ? <View style={styles.dot} /> : null}
+                {notification.message ? (
+                  <Text style={styles.message} numberOfLines={2}>
+                    {notification.message}
+                  </Text>
+                ) : null}
               </View>
-              {notification.message ? (
-                <Text style={styles.message} numberOfLines={3}>
-                  {notification.message}
-                </Text>
-              ) : null}
-              {notification.actionLabel ? (
-                <Text style={styles.action}>{notification.actionLabel}</Text>
-              ) : null}
+              <Text style={styles.chevron}>›</Text>
             </Pressable>
           ))}
         </ScrollView>
@@ -149,14 +90,11 @@ export function SpaceNotificationsScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: {
-    flex: 1,
-    padding: spacing.xl,
-  },
-  loader: {
-    marginTop: spacing.xl,
-  },
+  content: { flex: 1, paddingTop: spacing.sm },
+  loader: { marginTop: spacing.xl },
   card: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.white,
     borderRadius: radius.card,
     borderWidth: 1,
@@ -165,39 +103,26 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   cardUnread: {
-    borderColor: `${colors.primary}66`,
-    backgroundColor: colors.surface,
+    borderColor: colors.primary,
   },
   cardPressed: {
-    opacity: 0.92,
+    opacity: 0.88,
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
+  cardBody: {
+    flex: 1,
+    gap: 2,
   },
   title: {
     ...typography.bodyStrong,
-    flex: 1,
     color: colors.textPrimary,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.primary,
-    marginTop: 6,
   },
   message: {
     ...typography.caption,
     color: colors.muted,
-    marginTop: spacing.xs,
-    lineHeight: 18,
   },
-  action: {
-    ...typography.caption,
-    color: colors.primaryDark,
-    fontWeight: '600',
-    marginTop: spacing.sm,
+  chevron: {
+    fontSize: 20,
+    color: colors.muted,
+    marginLeft: spacing.sm,
   },
 });

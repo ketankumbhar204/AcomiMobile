@@ -25,10 +25,25 @@ describe('dailyMenuDayStatus', () => {
 
     expect(summarizeDailyMenuDay(menus)).toEqual({
       published: 0,
+      modified: 0,
       draft: 1,
       notPlanned: 2,
     });
     expect(listPlannedMealTypes(menus)).toEqual(['BREAKFAST']);
+  });
+
+  it('counts modified lunch separately from published', () => {
+    const menus = [
+      menu('BREAKFAST', 'PUBLISHED', 1),
+      menu('LUNCH', 'MODIFIED', 2),
+    ];
+
+    expect(summarizeDailyMenuDay(menus)).toEqual({
+      published: 1,
+      modified: 1,
+      draft: 0,
+      notPlanned: 1,
+    });
   });
 
   it('ignores menus with no available options', () => {
@@ -41,6 +56,7 @@ describe('dailyMenuDayStatus', () => {
 
     expect(summarizeDailyMenuDay(menus)).toEqual({
       published: 0,
+      modified: 0,
       draft: 0,
       notPlanned: 3,
     });

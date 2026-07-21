@@ -16,7 +16,7 @@ function menu(
       isAvailable: true,
       sortOrder: index,
     })),
-  } as DailyMenuResponse;
+  } as unknown as DailyMenuResponse;
 }
 
 function poll(
@@ -41,7 +41,8 @@ describe('buildDashboardMealSlotRows', () => {
 
     expect(rows.map(row => row.mealType)).toEqual(['BREAKFAST', 'LUNCH', 'DINNER']);
     expect(rows.every(row => row.status === 'not_planned')).toBe(true);
-    expect(rows.every(row => row.captionKey === 'dashboard.operations.ctaPlanMenu')).toBe(true);
+    expect(rows.every(row => row.statusKind === 'empty')).toBe(true);
+    expect(rows.every(row => row.captionKey === 'meals.planning.cardHintEmpty')).toBe(true);
   });
 
   it('maps draft breakfast and lunch with dinner not planned', () => {
@@ -55,45 +56,73 @@ describe('buildDashboardMealSlotRows', () => {
     expect(rows[0]).toMatchObject({
       mealType: 'BREAKFAST',
       status: 'draft',
-      statusLabelKey: 'dashboard.operations.statusDraft',
-      captionKey: 'dashboard.operations.ctaPublishShare',
-    });
-    expect(rows[1]).toMatchObject({
-      mealType: 'LUNCH',
-      status: 'draft',
+      statusKind: 'draft',
+      statusLabelKey: 'meals.status.notShared',
+      captionKey: 'meals.planning.cardHintDraft',
     });
     expect(rows[2]).toMatchObject({
       mealType: 'DINNER',
       status: 'not_planned',
-      statusLabelKey: 'dashboard.operations.statusNotPlanned',
-      captionKey: 'dashboard.operations.ctaPlanMenu',
+      statusKind: 'empty',
     });
   });
 
-  it('maps published breakfast with responses and draft lunch', () => {
+  it('keeps Shared as primary when poll is open; responses are secondary', () => {
     const menuMap = {
       BREAKFAST: menu('BREAKFAST', 'PUBLISHED', 1),
       LUNCH: menu('LUNCH', 'DRAFT', 1),
     };
     const pollMap = {
-      BREAKFAST: poll('BREAKFAST', 'OPEN', 23),
+      BREAKFAST: poll('BREAKFAST', 'OPEN', 1),
     };
 
-    const rows = buildDashboardMealSlotRows(menuMap, pollMap);
+    const rows = buildDashboardMealSlotRows(menuMap, pollMap, { BREAKFAST: 4 }, {}, 4);
 
     expect(rows[0]).toMatchObject({
       mealType: 'BREAKFAST',
       status: 'published',
-      captionKey: 'dashboard.operations.responsesCount',
-      captionParams: { count: 23 },
+      statusKind: 'shared',
+      statusLabelKey: 'meals.status.shared',
+      captionKey: 'meals.planning.cardHintResponses',
+      captionParams: { responded: 1, eligible: 4 },
+      countPrimary: '1 / 4',
+      captionTone: 'progress',
     });
-    expect(rows[1]).toMatchObject({
-      mealType: 'LUNCH',
-      status: 'draft',
+  });
+
+  it('maps modified meals to needs-reshare status', () => {
+    const menuMap = {
+      BREAKFAST: menu('BREAKFAST', 'MODIFIED', 2),
+    };
+
+    const rows = buildDashboardMealSlotRows(menuMap, {});
+
+    expect(rows[0]).toMatchObject({
+      statusKind: 'needs_reshare',
+      captionKey: 'meals.planning.cardHintNeedsReshare',
     });
-    expect(rows[2]).toMatchObject({
-      mealType: 'DINNER',
-      status: 'not_planned',
+  });
+
+  it('shows Shared + Poll closed when poll is closed', () => {
+    const menuMap = {
+      BREAKFAST: menu('BREAKFAST', 'PUBLISHED', 1),
+    };
+    const pollMap = {
+      BREAKFAST: poll('BREAKFAST', 'CLOSED', 3),
+    };
+
+    const rows = buildDashboardMealSlotRows(
+      menuMap,
+      pollMap,
+      { BREAKFAST: 4 },
+      { BREAKFAST: 4 },
+    );
+
+    expect(rows[0]).toMatchObject({
+      statusKind: 'shared',
+      statusLabelKey: 'meals.status.shared',
+      captionKey: 'meals.planning.cardHintPollClosed',
+      captionTone: 'muted',
     });
   });
 });

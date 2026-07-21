@@ -15,7 +15,9 @@ import { useToastStore } from '../../store/toastStore';
 import { colors, spacing, typography } from '../../theme';
 import { isPastMenuDate } from '../../utils/mealDates';
 import { loadMenuDraft, syncCombosOnMenu } from '../../utils/dailyMenuDraft';
+import { fetchSpaceMenuCatalog } from '../../utils/fetchSpaceMenuCatalog';
 import { hasComboPrice, getEffectivePriceDraft, parsePriceInput } from '../../utils/comboPrice';
+import { formatComboIncludeLine } from '../../utils/comboIncludes';
 import {
   applyDraftPricesToCombos,
   comboPriceDraftErrorMessage,
@@ -81,14 +83,14 @@ export function DailyMenuSelectComboScreen({
       (async () => {
         setLoading(true);
         try {
-          const [comboList, draft] = await Promise.all([
-            mealsApi.getMealCombos(spaceId),
+          const [comboCatalog, draft] = await Promise.all([
+            fetchSpaceMenuCatalog(spaceId),
             loadMenuDraft(spaceId, menuDate, mealType),
           ]);
           if (!active) {
             return;
           }
-          const activeCombos = comboList.filter(combo => combo.isActive);
+          const activeCombos = comboCatalog.combos.filter(combo => combo.isActive);
           setCombos(activeCombos);
           const existingComboIds = draft.options
             .filter(option => option.entryType === 'COMBO' && option.comboId)
@@ -275,7 +277,11 @@ export function DailyMenuSelectComboScreen({
             <ComboPickerCard
               key={combo.comboId}
               name={combo.name}
-              itemNames={combo.items?.map(item => item.name).filter(Boolean) ?? []}
+              itemNames={
+                combo.items
+                  ?.map(item => formatComboIncludeLine(item.name, item.quantity))
+                  .filter(Boolean) ?? []
+              }
               price={combo.price}
               currencyCode={combo.currencyCode}
               selected={selected}

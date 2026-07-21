@@ -11,6 +11,7 @@ import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useToastStore } from '../../store/toastStore';
 import type { MainStackParamList } from '../../navigation/types';
 import { colors, radius, spacing, typography } from '../../theme';
+import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
 
 type Route = NativeStackScreenProps<MainStackParamList, 'SubscriptionActivationRequests'>['route'];
 
@@ -67,6 +68,7 @@ export function SubscriptionActivationRequestsScreen({
                 setResolvingId(request.requestId);
                 try {
                   await subscriptionPlansApi.approveActivationRequest(spaceId, request.requestId);
+                  invalidateDashboardQueries();
                   showToast(t('meals.subscriptionPlans.approveSuccess'));
                   await reload();
                 } catch {
@@ -98,6 +100,7 @@ export function SubscriptionActivationRequestsScreen({
                 setResolvingId(request.requestId);
                 try {
                   await subscriptionPlansApi.rejectActivationRequest(spaceId, request.requestId);
+                  invalidateDashboardQueries();
                   showToast(t('meals.subscriptionPlans.rejectSuccess'));
                   await reload();
                 } catch {

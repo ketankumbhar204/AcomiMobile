@@ -5,12 +5,14 @@ import { MEAL_TYPES } from '../utils/mealLabels';
 
 export function useOwnerMealHeadcount(spaceId: UUID, menuDate: string, enabled: boolean) {
   const [loading, setLoading] = useState(false);
+  const [ready, setReady] = useState(false);
   const [slots, setSlots] = useState<MealHeadcountSlot[]>([]);
 
   const load = useCallback(
     async (silent = false) => {
       if (!enabled) {
         setLoading(false);
+        setReady(false);
         return;
       }
 
@@ -25,6 +27,7 @@ export function useOwnerMealHeadcount(spaceId: UUID, menuDate: string, enabled: 
         setSlots(day.slots);
       } finally {
         setLoading(false);
+        setReady(true);
       }
     },
     [enabled, menuDate, spaceId],
@@ -35,8 +38,11 @@ export function useOwnerMealHeadcount(spaceId: UUID, menuDate: string, enabled: 
     if (!enabled) {
       setSlots([]);
       setLoading(false);
+      setReady(false);
       return;
     }
+    setLoading(true);
+    setReady(false);
     void load();
   }, [enabled, load]);
 
@@ -50,6 +56,8 @@ export function useOwnerMealHeadcount(spaceId: UUID, menuDate: string, enabled: 
 
   return {
     loading,
+    /** True after at least one fetch completed while enabled. */
+    ready,
     slots: orderedSlots,
     openSlots,
     hasOpenPolls: openSlots.length > 0,

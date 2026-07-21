@@ -45,6 +45,9 @@ export {
 export { ListCard } from './ListCard';
 export { ModuleActionCard } from './ModuleActionCard';
 export { MetricCard, MetricCardProgress } from './MetricCard';
+export { MonthlySummaryCards } from './MonthlySummaryCards';
+export type { MonthlySummaryCardItem, MonthlySummaryCardTone } from './MonthlySummaryCards';
+export { MonthlySummaryHeader } from './MonthlySummaryHeader';
 export { PermissionDeniedScreen, RequireAccommodationAccess } from './PermissionDeniedScreen';
 export { Screen } from './Screen';
 export { Skeleton, SkeletonCard } from './Skeleton';

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Keyboard,
   Pressable,
   ScrollView,
@@ -13,20 +14,23 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { mealsApi } from '../../api/mealsApi';
-import type { MealType, MealComboResponse, UUID } from '../../api/types';
+import type { FoodItemResponse, MealType, MealComboResponse, UUID } from '../../api/types';
 import {
   MenuSelectionPanel,
+  type MenuSelectionPanelHandle,
   type MenuSelectionSaveResult,
 } from '../../components/meals/MenuSelectionPanel';
-import { Button, PermissionDeniedScreen } from '../../components/ui';
+import { MealExtrasEnableSection } from '../../components/meals/MealExtrasEnableSection';
+import { MealStatusBadge } from '../../components/meals/MealStatusBadge';
+import { Button, HeaderBackButton, PermissionDeniedScreen } from '../../components/ui';
 import { useMealPricingPolicy } from '../../hooks/useMealPricingPolicy';
-import { useScreenBackButton } from '../../hooks/useScreenBackButton';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { navigateMainStack } from '../../navigation/mainStackNavigation';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, spacing, typography } from '../../theme';
 import { addDaysIsoDate, formatMenuDate, isPastMenuDate } from '../../utils/mealDates';
+import { fetchSpaceMenuCatalog, patchSpaceMenuCatalogItem } from '../../utils/fetchSpaceMenuCatalog';
 import {
   loadMenuDraft,
   mergeSelectionIntoOptions,
@@ -34,6 +38,7 @@ import {
   saveMenuDraft,
   toMenuDraftOption,
   type MenuDraftOption,
+  type MenuSelectionItemPackage,
 } from '../../utils/dailyMenuDraft';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
 import {
@@ -48,6 +53,7 @@ import {
   type ComboPriceDraftErrors,
 } from '../../utils/comboSelectionPricing';
 import { countPlannedEntries, getPlannedEntryKind, plannedSummaryI18nKey } from '../../utils/plannedMenuSummary';
+import { collectSelectedMealItemIds } from '../../utils/mealExtrasSuggestions';
 
 type Nav = NativeStackNavigationProp<MainStackParamList>;
 
@@ -57,8 +63,41 @@ type DailyMenuEditScreenProps = {
   mealType: MealType;
 };
 
+type DraftSnapshot = {
+  optionsKey: string;
+  notes: string;
+  pricesKey: string;
+};
+
+function snapshotDraft(
+  nextOptions: MenuDraftOption[],
+  nextNotes: string,
+  nextPrices: Record<string, string>,
+): DraftSnapshot {
+  return {
+    optionsKey: JSON.stringify(
+      nextOptions.map(option => ({
+        entryType: option.entryType,
+        comboId: option.comboId ?? null,
+        itemId: option.itemId ?? null,
+        itemIds: option.itemIds ?? null,
+        label: option.label,
+        sortOrder: option.sortOrder,
+        price: option.price ?? null,
+        isAvailable: option.isAvailable,
+        isExtra: option.isExtra === true,
+      })),
+    ),
+    notes: nextNotes.trim(),
+    pricesKey: JSON.stringify(
+      Object.keys(nextPrices)
+        .sort()
+        .map(key => [key, nextPrices[key]]),
+    ),
+  };
+}
+
 export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEditScreenProps) {
-  useScreenBackButton(false);
   const { t, i18n } = useTranslation();
   const navigation = useNavigation<Nav>();
   const permissions = useSpacePermissions(spaceId);
@@ -70,16 +109,37 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
   const [saving, setSaving] = useState(false);
   const [options, setOptions] = useState<MenuDraftOption[]>([]);
   const [notes, setNotes] = useState('');
-  const [status, setStatus] = useState<'DRAFT' | 'PUBLISHED'>('DRAFT');
+  const [status, setStatus] = useState<'DRAFT' | 'PUBLISHED' | 'MODIFIED'>('DRAFT');
   const [comboById, setComboById] = useState<Map<string, MealComboResponse>>(new Map());
   const [priceDrafts, setPriceDrafts] = useState<Record<string, string>>({});
   const [priceErrors, setPriceErrors] = useState<ComboPriceDraftErrors>({});
   const [panelSeedKey, setPanelSeedKey] = useState(0);
+  const [panelHasSelection, setPanelHasSelection] = useState(false);
+  const [catalogItems, setCatalogItems] = useState<FoodItemResponse[]>([]);
   const latestSelectionRef = useRef<MenuSelectionSaveResult | null>(null);
+  const baselineRef = useRef<DraftSnapshot | null>(null);
+  const allowLeaveRef = useRef(false);
+  const panelRef = useRef<MenuSelectionPanelHandle>(null);
+  const scrollRef = useRef<ScrollView>(null);
+
+  const isDirty = useMemo(() => {
+    if (loading || dateReadOnly || baselineRef.current == null) {
+      return false;
+    }
+    const current = snapshotDraft(options, notes, priceDrafts);
+    const baseline = baselineRef.current;
+    return (
+      baseline.optionsKey !== current.optionsKey ||
+      baseline.notes !== current.notes ||
+      baseline.pricesKey !== current.pricesKey
+    );
+  }, [dateReadOnly, loading, notes, options, priceDrafts]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
       title: t('meals.planning.editTitle', { meal: t(mealTypeLabelKey(mealType)) }),
+      headerBackVisible: false,
+      headerLeft: () => <HeaderBackButton />,
     });
   }, [mealType, navigation, t]);
 
@@ -90,6 +150,8 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     setLoading(true);
     setPriceDrafts({});
     setPriceErrors({});
+    baselineRef.current = null;
+    allowLeaveRef.current = false;
   }, [mealType, menuDate, spaceId]);
 
   useFocusEffect(
@@ -98,27 +160,30 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
       (async () => {
         setLoading(true);
         try {
-          const [draft, comboList] = await Promise.all([
+          const [draft, catalog] = await Promise.all([
             loadMenuDraft(spaceId, menuDate, mealType),
-            mealsApi.getMealCombos(spaceId).catch(() => []),
+            fetchSpaceMenuCatalog(spaceId).catch(() => null),
           ]);
           if (!active) {
             return;
           }
+          const comboList = catalog?.combos ?? [];
           setComboById(new Map(comboList.map(combo => [combo.comboId, combo])));
+          setCatalogItems(catalog?.items ?? []);
           const comboOptions = draft.options.filter(option => option.entryType !== 'ITEM');
           setOptions(comboOptions);
           setNotes(draft.notes);
           setStatus(draft.menu?.status ?? 'DRAFT');
           const comboMap = new Map(comboList.map(combo => [combo.comboId, combo]));
-          setPriceDrafts(
-            comboOptions.reduce<Record<string, string>>((acc, option) => {
-              acc[optionChipId(option)] = comboPriceDraftFromOption(
-                resolveMenuOptionPrice(option, comboMap),
-              );
-              return acc;
-            }, {}),
-          );
+          const nextPrices = comboOptions.reduce<Record<string, string>>((acc, option) => {
+            acc[optionChipId(option)] = comboPriceDraftFromOption(
+              resolveMenuOptionPrice(option, comboMap),
+            );
+            return acc;
+          }, {});
+          setPriceDrafts(nextPrices);
+          baselineRef.current = snapshotDraft(comboOptions, draft.notes ?? '', nextPrices);
+          allowLeaveRef.current = false;
           setPanelSeedKey(key => key + 1);
         } catch {
           if (active) {
@@ -141,9 +206,60 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     [options],
   );
 
-  if (!permissions.canManageMeals) {
-    return <PermissionDeniedScreen spaceId={spaceId} />;
-  }
+  const enabledExtras = useMemo((): MenuSelectionItemPackage[] => {
+    return options
+      .filter(
+        option =>
+          option.entryType === 'PACKAGE' &&
+          option.isExtra === true &&
+          (option.itemIds?.length ?? 0) === 1,
+      )
+      .map(option => ({
+        itemId: option.itemIds![0],
+        name: option.label,
+        price: option.price ?? null,
+        currencyCode: option.currencyCode ?? 'INR',
+        foodType: option.foodType ?? null,
+      }));
+  }, [options]);
+
+  const selectedMealItemIds = useMemo(
+    () => collectSelectedMealItemIds(options, comboById),
+    [comboById, options],
+  );
+
+  const patchCatalogItem = useCallback(
+    (item: FoodItemResponse) => {
+      patchSpaceMenuCatalogItem(spaceId, item);
+      setCatalogItems(prev => {
+        const index = prev.findIndex(row => row.itemId === item.itemId);
+        if (index < 0) {
+          return [...prev, item];
+        }
+        const next = [...prev];
+        next[index] = item;
+        return next;
+      });
+    },
+    [spaceId],
+  );
+
+  const extrasFromOptions = useCallback((prev: MenuDraftOption[]): MenuSelectionItemPackage[] => {
+    return prev
+      .filter(
+        option =>
+          option.entryType === 'PACKAGE' &&
+          option.isExtra === true &&
+          (option.itemIds?.length ?? 0) === 1,
+      )
+      .map(option => ({
+        itemId: option.itemIds![0],
+        name: option.label,
+        price: option.price ?? null,
+        currencyCode: option.currencyCode ?? 'INR',
+        foodType: option.foodType ?? null,
+      }));
+  }, []);
 
   const handleSelectCombos = useCallback((result: MenuSelectionSaveResult) => {
     latestSelectionRef.current = result;
@@ -168,6 +284,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
         })),
         itemPackages,
         adHocPackages,
+        extrasFromOptions(prev),
       );
 
       setPriceDrafts(drafts => {
@@ -177,6 +294,10 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
         }
         for (const item of itemPackages) {
           next[item.itemId] = String(item.price);
+        }
+        for (const item of extrasFromOptions(prev)) {
+          next[`extra:${item.itemId}`] =
+            item.price != null ? String(item.price) : next[`extra:${item.itemId}`];
         }
         for (const option of nextOptions) {
           if (option.entryType === 'PACKAGE' && (option.itemIds?.length ?? 0) > 1) {
@@ -203,29 +324,111 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     });
 
     setPriceErrors({});
-  }, []);
+  }, [extrasFromOptions]);
+
+  const handleExtrasChange = useCallback(
+    (extras: MenuSelectionItemPackage[]) => {
+      setOptions(prev => {
+        const selection = latestSelectionRef.current;
+        const combos =
+          selection?.combos.map(combo => ({
+            comboId: combo.comboId,
+            name: combo.name,
+            price: combo.price ?? null,
+            currencyCode: combo.currencyCode ?? 'INR',
+          })) ??
+          prev
+            .filter(option => option.entryType === 'COMBO' && option.comboId)
+            .map(option => ({
+              comboId: option.comboId as string,
+              name: option.label,
+              price: option.price ?? null,
+              currencyCode: option.currencyCode ?? 'INR',
+            }));
+        const itemPackages =
+          selection?.itemPackages ??
+          prev
+            .filter(
+              option =>
+                option.entryType === 'PACKAGE' &&
+                option.isExtra !== true &&
+                (option.itemIds?.length ?? 0) === 1,
+            )
+            .map(option => ({
+              itemId: option.itemIds![0],
+              name: option.label,
+              price: option.price ?? null,
+              currencyCode: option.currencyCode ?? 'INR',
+              foodType: option.foodType ?? null,
+            }));
+        const adHocPackages =
+          selection?.adHocPackages ??
+          prev
+            .filter(
+              option =>
+                option.entryType === 'PACKAGE' &&
+                option.isExtra !== true &&
+                (option.itemIds?.length ?? 0) > 1,
+            )
+            .map(option => ({
+              label: option.label,
+              itemIds: option.itemIds ?? [],
+              price: option.price ?? null,
+              currencyCode: option.currencyCode ?? 'INR',
+            }));
+
+        const nextOptions = mergeSelectionIntoOptions(
+          prev,
+          combos,
+          itemPackages,
+          adHocPackages,
+          extras,
+        );
+
+        setPriceDrafts(drafts => {
+          const next = { ...drafts };
+          for (const item of extras) {
+            if (item.price != null) {
+              next[`extra:${item.itemId}`] = String(item.price);
+            }
+          }
+          return next;
+        });
+
+        if (latestSelectionRef.current) {
+          latestSelectionRef.current = {
+            ...latestSelectionRef.current,
+            extraPackages: extras,
+          };
+        }
+
+        return nextOptions;
+      });
+    },
+    [],
+  );
 
   const copyFromYesterday = async () => {
     const sourceDate = addDaysIsoDate(menuDate, -1);
     setSaving(true);
     try {
       const copied = await mealsApi.copyDailyMenu(spaceId, menuDate, mealType, sourceDate);
-      setOptions(
-        copied.options.map(toMenuDraftOption).filter(option => option.entryType !== 'ITEM'),
-      );
-      setNotes(copied.notes ?? '');
-      setStatus(copied.status);
       const copiedCombos = copied.options
         .map(toMenuDraftOption)
         .filter(option => option.entryType !== 'ITEM');
-      setPriceDrafts(
-        copiedCombos.reduce<Record<string, string>>((acc, option) => {
-          acc[optionChipId(option)] = comboPriceDraftFromOption(
-            resolveMenuOptionPrice(option, comboById),
-          );
-          return acc;
-        }, {}),
-      );
+      const nextNotes = copied.notes ?? '';
+      const nextPrices = copiedCombos.reduce<Record<string, string>>((acc, option) => {
+        acc[optionChipId(option)] = comboPriceDraftFromOption(
+          resolveMenuOptionPrice(option, comboById),
+        );
+        return acc;
+      }, {});
+      setOptions(copiedCombos);
+      setNotes(nextNotes);
+      setStatus(copied.status);
+      setPriceDrafts(nextPrices);
+      baselineRef.current = snapshotDraft(copiedCombos, nextNotes, nextPrices);
+      allowLeaveRef.current = false;
       setPanelSeedKey(key => key + 1);
       showToast(t('meals.planning.copySuccess'));
     } catch {
@@ -251,18 +454,31 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
         })),
         selection.itemPackages,
         selection.adHocPackages,
+        extrasFromOptions(base),
       );
     },
-    [],
+    [extrasFromOptions],
   );
 
   const resolveOptionsForSave = useCallback((): MenuDraftOption[] => {
     return buildOptionsFromLatestSelection(options);
   }, [buildOptionsFromLatestSelection, options]);
 
-  const syncPricesBeforeSave = async (optionsToSync: MenuDraftOption[]): Promise<boolean> => {
+  const syncPricesBeforeSave = async (
+    optionsToSync: MenuDraftOption[],
+    toastKey: 'meals.pricing.fixFieldsBeforeSave' | 'meals.pricing.fixFieldsBeforeShare',
+    panelDraftPrices?: Record<string, string>,
+  ): Promise<boolean> => {
     if (!mealPricing.requiresMealPrices) {
       return true;
+    }
+
+    const draftsForSave = {
+      ...priceDrafts,
+      ...(panelDraftPrices ?? {}),
+    };
+    if (panelDraftPrices) {
+      setPriceDrafts(draftsForSave);
     }
 
     const planned = optionsToSync.filter(
@@ -276,7 +492,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     const packageErrors: ComboPriceDraftErrors = {};
     for (const option of planned.filter(row => row.entryType === 'PACKAGE')) {
       const id = optionChipId(option);
-      const draft = getEffectivePriceDraft(id, priceDrafts, option.price);
+      const draft = getEffectivePriceDraft(id, draftsForSave, option.price);
       if (!draft.trim()) {
         packageErrors[id] = 'required';
         continue;
@@ -290,13 +506,15 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     const { updatedCombos, errors: comboErrors } = await applyDraftPricesToCombos(
       spaceId,
       comboResponses,
-      priceDrafts,
+      draftsForSave,
       { requirePrices: mealPricing.requiresMealPrices },
     );
     const mergedErrors = { ...comboErrors, ...packageErrors };
     if (Object.keys(mergedErrors).length > 0) {
       setPriceErrors(mergedErrors);
-      showToast(t('meals.errors.saveFailed'));
+      panelRef.current?.validatePrices();
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      showToast(t(toastKey));
       return false;
     }
 
@@ -315,7 +533,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
           return option;
         }
         const id = optionChipId(option);
-        const draft = getEffectivePriceDraft(id, priceDrafts, option.price);
+        const draft = getEffectivePriceDraft(id, draftsForSave, option.price);
         const price = parsePriceInput(draft);
         if (price == null) {
           return option;
@@ -327,13 +545,71 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     return true;
   };
 
-  const buildOptionsForSave = (optionsToSave: MenuDraftOption[]): MenuDraftOption[] =>
+  const prepareOptionsForSave = (
+    toastKey: 'meals.pricing.fixFieldsBeforeSave' | 'meals.pricing.fixFieldsBeforeShare',
+  ): { options: MenuDraftOption[]; draftPrices: Record<string, string> } | null => {
+    const panelDrafts = panelRef.current?.getDraftPrices() ?? {};
+
+    if (mealPricing.requiresMealPrices) {
+      if (!(panelRef.current?.validatePrices() ?? true)) {
+        scrollRef.current?.scrollTo({ y: 0, animated: true });
+        showToast(t(toastKey));
+        return null;
+      }
+      const selection = panelRef.current?.getSelectionResult();
+      if (selection) {
+        latestSelectionRef.current = selection;
+        const mergedDrafts = { ...priceDrafts, ...panelDrafts };
+        setPriceDrafts(mergedDrafts);
+        const mergedOptions = mergeSelectionIntoOptions(
+          options,
+          selection.combos.map(combo => ({
+            comboId: combo.comboId,
+            name: combo.name,
+            price: combo.price ?? null,
+            currencyCode: combo.currencyCode ?? 'INR',
+          })),
+          selection.itemPackages,
+          selection.adHocPackages,
+          extrasFromOptions(options),
+        );
+        if (mergedOptions.length === 0) {
+          showToast(t('meals.errors.optionsRequired'));
+          return null;
+        }
+        return {
+          options: mergedOptions,
+          draftPrices: mergedDrafts,
+        };
+      }
+    }
+
+    const optionsToSave = resolveOptionsForSave();
+    if (optionsToSave.length === 0) {
+      if (panelRef.current?.hasSelection()) {
+        scrollRef.current?.scrollTo({ y: 0, animated: true });
+        showToast(t(toastKey));
+        return null;
+      }
+      showToast(t('meals.errors.optionsRequired'));
+      return null;
+    }
+    return {
+      options: optionsToSave,
+      draftPrices: { ...priceDrafts, ...panelDrafts },
+    };
+  };
+
+  const buildOptionsForSave = (
+    optionsToSave: MenuDraftOption[],
+    draftsForSave: Record<string, string>,
+  ): MenuDraftOption[] =>
     optionsToSave.map(option => {
       if (option.entryType !== 'PACKAGE') {
         return option;
       }
       const id = optionChipId(option);
-      const draft = getEffectivePriceDraft(id, priceDrafts, option.price);
+      const draft = getEffectivePriceDraft(id, draftsForSave, option.price);
       const price = parsePriceInput(draft);
       if (price == null) {
         return option;
@@ -342,20 +618,27 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     });
 
   const persist = async () => {
-    const optionsToSave = resolveOptionsForSave();
-    if (optionsToSave.length === 0) {
-      showToast(t('meals.errors.optionsRequired'));
+    const prepared = prepareOptionsForSave('meals.pricing.fixFieldsBeforeSave');
+    if (!prepared || prepared.options.length === 0) {
       return;
     }
     setSaving(true);
     try {
-      const pricesOk = await syncPricesBeforeSave(optionsToSave);
+      const pricesOk = await syncPricesBeforeSave(
+        prepared.options,
+        'meals.pricing.fixFieldsBeforeSave',
+        prepared.draftPrices,
+      );
       if (!pricesOk) {
         return;
       }
-      const nextOptions = buildOptionsForSave(resolveOptionsForSave());
+      const nextOptions = buildOptionsForSave(
+        buildOptionsFromLatestSelection(prepared.options),
+        prepared.draftPrices,
+      );
       await saveMenuDraft(spaceId, menuDate, mealType, nextOptions, notes.trim() || null);
       showToast(t('meals.success.saved'));
+      allowLeaveRef.current = true;
       navigation.goBack();
     } catch {
       showToast(t('meals.errors.saveFailed'));
@@ -365,19 +648,26 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
   };
 
   const shareMeal = async () => {
-    const optionsToSave = resolveOptionsForSave();
-    if (optionsToSave.length === 0) {
-      showToast(t('meals.errors.optionsRequired'));
+    const prepared = prepareOptionsForSave('meals.pricing.fixFieldsBeforeShare');
+    if (!prepared || prepared.options.length === 0) {
       return;
     }
     setSaving(true);
     try {
-      const pricesOk = await syncPricesBeforeSave(optionsToSave);
+      const pricesOk = await syncPricesBeforeSave(
+        prepared.options,
+        'meals.pricing.fixFieldsBeforeShare',
+        prepared.draftPrices,
+      );
       if (!pricesOk) {
         return;
       }
-      const nextOptions = buildOptionsForSave(resolveOptionsForSave());
+      const nextOptions = buildOptionsForSave(
+        buildOptionsFromLatestSelection(prepared.options),
+        prepared.draftPrices,
+      );
       await saveMenuDraft(spaceId, menuDate, mealType, nextOptions, notes.trim() || null);
+      allowLeaveRef.current = true;
       navigateMainStack('MenuSharePreview', { spaceId, menuDate, mealType });
     } catch {
       showToast(t('meals.errors.saveFailed'));
@@ -394,6 +684,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     try {
       await mealsApi.deleteDailyMenu(spaceId, menuDate, mealType);
       showToast(t('meals.success.draftDeleted'));
+      allowLeaveRef.current = true;
       navigation.goBack();
     } catch {
       showToast(t('meals.errors.saveFailed'));
@@ -402,6 +693,36 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     }
   };
 
+  const persistRef = useRef(persist);
+  const shareMealRef = useRef(shareMeal);
+  persistRef.current = persist;
+  shareMealRef.current = shareMeal;
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', event => {
+      if (allowLeaveRef.current || dateReadOnly || !isDirty) {
+        return;
+      }
+      event.preventDefault();
+      Alert.alert(t('meals.menu.unsavedTitle'), t('meals.menu.unsavedMessage'), [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('meals.actions.saveDraft'),
+          onPress: () => {
+            void persistRef.current();
+          },
+        },
+        {
+          text: t('meals.actions.shareMeal'),
+          onPress: () => {
+            void shareMealRef.current();
+          },
+        },
+      ]);
+    });
+    return unsubscribe;
+  }, [dateReadOnly, isDirty, navigation, t]);
+
   const plannedCounts = useMemo(() => countPlannedEntries(plannedCombos), [plannedCombos]);
 
   const summaryText =
@@ -409,9 +730,14 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
       ? t(plannedSummaryI18nKey(plannedCounts), { count: plannedCombos.length })
       : t('meals.menu.plannedSummaryEmpty');
 
+  if (!permissions.canManageMeals) {
+    return <PermissionDeniedScreen spaceId={spaceId} />;
+  }
+
   return (
     <View style={styles.root}>
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
@@ -423,9 +749,11 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
           </View>
           <View style={styles.metaRight}>
             {status === 'PUBLISHED' ? (
-              <Text style={styles.published}>{t('meals.menu.published')}</Text>
+              <MealStatusBadge kind="shared" />
+            ) : status === 'MODIFIED' ? (
+              <MealStatusBadge kind="needs_reshare" />
             ) : (
-              <Text style={styles.draft}>{t('meals.menu.draft')}</Text>
+              <MealStatusBadge kind="draft" />
             )}
           </View>
         </View>
@@ -436,7 +764,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
           </View>
         ) : null}
 
-        {!dateReadOnly ? (
+        {!dateReadOnly && !loading && plannedCombos.length === 0 ? (
           <Button
             label={t('meals.menu.copyYesterdayButton')}
             variant="secondary"
@@ -461,13 +789,27 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
         {!loading ? (
           <>
             {!dateReadOnly ? (
-              <MenuSelectionPanel
-                key={`${menuDate}-${mealType}-${panelSeedKey}`}
-                spaceId={spaceId}
-                initialOptions={options}
-                onChange={handleSelectCombos}
-                requiresMealPrices={mealPricing.requiresMealPrices}
-              />
+              <>
+                <MenuSelectionPanel
+                  ref={panelRef}
+                  key={`${menuDate}-${mealType}-${panelSeedKey}`}
+                  spaceId={spaceId}
+                  initialOptions={options}
+                  onChange={handleSelectCombos}
+                  requiresMealPrices={mealPricing.requiresMealPrices}
+                  onSelectionPresenceChange={setPanelHasSelection}
+                />
+                {mealPricing.requiresMealPrices ? (
+                  <MealExtrasEnableSection
+                    spaceId={spaceId}
+                    catalogItems={catalogItems}
+                    selectedMealItemIds={selectedMealItemIds}
+                    enabledExtras={enabledExtras}
+                    onChange={handleExtrasChange}
+                    onCatalogItemUpdated={patchCatalogItem}
+                  />
+                ) : null}
+              </>
             ) : plannedCombos.length === 0 ? (
               <Text style={styles.emptySelection}>{t('meals.planning.noMenusSelectedYet')}</Text>
             ) : (
@@ -518,14 +860,14 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
             label={t('meals.actions.saveDraft')}
             variant="secondary"
             loading={saving}
-            disabled={options.length === 0}
+            disabled={options.length === 0 && !panelHasSelection}
             onPress={() => void persist()}
             style={styles.footerButton}
           />
           <Button
             label={t('meals.actions.shareMeal')}
             loading={saving}
-            disabled={options.length === 0}
+            disabled={options.length === 0 && !panelHasSelection}
             onPress={() => void shareMeal()}
             style={styles.footerButton}
           />
@@ -553,6 +895,13 @@ const styles = StyleSheet.create({
   published: {
     ...typography.caption,
     color: colors.success,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  modified: {
+    ...typography.caption,
+    color: '#C2410C',
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.3,

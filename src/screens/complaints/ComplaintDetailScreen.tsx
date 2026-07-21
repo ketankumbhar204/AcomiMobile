@@ -30,6 +30,7 @@ import { useToastStore } from '../../store/toastStore';
 import { colors, radius, spacing, typography } from '../../theme';
 import { canManageComplaints } from '../../utils/complaintPermissions';
 import { formatComplaintDateTime } from '../../utils/complaintStatus';
+import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
 import { pickPaymentProofImage } from '../../utils/pickPaymentProofImage';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'ComplaintDetail'>;
@@ -81,6 +82,7 @@ export function ComplaintDetailScreen() {
     setBusy(true);
     try {
       await action();
+      invalidateDashboardQueries();
       showToast(t(successKey));
     } catch (err) {
       const message = err instanceof ApiError ? err.message : t('complaints.errors.action');

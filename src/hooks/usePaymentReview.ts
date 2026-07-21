@@ -1,43 +1,27 @@
+/**
+ * @deprecated Prefer `usePaymentsReviewList`. Default `syncExpected` is false (read-only).
+ */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { PaymentServiceUnavailableError, paymentsApi } from '../api/paymentsApi';
+import { paymentsApi } from '../api/paymentsApi';
 import type { PaymentRejectionReason, PaymentReviewAction, SpacePaymentResponse, UUID } from '../api/types';
+import { createRequestGuard } from '../modules/orchestrator';
 import { currentMonthKey } from '../utils/dashboardFinancial';
 import {
-  isChangesRequested,
-  isSubmittedForReview,
-} from '../utils/paymentStatus';
+  filterReviewPayments,
+  type HistoryReviewFilter,
+  type PaymentReviewQueue,
+  type PendingReviewFilter,
+} from '../utils/ownerPaymentFilters';
+import { PaymentServiceUnavailableError } from '../api/paymentsApi';
 
-export type PaymentReviewQueue = 'PENDING' | 'HISTORY';
-
-export type PendingReviewFilter = 'SUBMITTED' | 'NEEDS_UPDATE';
-
-export type HistoryReviewFilter = 'PAID' | 'REJECTED';
-
-function matchesPendingFilter(
-  payment: SpacePaymentResponse,
-  filter: PendingReviewFilter,
-): boolean {
-  if (filter === 'NEEDS_UPDATE') {
-    return isChangesRequested(payment.paymentStatus);
-  }
-  return isSubmittedForReview(payment.paymentStatus);
-}
-
-function matchesHistoryFilter(
-  payment: SpacePaymentResponse,
-  filter: HistoryReviewFilter,
-): boolean {
-  if (filter === 'REJECTED') {
-    return payment.paymentStatus === 'REJECTED';
-  }
-  return payment.paymentStatus === 'PAID';
-}
+export type { PaymentReviewQueue, PendingReviewFilter, HistoryReviewFilter };
 
 export function usePaymentReview(
   spaceId: UUID | null,
   options?: {
     enabled?: boolean;
     month?: string;
+    /** Ignored for tab coupling — sync is a fetch policy only. */
     syncExpected?: boolean;
     queue?: PaymentReviewQueue;
     pendingFilter?: PendingReviewFilter;
@@ -46,80 +30,89 @@ export function usePaymentReview(
 ) {
   const enabled = options?.enabled ?? true;
   const month = options?.month ?? currentMonthKey();
-  const syncExpected = options?.syncExpected ?? true;
+  const syncExpected = options?.syncExpected ?? false;
   const queue = options?.queue ?? 'PENDING';
   const pendingFilter = options?.pendingFilter ?? 'SUBMITTED';
   const historyFilter = options?.historyFilter ?? 'PAID';
 
   const [payments, setPayments] = useState<SpacePaymentResponse[]>([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
   const [serviceUnavailable, setServiceUnavailable] = useState(false);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const guard = useMemo(() => createRequestGuard(), []);
 
   const reload = useCallback(async () => {
     if (!spaceId || !enabled) {
       setPayments([]);
       setServiceUnavailable(false);
       setError(null);
+      setRefreshError(null);
       setLoading(false);
       return;
     }
 
-    setLoading(true);
-    setError(null);
-    setServiceUnavailable(false);
+    const hasData = payments.length > 0;
+    const requestId = guard.next();
+    if (hasData) {
+      setRefreshing(true);
+      setRefreshError(null);
+    } else {
+      setLoading(true);
+      setError(null);
+      setServiceUnavailable(false);
+    }
+
     try {
       const response = await paymentsApi.listPayments(spaceId, { month, sync: syncExpected });
+      if (!guard.isCurrent(requestId)) {
+        return;
+      }
       setPayments(response.payments);
+      setError(null);
+      setRefreshError(null);
+      setServiceUnavailable(false);
     } catch (err) {
+      if (!guard.isCurrent(requestId)) {
+        return;
+      }
       if (err instanceof PaymentServiceUnavailableError) {
-        setServiceUnavailable(true);
-        setPayments([]);
+        if (hasData) {
+          setRefreshError('paymentCollection.serviceUnavailable.description');
+        } else {
+          setServiceUnavailable(true);
+          setPayments([]);
+        }
         return;
       }
       console.error('[usePaymentReview] failed', err);
-      setError('paymentCollection.errors.loadReview');
-      setPayments([]);
+      if (hasData) {
+        setRefreshError('paymentCollection.errors.loadReview');
+      } else {
+        setError('paymentCollection.errors.loadReview');
+        setPayments([]);
+      }
     } finally {
-      setLoading(false);
+      if (guard.isCurrent(requestId)) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
-  }, [enabled, month, spaceId, syncExpected]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- payments length only for hasData bootstrap
+  }, [enabled, guard, month, spaceId, syncExpected]);
 
   useEffect(() => {
     void reload();
-  }, [reload]);
+    // month/enabled only — do not rebind on reload identity
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, month, spaceId]);
 
-  const filteredPayments = useMemo(() => {
-    if (queue === 'PENDING') {
-      return payments.filter(p => matchesPendingFilter(p, pendingFilter));
-    }
-    return payments.filter(p => matchesHistoryFilter(p, historyFilter));
-  }, [payments, queue, pendingFilter, historyFilter]);
-
-  const submittedCount = useMemo(
-    () => payments.filter(p => isSubmittedForReview(p.paymentStatus)).length,
-    [payments],
+  const filteredPayments = useMemo(
+    () => filterReviewPayments(payments, queue, pendingFilter, historyFilter),
+    [payments, queue, pendingFilter, historyFilter],
   );
-
-  const changesRequestedCount = useMemo(
-    () => payments.filter(p => isChangesRequested(p.paymentStatus)).length,
-    [payments],
-  );
-
-  const pendingReviewCount = submittedCount + changesRequestedCount;
-
-  const paidCount = useMemo(
-    () => payments.filter(p => p.paymentStatus === 'PAID').length,
-    [payments],
-  );
-
-  const rejectedCount = useMemo(
-    () => payments.filter(p => p.paymentStatus === 'REJECTED').length,
-    [payments],
-  );
-
-  const historyCount = paidCount + rejectedCount;
 
   const review = useCallback(
     async (
@@ -153,15 +146,26 @@ export function usePaymentReview(
     historyFilter,
     payments: filteredPayments,
     allPayments: payments,
-    submittedCount,
-    changesRequestedCount,
-    pendingReviewCount,
-    paidCount,
-    rejectedCount,
-    historyCount,
-    loading,
-    error,
-    serviceUnavailable,
+    submittedCount: payments.filter(
+      p => p.paymentStatus === 'UNDER_REVIEW' || p.paymentStatus === 'PROOF_UPLOADED',
+    ).length,
+    changesRequestedCount: payments.filter(p => p.paymentStatus === 'UPDATE_REQUESTED').length,
+    pendingReviewCount: payments.filter(
+      p =>
+        p.paymentStatus === 'UNDER_REVIEW' ||
+        p.paymentStatus === 'PROOF_UPLOADED' ||
+        p.paymentStatus === 'UPDATE_REQUESTED',
+    ).length,
+    paidCount: payments.filter(p => p.paymentStatus === 'PAID').length,
+    rejectedCount: payments.filter(p => p.paymentStatus === 'REJECTED').length,
+    historyCount: payments.filter(
+      p => p.paymentStatus === 'PAID' || p.paymentStatus === 'REJECTED',
+    ).length,
+    loading: loading && payments.length === 0,
+    refreshing,
+    error: payments.length > 0 ? refreshError : error,
+    refreshError,
+    serviceUnavailable: serviceUnavailable && payments.length === 0,
     month,
     reload,
     review,

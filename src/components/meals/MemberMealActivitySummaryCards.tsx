@@ -1,14 +1,18 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { MemberMealActivityMonth, PrepaidBalanceUnit } from '../../api/types';
-import { colors, radius, spacing, typography } from '../../theme';
 import { formatComboPrice } from '../../utils/comboPrice';
+import {
+  MonthlySummaryCards,
+  type MonthlySummaryCardItem,
+} from '../ui/MonthlySummaryCards';
 import type { MemberMealActivityView } from './MemberMealActivityTabBar';
 
 type MemberMealActivitySummaryCardsProps = {
   view: MemberMealActivityView;
   activity: MemberMealActivityMonth | null;
+  /** customer = meal counts only (no payment amounts). */
+  audience?: 'owner' | 'customer';
 };
 
 function formatBalanceValue(
@@ -26,138 +30,116 @@ function formatBalanceValue(
   return formatComboPrice(amount, currencyCode) ?? '—';
 }
 
+/**
+ * Builds the standard KPI order: Total → Collected → Pending amount → Count.
+ */
+function buildPayPerMealCards(
+  activity: MemberMealActivityMonth,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): MonthlySummaryCardItem[] {
+  const summary = activity.summary;
+  const currencyCode = summary.currencyCode ?? 'INR';
+  return [
+    {
+      label: t('meals.activity.history.amountGenerated'),
+      value: formatComboPrice(summary.amountGenerated, currencyCode) ?? '—',
+    },
+    {
+      label: t('meals.activity.history.paid'),
+      value: formatComboPrice(summary.paidAmount, currencyCode) ?? '—',
+      tone: 'success',
+    },
+    {
+      label: t('meals.activity.history.pending'),
+      value: formatComboPrice(summary.pendingAmount, currencyCode) ?? '—',
+      tone: 'pending',
+    },
+    {
+      label: t('meals.activity.history.mealsAccepted'),
+      value: String(summary.acceptedMeals),
+    },
+  ];
+}
+
+function buildPrepaidCards(
+  activity: MemberMealActivityMonth,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): MonthlySummaryCardItem[] {
+  const summary = activity.summary;
+  const currencyCode = summary.currencyCode ?? 'INR';
+  return [
+    {
+      label: t('meals.activity.history.mealsPurchased'),
+      value: formatBalanceValue(summary.balancePurchased, summary.balanceUnit, currencyCode, t),
+    },
+    {
+      label: t('meals.activity.history.mealsConsumed'),
+      value: formatBalanceValue(summary.balanceConsumed, summary.balanceUnit, currencyCode, t),
+    },
+    {
+      label: t('meals.activity.history.mealsRemaining'),
+      value: formatBalanceValue(summary.balanceRemaining, summary.balanceUnit, currencyCode, t),
+      tone: 'remaining',
+    },
+    {
+      label: t('meals.activity.history.amountPaid'),
+      value: formatComboPrice(summary.amountPaidThisMonth, currencyCode) ?? '—',
+      tone: 'success',
+    },
+  ];
+}
+
+function buildCalendarCountCards(
+  activity: MemberMealActivityMonth,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): MonthlySummaryCardItem[] {
+  const summary = activity.summary;
+  return [
+    {
+      label: t('meals.activity.acceptedMeals'),
+      value: String(summary.acceptedMeals),
+    },
+    {
+      label: t('meals.activity.pendingResponses'),
+      value: String(summary.pendingResponses),
+    },
+    {
+      label: t('meals.activity.skippedMeals'),
+      value: String(summary.skippedMeals),
+    },
+  ];
+}
+
 export function MemberMealActivitySummaryCards({
   view,
   activity,
+  audience = 'owner',
 }: MemberMealActivitySummaryCardsProps) {
   const { t } = useTranslation();
-  const summary = activity?.summary;
-  if (!summary) {
+
+  const cards = useMemo((): MonthlySummaryCardItem[] => {
+    if (!activity?.summary) {
+      return [];
+    }
+    const isPrepaid = activity.summary.balanceUnit != null;
+
+    if (audience === 'customer') {
+      return buildPayPerMealCards(activity, t);
+    }
+
+    if (view === 'history') {
+      if (isPrepaid) {
+        return buildPrepaidCards(activity, t);
+      }
+      return buildPayPerMealCards(activity, t);
+    }
+
+    return buildCalendarCountCards(activity, t);
+  }, [activity, audience, t, view]);
+
+  if (cards.length === 0) {
     return null;
   }
 
-  const currencyCode = summary.currencyCode ?? 'INR';
-  const isPrepaid = summary.balanceUnit != null;
-
-  if (view === 'history') {
-    if (isPrepaid) {
-      return (
-        <View style={styles.grid}>
-          <View style={styles.card}>
-            <Text style={styles.value}>
-              {formatBalanceValue(summary.balancePurchased, summary.balanceUnit, currencyCode, t)}
-            </Text>
-            <Text style={styles.label}>{t('meals.activity.history.mealsPurchased')}</Text>
-          </View>
-          <View style={styles.card}>
-            <Text style={styles.value}>
-              {formatBalanceValue(summary.balanceConsumed, summary.balanceUnit, currencyCode, t)}
-            </Text>
-            <Text style={styles.label}>{t('meals.activity.history.mealsConsumed')}</Text>
-          </View>
-          <View style={styles.card}>
-            <Text style={[styles.value, styles.remaining]}>
-              {formatBalanceValue(summary.balanceRemaining, summary.balanceUnit, currencyCode, t)}
-            </Text>
-            <Text style={styles.label}>{t('meals.activity.history.mealsRemaining')}</Text>
-          </View>
-          <View style={styles.card}>
-            <Text style={[styles.value, styles.paid]}>
-              {formatComboPrice(summary.amountPaidThisMonth, currencyCode) ?? '—'}
-            </Text>
-            <Text style={styles.label}>{t('meals.activity.history.amountPaid')}</Text>
-          </View>
-        </View>
-      );
-    }
-
-    return (
-      <View style={styles.grid}>
-        <View style={styles.card}>
-          <Text style={styles.value}>{summary.acceptedMeals}</Text>
-          <Text style={styles.label}>{t('meals.activity.history.mealsAccepted')}</Text>
-        </View>
-        <View style={styles.card}>
-          <Text style={styles.value}>
-            {formatComboPrice(summary.amountGenerated, currencyCode) ?? '—'}
-          </Text>
-          <Text style={styles.label}>{t('meals.activity.history.amountGenerated')}</Text>
-        </View>
-        <View style={styles.card}>
-          <Text style={[styles.value, styles.paid]}>
-            {formatComboPrice(summary.paidAmount, currencyCode) ?? '—'}
-          </Text>
-          <Text style={styles.label}>{t('meals.activity.history.paid')}</Text>
-        </View>
-        <View style={styles.card}>
-          <Text style={[styles.value, styles.pending]}>
-            {formatComboPrice(summary.pendingAmount, currencyCode) ?? '—'}
-          </Text>
-          <Text style={styles.label}>{t('meals.activity.history.pending')}</Text>
-        </View>
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.row}>
-      <View style={styles.card}>
-        <Text style={styles.value}>{summary.acceptedMeals}</Text>
-        <Text style={styles.label}>{t('meals.activity.acceptedMeals')}</Text>
-      </View>
-      <View style={styles.card}>
-        <Text style={styles.value}>{summary.pendingResponses}</Text>
-        <Text style={styles.label}>{t('meals.activity.pendingResponses')}</Text>
-      </View>
-      <View style={styles.card}>
-        <Text style={styles.value}>{summary.skippedMeals}</Text>
-        <Text style={styles.label}>{t('meals.activity.skippedMeals')}</Text>
-      </View>
-    </View>
-  );
+  return <MonthlySummaryCards cards={cards} />;
 }
-
-const styles = StyleSheet.create({
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  card: {
-    flex: 1,
-    minWidth: '46%',
-    backgroundColor: colors.white,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.xs,
-    alignItems: 'center',
-    gap: 1,
-  },
-  value: {
-    ...typography.bodyStrong,
-    color: colors.primaryDark,
-    fontSize: 15,
-  },
-  paid: {
-    color: colors.success,
-  },
-  pending: {
-    color: '#EAB308',
-  },
-  remaining: {
-    color: colors.primary,
-  },
-  label: {
-    ...typography.caption,
-    color: colors.muted,
-    textAlign: 'center',
-    fontWeight: '600',
-    fontSize: 11,
-  },
-});

@@ -1,20 +1,31 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import type { PaymentRejectionReason } from '../../api/types';
-import type { usePaymentReview } from '../../hooks/usePaymentReview';
+import type { PaymentRejectionReason, SpacePaymentResponse, SpaceType } from '../../api/types';
+import type { HistoryReviewFilter, PendingReviewFilter } from '../../utils/ownerPaymentFilters';
 import { colors, spacing, typography } from '../../theme';
 import { EmptyState, SkeletonCard } from '../ui';
 import { PaymentApprovalCard } from './PaymentApprovalCard';
 
-type ReviewState = ReturnType<typeof usePaymentReview>;
+type ReviewState = {
+  queue: 'PENDING' | 'HISTORY';
+  pendingFilter: PendingReviewFilter;
+  historyFilter: HistoryReviewFilter;
+  payments: SpacePaymentResponse[];
+  loading: boolean;
+  error: string | null;
+  serviceUnavailable: boolean;
+  reviewingId: string | null;
+};
 
 type PaymentsReviewListProps = {
   review: ReviewState;
   showActions: boolean;
+  spaceType?: SpaceType;
   onApprove: (paymentId: string) => void;
   onReject: (paymentId: string, code: PaymentRejectionReason, reason?: string) => void;
-  onRequestUpdate: (paymentId: string, message: string) => void;
+  onRequestUpdate: (paymentId: string, message: string) => void | Promise<void>;
+  onOpenDetail?: (payment: SpacePaymentResponse) => void;
 };
 
 function emptyStateKey(review: ReviewState): string {
@@ -27,9 +38,11 @@ function emptyStateKey(review: ReviewState): string {
 export function PaymentsReviewList({
   review,
   showActions,
+  spaceType,
   onApprove,
   onReject,
   onRequestUpdate,
+  onOpenDetail,
 }: PaymentsReviewListProps) {
   const { t } = useTranslation();
 
@@ -57,13 +70,18 @@ export function PaymentsReviewList({
             key={payment.paymentId}
             payment={payment}
             reviewing={review.reviewingId === payment.paymentId}
+            spaceType={spaceType}
             showActions={
               showActions &&
-              (review.queue === 'PENDING' || payment.paymentStatus === 'REJECTED')
+              (payment.paymentStatus === 'UNDER_REVIEW' ||
+                payment.paymentStatus === 'PROOF_UPLOADED' ||
+                payment.paymentStatus === 'UPDATE_REQUESTED' ||
+                payment.paymentStatus === 'REJECTED')
             }
             onApprove={() => onApprove(payment.paymentId)}
             onReject={(code, reason) => onReject(payment.paymentId, code, reason)}
             onRequestUpdate={message => onRequestUpdate(payment.paymentId, message)}
+            onOpenDetail={onOpenDetail ? () => onOpenDetail(payment) : undefined}
           />
         ))
       )}

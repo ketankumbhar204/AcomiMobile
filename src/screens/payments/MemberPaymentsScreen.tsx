@@ -1,6 +1,6 @@
 import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text } from 'react-native';
-import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import type {
   NativeStackNavigationProp,
   NativeStackScreenProps,
@@ -12,6 +12,7 @@ import { UniversalPaymentCard } from '../../components/payments/UniversalPayment
 import { UniversalPaymentProofModal } from '../../components/payments/UniversalPaymentProofModal';
 import { EmptyState, HeaderBackButton, ListFilterChips, Screen, SkeletonCard } from '../../components/ui';
 import { useToastStore } from '../../store/toastStore';
+import { useMealPaymentActivitySummaries } from '../../hooks/useMealPaymentActivitySummaries';
 import { useUniversalPayments } from '../../hooks/useUniversalPayments';
 import type { MainStackParamList } from '../../navigation/types';
 import { colors, spacing, typography } from '../../theme';
@@ -20,6 +21,9 @@ import {
   filterTenantPayments,
   type TenantPaymentFilter,
 } from '../../utils/tenantPaymentFilters';
+import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
+import { invalidatePaymentsMonthCaches } from '../../utils/paymentsMonthCache';
+import { currentMonthKey } from '../../utils/dashboardFinancial';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'MemberPayments'>;
 type Route = NativeStackScreenProps<MainStackParamList, 'MemberPayments'>['route'];
@@ -28,12 +32,18 @@ export function MemberPaymentsScreen() {
   const { t, i18n } = useTranslation();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
-  const { spaceId, memberId, memberName } = route.params;
+  const { spaceId, memberId, memberName, month: routeMonth } = route.params;
   const showToast = useToastStore(state => state.showToast);
 
   const { payments, loading, error, serviceUnavailable, reload } = useUniversalPayments(spaceId, {
     memberId,
+    month: routeMonth,
   });
+  const { summaryByPaymentId, reload: reloadMealSummaries } = useMealPaymentActivitySummaries(
+    spaceId,
+    memberId,
+    payments,
+  );
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<TenantPaymentFilter>('ALL');
   const [updatePayment, setUpdatePayment] = useState<SpacePaymentResponse | null>(null);
@@ -47,20 +57,15 @@ export function MemberPaymentsScreen() {
     });
   }, [i18n.language, navigation, t]);
 
-  useFocusEffect(
-    useCallback(() => {
-      void reload();
-    }, [reload]),
-  );
-
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
       await reload();
+      await reloadMealSummaries();
     } finally {
       setRefreshing(false);
     }
-  }, [reload]);
+  }, [reload, reloadMealSummaries]);
 
   const filterOptions = useMemo(
     () =>
@@ -101,6 +106,8 @@ export function MemberPaymentsScreen() {
       try {
         await paymentsApi.submitProof(spaceId, updatePayment.paymentId, payload);
         setUpdatePayment(null);
+        invalidatePaymentsMonthCaches(spaceId, updatePayment.month ?? currentMonthKey());
+        invalidateDashboardQueries();
         showToast(t('paymentCollection.proof.submitted'));
         await reload();
       } catch (err) {
@@ -155,6 +162,7 @@ export function MemberPaymentsScreen() {
               <UniversalPaymentCard
                 key={payment.paymentId}
                 payment={payment}
+                mealSummary={summaryByPaymentId[payment.paymentId] ?? null}
                 onPress={() => openPayment(payment.paymentId)}
                 onUpdatePress={() => setUpdatePayment(payment)}
               />

@@ -38,6 +38,7 @@ export function MealDeliveryLocationCompact({
         lastUsedLocationId={lastUsedLocationId}
         onSelect={onSelect}
         readOnly={readOnly}
+        showEditAffordance={!readOnly && locations.length > 1}
       />
     </View>
   );
@@ -45,7 +46,7 @@ export function MealDeliveryLocationCompact({
 
 const styles = StyleSheet.create({
   block: {
-    marginTop: spacing.md,
+    marginTop: 0,
     padding: spacing.md,
     borderRadius: radius.input,
     backgroundColor: colors.surface,

@@ -1,5 +1,13 @@
 import { mealsApi } from '../api/mealsApi';
-import type { DailyMenuResponse, MealType, UUID } from '../api/types';
+import type {
+  DailyMenuOptionResponse,
+  DailyMenuResponse,
+  MealComboResponse,
+  MealType,
+  UUID,
+} from '../api/types';
+import { invalidateDashboardQueries } from './dashboardQueryCache';
+import { getMenuOptionItemNames } from './plannedComboDisplay';
 import { MEAL_TYPES } from './mealLabels';
 
 export type SlotShareState = 'shareable' | 'notPublished' | 'draft' | 'empty';
@@ -16,7 +24,7 @@ export function getSlotShareState(menu?: DailyMenuResponse | null): SlotShareSta
   if (!hasItems) {
     return 'empty';
   }
-  if (menu.status === 'PUBLISHED' || menu.status === 'DRAFT') {
+  if (menu.status === 'PUBLISHED' || menu.status === 'DRAFT' || menu.status === 'MODIFIED') {
     return 'shareable';
   }
   return 'notPublished';
@@ -35,10 +43,19 @@ export function defaultSelectedMealTypes(
   menuMap: Partial<Record<MealType, DailyMenuResponse>>,
   initialMealType?: MealType,
 ): MealType[] {
+  /** Already-shared (PUBLISHED) meals stay unchecked — user selects them explicitly. */
+  const shouldPreselect = (type: MealType): boolean => {
+    const menu = menuMap[type];
+    if (getSlotShareState(menu) !== 'shareable') {
+      return false;
+    }
+    return menu?.status === 'DRAFT' || menu?.status === 'MODIFIED';
+  };
+
   if (initialMealType) {
-    return getSlotShareState(menuMap[initialMealType]) === 'shareable' ? [initialMealType] : [];
+    return shouldPreselect(initialMealType) ? [initialMealType] : [];
   }
-  return MEAL_TYPES.filter(type => getSlotShareState(menuMap[type]) === 'shareable');
+  return MEAL_TYPES.filter(shouldPreselect);
 }
 
 function formatMealTypeLabel(mealType: MealType): string {
@@ -103,7 +120,10 @@ export async function publishDraftMenusForTypes(
 ): Promise<void> {
   const drafts = mealTypes.filter(type => {
     const menu = menuMap[type];
-    return menu?.status === 'DRAFT' && hasAvailableMenuOptions(menu);
+    return (
+      (menu?.status === 'DRAFT' || menu?.status === 'MODIFIED') &&
+      hasAvailableMenuOptions(menu)
+    );
   });
   if (drafts.length === 0) {
     return;
@@ -111,31 +131,160 @@ export async function publishDraftMenusForTypes(
   await Promise.all(
     drafts.map(type => mealsApi.publishDailyMenu(spaceId, menuDate, type)),
   );
+  invalidateDashboardQueries();
+}
+
+function isNotPublishedStub(messageText: string): boolean {
+  return /\(not published\)/i.test(messageText);
+}
+
+function formatSharePrice(price?: number | null, currencyCode?: string | null): string | null {
+  if (price == null || Number.isNaN(Number(price))) {
+    return null;
+  }
+  const amount = Number(price)
+    .toFixed(2)
+    .replace(/\.?0+$/, '');
+  const code = currencyCode?.trim() || 'INR';
+  if (code.toUpperCase() === 'INR') {
+    return `₹${amount}`;
+  }
+  return `${code} ${amount}`;
+}
+
+function inferShareEntryType(
+  option: DailyMenuOptionResponse,
+): 'COMBO' | 'ITEM' | 'PACKAGE' {
+  if (option.entryType === 'COMBO' || option.entryType === 'ITEM' || option.entryType === 'PACKAGE') {
+    return option.entryType;
+  }
+  if (option.comboId) {
+    return 'COMBO';
+  }
+  if (option.itemId) {
+    return 'ITEM';
+  }
+  return 'PACKAGE';
+}
+
+/** Numbered options block matching backend MealSharePreviewService formatting. */
+export function buildShareOptionsBody(
+  mealType: MealType,
+  menu: DailyMenuResponse,
+  comboById: Map<string, MealComboResponse> = new Map(),
+): string {
+  const available = [...(menu.options ?? [])]
+    .filter(option => option.isAvailable)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+
+  const lines: string[] = [];
+  let optionNum = 1;
+  for (const option of available) {
+    const entryType = inferShareEntryType(option);
+    const combo = option.comboId ? comboById.get(option.comboId) : undefined;
+    const price =
+      entryType === 'COMBO'
+        ? (option.price ?? combo?.price ?? null)
+        : (option.price ?? null);
+    const currencyCode =
+      entryType === 'COMBO'
+        ? (option.currencyCode ?? combo?.currencyCode ?? null)
+        : (option.currencyCode ?? null);
+    const priced = formatSharePrice(price, currencyCode);
+    lines.push(`${optionNum}. ${option.label}${priced ? ` - ${priced}` : ''}`);
+
+    if (entryType === 'COMBO' || entryType === 'PACKAGE') {
+      const detailNames = getMenuOptionItemNames(option, comboById);
+      if (detailNames.length > 0) {
+        lines.push(detailNames.join(', '));
+      }
+    }
+    optionNum += 1;
+  }
+  lines.push(`${optionNum}. Not available for ${formatMealTypeLabel(mealType)}`);
+  if (menu.notes?.trim()) {
+    lines.push(`Note: ${menu.notes.trim()}`);
+  }
+  return lines.join('\n');
+}
+
+function enrichUnpublishedPreviewMessage(
+  mealType: MealType,
+  menu: DailyMenuResponse,
+  apiMessageText: string,
+  comboById: Map<string, MealComboResponse>,
+): string {
+  const body = buildShareOptionsBody(mealType, menu, comboById);
+  if (isNotPublishedStub(apiMessageText)) {
+    return apiMessageText.replace(/\(not published\)/i, body);
+  }
+  return apiMessageText;
 }
 
 export async function buildShareMessageForSelection(
   spaceId: UUID,
   menuDate: string,
   mealTypes: MealType[],
+  menuMapInput?: Partial<Record<MealType, DailyMenuResponse>>,
 ): Promise<string> {
   if (mealTypes.length === 0) {
     return '';
   }
-  const menus = await mealsApi.getDailyMenusByDate(spaceId, menuDate);
-  const menuMap = menusByMealType(menus);
-  await publishDraftMenusForTypes(spaceId, menuDate, mealTypes, menuMap);
+  // Preview must not publish — publishing is reserved for the Share action.
+  // Backend share-preview only lists PUBLISHED/MODIFIED slots; drafts come back as
+  // "(not published)". Fill those from local daily-menu options so confirmation
+  // still shows selected combos/items.
+  const menuMap =
+    menuMapInput ??
+    menusByMealType(await mealsApi.getDailyMenusByDate(spaceId, menuDate));
+
+  const needsComboCatalog = mealTypes.some(type => {
+    const menu = menuMap[type];
+    if (!menu || !hasAvailableMenuOptions(menu)) {
+      return false;
+    }
+    return menu.options.some(
+      option =>
+        option.isAvailable &&
+        inferShareEntryType(option) === 'COMBO' &&
+        option.comboId &&
+        !(option.packageItems?.length),
+    );
+  });
+
+  let comboById = new Map<string, MealComboResponse>();
+  if (needsComboCatalog) {
+    const combos = await mealsApi.getMealCombos(spaceId).catch(() => []);
+    comboById = new Map(combos.map(combo => [combo.comboId, combo]));
+  }
+
   const previews = await Promise.all(
     mealTypes.map(type => mealsApi.getSharePreview(spaceId, menuDate, type)),
   );
+
   return composeShareMessages(
-    previews.map((preview, index) => ({
-      mealType: mealTypes[index],
-      messageText: preview.messageText,
-    })),
+    previews.map((preview, index) => {
+      const mealType = mealTypes[index];
+      const menu = menuMap[mealType];
+      let messageText = preview.messageText;
+      if (
+        menu &&
+        hasAvailableMenuOptions(menu) &&
+        isNotPublishedStub(messageText)
+      ) {
+        messageText = enrichUnpublishedPreviewMessage(
+          mealType,
+          menu,
+          messageText,
+          comboById,
+        );
+      }
+      return { mealType, messageText };
+    }),
   );
 }
 
-/** Opens in-app polls for shared meals. Ignores already-open or closed polls. */
+/** Opens in-app polls for shared meals. Reopens closed polls; extends past deadlines. */
 export async function openPollsForMealTypes(
   spaceId: UUID,
   menuDate: string,

@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AccommodationBedsScreen } from '../screens/accommodation/AccommodationBedsScreen';
 import { AccommodationBuilderScreen } from '../screens/accommodation/AccommodationBuilderScreen';
@@ -53,6 +54,8 @@ import { DashboardOccupancyListScreen } from '../screens/dashboard/DashboardOccu
 import { MemberPaymentsScreen } from '../screens/payments/MemberPaymentsScreen';
 import { PaymentReviewScreen } from '../screens/payments/PaymentReviewScreen';
 import { PaymentDetailScreen } from '../screens/payments/PaymentDetailScreen';
+import { DayMealBulkPayScreen } from '../screens/payments/DayMealBulkPayScreen';
+import { DayMealPaymentDetailScreen } from '../screens/payments/DayMealPaymentDetailScreen';
 import { PaymentHistoryScreen } from '../screens/payments/PaymentHistoryScreen';
 import { SpaceNotificationsScreen } from '../screens/notifications/SpaceNotificationsScreen';
 import { RaiseComplaintScreen } from '../screens/complaints/RaiseComplaintScreen';
@@ -66,6 +69,12 @@ import { SpaceTabNavigator } from './SpaceTabNavigator';
 import type { MainStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
+
+function SpaceTabsScreen({
+  route,
+}: NativeStackScreenProps<MainStackParamList, 'SpaceTabs'>) {
+  return <SpaceTabNavigator spaceId={route.params.spaceId} />;
+}
 
 export function MainNavigator() {
   const startupRoute = useSpaceStore(state => state.startupRoute);
@@ -232,7 +241,10 @@ export function MainNavigator() {
         name="DailyMenuToday"
         options={{ title: "Today's Menu" }}
         children={({ route }) => (
-          <DailyMenuTodayScreen spaceId={route.params.spaceId} />
+          <DailyMenuTodayScreen
+            spaceId={route.params.spaceId}
+            menuDate={route.params.menuDate}
+          />
         )}
       />
       <Stack.Screen
@@ -291,6 +303,7 @@ export function MainNavigator() {
           <MenuPlanningScreen
             spaceId={route.params.spaceId}
             initialDate={route.params.menuDate}
+            initialMealType={route.params.mealType}
           />
         )}
       />
@@ -366,6 +379,16 @@ export function MainNavigator() {
       />
       <Stack.Screen name="MemberPayments" component={MemberPaymentsScreen} />
       <Stack.Screen name="PaymentDetail" component={PaymentDetailScreen} />
+      <Stack.Screen
+        name="DayMealPaymentDetail"
+        component={DayMealPaymentDetailScreen}
+        options={{ title: 'Payment' }}
+      />
+      <Stack.Screen
+        name="DayMealBulkPay"
+        component={DayMealBulkPayScreen}
+        options={{ title: 'Pay' }}
+      />
       <Stack.Screen name="PaymentReview" component={PaymentReviewScreen} />
       <Stack.Screen name="PaymentHistory" component={PaymentHistoryScreen} />
       <Stack.Screen name="SpaceNotifications" component={SpaceNotificationsScreen} />
@@ -375,13 +398,11 @@ export function MainNavigator() {
       <Stack.Screen name="GlobalActivityList" component={GlobalActivityListScreen} />
       <Stack.Screen
         name="SpaceTabs"
+        component={SpaceTabsScreen}
         options={{ headerShown: false }}
         initialParams={
           selectedSpaceId ? { spaceId: selectedSpaceId } : undefined
         }
-        children={({ route }) => (
-          <SpaceTabNavigator spaceId={route.params.spaceId} />
-        )}
       />
     </Stack.Navigator>
   );

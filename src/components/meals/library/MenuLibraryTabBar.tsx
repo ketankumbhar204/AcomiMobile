@@ -3,17 +3,34 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { colors, spacing, typography } from '../../../theme';
 
-export type MenuLibraryTab = 'items' | 'combos';
+export type MenuLibraryTab = 'items' | 'combos' | 'extras';
 
 type MenuLibraryTabBarProps = {
   activeTab: MenuLibraryTab;
   onTabChange: (tab: MenuLibraryTab) => void;
+  /** Mess-only third tab for reusable meal extras. */
+  showExtras?: boolean;
 };
 
-export function MenuLibraryTabBar({ activeTab, onTabChange }: MenuLibraryTabBarProps) {
+export function MenuLibraryTabBar({
+  activeTab,
+  onTabChange,
+  showExtras = false,
+}: MenuLibraryTabBarProps) {
   const { t } = useTranslation();
+  const tabs: MenuLibraryTab[] = showExtras
+    ? ['items', 'combos', 'extras']
+    : ['items', 'combos'];
 
-  const tabs: MenuLibraryTab[] = ['items', 'combos'];
+  const labelFor = (tab: MenuLibraryTab) => {
+    if (tab === 'items') {
+      return t('meals.library.tabItems');
+    }
+    if (tab === 'combos') {
+      return t('meals.library.tabCombos');
+    }
+    return t('meals.library.tabExtras');
+  };
 
   return (
     <View style={styles.wrapper}>
@@ -27,8 +44,8 @@ export function MenuLibraryTabBar({ activeTab, onTabChange }: MenuLibraryTabBarP
               style={({ pressed }) => [styles.tab, pressed && styles.tabPressed]}
               accessibilityRole="tab"
               accessibilityState={{ selected: isActive }}>
-              <Text style={[styles.label, isActive && styles.labelActive]}>
-                {t(`meals.library.tab${tab === 'items' ? 'Items' : 'Combos'}`)}
+              <Text style={[styles.label, isActive && styles.labelActive]} numberOfLines={1}>
+                {labelFor(tab)}
               </Text>
               {isActive ? <View style={styles.indicator} /> : <View style={styles.indicatorPlaceholder} />}
             </Pressable>
@@ -53,15 +70,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: spacing.sm,
     paddingBottom: spacing.xs,
+    paddingHorizontal: spacing.xxs,
   },
   tabPressed: {
     opacity: 0.85,
   },
   label: {
     ...typography.body,
+    fontSize: 13,
     color: colors.muted,
     fontWeight: '500',
     marginBottom: spacing.sm,
+    textAlign: 'center',
   },
   labelActive: {
     color: colors.primary,
@@ -70,8 +90,8 @@ const styles = StyleSheet.create({
   indicator: {
     position: 'absolute',
     bottom: 0,
-    left: spacing.lg,
-    right: spacing.lg,
+    left: spacing.sm,
+    right: spacing.sm,
     height: 2,
     borderRadius: 1,
     backgroundColor: colors.primary,

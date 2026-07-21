@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { mealsApi } from '../api/mealsApi';
 import type {
@@ -15,6 +15,8 @@ import type {
 import { useToastStore } from '../store/toastStore';
 import { useNavigationFocusReload } from './useNavigationFocusReload';
 import { hasPrepaidOverflow } from '../utils/mealPollPayment';
+import { isPastMenuDate } from '../utils/mealDates';
+import { resolvePreferredDeliveryLocationId } from '../utils/mealPollDeliveryLocations';
 
 type SingleSelections = Partial<Record<MealType, UUID>>;
 type QuantitySelections = Partial<Record<MealType, Record<UUID, number>>>;
@@ -64,6 +66,7 @@ export function useMealPollDay(
   const [polls, setPolls] = useState<MealPollSlot[]>([]);
   const [myPaymentStatus, setMyPaymentStatus] = useState<MealPollPaymentStatus | null>(null);
   const [myRejectionReason, setMyRejectionReason] = useState<string | null>(null);
+  const [myPaymentChargedAmount, setMyPaymentChargedAmount] = useState<number | null>(null);
   const [myPrepaidOverflowAmount, setMyPrepaidOverflowAmount] = useState<number | null>(null);
   const [myPrepaidDebitedAmount, setMyPrepaidDebitedAmount] = useState<number | null>(null);
   const [myPrepaidOverflowPayment, setMyPrepaidOverflowPayment] = useState<boolean | null>(null);
@@ -75,37 +78,52 @@ export function useMealPollDay(
   const [editing, setEditing] = useState(true);
 
   const requiresDeliveryLocation = multiQuantity && deliveryLocations.length > 0;
+  const dateReadOnly = isPastMenuDate(menuDate);
+  const mealEditsLocked = myPaymentStatus === 'PENDING_APPROVAL';
+  const effectiveReadOnly = dateReadOnly || mealEditsLocked;
   const openPolls = useMemo(() => polls.filter(poll => poll.status === 'OPEN'), [polls]);
+  /**
+   * Include CLOSED polls for today and past days so shared menus stay visible after
+   * a meal's ordering window closes (OPEN-only made today look "not planned").
+   * Mutations still use `openPolls` only.
+   */
+  const displayPolls = useMemo(
+    () => polls.filter(poll => poll.status === 'OPEN' || poll.status === 'CLOSED'),
+    [polls],
+  );
+  const loadGenerationRef = useRef(0);
 
   const pollHasResponse = useCallback(
     (poll: MealPollSlot) => {
       if (multiQuantity) {
-        return (poll.mySelections?.length ?? 0) > 0;
+        return (poll.mySelections ?? []).some(selection => selection.quantity > 0);
       }
       return poll.mySelectedOptionId != null;
     },
     [multiQuantity],
   );
 
+  const responsePolls = displayPolls;
+
   const allResponded = useMemo(
-    () => openPolls.length > 0 && openPolls.every(poll => pollHasResponse(poll)),
-    [openPolls, pollHasResponse],
+    () => responsePolls.length > 0 && responsePolls.every(poll => pollHasResponse(poll)),
+    [pollHasResponse, responsePolls],
   );
 
   const anyResponded = useMemo(
-    () => openPolls.some(poll => pollHasResponse(poll)),
-    [openPolls, pollHasResponse],
+    () => responsePolls.some(poll => pollHasResponse(poll)),
+    [pollHasResponse, responsePolls],
   );
 
   const hasPartialSubmission = anyResponded && !allResponded;
-  const showSummary = allResponded && !editing;
+  const showSummary = allResponded && !editing && !effectiveReadOnly;
 
   const mealsWithPlates = useMemo(
     () =>
-      openPolls
+      displayPolls
         .filter(poll => sumQuantities(quantitySelections[poll.mealType]) > 0)
         .map(poll => poll.mealType),
-    [openPolls, quantitySelections],
+    [displayPolls, quantitySelections],
   );
 
   const totalPlates = useMemo(
@@ -115,6 +133,7 @@ export function useMealPollDay(
 
   const buildPayload = useCallback((): SubmitMealPollSelection[] | null => {
     if (multiQuantity) {
+      // Include every open meal so the backend can record explicit skips (0 plates).
       return openPolls.map(poll => ({
         mealType: poll.mealType,
         options: poll.options
@@ -123,7 +142,8 @@ export function useMealPollDay(
             optionId: option.id,
             quantity: quantitySelections[poll.mealType]?.[option.id] ?? 0,
           })),
-        ...(deliverySelections[poll.mealType]
+        ...(sumQuantities(quantitySelections[poll.mealType]) > 0 &&
+        deliverySelections[poll.mealType]
           ? { deliveryLocationId: deliverySelections[poll.mealType] }
           : {}),
       }));
@@ -138,24 +158,9 @@ export function useMealPollDay(
   }, [deliverySelections, multiQuantity, openPolls, quantitySelections, selections]);
 
   const validateForSave = useCallback((): boolean => {
-    const payload = buildPayload();
-    if (!payload || payload.length === 0) {
-      showToast(t('meals.poll.selectAtLeastOne'));
-      return false;
-    }
-
-    if (payload.length < openPolls.length) {
-      showToast(t('meals.poll.selectAllOpen'));
-      return false;
-    }
-
+    // Meals are optional: empty / partial days are valid (skipped = no response).
+    // Only validate correctness of meals the customer actually selected.
     if (multiQuantity) {
-      const incomplete = payload.some(entry => sumQuantities(quantitySelections[entry.mealType]) <= 0);
-      if (incomplete) {
-        showToast(t('meals.poll.selectAtLeastOnePlate'));
-        return false;
-      }
-
       if (requiresDeliveryLocation && mealsWithPlates.length > 0) {
         const missingLocation = mealsWithPlates.some(mealType => !deliverySelections[mealType]);
         if (missingLocation) {
@@ -163,40 +168,47 @@ export function useMealPollDay(
           return false;
         }
       }
+      return true;
     }
 
+    // PG / single-select: any subset of open meals is fine.
     return true;
   }, [
-    buildPayload,
     deliverySelections,
     mealsWithPlates,
     multiQuantity,
-    openPolls.length,
-    quantitySelections,
     requiresDeliveryLocation,
     showToast,
     t,
   ]);
 
   const load = useCallback(async () => {
+    const generation = ++loadGenerationRef.current;
     setLoading(true);
     try {
       const day = await mealsApi.getMealPolls(spaceId, menuDate);
+      // Ignore stale responses from overlapping first-load / focus / spaceType reloads.
+      if (generation !== loadGenerationRef.current) {
+        return;
+      }
+      const dayPolls = day.polls ?? [];
       setMealBillingType(day.myMealBillingType ?? 'PAY_PER_MEAL');
-      setPolls(day.polls);
+      setPolls(dayPolls);
       setMyPaymentStatus(day.myPaymentStatus ?? null);
       setMyRejectionReason(day.myRejectionReason ?? null);
+      setMyPaymentChargedAmount(day.myPaymentChargedAmount ?? null);
       setMyPrepaidOverflowAmount(day.myPrepaidOverflowAmount ?? null);
       setMyPrepaidDebitedAmount(day.myPrepaidDebitedAmount ?? null);
       setMyPrepaidOverflowPayment(day.myPrepaidOverflowPayment ?? null);
       setDeliveryLocations(day.deliveryLocations ?? []);
 
       const lastUsed: DeliverySelections = { ...(day.myLastDeliveryLocationIds ?? {}) };
+      const catalog = day.deliveryLocations ?? [];
       const initialSingle: SingleSelections = {};
       const initialQuantities: QuantitySelections = {};
       const initialDelivery: DeliverySelections = {};
 
-      for (const poll of day.polls) {
+      for (const poll of dayPolls) {
         if (poll.mySelectedOptionId) {
           initialSingle[poll.mealType] = poll.mySelectedOptionId;
         }
@@ -209,9 +221,22 @@ export function useMealPollDay(
           initialQuantities[poll.mealType] = buildInitialQuantities(poll);
         }
 
-        const prefilledLocation = poll.myDeliveryLocationId ?? lastUsed[poll.mealType] ?? undefined;
-        if (prefilledLocation && poll.status === 'OPEN' && mealPlates > 0) {
-          initialDelivery[poll.mealType] = prefilledLocation;
+        const pastDay = isPastMenuDate(menuDate);
+        const canPrefill =
+          mealPlates > 0 &&
+          (poll.status === 'OPEN' || poll.status === 'CLOSED');
+        if (!canPrefill || catalog.length === 0) {
+          continue;
+        }
+
+        // Prefer existing poll snapshot when still active; else last/first preferred.
+        const preferred =
+          poll.myDeliveryLocationId &&
+          catalog.some(location => location.id === poll.myDeliveryLocationId)
+            ? poll.myDeliveryLocationId
+            : resolvePreferredDeliveryLocationId(catalog, lastUsed[poll.mealType]);
+        if (preferred) {
+          initialDelivery[poll.mealType] = preferred;
         }
       }
 
@@ -220,13 +245,35 @@ export function useMealPollDay(
       setDeliverySelections(initialDelivery);
       setLastDeliveryLocations(lastUsed);
 
-      const open = day.polls.filter(poll => poll.status === 'OPEN');
-      const responded = open.length > 0 && open.every(poll => pollHasResponse(poll));
-      setEditing(options?.startInEditMode ? true : !responded);
+      const pastDay = isPastMenuDate(menuDate);
+      const paymentLocked = day.myPaymentStatus === 'PENDING_APPROVAL';
+      const open = dayPolls.filter(poll => poll.status === 'OPEN');
+      const display = dayPolls.filter(
+        poll => poll.status === 'OPEN' || poll.status === 'CLOSED',
+      );
+      const responded =
+        display.length > 0 &&
+        display.every(poll => {
+          if (multiQuantity) {
+            return (poll.mySelections?.length ?? 0) > 0;
+          }
+          return poll.mySelectedOptionId != null;
+        });
+      if (paymentLocked) {
+        setEditing(false);
+      } else {
+        setEditing(
+          options?.startInEditMode || pastDay || open.length === 0 ? true : !responded,
+        );
+      }
     } catch {
+      if (generation !== loadGenerationRef.current) {
+        return;
+      }
       setPolls([]);
       setMyPaymentStatus(null);
       setMyRejectionReason(null);
+      setMyPaymentChargedAmount(null);
       setMyPrepaidOverflowAmount(null);
       setMyPrepaidDebitedAmount(null);
       setMyPrepaidOverflowPayment(null);
@@ -235,9 +282,11 @@ export function useMealPollDay(
       setLastDeliveryLocations({});
       showToast(t('meals.errors.loadFailed'));
     } finally {
-      setLoading(false);
+      if (generation === loadGenerationRef.current) {
+        setLoading(false);
+      }
     }
-  }, [menuDate, multiQuantity, options?.startInEditMode, pollHasResponse, showToast, spaceId, t]);
+  }, [menuDate, multiQuantity, options?.startInEditMode, showToast, spaceId, t]);
 
   useNavigationFocusReload(load, options?.autoReload !== false);
 
@@ -266,9 +315,12 @@ export function useMealPollDay(
           if (prev[mealType]) {
             return prev;
           }
-          const lastUsed = lastDeliveryLocations[mealType];
-          if (lastUsed) {
-            return { ...prev, [mealType]: lastUsed };
+          const preferred = resolvePreferredDeliveryLocationId(
+            deliveryLocations,
+            lastDeliveryLocations[mealType],
+          );
+          if (preferred) {
+            return { ...prev, [mealType]: preferred };
           }
           return prev;
         });
@@ -283,7 +335,7 @@ export function useMealPollDay(
         });
       }
     },
-    [lastDeliveryLocations, quantitySelections],
+    [deliveryLocations, lastDeliveryLocations, quantitySelections],
   );
 
   const handleDeliveryLocationChange = useCallback((mealType: MealType, locationId: UUID) => {
@@ -291,11 +343,36 @@ export function useMealPollDay(
   }, []);
 
   const handleUpdateChoices = useCallback(() => {
+    if (mealEditsLocked) {
+      showToast(t('meals.poll.paymentUnderReviewLock'));
+      return;
+    }
     setEditing(true);
-  }, []);
+  }, [mealEditsLocked, showToast, t]);
+
+  const showPaymentAdjustmentToast = useCallback(
+    (adjustment: number | null | undefined) => {
+      if (adjustment == null || adjustment === 0) {
+        showToast(t('meals.poll.saved'));
+        return;
+      }
+      const amount = Math.abs(adjustment);
+      if (adjustment < 0) {
+        showToast(t('meals.poll.paidEditCredit', { amount }));
+        return;
+      }
+      showToast(t('meals.poll.paidEditAdditional', { amount }));
+    },
+    [showToast, t],
+  );
 
   const submitWithPayment = useCallback(
     async (paymentChoice?: MealPollPaymentChoice, proofImageBase64?: string) => {
+      if (mealEditsLocked) {
+        showToast(t('meals.poll.paymentUnderReviewLock'));
+        return false;
+      }
+
       const payload = buildPayload();
       if (!payload) {
         return false;
@@ -313,6 +390,7 @@ export function useMealPollDay(
         setPolls(day.polls);
         setMyPaymentStatus(day.myPaymentStatus ?? null);
         setMyRejectionReason(day.myRejectionReason ?? null);
+        setMyPaymentChargedAmount(day.myPaymentChargedAmount ?? null);
         setMyPrepaidOverflowAmount(day.myPrepaidOverflowAmount ?? null);
         setMyPrepaidDebitedAmount(day.myPrepaidDebitedAmount ?? null);
         setMyPrepaidOverflowPayment(day.myPrepaidOverflowPayment ?? null);
@@ -328,6 +406,8 @@ export function useMealPollDay(
               overflow: day.myPrepaidOverflowAmount ?? 0,
             }),
           );
+        } else if (day.myPaymentAdjustment != null && day.myPaymentAdjustment !== 0) {
+          showPaymentAdjustmentToast(day.myPaymentAdjustment);
         } else {
           showToast(
             paymentChoice === 'MARK_AS_PAID'
@@ -344,7 +424,16 @@ export function useMealPollDay(
         setSaving(false);
       }
     },
-    [buildPayload, menuDate, options?.onSaved, showToast, spaceId, t],
+    [
+      buildPayload,
+      mealEditsLocked,
+      menuDate,
+      options?.onSaved,
+      showPaymentAdjustmentToast,
+      showToast,
+      spaceId,
+      t,
+    ],
   );
 
   const submitPaymentProof = useCallback(
@@ -372,11 +461,29 @@ export function useMealPollDay(
     if (!validateForSave()) {
       return false;
     }
-    if (requiresPayment) {
+    if (mealEditsLocked) {
+      showToast(t('meals.poll.paymentUnderReviewLock'));
+      return false;
+    }
+    // Already paid: save selections without Complete payment.
+    if (myPaymentStatus === 'PAID') {
+      return submitWithPayment();
+    }
+    // Payment only when the customer ordered at least one plate.
+    if (requiresPayment && totalPlates > 0) {
       return true;
     }
     return submitWithPayment();
-  }, [requiresPayment, submitWithPayment, validateForSave]);
+  }, [
+    mealEditsLocked,
+    myPaymentStatus,
+    requiresPayment,
+    showToast,
+    submitWithPayment,
+    t,
+    totalPlates,
+    validateForSave,
+  ]);
 
   const totalPlatesForMeal = useCallback(
     (mealType: MealType) => sumQuantities(quantitySelections[mealType]),
@@ -387,11 +494,15 @@ export function useMealPollDay(
     loading,
     saving,
     openPolls,
+    displayPolls,
+    dateReadOnly,
     allResponded,
     anyResponded,
     hasPartialSubmission,
     myPaymentStatus,
     myRejectionReason,
+    myPaymentChargedAmount,
+    mealEditsLocked,
     myPrepaidOverflowAmount,
     myPrepaidDebitedAmount,
     myPrepaidOverflowPayment,

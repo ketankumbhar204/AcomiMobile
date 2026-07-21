@@ -6,14 +6,13 @@ export function dayHasActivity(day: MemberMealActivityDay | undefined): boolean 
   if (!day) {
     return false;
   }
-  const slotsActive = day.slots.some(slot => slot.status !== 'INACTIVE');
-  if (slotsActive) {
-    return true;
-  }
-  if (typeof day.hasActivity === 'boolean') {
-    return day.hasActivity;
-  }
-  return false;
+  const slots = day.slots ?? [];
+  return slots.some(
+    slot =>
+      slot.status === 'ACCEPTED' ||
+      slot.status === 'PENDING' ||
+      slot.status === 'SKIPPED',
+  );
 }
 
 /** Normalize API date values (string, array, or ISO datetime) to YYYY-MM-DD. */

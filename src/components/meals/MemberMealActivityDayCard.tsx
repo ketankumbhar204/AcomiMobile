@@ -13,9 +13,19 @@ import {
 
 const PAYMENT_DOT: Record<ActivityPaymentDisplay, string> = {
   PAID: colors.success,
+  IN_REVIEW: '#2563EB',
   PENDING: '#EAB308',
   OVERDUE: '#EF4444',
   REJECTED: '#EF4444',
+  NONE: colors.muted,
+};
+
+const PAYMENT_TEXT: Record<ActivityPaymentDisplay, string> = {
+  PAID: colors.success,
+  IN_REVIEW: '#1E3A8A',
+  PENDING: '#92400E',
+  OVERDUE: '#991B1B',
+  REJECTED: '#991B1B',
   NONE: colors.muted,
 };
 
@@ -55,6 +65,7 @@ export function MemberMealActivityDayCard({
   const paymentLabels = useMemo(
     () => ({
       PAID: t('meals.activity.history.paidStatus'),
+      IN_REVIEW: t('meals.activity.history.inReviewStatus'),
       PENDING: t('meals.activity.history.pendingStatus'),
       OVERDUE: t('meals.activity.history.overdue'),
       REJECTED: t('meals.activity.history.rejected'),
@@ -64,9 +75,9 @@ export function MemberMealActivityDayCard({
   );
 
   const visibleSlots = MEAL_TYPES.map(mealType => {
-    const slot = day.slots.find(row => row.mealType === mealType);
+    const slot = (day.slots ?? []).find(row => row.mealType === mealType);
     return slot ?? null;
-  }).filter(slot => slot != null && slot.status !== 'INACTIVE');
+  }).filter(slot => slot != null && slot.status !== 'INACTIVE' && slot.status !== 'NO_MENU');
 
   const payment = formatPaymentLine(day, todayIso, paymentLabels);
 
@@ -94,9 +105,14 @@ export function MemberMealActivityDayCard({
 
       {payment.display !== 'NONE' && payment.amount ? (
         <View style={styles.paymentRow}>
-          <View style={[styles.paymentDot, { backgroundColor: PAYMENT_DOT[payment.display] }]} />
-          <Text style={styles.paymentText}>
-            {payment.label} {payment.amount}
+          <View style={styles.paymentStatus}>
+            <View style={[styles.paymentDot, { backgroundColor: PAYMENT_DOT[payment.display] }]} />
+            <Text style={[styles.paymentLabel, { color: PAYMENT_TEXT[payment.display] }]}>
+              {payment.label}
+            </Text>
+          </View>
+          <Text style={[styles.paymentAmount, { color: PAYMENT_TEXT[payment.display] }]}>
+            {payment.amount}
           </Text>
         </View>
       ) : null}
@@ -144,21 +160,39 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontWeight: '600',
     marginLeft: spacing.xs,
+    minWidth: 52,
+    textAlign: 'right',
   },
   paymentRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    justifyContent: 'space-between',
+    gap: spacing.sm,
     marginTop: 2,
+    paddingTop: spacing.xs,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  paymentStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    flex: 1,
+    minWidth: 0,
   },
   paymentDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
   },
-  paymentText: {
+  paymentLabel: {
     ...typography.caption,
-    color: colors.textPrimary,
     fontWeight: '700',
+  },
+  paymentAmount: {
+    ...typography.caption,
+    fontWeight: '700',
+    minWidth: 52,
+    textAlign: 'right',
   },
 });

@@ -1,3 +1,4 @@
+import type { NavigatorScreenParams } from '@react-navigation/native';
 import type { MembershipRole, UUID } from '../api/types';
 
 export type AuthStackParamList = {
@@ -14,7 +15,7 @@ export type SpaceTabParamList = {
   Meals: { spaceId: UUID };
   Payments: {
     spaceId: UUID;
-    initialFilter?: 'all' | 'pending' | 'collected';
+    initialFilter?: 'all' | 'pending' | 'collected' | 'underReview';
     initialSection?:
       | 'members'
       | 'pendingReview'
@@ -40,7 +41,8 @@ export type MainStackParamList = {
   CreateSpace: undefined;
   SpaceDetails: { spaceId: UUID };
   EditSpace: { spaceId: UUID };
-  SpaceTabs: { spaceId: UUID };
+  /** Parent space id + optional nested tab target (soft navigate; avoid CommonActions.reset). */
+  SpaceTabs: { spaceId: UUID } & NavigatorScreenParams<SpaceTabParamList>;
   InviteMembers: {
     spaceId: UUID;
     mobileNumber?: string;
@@ -161,7 +163,7 @@ export type MainStackParamList = {
     buildingId?: UUID;
     occupancyId?: UUID;
   };
-  DailyMenuToday: { spaceId: UUID };
+  DailyMenuToday: { spaceId: UUID; menuDate?: string };
   DailyMenuEdit: {
     spaceId: UUID;
     menuDate: string;
@@ -179,7 +181,12 @@ export type MainStackParamList = {
   };
   MealComboForm: { spaceId: UUID; mode: 'create' | 'edit'; comboId?: UUID };
   MenuLibrary: { spaceId: UUID };
-  MenuPlanning: { spaceId: UUID; menuDate?: string };
+  MenuPlanning: {
+    spaceId: UUID;
+    menuDate?: string;
+    /** When set, Menu Planning opens with this meal selected. */
+    mealType?: 'BREAKFAST' | 'LUNCH' | 'DINNER';
+  };
   MealDeliveryLocations: { spaceId: UUID };
   MenuSharePreview: {
     spaceId: UUID;
@@ -202,11 +209,31 @@ export type MainStackParamList = {
     spaceId: UUID;
     status: 'AVAILABLE' | 'OCCUPIED';
   };
-  MemberPayments: { spaceId: UUID; memberId: UUID; memberName: string };
+  MemberPayments: {
+    spaceId: UUID;
+    memberId: UUID;
+    memberName: string;
+    /** Optional billing month (YYYY-MM) when opened from Owner Payments. */
+    month?: string;
+  };
   PaymentDetail: {
     spaceId: UUID;
     paymentId: UUID;
     memberId?: UUID;
+    memberName?: string;
+  };
+  DayMealPaymentDetail: {
+    spaceId: UUID;
+    memberId: UUID;
+    date: string;
+    memberName?: string;
+  };
+  DayMealBulkPay: {
+    spaceId: UUID;
+    memberId: UUID;
+    dates: string[];
+    totalAmount: number;
+    currencyCode: string;
     memberName?: string;
   };
   PaymentReview: { spaceId: UUID };

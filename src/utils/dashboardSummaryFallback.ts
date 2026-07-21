@@ -7,7 +7,6 @@ import type {
   DashboardAccommodationOperations,
   DashboardAttentionItem,
   DashboardFinancialSummary,
-  DashboardMessOperations,
   DashboardSummaryResponse,
   MemberPaymentLedgerResponse,
   MemberPaymentLedgerRow,
@@ -28,7 +27,7 @@ import {
 import { resolveDashboardAttention } from './dashboardTomorrowMenu';
 import { isAccommodationApplicable } from './accommodationProfile';
 import { computeOccupancyMonthlyTotalForMonth, isOccupancyBillableInMonth } from './occupancyContract';
-import { todayIsoDate, tomorrowIsoDate } from './mealDates';
+import { tomorrowIsoDate } from './mealDates';
 
 async function aggregateMealFinancial(
   spaceId: UUID,
@@ -113,42 +112,6 @@ async function loadAccommodationOperations(
   };
 }
 
-async function loadMessOperations(spaceId: UUID): Promise<DashboardMessOperations> {
-  const tomorrow = tomorrowIsoDate();
-  const today = todayIsoDate();
-  const month = currentMonthKey();
-  const { from, to } = monthDateRange(month);
-
-  const [eligibility, pollDay, menusMonth, participations, headcountDay] = await Promise.all([
-    mealsApi.getEligibilitySummary(spaceId, tomorrow).catch(() => null),
-    mealsApi.getMealPolls(spaceId, tomorrow).catch(() => ({ pollDate: tomorrow, polls: [] })),
-    mealsApi.getDailyMenusRange(spaceId, from, to).catch(() => []),
-    mealsApi.getMealParticipations(spaceId, { status: 'ACTIVE' }).catch(() => []),
-    mealsApi.getMealHeadcountDay(spaceId, today).catch(() => ({ date: today, slots: [] })),
-  ]);
-
-  const openPolls = pollDay.polls.filter(poll => poll.status === 'OPEN');
-  const eligibleCount =
-    eligibility?.distinctEligibleMemberCount ??
-    eligibility?.slots.reduce((max, slot) => Math.max(max, slot.eligibleCount), 0) ??
-    participations.length;
-
-  const todaysHeadcount = headcountDay.slots.reduce(
-    (total, slot) => total + (slot.mealsToPrepare ?? 0),
-    0,
-  );
-
-  return {
-    membersReceivingMeals: eligibleCount,
-    menusPublishedThisMonth: menusMonth.filter(menu => menu.status === 'PUBLISHED').length,
-    openPollsCount: openPolls.length,
-    todaysHeadcount: todaysHeadcount > 0 ? todaysHeadcount : null,
-    pollRespondedCount:
-      openPolls.length > 0 ? Math.max(...openPolls.map(poll => poll.responseCount)) : 0,
-    pollEligibleCount: eligibleCount,
-  };
-}
-
 function resolveSubscriptionActivationAttention(
   pendingCount: number,
 ): DashboardAttentionItem | null {
@@ -183,6 +146,11 @@ async function loadMessAttention(spaceId: UUID): Promise<DashboardAttentionItem[
   return menuAttention ? [menuAttention] : [];
 }
 
+/**
+ * @deprecated Do not use for Action Center. Dashboard-summary is served by the backend;
+ * Pending Actions is the single source of truth. Kept only for historical reference —
+ * prefer failing closed over synthesizing attention.
+ */
 export async function buildDashboardSummaryFallback(
   spaceId: UUID,
   spaceType: SpaceType,
@@ -192,7 +160,7 @@ export async function buildDashboardSummaryFallback(
   const isMess = spaceType === 'MESS';
 
   let financialParts: DashboardFinancialSummary[] = [];
-  let messOperations: DashboardMessOperations | null = null;
+  let messOperations = null;
   let accommodationOperations: DashboardAccommodationOperations | null = null;
   let attention: DashboardAttentionItem[] = [];
 
@@ -224,7 +192,7 @@ export async function buildDashboardSummaryFallback(
   // Do not invent a separate payments_overdue attention count in the client fallback.
 
   if (isMess) {
-    messOperations = await loadMessOperations(spaceId);
+    // Mess operations summary cards were removed from the dashboard UI.
     const subscriptionAttention = await loadSubscriptionActivationAttention(spaceId);
     const messAttention = await loadMessAttention(spaceId);
     attention = [
@@ -239,7 +207,6 @@ export async function buildDashboardSummaryFallback(
       row =>
         row.status === 'PENDING' ||
         row.status === 'PARTIAL' ||
-        row.status === 'UNDER_REVIEW' ||
         row.status === 'UPDATE_REQUESTED' ||
         row.status === 'REJECTED',
     ).length;
@@ -329,16 +296,18 @@ export async function buildMemberPaymentLedgerFallback(
 
     const expectedCharges = sumNullable(expectedParts);
     const collected = sumNullable(collectedParts);
-    const pending = computePending(expectedCharges, collected);
+    const underReview = null;
+    const pending = computePending(expectedCharges, collected, underReview);
 
     rows.push({
       memberId,
       memberName: member.fullName,
       expectedCharges,
       collected,
+      underReview,
       pending,
       currencyCode,
-      status: derivePaymentStatus(expectedCharges, collected),
+      status: derivePaymentStatus(expectedCharges, collected, underReview),
     });
   }
 

@@ -8,7 +8,7 @@ type PaymentRequestUpdateModalProps = {
   visible: boolean;
   reviewing?: boolean;
   onClose: () => void;
-  onConfirm: (message: string) => void;
+  onConfirm: (message: string) => void | Promise<void>;
 };
 
 export function PaymentRequestUpdateModal({
@@ -30,8 +30,9 @@ export function PaymentRequestUpdateModal({
     if (!trimmed) {
       return;
     }
-    onConfirm(trimmed);
-    setMessage('');
+    void Promise.resolve(onConfirm(trimmed)).then(() => {
+      setMessage('');
+    });
   };
 
   return (

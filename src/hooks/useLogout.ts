@@ -3,6 +3,7 @@ import { InteractionManager } from 'react-native';
 import { useAuthStore } from '../store/authStore';
 import { useMemberStore } from '../store/memberStore';
 import { useSpaceStore } from '../store/spaceStore';
+import { invalidateDashboardQueries } from '../utils/dashboardQueryCache';
 
 const LOG_TAG = '[Logout]';
 
@@ -15,12 +16,15 @@ export function useLogout(): () => Promise<void> {
     console.log(`${LOG_TAG} Started`);
 
     try {
+      // Drop owner-scoped Action Center caches before switching accounts on this device.
+      invalidateDashboardQueries();
       await clearSession();
       resetMembership();
       await resetSpaceSession();
       console.log(`${LOG_TAG} Completed`);
     } catch (err) {
       console.error(`${LOG_TAG} Error during logout`, err);
+      invalidateDashboardQueries();
       await clearSession();
       resetMembership();
       void resetSpaceSession();

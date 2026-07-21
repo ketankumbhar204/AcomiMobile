@@ -1,6 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import {
+  DefaultTheme,
+  NavigationContainer,
+  type Theme,
+} from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuthStore } from '../store/authStore';
 import { useSpaceStore } from '../store/spaceStore';
@@ -10,22 +14,24 @@ import { MainNavigator } from './MainNavigator';
 import {
   navigationRef,
   navigateBootstrapResult,
-  resetToAcceptInvitations,
-  resetToDashboard,
-  resetToMySpaces,
 } from './navigationRef';
 import type { RootStackParamList } from './types';
 import type { SpaceBootstrapResult } from '../store/spaceStore';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-function BootstrapScreen() {
-  return (
-    <View style={styles.splash}>
-      <ActivityIndicator size="large" color={colors.primary} />
-    </View>
-  );
-}
+const navigationTheme: Theme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: colors.background,
+    card: colors.background,
+    primary: colors.primary,
+    text: colors.textPrimary,
+    border: colors.border,
+    notification: colors.primary,
+  },
+};
 
 function applyStartupNavigation(result: SpaceBootstrapResult) {
   if (!navigationRef.isReady()) {
@@ -104,28 +110,52 @@ export function RootNavigator() {
     }
   }
 
-  return (
-    <NavigationContainer ref={navigationRef} onReady={handleNavigationReady}>
+  const stack = useMemo(
+    () => (
       <Stack.Navigator
         key={rootStackKey}
-        screenOptions={{ headerShown: false }}>
-        {showBootstrap ? (
-          <Stack.Screen name="Bootstrap" component={BootstrapScreen} />
-        ) : isAuthenticated ? (
+        screenOptions={{
+          headerShown: false,
+          animation: 'none',
+          contentStyle: { backgroundColor: colors.background },
+        }}>
+        {isAuthenticated ? (
           <Stack.Screen name="Main" component={MainNavigator} />
         ) : (
           <Stack.Screen name="Auth" component={AuthNavigator} />
         )}
       </Stack.Navigator>
-    </NavigationContainer>
+    ),
+    [isAuthenticated, rootStackKey],
+  );
+
+  return (
+    <View style={styles.root}>
+      <NavigationContainer
+        ref={navigationRef}
+        theme={navigationTheme}
+        onReady={handleNavigationReady}>
+        {stack}
+      </NavigationContainer>
+      {showBootstrap ? (
+        <View style={styles.splashOverlay} pointerEvents="auto">
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  splash: {
+  root: {
     flex: 1,
+    backgroundColor: colors.background,
+  },
+  splashOverlay: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 100,
   },
 });

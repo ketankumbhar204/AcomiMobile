@@ -13,16 +13,18 @@ export type MenuSelectionSummaryChip = {
 type MenuSelectionSummaryProps = {
   comboChips: MenuSelectionSummaryChip[];
   itemChips: MenuSelectionSummaryChip[];
+  extraChips?: MenuSelectionSummaryChip[];
   onRemove: (id: string) => void;
 };
 
 export function MenuSelectionSummary({
   comboChips,
   itemChips,
+  extraChips = [],
   onRemove,
 }: MenuSelectionSummaryProps) {
   const { t } = useTranslation();
-  const total = comboChips.length + itemChips.length;
+  const total = comboChips.length + itemChips.length + extraChips.length;
 
   return (
     <View style={styles.wrap}>
@@ -51,6 +53,22 @@ export function MenuSelectionSummary({
           <Text style={styles.groupLabel}>{t('meals.planning.selectedItemsGroup')}</Text>
           <View style={styles.chipRow}>
             {itemChips.map(chip => (
+              <PlanningChip
+                key={chip.id}
+                label={chip.label}
+                variant="ITEM"
+                onRemove={() => onRemove(chip.id)}
+              />
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      {extraChips.length > 0 ? (
+        <View style={styles.group}>
+          <Text style={styles.groupLabel}>{t('meals.planning.selectedExtrasGroup')}</Text>
+          <View style={styles.chipRow}>
+            {extraChips.map(chip => (
               <PlanningChip
                 key={chip.id}
                 label={chip.label}

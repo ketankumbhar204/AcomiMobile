@@ -1,10 +1,12 @@
 import type { MealComboResponse } from '../api/types';
 import type { MenuAdHocPackage, MenuSelectionItemPackage } from './dailyMenuDraft';
+import { extraItemDraftId } from './dailyMenuDraft';
 import { getEffectivePriceDraft, hasComboPrice, parsePriceInput } from './comboPrice';
 
 export type MenuSelectionSnapshot = {
   combos: MealComboResponse[];
   itemPackages: MenuSelectionItemPackage[];
+  extraPackages?: MenuSelectionItemPackage[];
   adHocPackages: MenuAdHocPackage[];
 };
 
@@ -15,6 +17,7 @@ export function isMenuSelectionFullyResolved(
   draftPrices: Record<string, string>,
   adHocPackages: MenuAdHocPackage[],
   requiresMealPrices = true,
+  selectedExtraIds: string[] = [],
 ): boolean {
   for (const comboId of selectedComboIds) {
     const combo = combos.find(row => row.comboId === comboId);
@@ -43,6 +46,13 @@ export function isMenuSelectionFullyResolved(
 
   for (const itemId of selectedItemIds) {
     const draft = getEffectivePriceDraft(itemId, draftPrices, null);
+    if (parsePriceInput(draft) == null) {
+      return false;
+    }
+  }
+
+  for (const itemId of selectedExtraIds) {
+    const draft = getEffectivePriceDraft(extraItemDraftId(itemId), draftPrices, null);
     if (parsePriceInput(draft) == null) {
       return false;
     }

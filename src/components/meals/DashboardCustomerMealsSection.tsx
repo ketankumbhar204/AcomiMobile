@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import type { UUID } from '../../api/types';
+import type { MealPollPaymentStatus, UUID } from '../../api/types';
 import { useCustomerSubscriptionStatus } from '../../hooks/useCustomerSubscriptionStatus';
 import { useMealPricingPolicy } from '../../hooks/useMealPricingPolicy';
 import { useLinkedMember } from '../../hooks/useLinkedMember';
@@ -10,17 +10,20 @@ import { useMealPollDay } from '../../hooks/useMealPollDay';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../../navigation/types';
 import { navigateMainStack } from '../../navigation/mainStackNavigation';
+import { useToastStore } from '../../store/toastStore';
 import {
   canShiftCustomerMealDate,
+  customerMealDateBounds,
   resolveCustomerMealFocusDate,
 } from '../../utils/customerMealFocusDate';
-import { addDaysIsoDate, todayIsoDate } from '../../utils/mealDates';
+import { addDaysIsoDate, isPastMenuDate, todayIsoDate } from '../../utils/mealDates';
+import { buildMealSummaryFromPolls } from '../../utils/mealSelectionSummary';
 import {
   DashboardCustomerPollCard,
   type DashboardPollCardState,
 } from './DashboardCustomerPollCard';
 import { DashboardCustomerSubscriptionBanner } from './DashboardCustomerSubscriptionBanner';
-import { MealPollPaymentProofModal } from './MealPollPaymentProofModal';
+import { MenuDatePickerModal } from './MenuDatePickerModal';
 
 type MainStackNav = NativeStackNavigationProp<MainStackParamList>;
 
@@ -30,33 +33,50 @@ type DashboardCustomerMealsSectionProps = {
 
 function resolveCardState(
   loading: boolean,
-  openPollCount: number,
+  pollCount: number,
   allResponded: boolean,
   hasPartialSubmission: boolean,
+  /** When the day has a meal payment, treat it as ordered even if poll flags lag. */
+  hasPaymentContext = false,
+  hasOrderPlates = false,
 ): DashboardPollCardState {
-  if (!loading && openPollCount === 0) {
+  if (!loading && pollCount === 0) {
     return 'empty';
   }
-  if (allResponded) {
+  if (allResponded || (hasPaymentContext && !hasPartialSubmission && hasOrderPlates)) {
     return 'complete';
   }
-  if (hasPartialSubmission) {
+  if (hasPartialSubmission || hasOrderPlates) {
     return 'partial';
   }
+  // Payment exists for this day (e.g. Pay later) — keep order/payment UI visible.
+  if (hasPaymentContext) {
+    return 'complete';
+  }
   return 'active';
+}
+
+function canUploadMealPaymentProof(status: MealPollPaymentStatus | null | undefined): boolean {
+  return (
+    status === 'PENDING' ||
+    status === 'REJECTED' ||
+    // Backend may surface owner "needs update" on meal-day payments.
+    (status as string) === 'UPDATE_REQUESTED'
+  );
 }
 
 export function DashboardCustomerMealsSection({ spaceId }: DashboardCustomerMealsSectionProps) {
   const { t, i18n } = useTranslation();
   const [menuDate, setMenuDate] = useState(todayIsoDate);
   const [userPickedDate, setUserPickedDate] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const mealPricing = useMealPricingPolicy(spaceId);
   const permissions = useSpacePermissions(spaceId);
   const navigation = useNavigation();
   const stackNavigation =
     navigation.getParent<MainStackNav>() ?? (navigation as MainStackNav);
-  const [proofModalOpen, setProofModalOpen] = useState(false);
-  const { memberId: linkedMemberId } = useLinkedMember(spaceId);
+  const showToast = useToastStore(state => state.showToast);
+  const { memberId: linkedMemberId, member: linkedMember } = useLinkedMember(spaceId);
   const { status: subscriptionStatus, reload: reloadSubscriptionStatus } =
     useCustomerSubscriptionStatus(spaceId);
 
@@ -84,16 +104,34 @@ export function DashboardCustomerMealsSection({ spaceId }: DashboardCustomerMeal
   );
 
   const poll = useMealPollDay(spaceId, menuDate, permissions.spaceType);
+  const isPastDate = isPastMenuDate(menuDate);
+  /** Today with only closed polls — still show menus, but as view-only. */
+  const reviewOnly =
+    isPastDate || (!poll.loading && poll.openPolls.length === 0 && poll.displayPolls.length > 0);
+
+  const orderSummary = useMemo(
+    () => buildMealSummaryFromPolls(poll.displayPolls, poll.multiQuantity),
+    [poll.displayPolls, poll.multiQuantity],
+  );
 
   const cardState = useMemo(
     () =>
       resolveCardState(
         poll.loading,
-        poll.openPolls.length,
+        poll.displayPolls.length,
         poll.allResponded,
         poll.hasPartialSubmission,
+        poll.myPaymentStatus != null,
+        orderSummary.totalPlates > 0,
       ),
-    [poll.allResponded, poll.hasPartialSubmission, poll.loading, poll.openPolls.length],
+    [
+      orderSummary.totalPlates,
+      poll.allResponded,
+      poll.displayPolls.length,
+      poll.hasPartialSubmission,
+      poll.loading,
+      poll.myPaymentStatus,
+    ],
   );
 
   const mealSelectionBlocked = useMemo(() => {
@@ -132,8 +170,18 @@ export function DashboardCustomerMealsSection({ spaceId }: DashboardCustomerMeal
     setMenuDate(prev => addDaysIsoDate(prev, 1));
   }, [menuDate]);
 
+  const handlePickDate = useCallback((nextDate: string) => {
+    const { minDate, maxDate } = customerMealDateBounds();
+    if (nextDate < minDate || nextDate > maxDate) {
+      return;
+    }
+    setUserPickedDate(true);
+    setMenuDate(nextDate);
+  }, []);
+
   const handleOpenPoll = useCallback(() => {
-    if (mealSelectionBlocked) {
+    // Past / closed-only days are view-only; still allow opening to review menus/orders.
+    if (mealSelectionBlocked && !reviewOnly) {
       return;
     }
 
@@ -144,12 +192,7 @@ export function DashboardCustomerMealsSection({ spaceId }: DashboardCustomerMeal
     }
 
     navigateMainStack('MealPollResponse', params);
-  }, [
-    mealSelectionBlocked,
-    menuDate,
-    spaceId,
-    stackNavigation,
-  ]);
+  }, [mealSelectionBlocked, menuDate, reviewOnly, spaceId, stackNavigation]);
 
   const handleViewPlans = useCallback(() => {
     if (!linkedMemberId) {
@@ -163,15 +206,44 @@ export function DashboardCustomerMealsSection({ spaceId }: DashboardCustomerMeal
     navigateMainStack('CustomerSubscriptionPlans', params);
   }, [linkedMemberId, spaceId, stackNavigation]);
 
-  const handleProofSubmit = useCallback(
-    async (proofImageBase64: string) => {
-      const success = await poll.submitPaymentProof(proofImageBase64);
-      if (success) {
-        setProofModalOpen(false);
-      }
-    },
-    [poll.submitPaymentProof],
-  );
+  const handleUploadProof = useCallback(() => {
+    if (!linkedMemberId) {
+      showToast(t('paymentCollection.errors.submitProof'));
+      return;
+    }
+
+    const summary = buildMealSummaryFromPolls(poll.displayPolls, poll.multiQuantity);
+    const totalAmount =
+      poll.myPaymentChargedAmount != null
+        ? Number(poll.myPaymentChargedAmount)
+        : summary.totalAmount;
+    const currencyCode = summary.currencyCode || 'INR';
+    const params: MainStackParamList['DayMealBulkPay'] = {
+      spaceId,
+      memberId: linkedMemberId,
+      dates: [menuDate],
+      totalAmount,
+      currencyCode,
+      memberName: linkedMember?.fullName ?? undefined,
+    };
+
+    if (stackNavigation?.navigate) {
+      stackNavigation.navigate('DayMealBulkPay', params);
+      return;
+    }
+    navigateMainStack('DayMealBulkPay', params);
+  }, [
+    linkedMember?.fullName,
+    linkedMemberId,
+    menuDate,
+    poll.displayPolls,
+    poll.multiQuantity,
+    poll.myPaymentChargedAmount,
+    showToast,
+    spaceId,
+    stackNavigation,
+    t,
+  ]);
 
   return (
     <>
@@ -186,9 +258,10 @@ export function DashboardCustomerMealsSection({ spaceId }: DashboardCustomerMeal
       <DashboardCustomerPollCard
         menuDate={menuDate}
         loading={poll.loading}
-        openPolls={poll.openPolls}
+        openPolls={poll.displayPolls}
         multiQuantity={poll.multiQuantity}
         cardState={cardState}
+        isPastDate={reviewOnly}
         paymentStatus={poll.myPaymentStatus}
         rejectionReason={poll.myRejectionReason}
         prepaidOverflowAmount={poll.myPrepaidOverflowAmount}
@@ -198,22 +271,22 @@ export function DashboardCustomerMealsSection({ spaceId }: DashboardCustomerMeal
         onNextDate={handleNextDate}
         canGoPrevious={canShiftCustomerMealDate(menuDate, -1)}
         canGoNext={canShiftCustomerMealDate(menuDate, 1)}
+        onOpenCalendar={() => setDatePickerOpen(true)}
         onAction={cardState === 'empty' ? undefined : handleOpenPoll}
-        actionDisabled={mealSelectionBlocked && cardState !== 'empty'}
-        actionDisabledReason={mealSelectionDisabledReason}
+        actionDisabled={mealSelectionBlocked && !reviewOnly && cardState !== 'empty'}
+        actionDisabledReason={reviewOnly ? undefined : mealSelectionDisabledReason}
         showMealPrices={mealPricing.showMealPrices}
         onUploadProof={
-          poll.myPaymentStatus === 'PENDING' || poll.myPaymentStatus === 'REJECTED'
-            ? () => setProofModalOpen(true)
-            : undefined
+          canUploadMealPaymentProof(poll.myPaymentStatus) ? handleUploadProof : undefined
         }
       />
 
-      <MealPollPaymentProofModal
-        visible={proofModalOpen}
-        submitting={poll.saving}
-        onClose={() => setProofModalOpen(false)}
-        onSubmit={proof => void handleProofSubmit(proof)}
+      <MenuDatePickerModal
+        visible={datePickerOpen}
+        value={menuDate}
+        allowPastDates
+        onClose={() => setDatePickerOpen(false)}
+        onConfirm={handlePickDate}
       />
     </>
   );

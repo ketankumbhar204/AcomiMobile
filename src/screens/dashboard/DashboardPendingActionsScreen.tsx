@@ -10,7 +10,7 @@ import { usePendingActions } from '../../hooks/usePendingActions';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../../navigation/types';
 import { colors, spacing, typography } from '../../theme';
-import { canViewOperationalDashboard } from '../../utils/dashboardFinancial';
+import { canManageNotifications } from '../../utils/spaceOperator';
 
 type Route = NativeStackScreenProps<MainStackParamList, 'DashboardPendingActions'>['route'];
 
@@ -25,12 +25,7 @@ export function DashboardPendingActionsScreen({
   const route = useRoute<Route>();
   const spaceId = spaceIdProp ?? route.params.spaceId;
   const permissions = useSpacePermissions(spaceId);
-  const showOwnerDashboard = canViewOperationalDashboard({
-    canManageMembers: permissions.canManageMembers,
-    canManageMeals: permissions.canManageMeals === true,
-    canManageOccupancy: permissions.canManageOccupancy,
-    canViewSpaceOccupancies: permissions.canViewSpaceOccupancies === true,
-  });
+  const showOwnerDashboard = canManageNotifications(permissions);
 
   // Always load from pending-actions API (syncs payments + meal ops) so the list
   // matches the dashboard badge. Owners must not use the tenant filter.

@@ -17,6 +17,7 @@ type InlineChipEditorProps = {
   onSave: (value: string) => void | Promise<void>;
   onCancel: () => void;
   autoFocus?: boolean;
+  maxLength?: number;
   /** full = own row below chips; chip = compact tile inside horizontal scroll */
   layout?: 'full' | 'chip';
   style?: ViewStyle;
@@ -28,6 +29,7 @@ export function InlineChipEditor({
   onSave,
   onCancel,
   autoFocus = true,
+  maxLength,
   layout = 'full',
   style,
 }: InlineChipEditorProps) {
@@ -74,6 +76,7 @@ export function InlineChipEditor({
         onSubmitEditing={() => void handleSave()}
         returnKeyType="done"
         editable={!saving}
+        maxLength={maxLength}
       />
       {saving ? (
         <ActivityIndicator size="small" color={colors.primary} style={styles.action} />

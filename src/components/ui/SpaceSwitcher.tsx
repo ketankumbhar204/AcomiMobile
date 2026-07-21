@@ -7,7 +7,7 @@ import {
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { resetToAccommodationHome } from '../../navigation/navigationRef';
+import { resetToDashboard } from '../../navigation/navigationRef';
 import { useSpaceStore } from '../../store/spaceStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { invalidateAccommodationQueries } from '../../utils/accommodationQueryCache';
@@ -68,7 +68,9 @@ export function SpaceSwitcher({ spaceId }: SpaceSwitcherProps) {
     const success = await switchSpace(selectedSpaceId);
     if (success) {
       invalidateAccommodationQueries();
-      resetToAccommodationHome(selectedSpaceId);
+      // Always land on Dashboard. Accommodation tab is absent for Mess — navigating
+      // there remounts native tabs incorrectly and crashes Fabric (addViewAt).
+      resetToDashboard(selectedSpaceId);
     }
   };
 

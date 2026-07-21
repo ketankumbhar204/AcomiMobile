@@ -1,5 +1,8 @@
 import type {
+  MealPollPaymentChoice,
+  MealPollPaymentStatus,
   MemberMealActivityDayDetail,
+  MemberMealActivityDayPayment,
   MemberMealActivitySlotDetail,
   MemberMealActivitySlotStatus,
   MealType,
@@ -99,7 +102,67 @@ export function normalizeMemberMealActivityDayDetail(raw: Record<string, unknown
     }),
   );
 
-  const payment = (raw.payment ?? null) as MemberMealActivityDayDetail['payment'];
+  const paymentRaw = (raw.payment ?? null) as Record<string, unknown> | null;
+  const payment = paymentRaw
+    ? {
+        id: (paymentRaw.id as string | null | undefined) ?? null,
+        pollDate: normalizeActivityDate(paymentRaw.pollDate ?? paymentRaw.poll_date),
+        paymentChoice: (paymentRaw.paymentChoice ??
+          paymentRaw.payment_choice ??
+          null) as MealPollPaymentChoice | null,
+        paymentStatus: (paymentRaw.paymentStatus ??
+          paymentRaw.payment_status ??
+          null) as MealPollPaymentStatus | null,
+        chargedAmount:
+          paymentRaw.chargedAmount != null
+            ? Number(paymentRaw.chargedAmount)
+            : paymentRaw.charged_amount != null
+              ? Number(paymentRaw.charged_amount)
+              : null,
+        paymentBatchId:
+          (paymentRaw.paymentBatchId as string | null | undefined) ??
+          (paymentRaw.payment_batch_id as string | null | undefined) ??
+          null,
+        proofImageUrl:
+          (paymentRaw.proofImageUrl as string | null | undefined) ??
+          (paymentRaw.proof_image_url as string | null | undefined) ??
+          null,
+        referenceNumber:
+          (paymentRaw.referenceNumber as string | null | undefined) ??
+          (paymentRaw.reference_number as string | null | undefined) ??
+          null,
+        remarks: (paymentRaw.remarks as string | null | undefined) ?? null,
+        paymentMethod:
+          (paymentRaw.paymentMethod as MemberMealActivityDayPayment['paymentMethod']) ??
+          (paymentRaw.payment_method as MemberMealActivityDayPayment['paymentMethod']) ??
+          null,
+        rejectionReason:
+          (paymentRaw.rejectionReason as string | null | undefined) ??
+          (paymentRaw.rejection_reason as string | null | undefined) ??
+          null,
+        proofSubmittedAt: normalizeDateTime(
+          paymentRaw.proofSubmittedAt ?? paymentRaw.proof_submitted_at,
+        ),
+        proofReviewedAt: normalizeDateTime(
+          paymentRaw.proofReviewedAt ?? paymentRaw.proof_reviewed_at,
+        ),
+        prepaidOverflowAmount:
+          paymentRaw.prepaidOverflowAmount != null
+            ? Number(paymentRaw.prepaidOverflowAmount)
+            : paymentRaw.prepaid_overflow_amount != null
+              ? Number(paymentRaw.prepaid_overflow_amount)
+              : null,
+        prepaidDebitedAmount:
+          paymentRaw.prepaidDebitedAmount != null
+            ? Number(paymentRaw.prepaidDebitedAmount)
+            : paymentRaw.prepaid_debited_amount != null
+              ? Number(paymentRaw.prepaid_debited_amount)
+              : null,
+        prepaidOverflowPayment: Boolean(
+          paymentRaw.prepaidOverflowPayment ?? paymentRaw.prepaid_overflow_payment,
+        ),
+      }
+    : null;
   const computedHasActivity =
     Boolean(payment) ||
     dailyCharges.length > 0 ||

@@ -50,7 +50,18 @@ function logResponse(
   console.log(
     `${LOG_TAG} ← ${status} ${method?.toUpperCase() ?? 'GET'} ${url ?? ''}`,
   );
-  console.log(`${LOG_TAG}   Response:`, JSON.stringify(data, null, 2));
+  try {
+    const serialized = JSON.stringify(data);
+    const maxLen = 2500;
+    console.log(
+      `${LOG_TAG}   Response:`,
+      serialized != null && serialized.length > maxLen
+        ? `${serialized.slice(0, maxLen)}…[truncated ${serialized.length} chars]`
+        : serialized,
+    );
+  } catch {
+    console.log(`${LOG_TAG}   Response: [unserializable]`);
+  }
 }
 
 function logError(error: AxiosError<ApiErrorBody>): void {

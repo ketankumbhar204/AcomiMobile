@@ -4,10 +4,11 @@ import { notificationsApi } from '../api/notificationsApi';
 import type { SpaceNotification, UUID } from '../api/types';
 import { useSpacePermissions } from './useSpacePermissions';
 import { filterTenantVisibleNotifications } from '../utils/ownerOnlyNotifications';
+import { canManageNotifications } from '../utils/spaceOperator';
 
 export function useSpaceNotifications(spaceId: UUID, enabled: boolean) {
   const permissions = useSpacePermissions(spaceId);
-  const canManageMeals = permissions.canManageMeals === true;
+  const isOperator = canManageNotifications(permissions);
   const [notifications, setNotifications] = useState<SpaceNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -21,12 +22,12 @@ export function useSpaceNotifications(spaceId: UUID, enabled: boolean) {
     setLoading(true);
     try {
       const data = await notificationsApi.listNotifications(spaceId, false);
-      const visible = canManageMeals
+      const visible = isOperator
         ? data.notifications
         : filterTenantVisibleNotifications(data.notifications);
       setNotifications(visible);
       setUnreadCount(
-        canManageMeals
+        isOperator
           ? data.unreadCount
           : visible.filter(n => n.status === 'UNREAD').length,
       );
@@ -36,7 +37,7 @@ export function useSpaceNotifications(spaceId: UUID, enabled: boolean) {
     } finally {
       setLoading(false);
     }
-  }, [canManageMeals, enabled, spaceId]);
+  }, [enabled, isOperator, spaceId]);
 
   useFocusEffect(
     useCallback(() => {

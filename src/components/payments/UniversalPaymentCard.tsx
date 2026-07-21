@@ -3,7 +3,14 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { SpacePaymentResponse } from '../../api/types';
 import { colors, radius, spacing, typography } from '../../theme';
+import { formatBillingPeriod } from '../../utils/paymentProofPolicy';
 import { formatPaymentAmount, formatPaymentDueDate } from '../../utils/paymentHistory';
+import {
+  displayMealPaymentTitle,
+  mealPaymentListSubtitle,
+  type MealSelectionSummaryModel,
+} from '../../utils/mealSelectionSummary';
+import { mealTypeLabelKey } from '../../utils/mealLabels';
 import { PaymentStatusBadge } from './PaymentStatusBadge';
 import { PaymentStatusCardFrame } from './PaymentStatusCardFrame';
 
@@ -13,6 +20,8 @@ type UniversalPaymentCardProps = {
   /** Opens the update/pay modal without navigating to detail. */
   onUpdatePress?: () => void;
   showMember?: boolean;
+  /** Optional meal breakdown meta from existing meal activity API. */
+  mealSummary?: MealSelectionSummaryModel | null;
 };
 
 export function UniversalPaymentCard({
@@ -20,8 +29,9 @@ export function UniversalPaymentCard({
   onPress,
   onUpdatePress,
   showMember = false,
+  mealSummary = null,
 }: UniversalPaymentCardProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const needsUpdate = payment.paymentStatus === 'UPDATE_REQUESTED';
   const canUpdate =
     payment.paymentStatus === 'PENDING' ||
@@ -33,6 +43,22 @@ export function UniversalPaymentCard({
       ? t('paymentCollection.payNow')
       : t('paymentCollection.updatePayment');
 
+  const displayTitle =
+    payment.paymentType === 'MEAL'
+      ? displayMealPaymentTitle(payment.title, payment.month, month =>
+          formatBillingPeriod(month, i18n.language),
+        )
+      : payment.title;
+
+  const mealSubtitle =
+    payment.paymentType === 'MEAL' && mealSummary
+      ? mealPaymentListSubtitle(
+          mealSummary,
+          count => t('meals.summary.platesCount', { count }),
+          mealType => t(mealTypeLabelKey(mealType)),
+        )
+      : null;
+
   const content = (
     <PaymentStatusCardFrame status={payment.paymentStatus} style={styles.card}>
       <View style={styles.cardInner}>
@@ -43,13 +69,14 @@ export function UniversalPaymentCard({
             </Text>
           ) : (
             <Text style={styles.titleInline} numberOfLines={2}>
-              {payment.title}
+              {displayTitle}
             </Text>
           )}
           <PaymentStatusBadge status={payment.paymentStatus} />
         </View>
         {payment.targetLabel ? <Text style={styles.target}>{payment.targetLabel}</Text> : null}
-        {showMember ? <Text style={styles.title}>{payment.title}</Text> : null}
+        {showMember ? <Text style={styles.title}>{displayTitle}</Text> : null}
+        {mealSubtitle ? <Text style={styles.mealSubtitle}>{mealSubtitle}</Text> : null}
         <Text style={styles.amount}>{formatPaymentAmount(payment.amount, payment.currencyCode)}</Text>
         <Text style={styles.due}>
           {t('paymentCollection.dueDate', { date: formatPaymentDueDate(payment.dueDate) })}
@@ -137,6 +164,11 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.h3,
+    marginBottom: spacing.xs,
+  },
+  mealSubtitle: {
+    ...typography.caption,
+    color: colors.textSecondary,
     marginBottom: spacing.xs,
   },
   amount: {

@@ -1,6 +1,6 @@
 ﻿# CountIn Development Roadmap
 
-**Last updated:** 10 July 2026  
+**Last updated:** 11 July 2026  
 **Document type:** Living development record (statuses reflect actual FE + BE implementation)
 
 **Status legend**
@@ -16,8 +16,8 @@
 
 | Layer | Path | Maturity (Jul 2026) |
 |-------|------|---------------------|
-| Frontend | `K:/CountIn` (React Native / Expo) | High for ops modules; Complaints stub only |
-| Backend | `K:/Projects/CountIn/Backend/countin-backend` | High for core domains; empty `complaint` / `report` / `whatsapp` packages |
+| Frontend | `K:/CountIn` (React Native / Expo) | High for ops modules; Complaints MVP UI shipped (assign/staff queue next) |
+| Backend | `K:/Projects/CountIn/Backend/countin-backend` | High for core domains; Complaints MVP API shipped; empty `report` / `whatsapp` packages |
 
 ---
 
@@ -309,37 +309,41 @@ This section preserves the historical phase order while updating statuses to mat
 
 ---
 
-## Phase 8 — Notifications ✅ In-app MVP · Complaints ⏳ next
+## Phase 8 — Notifications ✅ In-app MVP · Complaints ✅ MVP (assign UI next)
 
 ### Notification architecture ✅
 
-* ✅ `space_notifications` (V75)
+* ✅ `space_notifications` (V75) + global indexes (V77)
 * ✅ List / mark read / resolve
 * ✅ Channel enum reserved: IN_APP · EMAIL · WHATSAPP · PUSH · SMS (runtime **IN_APP only**)
+* ✅ Canonical catalog: [notification-event-catalog.md](./notification-event-catalog.md)
+* ✅ Single source of truth: `space_notifications` → Pending Actions / inbox (dashboard `attention` always empty)
 
 ### In-app notifications ✅
 
 * ✅ Bell badge · `SpaceNotificationsScreen`
 * ✅ Operator badge from dashboard pending cache (no duplicate heavy sync)
+* ✅ Central deep links (`notificationDeepLinks.ts`) · operator check (`canManageNotifications`)
 
 ### Pending Actions integration ✅
 
-* ✅ Sync from payments + meal attention
+* ✅ Sync from payments, meals (internal `DashboardAttentionService`), occupancy, invitations, complaints
 * ✅ Dashboard card · Pending Actions screen
-* ✅ Owner vs tenant filtering
+* ✅ Owner vs tenant filtering (STAFF assignees keep `COMPLAINT_PENDING`)
 
 ### Backend notification service ✅
 
-* ✅ `NotificationService` · `PendingActionService` · payment sync
+* ✅ `NotificationService` · `PendingActionService`
+* ✅ Sync services: payments · complaints · invitations · occupancy · meal/subscription ops
 
 ### Future channels ⏳
 
 * ⏳ Email · WhatsApp · Push · SMS delivery adapters
 
-### Complaints & Notices (historical Phase 8 item)
+### Complaints & Notices
 
-* ⏳ **Moved to active next milestone** — see [NEXT DEVELOPMENT PHASE](#next-development-phase)
-* ⏳ Notice Board still planned after Complaints MVP
+* ✅ **Complaints MVP** — list / raise / detail / comments / status (see [NEXT DEVELOPMENT PHASE](#next-development-phase) for assign polish)
+* ⏳ Notice Board still planned after Complaints assign UI
 
 ---
 
@@ -424,12 +428,12 @@ This section preserves the historical phase order while updating statuses to mat
 * **Solid / polishing:** Payments (review, timeline, request update), billing models
 * **Empty stubs:** reports, WhatsApp send/receive
 * **Complaints:** MVP API + FE shipped (assign UI / staff queue deferred)
-* **~505** main Java sources · **75** Flyway migrations (V1–V75) · **~48** unit tests
+* **~505** main Java sources · **77** Flyway migrations (V1–V77) · **~50** unit tests
 
 ### Frontend maturity
 
-* **Strong:** Auth, spaces, members, accommodation, meals ops, dashboard, payments UI, notifications bell/list
-* **Stub:** Complaints tab (`ScreenPlaceholder`)
+* **Strong:** Auth, spaces, members, accommodation, meals ops, dashboard, payments UI, notifications bell/list, Complaints MVP
+* **Next:** Complaints assign UI / staff queue polish
 * **Debt:** Agent debug ingest regions in some accommodation/occupancy files; verbose API `console.log`
 
 ### API completion status
@@ -451,7 +455,8 @@ This section preserves the historical phase order while updating statuses to mat
 ### Database maturity
 
 * Flyway modular folders; version uniqueness test
-* Latest domains: payments (V71–V74), notifications (V75), complaints (V76)
+* Latest domains: payments (V71–V74), notifications (V75), complaints (V76), global notification indexes (V77)
+* Schema source of truth: Flyway SQL (no separate schema doc maintained)
 * Report / whatsapp migration folders remain placeholders
 
 ### Production readiness checklist
@@ -462,7 +467,7 @@ This section preserves the historical phase order while updating statuses to mat
 | Real OTP SMS/WhatsApp | ⏳ |
 | Payment gateway / UPI | ⏳ |
 | Push notifications | ⏳ |
-| Complaints module | ⏳ |
+| Complaints module | ✅ MVP · assign UI next |
 | Reports | ⏳ |
 | E2E / integration test suite | ⏳ thin |
 | Remove debug agent ingest logs | 🚧 |
@@ -480,7 +485,7 @@ This section preserves the historical phase order while updating statuses to mat
 4. **House rules** — gender policy only; no rules document module.
 5. **Dashboard meal deferral** — must keep `useEffect` on `enabled` (focus-only load regressed empty meal ops once).
 6. **Payment collected amounts** — some PG ledger paths still expected-heavy.
-7. **Empty BE packages** — `complaint`, `report`, `whatsapp` need first migrations + controllers.
+7. **Empty BE packages** — `report`, `whatsapp` need first migrations + controllers.
 8. **Legacy `ScreenPlaceholder` Dashboard branch** — dead path; safe to delete when touching nav.
 9. **Test pyramid** — unit-heavy utils/services; few screen/controller/integration tests.
 
@@ -496,7 +501,7 @@ This section preserves the historical phase order while updating statuses to mat
 | P0 | Meal day GET in-flight dedupe + coordinated dashboard load | ✅ Done |
 | P0 | Backend menu entry/package batching; eligibility/headcount query cuts | ✅ Done |
 | P1 | Further headcount aggregate SQL (sum by poll) | ⏳ |
-| P1 | Dashboard attention `hasAvailableOptions` batch | ⏳ |
+| P1 | Pending Actions focus refetch vs TTL (avoid force sync when fresh) | ⏳ |
 | P2 | Image/proof CDN caching & compression | ⏳ |
 | P2 | List virtualization audit on large member/bed lists | ⏳ |
 
@@ -508,9 +513,9 @@ This section preserves the historical phase order while updating statuses to mat
 * PG rent “Record payment” operator flow
 * Meal prepaid overflow messaging clarity
 * Remove agent debug noise from accommodation flows
-* Complaints tab → MVP list / raise / detail (assign UI next)
+* Complaints assign UI / staff queue polish
 * Unified Settings hub
-* Notice board (after Complaints)
+* Notice board (after Complaints assign)
 
 ---
 
@@ -519,8 +524,8 @@ This section preserves the historical phase order while updating statuses to mat
 * Expand payment / notification / dashboard controller tests
 * FE component tests for Payments review & Dashboard meal ops
 * Integration tests for occupancy + meal poll payment paths
-* E2E smoke: login → dashboard → plan menu → poll → payment review
-* Complaints: TDD from API contract once Phase starts
+* E2E smoke: login → dashboard → plan menu → poll → payment review → complaint
+* Complaints: expand controller/service coverage beyond domain policy tests
 
 ---
 
@@ -528,7 +533,7 @@ This section preserves the historical phase order while updating statuses to mat
 
 * Production OTP provider + rate limits audit
 * Proof image access control / signed URLs
-* Role matrix regression tests for new Complaints permissions
+* Role matrix regression tests for Complaints assign / STAFF queue
 * Audit log for complaint status changes & payment reviews
 * Dependency / secret scanning in CI
 
@@ -654,6 +659,7 @@ This section preserves the historical phase order while updating statuses to mat
 
 # Related docs
 
+* [notification-event-catalog.md](./notification-event-catalog.md) — Notification / Pending Action event catalog (canonical Action Center contract)
 * [permissions-backend-spec.md](./permissions-backend-spec.md)
 * [meals-phase-5-backend.md](./meals-phase-5-backend.md)
 * [meals-phase-5-ui-integration.md](./meals-phase-5-ui-integration.md)

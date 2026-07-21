@@ -5,6 +5,7 @@ import {
   filterTenantPaymentsInSection,
   matchesTenantPaymentFilter,
   paymentsInTenantSection,
+  resolvePreferredTenantPaymentsSection,
 } from '../tenantPaymentFilters';
 import type { SpacePaymentResponse } from '../../api/types';
 
@@ -90,5 +91,17 @@ describe('tenantPaymentFilters', () => {
       '4',
     ]);
     expect(filterTenantPaymentsInSection(sample, 'actionNeeded', 'PENDING')).toHaveLength(1);
+  });
+
+  it('opens under review when action needed is empty', () => {
+    const withoutAction = sample.filter(
+      payment =>
+        payment.paymentStatus !== 'UPDATE_REQUESTED' &&
+        payment.paymentStatus !== 'PENDING' &&
+        payment.paymentStatus !== 'REJECTED',
+    );
+    expect(resolvePreferredTenantPaymentsSection(withoutAction, 'actionNeeded')).toBe(
+      'underReview',
+    );
   });
 });

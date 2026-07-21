@@ -2,12 +2,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import type { PendingActionsSummary, UUID } from '../api/types';
 import { currentMonthKey } from '../utils/dashboardFinancial';
-import { peekDashboardSummary } from '../utils/dashboardQueryCache';
+import {
+  peekDashboardSummary,
+  subscribeDashboardInvalidation,
+} from '../utils/dashboardQueryCache';
 import { filterTenantVisiblePendingActions } from '../utils/ownerOnlyNotifications';
 import {
   fetchPendingActionsCached,
   peekPendingActions,
-  seedPendingActionsCache,
 } from '../utils/pendingActionsQueryCache';
 
 export function usePendingActions(spaceId: UUID, enabled: boolean, isOwnerOperator = false) {
@@ -16,11 +18,11 @@ export function usePendingActions(spaceId: UUID, enabled: boolean, isOwnerOperat
     if (!enabled) {
       return null;
     }
-    return (
+    const peeked =
       peekPendingActions(spaceId, month) ??
       peekDashboardSummary(spaceId, month)?.pendingActions ??
-      null
-    );
+      null;
+    return isOwnerOperator ? peeked : filterTenantVisiblePendingActions(peeked);
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -38,13 +40,8 @@ export function usePendingActions(spaceId: UUID, enabled: boolean, isOwnerOperat
         setSummary(null);
         return;
       }
-      if (!force) {
-        const fromDash = peekDashboardSummary(spaceId, month)?.pendingActions;
-        if (fromDash) {
-          seedPendingActionsCache(spaceId, fromDash, month);
-          applySummary(fromDash);
-          return;
-        }
+      // Tenants must not reuse a possibly owner-seeded cache entry as the sole source of truth.
+      if (!force && isOwnerOperator) {
         const cached = peekPendingActions(spaceId, month);
         if (cached) {
           applySummary(cached);
@@ -54,7 +51,9 @@ export function usePendingActions(spaceId: UUID, enabled: boolean, isOwnerOperat
       setLoading(true);
       setError(false);
       try {
-        const data = await fetchPendingActionsCached(spaceId, month, { force });
+        const data = await fetchPendingActionsCached(spaceId, month, {
+          force: force || !isOwnerOperator,
+        });
         applySummary(data);
       } catch {
         setError(true);
@@ -63,14 +62,25 @@ export function usePendingActions(spaceId: UUID, enabled: boolean, isOwnerOperat
         setLoading(false);
       }
     },
-    [applySummary, enabled, month, spaceId],
+    [applySummary, enabled, isOwnerOperator, month, spaceId],
   );
 
   useFocusEffect(
     useCallback(() => {
+      // Respect TTL / inflight — force only after invalidateDashboardQueries.
       void reload(false);
     }, [reload]),
   );
+
+  useEffect(() => {
+    if (!enabled) {
+      setSummary(null);
+      return undefined;
+    }
+    return subscribeDashboardInvalidation(() => {
+      void reload(true);
+    });
+  }, [enabled, reload]);
 
   useEffect(() => {
     if (!enabled) {

@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { mealsApi } from '../api/mealsApi';
 import type {
   FoodCategoryResponse,
   FoodItemResponse,
   MealComboResponse,
   UUID,
 } from '../api/types';
+import { fetchSpaceMenuCatalog, patchSpaceMenuCatalogItem } from '../utils/fetchSpaceMenuCatalog';
 
 export function useMenuLibrary(spaceId: UUID) {
   const [loading, setLoading] = useState(true);
@@ -20,14 +20,10 @@ export function useMenuLibrary(spaceId: UUID) {
     setLoading(true);
     setLoadFailed(false);
     try {
-      const [categoryList, itemList, comboList] = await Promise.all([
-        mealsApi.getFoodCategories(spaceId),
-        mealsApi.getFoodItems(spaceId),
-        mealsApi.getMealCombos(spaceId),
-      ]);
-      setCategories(categoryList);
-      setItems(itemList);
-      setCombos(comboList);
+      const catalog = await fetchSpaceMenuCatalog(spaceId, { force: true });
+      setCategories(catalog.categories);
+      setItems(catalog.items);
+      setCombos(catalog.combos);
     } catch {
       setLoadFailed(true);
       setCategories([]);
@@ -37,6 +33,22 @@ export function useMenuLibrary(spaceId: UUID) {
       setLoading(false);
     }
   }, [spaceId]);
+
+  const patchItem = useCallback(
+    (item: FoodItemResponse) => {
+      patchSpaceMenuCatalogItem(spaceId, item);
+      setItems(prev => {
+        const index = prev.findIndex(row => row.itemId === item.itemId);
+        if (index < 0) {
+          return [...prev, item];
+        }
+        const next = [...prev];
+        next[index] = item;
+        return next;
+      });
+    },
+    [spaceId],
+  );
 
   useEffect(() => {
     void reload();
@@ -100,13 +112,31 @@ export function useMenuLibrary(spaceId: UUID) {
     return items.filter(item => item.categoryId === selectedCategoryId);
   }, [items, selectedCategoryId]);
 
+  const extraItems = useMemo(
+    () => items.filter(item => item.isActive && item.isExtra === true),
+    [items],
+  );
+
+  const filteredExtraItems = useMemo(() => {
+    if (!selectedCategoryId) {
+      return extraItems;
+    }
+    return extraItems.filter(item => item.categoryId === selectedCategoryId);
+  }, [extraItems, selectedCategoryId]);
+
+  const extraCategories = useMemo(() => {
+    const categoryIds = new Set(extraItems.map(item => item.categoryId));
+    return activeCategories.filter(category => categoryIds.has(category.categoryId));
+  }, [activeCategories, extraItems]);
+
   const stats = useMemo(
     () => ({
       categoryCount: activeCategories.length,
       itemCount: items.filter(item => item.isActive).length,
       comboCount: activeCombos.length,
+      extraCount: extraItems.length,
     }),
-    [activeCategories.length, activeCombos.length, items],
+    [activeCategories.length, activeCombos.length, extraItems.length, items],
   );
 
   return {
@@ -124,7 +154,11 @@ export function useMenuLibrary(spaceId: UUID) {
     setSelectedComboId,
     selectedCombo,
     filteredItems,
+    extraItems,
+    filteredExtraItems,
+    extraCategories,
     stats,
     reload,
+    patchItem,
   };
 }

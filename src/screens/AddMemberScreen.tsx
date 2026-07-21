@@ -32,6 +32,7 @@ import { useMemberStore } from '../store/memberStore';
 import { useSpaceStore } from '../store/spaceStore';
 import { useToastStore } from '../store/toastStore';
 import { colors, spacing, typography } from '../theme';
+import { invalidateDashboardQueries } from '../utils/dashboardQueryCache';
 import { defaultRoleForSpaceType } from '../utils/memberRoles';
 import { isMemberGenderRequired } from '../utils/memberGender';
 import { isValidIndianMobile, normalizeIndianMobileDigits } from '../utils/indianMobile';
@@ -193,6 +194,7 @@ export function AddMemberScreen() {
         }
       }
       showToast(t('membership.add.successToast'));
+      invalidateDashboardQueries();
       navigation.goBack();
       return;
     }

@@ -2,20 +2,27 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { mealsApi } from '../../api/mealsApi';
-import type { MealPollPaymentEvent, UUID } from '../../api/types';
+import type { MealPollPaymentEvent, MealPollPaymentEventType, UUID } from '../../api/types';
 import { colors, radius, spacing, typography } from '../../theme';
 import { formatComboPrice } from '../../utils/comboPrice';
+
+/** Owner-operational events that customers should not see in their Meals activity. */
+const OWNER_ONLY_PAYMENT_EVENTS: ReadonlySet<MealPollPaymentEventType> = new Set([
+  'REMINDER_SENT',
+]);
 
 type MemberMealPaymentTimelineProps = {
   spaceId: UUID;
   memberId: UUID;
   month: string;
+  audience?: 'owner' | 'customer';
 };
 
 export function MemberMealPaymentTimeline({
   spaceId,
   memberId,
   month,
+  audience = 'owner',
 }: MemberMealPaymentTimelineProps) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
@@ -37,18 +44,23 @@ export function MemberMealPaymentTimeline({
     void load();
   }, [load]);
 
+  const visibleEvents =
+    audience === 'customer'
+      ? events.filter(event => !OWNER_ONLY_PAYMENT_EVENTS.has(event.eventType))
+      : events;
+
   if (loading) {
     return <ActivityIndicator color={colors.primary} style={styles.loader} />;
   }
 
-  if (events.length === 0) {
+  if (visibleEvents.length === 0) {
     return <Text style={styles.empty}>{t('meals.paymentTimeline.empty')}</Text>;
   }
 
   return (
     <View style={styles.wrap}>
       <Text style={styles.title}>{t('meals.paymentTimeline.title')}</Text>
-      {events.map(event => (
+      {visibleEvents.map(event => (
         <View key={event.eventId} style={styles.row}>
           <View style={styles.dot} />
           <View style={styles.content}>

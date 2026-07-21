@@ -71,15 +71,29 @@ describe('dashboardQueryCache', () => {
     expect(dashboardApi.getDashboardSummary).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps cached summary after invalidation until force refresh', async () => {
-    await fetchDashboardSummaryCached(spaceId, spaceType, month);
-    invalidateDashboardQueries();
-
-    expect(peekDashboardSummary(spaceId, month)?.accommodationOperations?.occupiedBeds).toBe(1);
-
+  it('refetches when soft TTL expires', async () => {
+    jest.useFakeTimers();
     await fetchDashboardSummaryCached(spaceId, spaceType, month);
     expect(dashboardApi.getDashboardSummary).toHaveBeenCalledTimes(1);
 
+    jest.advanceTimersByTime(30_001);
+    await fetchDashboardSummaryCached(spaceId, spaceType, month);
+    expect(dashboardApi.getDashboardSummary).toHaveBeenCalledTimes(2);
+    jest.useRealTimers();
+  });
+
+  it('clears cached summary on invalidation so soft peeks stop serving stale Action Center data', async () => {
+    await fetchDashboardSummaryCached(spaceId, spaceType, month);
+    invalidateDashboardQueries();
+
+    expect(peekDashboardSummary(spaceId, month)).toBeNull();
+
+    await fetchDashboardSummaryCached(spaceId, spaceType, month);
+    expect(dashboardApi.getDashboardSummary).toHaveBeenCalledTimes(2);
+  });
+
+  it('force refresh refetches after a warm cache', async () => {
+    await fetchDashboardSummaryCached(spaceId, spaceType, month);
     await fetchDashboardSummaryCached(spaceId, spaceType, month, { force: true });
     expect(dashboardApi.getDashboardSummary).toHaveBeenCalledTimes(2);
   });

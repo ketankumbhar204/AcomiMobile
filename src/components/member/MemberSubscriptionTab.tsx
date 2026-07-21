@@ -8,8 +8,8 @@ import type { MemberDetailsResponse, MemberMealBalance, UUID } from '../../api/t
 import type { MainStackParamList } from '../../navigation/types';
 import { spacing } from '../../theme';
 import { Button } from '../ui';
-import { MemberMealActivityMonthNav } from '../meals/MemberMealActivityMonthNav';
 import { MemberMealSubscriptionActivityTimeline } from '../meals/MemberMealSubscriptionActivityTimeline';
+import { MonthlySummaryHeader } from '../ui/MonthlySummaryHeader';
 import { MemberSubscriptionSummaryCard } from './MemberSubscriptionSummaryCard';
 
 type MemberSubscriptionTabProps = {
@@ -108,7 +108,7 @@ export function MemberSubscriptionTab({ spaceId, member, canManage }: MemberSubs
         <Button label={t(actionLabelKey)} onPress={openSubscriptionFlow} />
       ) : null}
 
-      <MemberMealActivityMonthNav
+      <MonthlySummaryHeader
         month={month}
         onPreviousMonth={() => setMonth(value => shiftMonth(value, -1))}
         onNextMonth={() => setMonth(value => shiftMonth(value, 1))}

@@ -1,20 +1,22 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useTranslation } from 'react-i18next';
-import { formatSpaceType, spaceTypeIconLabel } from '../api';
+﻿import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useTranslation } from "react-i18next";
+import { formatSpaceType, spaceTypeIconLabel } from "../api";
 import type {
-  GlobalActivityItem,
-  GlobalAttentionSpace,
   MembershipRole,
   MyInvitationResponse,
   MySpaceResponse,
-} from '../api/types';
-import { memberApi } from '../api/memberApi';
-import { GlobalAttentionCard } from '../components/spaces/GlobalAttentionCard';
-import { RecentActivityCard } from '../components/spaces/RecentActivityCard';
-import { SpaceStatusBadge } from '../components/spaces/SpaceStatusBadge';
+} from "../api/types";
+import { memberApi } from "../api/memberApi";
+import {
+  SpaceAttentionCardStatus,
+  SpaceAttentionCountBadge,
+} from "../components/spaces/SpaceAttentionCardStatus";
+import { GlobalAttentionCard } from "../components/spaces/GlobalAttentionCard";
+import { RecentActivityCard } from "../components/spaces/RecentActivityCard";
+import { SpaceStatusBadge } from "../components/spaces/SpaceStatusBadge";
 import {
   Badge,
   EmptyState,
@@ -24,16 +26,17 @@ import {
   ModuleActionCard,
   ProfileHeaderButton,
   SkeletonCard,
-} from '../components/ui';
-import { useGlobalDashboard } from '../hooks/useGlobalDashboard';
-import { openSpaceToPendingActions, resetToDashboard } from '../navigation/navigationRef';
-import { invalidateAccommodationQueries } from '../utils/accommodationQueryCache';
-import type { MainStackParamList } from '../navigation/types';
-import { useSpaceStore } from '../store/spaceStore';
-import { colors, spacing, typography } from '../theme';
-import { formatSpaceDisplayName } from '../utils/spaceLabels';
+} from "../components/ui";
+import { useConsumerSpacesAttention } from "../hooks/useConsumerSpacesAttention";
+import { useGlobalDashboard } from "../hooks/useGlobalDashboard";
+import { invalidateAccommodationQueries } from "../utils/accommodationQueryCache";
+import type { MainStackParamList } from "../navigation/types";
+import { useSpaceStore } from "../store/spaceStore";
+import { colors, spacing, typography } from "../theme";
+import { formatSpaceDisplayName } from "../utils/spaceLabels";
+import { isConsumerMembershipRole } from "../utils/profileCompletion";
 
-type MySpacesNavigation = NativeStackNavigationProp<MainStackParamList, 'MySpaces'>;
+type MySpacesNavigation = NativeStackNavigationProp<MainStackParamList, "MySpaces">;
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -60,11 +63,17 @@ export function MySpacesScreen() {
   const [myInvitations, setMyInvitations] = useState<MyInvitationResponse[]>([]);
 
   const hasOperatorSpace = useMemo(
-    () => mySpaces.some(s => s.membershipRole === 'OWNER' || s.membershipRole === 'MANAGER'),
+    () => mySpaces.some(s => s.membershipRole === "OWNER" || s.membershipRole === "MANAGER"),
+    [mySpaces],
+  );
+  const hasConsumerSpace = useMemo(
+    () => mySpaces.some(s => isConsumerMembershipRole(s.membershipRole)),
     [mySpaces],
   );
 
   const globalDashboard = useGlobalDashboard(hasOperatorSpace);
+  const consumerAttention = useConsumerSpacesAttention(mySpaces, hasConsumerSpace);
+
   const pendingBySpace = useMemo(() => {
     const map = new Map<string, number>();
     for (const summary of globalDashboard.data?.spaceSummaries ?? []) {
@@ -72,6 +81,36 @@ export function MySpacesScreen() {
     }
     return map;
   }, [globalDashboard.data?.spaceSummaries]);
+
+  const attentionSpaceCount = useMemo(() => {
+    let count = 0;
+    pendingBySpace.forEach(pending => {
+      if (pending > 0) {
+        count += 1;
+      }
+    });
+    return count;
+  }, [pendingBySpace]);
+
+  const totalPendingCount = globalDashboard.data?.totalAttentionCount ?? 0;
+
+  const sortedSpaces = useMemo(() => {
+    return [...mySpaces].sort((a, b) => {
+      const pendingA = isConsumerMembershipRole(a.membershipRole)
+        ? (consumerAttention.bySpaceId[a.spaceId]?.totalCount ?? 0)
+        : (pendingBySpace.get(a.spaceId) ?? 0);
+      const pendingB = isConsumerMembershipRole(b.membershipRole)
+        ? (consumerAttention.bySpaceId[b.spaceId]?.totalCount ?? 0)
+        : (pendingBySpace.get(b.spaceId) ?? 0);
+      if (pendingA > 0 !== pendingB > 0) {
+        return pendingA > 0 ? -1 : 1;
+      }
+      if (pendingA !== pendingB) {
+        return pendingB - pendingA;
+      }
+      return formatSpaceDisplayName(a).localeCompare(formatSpaceDisplayName(b));
+    });
+  }, [consumerAttention.bySpaceId, mySpaces, pendingBySpace]);
 
   const loadMyInvitations = useCallback(async () => {
     try {
@@ -83,7 +122,7 @@ export function MySpacesScreen() {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: t('navigation.mySpaces'),
+      title: t("navigation.mySpaces"),
       headerRight: () => <ProfileHeaderButton />,
     });
   }, [navigation, t, i18n.language]);
@@ -100,12 +139,6 @@ export function MySpacesScreen() {
   );
 
   useEffect(() => {
-    if (hasOperatorSpace && !search.trim()) {
-      void globalDashboard.reload(true);
-    }
-  }, [globalDashboard.reload, hasOperatorSpace, search]);
-
-  useEffect(() => {
     const timer = setTimeout(() => {
       setSearchQuery(search);
       searchSpaces(search);
@@ -120,31 +153,27 @@ export function MySpacesScreen() {
       refresh(),
       loadMyInvitations(),
       hasOperatorSpace ? globalDashboard.reload(true) : Promise.resolve(),
+      hasConsumerSpace ? consumerAttention.reload(true) : Promise.resolve(),
     ]);
     setRefreshing(false);
-  }, [globalDashboard, hasOperatorSpace, loadMyInvitations, refresh]);
+  }, [
+    consumerAttention,
+    globalDashboard,
+    hasConsumerSpace,
+    hasOperatorSpace,
+    loadMyInvitations,
+    refresh,
+  ]);
 
   const openSpace = async (space: MySpaceResponse) => {
     const success = await switchSpace(space.spaceId);
     if (success) {
       invalidateAccommodationQueries();
-      resetToDashboard(space.spaceId);
-    }
-  };
-
-  const openAttentionSpace = async (space: GlobalAttentionSpace) => {
-    const success = await switchSpace(space.spaceId);
-    if (success) {
-      invalidateAccommodationQueries();
-      openSpaceToPendingActions(space.spaceId);
-    }
-  };
-
-  const openActivityItem = async (item: GlobalActivityItem) => {
-    const success = await switchSpace(item.spaceId);
-    if (success) {
-      invalidateAccommodationQueries();
-      resetToDashboard(item.spaceId);
+      navigation.navigate("SpaceTabs", {
+        spaceId: space.spaceId,
+        screen: "Dashboard",
+        params: { spaceId: space.spaceId },
+      });
     }
   };
 
@@ -173,13 +202,11 @@ export function MySpacesScreen() {
           />
         }>
         <View style={styles.heroAccent} />
-        <Text style={styles.eyebrow}>{t('spaces.mySpaces.eyebrow')}</Text>
-        <Text style={styles.heading}>{t('spaces.mySpaces.heading')}</Text>
-        <Text style={styles.subheading}>{t('spaces.mySpaces.subheading')}</Text>
+        <Text style={styles.heading}>{t("spaces.mySpaces.heading")}</Text>
 
         <FormInput
-          label={t('spaces.mySpaces.searchLabel')}
-          placeholder={t('spaces.mySpaces.searchPlaceholder')}
+          label={t("spaces.mySpaces.searchLabel")}
+          placeholder={t("spaces.mySpaces.searchPlaceholder")}
           value={search}
           onChangeText={setSearch}
           returnKeyType="search"
@@ -193,9 +220,9 @@ export function MySpacesScreen() {
           <View style={styles.inviteBanner}>
             <ModuleActionCard
               icon="✉️"
-              title={t('membership.incoming.bannerTitle', { count: myInvitations.length })}
-              subtitle={t('membership.incoming.bannerSubtitle')}
-              onPress={() => navigation.navigate('AcceptInvitations')}
+              title={t("membership.incoming.bannerTitle", { count: myInvitations.length })}
+              subtitle={t("membership.incoming.bannerSubtitle")}
+              onPress={() => navigation.navigate("AcceptInvitations")}
             />
           </View>
         ) : null}
@@ -210,15 +237,13 @@ export function MySpacesScreen() {
             ) : (
               <>
                 <GlobalAttentionCard
-                  spaces={globalDashboard.data?.attentionRequired ?? []}
-                  totalCount={globalDashboard.data?.totalAttentionCount ?? 0}
-                  onPressSpace={openAttentionSpace}
-                  onViewAll={() => navigation.navigate('GlobalAttentionList')}
+                  spaceCount={attentionSpaceCount}
+                  totalCount={totalPendingCount}
+                  onPress={() => navigation.navigate("GlobalAttentionList")}
                 />
                 <RecentActivityCard
                   items={globalDashboard.data?.recentActivity ?? []}
-                  onPressItem={openActivityItem}
-                  onViewAll={() => navigation.navigate('GlobalActivityList')}
+                  onPress={() => navigation.navigate("GlobalActivityList")}
                 />
               </>
             )}
@@ -235,38 +260,51 @@ export function MySpacesScreen() {
           <EmptyState
             title={
               isSearching
-                ? t('spaces.mySpaces.searchEmptyTitle')
-                : t('spaces.mySpaces.emptyTitle')
+                ? t("spaces.mySpaces.searchEmptyTitle")
+                : t("spaces.mySpaces.emptyTitle")
             }
             description={
               isSearching
-                ? t('spaces.mySpaces.searchEmptyDescription')
-                : t('spaces.mySpaces.emptyDescription')
+                ? t("spaces.mySpaces.searchEmptyDescription")
+                : t("spaces.mySpaces.emptyDescription")
             }
             icon="🏠"
           />
         ) : (
           <View style={styles.list}>
-            {mySpaces.map(space => {
-              const pending = pendingBySpace.get(space.spaceId) ?? 0;
+            {sortedSpaces.map(space => {
+              const isConsumer = isConsumerMembershipRole(space.membershipRole);
+              const consumerSummary = consumerAttention.bySpaceId[space.spaceId];
+              const operatorPending = pendingBySpace.get(space.spaceId) ?? 0;
+
               return (
                 <View key={space.spaceId} style={styles.listItem}>
                   {space.isDefault ? (
                     <View style={styles.defaultBadge}>
-                      <Badge label={t('spaces.mySpaces.defaultBadge')} />
+                      <Badge label={t("spaces.mySpaces.defaultBadge")} />
                     </View>
                   ) : null}
                   <ListCard
                     title={formatSpaceDisplayName(space)}
                     subtitle={buildSubtitle(space)}
                     iconLabel={spaceTypeIconLabel(space.spaceType)}
+                    status={
+                      isConsumer ? (
+                        <SpaceAttentionCardStatus
+                          summary={consumerSummary}
+                          loading={consumerAttention.loading && !consumerSummary}
+                        />
+                      ) : operatorPending > 0 ? (
+                        <SpaceStatusBadge pendingActionCount={operatorPending} />
+                      ) : undefined
+                    }
+                    trailingBadge={
+                      isConsumer ? (
+                        <SpaceAttentionCountBadge count={consumerSummary?.totalCount ?? 0} />
+                      ) : undefined
+                    }
                     onPress={() => openSpace(space)}
                   />
-                  {pending > 0 ? (
-                    <View style={styles.statusWrap}>
-                      <SpaceStatusBadge pendingActionCount={pending} />
-                    </View>
-                  ) : null}
                 </View>
               );
             })}
@@ -275,8 +313,8 @@ export function MySpacesScreen() {
       </ScrollView>
 
       <FAB
-        onPress={() => navigation.navigate('CreateSpace')}
-        accessibilityLabel={t('spaces.mySpaces.createFab')}
+        onPress={() => navigation.navigate("CreateSpace")}
+        accessibilityLabel={t("spaces.mySpaces.createFab")}
       />
     </View>
   );
@@ -296,7 +334,7 @@ const styles = StyleSheet.create({
     paddingBottom: 96,
   },
   heroAccent: {
-    position: 'absolute',
+    position: "absolute",
     top: -40,
     right: -40,
     width: 160,
@@ -304,17 +342,9 @@ const styles = StyleSheet.create({
     borderRadius: 80,
     backgroundColor: `${colors.primary}1A`,
   },
-  eyebrow: {
-    ...typography.eyebrow,
-    marginBottom: spacing.sm,
-  },
   heading: {
     ...typography.h1,
-    marginBottom: spacing.sm,
-  },
-  subheading: {
-    ...typography.body,
-    marginBottom: spacing.xxl,
+    marginBottom: spacing.xl,
   },
   errorText: {
     ...typography.body,
@@ -326,6 +356,7 @@ const styles = StyleSheet.create({
   },
   globalSection: {
     gap: spacing.md,
+    marginTop: spacing.lg,
     marginBottom: spacing.xl,
   },
   list: {
@@ -333,10 +364,6 @@ const styles = StyleSheet.create({
   },
   listItem: {
     gap: spacing.xs,
-  },
-  statusWrap: {
-    marginTop: -spacing.xs,
-    marginLeft: spacing.sm,
   },
   defaultBadge: {
     marginBottom: spacing.xs,

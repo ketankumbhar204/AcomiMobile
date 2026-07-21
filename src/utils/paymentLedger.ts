@@ -1,10 +1,15 @@
 import type { DashboardFinancialSummary, MemberPaymentLedgerRow, MemberPaymentStatus } from '../api/types';
 
-export type PaymentLedgerFilter = 'all' | 'pending' | 'collected';
+export type PaymentLedgerFilter = 'all' | 'pending' | 'collected' | 'underReview';
 
 export type PaymentSortOption = 'due_desc' | 'name_asc' | 'name_desc';
 
-export const PAYMENT_STATUSES: MemberPaymentStatus[] = ['PAID', 'PENDING', 'PARTIAL'];
+export const PAYMENT_STATUSES: MemberPaymentStatus[] = [
+  'PAID',
+  'PENDING',
+  'PARTIAL',
+  'UNDER_REVIEW',
+];
 
 export const PAYMENT_SORT_OPTIONS: PaymentSortOption[] = ['due_desc', 'name_asc', 'name_desc'];
 
@@ -17,7 +22,7 @@ export type PaymentListFilterState = {
   statuses: Set<MemberPaymentStatus>;
   sort: PaymentSortOption;
   /** Snapshot shortcuts from the financial summary cards. */
-  preset?: 'collected' | 'pending' | null;
+  preset?: 'collected' | 'pending' | 'underReview' | null;
 };
 
 export function defaultPaymentListFilters(): PaymentListFilterState {
@@ -34,6 +39,8 @@ export function paymentFiltersFromLegacy(filter: PaymentLedgerFilter): PaymentLi
       return { statuses: new Set(), sort: DEFAULT_PAYMENT_SORT, preset: 'pending' };
     case 'collected':
       return { statuses: new Set(), sort: DEFAULT_PAYMENT_SORT, preset: 'collected' };
+    case 'underReview':
+      return { statuses: new Set(), sort: DEFAULT_PAYMENT_SORT, preset: 'underReview' };
     default:
       return defaultPaymentListFilters();
   }
@@ -60,14 +67,21 @@ export function isPrepaidOnlyLedger(summary: DashboardFinancialSummary | null | 
   return summary?.prepaidBalance != null && summary.mixedMealBilling !== true;
 }
 
+/** Customer still owes action — excludes under-review (owner action). */
 export function isPendingPaymentRow(row: MemberPaymentLedgerRow): boolean {
-  return (
+  if (
     row.status === 'PENDING' ||
     row.status === 'PARTIAL' ||
-    row.status === 'UNDER_REVIEW' ||
     row.status === 'UPDATE_REQUESTED' ||
     row.status === 'REJECTED'
-  );
+  ) {
+    return true;
+  }
+  return (row.pending ?? 0) > 0 && row.status !== 'UNDER_REVIEW';
+}
+
+export function isUnderReviewPaymentRow(row: MemberPaymentLedgerRow): boolean {
+  return row.status === 'UNDER_REVIEW' || (row.underReview ?? 0) > 0;
 }
 
 /** Members with money collected this month (pack sales for prepaid, dues for pay-per-meal). */
@@ -129,6 +143,9 @@ export function applyPaymentLedgerFilter(
     if (filters.preset === 'collected') {
       return members.filter(isCollectedPaymentRow);
     }
+    if (filters.preset === 'underReview') {
+      return members.filter(isUnderReviewPaymentRow);
+    }
     return members.filter(row => matchesPaymentStatus(row, filters.statuses));
   })();
 
@@ -149,5 +166,6 @@ export function countPaymentLedgerFilters(
     all: members.length,
     pending: members.filter(isPendingPaymentRow).length,
     collected: members.filter(isCollectedPaymentRow).length,
+    underReview: members.filter(isUnderReviewPaymentRow).length,
   };
 }

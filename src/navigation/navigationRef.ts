@@ -2,29 +2,56 @@ import {
   CommonActions,
   createNavigationContainerRef,
 } from '@react-navigation/native';
+import { useSpaceStore } from '../store/spaceStore';
+import { findMySpaceEntry, resolveSpacePermissions } from '../utils/spacePermissions';
 import type { RootStackParamList, SpaceTabParamList } from './types';
 import type { SpaceBootstrapResult } from '../store/spaceStore';
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
-function buildSpaceTabsState(
+/**
+ * Soft-open SpaceTabs without CommonActions.reset.
+ * Full resets remount native-stack + bottom-tabs and crash Fabric on Android
+ * (addViewAt: child already has a parent) — especially for Mess (fewer tabs).
+ */
+function navigateToSpaceTabs(
   spaceId: string,
-  initialTab: string,
-  paymentsParams?: SpaceTabParamList['Payments'],
-) {
-  const routes = [
-    { name: 'Dashboard' as const, params: { spaceId } },
-    { name: 'Members' as const, params: { spaceId } },
-    { name: 'Accommodation' as const, params: { spaceId } },
-    { name: 'Meals' as const, params: { spaceId } },
-    { name: 'Payments' as const, params: paymentsParams ?? { spaceId } },
-    { name: 'Complaints' as const, params: { spaceId } },
-  ];
-  const tabIndex = Math.max(
-    routes.findIndex(route => route.name === initialTab),
-    0,
-  );
-  return { index: tabIndex, routes };
+  tab?: {
+    screen: keyof SpaceTabParamList;
+    params?: SpaceTabParamList[keyof SpaceTabParamList];
+  },
+): void {
+  if (!navigationRef.isReady()) {
+    return;
+  }
+
+  let screen = tab?.screen;
+  let params = tab?.params ?? { spaceId };
+
+  // Never target a tab that SpaceTabNavigator did not register (Mess has no Accommodation).
+  if (screen === 'Accommodation' || screen === 'Members') {
+    const entry = findMySpaceEntry(useSpaceStore.getState().mySpaces, spaceId);
+    const permissions = resolveSpacePermissions(entry);
+    if (screen === 'Accommodation' && !permissions.canViewAccommodation) {
+      screen = 'Dashboard';
+      params = { spaceId };
+    }
+    if (screen === 'Members' && !permissions.canManageMembers) {
+      screen = 'Dashboard';
+      params = { spaceId };
+    }
+  }
+
+  navigationRef.navigate('Main', {
+    screen: 'SpaceTabs',
+    params: screen
+      ? {
+          spaceId,
+          screen,
+          params,
+        }
+      : { spaceId },
+  });
 }
 
 export function resetToCompleteProfile(): void {
@@ -54,30 +81,10 @@ export function resetToProfileCompletionGate(): void {
 }
 
 export function resetToDashboard(spaceId: string): void {
-  if (!navigationRef.isReady()) {
-    return;
-  }
-
-  navigationRef.dispatch(
-    CommonActions.reset({
-      index: 0,
-      routes: [
-        {
-          name: 'Main',
-          state: {
-            index: 0,
-            routes: [
-              {
-                name: 'SpaceTabs',
-                params: { spaceId },
-                state: buildSpaceTabsState(spaceId, 'Dashboard'),
-              },
-            ],
-          },
-        },
-      ],
-    }),
-  );
+  navigateToSpaceTabs(spaceId, {
+    screen: 'Dashboard',
+    params: { spaceId },
+  });
 }
 
 /** Open a space and land on Pending Actions (from My Spaces attention rows). */
@@ -86,117 +93,46 @@ export function openSpaceToPendingActions(spaceId: string): void {
     return;
   }
 
-  navigationRef.dispatch(
-    CommonActions.reset({
-      index: 0,
-      routes: [
-        {
-          name: 'Main',
-          state: {
-            index: 1,
-            routes: [
-              {
-                name: 'SpaceTabs',
-                params: { spaceId },
-                state: buildSpaceTabsState(spaceId, 'Dashboard'),
-              },
-              { name: 'DashboardPendingActions', params: { spaceId } },
-            ],
-          },
-        },
-      ],
-    }),
-  );
+  navigateToSpaceTabs(spaceId, {
+    screen: 'Dashboard',
+    params: { spaceId },
+  });
+
+  queueMicrotask(() => {
+    if (!navigationRef.isReady()) {
+      return;
+    }
+    navigationRef.navigate('Main', {
+      screen: 'DashboardPendingActions',
+      params: { spaceId },
+    });
+  });
 }
 
 export function navigateToMembersTab(spaceId: string): void {
-  if (!navigationRef.isReady()) {
-    return;
-  }
-
-  navigationRef.dispatch(
-    CommonActions.reset({
-      index: 0,
-      routes: [
-        {
-          name: 'Main',
-          state: {
-            index: 0,
-            routes: [
-              {
-                name: 'SpaceTabs',
-                params: { spaceId },
-                state: buildSpaceTabsState(spaceId, 'Members'),
-              },
-            ],
-          },
-        },
-      ],
-    }),
-  );
+  navigateToSpaceTabs(spaceId, {
+    screen: 'Members',
+    params: { spaceId },
+  });
 }
 
 export function navigateToPaymentsTab(
   spaceId: string,
   paymentsParams?: Omit<SpaceTabParamList['Payments'], 'spaceId'>,
 ): void {
-  if (!navigationRef.isReady()) {
-    return;
-  }
-
-  navigationRef.dispatch(
-    CommonActions.reset({
-      index: 0,
-      routes: [
-        {
-          name: 'Main',
-          state: {
-            index: 0,
-            routes: [
-              {
-                name: 'SpaceTabs',
-                params: { spaceId },
-                state: buildSpaceTabsState(spaceId, 'Payments', {
-                  spaceId,
-                  ...paymentsParams,
-                }),
-              },
-            ],
-          },
-        },
-      ],
-    }),
-  );
+  navigateToSpaceTabs(spaceId, {
+    screen: 'Payments',
+    params: { spaceId, ...paymentsParams },
+  });
 }
 
 /** Clears accommodation drill-down stack and lands on the Accommodation tab. */
 export function resetToAccommodationHome(spaceId: string): void {
-  if (!navigationRef.isReady()) {
-    return;
-  }
-
   console.log('[navigation] resetToAccommodationHome', spaceId);
-
-  navigationRef.dispatch(
-    CommonActions.reset({
-      index: 0,
-      routes: [
-        {
-          name: 'Main',
-          state: {
-            index: 0,
-            routes: [
-              {
-                name: 'SpaceTabs',
-                params: { spaceId },
-                state: buildSpaceTabsState(spaceId, 'Accommodation'),
-              },
-            ],
-          },
-        },
-      ],
-    }),
-  );
+  navigateToSpaceTabs(spaceId, {
+    screen: 'Accommodation',
+    params: { spaceId },
+  });
 }
 
 export function resetToCreateSpace(): void {

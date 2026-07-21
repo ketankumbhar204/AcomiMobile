@@ -9,7 +9,15 @@ import { normalizeActivityDate } from './memberMealActivityCalendar';
 
 export type ActivityHistoryFilter = 'ALL' | 'PAID' | 'PENDING' | 'SKIPPED';
 
-export type ActivityPaymentDisplay = 'PAID' | 'PENDING' | 'OVERDUE' | 'REJECTED' | 'NONE';
+export type ActivityPaymentDisplay =
+  | 'PAID'
+  | 'IN_REVIEW'
+  | 'PENDING'
+  | 'OVERDUE'
+  | 'REJECTED'
+  | 'NONE';
+
+export type ActivityDateSortOrder = 'asc' | 'desc';
 
 const MEAL_PREFIX: Record<string, string> = {
   BREAKFAST: 'B',
@@ -30,24 +38,31 @@ export function mealSlotPrefix(mealType: string): string {
   return MEAL_PREFIX[mealType] ?? mealType.slice(0, 1);
 }
 
+/** Days worth listing: accepted / pending / skipped — not empty NO_MENU noise. */
 export function dayHasListActivity(day: MemberMealActivityDay): boolean {
-  if (day.hasActivity) {
-    return true;
-  }
-  return day.slots.some(slot => slot.status !== 'INACTIVE');
+  const slots = day.slots ?? [];
+  return slots.some(
+    slot =>
+      slot.status === 'ACCEPTED' ||
+      slot.status === 'PENDING' ||
+      slot.status === 'SKIPPED',
+  );
 }
 
 export function resolveActivityPaymentDisplay(
   day: MemberMealActivityDay,
   todayIso: string,
 ): ActivityPaymentDisplay {
-  const total = day.dayTotal ?? 0;
+  const total = day.dayTotal != null ? Number(day.dayTotal) : 0;
   if (total <= 0) {
     return 'NONE';
   }
   const status = day.paymentStatus;
   if (status === 'PAID') {
     return 'PAID';
+  }
+  if (status === 'PENDING_APPROVAL') {
+    return 'IN_REVIEW';
   }
   if (status === 'REJECTED') {
     return 'REJECTED';
@@ -74,7 +89,12 @@ export function dayMatchesActivityFilter(
       return resolveActivityPaymentDisplay(day, todayIso) === 'PAID';
     case 'PENDING': {
       const display = resolveActivityPaymentDisplay(day, todayIso);
-      return display === 'PENDING' || display === 'OVERDUE' || display === 'REJECTED';
+      return (
+        display === 'PENDING' ||
+        display === 'IN_REVIEW' ||
+        display === 'OVERDUE' ||
+        display === 'REJECTED'
+      );
     }
     case 'SKIPPED':
       return day.slots.some(slot => slot.status === 'SKIPPED');
@@ -87,13 +107,15 @@ export function filterActivityDays(
   days: MemberMealActivityDay[],
   filter: ActivityHistoryFilter,
   todayIso: string,
+  sortOrder: ActivityDateSortOrder = 'desc',
 ): MemberMealActivityDay[] {
   return days
     .filter(day => dayMatchesActivityFilter(day, filter, todayIso))
     .sort((left, right) => {
       const leftDate = normalizeActivityDate(left.date) ?? left.date;
       const rightDate = normalizeActivityDate(right.date) ?? right.date;
-      return leftDate.localeCompare(rightDate);
+      const cmp = leftDate.localeCompare(rightDate);
+      return sortOrder === 'desc' ? -cmp : cmp;
     });
 }
 
@@ -137,12 +159,14 @@ export function formatPaymentLine(
 
 export function normalizeActivityMonthDay(day: MemberMealActivityDay): MemberMealActivityDay {
   const date = normalizeActivityDate(day.date) ?? day.date;
+  const slots = Array.isArray(day.slots) ? day.slots : [];
   return {
     ...day,
     date,
     dayTotal: day.dayTotal != null ? Number(day.dayTotal) : null,
     paymentStatus: day.paymentStatus as MealPollPaymentStatus | null | undefined,
-    slots: day.slots.map(slot => ({
+    hasActivity: dayHasListActivity({ ...day, slots }),
+    slots: slots.map(slot => ({
       ...slot,
       slotAmount: slot.slotAmount != null ? Number(slot.slotAmount) : null,
     })),

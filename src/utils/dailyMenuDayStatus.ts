@@ -7,6 +7,7 @@ function hasPlannedMenu(menu: DailyMenuResponse): boolean {
 
 export type DailyMenuDaySummary = {
   published: number;
+  modified: number;
   draft: number;
   notPlanned: number;
 };
@@ -22,6 +23,7 @@ export function listPlannedMealTypes(menus: DailyMenuResponse[]): MealType[] {
 
 export function summarizeDailyMenuDay(menus: DailyMenuResponse[]): DailyMenuDaySummary {
   let published = 0;
+  let modified = 0;
   let draft = 0;
 
   for (const mealType of MEAL_TYPES) {
@@ -31,6 +33,8 @@ export function summarizeDailyMenuDay(menus: DailyMenuResponse[]): DailyMenuDayS
     }
     if (menu.status === 'PUBLISHED') {
       published += 1;
+    } else if (menu.status === 'MODIFIED') {
+      modified += 1;
     } else {
       draft += 1;
     }
@@ -38,18 +42,19 @@ export function summarizeDailyMenuDay(menus: DailyMenuResponse[]): DailyMenuDayS
 
   return {
     published,
+    modified,
     draft,
-    notPlanned: MEAL_TYPES.length - published - draft,
+    notPlanned: MEAL_TYPES.length - published - modified - draft,
   };
 }
 
 export function resolveMealOperationsEmptyKind(
   summary: DailyMenuDaySummary,
 ): MealOperationsEmptyKind {
-  if (summary.published === 0 && summary.draft === 0) {
+  if (summary.published === 0 && summary.modified === 0 && summary.draft === 0) {
     return 'all_not_planned';
   }
-  if (summary.published === 0) {
+  if (summary.published === 0 && summary.modified === 0) {
     return 'none_published';
   }
   return 'no_responses_yet';

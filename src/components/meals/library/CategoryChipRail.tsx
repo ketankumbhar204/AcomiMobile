@@ -11,6 +11,9 @@ type CategoryChipRailProps = {
   categories: FoodCategoryResponse[];
   selectedCategoryId: string | null;
   onSelect: (categoryId: string) => void;
+  /** When true, shows an "All" chip; selected when `selectedCategoryId` is null. */
+  includeAll?: boolean;
+  onSelectAll?: () => void;
   canManage?: boolean;
   isAdding?: boolean;
   addDisabled?: boolean;
@@ -24,6 +27,8 @@ export function CategoryChipRail({
   categories,
   selectedCategoryId,
   onSelect,
+  includeAll = false,
+  onSelectAll,
   canManage = false,
   isAdding = false,
   addDisabled = false,
@@ -47,6 +52,14 @@ export function CategoryChipRail({
   return (
     <View style={styles.wrapper}>
       <ScrollableChipRail>
+        {includeAll ? (
+          <MenuChip
+            label={t('meals.library.categoryFilterAll')}
+            variant="filter"
+            selected={selectedCategoryId == null}
+            onPress={() => onSelectAll?.()}
+          />
+        ) : null}
         {activeCategories.map(category => (
           <MenuChip
             key={category.categoryId}

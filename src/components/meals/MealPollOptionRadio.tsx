@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { MealPollOption } from '../../api/types';
+import { FoodTypeIcon } from '../ui/FoodTypeIcon';
 import { colors, radius, spacing, typography } from '../../theme';
 import { formatComboPrice } from '../../utils/comboPrice';
 
@@ -24,23 +25,47 @@ export function MealPollOptionRadio({
 
   return (
     <Pressable
-      style={[styles.row, isNotAvailable && styles.rowMuted, readOnly && styles.rowReadOnly]}
+      style={[
+        styles.row,
+        isNotAvailable && styles.rowMuted,
+        selected && readOnly && styles.rowSelectedReadOnly,
+        readOnly && styles.rowReadOnly,
+      ]}
       onPress={readOnly ? undefined : onSelect}
       disabled={readOnly}
       accessibilityRole="radio"
-      accessibilityState={{ selected }}>
-      <View style={[styles.radio, selected && styles.radioSelected]}>
-        {selected ? <View style={styles.radioDot} /> : null}
+      accessibilityState={{ selected, disabled: readOnly }}>
+      <View
+        style={[
+          styles.radio,
+          readOnly && styles.radioReadOnly,
+          selected && !readOnly && styles.radioSelected,
+          selected && readOnly && styles.radioSelectedReadOnly,
+        ]}>
+        {selected ? (
+          <View style={[styles.radioDot, readOnly && styles.radioDotReadOnly]} />
+        ) : null}
       </View>
       <View style={styles.content}>
         <View style={styles.mainLine}>
-          <Text style={[styles.label, isNotAvailable && styles.labelMuted]} numberOfLines={1}>
+          {!isNotAvailable && option.foodType ? (
+            <FoodTypeIcon foodType={option.foodType} size={14} style={styles.foodTypeIcon} />
+          ) : null}
+          <Text
+            style={[
+              styles.label,
+              isNotAvailable && styles.labelMuted,
+              readOnly && styles.labelReadOnly,
+            ]}
+            numberOfLines={1}>
             {option.sortOrder}. {option.label}
           </Text>
-          {priceLabel ? <Text style={styles.price}>{priceLabel}</Text> : null}
+          {priceLabel ? (
+            <Text style={[styles.price, readOnly && styles.priceReadOnly]}>{priceLabel}</Text>
+          ) : null}
         </View>
         {option.detail ? (
-          <Text style={styles.detail} numberOfLines={2}>
+          <Text style={[styles.detail, readOnly && styles.detailReadOnly]} numberOfLines={2}>
             {option.detail}
           </Text>
         ) : null}
@@ -65,8 +90,11 @@ const styles = StyleSheet.create({
   rowMuted: {
     backgroundColor: colors.surface,
   },
+  rowSelectedReadOnly: {
+    backgroundColor: colors.surface,
+  },
   rowReadOnly: {
-    opacity: 0.85,
+    opacity: 1,
   },
   radio: {
     width: 22,
@@ -78,14 +106,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 2,
   },
+  radioReadOnly: {
+    borderColor: colors.muted,
+  },
   radioSelected: {
     borderColor: colors.primary,
+  },
+  radioSelectedReadOnly: {
+    borderColor: colors.muted,
   },
   radioDot: {
     width: 12,
     height: 12,
     borderRadius: 6,
     backgroundColor: colors.primary,
+  },
+  radioDotReadOnly: {
+    backgroundColor: colors.muted,
   },
   content: {
     flex: 1,
@@ -98,6 +135,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     minHeight: 24,
   },
+  foodTypeIcon: {
+    flexShrink: 0,
+  },
   label: {
     ...typography.bodyStrong,
     flex: 1,
@@ -109,13 +149,22 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     flexShrink: 0,
   },
+  priceReadOnly: {
+    color: colors.muted,
+  },
   labelMuted: {
     color: colors.muted,
     fontWeight: '600',
+  },
+  labelReadOnly: {
+    color: colors.textSecondary,
   },
   detail: {
     ...typography.caption,
     color: colors.textSecondary,
     lineHeight: 18,
+  },
+  detailReadOnly: {
+    color: colors.muted,
   },
 });
