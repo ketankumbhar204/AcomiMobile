@@ -1,6 +1,8 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import type { MealType } from '../../api/types';
 import { MealStatusBadge } from './MealStatusBadge';
+import { MealTypeVisual } from './MealTypeVisual';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import type { DashboardMealSlotCaptionTone } from '../../utils/dashboardMealSlotDisplay';
 import { MENU_PLANNING_POLL_OPEN_COLOR } from '../../utils/menuPlanningStatusVisual';
@@ -25,6 +27,8 @@ export type MealOperationSlotCardProps = {
   captionTone: DashboardMealSlotCaptionTone;
   statusKind: MealStatusKind;
   onPress: () => void;
+  /** When set, shows Design A meal-type icon (swap to photo later via MealTypeVisual). */
+  mealType?: MealType;
   /** Drawer / strip selection — stronger border, elevation, slightly larger. */
   selected?: boolean;
   /** Slightly tighter padding for drawer strip. */
@@ -42,6 +46,7 @@ export function MealOperationSlotCard({
   captionTone,
   statusKind,
   onPress,
+  mealType,
   selected = false,
   compact = false,
 }: MealOperationSlotCardProps) {
@@ -59,15 +64,18 @@ export function MealOperationSlotCard({
         styles.slotCard,
         compact && styles.slotCardCompact,
         {
-          backgroundColor: selected ? theme.background : theme.background,
-          borderColor: selected ? theme.color : `${theme.color}99`,
+          backgroundColor: selected ? theme.background : colors.white,
+          borderColor: selected ? theme.color : colors.border,
         },
         selected && styles.slotCardSelected,
         selected && { borderColor: theme.color },
         pressed && styles.slotCardPressed,
         !selected && compact && styles.slotCardUnselectedCompact,
+        !selected && !compact && styles.slotCardDesignA,
       ]}>
       {selected ? <View style={[styles.selectedIndicator, { backgroundColor: theme.color }]} /> : null}
+      {/* TODO: pass imageSource on MealTypeVisual when meal photos are available */}
+      {mealType && !compact ? <MealTypeVisual mealType={mealType} size={18} /> : null}
       <Text style={styles.slotMealLabel} numberOfLines={1}>
         {mealLabel}
       </Text>
@@ -107,6 +115,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.xxs,
     overflow: 'hidden',
+  },
+  slotCardDesignA: {
+    minHeight: 124,
+    paddingVertical: spacing.md,
+    gap: spacing.xs,
+    ...shadows.sm,
   },
   slotCardCompact: {
     minHeight: 96,

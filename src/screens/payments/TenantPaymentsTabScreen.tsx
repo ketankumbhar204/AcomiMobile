@@ -18,6 +18,7 @@ import { UniversalPaymentProofModal } from '../../components/payments/UniversalP
 import { Button, EmptyState, ListFilterChips, SkeletonCard } from '../../components/ui';
 import { useCustomerSubscriptionStatus } from '../../hooks/useCustomerSubscriptionStatus';
 import { useLinkedMember } from '../../hooks/useLinkedMember';
+import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useMealPaymentActivitySummaries } from '../../hooks/useMealPaymentActivitySummaries';
 import { useSpaceTabHeader } from '../../hooks/useSpaceTabHeader';
 import { useToastStore } from '../../store/toastStore';
@@ -50,7 +51,7 @@ export function TenantPaymentsTabScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
-  const { spaceId } = route.params;
+  const spaceId = useActiveSpaceId(route.params.spaceId);
   useSpaceTabHeader(spaceId);
   const showToast = useToastStore(state => state.showToast);
 

@@ -3,7 +3,8 @@ import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
-import { formatSpaceType, spaceTypeIconLabel } from "../api";
+import { Mail, Plus } from "lucide-react-native";
+import { getSpaceTypeLabel, spaceTypeIconLabel } from "../api";
 import type {
   MembershipRole,
   MyInvitationResponse,
@@ -17,13 +18,14 @@ import {
 import { GlobalAttentionCard } from "../components/spaces/GlobalAttentionCard";
 import { RecentActivityCard } from "../components/spaces/RecentActivityCard";
 import { SpaceStatusBadge } from "../components/spaces/SpaceStatusBadge";
+import { DashboardActionRow } from "../components/dashboard/shared/DashboardActionRow";
+import { DashboardSectionTitle } from "../components/dashboard/DashboardSectionTitle";
 import {
   Badge,
   EmptyState,
   FAB,
   FormInput,
   ListCard,
-  ModuleActionCard,
   ProfileHeaderButton,
   SkeletonCard,
 } from "../components/ui";
@@ -32,7 +34,7 @@ import { useGlobalDashboard } from "../hooks/useGlobalDashboard";
 import { invalidateAccommodationQueries } from "../utils/accommodationQueryCache";
 import type { MainStackParamList } from "../navigation/types";
 import { useSpaceStore } from "../store/spaceStore";
-import { colors, spacing, typography } from "../theme";
+import { colors, radius, spacing, typography } from "../theme";
 import { formatSpaceDisplayName } from "../utils/spaceLabels";
 import { isConsumerMembershipRole } from "../utils/profileCompletion";
 
@@ -42,6 +44,16 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 function formatRoleLabel(role: MembershipRole, t: (key: string) => string): string {
   return t(`spaces.roles.${role}`);
+}
+
+function greetingKey(hour: number): string {
+  if (hour < 12) {
+    return "spaces.mySpaces.greetingMorning";
+  }
+  if (hour < 17) {
+    return "spaces.mySpaces.greetingAfternoon";
+  }
+  return "spaces.mySpaces.greetingEvening";
 }
 
 export function MySpacesScreen() {
@@ -178,7 +190,7 @@ export function MySpacesScreen() {
   };
 
   const buildSubtitle = (space: MySpaceResponse) => {
-    const typeLabel = formatSpaceType(space.spaceType);
+    const typeLabel = getSpaceTypeLabel(space.spaceType);
     const roleLabel = formatRoleLabel(space.membershipRole, t);
     return `${typeLabel} · ${roleLabel}`;
   };
@@ -186,6 +198,9 @@ export function MySpacesScreen() {
   const isSearching = search.trim().length > 0;
   const showLoading = (loading || searching) && mySpaces.length === 0;
   const showGlobalOverview = hasOperatorSpace && !isSearching;
+  // Join-invitation banner is for consumers joining a space — not for owners/managers.
+  const showInviteBanner = myInvitations.length > 0 && !hasOperatorSpace;
+  const greeting = useMemo(() => t(greetingKey(new Date().getHours())), [t]);
 
   return (
     <View style={styles.root}>
@@ -201,8 +216,11 @@ export function MySpacesScreen() {
             colors={[colors.primary]}
           />
         }>
-        <View style={styles.heroAccent} />
-        <Text style={styles.heading}>{t("spaces.mySpaces.heading")}</Text>
+        <View style={styles.hero}>
+          <Text style={styles.greeting}>{greeting}</Text>
+          <Text style={styles.heading}>{t("spaces.mySpaces.heading")}</Text>
+          <Text style={styles.subheading}>{t("spaces.mySpaces.subheading")}</Text>
+        </View>
 
         <FormInput
           label={t("spaces.mySpaces.searchLabel")}
@@ -216,12 +234,14 @@ export function MySpacesScreen() {
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        {myInvitations.length > 0 ? (
+        {showInviteBanner ? (
           <View style={styles.inviteBanner}>
-            <ModuleActionCard
-              icon="✉️"
+            <DashboardActionRow
+              icon={Mail}
+              accent={colors.primaryDark}
               title={t("membership.incoming.bannerTitle", { count: myInvitations.length })}
               subtitle={t("membership.incoming.bannerSubtitle")}
+              badgeCount={myInvitations.length}
               onPress={() => navigation.navigate("AcceptInvitations")}
             />
           </View>
@@ -272,6 +292,7 @@ export function MySpacesScreen() {
           />
         ) : (
           <View style={styles.list}>
+            <DashboardSectionTitle title={t("spaces.mySpaces.spacesSection")} />
             {sortedSpaces.map(space => {
               const isConsumer = isConsumerMembershipRole(space.membershipRole);
               const consumerSummary = consumerAttention.bySpaceId[space.spaceId];
@@ -310,6 +331,17 @@ export function MySpacesScreen() {
             })}
           </View>
         )}
+
+        <View style={styles.quickSection}>
+          <DashboardSectionTitle title={t("spaces.mySpaces.quickActionsTitle")} />
+          <DashboardActionRow
+            icon={Plus}
+            accent={colors.primaryDark}
+            title={t("spaces.mySpaces.addSpace")}
+            subtitle={t("spaces.mySpaces.addSpaceSubtitle")}
+            onPress={() => navigation.navigate("CreateSpace")}
+          />
+        </View>
       </ScrollView>
 
       <FAB
@@ -333,18 +365,31 @@ const styles = StyleSheet.create({
     padding: spacing.xxl,
     paddingBottom: 96,
   },
-  heroAccent: {
-    position: "absolute",
-    top: -40,
-    right: -40,
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: `${colors.primary}1A`,
+  hero: {
+    marginBottom: spacing.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.card,
+    backgroundColor: colors.lightGreen,
+    borderWidth: 1,
+    borderColor: `${colors.primary}33`,
+  },
+  greeting: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    fontWeight: "700",
+    marginBottom: spacing.xxs,
   },
   heading: {
-    ...typography.h1,
-    marginBottom: spacing.xl,
+    ...typography.h2,
+    fontSize: 24,
+    lineHeight: 30,
+    color: colors.textPrimary,
+  },
+  subheading: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginTop: spacing.sm,
   },
   errorText: {
     ...typography.body,
@@ -352,6 +397,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   inviteBanner: {
+    marginTop: spacing.md,
     marginBottom: spacing.lg,
   },
   globalSection: {
@@ -361,6 +407,7 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: spacing.md,
+    marginTop: spacing.md,
   },
   listItem: {
     gap: spacing.xs,
@@ -370,5 +417,10 @@ const styles = StyleSheet.create({
   },
   skeletonGap: {
     height: spacing.md,
+  },
+  quickSection: {
+    marginTop: spacing.xxl,
+    marginBottom: spacing.lg,
+    gap: spacing.sm,
   },
 });

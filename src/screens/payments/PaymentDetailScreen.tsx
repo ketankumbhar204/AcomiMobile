@@ -18,6 +18,7 @@ import { MealSelectionSummary } from '../../components/meals/MealSelectionSummar
 import { PaymentHistoryTimeline } from '../../components/payments/PaymentHistoryTimeline';
 import { PaymentNeedsUpdatePanel } from '../../components/payments/PaymentNeedsUpdatePanel';
 import { PaymentProofPreviewModal } from '../../components/payments/PaymentProofPreviewModal';
+import { PaymentReferenceLabel } from '../../components/payments/PaymentReferenceLabel';
 import { PaymentRequestUpdateModal } from '../../components/payments/PaymentRequestUpdateModal';
 import { PaymentStatusBadge } from '../../components/payments/PaymentStatusBadge';
 import { PaymentStatusCardFrame } from '../../components/payments/PaymentStatusCardFrame';
@@ -367,18 +368,31 @@ export function PaymentDetailScreen() {
                 {t(`paymentCollection.category.${payment.paymentCategory}`)}
               </Text>
             </View>
-            <PaymentStatusBadge status={payment.paymentStatus} />
           </View>
           {payment.targetLabel ? <Text style={styles.target}>{payment.targetLabel}</Text> : null}
-          <Text style={styles.amount}>
-            {formatPaymentAmount(payment.amount, payment.currencyCode)}
-          </Text>
+          <View style={styles.amountMetaRow}>
+            <Text style={styles.amount}>
+              {formatPaymentAmount(payment.amount, payment.currencyCode)}
+            </Text>
+            <PaymentStatusBadge status={payment.paymentStatus} style={styles.statusBadge} />
+          </View>
+          <PaymentReferenceLabel
+            source={payment}
+            compact={false}
+            style={styles.summaryReference}
+          />
 
           <View style={styles.metaBlock}>
             {metaRows.map(row => (
               <View key={row.key} style={styles.metaRow}>
                 <Text style={styles.metaLabel}>{t(row.labelKey)}</Text>
-                <Text style={styles.metaValue}>{row.value}</Text>
+                <Text
+                  style={[
+                    styles.metaValue,
+                    row.key === 'paymentReference' && styles.metaValueEmphasis,
+                  ]}>
+                  {row.value}
+                </Text>
               </View>
             ))}
           </View>
@@ -645,7 +659,21 @@ const styles = StyleSheet.create({
   title: { ...typography.h2 },
   category: { ...typography.caption, color: colors.muted, marginTop: spacing.xxs },
   target: { ...typography.caption, color: colors.muted, marginTop: spacing.sm },
-  amount: { ...typography.h1, marginTop: spacing.sm, marginBottom: spacing.xs },
+  amountMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  amount: { ...typography.h1, flex: 1, minWidth: 0 },
+  statusBadge: {
+    flexShrink: 0,
+  },
+  summaryReference: {
+    marginBottom: spacing.xs,
+  },
   mealSummaryWrap: {
     marginTop: spacing.md,
     marginBottom: spacing.md,
@@ -673,6 +701,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     flex: 1,
     textAlign: 'right',
+  },
+  metaValueEmphasis: {
+    ...typography.bodyStrong,
+    color: colors.primaryDark,
+    fontWeight: '700',
   },
   waiting: {
     ...typography.body,

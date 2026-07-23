@@ -1,4 +1,9 @@
-import type { MemberPaymentStatus, UniversalPaymentStatus } from '../api/types';
+import type {
+  MealPollPaymentStatus,
+  MemberPaymentStatus,
+  UniversalPaymentStatus,
+} from '../api/types';
+import type { DayMealPaymentDisplayStatus } from './dayMealPayments';
 
 export type PaymentStatusVariant =
   | 'pending'
@@ -7,9 +12,15 @@ export type PaymentStatusVariant =
   | 'paid'
   | 'rejected'
   | 'partial'
+  | 'overdue'
   | 'neutral';
 
-export type PaymentStatusSource = UniversalPaymentStatus | MemberPaymentStatus;
+export type PaymentStatusSource =
+  | UniversalPaymentStatus
+  | MemberPaymentStatus
+  | MealPollPaymentStatus
+  | DayMealPaymentDisplayStatus
+  | 'OVERDUE';
 
 export type PaymentStatusTheme = {
   background: string;
@@ -18,7 +29,7 @@ export type PaymentStatusTheme = {
   accent: string;
 };
 
-/** Distinct status colors: amber pending, orange partial/needs-update, blue review, green paid, red rejected. */
+/** Distinct status colors: amber pending, orange partial/needs-update, blue review, green paid, red rejected/overdue. */
 export const PAYMENT_STATUS_THEME: Record<PaymentStatusVariant, PaymentStatusTheme> = {
   pending: {
     background: '#FEF3C7',
@@ -56,6 +67,12 @@ export const PAYMENT_STATUS_THEME: Record<PaymentStatusVariant, PaymentStatusThe
     text: '#991B1B',
     accent: '#DC2626',
   },
+  overdue: {
+    background: '#FEE2E2',
+    border: '#EF4444',
+    text: '#991B1B',
+    accent: '#DC2626',
+  },
   neutral: {
     background: '#F8FAFC',
     border: '#CBD5E1',
@@ -64,16 +81,21 @@ export const PAYMENT_STATUS_THEME: Record<PaymentStatusVariant, PaymentStatusThe
   },
 };
 
-export function resolvePaymentStatusVariant(status: PaymentStatusSource | null | undefined): PaymentStatusVariant {
+export function resolvePaymentStatusVariant(
+  status: PaymentStatusSource | null | undefined,
+): PaymentStatusVariant {
   switch (status) {
     case 'PAID':
       return 'paid';
     case 'REJECTED':
       return 'rejected';
+    case 'OVERDUE':
+      return 'overdue';
     case 'UPDATE_REQUESTED':
       return 'needsUpdate';
     case 'UNDER_REVIEW':
     case 'PROOF_UPLOADED':
+    case 'PENDING_APPROVAL':
       return 'underReview';
     case 'PARTIAL':
       return 'partial';
@@ -90,10 +112,14 @@ export function getPaymentStatusLabelKey(status: PaymentStatusSource | null | un
       return 'payments.status.paid';
     case 'REJECTED':
       return 'payments.status.rejected';
+    case 'OVERDUE':
+      return 'paymentCollection.dayMeals.status.overdue';
     case 'UPDATE_REQUESTED':
       return 'payments.status.needsUpdate';
     case 'UNDER_REVIEW':
       return 'payments.status.underReview';
+    case 'PENDING_APPROVAL':
+      return 'paymentCollection.dayMeals.status.underReview';
     case 'PROOF_UPLOADED':
       return 'payments.status.submitted';
     case 'PARTIAL':
@@ -105,7 +131,9 @@ export function getPaymentStatusLabelKey(status: PaymentStatusSource | null | un
   }
 }
 
-export function getPaymentStatusTheme(status: PaymentStatusSource | null | undefined): PaymentStatusTheme {
+export function getPaymentStatusTheme(
+  status: PaymentStatusSource | null | undefined,
+): PaymentStatusTheme {
   return PAYMENT_STATUS_THEME[resolvePaymentStatusVariant(status)];
 }
 

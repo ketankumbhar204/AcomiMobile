@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { SpaceTabBackButton } from '../components/ui';
 import { NotificationBellButton } from '../components/notifications/NotificationBellButton';
 import { useSpaceTabHeader } from '../hooks/useSpaceTabHeader';
+import { useActiveSpaceId } from '../hooks/useActiveSpaceId';
 import { useSpacePermissions } from '../hooks/useSpacePermissions';
 import { AccommodationHomeScreen } from '../screens/accommodation/AccommodationHomeScreen';
 import { DashboardScreen } from '../screens/dashboard/DashboardScreen';
@@ -33,7 +34,7 @@ type SpaceTabNavigatorProps = {
 
 function DashboardTabScreen() {
   const route = useRoute<RouteProp<SpaceTabParamList, 'Dashboard'>>();
-  const { spaceId } = route.params;
+  const spaceId = useActiveSpaceId(route.params.spaceId);
   // Stable element — a fresh JSX node each render retriggers setOptions forever.
   const notificationBell = useMemo(
     () => <NotificationBellButton spaceId={spaceId} />,
@@ -48,14 +49,14 @@ function DashboardTabScreen() {
 
 function MembersTabScreen() {
   const route = useRoute<RouteProp<SpaceTabParamList, 'Members'>>();
-  const { spaceId } = route.params;
+  const spaceId = useActiveSpaceId(route.params.spaceId);
   useSpaceTabHeader(spaceId);
   return <MembersScreen />;
 }
 
 function MealsTabScreen() {
   const route = useRoute<RouteProp<SpaceTabParamList, 'Meals'>>();
-  const { spaceId } = route.params;
+  const spaceId = useActiveSpaceId(route.params.spaceId);
   const permissions = useSpacePermissions(spaceId);
   useSpaceTabHeader(spaceId);
 
@@ -68,7 +69,7 @@ function MealsTabScreen() {
 
 function PaymentsTabScreen() {
   const route = useRoute<RouteProp<SpaceTabParamList, 'Payments'>>();
-  const { spaceId } = route.params;
+  const spaceId = useActiveSpaceId(route.params.spaceId);
   const permissions = useSpacePermissions(spaceId);
   const canManage = canManagePayments(permissions.membershipRole);
 
@@ -81,7 +82,7 @@ function PaymentsTabScreen() {
 
 function ComplaintsTabScreen() {
   const route = useRoute<RouteProp<SpaceTabParamList, 'Complaints'>>();
-  const { spaceId } = route.params;
+  const spaceId = useActiveSpaceId(route.params.spaceId);
   useSpaceTabHeader(spaceId);
   return <ComplaintsListScreen />;
 }

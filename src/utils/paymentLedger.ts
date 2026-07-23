@@ -84,16 +84,9 @@ export function isUnderReviewPaymentRow(row: MemberPaymentLedgerRow): boolean {
   return row.status === 'UNDER_REVIEW' || (row.underReview ?? 0) > 0;
 }
 
-/** Members with money collected this month (pack sales for prepaid, dues for pay-per-meal). */
+/** Members who contributed to the Collected KPI this month (collected > 0). */
 export function isCollectedPaymentRow(row: MemberPaymentLedgerRow): boolean {
-  const collected = row.collected ?? 0;
-  if (collected <= 0) {
-    return false;
-  }
-  if (isPrepaidPaymentRow(row)) {
-    return true;
-  }
-  return row.status === 'PAID' || row.status === 'PARTIAL';
+  return (row.collected ?? 0) > 0;
 }
 
 function matchesPaymentStatus(

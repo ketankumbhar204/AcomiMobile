@@ -24,6 +24,7 @@
     "@react-navigation/native-stack": "^7.16.0",
     "axios": "^1.17.0",
     "i18next": "^26.3.1",
+    "lucide-react-native": "^1.25.0",
     "react": "19.2.3",
     "react-i18next": "^17.0.8",
     "react-native": "0.85.3",
@@ -33,6 +34,7 @@
     "react-native-reanimated": "^4.4.1",
     "react-native-safe-area-context": "^5.8.0",
     "react-native-screens": "^4.25.2",
+    "react-native-svg": "^15.15.5",
     "react-native-worklets": "^0.9.1",
     "zustand": "^5.0.14"
   },

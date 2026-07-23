@@ -1,6 +1,21 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import {
+  BatteryCharging,
+  BrushCleaning,
+  Camera,
+  Car,
+  Check,
+  Droplets,
+  GlassWater,
+  Plus,
+  Refrigerator,
+  SquareCheck,
+  UtensilsCrossed,
+  WashingMachine,
+  Wifi,
+} from 'lucide-react-native';
 import type { AmenityAssignment } from '../../api/types';
 import {
   MAX_CUSTOM_AMENITY_LABEL_LENGTH,
@@ -12,7 +27,13 @@ import {
   presetAmenityLabelKey,
   type AmenityCode,
 } from '../../utils/amenities';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
+
+type IconProps = {
+  size?: number;
+  color?: string;
+  strokeWidth?: number;
+};
 
 type SpaceAmenitiesFieldProps = {
   value: AmenityAssignment[];
@@ -22,47 +43,67 @@ type SpaceAmenitiesFieldProps = {
   selectAllByDefault?: boolean;
 };
 
-type AmenityCheckboxProps = {
-  label: string;
-  checked: boolean;
-  indeterminate?: boolean;
-  disabled?: boolean;
-  onToggle: () => void;
-  bold?: boolean;
+const AMENITY_ICON: Record<AmenityCode, ComponentType<IconProps>> = {
+  WIFI: Wifi,
+  FOOD_INCLUDED: UtensilsCrossed,
+  WASHING_MACHINE: WashingMachine,
+  HOT_WATER: Droplets,
+  PARKING: Car,
+  REFRIGERATOR: Refrigerator,
+  HOUSEKEEPING: BrushCleaning,
+  CCTV: Camera,
+  POWER_BACKUP: BatteryCharging,
+  RO_WATER: GlassWater,
+  CUSTOM: Plus,
 };
 
-function AmenityCheckbox({
+function AmenityTile({
   label,
   checked,
   indeterminate = false,
   disabled,
   onToggle,
-  bold = false,
-}: AmenityCheckboxProps) {
-  const showCheck = checked && !indeterminate;
+  icon: Icon,
+  fullWidth = false,
+}: {
+  label: string;
+  checked: boolean;
+  indeterminate?: boolean;
+  disabled?: boolean;
+  onToggle: () => void;
+  icon: ComponentType<IconProps>;
+  fullWidth?: boolean;
+}) {
+  const selected = checked || indeterminate;
   return (
     <Pressable
       onPress={onToggle}
       disabled={disabled}
-      style={styles.checkboxRow}
+      style={({ pressed }) => [
+        styles.tile,
+        fullWidth && styles.tileFull,
+        selected && styles.tileSelected,
+        pressed && !selected && styles.tilePressed,
+        disabled && styles.tileDisabled,
+      ]}
       accessibilityRole="checkbox"
       accessibilityState={{
         checked: indeterminate ? 'mixed' : checked,
         disabled: Boolean(disabled),
       }}>
-      <View
-        style={[
-          styles.checkboxBox,
-          (checked || indeterminate) && styles.checkboxBoxChecked,
-        ]}>
-        {showCheck ? <Text style={styles.checkboxMark}>✓</Text> : null}
-        {indeterminate ? <Text style={styles.checkboxMark}>−</Text> : null}
+      <View style={[styles.tileIconWrap, selected && styles.tileIconWrapSelected]}>
+        <Icon
+          size={18}
+          color={selected ? colors.primaryDark : colors.muted}
+          strokeWidth={2.2}
+        />
       </View>
-      <Text
-        style={[styles.checkboxLabel, bold && styles.checkboxLabelBold]}
-        numberOfLines={2}>
+      <Text style={[styles.tileLabel, selected && styles.tileLabelSelected]} numberOfLines={2}>
         {label}
       </Text>
+      <View style={[styles.tileCheck, selected && styles.tileCheckSelected]}>
+        {selected ? <Check size={11} color={colors.white} strokeWidth={3} /> : null}
+      </View>
     </Pressable>
   );
 }
@@ -113,9 +154,7 @@ export function SpaceAmenitiesField({
       return;
     }
     hasAppliedDefaultRef.current = true;
-    onChange(
-      buildAllPresetAmenities(code => t(presetAmenityLabelKey(code))),
-    );
+    onChange(buildAllPresetAmenities(code => t(presetAmenityLabelKey(code))));
   }, [disabled, onChange, selectAllByDefault, t, value.length]);
 
   function toggleAll() {
@@ -133,9 +172,8 @@ export function SpaceAmenitiesField({
     if (disabled) {
       return;
     }
-    const key = code;
-    if (selectedKeys.has(key)) {
-      onChange(value.filter(item => amenityKey(item) !== key));
+    if (selectedKeys.has(code)) {
+      onChange(value.filter(item => amenityKey(item) !== code));
       return;
     }
     if (value.length >= MAX_SPACE_AMENITIES) {
@@ -196,59 +234,62 @@ export function SpaceAmenitiesField({
       <Text style={styles.hint}>{t('spaces.amenities.hint')}</Text>
 
       <View style={styles.grid}>
-        <View style={styles.gridItemFull}>
-          <AmenityCheckbox
-            label={t('spaces.amenities.selectAll')}
-            checked={allSelected}
-            indeterminate={allIndeterminate}
-            disabled={disabled}
-            onToggle={toggleAll}
-            bold
-          />
-        </View>
+        <AmenityTile
+          label={t('spaces.amenities.selectAll')}
+          checked={allSelected}
+          indeterminate={allIndeterminate}
+          disabled={disabled}
+          onToggle={toggleAll}
+          icon={SquareCheck}
+          fullWidth
+        />
 
         {PRESET_AMENITY_CODES.map(code => (
-          <View key={code} style={styles.gridItem}>
-            <AmenityCheckbox
-              label={t(presetAmenityLabelKey(code))}
-              checked={selectedKeys.has(code)}
-              disabled={disabled}
-              onToggle={() => togglePreset(code)}
-            />
-          </View>
+          <AmenityTile
+            key={code}
+            label={t(presetAmenityLabelKey(code))}
+            checked={selectedKeys.has(code)}
+            disabled={disabled}
+            onToggle={() => togglePreset(code)}
+            icon={AMENITY_ICON[code]}
+          />
         ))}
 
         {customAmenities.map(item => (
-          <View key={amenityKey(item)} style={styles.gridItemFull}>
-            <AmenityCheckbox
-              label={item.label}
-              checked={selectedKeys.has(amenityKey(item))}
-              disabled={disabled}
-              onToggle={() => toggleCustom(item)}
-            />
-          </View>
+          <AmenityTile
+            key={amenityKey(item)}
+            label={item.label}
+            checked={selectedKeys.has(amenityKey(item))}
+            disabled={disabled}
+            onToggle={() => toggleCustom(item)}
+            icon={Plus}
+            fullWidth
+          />
         ))}
       </View>
 
       <View style={styles.customSection}>
         <Text style={styles.customLabel}>{t('spaces.amenities.customLabel')}</Text>
         <View style={styles.customInlineRow}>
-          <TextInput
-            style={[styles.customInput, customError ? styles.customInputError : null]}
-            placeholder={t('spaces.amenities.customPlaceholder')}
-            placeholderTextColor={colors.muted}
-            value={customLabel}
-            onChangeText={text => {
-              setCustomLabel(text);
-              if (customError) {
-                setCustomError(null);
-              }
-            }}
-            editable={!disabled}
-            maxLength={MAX_CUSTOM_AMENITY_LABEL_LENGTH}
-            returnKeyType="done"
-            onSubmitEditing={addCustomAmenity}
-          />
+          <View style={[styles.customInputWrap, customError ? styles.customInputWrapError : null]}>
+            <Plus size={16} color={colors.muted} strokeWidth={2.2} />
+            <TextInput
+              style={styles.customInput}
+              placeholder={t('spaces.amenities.customPlaceholder')}
+              placeholderTextColor={colors.muted}
+              value={customLabel}
+              onChangeText={text => {
+                setCustomLabel(text);
+                if (customError) {
+                  setCustomError(null);
+                }
+              }}
+              editable={!disabled}
+              maxLength={MAX_CUSTOM_AMENITY_LABEL_LENGTH}
+              returnKeyType="done"
+              onSubmitEditing={addCustomAmenity}
+            />
+          </View>
           <Pressable
             disabled={disabled}
             onPress={addCustomAmenity}
@@ -264,71 +305,95 @@ export function SpaceAmenitiesField({
 
 const styles = StyleSheet.create({
   wrap: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   label: {
-    ...typography.bodyStrong,
+    ...typography.label,
+    color: colors.textPrimary,
     marginBottom: spacing.xs,
   },
   hint: {
     ...typography.caption,
     color: colors.muted,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginHorizontal: -spacing.xs,
+    gap: spacing.xs,
   },
-  gridItem: {
-    width: '50%',
-    paddingHorizontal: spacing.xs,
-    marginBottom: spacing.xs,
-  },
-  gridItemFull: {
-    width: '100%',
-    paddingHorizontal: spacing.xs,
-    marginBottom: spacing.xs,
-  },
-  checkboxRow: {
+  tile: {
+    width: '48.5%',
+    flexGrow: 1,
+    minWidth: '46%',
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: spacing.sm,
-    paddingVertical: spacing.xs,
+    minHeight: 52,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.button,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+    ...shadows.sm,
   },
-  checkboxBox: {
-    width: 20,
-    height: 20,
+  tileFull: {
+    width: '100%',
+    minWidth: '100%',
+  },
+  tileSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.lightGreen,
+  },
+  tilePressed: {
+    backgroundColor: colors.surface,
+  },
+  tileDisabled: {
+    opacity: 0.5,
+  },
+  tileIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  tileIconWrapSelected: {
+    backgroundColor: `${colors.primary}22`,
+  },
+  tileLabel: {
+    ...typography.caption,
+    flex: 1,
+    minWidth: 0,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    fontSize: 12,
+  },
+  tileLabelSelected: {
+    color: colors.primaryDark,
+    fontWeight: '700',
+  },
+  tileCheck: {
+    width: 18,
+    height: 18,
     borderRadius: 4,
     borderWidth: 1.5,
     borderColor: colors.border,
+    backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.white,
-    marginTop: 1,
+    flexShrink: 0,
   },
-  checkboxBoxChecked: {
+  tileCheckSelected: {
     borderColor: colors.primary,
     backgroundColor: colors.primary,
   },
-  checkboxMark: {
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 14,
-  },
-  checkboxLabel: {
-    ...typography.caption,
-    color: colors.textPrimary,
-    flex: 1,
-    flexShrink: 1,
-  },
-  checkboxLabelBold: {
-    fontWeight: '600',
-  },
   customSection: {
     marginTop: spacing.md,
-    borderTopWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
     paddingTop: spacing.md,
     gap: spacing.sm,
@@ -342,21 +407,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  customInput: {
+  customInputWrap: {
     flex: 1,
     minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
     backgroundColor: colors.white,
     borderRadius: radius.input,
     borderWidth: 1,
     borderColor: colors.border,
     paddingHorizontal: spacing.md,
+  },
+  customInputWrapError: {
+    borderColor: '#F87171',
+    backgroundColor: '#FFF5F5',
+  },
+  customInput: {
+    flex: 1,
+    minWidth: 0,
     paddingVertical: spacing.sm,
     fontSize: 14,
     color: colors.textPrimary,
-  },
-  customInputError: {
-    borderColor: '#F87171',
-    backgroundColor: '#FFF5F5',
   },
   customErrorText: {
     ...typography.caption,
@@ -370,6 +442,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     minHeight: 44,
     justifyContent: 'center',
+    backgroundColor: colors.lightGreen,
   },
   addButtonDisabled: {
     opacity: 0.5,
@@ -377,6 +450,6 @@ const styles = StyleSheet.create({
   addButtonText: {
     ...typography.caption,
     color: colors.primaryDark,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

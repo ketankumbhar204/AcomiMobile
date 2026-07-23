@@ -40,7 +40,7 @@ export function SpaceSwitcher({ spaceId }: SpaceSwitcherProps) {
         if (a.isDefault !== b.isDefault) {
           return a.isDefault ? -1 : 1;
         }
-        return 0;
+        return a.spaceName.localeCompare(b.spaceName);
       }),
     [mySpaces],
   );
@@ -111,7 +111,7 @@ export function SpaceSwitcher({ spaceId }: SpaceSwitcherProps) {
               </View>
             ) : (
               sortedSpaces.map((space, index) => {
-                const isSelected = space.spaceId === currentSpace?.spaceId;
+                const isSelected = space.spaceId === (currentSpace?.spaceId ?? spaceId);
 
                 return (
                   <Pressable
@@ -120,6 +120,7 @@ export function SpaceSwitcher({ spaceId }: SpaceSwitcherProps) {
                     style={({ pressed }) => [
                       styles.menuItem,
                       index < sortedSpaces.length - 1 && styles.menuItemBorder,
+                      isSelected && styles.menuItemSelected,
                       pressed && styles.menuItemPressed,
                     ]}
                     accessibilityRole="menuitem"
@@ -132,13 +133,15 @@ export function SpaceSwitcher({ spaceId }: SpaceSwitcherProps) {
                       numberOfLines={1}>
                       {formatSpaceDisplayName(space)}
                     </Text>
-                    {isSelected ? (
-                      <Text style={styles.checkmark}>✓</Text>
-                    ) : space.isDefault ? (
-                      <Text style={styles.defaultHint}>
-                        {t('spaces.mySpaces.defaultBadge')}
-                      </Text>
-                    ) : null}
+                    <View style={styles.menuItemTrailing}>
+                      {isSelected ? (
+                        <Text style={styles.checkmark}>✓</Text>
+                      ) : space.isDefault ? (
+                        <Text style={styles.defaultHint}>
+                          {t('spaces.mySpaces.defaultBadge')}
+                        </Text>
+                      ) : null}
+                    </View>
                   </Pressable>
                 );
               })
@@ -179,8 +182,8 @@ const styles = StyleSheet.create({
   menu: {
     position: 'absolute',
     top: 96,
+    left: spacing.lg,
     right: spacing.lg,
-    minWidth: 220,
     backgroundColor: colors.white,
     borderRadius: radius.sm,
     borderWidth: 1,
@@ -191,16 +194,18 @@ const styles = StyleSheet.create({
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     minHeight: 48,
-    gap: spacing.md,
+    gap: spacing.sm,
     backgroundColor: colors.white,
   },
   menuItemBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
+  },
+  menuItemSelected: {
+    backgroundColor: colors.lightGreen,
   },
   menuItemPressed: {
     backgroundColor: colors.surface,
@@ -209,10 +214,16 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textPrimary,
     flex: 1,
+    minWidth: 0,
   },
   menuItemLabelSelected: {
-    ...typography.bodyStrong,
     color: colors.primaryDark,
+    fontWeight: '700',
+  },
+  menuItemTrailing: {
+    minWidth: 28,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
   },
   checkmark: {
     fontSize: 16,

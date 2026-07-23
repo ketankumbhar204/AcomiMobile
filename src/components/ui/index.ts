@@ -19,6 +19,7 @@ export type { QuickActionSheetOption } from './QuickActionSheetModal';
 export { Card } from './Card';
 export { EmptyState } from './EmptyState';
 export { HeaderBackButton } from './HeaderBackButton';
+export { StackTitleWithSubtitle } from './StackTitleWithSubtitle';
 export { ProfileHeaderButton } from './ProfileHeaderButton';
 export { SpaceTabBackButton } from './SpaceTabBackButton';
 export { SpaceTabHeaderActions } from './SpaceTabHeaderActions';

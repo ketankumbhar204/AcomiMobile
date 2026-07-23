@@ -3,6 +3,7 @@ import { paymentsApi } from '../api/paymentsApi';
 import type { MemberPaymentLedgerRow, MemberPaymentStatus, UUID } from '../api/types';
 import { createRequestGuard } from '../modules/orchestrator';
 import {
+  applyPaymentLedgerFilter,
   defaultPaymentListFilters,
   paymentFiltersFromLegacy,
   type PaymentLedgerFilter,
@@ -179,10 +180,16 @@ export function usePaymentsMembers(
     await load(page + 1, { append: true });
   }, [load, page, rows.length, totalElements]);
 
+  // Client-side safety net: server presets can return rows whose reconciled status
+  // no longer matches (e.g. collected amount on an under-review member).
+  const filteredMembers = useMemo(
+    () => applyPaymentLedgerFilter(rows, filters, search),
+    [filters, rows, search],
+  );
+
   return {
     members: rows,
-    /** Server already filtered — alias for screen compatibility. */
-    filteredMembers: rows,
+    filteredMembers,
     filters,
     search,
     setFilters,

@@ -1,10 +1,17 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import {
+  Clock,
+  IndianRupee,
+  Inbox,
+  Wallet,
+} from 'lucide-react-native';
 import type { DashboardFinancialSummary } from '../../api/types';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, spacing } from '../../theme';
 import { formatComboPrice } from '../../utils/comboPrice';
 import { DashboardSectionTitle } from './DashboardSectionTitle';
+import { DashboardStatCard } from './shared/DashboardStatCard';
 
 type DashboardFinancialSnapshotProps = {
   loading: boolean;
@@ -18,40 +25,12 @@ type DashboardFinancialSnapshotProps = {
   onPendingPress?: () => void;
 };
 
-function SnapshotCard({
-  value,
-  label,
-  valueStyle,
-  onPress,
-}: {
-  value: string;
-  label: string;
-  valueStyle?: object;
-  onPress?: () => void;
-}) {
-  const content = (
-    <>
-      <Text style={[styles.value, valueStyle]} numberOfLines={1}>
-        {value}
-      </Text>
-      <Text style={styles.label}>{label}</Text>
-      {onPress ? <Text style={styles.chevron}>›</Text> : null}
-    </>
-  );
-
-  if (!onPress) {
-    return <View style={styles.card}>{content}</View>;
-  }
-
-  return (
-    <Pressable
-      style={({ pressed }) => [styles.card, styles.cardPressable, pressed && styles.cardPressed]}
-      onPress={onPress}
-      accessibilityRole="button">
-      {content}
-    </Pressable>
-  );
-}
+const ACCENT = {
+  expected: colors.primaryDark,
+  collected: colors.success,
+  underReview: '#2563EB',
+  pending: '#D97706',
+} as const;
 
 export function DashboardFinancialSnapshot({
   loading,
@@ -118,47 +97,63 @@ export function DashboardFinancialSnapshot({
         <ActivityIndicator color={colors.primary} style={styles.loader} />
       ) : showPrepaidCards && !showPayPerMealCards ? (
         <View style={styles.row}>
-          <SnapshotCard
+          <DashboardStatCard
+            compact
+            icon={Wallet}
+            accent={ACCENT.expected}
             value={balanceSold}
             label={t('dashboard.financial.balanceSold')}
             onPress={onExpectedPress}
           />
-          <SnapshotCard
+          <DashboardStatCard
+            compact
+            icon={Inbox}
+            accent={ACCENT.collected}
             value={balanceConsumed}
             label={t('dashboard.financial.balanceConsumed')}
-            valueStyle={styles.collected}
             onPress={onCollectedPress}
           />
-          <SnapshotCard
+          <DashboardStatCard
+            compact
+            icon={IndianRupee}
+            accent={ACCENT.pending}
             value={balanceRemaining}
             label={t('dashboard.financial.balanceRemaining')}
-            valueStyle={styles.pending}
             onPress={onPendingPress}
           />
         </View>
       ) : (
-        <View style={styles.grid}>
-          <SnapshotCard
+        <View style={styles.row}>
+          <DashboardStatCard
+            compact
+            icon={Wallet}
+            accent={ACCENT.expected}
             value={expected}
             label={t('dashboard.financial.expected')}
             onPress={onExpectedPress}
           />
-          <SnapshotCard
+          <DashboardStatCard
+            compact
+            icon={Inbox}
+            accent={ACCENT.collected}
             value={collected}
             label={t('dashboard.financial.collected')}
-            valueStyle={styles.collected}
             onPress={onCollectedPress}
           />
-          <SnapshotCard
+          <DashboardStatCard
+            compact
+            icon={Clock}
+            accent={ACCENT.underReview}
             value={underReview}
             label={t('dashboard.financial.underReview')}
-            valueStyle={styles.underReview}
             onPress={onUnderReviewPress}
           />
-          <SnapshotCard
+          <DashboardStatCard
+            compact
+            icon={IndianRupee}
+            accent={ACCENT.pending}
             value={pending}
             label={t('dashboard.financial.pending')}
-            valueStyle={styles.pending}
             onPress={onPendingPress}
           />
         </View>
@@ -177,58 +172,6 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     gap: spacing.xs,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-  },
-  card: {
-    flexGrow: 1,
-    flexBasis: '47%',
-    minWidth: 0,
-    backgroundColor: colors.white,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xxs,
-    alignItems: 'center',
-    gap: 2,
-    position: 'relative',
-  },
-  cardPressable: {},
-  cardPressed: {
-    opacity: 0.88,
-    borderColor: colors.primary,
-  },
-  value: {
-    ...typography.bodyStrong,
-    color: colors.primaryDark,
-    fontSize: 15,
-  },
-  collected: {
-    color: colors.success,
-  },
-  underReview: {
-    color: colors.primary,
-  },
-  pending: {
-    color: '#EAB308',
-  },
-  label: {
-    ...typography.caption,
-    color: colors.muted,
-    textAlign: 'center',
-    fontWeight: '600',
-    fontSize: 11,
-  },
-  chevron: {
-    position: 'absolute',
-    top: spacing.xs,
-    right: spacing.xxs,
-    fontSize: 14,
-    fontWeight: '300',
-    color: colors.muted,
+    width: '100%',
   },
 });

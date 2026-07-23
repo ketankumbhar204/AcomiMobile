@@ -1,16 +1,20 @@
-import React, { useLayoutEffect } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import React, { useCallback, useLayoutEffect } from 'react';
+import { ScrollView, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import type { GlobalAttentionSpace } from '../../api/types';
+import type { GlobalAttentionItem, GlobalAttentionSpace } from '../../api/types';
+import { GlobalAttentionSpaceCard } from '../../components/spaces/GlobalAttentionSpaceCard';
 import { EmptyState, HeaderBackButton, SkeletonCard } from '../../components/ui';
 import { useGlobalDashboard } from '../../hooks/useGlobalDashboard';
 import type { MainStackParamList } from '../../navigation/types';
 import { openSpaceToPendingActions } from '../../navigation/navigationRef';
 import { useSpaceStore } from '../../store/spaceStore';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, spacing } from '../../theme';
 import { invalidateAccommodationQueries } from '../../utils/accommodationQueryCache';
+import { navigateFromNotificationType } from '../../utils/notificationDeepLinks';
+import { canManageNotifications } from '../../utils/spaceOperator';
+import { findMySpaceEntry, resolveSpacePermissions } from '../../utils/spacePermissions';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'GlobalAttentionList'>;
 
@@ -18,6 +22,7 @@ export function GlobalAttentionListScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const switchSpace = useSpaceStore(state => state.switchSpace);
+  const mySpaces = useSpaceStore(state => state.mySpaces);
   const { data, loading } = useGlobalDashboard(true);
 
   useLayoutEffect(() => {
@@ -28,13 +33,52 @@ export function GlobalAttentionListScreen() {
     });
   }, [navigation, t]);
 
-  const onPressSpace = async (space: GlobalAttentionSpace) => {
-    const success = await switchSpace(space.spaceId);
-    if (success) {
-      invalidateAccommodationQueries();
-      openSpaceToPendingActions(space.spaceId);
-    }
-  };
+  const switchIntoSpace = useCallback(
+    async (spaceId: string) => {
+      const success = await switchSpace(spaceId);
+      if (success) {
+        invalidateAccommodationQueries();
+      }
+      return success;
+    },
+    [switchSpace],
+  );
+
+  const onPressHeader = useCallback(
+    async (space: GlobalAttentionSpace) => {
+      const success = await switchIntoSpace(space.spaceId);
+      if (success) {
+        openSpaceToPendingActions(space.spaceId);
+      }
+    },
+    [switchIntoSpace],
+  );
+
+  const onPressItem = useCallback(
+    async (space: GlobalAttentionSpace, item: GlobalAttentionItem) => {
+      const success = await switchIntoSpace(space.spaceId);
+      if (!success) {
+        return;
+      }
+
+      const entry = findMySpaceEntry(mySpaces, space.spaceId);
+      const permissions = resolveSpacePermissions(entry);
+      const isOperator = canManageNotifications(permissions);
+
+      navigateFromNotificationType(
+        space.spaceId,
+        {
+          notificationType: item.actionType,
+          entityId: item.sampleEntityId,
+          actionRoute: item.actionRoute,
+          message: item.message,
+          title: item.title,
+        },
+        isOperator,
+      );
+    },
+    [mySpaces, switchIntoSpace],
+  );
 
   const spaces = data?.attentionRequired ?? [];
 
@@ -48,21 +92,12 @@ export function GlobalAttentionListScreen() {
         />
       ) : (
         spaces.map(space => (
-          <Pressable
+          <GlobalAttentionSpaceCard
             key={space.spaceId}
-            onPress={() => onPressSpace(space)}
-            style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
-            <Text style={styles.spaceName}>{space.spaceName}</Text>
-            <Text style={styles.count}>
-              {t('spaces.globalDashboard.pendingActions', { count: space.count })}
-            </Text>
-            {space.items.map(item => (
-              <Text key={`${space.spaceId}-${item.actionType}`} style={styles.item}>
-                • {item.count > 1 ? `${item.count} ` : ''}
-                {item.title}
-              </Text>
-            ))}
-          </Pressable>
+            space={space}
+            onPressHeader={() => void onPressHeader(space)}
+            onPressItem={item => void onPressItem(space, item)}
+          />
         ))
       )}
     </ScrollView>
@@ -72,16 +107,4 @@ export function GlobalAttentionListScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
-  card: {
-    backgroundColor: colors.white,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-    gap: spacing.xs,
-  },
-  pressed: { opacity: 0.8 },
-  spaceName: { ...typography.h3 },
-  count: { ...typography.caption, color: '#C2410C', fontWeight: '600' },
-  item: { ...typography.caption },
 });

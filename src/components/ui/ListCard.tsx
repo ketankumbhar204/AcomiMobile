@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { ChevronRight } from 'lucide-react-native';
 import { InlineEditableName } from './InlineEditableName';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 
@@ -50,7 +51,7 @@ export function ListCard({
         {status ? <View style={styles.status}>{status}</View> : null}
       </View>
       {trailingBadge ? <View style={styles.trailingBadge}>{trailingBadge}</View> : null}
-      {onPress ? <Text style={styles.chevron}>›</Text> : null}
+      {onPress ? <ChevronRight size={20} color={colors.muted} strokeWidth={2.4} /> : null}
     </Pressable>
   );
 }
@@ -65,7 +66,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: spacing.lg,
     gap: spacing.md,
-    minHeight: 72,
+    minHeight: 76,
     ...shadows.sm,
   },
   pressed: {
@@ -92,6 +93,7 @@ const styles = StyleSheet.create({
   subtitle: {
     ...typography.caption,
     marginTop: 2,
+    color: colors.textSecondary,
   },
   status: {
     marginTop: spacing.sm,
@@ -99,10 +101,5 @@ const styles = StyleSheet.create({
   trailingBadge: {
     flexShrink: 0,
     marginRight: spacing.xxs,
-  },
-  chevron: {
-    fontSize: 24,
-    fontWeight: '300',
-    color: colors.muted,
   },
 });

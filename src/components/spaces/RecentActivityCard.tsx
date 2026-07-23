@@ -1,8 +1,9 @@
-import React from 'react';
+﻿import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { ChevronRight, Clock } from 'lucide-react-native';
 import type { GlobalActivityItem } from '../../api/types';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 
 type RecentActivityCardProps = {
   items: GlobalActivityItem[];
@@ -21,13 +22,17 @@ export function RecentActivityCard({ items, onPress }: RecentActivityCardProps) 
   if (count === 0) {
     return (
       <View style={styles.card} accessibilityRole="summary">
-        <Text style={styles.title}>{t('spaces.globalDashboard.activityTitle')}</Text>
-        <Text style={styles.empty}>{t('spaces.globalDashboard.activityEmptyTitle')}</Text>
+        <View style={styles.iconWrap}>
+          <Clock size={18} color={colors.muted} strokeWidth={2.2} />
+        </View>
+        <View style={styles.textCol}>
+          <Text style={styles.title}>{t('spaces.globalDashboard.activityTitle')}</Text>
+          <Text style={styles.empty}>{t('spaces.globalDashboard.activityEmptyTitle')}</Text>
+        </View>
       </View>
     );
   }
 
-  // Prefer the concrete latest title — easier to glance than a count alone.
   const summary = latest.title || t('spaces.globalDashboard.activityNewUpdates', { count });
 
   return (
@@ -36,13 +41,16 @@ export function RecentActivityCard({ items, onPress }: RecentActivityCardProps) 
       accessibilityRole="button"
       accessibilityLabel={`${t('spaces.globalDashboard.activityTitle')}. ${summary}`}
       style={({ pressed }) => [styles.card, styles.pressable, pressed && styles.pressed]}>
+      <View style={styles.iconWrap}>
+        <Clock size={18} color={colors.primaryDark} strokeWidth={2.2} />
+      </View>
       <View style={styles.textCol}>
         <Text style={styles.title}>{t('spaces.globalDashboard.activityTitle')}</Text>
         <Text style={styles.summary} numberOfLines={1}>
           {summary}
         </Text>
       </View>
-      <Text style={styles.cta}>{t('spaces.globalDashboard.viewArrow')}</Text>
+      <ChevronRight size={18} color={colors.muted} strokeWidth={2.4} />
     </Pressable>
   );
 }
@@ -54,18 +62,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    gap: spacing.xs,
-    minHeight: 64,
-  },
-  pressable: {
+    paddingHorizontal: spacing.md,
+    gap: spacing.md,
+    minHeight: 68,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    ...shadows.sm,
   },
+  pressable: {},
   pressed: {
     opacity: 0.8,
     backgroundColor: colors.surface,
+  },
+  iconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.button,
+    backgroundColor: colors.lightGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   textCol: {
     flex: 1,
@@ -78,23 +93,17 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
-    fontSize: 12,
+    fontSize: 11,
   },
   summary: {
     ...typography.body,
     fontWeight: '600',
     color: colors.textPrimary,
-    fontSize: 16,
+    fontSize: 15,
   },
   empty: {
     ...typography.body,
     color: colors.textSecondary,
-    fontSize: 15,
-  },
-  cta: {
-    ...typography.body,
-    fontWeight: '700',
-    color: colors.primaryDark,
-    fontSize: 15,
+    fontSize: 14,
   },
 });

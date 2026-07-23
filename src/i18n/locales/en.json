@@ -11,6 +11,9 @@
     "retry": "Retry",
     "continue": "Continue",
     "select": "Select",
+    "selectMonth": "Select month",
+    "previousYear": "Previous year",
+    "nextYear": "Next year",
     "save": "Save",
     "edit": "Edit",
     "done": "Done",
@@ -136,8 +139,15 @@
   "spaces": {
     "mySpaces": {
       "eyebrow": "Your properties",
+      "greetingMorning": "Good morning",
+      "greetingAfternoon": "Good afternoon",
+      "greetingEvening": "Good evening",
       "heading": "Select a space",
       "subheading": "Open a space to view dashboard, members, meals, and more.",
+      "spacesSection": "Your spaces",
+      "quickActionsTitle": "Quick actions",
+      "addSpace": "Add space",
+      "addSpaceSubtitle": "Create a new PG, Mess, Hostel, or Rental",
       "emptyTitle": "No spaces yet",
       "emptyDescription": "Create your first PG, Rental, Mess, or Hostel space to get started.",
       "createFab": "Create new space",
@@ -689,9 +699,9 @@
       "RENTAL_desc": "Rentable units without room subdivisions"
     },
     "home": {
-      "emptyTitle": "No property structure yet",
-      "emptyDescription": "Describe your property in a few steps or create manually.",
-      "quickSetup": "Quick Setup",
+      "emptyTitle": "Welcome!",
+      "emptyDescription": "Next step: Create your property layout.",
+      "quickSetup": "Start Setup",
       "addBuildingManually": "Add Building Manually",
       "addManually": "Add Manually",
       "manageHint": "Tap to manage",
@@ -1473,6 +1483,66 @@
   "dashboard": {
     "overview": "Overview",
     "tomorrowMeals": "Tomorrow's meals",
+    "customer": {
+      "greetingMorning": "Good morning",
+      "greetingAfternoon": "Good afternoon",
+      "greetingEvening": "Good evening",
+      "heroSubtitle": "Here's what's cooking today",
+      "mealItems_one": "{{count}} Item",
+      "mealItems_other": "{{count}} Items",
+      "stats": {
+        "title": "Quick stats",
+        "menuItems": "Total menu items",
+        "yourOrders": "Your orders",
+        "dueAmount": "Due amount",
+        "upcomingPayments": "Upcoming payments"
+      },
+      "recentOrders": {
+        "title": "Recent orders",
+        "viewAll": "View all",
+        "empty": "No recent orders yet. Choose meals to get started.",
+        "itemCount_one": "{{count}} item",
+        "itemCount_other": "{{count}} items"
+      },
+      "quickActions": {
+        "title": "Quick actions",
+        "myOrders": "My Orders",
+        "payments": "Payments",
+        "complaints": "Complaints"
+      }
+    },
+    "owner": {
+      "greetingMorning": "Good morning",
+      "greetingAfternoon": "Good afternoon",
+      "greetingEvening": "Good evening",
+      "heroSubtitle": "Here's your operations overview"
+    },
+    "setup": {
+      "eyebrow": "Getting started",
+      "title": "Setup Progress",
+      "continue": "Continue Setup",
+      "startSetup": "Start Setup",
+      "addMembers": "Add Members",
+      "configureMeals": "Configure Meals",
+      "percentRemaining": "{{percent}}% remaining",
+      "steps": {
+        "spaceCreated": "Space created",
+        "createBuilding": "Create building",
+        "addFloors": "Add floors",
+        "addRooms": "Add rooms",
+        "addBeds": "Add beds",
+        "addMembers": "Add members",
+        "configureMeals": "Configure meals"
+      },
+      "nextHint": {
+        "createBuilding": "Create your property layout to unlock beds, members, and payments.",
+        "addFloors": "Add floors so you can organize rooms and beds.",
+        "addRooms": "Add rooms to your floors or units.",
+        "addBeds": "Add beds so you can assign residents.",
+        "addMembers": "Invite or add members to start allocating beds and meals.",
+        "configureMeals": "Set up your menu library so you can plan and share meals."
+      }
+    },
     "pollCard": {
       "title": "Tomorrow's Menu",
       "titleToday": "Today's Menu",
@@ -1506,6 +1576,7 @@
       "checkLater": "Please check later.",
       "chooseMyMeals": "Choose My Meals",
       "viewMenus": "View Menus",
+      "viewFullMenu": "View Full Menu",
       "continueSelection": "Continue Selection",
       "updateChoices": "Update Choices",
       "mealsUpdated": "Your meal choices are updated",
@@ -1761,6 +1832,7 @@
       "totalAmount": "Total amount",
       "mealsFallback": "Meals",
       "batchId": "Batch {{id}}",
+      "paymentReference": "Ref {{id}}",
       "status": {
         "pending": "Pending",
         "overdue": "Overdue",
@@ -1879,6 +1951,7 @@
         "paymentDate": "Payment date",
         "submitted": "Submitted",
         "method": "Payment method",
+        "paymentReference": "Payment reference",
         "reference": "Reference / UTR"
       },
       "mealDaysCount_one": "{{count}} day",
@@ -1926,6 +1999,8 @@
       "openAll": "Payments review",
       "tabPendingReview": "Pending Review ({{count}})",
       "tabHistory": "History ({{count}})",
+      "tabPendingReviewLabel": "Pending Review",
+      "tabHistoryLabel": "History",
       "autoOpenHint_one": "{{count}} payment requires your review.",
       "autoOpenHint_other": "{{count}} payments require your review.",
       "autoOpenHint": "{{count}} payments require your review.",
@@ -1934,7 +2009,11 @@
         "submitted": "Submitted ({{count}})",
         "needsUpdate": "Needs Update ({{count}})",
         "paid": "Paid ({{count}})",
-        "rejected": "Rejected ({{count}})"
+        "rejected": "Rejected ({{count}})",
+        "submittedLabel": "Submitted",
+        "needsUpdateLabel": "Needs Update",
+        "paidLabel": "Paid",
+        "rejectedLabel": "Rejected"
       },
       "tabSubmitted": "Submitted ({{count}})",
       "tabChangesRequested": "Changes Requested ({{count}})",
@@ -1975,6 +2054,7 @@
       "methodUnknown": "—",
       "utrMissing": "—",
       "submitted": "Submitted",
+      "paymentReference": "Ref {{id}}",
       "proofUploaded": "Proof Uploaded",
       "screenshotUploaded": "Screenshot uploaded",
       "viewScreenshot": "View Screenshot",

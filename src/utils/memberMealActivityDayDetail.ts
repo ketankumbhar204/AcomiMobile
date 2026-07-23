@@ -123,6 +123,10 @@ export function normalizeMemberMealActivityDayDetail(raw: Record<string, unknown
           (paymentRaw.paymentBatchId as string | null | undefined) ??
           (paymentRaw.payment_batch_id as string | null | undefined) ??
           null,
+        paymentReference:
+          (paymentRaw.paymentReference as string | null | undefined) ??
+          (paymentRaw.payment_reference as string | null | undefined) ??
+          null,
         proofImageUrl:
           (paymentRaw.proofImageUrl as string | null | undefined) ??
           (paymentRaw.proof_image_url as string | null | undefined) ??

@@ -72,7 +72,15 @@ export async function fetchDashboardSummaryCached(
   if (!options?.force) {
     const cached = cache.get(key);
     if (cached && Date.now() - cached.fetchedAt < TTL_MS) {
-      return cached.summary;
+      const reviewCount =
+        cached.summary.pendingActions?.groups?.find(g => g.actionType === 'PAYMENT_NEEDS_REVIEW')
+          ?.count ?? 0;
+      const underReviewAmount = cached.summary.financial?.underReview ?? 0;
+      if (reviewCount > 0 && !(underReviewAmount > 0)) {
+        // Fall through to refetch — snapshot may have just been healed server-side.
+      } else {
+        return cached.summary;
+      }
     }
     const pending = inflight.get(key);
     if (pending) {

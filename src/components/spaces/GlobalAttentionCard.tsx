@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { AlertTriangle, CheckCircle2, ChevronRight } from 'lucide-react-native';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 
 type GlobalAttentionCardProps = {
@@ -28,7 +29,9 @@ export function GlobalAttentionCard({
         style={styles.okCard}
         accessibilityRole="summary"
         accessibilityLabel={t('spaces.globalDashboard.attentionOk')}>
-        <Text style={styles.okIcon}>✅</Text>
+        <View style={styles.okIconWrap}>
+          <CheckCircle2 size={22} color={colors.success} strokeWidth={2.2} />
+        </View>
         <Text style={styles.okTitle}>{t('spaces.globalDashboard.attentionOk')}</Text>
       </View>
     );
@@ -44,8 +47,11 @@ export function GlobalAttentionCard({
       })}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
       <View style={styles.headerRow}>
-        <Text style={styles.icon}>⚠</Text>
+        <View style={styles.warnIconWrap}>
+          <AlertTriangle size={20} color="#D97706" strokeWidth={2.2} />
+        </View>
         <Text style={styles.title}>{t('spaces.globalDashboard.needsAttention')}</Text>
+        <ChevronRight size={18} color="#92400E" strokeWidth={2.4} />
       </View>
       <View style={styles.statsRow}>
         <View style={styles.stat}>
@@ -62,7 +68,6 @@ export function GlobalAttentionCard({
           </Text>
         </View>
       </View>
-      <Text style={styles.cta}>{t('spaces.globalDashboard.viewArrow')}</Text>
     </Pressable>
   );
 }
@@ -74,7 +79,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#F59E0B',
     paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: spacing.lg,
     gap: spacing.md,
     minHeight: 112,
     ...shadows.sm,
@@ -87,15 +92,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  icon: {
-    fontSize: 22,
-    color: '#B45309',
+  warnIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.button,
+    backgroundColor: '#FEF3C7',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
-    ...typography.h2,
+    ...typography.h3,
     color: '#92400E',
-    fontSize: 22,
-    lineHeight: 28,
+    flex: 1,
   },
   statsRow: {
     flexDirection: 'row',
@@ -107,14 +115,14 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   statNumber: {
-    fontSize: 32,
-    lineHeight: 38,
+    fontSize: 28,
+    lineHeight: 34,
     fontWeight: '800',
     color: colors.textPrimary,
   },
   statLabel: {
     ...typography.caption,
-    fontSize: 14,
+    fontSize: 13,
     lineHeight: 18,
     color: '#92400E',
     fontWeight: '600',
@@ -124,33 +132,32 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     backgroundColor: '#F59E0B55',
   },
-  cta: {
-    ...typography.body,
-    fontWeight: '700',
-    color: colors.primaryDark,
-    fontSize: 16,
-  },
   okCard: {
     backgroundColor: colors.white,
     borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
     paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     minHeight: 72,
     ...shadows.sm,
   },
-  okIcon: {
-    fontSize: 22,
+  okIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.button,
+    backgroundColor: colors.lightGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   okTitle: {
     ...typography.body,
     fontWeight: '700',
     color: colors.success,
-    fontSize: 17,
+    fontSize: 16,
     flex: 1,
   },
 });

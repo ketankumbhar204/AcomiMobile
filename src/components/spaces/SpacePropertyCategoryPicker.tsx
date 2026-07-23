@@ -15,6 +15,7 @@ type SpacePropertyCategoryPickerProps = {
   error?: string | null;
 };
 
+/** Design A compact capsule chips for property category (Gents / Ladies / Mixed). */
 export function SpacePropertyCategoryPicker({
   spaceType,
   value,
@@ -37,7 +38,9 @@ export function SpacePropertyCategoryPicker({
                 isSelected && styles.chipSelected,
                 pressed && !isSelected && styles.chipPressed,
               ]}
-              onPress={() => onChange(policy)}>
+              onPress={() => onChange(policy)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: isSelected }}>
               <Text style={[styles.chipLabel, isSelected && styles.chipLabelSelected]}>
                 {t(propertyCategoryLabelKey(spaceType, policy))}
               </Text>
@@ -52,7 +55,7 @@ export function SpacePropertyCategoryPicker({
 
 const styles = StyleSheet.create({
   wrapper: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   label: {
     ...typography.label,
@@ -62,17 +65,15 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   chip: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: radius.button,
-    borderWidth: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    borderWidth: 1.5,
     borderColor: colors.border,
     backgroundColor: colors.white,
-    minWidth: '30%',
-    flexGrow: 1,
   },
   chipSelected: {
     backgroundColor: colors.lightGreen,
@@ -82,10 +83,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   chipLabel: {
-    ...typography.bodyStrong,
-    fontSize: 14,
+    ...typography.caption,
+    fontWeight: '700',
+    fontSize: 13,
     color: colors.textPrimary,
-    textAlign: 'center',
   },
   chipLabelSelected: {
     color: colors.primaryDark,

@@ -4,7 +4,7 @@ import type { SpacePaymentResponse } from '../../api/types';
 describe('buildPaymentDetailMetaRows', () => {
   const t = (key: string) => key;
 
-  it('includes type, due, submitted, method, and reference', () => {
+  it('includes type, due, submitted, method, payment reference, and UTR', () => {
     const payment = {
       paymentType: 'MEAL',
       dueDate: '2026-07-10',
@@ -13,6 +13,7 @@ describe('buildPaymentDetailMetaRows', () => {
       updatedAt: '2026-07-11T12:00:00Z',
       paymentMethod: 'UPI',
       referenceNumber: 'UTR123',
+      paymentReference: 'PAY-20260720-000123',
     } as SpacePaymentResponse;
 
     const rows = buildPaymentDetailMetaRows(payment, t, {
@@ -27,8 +28,10 @@ describe('buildPaymentDetailMetaRows', () => {
       'paidOn',
       'submitted',
       'method',
+      'paymentReference',
       'utr',
     ]);
+    expect(rows.find(row => row.key === 'paymentReference')?.value).toBe('PAY-20260720-000123');
     expect(rows.find(row => row.key === 'utr')?.value).toBe('UTR123');
     expect(rows.find(row => row.key === 'billingPeriod')?.value).toBe('July 2026');
   });

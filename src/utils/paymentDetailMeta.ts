@@ -1,5 +1,6 @@
 import type { SpacePaymentResponse } from '../api/types';
 import { formatPaymentDueDate, formatPaymentSubmittedAt } from './paymentHistory';
+import { resolvePaymentReferenceDisplay } from './paymentReference';
 
 export type PaymentDetailMetaRow = {
   key: string;
@@ -71,6 +72,15 @@ export function buildPaymentDetailMetaRows(
       ? t(`paymentCollection.method.${payment.paymentMethod}`)
       : t('paymentCollection.approval.methodUnknown'),
   });
+
+  const paymentReference = resolvePaymentReferenceDisplay(payment);
+  if (paymentReference) {
+    rows.push({
+      key: 'paymentReference',
+      labelKey: 'paymentCollection.detail.fields.paymentReference',
+      value: paymentReference,
+    });
+  }
 
   rows.push({
     key: 'utr',

@@ -15,8 +15,14 @@ export {
 } from './spaceTypes';
 
 export function spaceResponseToSpace(response: SpaceResponse): Space {
+  const raw = response as SpaceResponse & { spaceId?: string };
+  const id = raw.id ?? raw.spaceId;
+  if (!id) {
+    throw new Error('Space response missing id');
+  }
+
   return {
-    id: response.id,
+    id,
     ownerId: response.ownerId,
     name: response.name,
     type: response.type,

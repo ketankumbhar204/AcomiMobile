@@ -12,6 +12,10 @@ type MonthlySummaryHeaderProps = {
   onPreviousMonth: () => void;
   onNextMonth: () => void;
   disableNext?: boolean;
+  /** Opens month/year picker when the month label is tapped. */
+  onMonthSelect?: (monthKey: string) => void;
+  /** Latest selectable month for the picker (YYYY-MM). */
+  maxMonth?: string;
   /** Prefer this for standard 4-KPI modules (payments, etc.). */
   cards?: MonthlySummaryCardItem[];
   /** Alternative to `cards` when metrics are built by a feature component. */
@@ -34,6 +38,8 @@ export function MonthlySummaryHeader({
   onPreviousMonth,
   onNextMonth,
   disableNext = false,
+  onMonthSelect,
+  maxMonth,
   cards,
   children,
   hint,
@@ -47,6 +53,8 @@ export function MonthlySummaryHeader({
           onPreviousMonth={onPreviousMonth}
           onNextMonth={onNextMonth}
           disableNext={disableNext}
+          onMonthSelect={onMonthSelect}
+          maxMonth={maxMonth}
         />
       ) : null}
       {cards != null && cards.length > 0 ? <MonthlySummaryCards cards={cards} /> : null}

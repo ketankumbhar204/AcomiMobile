@@ -31,6 +31,32 @@ describe('paymentLedger', () => {
     expect(applyPaymentLedgerFilter([prepaid], paymentFiltersFromLegacy('collected'))).toHaveLength(1);
   });
 
+  it('includes under-review members when they have a collected amount (matches KPI)', () => {
+    const underReview = row({
+      mealBillingType: 'PAY_PER_MEAL',
+      expectedCharges: 2510,
+      collected: 450,
+      pending: 0,
+      underReview: 2220,
+      status: 'UNDER_REVIEW',
+    });
+    expect(isCollectedPaymentRow(underReview)).toBe(true);
+    expect(
+      applyPaymentLedgerFilter([underReview], paymentFiltersFromLegacy('collected')),
+    ).toHaveLength(1);
+  });
+
+  it('excludes members with zero collected from collected filter', () => {
+    const pendingOnly = row({
+      mealBillingType: 'PAY_PER_MEAL',
+      expectedCharges: 1200,
+      collected: 0,
+      pending: 1200,
+      status: 'PENDING',
+    });
+    expect(isCollectedPaymentRow(pendingOnly)).toBe(false);
+  });
+
   it('excludes prepaid members without pack payments from collected', () => {
     const prepaid = row({
       mealBillingType: 'PREPAID_BALANCE',

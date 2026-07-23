@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { MemberPaymentLedgerRow, PrepaidBalanceUnit } from '../../api/types';
@@ -9,8 +9,18 @@ import { PaymentStatusBadge } from './PaymentStatusBadge';
 type MemberPaymentRowProps = {
   row: MemberPaymentLedgerRow;
   prepaidMode?: boolean;
+  /** When set to collected, trailing amount shows collected (matches Collected filter). */
+  amountEmphasis?: 'default' | 'collected';
   onPress: () => void;
 };
+
+function memberInitial(name: string | null | undefined): string {
+  const trimmed = name?.trim();
+  if (!trimmed) {
+    return '?';
+  }
+  return trimmed.charAt(0).toUpperCase();
+}
 
 function formatBalanceValue(
   amount: number | null | undefined,
@@ -27,7 +37,21 @@ function formatBalanceValue(
   return formatComboPrice(amount, currencyCode) ?? '—';
 }
 
-export function MemberPaymentRow({ row, prepaidMode, onPress }: MemberPaymentRowProps) {
+function MemberAvatar({ name }: { name: string }) {
+  const initial = useMemo(() => memberInitial(name), [name]);
+  return (
+    <View style={styles.avatar} accessibilityElementsHidden>
+      <Text style={styles.avatarText}>{initial}</Text>
+    </View>
+  );
+}
+
+export function MemberPaymentRow({
+  row,
+  prepaidMode,
+  amountEmphasis = 'default',
+  onPress,
+}: MemberPaymentRowProps) {
   const { t } = useTranslation();
   const currencyCode = row.currencyCode ?? 'INR';
   const unit = row.mealBalanceUnit ?? 'MEALS';
@@ -39,6 +63,7 @@ export function MemberPaymentRow({ row, prepaidMode, onPress }: MemberPaymentRow
         onPress={onPress}
         style={({ pressed }) => [styles.card, styles.cardRow, pressed && styles.cardPressed]}
         accessibilityRole="button">
+        <MemberAvatar name={row.memberName} />
         <View style={styles.main}>
           <Text style={styles.name} numberOfLines={1}>
             {row.memberName}
@@ -67,46 +92,61 @@ export function MemberPaymentRow({ row, prepaidMode, onPress }: MemberPaymentRow
   const hasPending = (row.pending ?? 0) > 0;
   const hasUnderReview =
     row.status === 'UNDER_REVIEW' || ((row.underReview ?? 0) > 0 && !hasPending);
-  const trailingAmount = hasPending
-    ? pendingDisplay
-    : hasUnderReview
-      ? (underReviewDisplay ?? '—')
-      : (collectedDisplay ?? expectedDisplay);
-  const trailingStyle = hasPending
-    ? styles.pendingAmount
-    : hasUnderReview
-      ? styles.underReviewAmount
-      : styles.settledAmount;
+
+  // Collected filter: always emphasize collected amount (not under-review / pending residual).
+  const emphasizeCollected = amountEmphasis === 'collected' && (row.collected ?? 0) > 0;
+  const trailingAmount = emphasizeCollected
+    ? (collectedDisplay ?? '—')
+    : hasPending
+      ? pendingDisplay
+      : hasUnderReview
+        ? (underReviewDisplay ?? '—')
+        : (collectedDisplay ?? expectedDisplay);
+  const trailingStyle = emphasizeCollected
+    ? styles.settledAmount
+    : hasPending
+      ? styles.pendingAmount
+      : hasUnderReview
+        ? styles.underReviewAmount
+        : styles.settledAmount;
+
+  // Member-month status can stay UNDER_REVIEW when only part of dues are approved.
+  // Under the Collected filter, badge reflects the collected slice with success styling.
+  const badgeStatus = emphasizeCollected
+    ? 'PAID'
+    : row.status === 'PENDING' && (row.underReview ?? 0) > 0 && (row.pending ?? 0) <= 0
+      ? 'UNDER_REVIEW'
+      : row.status;
+  const badgeLabel = emphasizeCollected
+    ? t('dashboard.financial.collected')
+    : undefined;
 
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      style={({ pressed }) => [styles.card, styles.cardWithAvatar, pressed && styles.cardPressed]}
       accessibilityRole="button">
-      <View style={styles.headerRow}>
-        <Text style={styles.name} numberOfLines={1}>
-          {row.memberName}
-        </Text>
-        <PaymentStatusBadge
-          status={
-            row.status === 'PENDING' && (row.underReview ?? 0) > 0 && (row.pending ?? 0) <= 0
-              ? 'UNDER_REVIEW'
-              : row.status
-          }
-        />
-      </View>
-      <View style={styles.bodyRow}>
-        <Text style={styles.meta} numberOfLines={1}>
-          {collectedDisplay
-            ? t('payments.row.collectedOfExpected', {
-                collected: collectedDisplay,
-                expected: expectedDisplay,
-              })
-            : t('payments.row.expected', {
-                expected: expectedDisplay,
-              })}
-        </Text>
-        <Text style={trailingStyle}>{trailingAmount}</Text>
+      <MemberAvatar name={row.memberName} />
+      <View style={styles.content}>
+        <View style={styles.headerRow}>
+          <Text style={styles.name} numberOfLines={1}>
+            {row.memberName}
+          </Text>
+          <PaymentStatusBadge status={badgeStatus} label={badgeLabel} />
+        </View>
+        <View style={styles.bodyRow}>
+          <Text style={styles.meta} numberOfLines={1}>
+            {collectedDisplay
+              ? t('payments.row.collectedOfExpected', {
+                  collected: collectedDisplay,
+                  expected: expectedDisplay,
+                })
+              : t('payments.row.expected', {
+                  expected: expectedDisplay,
+                })}
+          </Text>
+          <Text style={trailingStyle}>{trailingAmount}</Text>
+        </View>
       </View>
     </Pressable>
   );
@@ -123,6 +163,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     gap: spacing.xs,
   },
+  cardWithAvatar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   cardRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -130,6 +175,24 @@ const styles = StyleSheet.create({
   },
   cardPressed: {
     opacity: 0.92,
+  },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.lightGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    ...typography.bodyStrong,
+    color: colors.primaryDark,
+    fontSize: 14,
+  },
+  content: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacing.xs,
   },
   headerRow: {
     flexDirection: 'row',

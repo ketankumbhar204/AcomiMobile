@@ -21,6 +21,7 @@ import type { ComplaintResponse, ComplaintStatus } from '../../api/types';
 import { ComplaintStatusBadge } from '../../components/complaints';
 import { Button, EmptyState, ListFilterChips, SkeletonCard } from '../../components/ui';
 import { useComplaintsList } from '../../hooks/useComplaintsList';
+import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useSpaceTabHeader } from '../../hooks/useSpaceTabHeader';
 import type { MainStackParamList, SpaceTabParamList } from '../../navigation/types';
@@ -69,7 +70,7 @@ export function ComplaintsListScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
-  const { spaceId } = route.params;
+  const spaceId = useActiveSpaceId(route.params.spaceId);
   useSpaceTabHeader(spaceId);
 
   const permissions = useSpacePermissions(spaceId);

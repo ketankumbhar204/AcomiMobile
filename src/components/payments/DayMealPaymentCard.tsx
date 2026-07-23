@@ -6,6 +6,8 @@ import { formatComboPrice } from '../../utils/comboPrice';
 import type { DayMealPaymentListItem } from '../../utils/dayMealPayments';
 import { formatMenuDate } from '../../utils/mealDates';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
+import { PaymentReferenceLabel } from './PaymentReferenceLabel';
+import { PaymentStatusBadge } from './PaymentStatusBadge';
 
 type DayMealPaymentCardProps = {
   item: DayMealPaymentListItem;
@@ -14,35 +16,6 @@ type DayMealPaymentCardProps = {
   onPress: () => void;
   onToggleSelect?: () => void;
 };
-
-function statusLabelKey(status: DayMealPaymentListItem['displayStatus']): string {
-  switch (status) {
-    case 'OVERDUE':
-      return 'paymentCollection.dayMeals.status.overdue';
-    case 'PENDING_APPROVAL':
-      return 'paymentCollection.dayMeals.status.underReview';
-    case 'PAID':
-      return 'paymentCollection.dayMeals.status.paid';
-    case 'REJECTED':
-      return 'paymentCollection.dayMeals.status.rejected';
-    default:
-      return 'paymentCollection.dayMeals.status.pending';
-  }
-}
-
-function statusColor(status: DayMealPaymentListItem['displayStatus']): string {
-  switch (status) {
-    case 'OVERDUE':
-    case 'REJECTED':
-      return '#DC2626';
-    case 'PENDING_APPROVAL':
-      return '#2563EB';
-    case 'PAID':
-      return colors.success;
-    default:
-      return '#D97706';
-  }
-}
 
 export function DayMealPaymentCard({
   item,
@@ -83,12 +56,13 @@ export function DayMealPaymentCard({
             <Text style={styles.date}>{formatMenuDate(item.date, i18n.language)}</Text>
             <Text style={styles.amount}>{amountLabel}</Text>
           </View>
-          <Text style={styles.meals} numberOfLines={1}>
-            {mealsLabel}
-          </Text>
-          <Text style={[styles.status, { color: statusColor(item.displayStatus) }]}>
-            {t(statusLabelKey(item.displayStatus))}
-          </Text>
+          <View style={styles.metaRow}>
+            <Text style={styles.meals} numberOfLines={1}>
+              {mealsLabel}
+            </Text>
+            <PaymentStatusBadge status={item.displayStatus} style={styles.statusBadge} />
+          </View>
+          <PaymentReferenceLabel source={item} style={styles.reference} />
         </View>
       </View>
     </Pressable>
@@ -139,27 +113,40 @@ const styles = StyleSheet.create({
   body: {
     flex: 1,
     gap: 2,
+    minWidth: 0,
   },
   titleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     gap: spacing.sm,
   },
   date: {
     ...typography.bodyStrong,
     flex: 1,
+    minWidth: 0,
   },
   amount: {
     ...typography.bodyStrong,
     color: colors.textPrimary,
+    flexShrink: 0,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
   },
   meals: {
     ...typography.caption,
     color: colors.textSecondary,
+    flex: 1,
+    minWidth: 0,
   },
-  status: {
-    ...typography.caption,
-    fontWeight: '700',
+  statusBadge: {
+    flexShrink: 0,
+  },
+  reference: {
     marginTop: 2,
   },
 });

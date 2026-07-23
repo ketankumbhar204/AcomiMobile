@@ -22,6 +22,7 @@ export type DayMealPaymentListItem = {
   displayStatus: DayMealPaymentDisplayStatus;
   mealTypes: MealType[];
   paymentBatchId?: string | null;
+  paymentReference?: string | null;
   paymentId?: string | null;
 };
 
@@ -94,7 +95,8 @@ export function buildDayMealPaymentListItems(
         paymentStatus,
         displayStatus: resolveDayMealPaymentDisplayStatus(paymentStatus, day.date, todayIso),
         mealTypes,
-        paymentBatchId: null,
+        paymentBatchId: day.paymentBatchId ?? null,
+        paymentReference: day.paymentReference ?? null,
         paymentId: null,
       } satisfies DayMealPaymentListItem;
     })

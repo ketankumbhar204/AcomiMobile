@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { ChevronRight } from 'lucide-react-native';
 import type { MealType, UUID } from '../../api/types';
 import { useDashboardMealDay } from '../../hooks/useDashboardMealDay';
 import { useOwnerMealHeadcount } from '../../hooks/useOwnerMealHeadcount';
 import { navigateMainStack } from '../../navigation/mainStackNavigation';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { isPastMenuDate, todayIsoDate } from '../../utils/mealDates';
 import { buildDashboardMealSlotRows } from '../../utils/dashboardMealSlotDisplay';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
@@ -205,9 +206,8 @@ export function DashboardMealOperations({ spaceId, enabled = true }: DashboardMe
               style={({ pressed }) => [styles.planLink, pressed && styles.planLinkPressed]}
               onPress={() => handleOpenMenuPlanning()}
               accessibilityRole="button">
-              <Text style={styles.planLinkText}>
-                {t('dashboard.operations.planMenuCta')} ›
-              </Text>
+              <Text style={styles.planLinkText}>{t('dashboard.operations.planMenuCta')}</Text>
+              <ChevronRight size={14} color={colors.primaryDark} strokeWidth={2.6} />
             </Pressable>
           ) : null}
         </View>
@@ -219,6 +219,7 @@ export function DashboardMealOperations({ spaceId, enabled = true }: DashboardMe
             {mealSlotRows.map(row => (
               <MealOperationSlotCard
                 key={row.mealType}
+                mealType={row.mealType}
                 mealLabel={t(mealTypeLabelKey(row.mealType))}
                 caption={t(row.captionKey, row.captionParams)}
                 countPrimary={row.countPrimary}
@@ -270,7 +271,8 @@ const styles = StyleSheet.create({
   },
   loader: {
     marginVertical: spacing.md,
-  },  statusBar: {
+  },
+  statusBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -280,8 +282,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
     marginBottom: spacing.sm,
+    ...shadows.sm,
   },
   statusTextBlock: {
     flex: 1,
@@ -304,6 +307,9 @@ const styles = StyleSheet.create({
   },
   planLink: {
     flexShrink: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
     paddingVertical: spacing.xxs,
     paddingLeft: spacing.xs,
   },

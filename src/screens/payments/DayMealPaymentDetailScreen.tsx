@@ -12,6 +12,8 @@ import { useTranslation } from 'react-i18next';
 import { mealsApi } from '../../api/mealsApi';
 import type { MemberMealActivityDayDetail } from '../../api/types';
 import { MealSelectionSummary } from '../../components/meals/MealSelectionSummary';
+import { PaymentReferenceLabel } from '../../components/payments/PaymentReferenceLabel';
+import { PaymentStatusBadge } from '../../components/payments/PaymentStatusBadge';
 import { Button, Screen } from '../../components/ui';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
@@ -20,6 +22,7 @@ import { formatComboPrice } from '../../utils/comboPrice';
 import { resolveDayMealPaymentDisplayStatus } from '../../utils/dayMealPayments';
 import { formatMenuDate } from '../../utils/mealDates';
 import { buildMealSummaryFromDayDetails } from '../../utils/mealSelectionSummary';
+import { resolvePaymentReferenceDisplay } from '../../utils/paymentReference';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'DayMealPaymentDetail'>;
 type Nav = NativeStackNavigationProp<MainStackParamList>;
@@ -73,6 +76,7 @@ export function DayMealPaymentDetailScreen() {
         ? Number(detail.dayTotal)
         : summary?.totalAmount ?? 0;
   const currencyCode = detail?.currencyCode ?? 'INR';
+  const hasReference = Boolean(resolvePaymentReferenceDisplay(detail?.payment));
 
   const openSubmitPayment = useCallback(() => {
     navigation.navigate('DayMealBulkPay', {
@@ -95,17 +99,24 @@ export function DayMealPaymentDetailScreen() {
       {!loading && detail && summary ? (
         <>
           <View style={styles.amountCard}>
-            <Text style={styles.amountLabel}>{t('paymentCollection.dayMeals.totalAmount')}</Text>
-            <Text style={styles.amountValue}>
-              {formatComboPrice(amount, currencyCode) ?? '—'}
-            </Text>
-            <Text style={styles.status}>
-              {t(
-                `paymentCollection.dayMeals.status.${
-                  displayStatus === 'PENDING_APPROVAL' ? 'underReview' : displayStatus.toLowerCase()
-                }`,
+            <View style={styles.amountHeader}>
+              <Text style={styles.amountLabel}>{t('paymentCollection.dayMeals.totalAmount')}</Text>
+              <Text style={styles.amountValue}>
+                {formatComboPrice(amount, currencyCode) ?? '—'}
+              </Text>
+            </View>
+            <View style={styles.metaRow}>
+              {hasReference ? (
+                <PaymentReferenceLabel
+                  source={detail.payment}
+                  compact={false}
+                  style={styles.reference}
+                />
+              ) : (
+                <View style={styles.metaSpacer} />
               )}
-            </Text>
+              <PaymentStatusBadge status={displayStatus} style={styles.statusBadge} />
+            </View>
           </View>
 
           <MealSelectionSummary model={summary} showTotals />
@@ -113,12 +124,6 @@ export function DayMealPaymentDetailScreen() {
           {detail.payment?.rejectionReason ? (
             <Text style={styles.rejection}>
               {t('meals.poll.rejectionReason', { reason: detail.payment.rejectionReason })}
-            </Text>
-          ) : null}
-
-          {detail.payment?.paymentBatchId ? (
-            <Text style={styles.batch}>
-              {t('paymentCollection.dayMeals.batchId', { id: detail.payment.paymentBatchId })}
             </Text>
           ) : null}
 
@@ -168,27 +173,41 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: spacing.lg,
     marginBottom: spacing.md,
-    gap: spacing.xs,
+    gap: spacing.sm,
+  },
+  amountHeader: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: spacing.md,
   },
   amountLabel: {
     ...typography.caption,
     color: colors.muted,
+    flexShrink: 1,
   },
   amountValue: {
     ...typography.h2,
   },
-  status: {
-    ...typography.bodyStrong,
-    color: colors.primaryDark,
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  metaSpacer: {
+    flex: 1,
+  },
+  reference: {
+    flex: 1,
+    minWidth: 0,
+  },
+  statusBadge: {
+    flexShrink: 0,
   },
   rejection: {
     ...typography.body,
     color: '#DC2626',
-    marginTop: spacing.sm,
-  },
-  batch: {
-    ...typography.caption,
-    color: colors.muted,
     marginTop: spacing.sm,
   },
   payBtn: {

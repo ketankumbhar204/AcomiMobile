@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import {
   CompositeNavigationProp,
@@ -9,13 +9,17 @@ import {
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { formatSpaceType } from '../../api';
+import { Bell, MapPin, Users, UtensilsCrossed, Wallet } from 'lucide-react-native';
+import { formatSpaceType, getSpaceTypeLabel } from '../../api';
 import {
   DashboardAccommodationOperations,
   DashboardFinancialSnapshot,
   DashboardMealOperations,
   DashboardSectionTitle,
+  DashboardSetupProgressCard,
 } from '../../components/dashboard';
+import { DashboardActionRow } from '../../components/dashboard/shared/DashboardActionRow';
+import { DashboardOwnerHero } from '../../components/dashboard/shared/DashboardOwnerHero';
 import { DashboardCustomerMealsSection } from '../../components/meals/DashboardCustomerMealsSection';
 import { ModuleActionCard, SkeletonCard, useQuickActionSheet } from '../../components/ui';
 import type { QuickActionSheetOption } from '../../components/ui';
@@ -25,8 +29,10 @@ import { useLinkedMember } from '../../hooks/useLinkedMember';
 import { useHierarchyOccupancyPicker } from '../../hooks/useHierarchyOccupancyPicker';
 import { useNavigateFromSpaceTab } from '../../hooks/useNavigateFromSpaceTab';
 import { usePendingActions } from '../../hooks/usePendingActions';
+import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useSpaceDashboard } from '../../hooks/useSpaceDashboard';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
+import { useSpaceSetupProgress } from '../../hooks/useSpaceSetupProgress';
 import type { MainStackParamList, SpaceTabParamList } from '../../navigation/types';
 import {
   navigateToMembersTab,
@@ -42,6 +48,11 @@ import { peekPendingActions } from '../../utils/pendingActionsQueryCache';
 import { tomorrowIsoDate } from '../../utils/mealDates';
 import { shouldShowDashboardMealOperations } from '../../utils/dashboardMealOperations';
 import { findMySpaceEntry } from '../../utils/spacePermissions';
+import type { SetupStepId } from '../../utils/spaceSetupProgress';
+import {
+  hasAutoOpenedAccommodation,
+  markAutoOpenedAccommodation,
+} from '../../utils/spaceSetupStorage';
 
 type DashboardRoute = RouteProp<SpaceTabParamList, 'Dashboard'>;
 type DashboardNav = CompositeNavigationProp<
@@ -59,14 +70,13 @@ function PendingActionsQuickCard({
   const { t } = useTranslation();
 
   return (
-    <ModuleActionCard
-      icon="🔔"
+    <DashboardActionRow
+      icon={Bell}
+      accent="#D97706"
+      highlight
+      badgeCount={count}
       title={t('dashboard.quickActions.pendingActions')}
       subtitle={t('dashboard.quickActions.pendingActionsSubtitle', { count })}
-      badgeCount={count}
-      trailing="forward"
-      highlight
-      fullWidth
       onPress={onPress}
     />
   );
@@ -76,7 +86,7 @@ export function DashboardScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<DashboardNav>();
   const route = useRoute<DashboardRoute>();
-  const { spaceId } = route.params;
+  const spaceId = useActiveSpaceId(route.params.spaceId);
   const mySpaces = useSpaceStore(state => state.mySpaces);
   const spaceEntry = findMySpaceEntry(mySpaces, spaceId);
   const permissions = useSpacePermissions(spaceId);
@@ -98,6 +108,14 @@ export function DashboardScreen() {
   const isMealParticipant = showMealsReadOnly;
   const showOwnerDashboard = canManageNotifications(permissions);
   const showPaymentsQuickAction = canManagePayments(permissions.membershipRole);
+  const canViewAccommodation = permissions.canViewAccommodation === true;
+  const setupEnabled = showOwnerDashboard;
+  const { progress: setupProgress, refresh: refreshSetupProgress } = useSpaceSetupProgress(
+    spaceId,
+    spaceType,
+    setupEnabled,
+  );
+  const autoNavAttemptedRef = useRef<string | null>(null);
 
   const dashboard = useSpaceDashboard(spaceId, spaceType, showOwnerDashboard);
   const hasSummaryAccommodation = dashboard.accommodationOperations != null;
@@ -110,7 +128,8 @@ export function DashboardScreen() {
   const handleDashboardRefresh = useCallback(() => {
     void dashboard.reload(true);
     void quickAccommodation.reload();
-  }, [dashboard.reload, quickAccommodation.reload]);
+    void refreshSetupProgress();
+  }, [dashboard.reload, quickAccommodation.reload, refreshSetupProgress]);
   const showMealOperations = shouldShowDashboardMealOperations({
     showOwnerDashboard,
     canManageMeals: showMealsActions,
@@ -137,6 +156,76 @@ export function DashboardScreen() {
   const handlePendingActionsPress = useCallback(() => {
     navigateFromTab('DashboardPendingActions', { spaceId });
   }, [navigateFromTab, spaceId]);
+
+  const handleSetupContinue = useCallback(() => {
+    const next = setupProgress?.nextStepId;
+    const structureSteps: SetupStepId[] = [
+      'createBuilding',
+      'addFloors',
+      'addRooms',
+      'addBeds',
+    ];
+    if (next && structureSteps.includes(next) && canViewAccommodation) {
+      navigation.navigate('Accommodation', { spaceId });
+      return;
+    }
+    if (next === 'addMembers' && permissions.canManageMembers) {
+      navigateToMembersTab(spaceId);
+      return;
+    }
+    if (next === 'configureMeals') {
+      navigation.navigate('Meals', { spaceId });
+      return;
+    }
+    if (canViewAccommodation && setupProgress?.needsPropertyStructure) {
+      navigation.navigate('Accommodation', { spaceId });
+    }
+  }, [
+    canViewAccommodation,
+    navigation,
+    permissions.canManageMembers,
+    setupProgress?.needsPropertyStructure,
+    setupProgress?.nextStepId,
+    spaceId,
+  ]);
+
+  // First open of an empty property → Accommodation tab (once per space).
+  useEffect(() => {
+    if (!showOwnerDashboard || !accommodationApplicable || !canViewAccommodation) {
+      return;
+    }
+    if (!setupProgress?.needsPropertyStructure) {
+      return;
+    }
+    if (autoNavAttemptedRef.current === spaceId) {
+      return;
+    }
+    autoNavAttemptedRef.current = spaceId;
+
+    let cancelled = false;
+    void (async () => {
+      const already = await hasAutoOpenedAccommodation(spaceId);
+      if (cancelled || already) {
+        return;
+      }
+      await markAutoOpenedAccommodation(spaceId);
+      if (cancelled) {
+        return;
+      }
+      navigation.navigate('Accommodation', { spaceId });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    accommodationApplicable,
+    canViewAccommodation,
+    navigation,
+    setupProgress?.needsPropertyStructure,
+    showOwnerDashboard,
+    spaceId,
+  ]);
 
   const handlePaymentsNavigate = useCallback(
     (initialFilter: 'all' | 'pending' | 'collected' | 'underReview') => {
@@ -264,26 +353,30 @@ export function DashboardScreen() {
     return (
       <View style={styles.quickStack}>
         {pendingActionsCard}
-        <ModuleActionCard
-          icon="🍽"
+        <DashboardActionRow
+          icon={UtensilsCrossed}
+          accent={colors.primaryDark}
           title={t('dashboard.quickActions.meals')}
           subtitle={t('dashboard.quickActions.mealsSubtitle')}
           onPress={handleMealsPress}
         />
-        <ModuleActionCard
-          icon="📍"
+        <DashboardActionRow
+          icon={MapPin}
+          accent="#DC2626"
           title={t('dashboard.quickActions.deliveryLocations')}
           subtitle={t('dashboard.quickActions.deliveryLocationsSubtitle')}
           onPress={handleDeliveryLocationsPress}
         />
-        <ModuleActionCard
-          icon="👥"
+        <DashboardActionRow
+          icon={Users}
+          accent="#2563EB"
           title={t('dashboard.quickActions.members')}
           subtitle={t('dashboard.quickActions.membersSubtitle')}
           onPress={handleMembersPress}
         />
-        <ModuleActionCard
-          icon="💳"
+        <DashboardActionRow
+          icon={Wallet}
+          accent="#D97706"
           title={t('dashboard.quickActions.payments')}
           subtitle={t('dashboard.quickActions.paymentsSubtitle')}
           onPress={handlePaymentsPress}
@@ -307,32 +400,29 @@ export function DashboardScreen() {
         <View style={styles.quickStack}>
           {pendingActionsCard}
           {showResidentsActions ? (
-            <ModuleActionCard
-              icon="👥"
+            <DashboardActionRow
+              icon={Users}
+              accent="#2563EB"
               title={t('dashboard.quickActions.residents')}
               subtitle={t('dashboard.quickActions.residentsSubtitle')}
-              trailing="forward"
-              fullWidth
               onPress={handleResidentsPress}
             />
           ) : null}
           {showMealsActions && !isMess ? (
-            <ModuleActionCard
-              icon="🍽"
+            <DashboardActionRow
+              icon={UtensilsCrossed}
+              accent={colors.primaryDark}
               title={t('dashboard.quickActions.meals')}
               subtitle={t('dashboard.quickActions.mealsSubtitle')}
-              trailing="forward"
-              fullWidth
               onPress={handleMealsPress}
             />
           ) : null}
           {!isMess && showPaymentsQuickAction ? (
-            <ModuleActionCard
-              icon="💳"
+            <DashboardActionRow
+              icon={Wallet}
+              accent="#D97706"
               title={t('dashboard.quickActions.payments')}
               subtitle={t('dashboard.quickActions.paymentsSubtitle')}
-              trailing="forward"
-              fullWidth
               onPress={handlePaymentsPress}
             />
           ) : null}
@@ -350,17 +440,21 @@ export function DashboardScreen() {
             subtitle={t('permissions.myStay.subtitle')}
             onPress={handleMyStayPress}
           />
-          <ModuleActionCard
-            icon="💳"
-            title={t('paymentCollection.memberPayments.dashboardTitle')}
-            subtitle={t('paymentCollection.memberPayments.dashboardSubtitle')}
-            onPress={handleMyPaymentsPress}
-          />
+          {!isMealParticipant ? (
+            <ModuleActionCard
+              icon="💳"
+              title={t('paymentCollection.memberPayments.dashboardTitle')}
+              subtitle={t('paymentCollection.memberPayments.dashboardSubtitle')}
+              onPress={handleMyPaymentsPress}
+            />
+          ) : null}
         </View>
       );
     }
 
-    if ((isTenant || isCustomer) && linkedMemberId) {
+    // Meal participants get Design A quick actions (Orders / Payments / Complaints)
+    // inside DashboardCustomerMealsSection — avoid duplicating My payments here.
+    if ((isTenant || isCustomer) && linkedMemberId && !isMealParticipant) {
       return (
         <View style={styles.quickStack}>
           {pendingActionsCard}
@@ -372,6 +466,12 @@ export function DashboardScreen() {
           />
         </View>
       );
+    }
+
+    if ((isTenant || isCustomer) && linkedMemberId && isMealParticipant) {
+      return pendingActionsCard ? (
+        <View style={styles.quickStack}>{pendingActionsCard}</View>
+      ) : null;
     }
 
     if (isTenant && !linkedMemberId) {
@@ -389,6 +489,7 @@ export function DashboardScreen() {
     handleResidentsPress,
     isMess,
     isCustomer,
+    isMealParticipant,
     isTenant,
     linkedMemberId,
     pendingActionsCard,
@@ -414,7 +515,13 @@ export function DashboardScreen() {
       refreshing={dashboard.refreshing}
       onRefresh={showOwnerDashboard ? handleDashboardRefresh : undefined}>
       {hierarchyPicker.pickerModal}
-      {spaceEntry && !showOwnerDashboard ? (
+      {showOwnerDashboard && spaceEntry ? (
+        <DashboardOwnerHero
+          spaceName={spaceEntry.spaceName}
+          spaceTypeLabel={spaceType ? getSpaceTypeLabel(spaceType) : undefined}
+        />
+      ) : null}
+      {spaceEntry && !showOwnerDashboard && !isMealParticipant ? (
         <View style={styles.spaceDetails}>
           <Text style={styles.spaceName}>{spaceEntry.spaceName}</Text>
           <Text style={styles.spaceType}>
@@ -423,10 +530,19 @@ export function DashboardScreen() {
         </View>
       ) : null}
 
-      {isMealParticipant ? <DashboardCustomerMealsSection spaceId={spaceId} /> : null}
+      {isMealParticipant ? (
+        <DashboardCustomerMealsSection spaceId={spaceId} showCustomerChrome />
+      ) : null}
 
       {showOwnerDashboard ? (
         <>
+          {setupProgress && !setupProgress.isComplete ? (
+            <DashboardSetupProgressCard
+              progress={setupProgress}
+              onContinue={handleSetupContinue}
+            />
+          ) : null}
+
           {showInitialDashboardLoader ? (
             <SkeletonCard />
           ) : null}

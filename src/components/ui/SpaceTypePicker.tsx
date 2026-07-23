@@ -1,9 +1,23 @@
-import React from 'react';
+import React, { type ComponentType } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import {
+  Building2,
+  Check,
+  House,
+  KeyRound,
+  Users,
+  UtensilsCrossed,
+} from 'lucide-react-native';
 import { getSpaceTypeDescription, getSpaceTypeLabel, SPACE_TYPE_VALUES } from '../../api/spaceTypes';
 import type { SpaceType } from '../../api/types';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
+
+type IconProps = {
+  size?: number;
+  color?: string;
+  strokeWidth?: number;
+};
 
 type SpaceTypePickerProps = {
   value: SpaceType | null;
@@ -11,6 +25,18 @@ type SpaceTypePickerProps = {
   error?: string | null;
 };
 
+const TYPE_VISUAL: Record<
+  SpaceType,
+  { icon: ComponentType<IconProps>; accent: string }
+> = {
+  PG: { icon: House, accent: colors.primaryDark },
+  MESS: { icon: UtensilsCrossed, accent: '#D97706' },
+  HOSTEL: { icon: Building2, accent: '#7C3AED' },
+  CO_LIVING: { icon: Users, accent: '#2563EB' },
+  RENTAL: { icon: KeyRound, accent: '#CA8A04' },
+};
+
+/** Design A selectable space-type cards — icon + copy row, equal height, compact. */
 export function SpaceTypePicker({ value, onChange, error }: SpaceTypePickerProps) {
   const { t } = useTranslation();
 
@@ -20,21 +46,40 @@ export function SpaceTypePicker({ value, onChange, error }: SpaceTypePickerProps
       <View style={styles.grid}>
         {SPACE_TYPE_VALUES.map(type => {
           const isSelected = value === type;
+          const { icon: Icon, accent } = TYPE_VISUAL[type];
+          const isFullWidth = type === 'RENTAL';
           return (
             <Pressable
               key={type}
               style={({ pressed }) => [
-                styles.chip,
-                isSelected && styles.chipSelected,
-                pressed && !isSelected && styles.chipPressed,
+                styles.card,
+                isFullWidth && styles.cardFull,
+                isSelected && styles.cardSelected,
+                pressed && !isSelected && styles.cardPressed,
               ]}
-              onPress={() => onChange(type)}>
-              <Text style={[styles.chipLabel, isSelected && styles.chipLabelSelected]}>
-                {getSpaceTypeLabel(type)}
-              </Text>
-              <Text style={[styles.chipDesc, isSelected && styles.chipDescSelected]}>
-                {getSpaceTypeDescription(type)}
-              </Text>
+              onPress={() => onChange(type)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: isSelected }}>
+              <View style={[styles.iconWrap, { backgroundColor: `${accent}1F` }]}>
+                <Icon size={22} color={accent} strokeWidth={2.2} />
+              </View>
+              <View style={styles.copy}>
+                <Text
+                  style={[styles.cardLabel, isSelected && styles.cardLabelSelected]}
+                  numberOfLines={1}>
+                  {getSpaceTypeLabel(type)}
+                </Text>
+                <Text
+                  style={[styles.cardDesc, isSelected && styles.cardDescSelected]}
+                  numberOfLines={2}>
+                  {getSpaceTypeDescription(type)}
+                </Text>
+              </View>
+              {isSelected ? (
+                <View style={styles.checkBadge} accessibilityElementsHidden>
+                  <Check size={11} color={colors.white} strokeWidth={3} />
+                </View>
+              ) : null}
             </Pressable>
           );
         })}
@@ -46,7 +91,7 @@ export function SpaceTypePicker({ value, onChange, error }: SpaceTypePickerProps
 
 const styles = StyleSheet.create({
   wrapper: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   label: {
     ...typography.label,
@@ -58,38 +103,77 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.sm,
   },
-  chip: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: radius.button,
-    borderWidth: 1,
+  card: {
+    width: '47%',
+    flexGrow: 1,
+    minWidth: '45%',
+    minHeight: 72,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingLeft: spacing.sm,
+    paddingRight: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.card,
+    borderWidth: 1.5,
     borderColor: colors.border,
     backgroundColor: colors.white,
-    minWidth: '45%',
-    flex: 1,
+    position: 'relative',
+    overflow: 'hidden',
+    ...shadows.sm,
   },
-  chipSelected: {
-    backgroundColor: colors.lightGreen,
+  cardFull: {
+    width: '100%',
+    minWidth: '100%',
+  },
+  cardSelected: {
     borderColor: colors.primary,
+    backgroundColor: colors.lightGreen,
   },
-  chipPressed: {
+  cardPressed: {
     backgroundColor: colors.surface,
   },
-  chipLabel: {
+  iconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.button,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  copy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+    paddingRight: spacing.md,
+  },
+  cardLabel: {
     ...typography.bodyStrong,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.textPrimary,
   },
-  chipLabelSelected: {
+  cardLabelSelected: {
     color: colors.primaryDark,
   },
-  chipDesc: {
+  cardDesc: {
     ...typography.caption,
-    marginTop: 2,
     color: colors.muted,
+    lineHeight: 15,
+    fontSize: 11,
   },
-  chipDescSelected: {
+  cardDescSelected: {
     color: colors.primaryDark,
+  },
+  checkBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   errorText: {
     ...typography.caption,

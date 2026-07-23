@@ -73,7 +73,11 @@ const Stack = createNativeStackNavigator<MainStackParamList>();
 function SpaceTabsScreen({
   route,
 }: NativeStackScreenProps<MainStackParamList, 'SpaceTabs'>) {
-  return <SpaceTabNavigator spaceId={route.params.spaceId} />;
+  // Soft navigate after space switch can leave SpaceTabs route params stale.
+  // currentSpace is the source of truth (same pattern as useActiveSpaceId).
+  const currentSpaceId = useSpaceStore(state => state.currentSpace?.spaceId);
+  const spaceId = currentSpaceId ?? route.params.spaceId;
+  return <SpaceTabNavigator key={spaceId} spaceId={spaceId} />;
 }
 
 export function MainNavigator() {

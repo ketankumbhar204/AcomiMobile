@@ -9,7 +9,7 @@ import {
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { DashboardFinancialSnapshot } from '../../components/dashboard';
+import { ClipboardClock, History, Users } from 'lucide-react-native';
 import { MemberPaymentRow } from '../../components/payments/MemberPaymentRow';
 import { PaymentsFilterDrawer } from '../../components/payments/PaymentsFilterDrawer';
 import { PaymentsReviewList } from '../../components/payments/PaymentsReviewList';
@@ -17,6 +17,7 @@ import {
   PaymentsSectionTabBar,
   type PaymentsSection,
 } from '../../components/payments/PaymentsSectionTabBar';
+import { PaymentsSummaryFilters } from '../../components/payments/PaymentsSummaryFilters';
 import {
   EmptyState,
   ListFilterChips,
@@ -27,6 +28,7 @@ import {
 import { usePaymentsMembers } from '../../hooks/usePaymentsMembers';
 import { usePaymentsReviewList } from '../../hooks/usePaymentsReviewList';
 import { usePaymentsSummary } from '../../hooks/usePaymentsSummary';
+import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useSpaceTabHeader } from '../../hooks/useSpaceTabHeader';
 import type { MainStackParamList, SpaceTabParamList } from '../../navigation/types';
@@ -45,6 +47,7 @@ import { invalidatePaymentsMonthCaches } from '../../utils/paymentsMonthCache';
 import { paymentsApi } from '../../api/paymentsApi';
 import type { HistoryReviewFilter, PendingReviewFilter } from '../../utils/ownerPaymentFilters';
 import { resolveMemberMonthPaymentTarget } from '../../utils/resolveMemberMonthPaymentTarget';
+import { NotificationBellButton } from '../../components/notifications/NotificationBellButton';
 
 type PaymentsRoute = RouteProp<SpaceTabParamList, 'Payments'>;
 type PaymentsNav = CompositeNavigationProp<
@@ -89,8 +92,15 @@ export function PaymentsScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<PaymentsNav>();
   const route = useRoute<PaymentsRoute>();
-  const { spaceId } = route.params;
-  useSpaceTabHeader(spaceId);
+  const spaceId = useActiveSpaceId(route.params.spaceId);
+  const notificationBell = useMemo(
+    () => <NotificationBellButton spaceId={spaceId} />,
+    [spaceId],
+  );
+  useSpaceTabHeader(spaceId, {
+    showProfileAndMenu: true,
+    headerRightExtra: notificationBell,
+  });
   const showToast = useToastStore(state => state.showToast);
 
   const permissions = useSpacePermissions(spaceId);
@@ -218,18 +228,24 @@ export function PaymentsScreen() {
 
   const sectionTabs = useMemo(
     () => [
-      { id: 'members' as const, label: t('membership.tabs.members') },
+      {
+        id: 'members' as const,
+        label: t('membership.tabs.members'),
+        icon: Users,
+      },
       {
         id: 'pendingReview' as const,
-        label: t('paymentCollection.review.tabPendingReview', {
-          count: summary.counts.pendingReview ?? 0,
-        }),
+        label: t('paymentCollection.review.tabPendingReviewLabel'),
+        icon: ClipboardClock,
+        badge: summary.counts.pendingReview ?? 0,
+        badgeTone: 'info' as const,
       },
       {
         id: 'history' as const,
-        label: t('paymentCollection.review.tabHistory', {
-          count: summary.counts.history ?? 0,
-        }),
+        label: t('paymentCollection.review.tabHistoryLabel'),
+        icon: History,
+        badge: summary.counts.history ?? 0,
+        badgeTone: 'muted' as const,
       },
     ],
     [summary.counts.history, summary.counts.pendingReview, t],
@@ -239,15 +255,15 @@ export function PaymentsScreen() {
     () => [
       {
         id: 'SUBMITTED' as const,
-        label: t('paymentCollection.review.chips.submitted', {
-          count: summary.counts.submitted,
-        }),
+        label: t('paymentCollection.review.chips.submittedLabel'),
+        badge: summary.counts.submitted ?? 0,
+        tone: 'primary' as const,
       },
       {
         id: 'NEEDS_UPDATE' as const,
-        label: t('paymentCollection.review.chips.needsUpdate', {
-          count: summary.counts.changesRequested,
-        }),
+        label: t('paymentCollection.review.chips.needsUpdateLabel'),
+        badge: summary.counts.changesRequested ?? 0,
+        tone: 'warning' as const,
       },
     ],
     [summary.counts.changesRequested, summary.counts.submitted, t],
@@ -257,13 +273,15 @@ export function PaymentsScreen() {
     () => [
       {
         id: 'PAID' as const,
-        label: t('paymentCollection.review.chips.paid', { count: summary.counts.paid }),
+        label: t('paymentCollection.review.chips.paidLabel'),
+        badge: summary.counts.paid ?? 0,
+        tone: 'primary' as const,
       },
       {
         id: 'REJECTED' as const,
-        label: t('paymentCollection.review.chips.rejected', {
-          count: summary.counts.rejected,
-        }),
+        label: t('paymentCollection.review.chips.rejectedLabel'),
+        badge: summary.counts.rejected ?? 0,
+        tone: 'danger' as const,
       },
     ],
     [summary.counts.paid, summary.counts.rejected, t],
@@ -272,11 +290,42 @@ export function PaymentsScreen() {
   const handleFilterNavigate = useCallback(
     (nextFilter: PaymentLedgerFilter) => {
       setAutoOpenedReviewHint(false);
+
+      // Under Review summary → Pending Review (Submitted). Filter conditions unchanged.
+      if (nextFilter === 'underReview') {
+        const alreadyOpen =
+          section === 'pendingReview' && members.filters.preset === 'underReview';
+        if (alreadyOpen) {
+          members.setFilter('all');
+          return;
+        }
+        members.setFilter('underReview');
+        reviewList.setPendingFilter('SUBMITTED');
+        setSection('pendingReview');
+        return;
+      }
+
       setSection('members');
+      const active: PaymentLedgerFilter = members.filters.preset ?? 'all';
+      // Re-tap active filter clears back to Expected / all.
+      if (nextFilter === active) {
+        members.setFilter('all');
+        return;
+      }
       members.setFilter(nextFilter);
     },
-    [members.setFilter],
+    [
+      members.filters.preset,
+      members.setFilter,
+      reviewList.setPendingFilter,
+      section,
+    ],
   );
+
+  const activeSummaryFilter: PaymentLedgerFilter =
+    section === 'pendingReview' && members.filters.preset === 'underReview'
+      ? 'underReview'
+      : members.filters.preset ?? 'all';
 
   const handleMemberPress = useCallback(
     async (memberId: string, memberName: string) => {
@@ -441,18 +490,21 @@ export function PaymentsScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} />
         }>
+        <Text style={styles.heading}>{t('payments.title')}</Text>
+        <Text style={styles.subheading}>{t('payments.subtitle')}</Text>
+
         <MonthlySummaryHeader
           month={summary.month}
           onPreviousMonth={handlePrevMonth}
           onNextMonth={handleNextMonth}
-          disableNext={isCurrentMonth}>
-          <DashboardFinancialSnapshot
+          disableNext={isCurrentMonth}
+          onMonthSelect={summary.setMonth}
+          maxMonth={currentMonthKey()}>
+          <PaymentsSummaryFilters
             loading={summary.loading}
             financial={summary.financial}
-            onExpectedPress={() => handleFilterNavigate('all')}
-            onCollectedPress={() => handleFilterNavigate('collected')}
-            onUnderReviewPress={() => handleFilterNavigate('underReview')}
-            onPendingPress={() => handleFilterNavigate('pending')}
+            activeFilter={activeSummaryFilter}
+            onFilterPress={handleFilterNavigate}
           />
         </MonthlySummaryHeader>
 
@@ -523,6 +575,9 @@ export function PaymentsScreen() {
                       <MemberPaymentRow
                         key={row.memberId}
                         row={row}
+                        amountEmphasis={
+                          members.filters.preset === 'collected' ? 'collected' : 'default'
+                        }
                         onPress={() => void handleMemberPress(row.memberId, row.memberName)}
                       />
                     ))}
@@ -602,6 +657,15 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     paddingBottom: spacing.section,
     gap: spacing.sm,
+  },
+  heading: {
+    ...typography.h2,
+    marginBottom: spacing.xs,
+  },
+  subheading: {
+    ...typography.body,
+    color: colors.muted,
+    marginBottom: spacing.md,
   },
   refreshError: {
     ...typography.caption,

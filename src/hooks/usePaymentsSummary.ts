@@ -66,19 +66,26 @@ export function usePaymentsSummary(spaceId: UUID, enabled: boolean) {
           | { financial: DashboardFinancialSummary; counts: OwnerPaymentsMonthCounts }
           | null;
         if (cached) {
-          hasDataRef.current = true;
-          setFinancial(cached.financial);
-          setCounts(cached.counts);
-          setLoading(false);
-          setRefreshing(false);
-          if (requestMonth === currentMonthKey()) {
-            publishPaymentsUnderReviewCount(
-              spaceId,
-              requestMonth,
-              cached.counts.submitted ?? 0,
-            );
+          const submitted = cached.counts.submitted ?? 0;
+          const underReviewAmount = cached.financial?.underReview ?? 0;
+          // Stale client cache: review queue has items but Under Review KPI is empty.
+          if (submitted > 0 && !(underReviewAmount > 0)) {
+            ownerPaymentsMonthCache.invalidate(cacheKey);
+          } else {
+            hasDataRef.current = true;
+            setFinancial(cached.financial);
+            setCounts(cached.counts);
+            setLoading(false);
+            setRefreshing(false);
+            if (requestMonth === currentMonthKey()) {
+              publishPaymentsUnderReviewCount(
+                spaceId,
+                requestMonth,
+                cached.counts.submitted ?? 0,
+              );
+            }
+            return;
           }
-          return;
         }
       }
 

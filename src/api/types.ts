@@ -579,6 +579,9 @@ export interface MemberMealActivityDay {
   dayTotal?: number | null;
   currencyCode?: string | null;
   paymentStatus?: MealPollPaymentStatus | null;
+  /** Immutable human payment reference when available (e.g. PAY-20260720-000123). */
+  paymentReference?: string | null;
+  paymentBatchId?: string | null;
   slots: MemberMealActivitySlot[];
 }
 
@@ -676,7 +679,13 @@ export interface MemberMealActivityDayPayment {
   paymentStatus?: MealPollPaymentStatus | null;
   chargedAmount?: number | null;
   paymentBatchId?: string | null;
+  /**
+   * Immutable human-readable payment reference (e.g. PAY-20260720-000123).
+   * Minted once on first submission; never regenerate.
+   */
+  paymentReference?: string | null;
   proofImageUrl?: string | null;
+  /** Customer/UTR transaction reference entered with proof (not the system payment reference). */
   referenceNumber?: string | null;
   remarks?: string | null;
   paymentMethod?: UniversalPaymentMethod | null;
@@ -690,6 +699,8 @@ export interface MemberMealActivityDayPayment {
 
 export interface BulkMealPollPaymentProofResponse {
   paymentBatchId: string;
+  /** Immutable human-readable reference for the submitted payment batch. */
+  paymentReference?: string | null;
   dates: string[];
   updatedCount: number;
 }
@@ -2180,6 +2191,11 @@ export interface SpacePaymentResponse {
   targetLabel?: string | null;
   /** Present when multiple meal days were paid with one bulk proof. */
   paymentBatchId?: string | null;
+  /**
+   * Immutable human-readable payment reference (e.g. PAY-20260720-000123).
+   * Prefer this over paymentBatchId / paymentId for customer and owner display.
+   */
+  paymentReference?: string | null;
   /** Meal day dates covered by this payment (what was paid). */
   mealDates?: string[] | null;
   createdAt: string;

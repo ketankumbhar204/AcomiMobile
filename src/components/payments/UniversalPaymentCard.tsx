@@ -11,6 +11,7 @@ import {
   type MealSelectionSummaryModel,
 } from '../../utils/mealSelectionSummary';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
+import { PaymentReferenceLabel } from './PaymentReferenceLabel';
 import { PaymentStatusBadge } from './PaymentStatusBadge';
 import { PaymentStatusCardFrame } from './PaymentStatusCardFrame';
 
@@ -72,12 +73,17 @@ export function UniversalPaymentCard({
               {displayTitle}
             </Text>
           )}
-          <PaymentStatusBadge status={payment.paymentStatus} />
         </View>
         {payment.targetLabel ? <Text style={styles.target}>{payment.targetLabel}</Text> : null}
         {showMember ? <Text style={styles.title}>{displayTitle}</Text> : null}
         {mealSubtitle ? <Text style={styles.mealSubtitle}>{mealSubtitle}</Text> : null}
-        <Text style={styles.amount}>{formatPaymentAmount(payment.amount, payment.currencyCode)}</Text>
+        <View style={styles.amountMetaRow}>
+          <Text style={styles.amount}>
+            {formatPaymentAmount(payment.amount, payment.currencyCode)}
+          </Text>
+          <PaymentStatusBadge status={payment.paymentStatus} style={styles.statusBadge} />
+        </View>
+        <PaymentReferenceLabel source={payment} style={styles.paymentReference} />
         <Text style={styles.due}>
           {t('paymentCollection.dueDate', { date: formatPaymentDueDate(payment.dueDate) })}
         </Text>
@@ -174,6 +180,18 @@ const styles = StyleSheet.create({
   amount: {
     ...typography.bodyStrong,
     fontSize: 18,
+  },
+  amountMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  statusBadge: {
+    flexShrink: 0,
+  },
+  paymentReference: {
     marginBottom: spacing.xs,
   },
   due: {

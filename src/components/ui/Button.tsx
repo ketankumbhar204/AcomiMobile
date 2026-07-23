@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { type ComponentType } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -7,6 +7,12 @@ import {
   ViewStyle,
 } from 'react-native';
 import { colors, radius, spacing, typography } from '../../theme';
+
+type IconProps = {
+  size?: number;
+  color?: string;
+  strokeWidth?: number;
+};
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost';
 
@@ -17,6 +23,8 @@ type ButtonProps = {
   loading?: boolean;
   disabled?: boolean;
   style?: ViewStyle;
+  /** Optional Lucide leading icon. */
+  icon?: ComponentType<IconProps>;
 };
 
 export function Button({
@@ -26,8 +34,10 @@ export function Button({
   loading = false,
   disabled = false,
   style,
+  icon: Icon,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
+  const iconColor = variant === 'primary' ? colors.white : colors.primaryDark;
 
   return (
     <Pressable
@@ -47,7 +57,10 @@ export function Button({
           color={variant === 'primary' ? colors.white : colors.primary}
         />
       ) : (
-        <Text style={[styles.label, styles[`${variant}Label`]]}>{label}</Text>
+        <>
+          {Icon ? <Icon size={18} color={iconColor} strokeWidth={2.3} /> : null}
+          <Text style={[styles.label, styles[`${variant}Label`]]}>{label}</Text>
+        </>
       )}
     </Pressable>
   );
@@ -61,6 +74,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
   primary: {
     backgroundColor: colors.primary,

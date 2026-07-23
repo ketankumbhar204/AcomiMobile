@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Funnel, Search } from 'lucide-react-native';
 import { colors, radius, spacing, typography } from '../../theme';
 
 type ListSearchFilterBarProps = {
@@ -30,16 +31,19 @@ export function ListSearchFilterBar({
   return (
     <View style={[styles.row, !showSearch && styles.rowFilterOnly]}>
       {showSearch ? (
-        <TextInput
-          style={styles.searchInput}
-          value={searchValue}
-          onChangeText={onSearchChange}
-          placeholder={searchPlaceholder ?? t('list.search.placeholder')}
-          placeholderTextColor={colors.muted}
-          autoCorrect={false}
-          clearButtonMode="while-editing"
-          accessibilityLabel={searchPlaceholder ?? t('list.search.placeholder')}
-        />
+        <View style={styles.searchWrap}>
+          <Search size={16} color={colors.muted} strokeWidth={2.2} />
+          <TextInput
+            style={styles.searchInput}
+            value={searchValue}
+            onChangeText={onSearchChange}
+            placeholder={searchPlaceholder ?? t('list.search.placeholder')}
+            placeholderTextColor={colors.muted}
+            autoCorrect={false}
+            clearButtonMode="while-editing"
+            accessibilityLabel={searchPlaceholder ?? t('list.search.placeholder')}
+          />
+        </View>
       ) : null}
       {showFilterButton ? (
         <Pressable
@@ -57,6 +61,11 @@ export function ListSearchFilterBar({
               ? t('list.filterDrawer.activeCount', { count: activeFilterCount })
               : t('list.filterDrawer.open'))
           }>
+          <Funnel
+            size={14}
+            color={hasFilters ? colors.primaryDark : colors.muted}
+            strokeWidth={2.3}
+          />
           <Text style={[styles.filterLabel, hasFilters && styles.filterLabelActive]}>
             {t('list.filterDrawer.button')}
           </Text>
@@ -64,9 +73,7 @@ export function ListSearchFilterBar({
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{activeFilterCount}</Text>
             </View>
-          ) : (
-            <Text style={styles.filterIcon}>⚙</Text>
-          )}
+          ) : null}
         </Pressable>
       ) : null}
     </View>
@@ -83,14 +90,20 @@ const styles = StyleSheet.create({
   rowFilterOnly: {
     justifyContent: 'flex-end',
   },
-  searchInput: {
+  searchWrap: {
     flex: 1,
     minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
     backgroundColor: colors.white,
     borderRadius: radius.input,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
+  },
+  searchInput: {
+    flex: 1,
     paddingVertical: spacing.sm,
     ...typography.body,
     color: colors.textPrimary,
@@ -120,10 +133,6 @@ const styles = StyleSheet.create({
   },
   filterLabelActive: {
     color: colors.primaryDark,
-  },
-  filterIcon: {
-    fontSize: 14,
-    color: colors.muted,
   },
   badge: {
     minWidth: 20,

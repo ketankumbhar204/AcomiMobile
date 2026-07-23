@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   LayoutAnimation,
@@ -10,9 +10,11 @@ import {
   UIManager,
   View,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ChevronRight } from 'lucide-react-native';
 import { mealsApi } from '../../api/mealsApi';
 import type {
   DailyMenuResponse,
@@ -27,13 +29,16 @@ import { MenuDateContextHints } from '../../components/meals/MenuDateContextHint
 import { MenuDatePickerModal } from '../../components/meals/MenuDatePickerModal';
 import { PollCloseAtPickerModal } from '../../components/meals/PollCloseAtPickerModal';
 import { navigateToMembersTab } from '../../navigation/navigationRef';
+import type { MainStackParamList } from '../../navigation/types';
 import { PermissionDeniedScreen } from '../../components/ui/PermissionDeniedScreen';
+import { StackTitleWithSubtitle } from '../../components/ui/StackTitleWithSubtitle';
 import { useMainStackNavigation } from '../../hooks/useMainStackNavigation';
 import { useOwnerMealHeadcount } from '../../hooks/useOwnerMealHeadcount';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
+import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
 import { formatPollCloseLabel } from '../../utils/pollCloseDisplay';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import {
   addDaysIsoDate,
   formatMenuDate,
@@ -45,6 +50,7 @@ import { summarizeDailyMenuDay, type DailyMenuDaySummary } from '../../utils/dai
 import { buildDashboardMealSlotRows } from '../../utils/dashboardMealSlotDisplay';
 import { fetchSpaceMenuCatalog } from '../../utils/fetchSpaceMenuCatalog';
 import { MEAL_TYPES } from '../../utils/mealLabels';
+import { findMySpaceEntry } from '../../utils/spacePermissions';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -90,10 +96,31 @@ export function MenuPlanningScreen({
 }: MenuPlanningScreenProps) {
   const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const route = useRoute();
+  const isStackRoute = route.name === 'MenuPlanning';
   const { navigate: navigateMain } = useMainStackNavigation();
   const permissions = useSpacePermissions(spaceId);
   const showToast = useToastStore(state => state.showToast);
+  const mySpaces = useSpaceStore(state => state.mySpaces);
+  const currentSpace = useSpaceStore(state => state.currentSpace);
   const canManage = permissions.canManageMeals === true;
+
+  const spaceName = useMemo(() => {
+    const entry = findMySpaceEntry(mySpaces, spaceId);
+    return entry?.spaceName ?? (currentSpace?.spaceId === spaceId ? currentSpace.spaceName : null);
+  }, [currentSpace?.spaceId, currentSpace?.spaceName, mySpaces, spaceId]);
+
+  useLayoutEffect(() => {
+    if (!isStackRoute) {
+      return;
+    }
+    navigation.setOptions({
+      headerTitle: () => (
+        <StackTitleWithSubtitle title={t('meals.planning.title')} subtitle={spaceName} />
+      ),
+    });
+  }, [isStackRoute, navigation, spaceName, t, i18n.language]);
 
   const [menuDate, setMenuDate] = useState(initialDate ?? todayIsoDate());
   const headcount = useOwnerMealHeadcount(spaceId, menuDate, canManage);
@@ -352,56 +379,64 @@ export function MenuPlanningScreen({
   return (
     <View style={styles.root}>
       <View style={styles.stickyHeader}>
-        <Text style={styles.subtitle}>{t('meals.planning.subtitle')}</Text>
-
-        <View style={styles.dateRow}>
-          <Pressable
-            style={styles.dateNavBtn}
-            onPress={() => setMenuDate(prev => addDaysIsoDate(prev, -1))}>
-            <Text style={styles.dateNavText}>◀</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.dateCenter, pressed && styles.dateCenterPressed]}
-            onPress={() => setDatePickerOpen(true)}
-            accessibilityRole="button"
-            accessibilityLabel={formatMenuDate(menuDate, i18n.language)}
-            accessibilityHint={t('meals.planning.openCalendar')}>
-            <Text style={styles.dateLabel}>{formatMenuDate(menuDate, i18n.language)}</Text>
-            <MenuDateContextHints
-              menuDate={menuDate}
-              onJumpToToday={() => setMenuDate(todayIsoDate())}
-              onJumpToTomorrow={() => setMenuDate(tomorrowIsoDate())}
-            />
-          </Pressable>
-          <Pressable
-            style={styles.dateNavBtn}
-            onPress={() => setMenuDate(prev => addDaysIsoDate(prev, 1))}>
-            <Text style={styles.dateNavText}>▶</Text>
-          </Pressable>
-        </View>
-
-        {dateReadOnly ? (
-          <View style={styles.readOnlyBanner}>
-            <Text style={styles.readOnlyBannerText}>{t('meals.planning.pastDateReadOnly')}</Text>
+        {!isStackRoute && spaceName ? (
+          <View style={styles.spaceChip} accessibilityRole="text">
+            <Text style={styles.spaceChipLabel} numberOfLines={1}>
+              {spaceName}
+            </Text>
           </View>
         ) : null}
 
-        {!loading && !error ? (
-          <MenuPlanningDayOverview
-            menuMap={menuMap}
-            pollMap={pollMap}
-            eligibilityByMeal={eligibleCountByMeal}
-            statusSummary={statusSummary}
-            eligibleCount={distinctEligible}
-            selectedMealType={selectedMealType}
-            onSelectMealType={selectMealType}
-            shareDisabled={!canShareMenu}
-            onShare={permissions.canManageMeals ? () => openShare() : undefined}
-            dateReadOnly={dateReadOnly}
-            hasOpenPolls={hasOpenPolls}
-            respondedCount={respondedCount}
-          />
-        ) : null}
+        <View style={styles.planningCard}>
+          <View style={styles.dateRow}>
+            <Pressable
+              style={styles.dateNavBtn}
+              onPress={() => setMenuDate(prev => addDaysIsoDate(prev, -1))}>
+              <Text style={styles.dateNavText}>◀</Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.dateCenter, pressed && styles.dateCenterPressed]}
+              onPress={() => setDatePickerOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel={formatMenuDate(menuDate, i18n.language)}
+              accessibilityHint={t('meals.planning.openCalendar')}>
+              <Text style={styles.dateLabel}>{formatMenuDate(menuDate, i18n.language)}</Text>
+              <MenuDateContextHints
+                menuDate={menuDate}
+                onJumpToToday={() => setMenuDate(todayIsoDate())}
+                onJumpToTomorrow={() => setMenuDate(tomorrowIsoDate())}
+              />
+            </Pressable>
+            <Pressable
+              style={styles.dateNavBtn}
+              onPress={() => setMenuDate(prev => addDaysIsoDate(prev, 1))}>
+              <Text style={styles.dateNavText}>▶</Text>
+            </Pressable>
+          </View>
+
+          {dateReadOnly ? (
+            <View style={styles.readOnlyBanner}>
+              <Text style={styles.readOnlyBannerText}>{t('meals.planning.pastDateReadOnly')}</Text>
+            </View>
+          ) : null}
+
+          {!loading && !error ? (
+            <MenuPlanningDayOverview
+              menuMap={menuMap}
+              pollMap={pollMap}
+              eligibilityByMeal={eligibleCountByMeal}
+              statusSummary={statusSummary}
+              eligibleCount={distinctEligible}
+              selectedMealType={selectedMealType}
+              onSelectMealType={selectMealType}
+              shareDisabled={!canShareMenu}
+              onShare={permissions.canManageMeals ? () => openShare() : undefined}
+              dateReadOnly={dateReadOnly}
+              hasOpenPolls={hasOpenPolls}
+              respondedCount={respondedCount}
+            />
+          ) : null}
+        </View>
       </View>
 
       <ScrollView
@@ -505,12 +540,14 @@ export function MenuPlanningScreen({
         ) : null}
 
         {permissions.canManageMeals ? (
-          <View style={styles.actions}>
+          <View style={styles.linksCard}>
             <Pressable
               style={styles.linkRow}
               onPress={() => navigateMain('MenuLibrary', { spaceId })}>
               <Text style={styles.linkText}>{t('meals.library.title')}</Text>
+              <ChevronRight size={16} color={colors.muted} strokeWidth={2.4} />
             </Pressable>
+            <View style={styles.linkDivider} />
             <Pressable
               style={styles.linkRow}
               onPress={() =>
@@ -521,18 +558,25 @@ export function MenuPlanningScreen({
                   ? t('meals.todayMenu')
                   : t('meals.menuDetails.heading')}
               </Text>
+              <ChevronRight size={16} color={colors.muted} strokeWidth={2.4} />
             </Pressable>
             {permissions.spaceType === 'MESS' ? (
-              <Pressable
-                style={styles.linkRow}
-                onPress={() => navigateMain('MealDeliveryLocations', { spaceId })}>
-                <Text style={styles.linkText}>{t('meals.deliveryLocations.manage')}</Text>
-              </Pressable>
+              <>
+                <View style={styles.linkDivider} />
+                <Pressable
+                  style={styles.linkRow}
+                  onPress={() => navigateMain('MealDeliveryLocations', { spaceId })}>
+                  <Text style={styles.linkText}>{t('meals.deliveryLocations.manage')}</Text>
+                  <ChevronRight size={16} color={colors.muted} strokeWidth={2.4} />
+                </Pressable>
+              </>
             ) : null}
+            <View style={styles.linkDivider} />
             <Pressable
               style={styles.linkRow}
               onPress={() => navigateMain('SubscriptionPlans', { spaceId })}>
               <Text style={styles.linkText}>{t('meals.subscriptionPlans.title')}</Text>
+              <ChevronRight size={16} color={colors.muted} strokeWidth={2.4} />
             </Pressable>
           </View>
         ) : null}
@@ -577,40 +621,61 @@ export function MenuPlanningScreen({
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   stickyHeader: {
-    paddingHorizontal: spacing.xxl,
-    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
     paddingBottom: spacing.sm,
     backgroundColor: colors.background,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
     gap: spacing.sm,
   },
+  spaceChip: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+    backgroundColor: colors.lightGreen,
+    borderWidth: 1,
+    borderColor: `${colors.primary}44`,
+    maxWidth: '100%',
+  },
+  spaceChipLabel: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    fontWeight: '700',
+    fontSize: 11,
+  },
+  planningCard: {
+    backgroundColor: colors.white,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    gap: spacing.sm,
+    ...shadows.sm,
+  },
   scroll: { flex: 1 },
-  content: { paddingHorizontal: spacing.xxl, paddingTop: spacing.md },
-  subtitle: { ...typography.body, color: colors.muted },
+  content: { paddingHorizontal: spacing.md, paddingTop: spacing.sm },
   dateRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
   },
   dateNavBtn: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     borderRadius: radius.button,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
   },
-  dateNavText: { ...typography.bodyStrong, color: colors.primaryDark },
+  dateNavText: { ...typography.bodyStrong, color: colors.primaryDark, fontSize: 13 },
   readOnlyBanner: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.button,
-    padding: spacing.md,
-    marginBottom: spacing.md,
+    padding: spacing.sm,
   },
   readOnlyBannerText: { ...typography.caption, color: colors.muted, lineHeight: 18 },
   dateCenter: {
@@ -626,6 +691,7 @@ const styles = StyleSheet.create({
     ...typography.bodyStrong,
     color: colors.primaryDark,
     textDecorationLine: 'underline',
+    fontSize: 14,
   },
   loader: { marginVertical: spacing.lg },
   error: { ...typography.caption, color: '#DC2626', marginBottom: spacing.sm },
@@ -655,9 +721,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.primary,
-    borderRadius: radius.button,
+    borderRadius: radius.card,
     padding: spacing.md,
     marginBottom: spacing.md,
+    ...shadows.sm,
   },
   enrollBannerTitle: { ...typography.bodyStrong, color: colors.primaryDark, marginBottom: spacing.xxs },
   enrollBannerHint: { ...typography.caption, color: colors.muted },
@@ -671,13 +738,28 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     marginLeft: spacing.xs,
   },
-  actions: {
-    marginTop: spacing.lg,
-    gap: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingTop: spacing.md,
+  linksCard: {
+    marginTop: spacing.sm,
+    backgroundColor: colors.white,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+    ...shadows.sm,
   },
-  linkRow: { paddingVertical: spacing.sm },
-  linkText: { ...typography.body, color: colors.primaryDark, fontWeight: '600' },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    minHeight: 48,
+  },
+  linkDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+    marginLeft: spacing.md,
+  },
+  linkText: { ...typography.body, color: colors.primaryDark, fontWeight: '600', flex: 1 },
 });

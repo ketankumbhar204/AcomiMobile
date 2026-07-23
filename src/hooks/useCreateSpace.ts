@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ApiError, spaceApi, spaceResponseToSpace } from '../api';
 import { i18n } from '../i18n';
 import type { CreateSpaceRequest, Space } from '../api/types';
@@ -17,6 +17,7 @@ export function useCreateSpace(): UseCreateSpaceResult {
   const userId = useAuthenticatedUserId();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const inFlightRef = useRef(false);
 
   const createSpace = useCallback(
     async (payload: CreateSpaceInput) => {
@@ -25,8 +26,12 @@ export function useCreateSpace(): UseCreateSpaceResult {
         return null;
       }
 
-      console.log('[CreateSpace] Request Started', { ...payload, ownerId: userId });
+      // Hard guard against rapid taps before React re-renders disabled state.
+      if (inFlightRef.current) {
+        return null;
+      }
 
+      inFlightRef.current = true;
       setIsSubmitting(true);
       setError(null);
 
@@ -36,28 +41,22 @@ export function useCreateSpace(): UseCreateSpaceResult {
           ownerId: userId,
         });
 
-        console.log('[CreateSpace] API Response', response);
-
         const space = spaceResponseToSpace(response);
-
-        console.log('[CreateSpace] Mapped Space', space);
+        if (!space?.id) {
+          setError(i18n.t('common.errors.createSpace'));
+          return null;
+        }
 
         return space;
       } catch (err) {
-        console.error('[CreateSpace] Error', err);
-
         const message =
           err instanceof ApiError
             ? err.message
             : i18n.t('common.errors.createSpace');
-
-        console.error('[CreateSpace] Error Message', message);
-
         setError(message);
         return null;
       } finally {
-        console.log('[CreateSpace] Request Finished');
-
+        inFlightRef.current = false;
         setIsSubmitting(false);
       }
     },
@@ -65,7 +64,6 @@ export function useCreateSpace(): UseCreateSpaceResult {
   );
 
   const clearError = useCallback(() => {
-    console.log('[CreateSpace] Clearing Error');
     setError(null);
   }, []);
 
