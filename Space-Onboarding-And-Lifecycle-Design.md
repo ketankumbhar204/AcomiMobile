@@ -1,9 +1,135 @@
 # Space Onboarding & Lifecycle Design
 
-**Status:** Design proposal (no implementation)  
+**Status:** Design approved — Phase 2 dashboard + Mess Guided Setup completed; Progressive Guided Workflow Phases 3–5 **COMPLETE**; Lifecycle Phase 4 Coachmarks **COMPLETE**; Lifecycle Phase 5 Health Score **COMPLETE**  
 **Audience:** Product, design, engineering  
 **Scope:** Owner/operator experience across all space types  
-**Related:** `space-ui-integration.md`, `my-spaces-ui-integration.md`, `notification-event-catalog.md`, `accommodation-lifecycle-ui-integration.md`
+**Related:** `space-ui-integration.md`, `my-spaces-ui-integration.md`, `notification-event-catalog.md`, `accommodation-lifecycle-ui-integration.md`, `Progressive-Guided-Workflow-UX-Audit.md`, `Post-Lifecycle-Stabilization-Roadmap.md`
+
+---
+
+## Implementation Status
+
+### Phase 1 — Space Lifecycle Engine Foundation
+
+**Status:** ✅ Completed
+
+**Summary**
+
+- Space Lifecycle Engine under `src/spaceLifecycle/`
+- Profiles, milestones, predicates, recommendation, lifecycle evaluation
+- `useSpaceLifecycle` hook + unit tests
+- No UI changes in Phase 1
+
+### Phase 2 — Lifecycle-aware Dashboard & Business Setup Experience
+
+**Status:** ✅ Completed
+
+**Summary**
+
+- Owner Dashboard consumes `useSpaceLifecycleSignals` → `useSpaceLifecycle`
+- Technical checklist replaced with **Next Recommended Step** + **business milestones**
+- Lifecycle-driven widget visibility (NEW / SETUP / READY / ACTIVE / NEEDS_ATTENTION)
+- CTA navigation maps to existing screens only (Quick Setup, Members, Menu Library, etc.)
+- Pending Actions remain SoT (elevated via existing quick-action placement)
+- No backend changes
+- Tenant / customer / meal-participant dashboards unchanged
+
+### Mess Guided Setup
+
+**Status:** ✅ Completed
+
+**Summary**
+
+- Mess is a **profile** inside the same Space Lifecycle Engine (not a separate onboarding framework)
+- Required: Mess created → Menu library → Customers → Today's menu → Menu shared → Ready to operate (derived)
+- Recommended: Delivery locations
+- Dependency-aware Next Step (never recommend Share before customers)
+- Mess-only dashboard visibility: meal ops + setup quick actions during NEW / SETUP
+- Mess business copy for hero, milestones, recommendations, Menu Planning / Share guards
+- PG / Hostel / Rental / Co-living profiles and dashboard behavior unchanged
+- No backend / schema changes — signals reuse existing APIs + meal day query cache
+
+### Phase 3 — Progressive Guided Workflow (High Priority)
+
+**Status:** ✅ Completed
+
+**Summary**
+
+- Shared `ProgressiveWorkflowFooter` + `useProgressiveSectionReview` (generalized from Daily Menu Edit)
+- High Priority screens from UX audit: Occupancy Contract, Mess Add/Edit Member, Menu Share Preview, Quick Setup sticky Generate, Edit Space section nav
+- Aligns with Dashboard Design A; reuses horizontal Business Progress Stepper where wizards already have steps
+- No backend changes
+- Details: `Progressive-Guided-Workflow-UX-Audit.md` (implementation status + manual test guide)
+
+### Phase 4 — Progressive Guided Workflow (Medium Priority)
+
+**Status:** ✅ Completed
+
+**Summary**
+
+- Shared `StickyFormActions` for sticky Create/Save/Submit/decision CTAs
+- Create Space sticky Create + light amenities progressive when applicable
+- Raise Complaint sticky Submit + optional Continue to photos
+- Payment Detail / Complaint Detail sticky operator (and pay) actions
+- Hierarchy Building/Floor/Unit/Room/Bed forms: sticky Save; Unit/Room/Bed create pricing hint
+- No backend changes; no new lifecycle states
+- Details: `Progressive-Guided-Workflow-UX-Audit.md`
+
+### Phase 5 — Progressive UX Polish & Consistency
+
+**Status:** ✅ Completed — **Progressive Guided Workflow initiative closed**
+
+**Summary**
+
+- Customer Subscription Request progressive footer (plan → payment details → submit)
+- Complete Profile sticky Next / Back / Submit
+- Unified sticky chrome + safe-area insets (`stickyBarChrome`, `useStickyBarPaddingBottom`)
+- All ad-hoc sticky bars migrated to `StickyFormActions`
+- Pricing hint + subscription empty-state copy polish
+- No Coachmarks / Health Score / backend changes
+- Details: `Progressive-Guided-Workflow-UX-Audit.md`
+
+### Lifecycle Phase 4 — Coachmarks
+
+**Status:** ✅ Completed (2026-07-25)
+
+**Summary**
+
+- Reusable coachmark framework: `CoachmarkProvider`, `CoachmarkOverlay`, `CoachmarkCard`, `CoachmarkAnchor`, `CoachmarkSequence`, `useCoachmarks`
+- Local persistence `@countin/coachmarks/{spaceId}/{tourId}` (`completed` | `skipped`) via `coachmarkStorage`
+- Lifecycle gate: `NEW` | `SETUP_IN_PROGRESS` only; never auto-show for READY / ACTIVE / NEEDS_ATTENTION
+- Accommodation tour `setup.accommodation.v1` on Accommodation (empty + owner) ≤3 steps
+- Mess tour `setup.mess.v1` on Dashboard setup card ≤3 steps
+- Kill switch: `ENABLE_SETUP_COACHMARKS`
+- No navigation from coachmarks; Skip / Next / Got it / outside / Back all dismiss permanently
+- Future Replay Tips: `clearCoachmarkRecord` + `forceReplay`
+- No Health Score / backend / Progressive WF changes
+
+### Lifecycle Phase 5 — Space Health Score
+
+**Status:** ✅ Completed (2026-07-25) — secondary insight only
+
+**Summary**
+
+- `src/spaceLifecycle/health/` — weights, signals, `calculateSpaceHealth`, `useSpaceHealth`
+- Dashboard widget + breakdown (Setup 50% / Operations 30% / Attention 20%)
+- Reuses lifecycle evaluation + Pending Actions; suggestions from Recommendation Engine
+- Empty state for brand-new spaces (no vanity 0%); setup-incomplete score cap
+- No enterprise portfolio, no backend, no Progressive WF / Coachmark changes
+
+### Remaining (Lifecycle roadmap)
+
+| Phase | Status |
+|-------|--------|
+| Phase 3 — Contextual empty states | 🟡 Partial (Mess meal/financial empty hints done; module empties remain) |
+| Progressive Guided Workflow (Phases 3–5) | ✅ **Complete** |
+| Lifecycle Phase 4 — Coachmarks | ✅ **Complete** |
+| Lifecycle Phase 5 — Health Score | ✅ **Complete** (secondary widget; no enterprise portfolio) |
+| Mess Guided Setup | ✅ Completed |
+
+**Lifecycle roadmap (Phases 1–5 engine + dashboard + coachmarks + health): implemented.** Enterprise portfolio / My Spaces rollup remains out of scope.
+
+**Next execution plan:** `Post-Lifecycle-Stabilization-Roadmap.md` — Stabilization → Localization → Cleanup → Empty states → Replay Tips → Architecture Freeze (Enterprise Portfolio postponed).
 
 ---
 
@@ -365,6 +491,8 @@ Onboarding card hidden. Optional milestone tips at most once.
 
 Standard owner dashboard (current Design A): financial, ops, meal ops, quick actions. No setup chrome.
 
+**Quick Setup Preview (Step 4)** uses the same Design A language as the Owner Dashboard (`DashboardOwnerHero`, `DashboardStatCard`, `DashboardSectionHeader`, Lucide icon circles, spacing/typography/color tokens). Do not introduce a separate preview visual system.
+
 ### NEEDS_ATTENTION
 
 Same as ACTIVE/READY **plus**:
@@ -451,7 +579,32 @@ Where `AttentionHealth = 1 - saturate(pendingCount / threshold)`.
 - Optional milestones never reduce Health below READY threshold.
 - Label bands: Needs setup / Ready / Healthy / Needs attention—not a vanity percentage alone.
 
-**v1 ship without Health Score.** Use Setup Readiness % + Pending Actions.
+**v1 originally shipped without Health Score.** Use Setup Readiness % + Pending Actions as primary.
+
+### Implementation (Lifecycle Phase 5) ✅ — secondary Space Health
+
+Shipped as an **informative** dashboard widget (not primary navigation).
+
+| Category | Weight (configurable) |
+|----------|------------------------|
+| Setup Readiness | 50% |
+| Operational Health | 30% |
+| Attention Health | 20% |
+
+Constants: `src/spaceLifecycle/health/healthWeights.ts`  
+Calculator: `calculateSpaceHealth` · Hook: `useSpaceHealth`  
+Widget: `DashboardSpaceHealthCard` · Breakdown: `DashboardSpaceHealthScreen`
+
+```
+Health = 0.5 * Setup + 0.3 * Operations + 0.2 * Attention
+```
+
+- Incomplete required setup → overall score capped at `SETUP_INCOMPLETE_SCORE_CAP` (69).
+- Brand-new NEW spaces → **unavailable** empty copy (never vanity `0%`).
+- Suggestions reuse lifecycle `recommendation` + Pending Actions — no parallel advice engine.
+- Bands: Excellent / Healthy / Needs Improvement / At Risk / Critical (always with label).
+
+Primary guidance remains: **Next Recommended Step**, **Business Milestones**, **Pending Actions**.
 
 ---
 
@@ -469,6 +622,32 @@ Lightweight, local, minimal—not React Joyride everywhere.
 | **Not used for** | Every empty state, every tab, returning ACTIVE users |
 
 Empty states + Next Step card carry ongoing guidance; coachmarks are orientation only.
+
+### Implementation (Lifecycle Phase 4) ✅
+
+```mermaid
+flowchart TD
+  A[Screen focus] --> B{ENABLE_SETUP_COACHMARKS?}
+  B -->|no| Z[No overlay]
+  B -->|yes| C{lifecycle NEW or SETUP?}
+  C -->|no| Z
+  C -->|yes| D{storage finished?}
+  D -->|yes| Z
+  D -->|no| E[Start CoachmarkSequence ≤3]
+  E --> F[Skip / Done / Outside / Back]
+  F --> G[Persist completed or skipped]
+  G --> Z
+```
+
+| Piece | Path |
+|-------|------|
+| Provider + hook | `src/coachmarks/CoachmarkProvider.tsx`, `useCoachmarks` |
+| Overlay / card / anchor / sequence | `src/components/coachmarks/*` |
+| Visibility + kill switch | `src/coachmarks/visibility.ts` |
+| Sequences | `src/coachmarks/sequences.ts` (`setup.accommodation.v1`, `setup.mess.v1`) |
+| Storage | `src/utils/coachmarkStorage.ts` |
+| Mess landing | `DashboardScreen` + `DashboardSetupProgressCard` anchors |
+| Accommodation landing | `AccommodationHomeScreen` (empty owner) anchors |
 
 ---
 
@@ -800,6 +979,187 @@ This yields a production-ready architecture that stays space-oriented, reuses Co
 
 ---
 
+## Mess Guided Setup
+
+**Status:** ✅ Completed (business workflow refinement 2026-07-24)  
+**Isolation:** Applies only when `SpaceType === MESS`. PG / Hostel / Rental / Co-living profiles, visibility, and copy remain unchanged.
+
+### Architecture reuse (no duplicated framework)
+
+| Concern | Reuse |
+|---------|--------|
+| Lifecycle states | Same `NEW → SETUP_IN_PROGRESS → READY → ACTIVE` (+ `NEEDS_ATTENTION` overlay) |
+| Engine | `evaluateSpaceLifecycle` / `recommendNextAction` / `deriveLifecycleState` |
+| Profile | `setupProfileForSpaceType('MESS')` only |
+| Signals | `useSpaceLifecycleSignals` (Mess adds today’s menu via `mealDayQueryCache`) |
+| Dashboard chrome | `DashboardSetupProgressCard`, `DashboardOwnerHero`, financial / meal ops cards |
+| Navigation | Existing `MenuLibrary`, `MenuPlanning`, `MenuSharePreview`, `AddMember`, `MealDeliveryLocations` |
+
+---
+
+## Mess Business Workflow
+
+**Why this order:** Owners were told to plan/share menus while Menu Planning blocked share without customers. The recommendation engine must never push a step that is immediately blocked by a hidden prerequisite. Customers are enrolled **per mess** (space-scoped members); portfolio customers elsewhere do not receive this mess’s menus until added here.
+
+### Business milestone sequence
+
+```mermaid
+flowchart TD
+  A[Mess Created] --> B[Menu Library Ready]
+  B --> C[Customers Added]
+  C --> D[Today's Menu Planned]
+  D --> E[Menu Shared]
+  E --> F[Ready to Operate]
+  F -.-> G[Delivery Locations optional]
+```
+
+| Milestone | Kind | Why it exists | Done when | Primary CTA |
+|-----------|------|---------------|-----------|-------------|
+| Mess created | Required | Space exists | Space exists | — |
+| Menu library ready | Required | Need reusable dishes before planning | Active items or combos | Open Menu Library |
+| Customers added | Required | Someone must receive menus / confirmations | `memberCount > 0` | Add Customers |
+| Today's menu planned | Required | Something to share today | ≥1 meal planned today | Plan Menu |
+| Menu shared | Required | Customers only see menus after share | ≥1 meal published/modified today | Share Menu |
+| Ready to operate | Derived | All required complete | All required done | Dashboard |
+| Delivery locations | Recommended | Optional drop points | ≥1 delivery location | Add Delivery Locations |
+
+**Allowed out-of-order work:** Owner may plan today’s menu before adding customers (Menu Planning allows it). Recommendation still prefers **Add Customers** first so Share is never the next tip while customers are missing.
+
+### Dependency graph (recommendation)
+
+```mermaid
+flowchart TD
+  L{Menu library?}
+  C{Customers?}
+  M{Today menu?}
+  S{Shared?}
+  L -->|No| R1[Recommend: Create Menu Library]
+  L -->|Yes| C
+  C -->|No| R2[Recommend: Add Customers]
+  C -->|Yes| M
+  M -->|No| R3[Recommend: Plan Today's Menu]
+  M -->|Yes| S
+  S -->|No| R4[Recommend: Share Today's Menu]
+  S -->|Yes| D{Delivery?}
+  D -->|No| R5[Tip: Delivery locations]
+  D -->|Yes| Done[No recommendation / operational]
+```
+
+### Recommendation decision tree (cases)
+
+| Library | Customers | Menu | Shared | Next recommendation | Reason (product) |
+|---------|-----------|------|--------|---------------------|------------------|
+| ❌ | — | — | — | Create Menu Library | Items required before planning meals |
+| ✅ | ❌ | — | — | Add Customers | Needed before sharing today’s menu |
+| ✅ | ✅ | ❌ | — | Plan Today's Menu | Customers ready — plan so they can receive |
+| ✅ | ✅ | ✅ | ❌ | Share Today's Menu | Customers won’t receive until shared |
+| ✅ | ✅ | ✅ | ✅ | Hidden (ops) / optional delivery tip | Mess ready |
+
+Engine rule: walk **required** milestones in **profile order**, then recommended. Profile order encodes dependencies — no separate dependency DSL.
+
+### Hero messaging (Mess)
+
+| Stage | Hero subtitle |
+|-------|----------------|
+| New / library incomplete | Let’s get your mess ready. Only N step(s) remain… |
+| Next = Add Customers | Great start! Now add customers… |
+| Next = Plan menu | Customers are ready. Plan today’s menu… |
+| Next = Share | Everything is ready. Share today’s menu… |
+| READY | Your mess is ready! Start managing meals and payments. |
+
+### Menu Planning guidance
+
+- **No eligible meal members:** contextual card — can still plan; cannot share until customers are added. CTAs: **Add customers** / **Continue planning**.
+- **Share with zero eligible members:** friendly alert → Add customers / Cancel (no technical errors).
+- **Day status line:** business copy (“hasn’t been planned / hasn’t been shared”) instead of “0 shared · 0 not shared · 3 empty”.
+
+### Share Menu prerequisites
+
+1. At least one meal planned for the date (button otherwise disabled).
+2. For Mess: ≥1 active meal member (`distinctEligibleMemberCount > 0`); otherwise block with enroll CTA.
+3. Publish via existing `MenuSharePreview` flow.
+
+### Empty-state strategy
+
+- Setup progress: business labels (no Required/Recommended badges on Mess).
+- Financial: “No payments yet…” while setup softens financial.
+- Meal ops: guided empty during setup chrome.
+- Menu Planning day strip: action-oriented hints.
+
+### Lifecycle transitions (Mess)
+
+| From | To | When |
+|------|----|------|
+| NEW | SETUP_IN_PROGRESS | First library/customers/menu signal |
+| SETUP_IN_PROGRESS | READY | All **required** done (includes Menu Shared) |
+| READY | ACTIVE | Dashboard operational signal (e.g. payments) — not menu alone |
+| READY/ACTIVE | NEEDS_ATTENTION | Pending actions > 0 |
+
+Setup chrome + Mess setup quick actions hide when required complete. Delivery remains a soft recommended tip from the engine (not blocking READY).
+
+### Dashboard visibility (Mess-only deltas)
+
+During **NEW / SETUP_IN_PROGRESS**:
+
+- Show setup chrome (Next Step + progress)
+- Show financial (softened) + meal operations + Mess setup QAs (Library → Customers → Plan → Share)
+- Hide full operational quick actions and accommodation ops
+
+When **READY / ACTIVE / NEEDS_ATTENTION**:
+
+- Hide setup chrome and Mess setup quick actions
+- Show normal Mess operational dashboard
+
+### Screens / files touched
+
+- `src/spaceLifecycle/profiles.ts` (milestone order + MENU_SHARED required)
+- `src/spaceLifecycle/recommendation.ts` (Mess copy stems)
+- `src/hooks/useSpaceLifecycleSignals.ts` (ACTIVE not from menu alone)
+- `src/screens/dashboard/DashboardScreen.tsx` (hero + setup QAs)
+- `src/components/dashboard/DashboardSetupProgressCard.tsx` (hide kind badges for Mess)
+- `src/screens/meals/MenuPlanningScreen.tsx` (contextual enroll + share guard)
+- `src/components/meals/MenuPlanningDayOverview.tsx` (business day status)
+- `src/i18n/locales/en.json`
+- Unit tests under `src/spaceLifecycle/__tests__/`
+
+**Backend:** No backend changes required.
+
+### Shared Business Progress Stepper (Dashboard Design System)
+
+**Component:** `BusinessProgressStepper` (`src/components/dashboard/shared/BusinessProgressStepper.tsx`)
+
+Horizontal onboarding stepper used by `DashboardSetupProgressCard` for **all** space types. Callers pass `steps[]` + `currentStepIndex` — no Mess-specific logic inside the stepper.
+
+| State | Visual |
+|-------|--------|
+| Completed | Green filled circle + white check; green connector |
+| Current | White circle, green border, step number |
+| Future | Gray border, gray number, gray connector |
+
+**Related shared cards**
+
+| Component | Role |
+|-----------|------|
+| `DashboardChoiceCard` | Primary / secondary action cards (Add / Import) |
+| `DashboardTipCard` | Yellow tip callout |
+| `DashboardReasonCard` | “Why …” icon rows |
+| `DashboardOrDivider` | Centered OR divider |
+| `DashboardInfoBanner` | Summary banner + count pill |
+| `DashboardPersonCard` | Import person row (avatar, source, role, status, Add) |
+| `DashboardAvatar` / `DashboardRoleChip` / `DashboardStatusChip` | Person card primitives |
+
+**Mess Add Customers flow**
+
+1. `AddCustomersHub` — hero + stepper + Add customers / Import from other spaces  
+2. `ImportExistingPeople` — filters, search, person cards (From: space; Available / Current Resident; + Add)  
+3. `AddMember` (`initialMode: 'new'`) — create new customer  
+
+Lifecycle / recommendation engines unchanged. `ADD_MEMBER` maps to `AddCustomersHub` when `spaceType === 'MESS'`.
+
+**Future:** PG / Hostel / Rental / Co-living reuse the same stepper with their milestone labels.
+
+---
+
 ## Implementation Roadmap
 
 Execution plan for implementing this design. **Do not expand phase scope** without updating this section and re-checking acceptance criteria.
@@ -815,18 +1175,21 @@ flowchart LR
   P4 -.-> P5[Phase 5\nOptional health]
 ```
 
-| Phase | In v1 default ship? | Depends on |
-|-------|---------------------|------------|
-| 0 — Decisions & freeze | Yes | Design approval |
-| 1 — Milestone engine + Next Step UI | Yes | Phase 0 |
-| 2 — Lifecycle dashboard composition | Yes | Phase 1 |
-| 3 — Contextual empty states | Yes | Phase 1 (copy keys); Phase 2 preferred |
-| 4 — Coachmarks | Yes (thin) | Phase 2 |
-| 5 — Health Score / enterprise | **No** (optional) | Phase 2 + product ask |
+| Phase | In v1 default ship? | Depends on | Status |
+|-------|---------------------|------------|--------|
+| 0 — Decisions & freeze | Yes | Design approval | ✅ Completed (defaults applied) |
+| 1 — Lifecycle engine foundation | Yes | Phase 0 | ✅ Completed (no UI) |
+| 2 — Lifecycle dashboard + Next Step UI | Yes | Phase 1 | ✅ Completed |
+| Mess Guided Setup (profile + Mess dashboard polish) | Yes | Phase 2 | ✅ Completed |
+| 3 — Contextual empty states | Yes | Phase 1; Phase 2 preferred | 🟡 Partial (Mess hints done) |
+| 4 — Coachmarks | Yes (thin) | Phase 2 | ✅ Completed |
+| 5 — Health Score / enterprise | **No** portfolio; Health Score **yes** (secondary) | Phase 2 + product ask | ✅ Health Score complete; enterprise rollup deferred |
 
 ---
 
 ### Phase 0 — Decisions & scope freeze
+
+**Status:** ✅ Completed (Phase 0 defaults applied in engine profiles)
 
 #### Goal
 
@@ -850,12 +1213,12 @@ None (process only).
 | Unresolved Rental+Meals / member filter debates stall Phase 1 | Default decisions below if owners don’t reply in time |
 | Scope expands into Health Score or new APIs | Explicitly mark Phase 5 optional; reject mid-phase adds |
 
-**Default decisions if product is silent (v1):**
+**Default decisions applied in Phase 1 engine:**
 
 1. Rental: **omit** MEALS_READY from setup profile.  
-2. RESIDENTS_READY: `memberCount > 0` as returned by `getMembers` (refine filter later).  
-3. ACTIVE: **soft-equal READY** on first dashboard visit after required milestones complete.  
-4. Optional meals tips: dismissible **per space**.
+2. RESIDENTS_READY: `memberCount > 0` (caller-supplied count).  
+3. ACTIVE: requires `hasOperationalSignal === true` (Phase 2 soft-graduate).  
+4. Optional meals tips: dismissible via `dismissedOptionalMilestoneIds` per evaluation.
 
 #### Rollback strategy
 
@@ -863,91 +1226,113 @@ N/A (documentation only). Revert doc edits if decisions change before Phase 1 st
 
 #### Regression checklist
 
-- [ ] Open Questions 1–3 and 6 have recorded answers (or defaults above).  
-- [ ] Phase 5 confirmed out of v1.  
-- [ ] No new API or backend work approved for Phases 1–4.  
-- [ ] Stakeholders agree Create Space lock/nav behavior from prior fix stays as-is in Phase 1 (no rewrites unless broken).
+- [x] Open Questions 1–3 and 6 have recorded answers (defaults above).  
+- [x] Phase 5 confirmed out of v1.  
+- [x] No new API or backend work approved for Phases 1–4.  
+- [x] Create Space lock/nav behavior left as-is.
 
 #### Acceptance criteria
 
-- [ ] Written decision log for blocking questions.  
-- [ ] Phase 1–4 scope locked; Phase 5 optional.  
-- [ ] Engineering can start Phase 1 without further product meetings for defaults.
+- [x] Written decision log for blocking questions.  
+- [x] Phase 1–4 scope locked; Phase 5 optional.  
+- [x] Engineering started Phase 1 with defaults.
 
 ---
 
-### Phase 1 — Milestone engine + business Next Step UI
+### Phase 1 — Space Lifecycle Engine foundation ✅
+
+**Status:** ✅ Completed (foundation only — **no UI redesign**)
+
+> **Scope adjustment vs earlier roadmap draft:** Phase 1 ships the domain engine + hook + tests only. Wiring Next Step UI / replacing the technical checklist on the dashboard is deferred to **Phase 2** so visible behavior stays unchanged.
 
 #### Goal
 
-Replace technical checklist steps with **profile-driven business milestones** and a single **Next Recommended Action**. Fix Mess / Rental / Co-living predicates so each space type only sees relevant milestones. Keep Create Space → land behavior; wire CTAs to existing screens.
+Create the Space Lifecycle Engine behind the scenes without changing application-visible behavior. Existing setup progress UI, dashboard, and navigation continue to work exactly as before.
 
-#### Files to modify
+#### Files created / modified
 
 | Path | Change |
 |------|--------|
-| `src/utils/spaceSetupProgress.ts` **or** new `src/spaceLifecycle/*` | Profiles, milestones, evaluator, lifecycle derivation |
-| `src/hooks/useSpaceSetupProgress.ts` | Consume evaluator; fetch only signals required by profile |
-| `src/utils/__tests__/spaceSetupProgress.test.ts` (+ new lifecycle tests) | Per–space-type decision tables |
-| `src/components/dashboard/DashboardSetupProgressCard.tsx` | Next Step + milestone progress (required/optional badges) |
-| `src/screens/dashboard/DashboardScreen.tsx` | Plumb new action shape / CTA routing by milestone |
-| `src/i18n/locales/en.json` | Business milestone + reason + CTA strings (fallbackLng covers others) |
-| `src/utils/spaceSetupStorage.ts` | Keep auto-open flag; no behavior change unless needed |
+| `src/spaceLifecycle/types.ts` | Lifecycle / milestone / recommendation types |
+| `src/spaceLifecycle/milestones.ts` | Canonical milestone catalog |
+| `src/spaceLifecycle/profiles.ts` | Per–space-type profiles via capability gates |
+| `src/spaceLifecycle/predicates.ts` | Pure business predicates |
+| `src/spaceLifecycle/recommendation.ts` | Single next-action engine |
+| `src/spaceLifecycle/lifecycle.ts` | Lifecycle state derivation |
+| `src/spaceLifecycle/evaluate.ts` | `evaluateSpaceLifecycle` entry point |
+| `src/spaceLifecycle/compat.ts` | Legacy adapter + empty context helper |
+| `src/spaceLifecycle/index.ts` | Public exports |
+| `src/hooks/useSpaceLifecycle.ts` | Hook (unused by UI) |
+| `src/spaceLifecycle/__tests__/*.test.ts` | Unit tests |
+| `docs/Space-Onboarding-And-Lifecycle-Design.md` | Status + verification guide |
 
-**Do not modify in this phase:** Quick Setup internals, Pending Actions, payments, meal APIs, tab navigator structure (unless CTA target missing).
+**Unchanged (by design):** `DashboardScreen`, `DashboardSetupProgressCard`, `useSpaceSetupProgress`, `spaceSetupProgress.ts`, Create Space, navigation.
 
 #### Components affected
 
-- `DashboardSetupProgressCard` (primary)  
-- Owner `DashboardScreen` setup block  
-- Indirect: navigation to Accommodation / Members / Meals / Quick Setup / Delivery (existing screens, no redesign)
+None in the running app. New domain module + unused hook only.
 
 #### Risks
 
 | Risk | Mitigation |
 |------|------------|
-| Hook over-fetch (catalog + all summaries) | Lazy predicates: Mess loads catalog first; lodging skips catalog until PROPERTY_READY |
-| Breaking existing setup card consumers | Adapter: map new evaluator → card props; keep export name temporarily |
-| Wrong Rental completion (beds) | Unit tests for RENTAL profile: units-based PROPERTY_READY |
-| CTA navigates to tab user cannot see | Filter by `resolveSpacePermissions` before recommending |
+| Accidental UI wiring | Explicitly did not import engine into Dashboard |
+| Profile drift from `SPACE_TYPE_VALUES` | `LIFECYCLE_SPACE_TYPES` mirrored; tests assert full coverage |
+| Jest + i18n import graph | Profiles avoid `api/spaceTypes` (i18n) |
 
 #### Rollback strategy
 
-1. Revert PR(s) for `spaceLifecycle` / `spaceSetupProgress` + card + dashboard wiring.  
-2. Restore previous technical checklist i18n keys if removed.  
-3. Feature toggle (optional): `USE_MILESTONE_SETUP=false` local constant to force old `buildSpaceSetupProgress` path for one release if needed.
+1. Delete `src/spaceLifecycle/` and `src/hooks/useSpaceLifecycle.ts`.  
+2. Revert doc status sections.  
+3. No UI rollback needed (no consumers).
 
 #### Regression checklist
 
-- [ ] **PG:** no buildings → Next Step = Property ready → CTA opens Quick Setup or Accommodation.  
-- [ ] **PG:** beds exist, no members → Residents ready → Members / Add Member.  
-- [ ] **HOSTEL:** same as PG for milestones (copy may differ).  
-- [ ] **CO_LIVING:** no “floors” as owner-facing milestone; PROPERTY_READY via beds.  
-- [ ] **RENTAL:** no beds/meals milestones; PROPERTY_READY via units; completes without beds.  
-- [ ] **MESS:** no property milestones; Meals ready required; lands Dashboard; CTA → Menu Library.  
-- [ ] Required % excludes optional meals for lodging.  
-- [ ] Create Space still disables Save, no duplicates, success toast, correct landing tab.  
-- [ ] Auto-open Accommodation still once per empty lodging space.  
-- [ ] Pending Actions bell/card still works during SETUP.  
-- [ ] Staff without `canManageAccommodation` never gets Property CTA.  
-- [ ] Unit tests: decision table for all five space types.
+- [x] Unit tests pass for all five space types.  
+- [x] Legacy `buildSpaceSetupProgress` tests still pass.  
+- [x] No dashboard/setup card file changes.  
+- [ ] Manual: app dashboard looks identical (see Verification Guide).  
+- [ ] Manual: Create Space / Accommodation / Members / Meals unchanged.
 
 #### Acceptance criteria
 
-- [ ] Owner UI shows **business milestones only** (no Create Floor/Room/Bed rows).  
-- [ ] Single Next Step answers what / why / where.  
-- [ ] Profiles match Feature Matrix (Mess omit property; Rental omit meals; lodging meals optional).  
-- [ ] READY when all **required** milestones complete; card hides.  
-- [ ] No new backend APIs.  
-- [ ] Phase 1 PR(s) pass lint + targeted Jest.
+- [x] Engine evaluates milestones, recommendation, lifecycle purely from `PredicateContext`.  
+- [x] Profiles match design (Mess meals-first; Rental no meals; lodging optional meals).  
+- [x] `useSpaceLifecycle` available but not consumed by UI.  
+- [x] No new backend APIs.  
+- [x] No visible UI / navigation changes in this PR.  
+- [x] Design doc updated (status, roadmap, verification guide).
+
+---
+
+### Phase 2 — Lifecycle-aware dashboard + business Next Step UI
+
+**Status:** ✅ Completed
+
+#### Goal
+
+**Done.** Consume `evaluateSpaceLifecycle` / `useSpaceLifecycle` on the owner dashboard: replace technical checklist with business milestones + Next Step card; soft-mute ops widgets during SETUP. Keep Create Space landing behavior.
+
+#### Files to modify (planned)
+
+| Path | Change |
+|------|--------|
+| `src/screens/dashboard/DashboardScreen.tsx` | Consume lifecycle hook / evaluation |
+| `src/components/dashboard/DashboardSetupProgressCard.tsx` | Business milestone UI |
+| `src/hooks/useSpaceSetupProgress.ts` | Build `PredicateContext` from existing fetches; feed engine |
+| `src/i18n/locales/en.json` | Milestone title/reason/CTA strings |
+
+See **Phase 2 Implementation Summary** and **Phase 2 Verification Guide** below for what shipped.
 
 ---
 
 ### Phase 2 — Lifecycle-aware dashboard composition
 
+**Status:** ✅ Completed (merged with Next Step UI in the same ship)
+
 #### Goal
 
-Drive owner dashboard chrome from lifecycle state: emphasize setup during `NEW` / `SETUP_IN_PROGRESS`; show full ops when `READY` / `ACTIVE`; elevate Pending Actions when `NEEDS_ATTENTION` without replacing attention SoT.
+Drive owner dashboard chrome from lifecycle state **and** replace the technical setup checklist with business milestones + Next Recommended Step (consuming Phase 1 engine). Emphasize setup during `NEW` / `SETUP_IN_PROGRESS`; show full ops when `READY` / `ACTIVE`; elevate Pending Actions when `NEEDS_ATTENTION` without replacing attention SoT.
 
 #### Files to modify
 
@@ -1066,95 +1451,109 @@ Revert i18n + screen empty JSX; `EmptyState` API change (if any) behind optional
 
 One-time ≤3-step orientation on first land after create (or first SETUP visit), persisted locally—not a tour on every screen.
 
-#### Files to modify
+#### Status
+
+✅ **Completed** (2026-07-25)
+
+#### Files
 
 | Path | Change |
 |------|--------|
-| `src/utils/spaceSetupStorage.ts` or `src/utils/coachmarkStorage.ts` | Persist `{spaceId, tourId}` completion |
-| `src/components/ui/CoachmarkOverlay.tsx` *(new, minimal)* | Spotlight + next/skip |
-| `src/screens/accommodation/AccommodationHomeScreen.tsx` | Trigger `setup.accommodation.v1` when empty + not seen |
-| `src/screens/dashboard/DashboardScreen.tsx` | Trigger `setup.mess.v1` for Mess SETUP |
+| `src/utils/coachmarkStorage.ts` | Persist `{spaceId, tourId}` completion (`completed` \| `skipped`) |
+| `src/coachmarks/*` | Provider, visibility, sequences, types |
+| `src/components/coachmarks/*` | Overlay, Card, Anchor, Sequence |
+| `src/screens/accommodation/AccommodationHomeScreen.tsx` | `setup.accommodation.v1` when empty + owner + eligible lifecycle |
+| `src/screens/dashboard/DashboardScreen.tsx` | `setup.mess.v1` for Mess SETUP |
+| `src/components/dashboard/DashboardSetupProgressCard.tsx` | Optional coachmark anchors |
+| `App.tsx` | `CoachmarkProvider` |
 | `src/i18n/locales/en.json` | Tour step strings |
+| Unit tests | `coachmarkStorage`, `visibility`, `sequences` |
 
-**Out of scope:** React Joyride, per-tab tours, replay UI (settings hook can be Phase 5+).
-
-#### Components affected
-
-- Thin overlay above Accommodation or Mess Dashboard  
-- Next Step card (step 1 target)  
-- Primary CTA / tab (steps 2–3)
-
-#### Risks
-
-| Risk | Mitigation |
-|------|------------|
-| Blocks interaction / annoys | Skip always visible; max 3 steps; never on ACTIVE return visits |
-| Breaks Android touch handling | Use simple absolute overlay; avoid native modal stacks |
-| Fires every focus | Persist before advancing; check storage before mount |
-
-#### Rollback strategy
-
-1. Disable coachmark entrypoints with `ENABLE_SETUP_COACHMARKS = false`.  
-2. Or revert overlay PR; storage keys harmless if left.
+**Out of scope (unchanged):** React Joyride, per-tab tours, replay UI (settings hook can be Phase 5+), Health Score, backend.
 
 #### Regression checklist
 
-- [ ] First create PG: coachmark ≤3 steps on Accommodation; then never again for that space.  
-- [ ] First create Mess: coachmark on Dashboard only.  
-- [ ] Skip dismisses and persists.  
-- [ ] Returning ACTIVE user: no coachmark.  
-- [ ] Setup Next Step still usable if coachmark disabled.  
-- [ ] No interaction with Pending Actions / bell.
+- [x] First create PG: coachmark ≤3 steps on Accommodation; then never again for that space.  
+- [x] First create Mess: coachmark on Dashboard only.  
+- [x] Skip dismisses and persists.  
+- [x] Returning ACTIVE user: no coachmark.  
+- [x] Setup Next Step still usable if coachmark disabled (`ENABLE_SETUP_COACHMARKS`).  
+- [x] No interaction with Pending Actions / bell.  
+- [x] Progressive Guided Workflow unchanged.
 
 #### Acceptance criteria
 
-- [ ] Coachmarks appear at most once per space per tour id.  
-- [ ] ≤3 steps; Skip works.  
-- [ ] Kill-switch constant available.  
-- [ ] No dependency on web Joyride libraries.
+- [x] Coachmarks appear at most once per space per tour id.  
+- [x] ≤3 steps; Skip works.  
+- [x] Kill-switch constant available.  
+- [x] No dependency on web Joyride libraries.
 
 ---
 
-### Phase 5 — Optional Health Score / enterprise rollup *(out of v1)*
+### Phase 5 — Space Health Score *(secondary)* + optional enterprise rollup
 
 #### Goal
 
-Only if product explicitly requests: secondary readiness/attention score or My Spaces aggregation of spaces in SETUP—without replacing Pending Actions.
+Secondary explainable Space Health (0–100) on the owner dashboard — never replacing Next Step or Pending Actions. Enterprise / My Spaces portfolio rollup remains deferred.
 
-#### Files to modify (indicative)
+#### Status
+
+✅ **Health Score completed** (2026-07-25) · ⬜ Enterprise portfolio deferred
+
+#### Files
 
 | Path | Change |
 |------|--------|
-| `src/spaceLifecycle/health.ts` | Optional weighted score |
-| `src/screens/MySpacesScreen.tsx` | Optional “Needs setup” filter/badge |
-| `docs/Space-Onboarding-And-Lifecycle-Design.md` | Lock formula before coding |
+| `src/spaceLifecycle/health/*` | Weights, signals, calculator, `useSpaceHealth` |
+| `src/components/dashboard/DashboardSpaceHealthCard.tsx` | Secondary widget |
+| `src/screens/dashboard/DashboardSpaceHealthScreen.tsx` | Breakdown (Setup / Ops / Attention) |
+| `src/screens/dashboard/DashboardScreen.tsx` | Widget placement after setup card |
+| `src/navigation/MainNavigator.tsx` + `types.ts` | `DashboardSpaceHealth` route |
+| `src/i18n/locales/en.json` | `dashboard.health.*` |
+| Unit tests | `health/__tests__/healthCalculator.test.ts` |
+
+**Out of scope:** My Spaces “Needs setup” filter/badge, backend persistence, new APIs, gamification.
 
 #### Components affected
 
-My Spaces cards/badges; optional dashboard footnote—**not** primary Next Step.
+Owner Dashboard only (secondary card); breakdown stack screen. Next Step + Pending Actions unchanged as primary.
 
 #### Risks
 
 | Risk | Mitigation |
 |------|------------|
-| Confuses setup % with attention | Never label as sole “Healthy” if pending > 0 |
-| Scope creep into backend fields | Client aggregate first |
+| Confuses setup % with attention | Cap while setup incomplete; Pending Actions remain SoT |
+| Vanity 0% on new spaces | `available: false` empty state |
+| Scope creep into backend | Client aggregate from existing signals only |
 
 #### Rollback strategy
 
-Remove score UI; keep Phase 1–4 engine.
+Hide widget (stop rendering `DashboardSpaceHealthCard`); engine remains pure and unused.
 
 #### Regression checklist
 
-- [ ] Pending Actions badges unchanged.  
-- [ ] SETUP spaces still show Next Step, not only a score.  
-- [ ] Formula documented and tested.
+- [x] Pending Actions badges unchanged.  
+- [x] SETUP spaces still show Next Step, not only a score.  
+- [x] Formula documented and unit-tested.  
+- [x] Progressive Guided Workflow / Coachmarks unchanged.  
+- [x] No new lifecycle states or APIs.
 
 #### Acceptance criteria
 
-- [ ] Product sign-off on formula.  
-- [ ] Score is secondary; Next Step + Pending Actions remain primary.  
-- [ ] No new attention SoT.
+- [x] Score is secondary; Next Step + Pending Actions remain primary.  
+- [x] Every deduction has an explanation factor.  
+- [x] Suggestions reuse Recommendation Engine.  
+- [x] No new attention SoT.  
+- [ ] Enterprise portfolio — deferred.
+
+#### Manual test guide
+
+1. Brand-new PG → empty health copy (no 0%).  
+2. Setup in progress (building added) → score ≤ 69 with setup factors.  
+3. Mess READY with clear pending → Healthy/Excellent band + positive factors.  
+4. NEEDS_ATTENTION with pending → lower Attention category + Open Pending CTA on breakdown.  
+5. Tap widget → breakdown shows Setup / Operations / Attention weights.  
+6. Confirm Next Step card and Pending Actions still primary.
 
 ---
 
@@ -1172,26 +1571,298 @@ Remove score UI; keep Phase 1–4 engine.
 | Phase | Eng focus | Product / design focus |
 |-------|-----------|-------------------------|
 | 0 | — | Decisions |
-| 1 | Profiles, hooks, card | Milestone copy |
-| 2 | Dashboard composition | “Does this feel like ops yet?” |
+| 1 | Engine + unit tests (no UI) | Confirm profiles match product |
+| 2 | Dashboard composition + Next Step UI | “Does this feel like ops yet?” |
 | 3 | Empty CTAs | Tone / why lines |
 | 4 | Overlay + persistence | Step count / annoyance |
 | 5 | Score math | Whether to ship at all |
 
 ---
 
-## Appendix A — Suggested module boundaries (implementation later)
+## Phase 1 Verification Guide
+
+### Build verification
+
+```bash
+npm test -- --testPathPattern="spaceLifecycle|spaceSetupProgress" --no-coverage
+```
+
+- [ ] Project compiles / Metro starts as usual.  
+- [ ] No TypeScript errors in `src/spaceLifecycle/**`.  
+- [ ] Unit tests above pass (expect 30+ tests).  
+- [ ] Legacy setup progress tests still pass.
+
+### Regression testing (manual — UI must be unchanged)
+
+Verify **no visible difference** vs pre–Phase 1:
+
+1. **Dashboard** — Owner PG space: setup card (technical steps) still appears if incomplete; financial / ops / quick actions unchanged.  
+2. **Setup progress** — Still shows create building / floors / rooms / beds style steps (legacy).  
+3. **Create Space** — Save disabled while submitting; single space created; success toast; lands Accommodation (lodging) or Dashboard (Mess).  
+4. **Navigation** — Tabs and stack behavior unchanged.  
+5. **Accommodation** — Empty Welcome / Start Setup unchanged.  
+6. **Members / Meals** — Unchanged flows.
+
+### Functional verification (engine — no production UI)
+
+Phase 1 has **no production UI surface**. Verify the engine via unit tests and optional temporary DevTools usage:
+
+**A. Unit tests (preferred)**
+
+```bash
+npm test -- --testPathPattern=spaceLifecycle --no-coverage
+```
+
+Covers: profile selection per type, PROPERTY_READY beds vs units, Mess meals-first recommendation, permissions skip, NEEDS_ATTENTION vs SETUP, optional dismiss, no recommendation when complete.
+
+**B. Optional temporary debug (do not ship)**
+
+In a throwaway local-only snippet (remove before commit):
+
+```ts
+import { evaluateSpaceLifecycle, emptyPredicateContext } from './spaceLifecycle';
+import { deriveSpacePermissions } from './utils/spacePermissions';
+
+const spaceType = 'PG';
+const result = evaluateSpaceLifecycle({
+  spaceType,
+  context: emptyPredicateContext(
+    spaceType,
+    deriveSpacePermissions('OWNER', spaceType),
+    { buildingCount: 0 },
+  ),
+});
+console.log('[lifecycle]', result.lifecycle, result.recommendation);
+```
+
+Expected for empty PG: `lifecycle === 'NEW'`, `recommendation.milestoneId === 'PROPERTY_READY'`.
+
+**C. Hook**
+
+`useSpaceLifecycle` is exported from `src/hooks/useSpaceLifecycle.ts` but **must not** be imported by Dashboard yet. Confirm with:
+
+```bash
+# Should return no matches under screens/components (except if you added debug)
+rg "useSpaceLifecycle" src/screens src/components
+```
+
+### Expected result after Phase 1
+
+| Should have changed | Should NOT have changed |
+|---------------------|-------------------------|
+| New `src/spaceLifecycle/` module | Dashboard appearance |
+| New `useSpaceLifecycle` hook (unused) | Setup progress card content |
+| Unit tests | Create Space / navigation |
+| This design doc status sections | Empty states / coachmarks |
+| | Network call patterns on dashboard |
+
+### Architecture (Phase 1 module)
+
+```mermaid
+flowchart TD
+  CTX[PredicateContext\ncaller-supplied signals] --> EVAL[evaluateSpaceLifecycle]
+  EVAL --> PROF[setupProfileForSpaceType]
+  EVAL --> PRED[predicates]
+  EVAL --> REC[recommendNextAction]
+  EVAL --> LIFE[deriveLifecycleState]
+  EVAL --> OUT[LifecycleEvaluationResult]
+  HOOK[useSpaceLifecycle] --> EVAL
+  UI[Dashboard / cards] -.->|Phase 2+| HOOK
+  LEGACY[useSpaceSetupProgress] -->|unchanged Phase 1| CARD[DashboardSetupProgressCard]
+```
+
+---
+
+## Phase 2 Implementation Summary
+
+### What shipped
+
+Owner Dashboard is now a **consumer** of the Phase 1 Space Lifecycle Engine:
+
+1. `useSpaceLifecycleSignals` loads buildings / summaries / members / menu catalog / Mess delivery locations (lazy by stage).
+2. Builds pure `PredicateContext` (plus pending count + operational signal from existing dashboard data).
+3. `useSpaceLifecycle` → `evaluateSpaceLifecycle` → recommendation + lifecycle + progress.
+4. `DashboardSetupProgressCard` shows **Next Recommended Step** + **business milestones** (no Create Floor/Room/Bed rows).
+5. Widget visibility follows `dashboardVisibilityForLifecycle`.
+6. Continue CTA uses `mapSetupNavigationTarget` → existing tabs/stack screens only.
+
+### Frontend files changed / added
+
+| Path | Change |
+|------|--------|
+| `src/hooks/useSpaceLifecycleSignals.ts` | **Added** — signal gathering for engine |
+| `src/hooks/useSpaceLifecycle.ts` | Comment update (dashboard consumer) |
+| `src/spaceLifecycle/dashboardVisibility.ts` | **Added** — visibility rules |
+| `src/spaceLifecycle/navigation.ts` | **Added** — CTA → existing routes |
+| `src/spaceLifecycle/index.ts` | Export visibility + navigation |
+| `src/spaceLifecycle/__tests__/dashboardVisibility.test.ts` | **Added** |
+| `src/screens/dashboard/DashboardScreen.tsx` | Engine integration + visibility |
+| `src/components/dashboard/DashboardSetupProgressCard.tsx` | Business milestone UI |
+| `src/components/dashboard/shared/DashboardOwnerHero.tsx` | Optional subtitle |
+| `src/utils/spaceSetupProgress.ts` | `aggregateBuildingStructure` includes `units` |
+| `src/utils/__tests__/spaceSetupProgress.test.ts` | Units in aggregate assert |
+| `src/i18n/locales/en.json` | Setup + `spaceLifecycle.milestones.*` copy |
+| `docs/Space-Onboarding-And-Lifecycle-Design.md` | Status / summary / verification |
+
+**Left in place (unused by Dashboard):** `useSpaceSetupProgress` + `buildSpaceSetupProgress` (legacy; safe to remove in a later cleanup).
+
+### Navigation changes
+
+No new routes. CTA maps:
+
+| Engine target | Destination |
+|---------------|-------------|
+| `QUICK_SETUP` | `QuickSetupWizard` |
+| `BUILDING_FORM` | `BuildingForm` (create) |
+| `ACCOMMODATION_HOME` | Accommodation tab |
+| `ADD_MEMBER` | `AddMember` |
+| `MEMBERS` | Members tab |
+| `MENU_LIBRARY` | `MenuLibrary` |
+| `MENU_PLANNING` | `MenuPlanning` |
+| `DELIVERY_LOCATIONS` | `MealDeliveryLocations` |
+| `PENDING_ACTIONS` | `DashboardPendingActions` |
+
+### Backend changes
+
+**No backend changes required.**
+
+### Performance considerations
+
+- Lodging with 0 buildings: members only (no catalog / summaries).
+- Catalog + summaries after buildings exist (or always for Mess).
+- Delivery locations fetched only for Mess (`servingLocationMode === 'delivery'`).
+- Operational signal reused from dashboard accommodation/financial already in memory.
+- Pending count reused from existing dashboard / cache peeks.
+
+### Known limitations
+
+- Mess “Residents ready” copy is generic “members” (not “customers”) in Next Step title.
+- `ACTIVE` requires occupied beds / move-ins / collected payments; brand-new READY spaces stay READY until ops activity.
+- Optional meal tips still appear after required complete until catalog exists or tip is dismissed (dismiss storage not wired in UI yet).
+- Legacy `useSpaceSetupProgress` still exists but is unused by Dashboard.
+
+### Future work (not Phase 2)
+
+- Phase 3: contextual empty states across modules  
+- Phase 4: coachmarks  
+- Optional dismiss persistence for optional milestones  
+- Remove legacy setup progress module once unused
+
+### Lifecycle UI descriptions (expected)
+
+| State | What owner sees |
+|-------|-----------------|
+| **NEW** | Hero (setup subtitle) + Next Step + milestone progress; financial softened; no occupancy/meal ops; limited QA |
+| **SETUP_IN_PROGRESS** | Same as NEW after first progress (e.g. building exists but beds/members incomplete) |
+| **READY** | Setup chrome hidden; full financial + ops + meal ops + quick actions |
+| **ACTIVE** | Same as READY (after operational signal) |
+| **NEEDS_ATTENTION** | Same as READY/ACTIVE; Pending Actions card still first in quick actions (SoT unchanged) |
+
+---
+
+## Phase 2 Verification Guide
+
+### Build verification
+
+```bash
+npm test -- --testPathPattern="spaceLifecycle|spaceSetupProgress" --no-coverage
+```
+
+Expected: all suites pass (36+ tests).
+
+### Manual UI testing checklist
+
+#### 1. Create Space
+
+| Type | Landing | Expected |
+|------|---------|----------|
+| PG / Hostel / Co-living / Rental | Accommodation (if empty) | Single space; no crash; Welcome / Start Setup |
+| Mess | Dashboard | Next Step → menu library |
+
+- [ ] Save disabled while submitting; no duplicates  
+- [ ] Success toast appears  
+
+#### 2. Dashboard — every space type
+
+- [ ] **PG empty:** Next = Get your property ready; milestones show Property / Residents / Meals (optional); no technical floor/bed rows  
+- [ ] **Rental:** No Meals milestone; Property ready via units  
+- [ ] **Mess:** No Property milestone; Next = Configure menu library; Delivery recommended after required  
+- [ ] Progress % uses **required** milestones only  
+- [ ] Continue opens correct existing screen  
+
+#### 3. Navigation CTAs
+
+- [ ] Continue Setup → Quick Setup / Accommodation path works  
+- [ ] Add Members → Add Member screen  
+- [ ] Open Menu Library → Menu Library  
+- [ ] Add Delivery Locations (Mess) → Delivery Locations  
+
+#### 4. Lifecycle transitions
+
+- [ ] Empty space → NEW / SETUP with setup chrome  
+- [ ] After property + members (lodging) → setup chrome gone (READY/ACTIVE)  
+- [ ] With pending actions after ready → NEEDS_ATTENTION; pending card still works  
+- [ ] Bell / Global Attention unchanged  
+
+#### 5. Recommendation updates
+
+- [ ] After Quick Setup / beds → next becomes Add members  
+- [ ] After members → optional meals (lodging) or delivery (Mess)  
+- [ ] After meals library (Mess) → customers / delivery  
+
+#### 6. Existing features regression
+
+- [ ] Accommodation / Quick Setup / Builder  
+- [ ] Members / Add Member  
+- [ ] Meals / Menu Planning / Menu Library  
+- [ ] Payments / Complaints  
+- [ ] Notifications / Pending Actions  
+- [ ] Quick Actions (when READY+)  
+- [ ] Tenant / customer dashboards unchanged  
+
+#### 7. Regression — ops widgets
+
+- [ ] Financial cards still load when visible  
+- [ ] Occupancy cards when READY+  
+- [ ] Meal operations when READY+ and meals managed  
+- [ ] No duplicate pending cards  
+
+#### 8. Performance
+
+- [ ] Dashboard does not visibly thrash / flicker on focus  
+- [ ] Pull-to-refresh still updates summary + setup signals  
+- [ ] Empty lodging does not hammer menu catalog  
+
+### Expected result after Phase 2
+
+| Changed | Unchanged |
+|---------|-----------|
+| Owner setup card (business milestones) | Create Space flow |
+| Lifecycle-based ops visibility | Tenant/customer dashboards |
+| CTA navigation from recommendation | Module screens themselves |
+| Hero subtitle during setup | APIs / permissions / Pending SoT |
+
+---
+
+## Appendix A — Module boundaries (Phase 1 shipped)
 
 ```
 src/spaceLifecycle/
-  profiles.ts          # setupProfileForSpaceType
-  milestones.ts        # catalog + kinds
-  evaluate.ts          # next action + lifecycle state
-  predicates.ts        # wraps existing APIs/signals
   types.ts
+  milestones.ts
+  profiles.ts
+  predicates.ts
+  recommendation.ts
+  lifecycle.ts
+  evaluate.ts
+  compat.ts
+  index.ts
+  __tests__/
+
+src/hooks/useSpaceLifecycle.ts
 ```
 
-UI continues to live under `components/dashboard/`; hooks under `hooks/`.
+UI continues to live under `components/dashboard/`; legacy setup under `utils/spaceSetupProgress.ts` until Phase 2.
 
 ## Appendix B — Copy tone
 
@@ -1205,3 +1876,5 @@ UI continues to live under `components/dashboard/`; hooks under `hooks/`.
 |---------|------|-------|
 | 0.1 | 2026-07-23 | Initial production design from codebase analysis + proposal refinement |
 | 0.2 | 2026-07-23 | Added Implementation Roadmap (phases 0–5: goals, files, risks, rollback, regression, acceptance) |
+| 0.3 | 2026-07-23 | Phase 1 completed: spaceLifecycle engine + tests; no UI; status + verification guide |
+| 0.4 | 2026-07-23 | Phase 2 completed: dashboard consumes engine; business Next Step; visibility; verification guide |

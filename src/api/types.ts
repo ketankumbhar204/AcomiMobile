@@ -877,6 +877,26 @@ export interface MemberResponse {
   createdAt: string;
 }
 
+/** Eligible resident for cross-space Move In / Reserve reuse. */
+export interface MemberImportCandidateResponse {
+  memberId: UUID;
+  fullName: string;
+  mobileNumber: string;
+  role: MembershipRole;
+  status: MemberStatus;
+  occupancyStatus?: MemberOccupancyStatus;
+  gender?: MemberGender | null;
+  createdAt: string;
+  sourceSpaceId: UUID;
+  sourceSpaceName: string;
+  alreadyInTargetSpace: boolean;
+  availableForMoveIn: boolean;
+}
+
+export interface ImportMemberRequest {
+  sourceMemberId: UUID;
+}
+
 export interface MemberDetailsResponse {
   memberId: UUID;
   spaceId: UUID;

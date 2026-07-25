@@ -2,6 +2,8 @@ import React, { useLayoutEffect, useRef, useState } from 'react';
 import {
   Keyboard,
   KeyboardAvoidingView,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Platform,
   ScrollView,
   StyleSheet,
@@ -12,13 +14,19 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { Building2, MapPin, Phone, Save } from 'lucide-react-native';
+import { Building2, MapPin, Phone } from 'lucide-react-native';
 import type { AmenityAssignment, GenderPolicy, SpaceType } from '../api/types';
-import { Button, FormInput, SpaceTypePicker } from '../components/ui';
+import { FormInput, SpaceTypePicker } from '../components/ui';
 import { SpaceAmenitiesField } from '../components/spaces/SpaceAmenitiesField';
 import { SpacePropertyCategoryPicker } from '../components/spaces/SpacePropertyCategoryPicker';
 import { HeaderBackButton } from '../components/ui/HeaderBackButton';
+import {
+  ProgressiveWorkflowFooter,
+  StickyFormActions,
+  progressiveSectionHighlightStyle,
+} from '../components/progressive';
 import { useCreateSpace } from '../hooks/useCreateSpace';
+import { useProgressiveSectionReview } from '../hooks/useProgressiveSectionReview';
 import {
   buildAllPresetAmenities,
   normalizeAmenityAssignments,
@@ -28,6 +36,7 @@ import {
 import { supportsSpacePropertyCategory } from '../utils/spacePropertyCategory';
 import { isAccommodationApplicable } from '../utils/accommodationProfile';
 import { markAutoOpenedAccommodation } from '../utils/spaceSetupStorage';
+import { resolveProgressivePhase } from '../utils/progressivePhase';
 import type { MainStackParamList } from '../navigation/types';
 import {
   resetToAccommodationHome,
@@ -63,8 +72,42 @@ export function CreateSpaceScreen() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isFinishing, setIsFinishing] = useState(false);
   const submitLockRef = useRef(false);
+  const scrollRef = useRef<ScrollView>(null);
 
   const isBusy = isSubmitting || isFinishing;
+  const showAmenities = supportsSpaceAmenities(type);
+  const amenitiesProgressiveEnabled = showAmenities;
+  const essentialsComplete = Boolean(type && name.trim());
+
+  const {
+    reviewed: amenitiesReviewed,
+    highlighted: amenitiesHighlighted,
+    onSectionLayout: onAmenitiesLayout,
+    onScroll: onAmenitiesScroll,
+    onScrollBeginDrag: onAmenitiesScrollBeginDrag,
+    continueToSection: continueToAmenities,
+    clearReviewed: clearAmenitiesReviewed,
+  } = useProgressiveSectionReview({
+    enabled: amenitiesProgressiveEnabled,
+  });
+
+  React.useEffect(() => {
+    if (!amenitiesProgressiveEnabled) {
+      return;
+    }
+    clearAmenitiesReviewed();
+  }, [amenitiesProgressiveEnabled, clearAmenitiesReviewed, type]);
+
+  const progressivePhase = resolveProgressivePhase({
+    enabled: amenitiesProgressiveEnabled,
+    prerequisiteMet: essentialsComplete,
+    sectionReviewed: amenitiesReviewed,
+  });
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, layoutMeasurement } = event.nativeEvent;
+    onAmenitiesScroll(contentOffset.y, layoutMeasurement.height);
+  };
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -121,7 +164,6 @@ export function CreateSpaceScreen() {
 
       createdSuccessfully = true;
 
-      // Space already exists — never treat post-create work as a create failure.
       try {
         await refresh();
       } catch {
@@ -139,8 +181,6 @@ export function CreateSpaceScreen() {
         await markAutoOpenedAccommodation(space.id);
       }
 
-      // Prefer replace so Create Space is not left under the new space.
-      // Fall back to soft tab navigate if replace is unavailable.
       try {
         navigation.replace('SpaceTabs', {
           spaceId: space.id,
@@ -157,7 +197,6 @@ export function CreateSpaceScreen() {
 
       showToast(t('spaces.createSpace.successMessage', { name: space.name }));
     } finally {
-      // Keep Save locked after success so a slow unmount cannot double-submit.
       if (!createdSuccessfully) {
         submitLockRef.current = false;
         setIsFinishing(false);
@@ -170,121 +209,177 @@ export function CreateSpaceScreen() {
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}>
-          <View style={styles.hero} accessibilityRole="header">
-            <View style={styles.decorBlob} pointerEvents="none" />
-            <View style={styles.decorRing} pointerEvents="none" />
-            <View style={styles.heroIconWrap} accessibilityElementsHidden>
-              <Building2 size={18} color={colors.primaryDark} strokeWidth={2.2} />
+        <View style={styles.flex}>
+          <ScrollView
+            ref={scrollRef}
+            style={styles.scroll}
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            scrollEventThrottle={16}
+            onScrollBeginDrag={
+              amenitiesProgressiveEnabled ? onAmenitiesScrollBeginDrag : undefined
+            }
+            onScroll={amenitiesProgressiveEnabled ? handleScroll : undefined}>
+            <View style={styles.hero} accessibilityRole="header">
+              <View style={styles.decorBlob} pointerEvents="none" />
+              <View style={styles.decorRing} pointerEvents="none" />
+              <View style={styles.heroIconWrap} accessibilityElementsHidden>
+                <Building2 size={18} color={colors.primaryDark} strokeWidth={2.2} />
+              </View>
+              <Text style={styles.eyebrow}>{t('spaces.createSpace.eyebrow')}</Text>
+              <Text style={styles.heading}>{t('spaces.createSpace.heading')}</Text>
+              <Text style={styles.subheading}>{t('spaces.createSpace.subheading')}</Text>
             </View>
-            <Text style={styles.eyebrow}>{t('spaces.createSpace.eyebrow')}</Text>
-            <Text style={styles.heading}>{t('spaces.createSpace.heading')}</Text>
-            <Text style={styles.subheading}>{t('spaces.createSpace.subheading')}</Text>
-          </View>
 
-          {error ? (
-            <View style={styles.errorBanner}>
-              <Text style={styles.errorBannerText}>{error}</Text>
-            </View>
-          ) : null}
+            {error ? (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorBannerText}>{error}</Text>
+              </View>
+            ) : null}
 
-          <FormInput
-            label={t('spaces.createSpace.nameLabel')}
-            placeholder={t('spaces.createSpace.namePlaceholder')}
-            value={name}
-            onChangeText={text => {
-              setName(text);
-              if (fieldErrors.name) {
-                setFieldErrors(prev => ({ ...prev, name: undefined }));
-              }
-            }}
-            error={fieldErrors.name}
-            autoCapitalize="words"
-            returnKeyType="next"
-            leadingIcon={Building2}
-          />
+            <Text style={styles.sectionTitle}>
+              {t('progressiveWorkflow.createSpace.essentialsTitle')}
+            </Text>
 
-          <SpaceTypePicker
-            value={type}
-            onChange={selected => {
-              setType(selected);
-              if (!supportsSpaceAmenities(selected)) {
-                setAmenities([]);
-              } else if (amenities.length === 0) {
-                setAmenities(
-                  buildAllPresetAmenities(code => t(presetAmenityLabelKey(code))),
-                );
-              }
-              if (!supportsSpacePropertyCategory(selected)) {
-                setGenderPolicy(null);
-              }
-              if (fieldErrors.type) {
-                setFieldErrors(prev => ({ ...prev, type: undefined }));
-              }
-            }}
-            error={fieldErrors.type}
-          />
-
-          {type && supportsSpacePropertyCategory(type) ? (
-            <SpacePropertyCategoryPicker
-              spaceType={type}
-              value={genderPolicy}
-              onChange={setGenderPolicy}
+            <SpaceTypePicker
+              value={type}
+              onChange={selected => {
+                setType(selected);
+                if (!supportsSpaceAmenities(selected)) {
+                  setAmenities([]);
+                } else if (amenities.length === 0) {
+                  setAmenities(
+                    buildAllPresetAmenities(code => t(presetAmenityLabelKey(code))),
+                  );
+                }
+                if (!supportsSpacePropertyCategory(selected)) {
+                  setGenderPolicy(null);
+                }
+                if (fieldErrors.type) {
+                  setFieldErrors(prev => ({ ...prev, type: undefined }));
+                }
+              }}
+              error={fieldErrors.type}
             />
-          ) : null}
 
-          <FormInput
-            label={t('spaces.createSpace.addressLabel')}
-            placeholder={t('spaces.createSpace.addressPlaceholder')}
-            value={address}
-            onChangeText={setAddress}
-            error={fieldErrors.address}
-            autoCapitalize="sentences"
-            returnKeyType="next"
-            leadingIcon={MapPin}
-          />
-
-          <FormInput
-            label={t('spaces.createSpace.contactLabel')}
-            placeholder={t('spaces.createSpace.contactPlaceholder')}
-            value={contactNumber}
-            onChangeText={setContactNumber}
-            error={fieldErrors.contactNumber}
-            keyboardType="phone-pad"
-            returnKeyType="done"
-            maxLength={15}
-            leadingIcon={Phone}
-          />
-
-          {supportsSpaceAmenities(type) ? (
-            <SpaceAmenitiesField
-              value={amenities}
-              onChange={setAmenities}
-              selectAllByDefault
+            <FormInput
+              label={t('spaces.createSpace.nameLabel')}
+              placeholder={t(
+                type
+                  ? `spaces.createSpace.namePlaceholderByType.${type}`
+                  : 'spaces.createSpace.namePlaceholder',
+              )}
+              value={name}
+              onChangeText={text => {
+                setName(text);
+                if (fieldErrors.name) {
+                  setFieldErrors(prev => ({ ...prev, name: undefined }));
+                }
+              }}
+              error={fieldErrors.name}
+              autoCapitalize="words"
+              returnKeyType="next"
+              leadingIcon={Building2}
             />
-          ) : null}
 
-          <View style={styles.footer}>
-            <Button
-              label={t('spaces.createSpace.save')}
-              onPress={handleSave}
-              loading={isBusy}
-              disabled={isBusy}
-              icon={Save}
+            {type && supportsSpacePropertyCategory(type) ? (
+              <SpacePropertyCategoryPicker
+                spaceType={type}
+                value={genderPolicy}
+                onChange={setGenderPolicy}
+              />
+            ) : null}
+
+            <FormInput
+              label={t('spaces.createSpace.addressLabel')}
+              placeholder={t('spaces.createSpace.addressPlaceholder')}
+              value={address}
+              onChangeText={setAddress}
+              error={fieldErrors.address}
+              autoCapitalize="sentences"
+              returnKeyType="next"
+              leadingIcon={MapPin}
             />
-            <Button
-              label={t('spaces.createSpace.cancel')}
-              variant="ghost"
-              onPress={() => navigation.goBack()}
-              disabled={isBusy}
-              style={styles.cancelButton}
+
+            <FormInput
+              label={t('spaces.createSpace.contactLabel')}
+              placeholder={t('spaces.createSpace.contactPlaceholder')}
+              value={contactNumber}
+              onChangeText={setContactNumber}
+              error={fieldErrors.contactNumber}
+              keyboardType="phone-pad"
+              returnKeyType="done"
+              maxLength={15}
+              leadingIcon={Phone}
             />
-          </View>
-        </ScrollView>
+
+            {showAmenities ? (
+              <View
+                style={[styles.amenitiesSection, amenitiesHighlighted && styles.amenitiesHighlight]}
+                onLayout={event => {
+                  onAmenitiesLayout(
+                    event.nativeEvent.layout.y,
+                    event.nativeEvent.layout.height,
+                  );
+                }}>
+                <Text style={styles.sectionTitle}>
+                  {t('progressiveWorkflow.createSpace.amenitiesTitle')}
+                </Text>
+                <SpaceAmenitiesField
+                  value={amenities}
+                  onChange={setAmenities}
+                  selectAllByDefault
+                />
+              </View>
+            ) : null}
+          </ScrollView>
+
+          {amenitiesProgressiveEnabled ? (
+            <ProgressiveWorkflowFooter
+              phase={progressivePhase}
+              stepLabel={t('progressiveWorkflow.stepOf', {
+                current: progressivePhase === 'continue' ? 1 : 2,
+                total: 2,
+              })}
+              progressLine={
+                progressivePhase === 'continue'
+                  ? t('progressiveWorkflow.createSpace.progressEssentialsNext')
+                  : t('progressiveWorkflow.createSpace.progressReady')
+              }
+              continueEyebrow={t('progressiveWorkflow.nextStep')}
+              continueTitle={t('progressiveWorkflow.createSpace.reviewAmenitiesTitle')}
+              continueHint={t('progressiveWorkflow.createSpace.reviewAmenitiesHint')}
+              continueLabel={t('progressiveWorkflow.createSpace.continueToAmenities')}
+              onContinue={() => continueToAmenities(scrollRef)}
+              primaryAction={{
+                label: t('spaces.createSpace.save'),
+                onPress: handleSave,
+                loading: isBusy,
+                disabled: isBusy,
+              }}
+              secondaryAction={{
+                label: t('spaces.createSpace.cancel'),
+                onPress: () => navigation.goBack(),
+                disabled: isBusy,
+              }}
+            />
+          ) : (
+            <StickyFormActions
+              primary={{
+                label: t('spaces.createSpace.save'),
+                onPress: handleSave,
+                loading: isBusy,
+                disabled: isBusy,
+              }}
+              secondary={{
+                label: t('spaces.createSpace.cancel'),
+                onPress: () => navigation.goBack(),
+                disabled: isBusy,
+              }}
+            />
+          )}
+        </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
@@ -301,7 +396,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.md,
-    paddingBottom: spacing.section,
+    paddingBottom: spacing.xl,
   },
   hero: {
     marginBottom: spacing.md,
@@ -364,6 +459,20 @@ const styles = StyleSheet.create({
     color: colors.muted,
     zIndex: 1,
   },
+  sectionTitle: {
+    ...typography.h3,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  amenitiesSection: {
+    marginTop: spacing.sm,
+  },
+  amenitiesHighlight: {
+    ...progressiveSectionHighlightStyle,
+    borderWidth: 1,
+    borderRadius: radius.card,
+    padding: spacing.sm,
+  },
   errorBanner: {
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
@@ -375,12 +484,5 @@ const styles = StyleSheet.create({
   errorBannerText: {
     ...typography.body,
     color: '#DC2626',
-  },
-  footer: {
-    marginTop: spacing.md,
-    gap: spacing.sm,
-  },
-  cancelButton: {
-    marginTop: spacing.xxs,
   },
 });

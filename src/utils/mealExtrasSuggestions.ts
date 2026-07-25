@@ -13,8 +13,9 @@ export type MealExtraSuggestionBuckets = {
 };
 
 /**
- * Collect catalog item IDs from the current meal selection (combos + mains),
- * excluding meal-level extras themselves.
+ * Item IDs to suggest as meal extras from the current selection.
+ * Only expands **combo constituents** (e.g. Chapati inside a thali).
+ * Selected individual items are already the meal — do not re-list them under Extras.
  */
 export function collectSelectedMealItemIds(
   options: MenuDraftOption[],
@@ -32,12 +33,26 @@ export function collectSelectedMealItemIds(
           ids.add(item.itemId);
         }
       }
+    }
+  }
+  return ids;
+}
+
+/**
+ * Category seed IDs for “similar extras” — includes combo constituents and
+ * selected individual mains (without listing those mains as extras themselves).
+ */
+export function collectMealExtraCategorySeedIds(
+  options: MenuDraftOption[],
+  comboById: Map<string, MealComboResponse>,
+): Set<string> {
+  const ids = collectSelectedMealItemIds(options, comboById);
+  for (const option of options) {
+    if (option.isExtra === true || option.entryType !== 'PACKAGE') {
       continue;
     }
-    if (option.entryType === 'PACKAGE') {
-      for (const itemId of option.itemIds ?? []) {
-        ids.add(itemId);
-      }
+    for (const itemId of option.itemIds ?? []) {
+      ids.add(itemId);
     }
   }
   return ids;
@@ -46,10 +61,15 @@ export function collectSelectedMealItemIds(
 /**
  * In-memory extras suggestions using itemId HashSet lookups (O(n)).
  * Expects catalog items already loaded with the planner — no extra API calls.
+ *
+ * @param selectedMealItemIds Combo constituent IDs for “In your meal”.
+ * @param categorySeedItemIds Optional broader set (e.g. include individual mains)
+ *   used only to find related library extras by category.
  */
 export function buildMealExtraSuggestionBuckets(
   catalogItems: FoodItemResponse[],
   selectedMealItemIds: Set<string>,
+  categorySeedItemIds: Set<string> = selectedMealItemIds,
 ): MealExtraSuggestionBuckets {
   const active = catalogItems.filter(item => item.isActive);
   const byId = new Map(active.map(item => [item.itemId, item]));
@@ -64,7 +84,7 @@ export function buildMealExtraSuggestionBuckets(
   }
 
   const selectedCategoryIds = new Set<string>();
-  for (const itemId of selectedMealItemIds) {
+  for (const itemId of categorySeedItemIds) {
     const item = byId.get(itemId);
     if (item?.categoryId) {
       selectedCategoryIds.add(item.categoryId);
@@ -85,6 +105,11 @@ export function buildMealExtraSuggestionBuckets(
 
   for (const extra of libraryExtras) {
     if (relevantIds.has(extra.itemId)) {
+      continue;
+    }
+    // Don't suggest an individual main as a “related” extra for itself.
+    if (categorySeedItemIds.has(extra.itemId) && !selectedMealItemIds.has(extra.itemId)) {
+      other.push(extra);
       continue;
     }
     if (extra.categoryId && selectedCategoryIds.has(extra.categoryId)) {

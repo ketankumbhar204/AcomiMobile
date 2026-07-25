@@ -3,9 +3,9 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TouchableWithoutFeedback,
   View,
@@ -33,12 +33,13 @@ import {
 } from '../../components/accommodation';
 import { expandToEditableStructure } from '../../components/accommodation/setup-preview/setupStructureModel';
 import type { EditableSetupStructure } from '../../components/accommodation/setup-preview/setupStructureTypes';
+import { StickyFormActions } from '../../components/progressive';
 import { Button, FormInput, HeaderBackButton } from '../../components/ui';
 import { useQuickSetup } from '../../hooks/useQuickSetup';
 import type { MainStackParamList } from '../../navigation/types';
 import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, spacing, typography } from '../../theme';
 import {
   buildSetupRequest,
   validateCoLivingSetup,
@@ -100,9 +101,8 @@ export function QuickSetupWizardScreen() {
   const [startNumber, setStartNumber] = useState('101');
   const [numberingStep, setNumberingStep] = useState('1');
 
-  const [roomsPerParent, setRoomsPerParent] = useState('10');
+  const [roomsPerParent, setRoomsPerParent] = useState('4');
   const [bedsPerRoom, setBedsPerRoom] = useState('3');
-  const [capacityPerRoom, setCapacityPerRoom] = useState('3');
   const [roomType, setRoomType] = useState<RoomType | null>('SHARED');
 
   const [stepError, setStepError] = useState<string | null>(null);
@@ -122,14 +122,16 @@ export function QuickSetupWizardScreen() {
     setLayoutMode(defaultLayoutModeForSpaceType(spaceType));
   }, [spaceType]);
 
+  const bedsPerRoomCount = Number(bedsPerRoom) || 1;
   const expandConfig = useMemo(
     () => ({
       roomsPerParent: Number(roomsPerParent) || 1,
-      bedsPerRoom: Number(bedsPerRoom) || 1,
-      capacityPerRoom: Number(capacityPerRoom) || 1,
+      bedsPerRoom: bedsPerRoomCount,
+      // Capacity tracks beds so API/validation stay valid without a separate UI field.
+      capacityPerRoom: bedsPerRoomCount,
       includeGroundFloor,
     }),
-    [bedsPerRoom, capacityPerRoom, includeGroundFloor, roomsPerParent],
+    [bedsPerRoomCount, includeGroundFloor, roomsPerParent],
   );
 
   const buildExpandConfig = useCallback(() => {
@@ -181,7 +183,7 @@ export function QuickSetupWizardScreen() {
         roomsPerFloor: Number(roomsPerParent),
         bedsPerRoom: Number(bedsPerRoom),
         defaultRoomType: roomType ?? 'SHARED',
-        capacityPerRoom: Number(capacityPerRoom),
+        capacityPerRoom: Number(bedsPerRoom),
       };
       return buildSetupRequest(spaceType, building, floors, undefined, layoutMode);
     }
@@ -196,7 +198,7 @@ export function QuickSetupWizardScreen() {
       units.roomsPerUnit = Number(roomsPerParent);
       units.bedsPerRoom = Number(bedsPerRoom);
       units.defaultRoomType = roomType ?? 'SHARED';
-      units.capacityPerRoom = Number(capacityPerRoom);
+      units.capacityPerRoom = Number(bedsPerRoom);
     }
 
     return buildSetupRequest(spaceType, building, undefined, units);
@@ -205,7 +207,6 @@ export function QuickSetupWizardScreen() {
     bedsPerRoom,
     buildingCode,
     buildingName,
-    capacityPerRoom,
     floorCount,
     includeGroundFloor,
     isApartmentPg,
@@ -285,7 +286,7 @@ export function QuickSetupWizardScreen() {
         roomsPerFloor: Number(roomsPerParent),
         bedsPerRoom: Number(bedsPerRoom),
         defaultRoomType: roomType,
-        capacityPerRoom: Number(capacityPerRoom),
+        capacityPerRoom: Number(bedsPerRoom),
       };
       const err = validatePgHostelSetup(floors, layoutMode);
       if (err) {
@@ -300,7 +301,7 @@ export function QuickSetupWizardScreen() {
         roomsPerUnit: Number(roomsPerParent),
         bedsPerRoom: Number(bedsPerRoom),
         defaultRoomType: roomType,
-        capacityPerRoom: Number(capacityPerRoom),
+        capacityPerRoom: Number(bedsPerRoom),
       };
       const err = validateCoLivingSetup(units);
       if (err) {
@@ -446,13 +447,20 @@ export function QuickSetupWizardScreen() {
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <Text style={styles.stepLabel}>
-            {t('accommodation.setup.step', {
-              current: stepIndex + 1,
-              total: steps.length,
-            })}
-          </Text>
+        <View style={styles.flex}>
+          <ScrollView
+            style={styles.flex}
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}>
+          {currentStep !== 'preview' ? (
+            <Text style={styles.stepLabel}>
+              {t('accommodation.setup.step', {
+                current: stepIndex + 1,
+                total: steps.length,
+              })}
+            </Text>
+          ) : null}
 
           {currentStep === 'building' ? (
             <View>
@@ -480,7 +488,7 @@ export function QuickSetupWizardScreen() {
             </View>
           ) : null}
 
-          {isPgHostel && currentStep !== 'building' ? (
+          {isPgHostel && currentStep !== 'building' && currentStep !== 'preview' ? (
             <Text style={styles.layoutReminder}>
               {t('accommodation.setup.selectedLayout', {
                 layout: t(getLayoutModeLabelKey(layoutMode)),
@@ -504,14 +512,20 @@ export function QuickSetupWizardScreen() {
                 onChangeText={setFloorCount}
                 keyboardType="number-pad"
               />
-              <Pressable
-                style={[styles.toggle, includeGroundFloor && styles.toggleOn]}
-                onPress={() => setIncludeGroundFloor(value => !value)}>
-                <Text style={styles.toggleLabel}>{t('accommodation.setup.includeGroundFloor')}</Text>
-                <Text style={styles.toggleValue}>
-                  {includeGroundFloor ? t('common.yes') : t('common.no')}
-                </Text>
-              </Pressable>
+              <View style={styles.toggleRow}>
+                <View style={styles.toggleCopy}>
+                  <Text style={styles.toggleLabel}>{t('accommodation.setup.includeGroundFloor')}</Text>
+                  <Text style={styles.toggleHint}>{t('accommodation.setup.includeGroundFloorHint')}</Text>
+                </View>
+                <Switch
+                  value={includeGroundFloor}
+                  onValueChange={setIncludeGroundFloor}
+                  trackColor={{ false: colors.border, true: colors.primary }}
+                  thumbColor={colors.white}
+                  ios_backgroundColor={colors.border}
+                  accessibilityLabel={t('accommodation.setup.includeGroundFloor')}
+                />
+              </View>
               {isApartmentPg ? (
                 <FormInput
                   label={t('accommodation.setup.apartmentsPerFloor')}
@@ -577,12 +591,6 @@ export function QuickSetupWizardScreen() {
                 keyboardType="number-pad"
               />
               <RoomTypePicker value={roomType} onChange={setRoomType} />
-              <FormInput
-                label={t('accommodation.setup.capacityPerRoom')}
-                value={capacityPerRoom}
-                onChangeText={setCapacityPerRoom}
-                keyboardType="number-pad"
-              />
               {estimatedBeds > 0 ? (
                 <Text style={styles.estimate}>
                   {t('accommodation.setup.estimatedBeds', { count: estimatedBeds })}
@@ -593,11 +601,14 @@ export function QuickSetupWizardScreen() {
 
           {currentStep === 'preview' && preview && editableStructure ? (
             <View>
-              <Text style={styles.sectionTitle}>{t('accommodation.setup.previewStep')}</Text>
               <SetupStructureEditor
                 structure={editableStructure}
                 onChange={setEditableStructure}
                 expandConfig={expandConfig}
+                stepLabel={t('accommodation.setup.step', {
+                  current: stepIndex + 1,
+                  total: steps.length,
+                })}
                 layoutModeLabel={
                   spaceType && isLayoutModeSelectable(spaceType)
                     ? t(getLayoutModeLabelKey(layoutMode))
@@ -619,30 +630,34 @@ export function QuickSetupWizardScreen() {
           {stepError ? <Text style={styles.errorText}>{stepError}</Text> : null}
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-          <View style={styles.actions}>
-            <Button
-              label={stepIndex === 0 ? t('common.cancel') : t('accommodation.setup.back')}
-              variant="ghost"
-              onPress={goBack}
-              style={styles.actionBtn}
-            />
-            {currentStep === 'preview' ? (
-              <Button
-                label={t('accommodation.setup.generateStructure')}
-                onPress={handleGenerate}
-                loading={generating}
-                style={styles.actionBtn}
-              />
-            ) : (
-              <Button
-                label={t('accommodation.setup.next')}
-                onPress={goNext}
-                loading={loading}
-                style={styles.actionBtn}
-              />
-            )}
-          </View>
-        </ScrollView>
+          {currentStep === 'preview' ? (
+            <Text style={styles.previewHint}>
+              {t('progressiveWorkflow.quickSetup.reviewPreviewHint')}
+            </Text>
+          ) : null}
+          </ScrollView>
+
+          <StickyFormActions
+            layout="row"
+            secondary={{
+              label: stepIndex === 0 ? t('common.cancel') : t('accommodation.setup.back'),
+              onPress: goBack,
+            }}
+            primary={
+              currentStep === 'preview'
+                ? {
+                    label: t('accommodation.setup.generateStructure'),
+                    onPress: handleGenerate,
+                    loading: generating,
+                  }
+                : {
+                    label: t('accommodation.setup.next'),
+                    onPress: goNext,
+                    loading: loading,
+                  }
+            }
+          />
+        </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
@@ -682,27 +697,23 @@ const styles = StyleSheet.create({
     color: colors.muted,
     marginBottom: spacing.lg,
   },
-  toggle: {
+  toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacing.lg,
-    borderRadius: radius.button,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.white,
+    gap: spacing.md,
+    paddingVertical: spacing.md,
     marginBottom: spacing.lg,
   },
-  toggleOn: {
-    borderColor: colors.primary,
-    backgroundColor: colors.lightGreen,
+  toggleCopy: {
+    flex: 1,
+    gap: spacing.xs,
   },
   toggleLabel: {
     ...typography.bodyStrong,
   },
-  toggleValue: {
-    ...typography.body,
-    color: colors.primaryDark,
+  toggleHint: {
+    ...typography.caption,
+    color: colors.muted,
   },
   estimate: {
     ...typography.caption,
@@ -718,13 +729,10 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: '#B45309',
   },
-  actions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.xl,
-  },
-  actionBtn: {
-    flex: 1,
+  previewHint: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: spacing.md,
   },
   errorText: {
     ...typography.body,

@@ -49,7 +49,7 @@ export type DashboardBedInventoryFilterOverlayLayout = {
 };
 
 export type DashboardBedInventoryFiltersBarHandle = {
-  selectOption: (value?: string) => void;
+  selectOption: (value?: string, field?: BedInventoryFilterLevel) => void;
   closeDropdown: () => void;
 };
 
@@ -236,27 +236,22 @@ export const DashboardBedInventoryFiltersBar = forwardRef<
     }
   }, [filterLevels, openField]);
 
+  // Prefer the only building / floor / unit instead of "All …".
   useEffect(() => {
-    // #region agent log
-    agentDebugLog({
-      hypothesisId: 'H',
-      location: 'DashboardBedInventoryFiltersBar.tsx:filterLevels',
-      message: 'bed inventory filter levels resolved',
-      data: {
-        spaceType,
-        buildingId: filters.buildingId ?? null,
-        layoutMode: inventoryProfile?.layoutMode ?? null,
-        filterLevels,
-        unitFilterParent,
-      },
-      runId: 'bed-hierarchy',
+    if (loadingBuildings || buildings.length !== 1 || filters.buildingId) {
+      return;
+    }
+    onChange({
+      buildingId: buildings[0].buildingId,
+      floorId: undefined,
+      unitId: undefined,
     });
-    // #endregion
-  }, [filterLevels, filters.buildingId, inventoryProfile?.layoutMode, spaceType, unitFilterParent]);
+  }, [buildings, filters.buildingId, loadingBuildings, onChange]);
 
   useEffect(() => {
     if (!filters.buildingId || !filterLevels.includes('floor')) {
       setFloors([]);
+      setLoadingFloors(false);
       return;
     }
 
@@ -268,6 +263,11 @@ export const DashboardBedInventoryFiltersBar = forwardRef<
       .then(response => {
         if (!cancelled) {
           setFloors(response.content);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setFloors([]);
         }
       })
       .finally(() => {
@@ -282,13 +282,39 @@ export const DashboardBedInventoryFiltersBar = forwardRef<
   }, [filterLevels, filters.buildingId, spaceId]);
 
   useEffect(() => {
+    if (
+      loadingFloors ||
+      floors.length !== 1 ||
+      !filters.buildingId ||
+      filters.floorId ||
+      !filterLevels.includes('floor')
+    ) {
+      return;
+    }
+    onChange({
+      buildingId: filters.buildingId,
+      floorId: floors[0].floorId,
+      unitId: undefined,
+    });
+  }, [
+    filterLevels,
+    filters.buildingId,
+    filters.floorId,
+    floors,
+    loadingFloors,
+    onChange,
+  ]);
+
+  useEffect(() => {
     if (!filters.buildingId || !filterLevels.includes('unit') || !unitFilterParent) {
       setUnits([]);
+      setLoadingUnits(false);
       return;
     }
 
     if (unitFilterParent === 'floor' && !filters.floorId) {
       setUnits([]);
+      setLoadingUnits(false);
       return;
     }
 
@@ -308,6 +334,11 @@ export const DashboardBedInventoryFiltersBar = forwardRef<
           setUnits(response.content.filter(item => !item.synthetic));
         }
       })
+      .catch(() => {
+        if (!cancelled) {
+          setUnits([]);
+        }
+      })
       .finally(() => {
         if (!cancelled) {
           setLoadingUnits(false);
@@ -323,6 +354,35 @@ export const DashboardBedInventoryFiltersBar = forwardRef<
     filters.floorId,
     spaceId,
     unitFilterParent,
+  ]);
+
+  useEffect(() => {
+    if (
+      loadingUnits ||
+      units.length !== 1 ||
+      !filters.buildingId ||
+      filters.unitId ||
+      !filterLevels.includes('unit')
+    ) {
+      return;
+    }
+    if (unitFilterParent === 'floor' && !filters.floorId) {
+      return;
+    }
+    onChange({
+      buildingId: filters.buildingId,
+      floorId: filters.floorId,
+      unitId: units[0].unitId,
+    });
+  }, [
+    filterLevels,
+    filters.buildingId,
+    filters.floorId,
+    filters.unitId,
+    loadingUnits,
+    onChange,
+    unitFilterParent,
+    units,
   ]);
 
   const buildingOptions = useMemo(
@@ -410,21 +470,28 @@ export const DashboardBedInventoryFiltersBar = forwardRef<
       ({
         building: {
           label: t('occupancy.section.building'),
-          valueLabel: buildingLabel,
+          valueLabel: loadingBuildings
+            ? t('common.loading', { defaultValue: 'Loading…' })
+            : buildingLabel,
           disabled: false,
         },
         floor: {
           label: t('occupancy.section.floor'),
-          valueLabel: floorLabel,
-          disabled: !filters.buildingId || loadingFloors,
+          valueLabel: loadingFloors
+            ? t('common.loading', { defaultValue: 'Loading…' })
+            : floorLabel,
+          // Enable as soon as a building is chosen; loading is shown in the label.
+          disabled: !filters.buildingId,
         },
         unit: {
           label: t('occupancy.section.unit'),
-          valueLabel: unitLabel,
+          valueLabel: loadingUnits
+            ? t('common.loading', { defaultValue: 'Loading…' })
+            : unitLabel,
           disabled:
             unitFilterParent === 'floor'
-              ? !filters.buildingId || !filters.floorId || loadingUnits
-              : !filters.buildingId || loadingUnits,
+              ? !filters.buildingId || !filters.floorId
+              : !filters.buildingId,
         },
       }) satisfies Record<
         BedInventoryFilterLevel,
@@ -435,6 +502,7 @@ export const DashboardBedInventoryFiltersBar = forwardRef<
       filters.buildingId,
       filters.floorId,
       floorLabel,
+      loadingBuildings,
       loadingFloors,
       loadingUnits,
       t,
@@ -444,7 +512,8 @@ export const DashboardBedInventoryFiltersBar = forwardRef<
   );
 
   const handleSelect = useCallback(
-    (value?: string) => {
+    (value?: string, field?: BedInventoryFilterLevel) => {
+      const targetField = field ?? openField;
       // #region agent log
       agentDebugLog({
         hypothesisId: 'B',
@@ -452,6 +521,7 @@ export const DashboardBedInventoryFiltersBar = forwardRef<
         message: 'filter option selected',
         data: {
           openField,
+          targetField,
           value: value ?? null,
           priorBuildingId: filters.buildingId ?? null,
           priorFloorId: filters.floorId ?? null,
@@ -460,27 +530,28 @@ export const DashboardBedInventoryFiltersBar = forwardRef<
         runId: 'bed-filter-overlay',
       });
       // #endregion
-      if (openField === 'building') {
+      if (targetField === 'building') {
         onChange({
           buildingId: value,
           floorId: undefined,
           unitId: undefined,
         });
-      } else if (openField === 'floor') {
+      } else if (targetField === 'floor') {
         onChange({
-          ...filters,
+          buildingId: filters.buildingId,
           floorId: value,
           unitId: undefined,
         });
-      } else if (openField === 'unit') {
+      } else if (targetField === 'unit') {
         onChange({
-          ...filters,
+          buildingId: filters.buildingId,
+          floorId: filters.floorId,
           unitId: value,
         });
       }
       setOpenField(null);
     },
-    [filters, onChange, openField],
+    [filters.buildingId, filters.floorId, onChange, openField],
   );
 
   const closeDropdown = useCallback(() => {

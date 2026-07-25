@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { ChevronRight } from 'lucide-react-native';
 import type { MealType, UUID } from '../../api/types';
@@ -17,18 +17,24 @@ import { MealHeadcountBottomSheet } from '../meals/MealHeadcountBottomSheet';
 import { MealOperationSlotCard } from '../meals/MealOperationSlotCard';
 import { MenuDateNavRow } from '../meals/MenuDateNavRow';
 import { MenuDatePickerModal } from '../meals/MenuDatePickerModal';
+import { Skeleton } from '../ui/Skeleton';
 import { DashboardSectionTitle } from './DashboardSectionTitle';
 
 type DashboardMealOperationsProps = {
   spaceId: UUID;
   enabled?: boolean;
+  /** Mess guided setup: stronger empty copy when no menu is planned. */
+  guidedEmpty?: boolean;
 };
 
-export function DashboardMealOperations({ spaceId, enabled = true }: DashboardMealOperationsProps) {
+export function DashboardMealOperations({
+  spaceId,
+  enabled = true,
+  guidedEmpty = false,
+}: DashboardMealOperationsProps) {
   const { t } = useTranslation();
   const [menuDate, setMenuDate] = useState(todayIsoDate());
-  const [deferMealFetch, setDeferMealFetch] = useState(true);
-  const mealFetchEnabled = enabled && !deferMealFetch;
+  const mealFetchEnabled = enabled;
   const [sheetOpen, setSheetOpen] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [initialMealType, setInitialMealType] = useState<MealType>('BREAKFAST');
@@ -45,13 +51,8 @@ export function DashboardMealOperations({ spaceId, enabled = true }: DashboardMe
   );
 
   useEffect(() => {
-    if (!enabled) {
-      setDeferMealFetch(true);
-      return;
-    }
-    const timer = setTimeout(() => setDeferMealFetch(false), 400);
-    return () => clearTimeout(timer);
-  }, [enabled, spaceId]);
+    setMenuDate(todayIsoDate());
+  }, [spaceId]);
 
   const loading = mealDay.loading;
 
@@ -172,70 +173,101 @@ export function DashboardMealOperations({ spaceId, enabled = true }: DashboardMe
     <View style={styles.wrap}>
       <DashboardSectionTitle title={t('dashboard.operations.title')} />
 
-      {!sheetOpen ? (
-        <MenuDateNavRow
-          menuDate={menuDate}
-          onMenuDateChange={setMenuDate}
-          onOpenCalendar={() => setDatePickerOpen(true)}
-          onJumpToToday={() => setMenuDate(todayIsoDate())}
-        />
-      ) : null}
-
-      {loading ? (
-        <ActivityIndicator color={colors.primary} style={styles.loader} />
-      ) : (
-        <View style={styles.statusBar}>
-          <View style={styles.statusTextBlock}>
-            <Text style={styles.dayStatusLine}>
-              {t('meals.planning.dayStatusVisual', {
-                shared: mealDay.summary.published,
-                notShared: mealDay.summary.draft + mealDay.summary.modified,
-                empty: mealDay.summary.notPlanned,
-              })}
-            </Text>
-            <Text
-              style={[
-                styles.pollStatusLine,
-                mealDay.hasOpenPolls && styles.pollStatusLineOpen,
-              ]}>
-              {pollStatusLine}
-            </Text>
+      <View style={styles.body}>
+        {loading ? (
+          <View style={styles.mealSkeleton}>
+            <Skeleton width="100%" height={36} borderRadius={radius.button} />
+            <View style={styles.mealSkeletonRow}>
+              {[0, 1, 2].map(key => (
+                <View key={key} style={styles.mealSkeletonCard}>
+                  <Skeleton width={32} height={32} borderRadius={16} />
+                  <Skeleton width="70%" height={12} style={styles.mealSkeletonGap} />
+                  <Skeleton
+                    width="80%"
+                    height={20}
+                    borderRadius={radius.full}
+                    style={styles.mealSkeletonGap}
+                  />
+                  <Skeleton width="55%" height={11} style={styles.mealSkeletonGap} />
+                </View>
+              ))}
+            </View>
           </View>
-          {!dateReadOnly ? (
-            <Pressable
-              style={({ pressed }) => [styles.planLink, pressed && styles.planLinkPressed]}
-              onPress={() => handleOpenMenuPlanning()}
-              accessibilityRole="button">
-              <Text style={styles.planLinkText}>{t('dashboard.operations.planMenuCta')}</Text>
-              <ChevronRight size={14} color={colors.primaryDark} strokeWidth={2.6} />
-            </Pressable>
-          ) : null}
-        </View>
-      )}
-
-      {!loading ? (
-        <>
-          <View style={styles.mealSlotRow}>
-            {mealSlotRows.map(row => (
-              <MealOperationSlotCard
-                key={row.mealType}
-                mealType={row.mealType}
-                mealLabel={t(mealTypeLabelKey(row.mealType))}
-                caption={t(row.captionKey, row.captionParams)}
-                countPrimary={row.countPrimary}
-                countUnit={row.countUnitKey ? t(row.countUnitKey) : undefined}
-                captionTone={row.captionTone}
-                statusKind={row.statusKind}
-                onPress={() => handleSlotPress(row.mealType, row.status, row.statusKind)}
+        ) : (
+          <>
+            {!sheetOpen ? (
+              <MenuDateNavRow
+                compact
+                menuDate={menuDate}
+                onMenuDateChange={setMenuDate}
+                onOpenCalendar={() => setDatePickerOpen(true)}
+                onJumpToToday={() => setMenuDate(todayIsoDate())}
               />
-            ))}
-          </View>
+            ) : null}
 
-          {mealDay.summary.published > 0 || mealDay.summary.modified > 0 ? (
-            <Text style={styles.hint}>{t('dashboard.headcount.toggleMealHint')}</Text>
-          ) : null}
-        </>
-      ) : null}
+            <View style={styles.statusBar}>
+              <View style={styles.statusTextBlock}>
+                {guidedEmpty && mealDay.emptyKind === 'all_not_planned' ? (
+                  <>
+                    <Text style={styles.guidedEmptyTitle}>
+                      {t('dashboard.operations.guidedEmptyTitle')}
+                    </Text>
+                    <Text style={styles.guidedEmptyBody}>
+                      {t('dashboard.operations.guidedEmptyBody')}
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.dayStatusLine}>
+                      {t('meals.planning.dayStatusVisual', {
+                        shared: mealDay.summary.published,
+                        notShared: mealDay.summary.draft + mealDay.summary.modified,
+                        empty: mealDay.summary.notPlanned,
+                      })}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.pollStatusLine,
+                        mealDay.hasOpenPolls && styles.pollStatusLineOpen,
+                      ]}>
+                      {pollStatusLine}
+                    </Text>
+                  </>
+                )}
+              </View>
+              {!dateReadOnly ? (
+                <Pressable
+                  style={({ pressed }) => [styles.planLink, pressed && styles.planLinkPressed]}
+                  onPress={() => handleOpenMenuPlanning()}
+                  accessibilityRole="button">
+                  <Text style={styles.planLinkText}>{t('dashboard.operations.planMenuCta')}</Text>
+                  <ChevronRight size={14} color={colors.primaryDark} strokeWidth={2.6} />
+                </Pressable>
+              ) : null}
+            </View>
+
+            <View style={styles.mealSlotRow}>
+              {mealSlotRows.map(row => (
+                <MealOperationSlotCard
+                  key={row.mealType}
+                  mealType={row.mealType}
+                  mealLabel={t(mealTypeLabelKey(row.mealType))}
+                  caption={t(row.captionKey, row.captionParams)}
+                  countPrimary={row.countPrimary}
+                  countUnit={row.countUnitKey ? t(row.countUnitKey) : undefined}
+                  captionTone={row.captionTone}
+                  statusKind={row.statusKind}
+                  onPress={() => handleSlotPress(row.mealType, row.status, row.statusKind)}
+                />
+              ))}
+            </View>
+
+            {mealDay.summary.published > 0 || mealDay.summary.modified > 0 ? (
+              <Text style={styles.hint}>{t('dashboard.headcount.toggleMealHint')}</Text>
+            ) : null}
+          </>
+        )}
+      </View>
 
       <MealHeadcountBottomSheet
         visible={sheetOpen}
@@ -267,10 +299,30 @@ export function DashboardMealOperations({ spaceId, enabled = true }: DashboardMe
 const styles = StyleSheet.create({
   wrap: {
     marginBottom: spacing.lg,
-    gap: spacing.xs,
   },
-  loader: {
-    marginVertical: spacing.md,
+  body: {
+    gap: spacing.sm,
+  },
+  mealSkeleton: {
+    gap: spacing.sm,
+  },
+  mealSkeletonRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  mealSkeletonCard: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 110,
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.sm,
+  },
+  mealSkeletonGap: {
+    marginTop: spacing.xs,
   },
   statusBar: {
     flexDirection: 'row',
@@ -282,8 +334,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    marginBottom: spacing.sm,
+    paddingVertical: spacing.sm,
     ...shadows.sm,
   },
   statusTextBlock: {
@@ -295,6 +346,16 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.muted,
     fontWeight: '600',
+  },
+  guidedEmptyTitle: {
+    ...typography.bodyStrong,
+    color: colors.textPrimary,
+    fontSize: 14,
+  },
+  guidedEmptyBody: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    lineHeight: 18,
   },
   pollStatusLine: {
     ...typography.caption,
@@ -329,7 +390,6 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.muted,
     textAlign: 'center',
-    marginTop: spacing.sm,
     lineHeight: 18,
   },
 });

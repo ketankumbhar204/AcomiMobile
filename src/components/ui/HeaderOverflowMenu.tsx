@@ -16,6 +16,7 @@ import {
   View,
   type LayoutRectangle,
 } from 'react-native';
+import { MoreVertical } from 'lucide-react-native';
 import { navigationRef } from '../../navigation/navigationRef';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 
@@ -240,7 +241,7 @@ export function HeaderOverflowMenu({
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
         accessibilityState={{ expanded: isMenuOpen }}>
-        <Text style={styles.triggerIcon}>⋮</Text>
+        <MoreVertical size={22} color={colors.textPrimary} strokeWidth={2.4} />
       </Pressable>
     </View>
   );
@@ -291,11 +292,5 @@ const styles = StyleSheet.create({
   },
   triggerPressed: {
     opacity: 0.5,
-  },
-  triggerIcon: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    lineHeight: 24,
   },
 });

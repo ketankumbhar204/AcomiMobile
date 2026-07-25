@@ -23,6 +23,6 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
   padded: {
-    padding: spacing.lg,
+    padding: spacing.md,
   },
 });

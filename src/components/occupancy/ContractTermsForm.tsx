@@ -10,7 +10,6 @@ import {
   OCCUPANCY_CHARGE_CODES,
   computeMonthlyRentFoodTotal,
   formatContractAmount,
-  isFoodBundledWithRent,
   monthlyTotalIncludesFoodFromForm,
   monthlyTotalLabelKey,
   type ContractTermsFormValues,
@@ -26,6 +25,11 @@ type ContractTermsFormProps = {
   catalogRentHint?: number | null;
   catalogDepositHint?: number | null;
   foodPolicy?: SpaceFoodPolicy;
+  /** Wrap deposit + other charges for progressive scroll targeting. */
+  onAddonsLayout?: (y: number, height: number) => void;
+  addonsHighlighted?: boolean;
+  /** Rendered inside the addons block (e.g. amenities) for one review target. */
+  addonsFooter?: React.ReactNode;
 };
 
 function ChargeCodePicker({
@@ -67,6 +71,9 @@ export function ContractTermsForm({
   catalogRentHint,
   catalogDepositHint,
   foodPolicy,
+  onAddonsLayout,
+  addonsHighlighted = false,
+  addonsFooter,
 }: ContractTermsFormProps) {
   const { t } = useTranslation();
   const foodIncludedInRent = foodPolicy?.foodIncludedInRent ?? false;
@@ -74,10 +81,6 @@ export function ContractTermsForm({
   const monthlyTotalLabel = monthlyTotalLabelKey(
     monthlyTotalIncludesFoodFromForm(values, foodPolicy),
   );
-
-  // #region agent log
-  fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'ContractTermsForm.tsx:render',message:'contract food ui state',data:{foodIncludedInRent,foodEnabled:values.foodEnabled,bundledWithRent:isFoodBundledWithRent(values,foodPolicy)},timestamp:Date.now(),hypothesisId:'H1',runId:'food-toggle'})}).catch(()=>{});
-  // #endregion
 
   function updateCharge(index: number, patch: Partial<ContractTermsFormValues['otherCharges'][0]>) {
     const next = values.otherCharges.map((charge, i) => {
@@ -184,7 +187,13 @@ export function ContractTermsForm({
       ) : null}
 
       {showRentDeposit ? (
-        <>
+        <View
+          collapsable={false}
+          style={addonsHighlighted ? styles.addonsHighlight : undefined}
+          onLayout={event => {
+            const { y, height } = event.nativeEvent.layout;
+            onAddonsLayout?.(y, height);
+          }}>
           {readOnlyDeposit != null ? (
             <View style={styles.readonlyField}>
               <Text style={styles.readonlyLabel}>{t('occupancy.contract.deposit')}</Text>
@@ -210,63 +219,121 @@ export function ContractTermsForm({
               }
             />
           )}
-        </>
-      ) : null}
 
-      <View style={styles.chargesHeader}>
-        <Text style={styles.chargesTitle}>{t('occupancy.contract.otherCharges')}</Text>
-        <Pressable
-          onPress={addCharge}
-          disabled={values.otherCharges.length >= MAX_OTHER_CHARGES}
-          hitSlop={8}>
-          <Text
-            style={[
-              styles.addChargeText,
-              values.otherCharges.length >= MAX_OTHER_CHARGES && styles.addChargeDisabled,
-            ]}>
-            + {t('occupancy.contract.addCharge')}
-          </Text>
-        </Pressable>
-      </View>
-
-      {values.otherCharges.map((charge, index) => (
-        <View key={`charge-${index}`} style={styles.chargeCard}>
-          <View style={styles.chargeCardHeader}>
-            <Text style={styles.chargeTitle}>
-              {charge.code === 'OTHER'
-                ? t('occupancy.contract.chargeCode.OTHER')
-                : t(`occupancy.contract.chargeCode.${charge.code}`)}
-            </Text>
-            <Pressable onPress={() => removeCharge(index)} hitSlop={8}>
-              <Text style={styles.removeCharge}>{t('occupancy.contract.removeCharge')}</Text>
+          <View style={styles.chargesHeader}>
+            <Text style={styles.chargesTitle}>{t('occupancy.contract.otherCharges')}</Text>
+            <Pressable
+              onPress={addCharge}
+              disabled={values.otherCharges.length >= MAX_OTHER_CHARGES}
+              hitSlop={8}>
+              <Text
+                style={[
+                  styles.addChargeText,
+                  values.otherCharges.length >= MAX_OTHER_CHARGES && styles.addChargeDisabled,
+                ]}>
+                + {t('occupancy.contract.addCharge')}
+              </Text>
             </Pressable>
           </View>
-          <ChargeCodePicker
-            value={charge.code}
-            onChange={code => updateCharge(index, { code })}
-          />
-          {charge.code === 'OTHER' ? (
-            <FormInput
-              label={t('occupancy.contract.chargeLabel')}
-              value={charge.label}
-              onChangeText={label => updateCharge(index, { label })}
-              placeholder={t('occupancy.contract.chargeLabelPlaceholder')}
-            />
-          ) : null}
-          <FormInput
-            label={t('occupancy.contract.chargeAmount')}
-            value={String(charge.amount)}
-            onChangeText={text => {
-              const parsed = Number(text);
-              updateCharge(index, {
-                amount: Number.isFinite(parsed) && parsed >= 0 ? parsed : 0,
-              });
-            }}
-            keyboardType="numeric"
-            placeholder="0"
-          />
+
+          {values.otherCharges.map((charge, index) => (
+            <View key={`charge-${index}`} style={styles.chargeCard}>
+              <View style={styles.chargeCardHeader}>
+                <Text style={styles.chargeTitle}>
+                  {charge.code === 'OTHER'
+                    ? t('occupancy.contract.chargeCode.OTHER')
+                    : t(`occupancy.contract.chargeCode.${charge.code}`)}
+                </Text>
+                <Pressable onPress={() => removeCharge(index)} hitSlop={8}>
+                  <Text style={styles.removeCharge}>{t('occupancy.contract.removeCharge')}</Text>
+                </Pressable>
+              </View>
+              <ChargeCodePicker
+                value={charge.code}
+                onChange={code => updateCharge(index, { code })}
+              />
+              {charge.code === 'OTHER' ? (
+                <FormInput
+                  label={t('occupancy.contract.chargeLabel')}
+                  value={charge.label}
+                  onChangeText={label => updateCharge(index, { label })}
+                  placeholder={t('occupancy.contract.chargeLabelPlaceholder')}
+                />
+              ) : null}
+              <FormInput
+                label={t('occupancy.contract.chargeAmount')}
+                value={String(charge.amount)}
+                onChangeText={text => {
+                  const parsed = Number(text);
+                  updateCharge(index, {
+                    amount: Number.isFinite(parsed) && parsed >= 0 ? parsed : 0,
+                  });
+                }}
+                keyboardType="numeric"
+                placeholder="0"
+              />
+            </View>
+          ))}
+          {addonsFooter}
         </View>
-      ))}
+      ) : (
+        <>
+          <View style={styles.chargesHeader}>
+            <Text style={styles.chargesTitle}>{t('occupancy.contract.otherCharges')}</Text>
+            <Pressable
+              onPress={addCharge}
+              disabled={values.otherCharges.length >= MAX_OTHER_CHARGES}
+              hitSlop={8}>
+              <Text
+                style={[
+                  styles.addChargeText,
+                  values.otherCharges.length >= MAX_OTHER_CHARGES && styles.addChargeDisabled,
+                ]}>
+                + {t('occupancy.contract.addCharge')}
+              </Text>
+            </Pressable>
+          </View>
+
+          {values.otherCharges.map((charge, index) => (
+            <View key={`charge-${index}`} style={styles.chargeCard}>
+              <View style={styles.chargeCardHeader}>
+                <Text style={styles.chargeTitle}>
+                  {charge.code === 'OTHER'
+                    ? t('occupancy.contract.chargeCode.OTHER')
+                    : t(`occupancy.contract.chargeCode.${charge.code}`)}
+                </Text>
+                <Pressable onPress={() => removeCharge(index)} hitSlop={8}>
+                  <Text style={styles.removeCharge}>{t('occupancy.contract.removeCharge')}</Text>
+                </Pressable>
+              </View>
+              <ChargeCodePicker
+                value={charge.code}
+                onChange={code => updateCharge(index, { code })}
+              />
+              {charge.code === 'OTHER' ? (
+                <FormInput
+                  label={t('occupancy.contract.chargeLabel')}
+                  value={charge.label}
+                  onChangeText={label => updateCharge(index, { label })}
+                  placeholder={t('occupancy.contract.chargeLabelPlaceholder')}
+                />
+              ) : null}
+              <FormInput
+                label={t('occupancy.contract.chargeAmount')}
+                value={String(charge.amount)}
+                onChangeText={text => {
+                  const parsed = Number(text);
+                  updateCharge(index, {
+                    amount: Number.isFinite(parsed) && parsed >= 0 ? parsed : 0,
+                  });
+                }}
+                keyboardType="numeric"
+                placeholder="0"
+              />
+            </View>
+          ))}
+        </>
+      )}
     </View>
   );
 }
@@ -286,6 +353,14 @@ const styles = StyleSheet.create({
   },
   rentFoodGroup: {
     gap: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  addonsHighlight: {
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    backgroundColor: '#FFFBEB',
+    borderRadius: radius.card,
+    padding: spacing.sm,
     marginBottom: spacing.sm,
   },
   totalRow: {

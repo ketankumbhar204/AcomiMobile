@@ -1,7 +1,9 @@
-import React, { useCallback, useLayoutEffect, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import {
   Keyboard,
   KeyboardAvoidingView,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Platform,
   ScrollView,
   StyleSheet,
@@ -23,12 +25,17 @@ import {
   type MemberMealBillingSelection,
 } from '../components/member/MemberMealBillingTypeSection';
 import { MemberSubscriptionSetupFields } from '../components/member/MemberSubscriptionSetupFields';
+import {
+  ProgressiveWorkflowFooter,
+  progressiveSectionHighlightStyle,
+} from '../components/progressive';
 import { Button, FormInput, GenderPicker, HeaderBackButton, RolePicker } from '../components/ui';
+import { useProgressiveSectionReview } from '../hooks/useProgressiveSectionReview';
 import type { MainStackParamList } from '../navigation/types';
 import { useMemberStore } from '../store/memberStore';
 import { useSpaceStore } from '../store/spaceStore';
 import { useToastStore } from '../store/toastStore';
-import { colors, spacing, typography } from '../theme';
+import { colors, radius, spacing, typography } from '../theme';
 import { isRoleAssignableInSpace } from '../utils/memberRoles';
 import { isMemberGenderRequired, isSelectableMemberGender } from '../utils/memberGender';
 import { isValidIndianMobile, normalizeIndianMobileDigits } from '../utils/indianMobile';
@@ -38,6 +45,7 @@ import {
   isSubscriptionBilling,
 } from '../utils/memberMealBilling';
 import { defaultSubscriptionValidTillIso, parseValidTillInput } from '../utils/subscriptionLifecycle';
+import { resolveProgressivePhase } from '../utils/progressivePhase';
 
 type EditMemberNav = NativeStackNavigationProp<MainStackParamList, 'EditMember'>;
 type EditMemberRoute = NativeStackScreenProps<MainStackParamList, 'EditMember'>['route'];
@@ -83,6 +91,31 @@ export function EditMemberScreen() {
   const showMealBilling = spaceType === 'MESS';
   const showSubscriptionSetup =
     showMealBilling && isSubscriptionBilling(mealBillingSelection, spaceDefaultBilling);
+  const messProgressiveEnabled = showMealBilling;
+  const scrollRef = useRef<ScrollView>(null);
+
+  const {
+    reviewed: mealsReviewed,
+    highlighted: mealsHighlighted,
+    onSectionLayout: onMealsLayout,
+    onScroll: onMealsScroll,
+    onScrollBeginDrag: onMealsScrollBeginDrag,
+    continueToSection: continueToMeals,
+    markReviewed: markMealsReviewed,
+  } = useProgressiveSectionReview({
+    enabled: messProgressiveEnabled,
+  });
+
+  const progressivePhase = resolveProgressivePhase({
+    enabled: messProgressiveEnabled,
+    prerequisiteMet: true,
+    sectionReviewed: mealsReviewed,
+  });
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, layoutMeasurement } = event.nativeEvent;
+    onMealsScroll(contentOffset.y, layoutMeasurement.height);
+  };
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -94,8 +127,6 @@ export function EditMemberScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      console.log('[EditMember] screen focused', { memberId });
-
       if (showMealBilling) {
         void mealBillingApi.getSettings(spaceId).then(settings => {
           setSpaceDefaultBilling(settings.billingType);
@@ -150,7 +181,6 @@ export function EditMemberScreen() {
       return;
     }
 
-    console.log('[EditMember] save started', { memberId });
     setIsSubmitting(true);
 
     const updated = await updateMember(memberId, {
@@ -165,7 +195,6 @@ export function EditMemberScreen() {
     setIsSubmitting(false);
 
     if (updated) {
-      console.log('[EditMember] save success', updated.memberId);
       const purchase = buildSubscriptionPurchasePayload(
         subscriptionMealQty,
         subscriptionPrice,
@@ -197,115 +226,179 @@ export function EditMemberScreen() {
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}>
-          <Text style={styles.eyebrow}>{t('membership.edit.eyebrow')}</Text>
-          <Text style={styles.heading}>{t('membership.edit.heading')}</Text>
-          <Text style={styles.subheading}>{t('membership.edit.subheading')}</Text>
+        <View style={styles.flex}>
+          <ScrollView
+            ref={scrollRef}
+            style={styles.scroll}
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            scrollEventThrottle={16}
+            onScrollBeginDrag={messProgressiveEnabled ? onMealsScrollBeginDrag : undefined}
+            onScroll={messProgressiveEnabled ? handleScroll : undefined}>
+            <Text style={styles.eyebrow}>{t('membership.edit.eyebrow')}</Text>
+            <Text style={styles.heading}>{t('membership.edit.heading')}</Text>
+            <Text style={styles.subheading}>{t('membership.edit.subheading')}</Text>
 
-          {storeError ? (
-            <View style={styles.errorBanner}>
-              <Text style={styles.errorBannerText}>{storeError}</Text>
-            </View>
-          ) : null}
+            {storeError ? (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorBannerText}>{storeError}</Text>
+              </View>
+            ) : null}
 
-          <FormInput
-            label={t('membership.add.fullNameLabel')}
-            placeholder={t('membership.add.fullNamePlaceholder')}
-            value={fullName}
-            onChangeText={text => {
-              setFullName(text);
-              if (fieldErrors.fullName) {
-                setFieldErrors(prev => ({ ...prev, fullName: undefined }));
+            <FormInput
+              label={t('membership.add.fullNameLabel')}
+              placeholder={t('membership.add.fullNamePlaceholder')}
+              value={fullName}
+              onChangeText={text => {
+                setFullName(text);
+                if (fieldErrors.fullName) {
+                  setFieldErrors(prev => ({ ...prev, fullName: undefined }));
+                }
+              }}
+              error={fieldErrors.fullName}
+              autoCapitalize="words"
+              returnKeyType="next"
+            />
+
+            <FormInput
+              label={t('membership.invite.mobileLabel')}
+              placeholder={t('membership.invite.mobilePlaceholder')}
+              value={mobileNumber}
+              onChangeText={text => {
+                setMobileNumber(text);
+                if (fieldErrors.mobileNumber) {
+                  setFieldErrors(prev => ({ ...prev, mobileNumber: undefined }));
+                }
+              }}
+              error={fieldErrors.mobileNumber}
+              keyboardType="phone-pad"
+              returnKeyType="done"
+              maxLength={15}
+            />
+
+            <RolePicker
+              value={role}
+              spaceType={spaceType}
+              onChange={selected => {
+                setRole(selected);
+                if (fieldErrors.role) {
+                  setFieldErrors(prev => ({ ...prev, role: undefined }));
+                }
+              }}
+              error={fieldErrors.role}
+            />
+
+            <GenderPicker
+              value={gender}
+              onChange={selected => {
+                setGender(selected);
+                if (fieldErrors.gender) {
+                  setFieldErrors(prev => ({ ...prev, gender: undefined }));
+                }
+              }}
+              error={fieldErrors.gender}
+              required={genderRequired}
+            />
+
+            {messProgressiveEnabled ? (
+              <View
+                collapsable={false}
+                style={[
+                  styles.mealsSection,
+                  mealsHighlighted ? styles.mealsHighlight : null,
+                ]}
+                onLayout={event => {
+                  const { y, height } = event.nativeEvent.layout;
+                  onMealsLayout(y, height);
+                }}>
+                {showMealBilling ? (
+                  <MemberMealBillingTypeSection
+                    spaceDefault={spaceDefaultBilling}
+                    value={mealBillingSelection}
+                    onChange={value => {
+                      markMealsReviewed();
+                      setMealBillingSelection(value);
+                    }}
+                    disabled={isSubmitting || loading}
+                  />
+                ) : null}
+
+                {showSubscriptionSetup ? (
+                  <MemberSubscriptionSetupFields
+                    unit={prepaidBalanceUnit}
+                    mealQty={subscriptionMealQty}
+                    subscriptionPrice={subscriptionPrice}
+                    validTill={subscriptionValidTill}
+                    onMealQtyChange={value => {
+                      markMealsReviewed();
+                      setSubscriptionMealQty(value);
+                    }}
+                    onSubscriptionPriceChange={value => {
+                      markMealsReviewed();
+                      setSubscriptionPrice(value);
+                    }}
+                    onValidTillChange={value => {
+                      markMealsReviewed();
+                      setSubscriptionValidTill(value);
+                    }}
+                    optionalHint
+                    useSubscriptionLabels
+                  />
+                ) : null}
+              </View>
+            ) : null}
+
+            {!messProgressiveEnabled ? (
+              <View style={styles.footer}>
+                <Button
+                  label={t('membership.edit.save')}
+                  onPress={handleSave}
+                  loading={isSubmitting || loading}
+                  disabled={isSubmitting || loading}
+                />
+                <Button
+                  label={t('common.cancel')}
+                  variant="ghost"
+                  onPress={() => navigation.goBack()}
+                  disabled={isSubmitting || loading}
+                  style={styles.cancelButton}
+                />
+              </View>
+            ) : null}
+          </ScrollView>
+
+          {messProgressiveEnabled ? (
+            <ProgressiveWorkflowFooter
+              phase={progressivePhase}
+              stepLabel={t('progressiveWorkflow.stepOf', {
+                current: progressivePhase === 'continue' ? 1 : 2,
+                total: 2,
+              })}
+              progressLine={
+                progressivePhase === 'continue'
+                  ? t('progressiveWorkflow.member.progressIdentityNext')
+                  : t('progressiveWorkflow.member.progressReady')
               }
-            }}
-            error={fieldErrors.fullName}
-            autoCapitalize="words"
-            returnKeyType="next"
-          />
-
-          <FormInput
-            label={t('membership.invite.mobileLabel')}
-            placeholder={t('membership.invite.mobilePlaceholder')}
-            value={mobileNumber}
-            onChangeText={text => {
-              setMobileNumber(text);
-              if (fieldErrors.mobileNumber) {
-                setFieldErrors(prev => ({ ...prev, mobileNumber: undefined }));
-              }
-            }}
-            error={fieldErrors.mobileNumber}
-            keyboardType="phone-pad"
-            returnKeyType="done"
-            maxLength={15}
-          />
-
-          <RolePicker
-            value={role}
-            spaceType={spaceType}
-            onChange={selected => {
-              setRole(selected);
-              if (fieldErrors.role) {
-                setFieldErrors(prev => ({ ...prev, role: undefined }));
-              }
-            }}
-            error={fieldErrors.role}
-          />
-
-          {showMealBilling ? (
-            <MemberMealBillingTypeSection
-              spaceDefault={spaceDefaultBilling}
-              value={mealBillingSelection}
-              onChange={setMealBillingSelection}
-              disabled={isSubmitting || loading}
+              continueEyebrow={t('progressiveWorkflow.nextStep')}
+              continueTitle={t('progressiveWorkflow.member.reviewMealsTitle')}
+              continueHint={t('progressiveWorkflow.member.reviewMealsHint')}
+              continueLabel={t('progressiveWorkflow.member.continueToMeals')}
+              onContinue={() => continueToMeals(scrollRef)}
+              primaryAction={{
+                label: t('membership.edit.save'),
+                onPress: handleSave,
+                loading: isSubmitting || loading,
+                disabled: isSubmitting || loading,
+              }}
+              secondaryAction={{
+                label: t('common.cancel'),
+                onPress: () => navigation.goBack(),
+                disabled: isSubmitting || loading,
+              }}
             />
           ) : null}
-
-          {showSubscriptionSetup ? (
-            <MemberSubscriptionSetupFields
-              unit={prepaidBalanceUnit}
-              mealQty={subscriptionMealQty}
-              subscriptionPrice={subscriptionPrice}
-              validTill={subscriptionValidTill}
-              onMealQtyChange={setSubscriptionMealQty}
-              onSubscriptionPriceChange={setSubscriptionPrice}
-              onValidTillChange={setSubscriptionValidTill}
-              optionalHint
-              useSubscriptionLabels
-            />
-          ) : null}
-
-          <GenderPicker
-            value={gender}
-            onChange={selected => {
-              setGender(selected);
-              if (fieldErrors.gender) {
-                setFieldErrors(prev => ({ ...prev, gender: undefined }));
-              }
-            }}
-            error={fieldErrors.gender}
-            required={genderRequired}
-          />
-
-          <View style={styles.footer}>
-            <Button
-              label={t('membership.edit.save')}
-              onPress={handleSave}
-              loading={isSubmitting || loading}
-              disabled={isSubmitting || loading}
-            />
-            <Button
-              label={t('common.cancel')}
-              variant="ghost"
-              onPress={() => navigation.goBack()}
-              disabled={isSubmitting || loading}
-              style={styles.cancelButton}
-            />
-          </View>
-        </ScrollView>
+        </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
@@ -347,6 +440,15 @@ const styles = StyleSheet.create({
   errorBannerText: {
     ...typography.body,
     color: '#DC2626',
+  },
+  mealsSection: {
+    marginTop: spacing.sm,
+  },
+  mealsHighlight: {
+    ...progressiveSectionHighlightStyle,
+    borderWidth: 1,
+    borderRadius: radius.card,
+    padding: spacing.sm,
   },
   footer: {
     marginTop: spacing.xl,

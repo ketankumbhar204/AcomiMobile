@@ -2,7 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { OverflowMenuProvider, QuickActionSheetProvider, Toast, ConfirmDialogProvider } from './src/components/ui';
+import {
+  ConfirmDialogProvider,
+  OverflowMenuProvider,
+  QuickActionSheetProvider,
+  Toast,
+} from './src/components/ui';
+import { CoachmarkProvider } from './src/coachmarks';
 import { AccommodationActionSheet } from './src/components/accommodation';
 import { MemberMealActivityDaySheetHost } from './src/components/meals/MemberMealActivityDaySheetHost';
 import { initI18n } from './src/i18n';
@@ -36,10 +42,12 @@ function App() {
         <ConfirmDialogProvider>
           <OverflowMenuProvider>
             <QuickActionSheetProvider>
-              <RootNavigator />
-              <AccommodationActionSheet />
-              <Toast />
-              <MemberMealActivityDaySheetHost />
+              <CoachmarkProvider>
+                <RootNavigator />
+                <AccommodationActionSheet />
+                <Toast />
+                <MemberMealActivityDaySheetHost />
+              </CoachmarkProvider>
             </QuickActionSheetProvider>
           </OverflowMenuProvider>
         </ConfirmDialogProvider>

@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -254,6 +254,11 @@ export function MySpacesScreen() {
                 <SkeletonCard />
                 <SkeletonCard />
               </>
+            ) : globalDashboard.error && !globalDashboard.data ? (
+              <EmptyState
+                title={t("common.errors.generic")}
+                description={t("common.errors.network")}
+              />
             ) : (
               <>
                 <GlobalAttentionCard

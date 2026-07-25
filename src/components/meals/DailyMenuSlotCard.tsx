@@ -1,8 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { ClipboardList, Copy, Pencil, Share2, UtensilsCrossed } from 'lucide-react-native';
 import type { DailyMenuResponse, MealComboResponse, MealType, UUID } from '../../api/types';
 import { Card } from '../ui/Card';
+import { HeaderOverflowMenu } from '../ui/HeaderOverflowMenu';
 import { useMealPricingPolicy } from '../../hooks/useMealPricingPolicy';
 import { colors, radius, spacing, typography } from '../../theme';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
@@ -19,12 +21,12 @@ import {
 import {
   resolveMenuOptionCurrency,
   resolveMenuOptionPrice,
+  formatComboPrice,
 } from '../../utils/comboPrice';
 import { ComboItemsPopup } from './ComboItemsPopup';
-import { MealStatusBadge } from './MealStatusBadge';
-import { PlannedComboPreviewRow } from './PlannedComboPreviewRow';
+import { MealTypeVisual } from './MealTypeVisual';
 
-const MAX_VISIBLE = 2;
+const MAX_VISIBLE = 3;
 const EMPTY_COMBO_MAP = new Map<string, MealComboResponse>();
 
 type DailyMenuSlotCardProps = {
@@ -35,8 +37,8 @@ type DailyMenuSlotCardProps = {
   onSelectMenu?: () => void;
   onEdit?: () => void;
   onShare?: () => void;
-  onCopyYesterday?: () => void;
-  copyYesterdayLoading?: boolean;
+  onCopyMenu?: () => void;
+  copyMenuLoading?: boolean;
   onClosePoll?: () => void;
   onEditPollCloseAt?: () => void;
   pollStatus?: 'OPEN' | 'CLOSED' | null;
@@ -57,8 +59,8 @@ export function DailyMenuSlotCard({
   onSelectMenu,
   onEdit,
   onShare,
-  onCopyYesterday,
-  copyYesterdayLoading = false,
+  onCopyMenu,
+  copyMenuLoading = false,
   onClosePoll,
   onEditPollCloseAt,
   pollStatus,
@@ -83,9 +85,28 @@ export function DailyMenuSlotCard({
   const [comboPreviewSingleItem, setComboPreviewSingleItem] = useState(false);
   const published = menu?.status === 'PUBLISHED';
   const modified = menu?.status === 'MODIFIED';
-  const options = menu?.options?.filter(option => option.isAvailable) ?? [];
+  const options = useMemo(
+    () => menu?.options?.filter(option => option.isAvailable) ?? [],
+    [menu?.options],
+  );
   const hasPlan = options.length > 0;
   const canShare = hasPlan && onShare;
+  const cardStatus =
+    !hasPlan
+      ? 'empty'
+      : published
+        ? 'shared'
+        : modified
+          ? 'updated'
+          : 'planned';
+  const cardStatusLabel =
+    cardStatus === 'empty'
+      ? t('meals.planning.selector.notPlanned', { defaultValue: 'Not planned' })
+      : cardStatus === 'shared'
+        ? t('meals.planning.selector.shared', { defaultValue: 'Shared' })
+        : cardStatus === 'updated'
+          ? t('meals.planning.selector.updated', { defaultValue: 'Updated' })
+          : t('meals.planning.selector.planned', { defaultValue: 'Planned' });
 
   const hiddenCount = options.length - MAX_VISIBLE;
 
@@ -128,10 +149,11 @@ export function DailyMenuSlotCard({
     }
 
     setComboPreviewLoading(true);
-    void resolveMenuOptionItemNames(spaceId, option, library)
+    resolveMenuOptionItemNames(spaceId, option, library)
       .then(names => {
         setComboPreviewItems(names);
       })
+      .catch(() => undefined)
       .finally(() => {
         setComboPreviewLoading(false);
       });
@@ -143,95 +165,212 @@ export function DailyMenuSlotCard({
   const menuCtaAction = readOnly ? undefined : hasPlan ? onEdit : onSelectMenu;
   const canShareAction = !readOnly && canShare;
 
-  const shareLabel = modified
-    ? t('meals.planning.shareChanges')
-    : published && pollStatus === 'OPEN'
-      ? t('meals.planning.shareSlotAgain')
-      : t('meals.planning.shareSlot');
-
   const respondedLabel = t('meals.poll.respondedCount', { count: pollResponseCount });
 
   return (
     <>
-    <Card style={styles.card}>
+    <Card style={styles.card} padded={false}>
+      <View style={styles.cardInner}>
       <View style={styles.header}>
-        <Text style={styles.slotTitle}>{t(mealTypeLabelKey(mealType))}</Text>
-        <MealStatusBadge menu={menu} />
+        <View style={styles.headerLeft}>
+          <MealTypeVisual mealType={mealType} size={18} style={styles.headerIcon} />
+          <Text style={styles.slotTitle}>{t(mealTypeLabelKey(mealType))}</Text>
+        </View>
+        <View style={styles.headerRight}>
+          <View
+            style={[
+              styles.headerStatus,
+              cardStatus === 'empty' && styles.headerStatusEmpty,
+              cardStatus === 'updated' && styles.headerStatusUpdated,
+            ]}>
+            <Text
+              style={[
+                styles.headerStatusText,
+                cardStatus === 'empty' && styles.headerStatusTextEmpty,
+                cardStatus === 'updated' && styles.headerStatusTextUpdated,
+              ]}>
+              {cardStatusLabel}
+            </Text>
+          </View>
+          <HeaderOverflowMenu
+            accessibilityLabel={t('spaces.menu.open')}
+            items={[
+              {
+                id: 'copy-menu',
+                label: t('meals.planning.copyMenu'),
+                visible: !readOnly && Boolean(onCopyMenu),
+                onPress: () => onCopyMenu?.(),
+              },
+            ]}
+          />
+        </View>
       </View>
 
       {!hasPlan ? (
         <View style={styles.emptyBlock}>
-          <Text style={styles.emptyTitle}>
-            {t('meals.menu.emptyTitle', { meal: t(mealTypeLabelKey(mealType)) })}
-          </Text>
-          <Text style={styles.emptyHint}>{t('meals.menu.emptyHint')}</Text>
-          {!readOnly && onCopyYesterday ? (
-            <Pressable
-              style={[styles.copyYesterdayButton, copyYesterdayLoading && styles.buttonDisabled]}
-              onPress={onCopyYesterday}
-              disabled={copyYesterdayLoading}>
-              <Text style={styles.copyYesterdayText}>
-                {copyYesterdayLoading
-                  ? t('common.loading', { defaultValue: 'Loading…' })
-                  : t('meals.planning.copyYesterday')}
+          <View style={styles.emptyRow}>
+            <View style={styles.emptyIllustration} accessibilityElementsHidden>
+              <ClipboardList size={28} color={colors.primaryDark} strokeWidth={1.8} />
+              <View style={styles.emptyIllustrationBadge}>
+                <UtensilsCrossed size={14} color={colors.primary} strokeWidth={2.2} />
+              </View>
+            </View>
+            <View style={styles.emptyCopy}>
+              <Text style={styles.emptyTitle}>
+                {t('meals.menu.emptyTitle', { meal: t(mealTypeLabelKey(mealType)) })}
               </Text>
-            </Pressable>
-          ) : null}
+              <Text style={styles.emptyHint}>{t('meals.menu.emptyHint')}</Text>
+            </View>
+          </View>
+          <View style={styles.emptyActions}>
+            {!readOnly && onCopyMenu ? (
+              <Pressable
+                android_ripple={{ color: 'rgba(18, 140, 126, 0.12)' }}
+                style={({ pressed }) => [
+                  styles.copyMenuButton,
+                  styles.emptyActionButton,
+                  copyMenuLoading && styles.buttonDisabled,
+                  pressed && styles.buttonPressed,
+                ]}
+                onPress={onCopyMenu}
+                disabled={copyMenuLoading}
+                accessibilityRole="button">
+                <Copy size={16} color={colors.primaryDark} strokeWidth={2.2} />
+                <Text style={styles.copyMenuText}>
+                  {copyMenuLoading
+                    ? t('common.loading', { defaultValue: 'Loading…' })
+                    : t('meals.planning.copyMenu')}
+                </Text>
+              </Pressable>
+            ) : null}
+            {menuCtaAction && !hasPlan ? (
+              <Pressable
+                android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
+                style={({ pressed }) => [
+                  styles.menuCtaButton,
+                  styles.emptyActionButton,
+                  styles.emptyPrimaryButton,
+                  pressed && styles.buttonPressed,
+                ]}
+                onPress={menuCtaAction}
+                accessibilityRole="button">
+                <Text style={styles.menuCtaText}>{menuCtaLabel}</Text>
+              </Pressable>
+            ) : null}
+          </View>
         </View>
       ) : (
         <View style={styles.choicesBlock}>
           <View style={styles.choicesHeader}>
             <Text style={styles.choicesLabel}>{t('meals.menu.plannedMenuLabel')}</Text>
+            <Text style={styles.choicesSeparator}>•</Text>
             <Text style={styles.choicesCount}>
-              {plannedCounts.combos > 0 && plannedCounts.items > 0
-                ? t('meals.menu.plannedMenuBreakdown', {
-                    combos: plannedCounts.combos,
-                    items: plannedCounts.items,
-                  })
-                : `(${options.length})`}
+              {t('meals.planning.summaryItems', {
+                count: plannedCounts.items,
+                defaultValue: '{{count}} items',
+              })}
+            </Text>
+            <Text style={styles.choicesSeparator}>•</Text>
+            <Text style={styles.choicesCount}>
+              {t('meals.planning.summaryCombos', {
+                count: plannedCounts.combos,
+                defaultValue: '{{count}} combos',
+              })}
             </Text>
           </View>
-          {visibleOptionRows.map(({ option, itemNames, price, currencyCode }, index) => (
-            <PlannedComboPreviewRow
-              key={option.optionId ?? `${option.label}-${index}`}
-              option={option}
-              itemNames={itemNames}
-              price={price}
-              currencyCode={currencyCode}
-              showPrice={mealPricing.showMealPrices}
-              onPress={
-                getPlannedEntryKind(option) === 'combo'
-                  ? () => openOptionPreview(option, itemNames, price, currencyCode)
-                  : undefined
-              }
-            />
-          ))}
+          <View style={styles.menuRows}>
+            {visibleOptionRows.map(({ option, itemNames, price, currencyCode }, index) => {
+              const isCombo = getPlannedEntryKind(option) === 'combo';
+              const priceLabel = mealPricing.showMealPrices
+                ? formatComboPrice(price, currencyCode ?? 'INR')
+                : null;
+              return (
+                <Pressable
+                  key={option.optionId ?? `${option.label}-${index}`}
+                  onPress={
+                    isCombo
+                      ? () => openOptionPreview(option, itemNames, price, currencyCode)
+                      : undefined
+                  }
+                  disabled={!isCombo}
+                  style={({ pressed }) => [
+                    styles.menuRow,
+                    pressed && styles.menuRowPressed,
+                  ]}>
+                  <View style={styles.menuBullet} />
+                  <Text style={styles.menuItemName} numberOfLines={1}>
+                    {option.label}
+                  </Text>
+                  {isCombo ? (
+                    <Text style={styles.comboLabel}>
+                      {t('meals.menu.entryKindComboSuffix')}
+                    </Text>
+                  ) : null}
+                  {priceLabel ? <Text style={styles.menuPrice}>{priceLabel}</Text> : null}
+                  {isCombo ? <Text style={styles.menuChevron}>›</Text> : null}
+                </Pressable>
+              );
+            })}
+          </View>
           {!expanded && hiddenCount > 0 ? (
-            <Pressable onPress={() => setExpanded(true)}>
+            <Pressable onPress={() => setExpanded(true)} style={styles.moreRow}>
               <Text style={styles.moreChoices}>
                 {t(moreChoicesI18nKey(plannedCounts), { count: hiddenCount })}
               </Text>
             </Pressable>
           ) : null}
           {expanded && hiddenCount > 0 ? (
-            <Pressable onPress={() => setExpanded(false)}>
+            <Pressable onPress={() => setExpanded(false)} style={styles.moreRow}>
               <Text style={styles.moreChoices}>{t(showLessI18nKey(plannedCounts))}</Text>
             </Pressable>
           ) : null}
         </View>
       )}
 
-      {menuCtaAction ? (
-        <Pressable
-          style={[styles.menuCtaButton, hasPlan && styles.menuCtaButtonSecondary]}
-          onPress={menuCtaAction}>
-          <Text style={[styles.menuCtaText, hasPlan && styles.menuCtaTextSecondary]}>
-            {menuCtaLabel}
-          </Text>
-        </Pressable>
+      {hasPlan ? (
+        <View style={styles.plannedActions}>
+          <Pressable
+            onPress={!readOnly ? onEdit : undefined}
+            disabled={readOnly || !onEdit}
+            android_ripple={{ color: 'rgba(18, 140, 126, 0.1)' }}
+            style={({ pressed }) => [
+              styles.plannedAction,
+              (readOnly || !onEdit) && styles.plannedActionDisabled,
+              pressed && styles.buttonPressed,
+            ]}
+            accessibilityRole="button">
+            <Pencil size={16} color={colors.primaryDark} strokeWidth={2.2} />
+            <Text
+              style={styles.plannedActionText}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.78}>
+              {t('meals.menu.editMenu')}
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={canShareAction ? onShare : undefined}
+            disabled={!canShareAction}
+            android_ripple={{ color: 'rgba(18, 140, 126, 0.1)' }}
+            style={({ pressed }) => [
+              styles.plannedAction,
+              !canShareAction && styles.plannedActionDisabled,
+              pressed && styles.buttonPressed,
+            ]}
+            accessibilityRole="button">
+            <Share2 size={16} color={colors.primaryDark} strokeWidth={2.2} />
+            <Text
+              style={styles.plannedActionText}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.78}>
+              {t('meals.planning.shareMealAction', { defaultValue: 'Share meal' })}
+            </Text>
+          </Pressable>
+        </View>
       ) : null}
 
-      {(canShareAction || modified || (published && pollStatus)) ? (
+      {(modified || (published && pollStatus)) ? (
         <View style={styles.divider} />
       ) : null}
 
@@ -242,11 +381,6 @@ export function DailyMenuSlotCard({
               ? t('meals.planning.priorPollResponsesHint', { count: pollResponseCount })
               : t('meals.planning.shareNeedsReshareHint')}
           </Text>
-          {canShareAction ? (
-            <Pressable style={styles.shareLink} onPress={onShare}>
-              <Text style={styles.shareLinkText}>{shareLabel}</Text>
-            </Pressable>
-          ) : null}
         </View>
       ) : published && pollStatus === 'OPEN' ? (
         <View style={styles.shareFooter}>
@@ -263,16 +397,7 @@ export function DailyMenuSlotCard({
               <Text style={styles.pollStatusOpen}>{respondedLabel}</Text>
             )}
           </View>
-          {canShareAction ? (
-            <Pressable style={styles.shareLink} onPress={onShare}>
-              <Text style={styles.shareLinkText}>{shareLabel}</Text>
-            </Pressable>
-          ) : null}
         </View>
-      ) : canShareAction ? (
-        <Pressable style={styles.shareLinkCentered} onPress={onShare}>
-          <Text style={styles.shareLinkText}>{shareLabel}</Text>
-        </Pressable>
       ) : null}
 
       {published && !modified && pollStatus === 'CLOSED' ? (
@@ -330,6 +455,7 @@ export function DailyMenuSlotCard({
           ) : null}
         </View>
       ) : null}
+      </View>
     </Card>
 
     <ComboItemsPopup
@@ -347,64 +473,158 @@ export function DailyMenuSlotCard({
 }
 
 const styles = StyleSheet.create({
-  card: { marginBottom: spacing.md },
+  card: {
+    marginBottom: 0,
+    borderRadius: 18,
+    overflow: 'hidden',
+  },
+  cardInner: {
+    padding: spacing.lg,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
-  slotTitle: { ...typography.bodyStrong },
-  statusBadge: {
+  headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xxs,
-    borderWidth: 1,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
+    gap: spacing.sm,
+    flex: 1,
+    minWidth: 0,
   },
-  statusSymbol: {
-    ...typography.caption,
-    fontWeight: '800',
-    fontSize: 12,
+  headerIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
   },
-  statusLabel: { ...typography.caption, fontWeight: '700' },
-  emptyBlock: {
+  slotTitle: {
+    ...typography.h3,
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.xs,
-    marginBottom: spacing.sm,
+    flexShrink: 0,
+  },
+  headerStatus: {
+    minHeight: 26,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.full,
+    backgroundColor: colors.lightGreen,
+  },
+  headerStatusEmpty: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+  },
+  headerStatusUpdated: {
+    backgroundColor: '#DBEAFE',
+  },
+  headerStatusText: {
+    ...typography.caption,
+    color: colors.success,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  headerStatusTextEmpty: {
+    color: colors.muted,
+  },
+  headerStatusTextUpdated: {
+    color: '#2563EB',
+  },
+  emptyBlock: {
+    gap: spacing.md,
+  },
+  emptyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  emptyIllustration: {
+    width: 72,
+    height: 72,
+    borderRadius: radius.card,
+    backgroundColor: colors.lightGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  emptyIllustrationBadge: {
+    position: 'absolute',
+    right: 6,
+    bottom: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacing.xs,
   },
   emptyTitle: {
     ...typography.bodyStrong,
+    fontSize: 14,
+    lineHeight: 20,
     color: colors.textPrimary,
   },
   emptyHint: {
     ...typography.caption,
+    fontSize: 12,
+    lineHeight: 16,
     color: colors.muted,
-    lineHeight: 18,
   },
-  copyYesterdayButton: {
-    alignSelf: 'flex-start',
-    marginTop: spacing.xs,
-    borderWidth: 1,
+  emptyActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  emptyActionButton: {
+    flex: 1,
+    marginTop: 0,
+  },
+  emptyPrimaryButton: {
+    backgroundColor: colors.primary,
+  },
+  copyMenuButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    minHeight: 48,
+    borderWidth: 1.5,
     borderColor: colors.primary,
-    borderRadius: radius.button,
-    backgroundColor: colors.lightGreen,
+    borderRadius: 14,
+    backgroundColor: colors.white,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
   },
-  copyYesterdayText: {
-    ...typography.caption,
+  copyMenuText: {
+    ...typography.bodyStrong,
+    fontSize: 14,
+    fontWeight: '600',
     color: colors.primaryDark,
-    fontWeight: '700',
+  },
+  buttonPressed: {
+    opacity: 0.9,
   },
   empty: { ...typography.body, color: colors.muted, marginBottom: spacing.sm },
-  choicesBlock: { marginBottom: spacing.sm },
+  choicesBlock: { marginBottom: spacing.md },
   choicesHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
+    flexWrap: 'wrap',
   },
   choicesLabel: {
     ...typography.caption,
@@ -414,27 +634,113 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   choicesCount: { ...typography.caption, color: colors.muted },
+  choicesSeparator: { ...typography.caption, color: colors.muted },
+  menuRows: {
+    gap: spacing.xs,
+  },
+  menuRow: {
+    minHeight: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.xs,
+  },
+  menuRowPressed: {
+    backgroundColor: colors.surface,
+  },
+  menuBullet: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.success,
+    flexShrink: 0,
+  },
+  menuItemName: {
+    ...typography.bodyStrong,
+    color: colors.textPrimary,
+    fontSize: 14,
+    flex: 1,
+    minWidth: 0,
+  },
+  comboLabel: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontSize: 11,
+    flexShrink: 0,
+  },
+  menuPrice: {
+    ...typography.bodyStrong,
+    color: colors.textSecondary,
+    fontSize: 13,
+    flexShrink: 0,
+  },
+  menuChevron: {
+    ...typography.bodyStrong,
+    color: colors.muted,
+    fontSize: 18,
+    flexShrink: 0,
+  },
+  moreRow: {
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.xs,
+  },
   moreChoices: {
     ...typography.caption,
     color: colors.primary,
     fontWeight: '600',
-    marginTop: spacing.xs,
-    marginLeft: spacing.sm,
   },
   menuCtaButton: {
     marginTop: spacing.sm,
-    borderRadius: radius.button,
+    minHeight: 48,
+    borderRadius: 14,
     backgroundColor: colors.primary,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   menuCtaButtonSecondary: {
     backgroundColor: colors.white,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.primary,
   },
-  menuCtaText: { ...typography.bodyStrong, color: colors.white, fontSize: 14 },
+  menuCtaText: {
+    ...typography.bodyStrong,
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '600',
+  },
   menuCtaTextSecondary: { color: colors.primaryDark },
+  plannedActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  plannedAction: {
+    flex: 1,
+    minWidth: 0,
+    height: 48,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    backgroundColor: colors.white,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.xs,
+    overflow: 'hidden',
+  },
+  plannedActionDisabled: {
+    opacity: 0.45,
+  },
+  plannedActionText: {
+    ...typography.bodyStrong,
+    color: colors.primaryDark,
+    fontSize: 13,
+    fontWeight: '600',
+    flexShrink: 1,
+  },
   divider: {
     height: 1,
     backgroundColor: colors.border,
@@ -453,9 +759,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.sm,
   },
-  shareLink: { paddingVertical: spacing.xs },
-  shareLinkCentered: { alignItems: 'center', paddingVertical: spacing.xs },
-  shareLinkText: { ...typography.bodyStrong, color: colors.primaryDark, fontSize: 14 },
   pollStatusRow: {
     flexDirection: 'row',
     alignItems: 'center',

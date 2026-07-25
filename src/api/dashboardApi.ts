@@ -21,6 +21,9 @@ const LOG_TAG = '[DashboardApi]';
 /** Align with payments summary timeout when cold snapshot ensure runs once. */
 const DASHBOARD_SUMMARY_TIMEOUT_MS = 120_000;
 
+/** Global sync walks every owned space — can exceed the default 30s client timeout. */
+const GLOBAL_DASHBOARD_TIMEOUT_MS = 120_000;
+
 function shouldUseLedgerFallback(error: unknown): boolean {
   if (error instanceof ApiError) {
     // Match docs: fall back on missing endpoint (404) or transport failure (timeout / offline).
@@ -74,6 +77,10 @@ export const dashboardApi = {
   ): Promise<GlobalDashboardResponse> => {
     const path = `/dashboard/global?month=${encodeURIComponent(month)}&sync=${sync}`;
     console.log(`${LOG_TAG} GET ${path}`);
-    return unwrapApiResponse(apiClient.get<ApiResponse<GlobalDashboardResponse>>(path));
+    return unwrapApiResponse(
+      apiClient.get<ApiResponse<GlobalDashboardResponse>>(path, {
+        timeout: GLOBAL_DASHBOARD_TIMEOUT_MS,
+      }),
+    );
   },
 };

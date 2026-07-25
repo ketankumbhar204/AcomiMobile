@@ -22,6 +22,8 @@ import type {
   UnitListItemResponse,
 } from '../../api/types';
 import { Button } from '../ui';
+import { ProgressiveWorkflowFooter } from '../progressive';
+import { OccupancyWizardStepHeader } from './OccupancyWizardStepHeader';
 import { OccupancyWizardTopBar } from './OccupancyWizardTopBar';
 import { useSpaceStore } from '../../store/spaceStore';
 import { ContractTermsStep } from '../../features/occupancy/OccupancyWizard/steps/ContractTermsStep';
@@ -33,7 +35,12 @@ import { ReserveDatesStep } from '../../features/occupancy/OccupancyWizard/steps
 import { ReviewStep } from '../../features/occupancy/OccupancyWizard/steps/ReviewStep';
 import { useOccupancyWizardSubmit } from '../../features/occupancy/OccupancyWizard/useOccupancyWizardSubmit';
 import { navigateToMemberDetailsAfterOccupancyFromRef } from '../../features/occupancy/OccupancyWizard/navigation';
-import { useMemberSearch } from '../../hooks/useMemberSearch';
+import {
+  useResidentImportSearch,
+  type ResidentPickerItem,
+} from '../../hooks/useResidentImportSearch';
+import { useProgressiveSectionReview } from '../../hooks/useProgressiveSectionReview';
+import { resolveProgressivePhase } from '../../utils/progressivePhase';
 import { colors, radius, spacing, typography } from '../../theme';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
 import { getAccommodationUiProfile } from '../../utils/accommodationProfile';
@@ -42,6 +49,7 @@ import { fetchPrefilledAllocationTarget } from '../../utils/fetchPrefilledAlloca
 import { fetchSpaceAmenities } from '../../utils/fetchSpaceAmenities';
 import { fetchSpaceFoodPolicy, type SpaceFoodPolicy } from '../../utils/fetchSpaceFoodPolicy';
 import { getMembershipErrorMessage } from '../../utils/membershipErrors';
+import { getOccupancyErrorMessage } from '../../utils/occupancyErrors';
 import {
   emptyContractTermsFormValues,
   resolveContractFoodPolicy,
@@ -241,6 +249,7 @@ export function HierarchyOccupancyPickerModal({
   const [expectedExitDate, setExpectedExitDate] = useState('');
   const [remarks, setRemarks] = useState('');
   const [agreementSigned, setAgreementSigned] = useState(false);
+  const contractScrollRef = useRef<ScrollView>(null);
 
   const currentHierarchyStep = steps[stepIndex] ?? null;
   const profile = getAccommodationUiProfile(spaceType, effectiveLayoutMode ?? 'CORRIDOR_PG');
@@ -252,10 +261,10 @@ export function HierarchyOccupancyPickerModal({
     () => resolveContractFoodPolicy(foodPolicy, null),
     [foodPolicy],
   );
-  const { members, loading: membersLoading, error: membersError } = useMemberSearch(
+  const { members, loading: membersLoading, error: membersError } = useResidentImportSearch(
     spaceId,
     memberQuery,
-    { occupancyStatus: 'VACATED', enabled: visible && phase === 'member' },
+    { enabled: visible && phase === 'member' && memberPickerMode === 'search' },
   );
 
   const mySpaces = useSpaceStore(state => state.mySpaces);
@@ -841,11 +850,27 @@ export function HierarchyOccupancyPickerModal({
   }
 
   const handleMemberSelect = useCallback(
-    (selected: MemberResponse) => {
+    async (selected: ResidentPickerItem) => {
       suppressAutoSelectRef.current = false;
       memberAutoSelectSuppressRef.current = false;
-      setMember(selected);
       setError(null);
+
+      let resolved: MemberResponse = selected;
+      if (selected.needsImport && selected.memberId) {
+        setCreatingMember(true);
+        try {
+          resolved = await memberApi.importMember(spaceId, {
+            sourceMemberId: selected.memberId,
+          });
+        } catch (err) {
+          setError(getMembershipErrorMessage(err, 'occupancyWizard.errors.importMember'));
+          return;
+        } finally {
+          setCreatingMember(false);
+        }
+      }
+
+      setMember(resolved);
       setPhase(
         wizardMode === 'RESERVE'
           ? 'reserve_dates'
@@ -854,7 +879,7 @@ export function HierarchyOccupancyPickerModal({
             : 'review',
       );
     },
-    [wizardMode],
+    [spaceId, wizardMode],
   );
 
   useEffect(() => {
@@ -865,12 +890,15 @@ export function HierarchyOccupancyPickerModal({
       return;
     }
     const candidate = members[0];
+    if (candidate.needsImport) {
+      return;
+    }
     const autoKey = `${candidate.memberId}:${memberQuery}`;
     if (memberAutoSelectKeyRef.current === autoKey) {
       return;
     }
     memberAutoSelectKeyRef.current = autoKey;
-    handleMemberSelect(candidate);
+    void handleMemberSelect(candidate);
   }, [handleMemberSelect, memberPickerMode, memberQuery, members, membersLoading, phase]);
 
   const handleCreateNewMember = useCallback(async () => {
@@ -909,60 +937,50 @@ export function HierarchyOccupancyPickerModal({
 
   const handleConfirm = useCallback(async () => {
     if (!member || !activeTarget) {
-      setError(t('occupancy.errors.generic'));
+      setError(t('occupancy.errors.targetRequired'));
       return;
     }
 
-    // #region agent log
-    agentDebugLog({
-      hypothesisId: 'B',
-      location: 'HierarchyOccupancyPickerModal.tsx:handleConfirm',
-      message: 'submitting occupancy with food policy',
-      data: {
-        wizardMode,
-        foodIncludedInRent: effectiveFoodPolicy.foodIncludedInRent,
-        foodEnabled: contractValues.foodEnabled,
-        foodChargeSnapshot: contractValues.foodChargeSnapshot || null,
-      },
-      runId: 'movein-food',
-    });
-    // #endregion
-
-    await submit({
-      mode: wizardMode,
-      spaceType,
-      memberId: member.memberId,
-      target: activeTarget,
-      catalogRent,
-      contractValues,
-      foodPolicy: effectiveFoodPolicy,
-      moveInDate,
-      expectedExitDate,
-      remarks,
-      agreementSigned,
-      assignedAmenities,
-      onSuccess: async () => {
-        const nextIndex = bedQueueIndex + 1;
-        if (nextIndex < bedQueue.length) {
-          const nextBed = bedQueue[nextIndex];
-          setBedQueueIndex(nextIndex);
-          setActiveTarget(nextBed.selection);
-          setMember(null);
-          setMemberQuery('');
-          setMoveInDate('');
-          setExpectedExitDate('');
-          setRemarks('');
-          await applyTargetDefaults(nextBed.selection);
-          setPhase('member');
-          return;
-        }
-        reset();
-        onClose();
-        if (wizardMode === 'ALLOCATE' || wizardMode === 'RESERVE') {
-          navigateToMemberDetailsAfterOccupancyFromRef(spaceId, member.memberId);
-        }
-      },
-    });
+    setError(null);
+    try {
+      await submit({
+        mode: wizardMode,
+        spaceType,
+        memberId: member.memberId,
+        target: activeTarget,
+        catalogRent,
+        contractValues,
+        foodPolicy: effectiveFoodPolicy,
+        moveInDate,
+        expectedExitDate,
+        remarks,
+        agreementSigned,
+        assignedAmenities,
+        onSuccess: async () => {
+          const nextIndex = bedQueueIndex + 1;
+          if (nextIndex < bedQueue.length) {
+            const nextBed = bedQueue[nextIndex];
+            setBedQueueIndex(nextIndex);
+            setActiveTarget(nextBed.selection);
+            setMember(null);
+            setMemberQuery('');
+            setMoveInDate('');
+            setExpectedExitDate('');
+            setRemarks('');
+            await applyTargetDefaults(nextBed.selection);
+            setPhase('member');
+            return;
+          }
+          reset();
+          onClose();
+          if (wizardMode === 'ALLOCATE' || wizardMode === 'RESERVE') {
+            navigateToMemberDetailsAfterOccupancyFromRef(spaceId, member.memberId);
+          }
+        },
+      });
+    } catch (err) {
+      setError(getOccupancyErrorMessage(err));
+    }
   }, [
     activeTarget,
     agreementSigned,
@@ -1043,6 +1061,32 @@ export function HierarchyOccupancyPickerModal({
         ? t('occupancyWizard.memberMode.addNew')
         : t('common.continue');
 
+  const contractProgressiveEnabled = phase === 'contract';
+
+  const {
+    reviewed: addonsReviewed,
+    highlighted: addonsHighlighted,
+    onSectionLayout: onAddonsLayout,
+    onScroll: onAddonsScroll,
+    onScrollBeginDrag: onAddonsScrollBeginDrag,
+    continueToSection: continueToAddons,
+    clearReviewed: clearAddonsReviewed,
+  } = useProgressiveSectionReview({
+    enabled: contractProgressiveEnabled,
+  });
+
+  useEffect(() => {
+    if (phase === 'contract') {
+      clearAddonsReviewed();
+    }
+  }, [clearAddonsReviewed, phase]);
+
+  const contractFooterPhase = resolveProgressivePhase({
+    enabled: contractProgressiveEnabled,
+    prerequisiteMet: true,
+    sectionReviewed: addonsReviewed,
+  });
+
   const canContinue =
     phase === 'hierarchy'
       ? canContinueHierarchy()
@@ -1050,7 +1094,9 @@ export function HierarchyOccupancyPickerModal({
         ? memberPickerMode === 'new' || Boolean(member)
         : phase === 'reserve_dates'
           ? Boolean(moveInDate.trim())
-          : true;
+          : phase === 'contract' && contractProgressiveEnabled
+            ? addonsReviewed
+            : true;
 
   const bulkProgress =
     bedQueue.length > 1 ? `${bedQueueIndex + 1} / ${bedQueue.length}` : null;
@@ -1148,6 +1194,7 @@ export function HierarchyOccupancyPickerModal({
               error={membersError}
               preferredStatus="VACATED"
               allowAddNew
+              crossSpaceReuse
               hideTitle
               pickerMode={memberPickerMode}
               onPickerModeChange={mode => {
@@ -1178,7 +1225,16 @@ export function HierarchyOccupancyPickerModal({
         ) : null}
 
         {phase === 'contract' ? (
-          <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
+          <ScrollView
+            ref={contractScrollRef}
+            style={styles.list}
+            contentContainerStyle={styles.listContent}
+            scrollEventThrottle={16}
+            onScrollBeginDrag={onAddonsScrollBeginDrag}
+            onScroll={event => {
+              const { contentOffset, layoutMeasurement } = event.nativeEvent;
+              onAddonsScroll(contentOffset.y, layoutMeasurement.height);
+            }}>
             <ContractTermsStep
               spaceId={spaceId}
               mode="ALLOCATE"
@@ -1191,6 +1247,8 @@ export function HierarchyOccupancyPickerModal({
               spaceAmenities={spaceAmenities}
               assignedAmenities={assignedAmenities}
               onAssignedAmenitiesChange={setAssignedAmenities}
+              onAddonsLayout={onAddonsLayout}
+              addonsHighlighted={addonsHighlighted}
             />
           </ScrollView>
         ) : null}
@@ -1225,20 +1283,55 @@ export function HierarchyOccupancyPickerModal({
         ) : null}
 
         <View style={styles.footer}>
-          {showContinueButton ? (
-            <Button
-              label={primaryLabel}
-              onPress={handleContinue}
-              disabled={!canContinue || loading || submitting || creatingMember}
-              loading={submitting || creatingMember}
+          {phase === 'contract' && contractProgressiveEnabled ? (
+            <ProgressiveWorkflowFooter
+              phase={contractFooterPhase}
+              stepLabel={t('progressiveWorkflow.stepOf', {
+                current: contractFooterPhase === 'continue' ? 1 : 2,
+                total: 2,
+              })}
+              progressLine={
+                contractFooterPhase === 'continue'
+                  ? t('progressiveWorkflow.occupancy.progressRentNext')
+                  : t('progressiveWorkflow.occupancy.progressReady')
+              }
+              continueEyebrow={t('progressiveWorkflow.nextStep')}
+              continueTitle={t('progressiveWorkflow.occupancy.reviewAddonsTitle')}
+              continueHint={t('progressiveWorkflow.occupancy.reviewAddonsHint')}
+              continueLabel={t('progressiveWorkflow.occupancy.continueToAddons')}
+              onContinue={() => continueToAddons(contractScrollRef)}
+              primaryAction={{
+                label: primaryLabel,
+                onPress: handleContinue,
+                disabled: !canContinue || loading || submitting || creatingMember,
+                loading: submitting || creatingMember,
+              }}
+              secondaryAction={{
+                label: t('common.back'),
+                onPress: handleBack,
+                disabled: submitting || creatingMember,
+              }}
+              style={styles.progressiveFooter}
+              minHeight={160}
             />
-          ) : null}
-          <Button
-            label={t('common.back')}
-            variant="ghost"
-            onPress={handleBack}
-            disabled={submitting || creatingMember}
-          />
+          ) : (
+            <>
+              {showContinueButton ? (
+                <Button
+                  label={primaryLabel}
+                  onPress={handleContinue}
+                  disabled={!canContinue || loading || submitting || creatingMember}
+                  loading={submitting || creatingMember}
+                />
+              ) : null}
+              <Button
+                label={t('common.back')}
+                variant="ghost"
+                onPress={handleBack}
+                disabled={submitting || creatingMember}
+              />
+            </>
+          )}
         </View>
       </View>
     </Modal>
@@ -1380,5 +1473,11 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     backgroundColor: colors.white,
     gap: spacing.sm,
+  },
+  progressiveFooter: {
+    borderTopWidth: 0,
+    marginHorizontal: -spacing.xl,
+    marginBottom: -spacing.xl,
+    paddingHorizontal: spacing.xl,
   },
 });

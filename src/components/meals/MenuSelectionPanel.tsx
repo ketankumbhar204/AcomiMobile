@@ -34,7 +34,6 @@ import {
   parsePriceInput,
   validatePriceInput,
 } from '../../utils/comboPrice';
-import { isMenuSelectionFullyResolved } from '../../utils/menuSelectionSync';
 import {
   collectSelectionPriceErrors,
   firstPriceErrorTarget,
@@ -321,10 +320,10 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
     const itemPackages: MenuSelectionItemPackage[] = [];
     for (const item of selectedItems) {
       const draft = getEffectivePriceDraft(item.itemId, draftPrices, item.defaultPrice ?? null);
-      const price = draft ? parsePriceInput(draft) : null;
-      if (requiresMealPrices && (price == null || price <= 0)) {
-        continue;
-      }
+      const parsed = draft ? parsePriceInput(draft) : null;
+      const price = parsed != null && parsed > 0 ? parsed : null;
+      // Include unpriced items so Extras can expand selection immediately;
+      // Save / Share still validate prices separately.
       itemPackages.push({
         itemId: item.itemId,
         name: item.name,
@@ -339,7 +338,7 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
       extraPackages: [],
       adHocPackages,
     };
-  }, [adHocPackages, draftPrices, requiresMealPrices, selectedCombos, selectedItems]);
+  }, [adHocPackages, draftPrices, selectedCombos, selectedItems]);
 
   const hasAnySelection =
     selectedComboIds.length > 0 ||
@@ -415,32 +414,10 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
     if (loading) {
       return;
     }
-    if (
-      hasAnySelection &&
-      !isMenuSelectionFullyResolved(
-        selectedComboIds,
-        selectedItemIds,
-        combos,
-        draftPrices,
-        adHocPackages,
-        requiresMealPrices,
-      )
-    ) {
-      return;
-    }
+    // Always sync selection (even before prices are filled) so Extras can list
+    // items inside selected combos without waiting for Menu Library.
     onChange(buildSelectionResult);
-  }, [
-    adHocPackages,
-    buildSelectionResult,
-    combos,
-    draftPrices,
-    hasAnySelection,
-    loading,
-    onChange,
-    selectedComboIds,
-    selectedItemIds,
-    requiresMealPrices,
-  ]);
+  }, [buildSelectionResult, loading, onChange]);
 
   const filteredCombos = useMemo(() => {
     const query = comboSearch.trim().toLowerCase();

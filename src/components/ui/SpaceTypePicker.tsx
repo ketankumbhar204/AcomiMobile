@@ -47,13 +47,11 @@ export function SpaceTypePicker({ value, onChange, error }: SpaceTypePickerProps
         {SPACE_TYPE_VALUES.map(type => {
           const isSelected = value === type;
           const { icon: Icon, accent } = TYPE_VISUAL[type];
-          const isFullWidth = type === 'RENTAL';
           return (
             <Pressable
               key={type}
               style={({ pressed }) => [
                 styles.card,
-                isFullWidth && styles.cardFull,
                 isSelected && styles.cardSelected,
                 pressed && !isSelected && styles.cardPressed,
               ]}
@@ -105,8 +103,8 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '47%',
-    flexGrow: 1,
-    minWidth: '45%',
+    maxWidth: '47%',
+    flexGrow: 0,
     minHeight: 72,
     flexDirection: 'row',
     alignItems: 'center',
@@ -121,10 +119,6 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
     ...shadows.sm,
-  },
-  cardFull: {
-    width: '100%',
-    minWidth: '100%',
   },
   cardSelected: {
     borderColor: colors.primary,

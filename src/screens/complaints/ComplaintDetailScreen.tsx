@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import {
   Image,
   RefreshControl,
@@ -23,6 +23,7 @@ import {
   ComplaintPriorityBadge,
   ComplaintStatusBadge,
 } from '../../components/complaints';
+import { StickyFormActions } from '../../components/progressive';
 import { useComplaintDetail } from '../../hooks/useComplaintDetail';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../../navigation/types';
@@ -98,6 +99,23 @@ export function ComplaintDetailScreen() {
       setComplaint(updated);
     }, 'complaints.updated');
 
+  const hasStickyActions = useMemo(() => {
+    if (!complaint) {
+      return false;
+    }
+    if (complaint.canReopen) {
+      return true;
+    }
+    if (!manage) {
+      return false;
+    }
+    return (
+      complaint.status === 'OPEN' ||
+      complaint.status === 'IN_PROGRESS' ||
+      complaint.status === 'RESOLVED'
+    );
+  }, [complaint, manage]);
+
   if (loading && !complaint) {
     return (
       <View style={styles.pad}>
@@ -114,115 +132,137 @@ export function ComplaintDetailScreen() {
     );
   }
 
+  const showResolveStack =
+    manage && (complaint.status === 'OPEN' || complaint.status === 'IN_PROGRESS');
+
   return (
-    <ScrollView
-      style={styles.flex}
-      contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
-      <Text style={styles.title}>{complaint.title}</Text>
-      <View style={styles.badgeRow}>
-        <ComplaintStatusBadge status={complaint.status} />
-        <ComplaintPriorityBadge priority={complaint.priority} />
-        <ComplaintCategoryBadge category={complaint.category} />
-      </View>
-      <Text style={styles.meta}>{formatComplaintDateTime(complaint.createdAt)}</Text>
-      <Text style={styles.body}>{complaint.description}</Text>
-
-      {complaint.mealDate || complaint.mealType ? (
-        <Text style={styles.meta}>
-          {t('complaints.fields.meal')}: {complaint.mealDate ?? '—'}{' '}
-          {complaint.mealType ? t(`complaints.mealType.${complaint.mealType}`) : ''}
-        </Text>
-      ) : null}
-
-      {complaint.resolutionSummary ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('complaints.fields.resolution')}</Text>
-          <Text style={styles.body}>{complaint.resolutionSummary}</Text>
+    <View style={styles.flex}>
+      <ScrollView
+        style={styles.flex}
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+        <Text style={styles.title}>{complaint.title}</Text>
+        <View style={styles.badgeRow}>
+          <ComplaintStatusBadge status={complaint.status} />
+          <ComplaintPriorityBadge priority={complaint.priority} />
+          <ComplaintCategoryBadge category={complaint.category} />
         </View>
-      ) : null}
+        <Text style={styles.meta}>{formatComplaintDateTime(complaint.createdAt)}</Text>
+        <Text style={styles.body}>{complaint.description}</Text>
 
-      {complaint.attachments && complaint.attachments.length > 0 ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('complaints.fields.photos')}</Text>
-          <View style={styles.photoRow}>
-            {complaint.attachments.map(att => (
-              <Image key={att.attachmentId} source={{ uri: att.storageUrl }} style={styles.thumb} />
-            ))}
-          </View>
-        </View>
-      ) : null}
+        {complaint.mealDate || complaint.mealType ? (
+          <Text style={styles.meta}>
+            {t('complaints.fields.meal')}: {complaint.mealDate ?? '—'}{' '}
+            {complaint.mealType ? t(`complaints.mealType.${complaint.mealType}`) : ''}
+          </Text>
+        ) : null}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t('complaints.timeline')}</Text>
-        {(complaint.timeline ?? []).map(event => (
-          <View key={event.eventId} style={styles.timelineItem}>
-            <Text style={styles.timelineType}>
-              {t(`complaints.timelineEvent.${event.eventType}`)}
-            </Text>
-            {event.remarks ? <Text style={styles.meta}>{event.remarks}</Text> : null}
-            <Text style={styles.meta}>{formatComplaintDateTime(event.performedAt)}</Text>
-          </View>
-        ))}
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t('complaints.comments')}</Text>
-        {(complaint.comments ?? []).map(c => (
-          <View key={c.commentId} style={styles.comment}>
-            <Text style={styles.commentAuthor}>
-              {c.authorName ?? t('complaints.operator')}
-              {c.internal ? ` · ${t('complaints.internal')}` : ''}
-            </Text>
-            <Text style={styles.body}>{c.body}</Text>
-            <Text style={styles.meta}>{formatComplaintDateTime(c.createdAt)}</Text>
-          </View>
-        ))}
-        <FormInput
-          label={t('complaints.fields.comment')}
-          value={comment}
-          onChangeText={setComment}
-          multiline
-        />
-        {manage ? (
-          <View style={styles.switchRow}>
-            <View style={styles.switchText}>
-              <Text style={styles.switchLabel}>{t('complaints.fields.internalNote')}</Text>
-              <Text style={styles.switchHint}>
-                {internalNote
-                  ? t('complaints.hints.internalNoteOn')
-                  : t('complaints.hints.internalNoteOff')}
-              </Text>
-            </View>
-            <Switch
-              value={internalNote}
-              onValueChange={setInternalNote}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor={colors.white}
-            />
+        {complaint.resolutionSummary ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t('complaints.fields.resolution')}</Text>
+            <Text style={styles.body}>{complaint.resolutionSummary}</Text>
           </View>
         ) : null}
+
+        {complaint.attachments && complaint.attachments.length > 0 ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t('complaints.fields.photos')}</Text>
+            <View style={styles.photoRow}>
+              {complaint.attachments.map(att => (
+                <Image key={att.attachmentId} source={{ uri: att.storageUrl }} style={styles.thumb} />
+              ))}
+            </View>
+          </View>
+        ) : null}
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t('complaints.timeline')}</Text>
+          {(complaint.timeline ?? []).map(event => (
+            <View key={event.eventId} style={styles.timelineItem}>
+              <Text style={styles.timelineType}>
+                {t(`complaints.timelineEvent.${event.eventType}`)}
+              </Text>
+              {event.remarks ? <Text style={styles.meta}>{event.remarks}</Text> : null}
+              <Text style={styles.meta}>{formatComplaintDateTime(event.performedAt)}</Text>
+            </View>
+          ))}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t('complaints.comments')}</Text>
+          {(complaint.comments ?? []).map(c => (
+            <View key={c.commentId} style={styles.comment}>
+              <Text style={styles.commentAuthor}>
+                {c.authorName ?? t('complaints.operator')}
+                {c.internal ? ` · ${t('complaints.internal')}` : ''}
+              </Text>
+              <Text style={styles.body}>{c.body}</Text>
+              <Text style={styles.meta}>{formatComplaintDateTime(c.createdAt)}</Text>
+            </View>
+          ))}
+          <FormInput
+            label={t('complaints.fields.comment')}
+            value={comment}
+            onChangeText={setComment}
+            multiline
+          />
+          {manage ? (
+            <View style={styles.switchRow}>
+              <View style={styles.switchText}>
+                <Text style={styles.switchLabel}>{t('complaints.fields.internalNote')}</Text>
+                <Text style={styles.switchHint}>
+                  {internalNote
+                    ? t('complaints.hints.internalNoteOn')
+                    : t('complaints.hints.internalNoteOff')}
+                </Text>
+              </View>
+              <Switch
+                value={internalNote}
+                onValueChange={setInternalNote}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={colors.white}
+              />
+            </View>
+          ) : null}
+          <Button
+            label={t('complaints.actions.addComment')}
+            loading={busy}
+            disabled={busy || !comment.trim()}
+            onPress={() =>
+              runAction(async () => {
+                const updated = await complaintsApi.addComment(spaceId, complaintId, {
+                  body: comment.trim(),
+                  internal: manage && internalNote,
+                });
+                setComplaint(updated);
+                setComment('');
+              }, 'complaints.commentAdded')
+            }
+          />
+        </View>
+
         <Button
-          label={t('complaints.actions.addComment')}
-          loading={busy}
-          disabled={busy || !comment.trim()}
+          label={t('complaints.actions.addPhoto')}
+          variant="secondary"
+          disabled={busy}
           onPress={() =>
             runAction(async () => {
-              const updated = await complaintsApi.addComment(spaceId, complaintId, {
-                body: comment.trim(),
-                internal: manage && internalNote,
+              const image = await pickPaymentProofImage();
+              if (!image) {
+                return;
+              }
+              const updated = await complaintsApi.addAttachment(spaceId, complaintId, {
+                imageBase64: image,
               });
               setComplaint(updated);
-              setComment('');
-            }, 'complaints.commentAdded')
+            }, 'complaints.updated')
           }
         />
-      </View>
+      </ScrollView>
 
-      {manage ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('complaints.operatorActions')}</Text>
-          <View style={styles.actions}>
+      {hasStickyActions ? (
+        <StickyFormActions>
+          <View style={styles.stickyStack}>
             {complaint.status === 'OPEN' ? (
               <Button
                 label={t('complaints.actions.start')}
@@ -230,7 +270,7 @@ export function ComplaintDetailScreen() {
                 disabled={busy}
               />
             ) : null}
-            {complaint.status === 'OPEN' || complaint.status === 'IN_PROGRESS' ? (
+            {showResolveStack ? (
               <>
                 <FormInput
                   label={t('complaints.fields.resolution')}
@@ -268,48 +308,29 @@ export function ComplaintDetailScreen() {
                 onPress={() => updateStatus('CLOSED')}
               />
             ) : null}
+            {complaint.canReopen ? (
+              <Button
+                label={t('complaints.actions.reopen')}
+                variant="secondary"
+                disabled={busy}
+                onPress={() =>
+                  runAction(async () => {
+                    const updated = await complaintsApi.reopen(spaceId, complaintId);
+                    setComplaint(updated);
+                  }, 'complaints.reopened')
+                }
+              />
+            ) : null}
           </View>
-        </View>
+        </StickyFormActions>
       ) : null}
-
-      {complaint.canReopen ? (
-        <Button
-          label={t('complaints.actions.reopen')}
-          variant="secondary"
-          disabled={busy}
-          onPress={() =>
-            runAction(async () => {
-              const updated = await complaintsApi.reopen(spaceId, complaintId);
-              setComplaint(updated);
-            }, 'complaints.reopened')
-          }
-        />
-      ) : null}
-
-      <Button
-        label={t('complaints.actions.addPhoto')}
-        variant="secondary"
-        disabled={busy}
-        onPress={() =>
-          runAction(async () => {
-            const image = await pickPaymentProofImage();
-            if (!image) {
-              return;
-            }
-            const updated = await complaintsApi.addAttachment(spaceId, complaintId, {
-              imageBase64: image,
-            });
-            setComplaint(updated);
-          }, 'complaints.updated')
-        }
-      />
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.lg, gap: spacing.sm, paddingBottom: spacing.xxl },
+  content: { padding: spacing.lg, gap: spacing.sm, paddingBottom: spacing.xl },
   pad: { flex: 1, padding: spacing.lg, backgroundColor: colors.background },
   title: { ...typography.h2 },
   badgeRow: {
@@ -354,6 +375,6 @@ const styles = StyleSheet.create({
   },
   photoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   thumb: { width: 88, height: 88, borderRadius: radius.sm },
-  actions: { gap: spacing.sm },
+  stickyStack: { gap: spacing.sm },
   error: { ...typography.body, color: '#B91C1C' },
 });

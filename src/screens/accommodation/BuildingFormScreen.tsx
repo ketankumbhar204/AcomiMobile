@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Text,
   TouchableWithoutFeedback,
+  View,
 } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type {
@@ -17,7 +18,8 @@ import { useTranslation } from 'react-i18next';
 import { accommodationApi } from '../../api/accommodationApi';
 import type { PropertyLayoutMode, SpaceType } from '../../api/types';
 import { PropertyLayoutModePicker } from '../../components/accommodation';
-import { Button, FormInput, HeaderBackButton } from '../../components/ui';
+import { FormInput, HeaderBackButton } from '../../components/ui';
+import { StickyFormActions } from '../../components/progressive';
 import type { MainStackParamList } from '../../navigation/types';
 import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
@@ -123,39 +125,45 @@ export function BuildingFormScreen() {
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <FormInput
-            label={t('accommodation.fields.name')}
-            value={name}
-            onChangeText={setName}
-            placeholder={t('accommodation.buildings.namePlaceholder')}
-            error={nameError}
-          />
-          <FormInput
-            label={t('accommodation.fields.code')}
-            value={code}
-            onChangeText={setCode}
-            placeholder={t('accommodation.buildings.codePlaceholder')}
-          />
-          {spaceType && isLayoutModeSelectable(spaceType) ? (
-            <PropertyLayoutModePicker
-              value={layoutMode}
-              onChange={setLayoutMode}
-              options={layoutModeOptions}
+        <View style={styles.flex}>
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled">
+            <FormInput
+              label={t('accommodation.fields.name')}
+              value={name}
+              onChangeText={setName}
+              placeholder={t('accommodation.buildings.namePlaceholder')}
+              error={nameError}
             />
-          ) : spaceType ? (
-            <Text style={styles.fixedLayout}>
-              {t('accommodation.layoutMode.label')}: {t(getLayoutModeLabelKey(layoutMode))}
-            </Text>
-          ) : null}
-          {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
-          <Button
-            label={t('common.save')}
-            onPress={handleSubmit}
-            loading={submitting}
-            style={styles.submit}
+            <FormInput
+              label={t('accommodation.fields.code')}
+              value={code}
+              onChangeText={setCode}
+              placeholder={t('accommodation.buildings.codePlaceholder')}
+            />
+            {spaceType && isLayoutModeSelectable(spaceType) ? (
+              <PropertyLayoutModePicker
+                value={layoutMode}
+                onChange={setLayoutMode}
+                options={layoutModeOptions}
+              />
+            ) : spaceType ? (
+              <Text style={styles.fixedLayout}>
+                {t('accommodation.layoutMode.label')}: {t(getLayoutModeLabelKey(layoutMode))}
+              </Text>
+            ) : null}
+            {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
+          </ScrollView>
+          <StickyFormActions
+            primary={{
+              label: t('common.save'),
+              onPress: handleSubmit,
+              loading: submitting,
+            }}
           />
-        </ScrollView>
+        </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
@@ -163,12 +171,12 @@ export function BuildingFormScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.xxl, paddingBottom: spacing.section },
+  scroll: { flex: 1 },
+  content: { padding: spacing.xxl, paddingBottom: spacing.xl },
   fixedLayout: {
     ...typography.body,
     color: colors.textSecondary,
     marginBottom: spacing.lg,
   },
   errorText: { ...typography.body, color: '#DC2626', marginBottom: spacing.md },
-  submit: { marginTop: spacing.sm },
 });

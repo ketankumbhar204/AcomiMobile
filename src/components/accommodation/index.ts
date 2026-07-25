@@ -43,6 +43,7 @@ export { AccommodationContextTrail } from './AccommodationContextTrail';
 export { AccommodationEntityRow } from './AccommodationEntityRow';
 export { HeaderMenuSlot } from './HeaderMenuSlot';
 export { ParentSummaryCard } from './ParentSummaryCard';
+export { PricingAfterCreateHint } from './PricingAfterCreateHint';
 export { DuplicateBuildingModal } from './DuplicateBuildingModal';
 export { DuplicateFloorModal } from './DuplicateFloorModal';
 export { DuplicateRoomModal } from './DuplicateRoomModal';

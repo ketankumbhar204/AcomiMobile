@@ -31,6 +31,7 @@ import { colors, spacing, typography } from '../../theme';
 
 type MenuLibraryScreenProps = {
   spaceId: UUID;
+  initialTab?: MenuLibraryTab;
 };
 
 type MenuLibraryNav = CompositeNavigationProp<
@@ -40,7 +41,7 @@ type MenuLibraryNav = CompositeNavigationProp<
 
 type InlineEditor = 'category' | 'item-add' | null;
 
-export function MenuLibraryScreen({ spaceId }: MenuLibraryScreenProps) {
+export function MenuLibraryScreen({ spaceId, initialTab }: MenuLibraryScreenProps) {
   const { t } = useTranslation();
   const navigation = useNavigation<MenuLibraryNav>();
   const { navigate: navigateMain } = useMainStackNavigation();
@@ -71,8 +72,24 @@ export function MenuLibraryScreen({ spaceId }: MenuLibraryScreenProps) {
 
   const [inlineEditor, setInlineEditor] = useState<InlineEditor>(null);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<MenuLibraryTab>('items');
+  const [activeTab, setActiveTab] = useState<MenuLibraryTab>(() => {
+    if (initialTab === 'extras' && !mealPricing.requiresMealPrices) {
+      return 'items';
+    }
+    return initialTab ?? 'items';
+  });
   const [configureExtrasOpen, setConfigureExtrasOpen] = useState(false);
+
+  useEffect(() => {
+    if (!initialTab) {
+      return;
+    }
+    if (initialTab === 'extras' && !showExtrasTab) {
+      setActiveTab('items');
+      return;
+    }
+    setActiveTab(initialTab);
+  }, [initialTab, showExtrasTab]);
 
   const extrasSelectedCategoryId = useMemo(() => {
     if (extraCategories.length === 0) {

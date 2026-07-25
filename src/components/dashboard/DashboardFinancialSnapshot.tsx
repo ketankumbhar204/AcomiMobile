@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import {
   Clock,
@@ -8,7 +8,7 @@ import {
   Wallet,
 } from 'lucide-react-native';
 import type { DashboardFinancialSummary } from '../../api/types';
-import { colors, spacing } from '../../theme';
+import { colors, spacing, typography } from '../../theme';
 import { formatComboPrice } from '../../utils/comboPrice';
 import { DashboardSectionTitle } from './DashboardSectionTitle';
 import { DashboardStatCard } from './shared/DashboardStatCard';
@@ -19,6 +19,8 @@ type DashboardFinancialSnapshotProps = {
   title?: string;
   /** When true, always render This month cards (show —) even if all amounts are null. */
   alwaysShow?: boolean;
+  /** Soft empty-state hint under the section title (e.g. Mess setup). */
+  emptyHint?: string;
   onExpectedPress?: () => void;
   onCollectedPress?: () => void;
   onUnderReviewPress?: () => void;
@@ -32,11 +34,28 @@ const ACCENT = {
   pending: '#D97706',
 } as const;
 
+/** Dashboard money display: never show "—" — null/zero → ₹0.0 */
+function formatMoneyOrZero(
+  value: number | null | undefined,
+  currencyCode?: string | null,
+): string {
+  const formatted = formatComboPrice(value ?? 0, currencyCode);
+  if (formatted) {
+    return formatted;
+  }
+  const code = (currencyCode ?? 'INR').toUpperCase();
+  if (code === 'INR') {
+    return '₹0.0';
+  }
+  return `${code} 0.0`;
+}
+
 export function DashboardFinancialSnapshot({
   loading,
   financial,
   title,
   alwaysShow = false,
+  emptyHint,
   onExpectedPress,
   onCollectedPress,
   onUnderReviewPress,
@@ -68,31 +87,33 @@ export function DashboardFinancialSnapshot({
     return null;
   }
 
-  const expected =
-    formatComboPrice(financial?.expectedCharges ?? null, currencyCode) ?? '—';
-  const collected = formatComboPrice(financial?.collected ?? null, currencyCode) ?? '—';
-  const underReview = formatComboPrice(financial?.underReview ?? null, currencyCode) ?? '—';
-  const pending = formatComboPrice(financial?.pending ?? null, currencyCode) ?? '—';
+  const expected = formatMoneyOrZero(financial?.expectedCharges, currencyCode);
+  const collected = formatMoneyOrZero(financial?.collected, currencyCode);
+  const underReview = formatMoneyOrZero(financial?.underReview, currencyCode);
+  const pending = formatMoneyOrZero(financial?.pending, currencyCode);
 
   const balanceSold =
     prepaid?.unit === 'MEALS'
       ? t('dashboard.financial.mealsCount', { count: prepaid.balanceSold ?? 0 })
-      : formatComboPrice(prepaid?.balanceSold ?? null, prepaid?.currencyCode ?? currencyCode) ??
-        '—';
+      : formatMoneyOrZero(prepaid?.balanceSold, prepaid?.currencyCode ?? currencyCode);
   const balanceConsumed =
     prepaid?.unit === 'MEALS'
       ? t('dashboard.financial.mealsCount', { count: prepaid.balanceConsumed ?? 0 })
-      : formatComboPrice(prepaid?.balanceConsumed ?? null, prepaid?.currencyCode ?? currencyCode) ??
-        '—';
+      : formatMoneyOrZero(prepaid?.balanceConsumed, prepaid?.currencyCode ?? currencyCode);
   const balanceRemaining =
     prepaid?.unit === 'MEALS'
       ? t('dashboard.financial.mealsCount', { count: prepaid.balanceRemaining ?? 0 })
-      : formatComboPrice(prepaid?.balanceRemaining ?? null, prepaid?.currencyCode ?? currencyCode) ??
-        '—';
+      : formatMoneyOrZero(prepaid?.balanceRemaining, prepaid?.currencyCode ?? currencyCode);
 
   return (
     <View style={styles.wrap}>
-      <DashboardSectionTitle title={title ?? t('dashboard.financial.title')} />
+      <DashboardSectionTitle
+        title={title ?? t('dashboard.financial.title')}
+        subtitle={title ? undefined : t('dashboard.financial.period')}
+      />
+      {emptyHint && !loading ? (
+        <Text style={styles.emptyHint}>{emptyHint}</Text>
+      ) : null}
       {loading ? (
         <ActivityIndicator color={colors.primary} style={styles.loader} />
       ) : showPrepaidCards && !showPayPerMealCards ? (
@@ -166,8 +187,14 @@ const styles = StyleSheet.create({
   wrap: {
     marginBottom: spacing.lg,
   },
+  emptyHint: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+    marginTop: -spacing.xs,
+  },
   loader: {
-    marginVertical: spacing.md,
+    marginVertical: spacing.sm,
   },
   row: {
     flexDirection: 'row',

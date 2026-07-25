@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Text,
   TouchableWithoutFeedback,
+  View,
 } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type {
@@ -16,8 +17,12 @@ import type {
 import { useTranslation } from 'react-i18next';
 import type { AccommodationStatus } from '../../api/types';
 import { accommodationApi } from '../../api/accommodationApi';
-import { AccommodationStatusPicker } from '../../components/accommodation';
-import { Button, FormInput, HeaderBackButton } from '../../components/ui';
+import {
+  AccommodationStatusPicker,
+  PricingAfterCreateHint,
+} from '../../components/accommodation';
+import { FormInput, HeaderBackButton } from '../../components/ui';
+import { StickyFormActions } from '../../components/progressive';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, spacing, typography } from '../../theme';
@@ -124,36 +129,48 @@ export function UnitFormScreen() {
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <FormInput label={t('accommodation.fields.name')} value={name} onChangeText={setName} error={nameError} />
-          <FormInput
-            label={t('accommodation.units.unitNumberLabel')}
-            value={unitNumber}
-            onChangeText={setUnitNumber}
-            error={unitNumberError}
+        <View style={styles.flex}>
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled">
+            {!isEdit ? <PricingAfterCreateHint entityKey="unit" /> : null}
+            <FormInput label={t('accommodation.fields.name')} value={name} onChangeText={setName} error={nameError} />
+            <FormInput
+              label={t('accommodation.units.unitNumberLabel')}
+              value={unitNumber}
+              onChangeText={setUnitNumber}
+              error={unitNumberError}
+            />
+            {isEdit ? (
+              <AccommodationStatusPicker value={status} onChange={setStatus} error={statusError} />
+            ) : null}
+            {isEdit ? (
+              <>
+                <FormInput
+                  label={t('accommodation.fields.defaultRent')}
+                  value={defaultRent}
+                  onChangeText={setDefaultRent}
+                  keyboardType="numeric"
+                />
+                <FormInput
+                  label={t('accommodation.fields.defaultDeposit')}
+                  value={defaultDeposit}
+                  onChangeText={setDefaultDeposit}
+                  keyboardType="numeric"
+                />
+              </>
+            ) : null}
+            {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
+          </ScrollView>
+          <StickyFormActions
+            primary={{
+              label: t('common.save'),
+              onPress: handleSubmit,
+              loading: submitting,
+            }}
           />
-          {isEdit ? (
-            <AccommodationStatusPicker value={status} onChange={setStatus} error={statusError} />
-          ) : null}
-          {isEdit ? (
-            <>
-              <FormInput
-                label={t('accommodation.fields.defaultRent')}
-                value={defaultRent}
-                onChangeText={setDefaultRent}
-                keyboardType="numeric"
-              />
-              <FormInput
-                label={t('accommodation.fields.defaultDeposit')}
-                value={defaultDeposit}
-                onChangeText={setDefaultDeposit}
-                keyboardType="numeric"
-              />
-            </>
-          ) : null}
-          {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
-          <Button label={t('common.save')} onPress={handleSubmit} loading={submitting} />
-        </ScrollView>
+        </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
@@ -161,6 +178,7 @@ export function UnitFormScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.xxl, paddingBottom: spacing.section },
+  scroll: { flex: 1 },
+  content: { padding: spacing.xxl, paddingBottom: spacing.xl },
   errorText: { ...typography.body, color: '#DC2626', marginBottom: spacing.md },
 });

@@ -215,6 +215,7 @@ export function useOccupancyWizardSubmit(spaceId: string) {
         onSuccess();
       } catch (err) {
         showToast(getOccupancyErrorMessage(err));
+        throw err;
       }
     },
     [allocate, moveIn, reserve, showToast, t, transfer, vacate],

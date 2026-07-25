@@ -155,6 +155,17 @@ export function formatMenuDate(isoDate: string, locale: string): string {
   });
 }
 
+/** Short weekday date for dense nav rows, e.g. "Sat Jul 25". */
+export function formatMenuDateShort(isoDate: string, locale: string): string {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.toLocaleDateString(locale, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
 /** Compact date for sheet headers, e.g. "19 Jun 2026". */
 export function formatMenuDateCompact(isoDate: string, locale: string): string {
   const [year, month, day] = isoDate.split('-').map(Number);

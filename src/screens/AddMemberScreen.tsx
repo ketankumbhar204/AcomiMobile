@@ -1,7 +1,9 @@
-import React, { useEffect, useLayoutEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   Keyboard,
   KeyboardAvoidingView,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Platform,
   Pressable,
   ScrollView,
@@ -20,28 +22,50 @@ import { useTranslation } from 'react-i18next';
 import { enrollMemberInFullMeals } from '../api/mealsApi';
 import { mealBalanceApi } from '../api/mealBalanceApi';
 import { mealBillingApi } from '../api/mealBillingApi';
-import type { MealBillingType, MemberGender, MembershipRole, PrepaidBalanceUnit } from '../api/types';
+import { memberApi } from '../api/memberApi';
+import type {
+  MealBillingType,
+  MemberGender,
+  MembershipRole,
+  PrepaidBalanceUnit,
+  UUID,
+} from '../api/types';
 import {
   MemberMealBillingTypeSection,
   type MemberMealBillingSelection,
 } from '../components/member/MemberMealBillingTypeSection';
 import { MemberSubscriptionSetupFields } from '../components/member/MemberSubscriptionSetupFields';
+import {
+  ProgressiveWorkflowFooter,
+  progressiveSectionHighlightStyle,
+} from '../components/progressive';
 import { Button, FormInput, GenderPicker, HeaderBackButton, RolePicker } from '../components/ui';
+import {
+  MemberPickerStep,
+  type MemberPickerMode,
+} from '../features/occupancy/OccupancyWizard/steps/MemberPickerStep';
+import { useProgressiveSectionReview } from '../hooks/useProgressiveSectionReview';
+import {
+  useResidentImportSearch,
+  type ResidentPickerItem,
+} from '../hooks/useResidentImportSearch';
 import type { MainStackParamList } from '../navigation/types';
 import { useMemberStore } from '../store/memberStore';
 import { useSpaceStore } from '../store/spaceStore';
 import { useToastStore } from '../store/toastStore';
-import { colors, spacing, typography } from '../theme';
+import { colors, radius, spacing, typography } from '../theme';
 import { invalidateDashboardQueries } from '../utils/dashboardQueryCache';
 import { defaultRoleForSpaceType } from '../utils/memberRoles';
 import { isMemberGenderRequired } from '../utils/memberGender';
 import { isValidIndianMobile, normalizeIndianMobileDigits } from '../utils/indianMobile';
+import { getMembershipErrorMessage } from '../utils/membershipErrors';
 import { findMySpaceEntry } from '../utils/spacePermissions';
 import {
   buildSubscriptionPurchasePayload,
   isSubscriptionBilling,
 } from '../utils/memberMealBilling';
 import { defaultSubscriptionValidTillIso, parseValidTillInput } from '../utils/subscriptionLifecycle';
+import { resolveProgressivePhase } from '../utils/progressivePhase';
 
 type AddMemberNav = NativeStackNavigationProp<MainStackParamList, 'AddMember'>;
 type AddMemberRoute = NativeStackScreenProps<MainStackParamList, 'AddMember'>['route'];
@@ -53,6 +77,7 @@ type FieldErrors = {
   gender?: string;
   subscriptionMealQty?: string;
   subscriptionPrice?: string;
+  import?: string;
 };
 
 export function AddMemberScreen() {
@@ -60,12 +85,21 @@ export function AddMemberScreen() {
   const navigation = useNavigation<AddMemberNav>();
   const route = useRoute<AddMemberRoute>();
   const { spaceId } = route.params;
+  const initialMode = route.params.initialMode;
   const mySpaces = useSpaceStore(state => state.mySpaces);
   const spaceType = findMySpaceEntry(mySpaces, spaceId)?.spaceType;
   const addMember = useMemberStore(state => state.addMember);
   const loading = useMemberStore(state => state.loading);
   const storeError = useMemberStore(state => state.error);
   const showToast = useToastStore(state => state.showToast);
+
+  const isMess = spaceType === 'MESS';
+  const [pickerMode, setPickerMode] = useState<MemberPickerMode>(() =>
+    initialMode === 'new' ? 'new' : 'search',
+  );
+  const [memberQuery, setMemberQuery] = useState('');
+  const [selectedImport, setSelectedImport] = useState<ResidentPickerItem | null>(null);
+  const [importing, setImporting] = useState(false);
 
   const [fullName, setFullName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
@@ -84,8 +118,15 @@ export function AddMemberScreen() {
   const [subscriptionValidTill, setSubscriptionValidTill] = useState(defaultSubscriptionValidTillIso());
 
   const genderRequired = isMemberGenderRequired(spaceType);
+  const showCustomerReuse = isMess && role === 'CUSTOMER';
+  const usingImport = showCustomerReuse && pickerMode === 'search' && selectedImport != null;
+  const showCreateForm = !showCustomerReuse || pickerMode === 'new';
 
-  const showMealAccess = spaceType === 'MESS' && role === 'CUSTOMER';
+  const importSearch = useResidentImportSearch(spaceId, memberQuery, {
+    enabled: showCustomerReuse && pickerMode === 'search',
+  });
+
+  const showMealAccess = isMess && role === 'CUSTOMER';
   const showMealBilling = showMealAccess;
 
   useEffect(() => {
@@ -101,15 +142,59 @@ export function AddMemberScreen() {
   const showSubscriptionSetup =
     showMealBilling && isSubscriptionBilling(mealBillingSelection, spaceDefaultBilling);
 
+  const messProgressiveEnabled = isMess && (showMealBilling || showMealAccess);
+  const scrollRef = useRef<ScrollView>(null);
+
+  const {
+    reviewed: mealsReviewed,
+    highlighted: mealsHighlighted,
+    onSectionLayout: onMealsLayout,
+    onScroll: onMealsScroll,
+    onScrollBeginDrag: onMealsScrollBeginDrag,
+    continueToSection: continueToMeals,
+    clearReviewed: clearMealsReviewed,
+    markReviewed: markMealsReviewed,
+  } = useProgressiveSectionReview({
+    enabled: messProgressiveEnabled,
+  });
+
+  useEffect(() => {
+    if (!messProgressiveEnabled) {
+      return;
+    }
+    clearMealsReviewed();
+  }, [clearMealsReviewed, messProgressiveEnabled, role]);
+
+  const progressivePhase = resolveProgressivePhase({
+    enabled: messProgressiveEnabled,
+    prerequisiteMet: true,
+    sectionReviewed: mealsReviewed,
+  });
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, layoutMeasurement } = event.nativeEvent;
+    onMealsScroll(contentOffset.y, layoutMeasurement.height);
+  };
+
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: t('navigation.addMember'),
+      title: isMess ? t('membership.add.headingMess') : t('navigation.addMember'),
       headerLeft: () => <HeaderBackButton />,
       headerBackVisible: false,
     });
-  }, [navigation, t, i18n.language]);
+  }, [isMess, navigation, t, i18n.language]);
 
-  function validate(): boolean {
+  useEffect(() => {
+    if (!showCustomerReuse) {
+      setPickerMode('new');
+      setSelectedImport(null);
+      setMemberQuery('');
+    } else if (role === 'CUSTOMER') {
+      setPickerMode('search');
+    }
+  }, [role, showCustomerReuse]);
+
+  function validateCreate(): boolean {
     const errors: FieldErrors = {};
     const digits = normalizeIndianMobileDigits(mobileNumber);
 
@@ -150,14 +235,95 @@ export function AddMemberScreen() {
     return Object.keys(errors).length === 0;
   }
 
+  function validateImport(): boolean {
+    const errors: FieldErrors = {};
+    if (!selectedImport) {
+      errors.import = t('membership.add.reuseRequired');
+    }
+    if (showSubscriptionSetup) {
+      const purchase = buildSubscriptionPurchasePayload(
+        subscriptionMealQty,
+        subscriptionPrice,
+        prepaidBalanceUnit,
+      );
+      if (!purchase) {
+        if (prepaidBalanceUnit === 'MEALS') {
+          errors.subscriptionMealQty = t('members.subscriptionSetup.mealQtyRequired');
+        } else {
+          errors.subscriptionPrice = t('members.subscriptionSetup.priceRequired');
+        }
+      }
+    }
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  }
+
+  async function finishAfterMemberCreated(memberId: UUID) {
+    if (showMealAccess && mealAccessEnabled) {
+      try {
+        await enrollMemberInFullMeals(spaceId, memberId);
+      } catch {
+        showToast(t('meals.errors.mealAccessFailed'));
+      }
+    }
+    if (showSubscriptionSetup) {
+      const purchase = buildSubscriptionPurchasePayload(
+        subscriptionMealQty,
+        subscriptionPrice,
+        prepaidBalanceUnit,
+      );
+      if (purchase) {
+        try {
+          await mealBalanceApi.recordPurchase(spaceId, memberId, {
+            ...purchase,
+            validTill:
+              parseValidTillInput(subscriptionValidTill) ?? defaultSubscriptionValidTillIso(),
+          });
+        } catch {
+          showToast(t('meals.errors.saveFailed'));
+        }
+      }
+    }
+    showToast(
+      usingImport
+        ? t('membership.add.importSuccessToast')
+        : t('membership.add.successToast'),
+    );
+    invalidateDashboardQueries();
+    navigation.goBack();
+  }
+
   async function handleSave() {
     Keyboard.dismiss();
 
-    if (!validate()) {
+    if (usingImport && selectedImport) {
+      if (!validateImport()) {
+        return;
+      }
+      setImporting(true);
+      try {
+        let memberId = selectedImport.memberId;
+        if (selectedImport.needsImport) {
+          const imported = await memberApi.importMember(spaceId, {
+            sourceMemberId: selectedImport.memberId,
+          });
+          memberId = imported.memberId;
+        }
+        await finishAfterMemberCreated(memberId);
+      } catch (err) {
+        setFieldErrors({
+          import: getMembershipErrorMessage(err, 'membership.add.importFailed'),
+        });
+      } finally {
+        setImporting(false);
+      }
       return;
     }
 
-    console.log('[AddMember] submit');
+    if (!validateCreate()) {
+      return;
+    }
+
     const member = await addMember({
       fullName: fullName.trim(),
       mobileNumber: mobileNumber.trim(),
@@ -168,34 +334,7 @@ export function AddMemberScreen() {
     });
 
     if (member) {
-      console.log('[AddMember] success', member.memberId);
-      if (showMealAccess && mealAccessEnabled) {
-        try {
-          await enrollMemberInFullMeals(spaceId, member.memberId);
-        } catch {
-          showToast(t('meals.errors.mealAccessFailed'));
-        }
-      }
-      if (showSubscriptionSetup) {
-        const purchase = buildSubscriptionPurchasePayload(
-          subscriptionMealQty,
-          subscriptionPrice,
-          prepaidBalanceUnit,
-        );
-        if (purchase) {
-          try {
-            await mealBalanceApi.recordPurchase(spaceId, member.memberId, {
-            ...purchase,
-            validTill: parseValidTillInput(subscriptionValidTill) ?? defaultSubscriptionValidTillIso(),
-          });
-          } catch {
-            showToast(t('meals.errors.saveFailed'));
-          }
-        }
-      }
-      showToast(t('membership.add.successToast'));
-      invalidateDashboardQueries();
-      navigation.goBack();
+      await finishAfterMemberCreated(member.memberId);
       return;
     }
 
@@ -205,153 +344,312 @@ export function AddMemberScreen() {
     }
   }
 
+  const busy = loading || importing;
+  const saveLabel = usingImport
+    ? t('membership.add.saveImport')
+    : isMess
+      ? t('membership.add.saveMess')
+      : t('membership.add.save');
+  const saveDisabled = busy || (showCustomerReuse && pickerMode === 'search' && !selectedImport);
+
   return (
     <KeyboardAvoidingView
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}>
-          <Text style={styles.eyebrow}>{t('membership.add.eyebrow')}</Text>
-          <Text style={styles.heading}>{t('membership.add.heading')}</Text>
-          <Text style={styles.subheading}>{t('membership.add.subheading')}</Text>
-          <View style={styles.inviteInsteadRow}>
-            <Text style={styles.inviteInsteadText}>
-              {t('membership.add.inviteInstead')}{' '}
+        <View style={styles.flex}>
+          <ScrollView
+            ref={scrollRef}
+            style={styles.scroll}
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            scrollEventThrottle={16}
+            onScrollBeginDrag={messProgressiveEnabled ? onMealsScrollBeginDrag : undefined}
+            onScroll={messProgressiveEnabled ? handleScroll : undefined}>
+            <Text style={styles.eyebrow}>{t('membership.add.eyebrow')}</Text>
+            <Text style={styles.heading}>
+              {isMess ? t('membership.add.headingMess') : t('membership.add.heading')}
             </Text>
-            <Pressable
-              onPress={() => navigation.navigate('InviteMembers', { spaceId })}
-              hitSlop={8}>
-              <Text style={styles.inviteInsteadLink}>
-                {t('membership.add.inviteInsteadAction')}
+            <Text style={styles.subheading}>
+              {isMess ? t('membership.add.subheadingMess') : t('membership.add.subheading')}
+            </Text>
+            <View style={styles.inviteInsteadRow}>
+              <Text style={styles.inviteInsteadText}>
+                {t('membership.add.inviteInstead')}{' '}
               </Text>
-            </Pressable>
-          </View>
-
-          {storeError ? (
-            <View style={styles.errorBanner}>
-              <Text style={styles.errorBannerText}>{storeError}</Text>
+              <Pressable
+                onPress={() => navigation.navigate('InviteMembers', { spaceId })}
+                hitSlop={8}>
+                <Text style={styles.inviteInsteadLink}>
+                  {t('membership.add.inviteInsteadAction')}
+                </Text>
+              </Pressable>
             </View>
-          ) : null}
 
-          <FormInput
-            label={t('membership.add.fullNameLabel')}
-            placeholder={t('membership.add.fullNamePlaceholder')}
-            value={fullName}
-            onChangeText={text => {
-              setFullName(text);
-              if (fieldErrors.fullName) {
-                setFieldErrors(prev => ({ ...prev, fullName: undefined }));
-              }
-            }}
-            error={fieldErrors.fullName}
-            autoCapitalize="words"
-            returnKeyType="next"
-          />
-
-          <FormInput
-            label={t('membership.invite.mobileLabel')}
-            placeholder={t('membership.invite.mobilePlaceholder')}
-            value={mobileNumber}
-            onChangeText={text => {
-              setMobileNumber(text);
-              if (fieldErrors.mobileNumber) {
-                setFieldErrors(prev => ({ ...prev, mobileNumber: undefined }));
-              }
-            }}
-            error={fieldErrors.mobileNumber}
-            keyboardType="phone-pad"
-            returnKeyType="done"
-            maxLength={15}
-          />
-
-          <RolePicker
-            value={role}
-            spaceType={spaceType}
-            onChange={selected => {
-              setRole(selected);
-              if (fieldErrors.role) {
-                setFieldErrors(prev => ({ ...prev, role: undefined }));
-              }
-            }}
-            error={fieldErrors.role}
-          />
-
-          {showMealBilling ? (
-            <MemberMealBillingTypeSection
-              spaceDefault={spaceDefaultBilling}
-              value={mealBillingSelection}
-              onChange={setMealBillingSelection}
-              disabled={loading}
-            />
-          ) : null}
-
-          {showSubscriptionSetup ? (
-            <MemberSubscriptionSetupFields
-              unit={prepaidBalanceUnit}
-              mealQty={subscriptionMealQty}
-              subscriptionPrice={subscriptionPrice}
-              validTill={subscriptionValidTill}
-              onMealQtyChange={value => {
-                setSubscriptionMealQty(value);
-                if (fieldErrors.subscriptionMealQty) {
-                  setFieldErrors(prev => ({ ...prev, subscriptionMealQty: undefined }));
-                }
-              }}
-              onSubscriptionPriceChange={value => {
-                setSubscriptionPrice(value);
-                if (fieldErrors.subscriptionPrice) {
-                  setFieldErrors(prev => ({ ...prev, subscriptionPrice: undefined }));
-                }
-              }}
-              onValidTillChange={setSubscriptionValidTill}
-              mealQtyError={fieldErrors.subscriptionMealQty}
-              subscriptionPriceError={fieldErrors.subscriptionPrice}
-              useSubscriptionLabels
-            />
-          ) : null}
-
-          <GenderPicker
-            value={gender}
-            onChange={selected => {
-              setGender(selected);
-              if (fieldErrors.gender) {
-                setFieldErrors(prev => ({ ...prev, gender: undefined }));
-              }
-            }}
-            error={fieldErrors.gender}
-            required={genderRequired}
-          />
-
-          {showMealAccess ? (
-            <View style={styles.mealAccessRow}>
-              <View style={styles.mealAccessText}>
-                <Text style={styles.mealAccessLabel}>{t('meals.mealAccess.label')}</Text>
-                <Text style={styles.mealAccessHint}>{t('meals.mealAccess.addCustomerHint')}</Text>
+            {storeError ? (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorBannerText}>{storeError}</Text>
               </View>
-              <Switch value={mealAccessEnabled} onValueChange={setMealAccessEnabled} />
-            </View>
-          ) : null}
+            ) : null}
+            {fieldErrors.import ? (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorBannerText}>{fieldErrors.import}</Text>
+              </View>
+            ) : null}
 
-          <View style={styles.footer}>
-            <Button
-              label={t('membership.add.save')}
-              onPress={handleSave}
-              loading={loading}
-              disabled={loading}
+            <RolePicker
+              value={role}
+              spaceType={spaceType}
+              onChange={selected => {
+                setRole(selected);
+                setSelectedImport(null);
+                if (fieldErrors.role) {
+                  setFieldErrors(prev => ({ ...prev, role: undefined }));
+                }
+              }}
+              error={fieldErrors.role}
             />
-            <Button
-              label={t('common.cancel')}
-              variant="ghost"
-              onPress={() => navigation.goBack()}
-              disabled={loading}
-              style={styles.cancelButton}
+
+            {showCustomerReuse ? (
+              <View style={styles.pickerWrap}>
+                <MemberPickerStep
+                  hideTitle
+                  allowAddNew
+                  crossSpaceReuse
+                  audience="customer"
+                  query={memberQuery}
+                  onQueryChange={setMemberQuery}
+                  members={importSearch.members}
+                  loading={importSearch.loading}
+                  error={importSearch.error}
+                  pickerMode={pickerMode}
+                  onPickerModeChange={mode => {
+                    setPickerMode(mode);
+                    setSelectedImport(null);
+                    setFieldErrors(prev => ({ ...prev, import: undefined }));
+                  }}
+                  newMemberName={fullName}
+                  newMemberMobile={mobileNumber}
+                  onNewMemberNameChange={text => {
+                    setFullName(text);
+                    if (fieldErrors.fullName) {
+                      setFieldErrors(prev => ({ ...prev, fullName: undefined }));
+                    }
+                  }}
+                  onNewMemberMobileChange={text => {
+                    setMobileNumber(text);
+                    if (fieldErrors.mobileNumber) {
+                      setFieldErrors(prev => ({ ...prev, mobileNumber: undefined }));
+                    }
+                  }}
+                  newMemberErrors={{
+                    fullName: fieldErrors.fullName,
+                    mobileNumber: fieldErrors.mobileNumber,
+                  }}
+                  creatingMember={busy}
+                  selectedMemberId={selectedImport?.memberId}
+                  onSelect={member => {
+                    setSelectedImport(member);
+                    setFieldErrors(prev => ({ ...prev, import: undefined }));
+                  }}
+                />
+              </View>
+            ) : null}
+
+            {showCreateForm && !showCustomerReuse ? (
+              <>
+                <FormInput
+                  label={t('membership.add.fullNameLabel')}
+                  placeholder={t('membership.add.fullNamePlaceholder')}
+                  value={fullName}
+                  onChangeText={text => {
+                    setFullName(text);
+                    if (fieldErrors.fullName) {
+                      setFieldErrors(prev => ({ ...prev, fullName: undefined }));
+                    }
+                  }}
+                  error={fieldErrors.fullName}
+                  autoCapitalize="words"
+                  returnKeyType="next"
+                />
+
+                <FormInput
+                  label={t('membership.invite.mobileLabel')}
+                  placeholder={t('membership.invite.mobilePlaceholder')}
+                  value={mobileNumber}
+                  onChangeText={text => {
+                    setMobileNumber(text);
+                    if (fieldErrors.mobileNumber) {
+                      setFieldErrors(prev => ({ ...prev, mobileNumber: undefined }));
+                    }
+                  }}
+                  error={fieldErrors.mobileNumber}
+                  keyboardType="phone-pad"
+                  returnKeyType="done"
+                  maxLength={15}
+                />
+              </>
+            ) : null}
+
+            {usingImport && selectedImport ? (
+              <View style={styles.selectedCard}>
+                <Text style={styles.selectedLabel}>{t('membership.add.selectedCustomer')}</Text>
+                <Text style={styles.selectedName}>{selectedImport.fullName}</Text>
+                <Text style={styles.selectedMeta}>
+                  {t('occupancyWizard.residentCard.mobile', {
+                    mobile: selectedImport.mobileNumber,
+                  })}
+                </Text>
+                {selectedImport.sourceSpaceName ? (
+                  <Text style={styles.selectedMeta}>
+                    {selectedImport.alreadyInTargetSpace
+                      ? t('occupancyWizard.residentCard.inThisSpace')
+                      : t('occupancyWizard.residentCard.previouslyIn', {
+                          space: selectedImport.sourceSpaceName,
+                        })}
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
+
+            {showCreateForm ? (
+              <GenderPicker
+                value={gender}
+                onChange={selected => {
+                  setGender(selected);
+                  if (fieldErrors.gender) {
+                    setFieldErrors(prev => ({ ...prev, gender: undefined }));
+                  }
+                }}
+                error={fieldErrors.gender}
+                required={genderRequired}
+              />
+            ) : null}
+
+            {messProgressiveEnabled ? (
+              <View
+                collapsable={false}
+                style={[
+                  styles.mealsSection,
+                  mealsHighlighted ? styles.mealsHighlight : null,
+                ]}
+                onLayout={event => {
+                  const { y, height } = event.nativeEvent.layout;
+                  onMealsLayout(y, height);
+                }}>
+                {showMealBilling ? (
+                  <MemberMealBillingTypeSection
+                    spaceDefault={spaceDefaultBilling}
+                    value={mealBillingSelection}
+                    onChange={value => {
+                      markMealsReviewed();
+                      setMealBillingSelection(value);
+                    }}
+                    disabled={busy}
+                  />
+                ) : null}
+
+                {showSubscriptionSetup ? (
+                  <MemberSubscriptionSetupFields
+                    unit={prepaidBalanceUnit}
+                    mealQty={subscriptionMealQty}
+                    subscriptionPrice={subscriptionPrice}
+                    validTill={subscriptionValidTill}
+                    onMealQtyChange={value => {
+                      markMealsReviewed();
+                      setSubscriptionMealQty(value);
+                      if (fieldErrors.subscriptionMealQty) {
+                        setFieldErrors(prev => ({ ...prev, subscriptionMealQty: undefined }));
+                      }
+                    }}
+                    onSubscriptionPriceChange={value => {
+                      markMealsReviewed();
+                      setSubscriptionPrice(value);
+                      if (fieldErrors.subscriptionPrice) {
+                        setFieldErrors(prev => ({ ...prev, subscriptionPrice: undefined }));
+                      }
+                    }}
+                    onValidTillChange={value => {
+                      markMealsReviewed();
+                      setSubscriptionValidTill(value);
+                    }}
+                    mealQtyError={fieldErrors.subscriptionMealQty}
+                    subscriptionPriceError={fieldErrors.subscriptionPrice}
+                    useSubscriptionLabels
+                  />
+                ) : null}
+
+                {showMealAccess ? (
+                  <View style={styles.mealAccessRow}>
+                    <View style={styles.mealAccessText}>
+                      <Text style={styles.mealAccessLabel}>{t('meals.mealAccess.label')}</Text>
+                      <Text style={styles.mealAccessHint}>
+                        {t('meals.mealAccess.addCustomerHint')}
+                      </Text>
+                    </View>
+                    <Switch
+                      value={mealAccessEnabled}
+                      onValueChange={value => {
+                        markMealsReviewed();
+                        setMealAccessEnabled(value);
+                      }}
+                    />
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
+
+            {!messProgressiveEnabled ? (
+              <View style={styles.footer}>
+                <Button
+                  label={saveLabel}
+                  onPress={handleSave}
+                  loading={busy}
+                  disabled={saveDisabled}
+                />
+                <Button
+                  label={t('common.cancel')}
+                  variant="ghost"
+                  onPress={() => navigation.goBack()}
+                  disabled={busy}
+                  style={styles.cancelButton}
+                />
+              </View>
+            ) : null}
+          </ScrollView>
+
+          {messProgressiveEnabled ? (
+            <ProgressiveWorkflowFooter
+              phase={progressivePhase}
+              stepLabel={t('progressiveWorkflow.stepOf', {
+                current: progressivePhase === 'continue' ? 1 : 2,
+                total: 2,
+              })}
+              progressLine={
+                progressivePhase === 'continue'
+                  ? t('progressiveWorkflow.member.progressIdentityNext')
+                  : t('progressiveWorkflow.member.progressReady')
+              }
+              continueEyebrow={t('progressiveWorkflow.nextStep')}
+              continueTitle={t('progressiveWorkflow.member.reviewMealsTitle')}
+              continueHint={t('progressiveWorkflow.member.reviewMealsHint')}
+              continueLabel={t('progressiveWorkflow.member.continueToMeals')}
+              onContinue={() => continueToMeals(scrollRef)}
+              primaryAction={{
+                label: saveLabel,
+                onPress: handleSave,
+                loading: busy,
+                disabled: saveDisabled,
+              }}
+              secondaryAction={{
+                label: t('common.cancel'),
+                onPress: () => navigation.goBack(),
+                disabled: busy,
+              }}
             />
-          </View>
-        </ScrollView>
+          ) : null}
+        </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
@@ -408,6 +706,33 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: '#DC2626',
   },
+  pickerWrap: {
+    minHeight: 320,
+    marginBottom: spacing.md,
+  },
+  selectedCard: {
+    marginBottom: spacing.md,
+    padding: spacing.md,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    backgroundColor: colors.lightGreen,
+    gap: 2,
+  },
+  selectedLabel: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  selectedName: {
+    ...typography.bodyStrong,
+    color: colors.textPrimary,
+  },
+  selectedMeta: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
   mealAccessRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -423,9 +748,18 @@ const styles = StyleSheet.create({
   mealAccessText: { flex: 1, gap: spacing.xs },
   mealAccessLabel: { ...typography.bodyStrong },
   mealAccessHint: { ...typography.caption, color: colors.muted },
+  mealsSection: {
+    marginTop: spacing.sm,
+  },
+  mealsHighlight: {
+    ...progressiveSectionHighlightStyle,
+    borderWidth: 1,
+    borderRadius: radius.card,
+    padding: spacing.sm,
+  },
   footer: {
     marginTop: spacing.xl,
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   cancelButton: {
     marginTop: spacing.xs,

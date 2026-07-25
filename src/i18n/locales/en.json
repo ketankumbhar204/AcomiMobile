@@ -1,4 +1,87 @@
 {
+  "progressiveWorkflow": {
+    "nextStep": "Next step",
+    "stepOf": "Step {{current}} of {{total}}",
+    "continueDown": "Continue ↓",
+    "occupancy": {
+      "reviewAddonsTitle": "Review deposit & amenities",
+      "reviewAddonsHint": "Optional charges, deposit, and amenities are below rent.",
+      "continueToAddons": "Continue to deposit & amenities ↓",
+      "progressRentNext": "✓ Rent set  ·  Next: Deposit & amenities",
+      "progressReady": "✓ Contract reviewed  ·  Continue"
+    },
+    "member": {
+      "reviewMealsTitle": "Review meal settings",
+      "reviewMealsHint": "Billing, subscription, and meal access are optional but easy to miss.",
+      "continueToMeals": "Continue to meal settings ↓",
+      "progressIdentityNext": "✓ Customer details  ·  Next: Meal settings",
+      "progressReady": "✓ Details reviewed  ·  Ready to save"
+    },
+    "sharePreview": {
+      "reviewMessageTitle": "Review message & recipients",
+      "reviewMessageHint": "Confirm other spaces and the share message before sending.",
+      "continueToMessage": "Continue to message ↓",
+      "progressSlotsNext": "✓ Meals selected  ·  Next: Message",
+      "progressReady": "✓ Ready to share"
+    },
+    "editSpace": {
+      "tabGeneral": "General",
+      "tabMeals": "Meals & billing",
+      "tabPolls": "Poll defaults"
+    },
+    "quickSetup": {
+      "reviewPreviewHint": "Review the structure below, then generate."
+    },
+    "createSpace": {
+      "essentialsTitle": "Essentials",
+      "amenitiesTitle": "Amenities (optional)",
+      "reviewAmenitiesTitle": "Review amenities",
+      "reviewAmenitiesHint": "Optional — skip if you will set these later.",
+      "continueToAmenities": "Continue to amenities ↓",
+      "progressEssentialsNext": "✓ Essentials  ·  Next: Amenities",
+      "progressReady": "✓ Ready to create"
+    },
+    "raiseComplaint": {
+      "detailsTitle": "Details",
+      "contextTitle": "Context",
+      "photosTitle": "Photos (optional)",
+      "reviewPhotosTitle": "Add photos (optional)",
+      "reviewPhotosHint": "Photos help operators resolve issues faster.",
+      "continueToPhotos": "Continue to photos ↓",
+      "progressDetailsNext": "✓ Details  ·  Next: Photos",
+      "progressReady": "✓ Ready to submit"
+    },
+    "subscription": {
+      "choosePlanTitle": "Choose a plan",
+      "paymentDetailsTitle": "Payment details",
+      "reviewPaymentTitle": "Review payment details",
+      "reviewPaymentHint": "Add a payment reference or proof, then submit your request.",
+      "continueToPayment": "Continue to payment details ↓",
+      "progressPlanNext": "✓ Plan selected  ·  Next: Payment details",
+      "progressReady": "✓ Ready to submit request"
+    }
+  },
+  "coachmarks": {
+    "actions": {
+      "next": "Next",
+      "gotIt": "Got it",
+      "skip": "Skip"
+    },
+    "a11y": {
+      "stepOf": "Step {{current}} of {{total}}",
+      "dismissOverlay": "Dismiss tips"
+    },
+    "accommodation": {
+      "step1": "This card always tells you the next business task to complete.",
+      "step2": "Continue your property setup here.",
+      "step3": "Start creating your property layout here."
+    },
+    "mess": {
+      "step1": "This tells you exactly what your mess needs next.",
+      "step2": "Follow this recommendation to complete your setup.",
+      "step3": "Your setup progress updates automatically."
+    }
+  },
   "common": {
     "appName": "CountIn",
     "ok": "OK",
@@ -18,6 +101,7 @@
     "edit": "Edit",
     "done": "Done",
     "saving": "Saving…",
+    "pleaseWait": "Please wait…",
     "user": "User",
     "errors": {
       "generic": "Something went wrong. Please try again.",
@@ -195,6 +279,13 @@
       "subheading": "Fill in the details below. You can update them later.",
       "nameLabel": "Space Name",
       "namePlaceholder": "e.g. Sunrise PG",
+      "namePlaceholderByType": {
+        "PG": "e.g. Sunrise PG",
+        "MESS": "e.g. Baner Mess",
+        "HOSTEL": "e.g. City Hostel",
+        "CO_LIVING": "e.g. Urban Nest",
+        "RENTAL": "e.g. Green Avenue Flats"
+      },
       "addressLabel": "Address",
       "addressPlaceholder": "e.g. Baner, Pune (optional)",
       "contactLabel": "Contact Number",
@@ -362,12 +453,76 @@
       "inviteInsteadAction": "Send invitation",
       "eyebrow": "Members",
       "heading": "Add a Member",
+      "headingMess": "Add a Customer",
       "subheading": "Create a business record directly. They do not need the CountIn app.",
+      "subheadingMess": "Choose people you've already added to another space. We'll add them to this mess without asking for their details again.",
       "fullNameLabel": "Full Name",
       "fullNamePlaceholder": "e.g. Rahul Sharma",
       "fullNameRequired": "Full name is required.",
       "save": "Add Member",
-      "successToast": "Member added successfully."
+      "saveMess": "Add Customer",
+      "saveImport": "Add",
+      "successToast": "Member added successfully.",
+      "importSuccessToast": "Customer added to this mess.",
+      "importFailed": "Could not import this customer. Please try again.",
+      "reuseRequired": "Pick someone from another space, or create a new customer.",
+      "selectedCustomer": "Selected",
+      "memberMode": {
+        "search": "From another space",
+        "addNew": "New customer"
+      },
+      "searchCustomerPlaceholder": "Search people from your other spaces",
+      "createNewHint": "Enter their name and mobile for this mess.",
+      "noReusableCustomers": "No one from your other spaces matches. Create a new customer instead.",
+      "reuseCard": {
+        "fromSpace": "From {{space}}",
+        "alreadyHere": "Already in this mess",
+        "available": "Available",
+        "currentResident": "Lives in {{space}}",
+        "typeCustomer": "Customer",
+        "typeResident": "Resident",
+        "addAction": "+ Add"
+      }
+    },
+    "addCustomersHub": {
+      "navTitle": "Add Customers",
+      "title": "Add customers to this mess",
+      "subtitle": "Add people who will receive today's menu and place meal orders.",
+      "addCardTitle": "Add customers",
+      "addCardBody": "Create a new customer record for this mess with name and mobile.",
+      "addCardCta": "Add customers",
+      "or": "OR",
+      "importCardTitle": "Import existing people",
+      "importCardBody": "Choose people you've already added to another space. We'll add them here without asking for their details again.",
+      "importCardCta": "Import from other spaces",
+      "tip": "You can plan today's menu after adding customers. It cannot be shared until at least one customer is added.",
+      "whyTitle": "Why add customers first?",
+      "whyMenu": "Receive today's menu",
+      "whyConfirm": "Confirm meals",
+      "whyBilling": "Accurate billing & delivery",
+      "afterTitle": "What happens next?",
+      "afterPlan": "Plan and share today's menu so customers can respond"
+    },
+    "importPeople": {
+      "title": "Import existing people",
+      "banner": "People from your other spaces",
+      "foundBadge": "{{count}} found",
+      "searchPlaceholder": "Search by name or mobile",
+      "filterAll": "All ({{count}})",
+      "filterCustomers": "Customers ({{count}})",
+      "filterResidents": "Residents ({{count}})",
+      "filterFormer": "Former ({{count}})",
+      "roleCustomer": "Customer",
+      "roleResident": "Resident",
+      "roleFormerCustomer": "Former Customer",
+      "roleFormerResident": "Former Resident",
+      "statusAvailable": "Available",
+      "statusCurrentResident": "Current Resident",
+      "statusCurrentCustomer": "Current Customer",
+      "emptyTitle": "No people found",
+      "emptyBody": "Try another search, or create a new customer.",
+      "createHint": "Can't find the person? Create a new customer manually.",
+      "createCta": "Create new customer"
     },
     "roles": {
       "label": "Role",
@@ -629,6 +784,13 @@
       "defaultRent": "Default monthly rent (prefill only)",
       "defaultDeposit": "Default deposit (prefill only)"
     },
+    "pricingHints": {
+      "title": "Set rent after you save",
+      "unit": "Default rent and deposit are set when you edit this unit — then allocations can prefill them for residents.",
+      "room": "Default rent and deposit are set when you edit this room — then allocations can prefill them for residents.",
+      "bed": "Default rent and deposit are set when you edit this bed — then allocations can prefill them for residents.",
+      "missingOnDetail": "No default rent yet. Edit to set rent and deposit so allocations prefill correctly."
+    },
     "actions": {
       "edit": "Edit"
     },
@@ -689,10 +851,11 @@
     },
     "layoutMode": {
       "label": "Property layout",
+      "selected": "Selected",
       "CORRIDOR_PG": "Corridor PG",
-      "CORRIDOR_PG_desc": "Rooms along corridors on each floor",
+      "CORRIDOR_PG_desc": "Rooms arranged along a central corridor. Ideal for traditional PG buildings.",
       "APARTMENT_PG": "Apartment PG",
-      "APARTMENT_PG_desc": "Apartments per floor with rooms inside each",
+      "APARTMENT_PG_desc": "Separate apartments with multiple rooms. Suitable for apartment-style properties.",
       "CO_LIVING": "Co-living",
       "CO_LIVING_desc": "Units with shared or private rooms",
       "RENTAL": "Rental",
@@ -750,14 +913,27 @@
       "apartmentPgStructureHint": "Set how many floors you have and how many apartments sit on each floor.",
       "apartmentPgRoomsHint": "These rooms are created inside each apartment, not directly on the floor.",
       "previewStep": "Preview",
-      "structurePreview": "Structure preview",
+      "previewScreenTitle": "Review Before Creating",
+      "previewHeroSubtitle": "Please review your property details before creating it.",
+      "buildingInformation": "Building Information",
+      "propertyOverview": "Property Overview",
+      "structurePreview": "Structure Preview",
+      "editBuilding": "Edit",
+      "previewEditHint": "You can edit details anytime after creation",
       "viewCompleteStructure": "View complete structure",
       "summary": {
-        "floors": "Floors",
-        "units": "Units",
-        "rooms": "Rooms",
-        "beds": "Beds"
+        "floors": "Total floors",
+        "units": "Total units",
+        "rooms": "Total rooms",
+        "beds": "Total beds"
       },
+      "floorSummaryBadge": "{{units}} Units · {{rooms}} Rooms · {{beds}} Beds",
+      "floorSummaryBadgeNoUnits": "{{rooms}} Rooms · {{beds}} Beds",
+      "unitSummaryLine": "Rooms {{rooms}} · Beds {{beds}}",
+      "roomSummaryLine": "Beds {{beds}}",
+      "buildingName": "Building Name",
+      "buildingCode": "Building Code",
+      "numberOfFloors": "Number of Floors",
       "structure": {
         "floorUnits": "• {{count}} Units",
         "floorRooms": "• {{count}} Rooms",
@@ -795,10 +971,12 @@
         "roomsCount": "Rooms: {{count}}",
         "bedsCount": "Beds: {{count}}",
         "roomsBeds": "Rooms: {{rooms}} · Beds: {{beds}}",
+        "bedsOnly": "Beds: {{beds}}",
         "capacityBeds": "Capacity: {{capacity}} · Beds: {{beds}}"
       },
       "floorCount": "Number of floors",
       "includeGroundFloor": "Include ground floor",
+      "includeGroundFloorHint": "Adds a Ground Floor (G) below Floor 1. Turn off if your property starts at Floor 1.",
       "unitCount": "Number of units",
       "startNumber": "Starting unit number",
       "numberingStep": "Numbering step",
@@ -1110,6 +1288,7 @@
     "searchMemberPlaceholder": "Search by name or mobile",
     "searchTargetPlaceholder": "Search building, room, bed…",
     "noMembers": "No matching members.",
+    "noReusableResidents": "No existing residents available. Create a new resident to continue.",
     "noTargets": "No accommodation targets found.",
     "noTargetsInBuilding": "No available beds in {{building}}",
     "noTargetsWithStatus": "No {{status}} targets found.",
@@ -1117,8 +1296,15 @@
     "memberNotAllocated": "Member has no active occupancy",
     "addMemberHint": "A tenant record will be created when you continue. No separate setup needed.",
     "memberMode": {
-      "search": "Search existing",
-      "addNew": "Add new tenant"
+      "search": "Select Existing Resident",
+      "addNew": "Create New Resident"
+    },
+    "residentCard": {
+      "mobile": "Mobile {{mobile}}",
+      "previouslyIn": "Previously stayed in {{space}}",
+      "inThisSpace": "Already in this space",
+      "available": "Available for Move In",
+      "moveIn": "Move In"
     },
     "context": {
       "member": "Tenant",
@@ -1157,6 +1343,7 @@
     },
     "errors": {
       "searchMembers": "Failed to search members.",
+      "importMember": "Failed to reuse this resident. Please try again.",
       "searchTargets": "Failed to search accommodation.",
       "memberRequired": "Select a tenant or add a new one to continue.",
       "targetRequired": "Select a bed to continue."
@@ -1473,6 +1660,7 @@
       "bedRequired": "Select a bed.",
       "roomRequired": "Select a room.",
       "unitRequired": "Select a unit.",
+      "targetRequired": "Select accommodation before allocating. Go back and choose a bed or unit.",
       "codes": {
         "RENT_SNAPSHOT_REQUIRED": "Monthly rent is required when activating.",
         "FOOD_CHARGE_REQUIRED": "Food charge is required when food is enabled.",
@@ -1515,16 +1703,141 @@
       "greetingMorning": "Good morning",
       "greetingAfternoon": "Good afternoon",
       "greetingEvening": "Good evening",
-      "heroSubtitle": "Here's your operations overview"
+      "viewSpace": "View space",
+      "heroSubtitle": "Here's your operations overview",
+      "heroSubtitleSetup": "Let's finish setting up your space",
+      "heroSubtitleSetupMess": "Let's get your mess ready. Only {{count}} step remains before customers can start ordering meals.",
+      "heroSubtitleSetupMess_plural": "Let's get your mess ready. Only {{count}} steps remain before customers can start ordering meals.",
+      "heroSubtitleMessLibraryDone": "Great start! Now add customers so they'll be ready to receive your menu.",
+      "heroSubtitleMessCustomersDone": "Customers are ready. Plan today's menu to start taking meal confirmations.",
+      "heroSubtitleMessMenuDone": "Everything is ready. Share today's menu so customers can respond.",
+      "heroSubtitleMessReady": "Your mess is ready! Start managing meals and payments."
+    },
+    "health": {
+      "title": "Space Health",
+      "emptyTitle": "Space Health",
+      "emptyBody": "Health Score will appear after you complete your initial setup.",
+      "viewDetails": "View breakdown",
+      "categoryScore": "{{score}}%",
+      "suggestionsTitle": "Improve by",
+      "nextFromEngine": "Recommended next step",
+      "openPending": "Open Pending Actions",
+      "bands": {
+        "excellent": "Excellent",
+        "healthy": "Healthy",
+        "needsImprovement": "Needs Improvement",
+        "atRisk": "At Risk",
+        "critical": "Critical"
+      },
+      "summary": {
+        "setup": "Finish required setup to raise your score.",
+        "healthy": "Your space is in good operational shape.",
+        "improve": "A few gaps are holding the score back.",
+        "risk": "Attention items need action soon.",
+        "needsAttention": "Pending Actions need your attention."
+      },
+      "categories": {
+        "setup": "Setup Readiness",
+        "operations": "Operational Health",
+        "attention": "Attention Health"
+      },
+      "categoriesShort": {
+        "setup": "Setup",
+        "operations": "Operations",
+        "attention": "Attention"
+      },
+      "weightsInfo": {
+        "title": "How is my Space Health calculated?",
+        "intro": "Your Space Health is calculated on a 100% scale.",
+        "combines": "It combines three health categories:",
+        "setupExplain": "Measures how complete your initial setup is.",
+        "operationsExplain": "Measures occupancy, residents, and day-to-day operations.",
+        "attentionExplain": "Measures unresolved issues like pending actions and payments under review.",
+        "exampleTitle": "Example using your current scores:",
+        "overallLabel": "Overall Space Health",
+        "gotIt": "Got it",
+        "a11y": "How Space Health is calculated",
+        "footerTitle": "How is this score calculated?",
+        "footerSubtitle": "Setup (50%) + Operations (30%) + Attention (20%)"
+      },
+      "recommendedAction": "Recommended Action",
+      "actions": {
+        "improveOccupancy": "Improve occupancy by allocating vacant beds"
+      },
+      "factors": {
+        "setupComplete": "Required setup complete",
+        "setupProgress": "Setup {{completed}} of {{total}} ({{percent}}%)",
+        "menuLibrary": "Menu library ready",
+        "todaysMenu": "Today's menu planned",
+        "menuShared": "Menu shared with customers",
+        "customersActive": "{{count}} customers on board",
+        "propertyReady": "Property layout started",
+        "residentsActive": "{{count}} residents active",
+        "occupancy": "{{occupied}} of {{total}} beds occupied",
+        "attentionClear": "No pending actions",
+        "pendingActions": "{{count}} pending actions",
+        "pendingPayments": "{{count}} payments under review"
+      },
+      "suggestions": {
+        "completeSetup": "Complete {{count}} remaining setup steps",
+        "completeMenuSetup": "Complete menu setup",
+        "addResidents": "Add your first residents",
+        "completeProperty": "Start creating your property layout",
+        "resolvePending": "Resolve {{count}} pending actions",
+        "resolvePayments": "Review payments under review"
+      },
+      "banner": {
+        "issuesAttention": "{{count}} issues need attention",
+        "issuesShort": "{{count}} issues"
+      },
+      "a11y": {
+        "summary": "Space Health {{score}} percent, {{band}}.",
+        "banner": "Space Health {{score}} percent, {{band}}",
+        "openDetails": "Opens the health breakdown"
+      }
     },
     "setup": {
       "eyebrow": "Getting started",
+      "eyebrowMess": "Getting your mess ready",
+      "skipOptional": "Skip",
+      "previousStep": "Previous",
+      "tapStepHint": "Tap a step above to go back or open it again.",
       "title": "Setup Progress",
+      "nextStepLabel": "Next step",
+      "nextFallbackTitle": "Continue setup",
+      "nextFallbackReason": "Complete the remaining required steps to unlock daily operations.",
       "continue": "Continue Setup",
       "startSetup": "Start Setup",
       "addMembers": "Add Members",
       "configureMeals": "Configure Meals",
+      "readinessTitle": "Setup readiness",
+      "readinessTitleMess": "Getting your mess ready",
+      "readinessPercent": "{{percent}}%",
       "percentRemaining": "{{percent}}% remaining",
+      "kind": {
+        "required": "Required",
+        "recommended": "Recommended",
+        "optional": "Optional"
+      },
+      "milestones": {
+        "spaceCreated": "Space created",
+        "propertyReady": "Property ready",
+        "residentsReady": "Residents ready",
+        "mealsReady": "Meals ready",
+        "todaysMenuReady": "Today's menu",
+        "menuShared": "Menu shared",
+        "deliveryReady": "Delivery ready",
+        "opsReady": "Ready for daily operations",
+        "mess": {
+          "spaceCreated": "Mess created",
+          "mealsReady": "Menu library",
+          "todaysMenuReady": "Plan today's menu",
+          "residentsReady": "Add customers",
+          "menuShared": "Share menu",
+          "deliveryReady": "Delivery locations",
+          "opsReady": "Ready to operate"
+        }
+      },
       "steps": {
         "spaceCreated": "Space created",
         "createBuilding": "Create building",
@@ -1683,7 +1996,9 @@
       }
     },
     "financial": {
-      "title": "This month",
+      "title": "Payment Summary",
+      "period": "This month",
+      "emptyHintMess": "No payments yet. Payments will appear after customers begin placing orders.",
       "expectedCharges": "Expected charges",
       "expected": "Expected",
       "collected": "Collected",
@@ -1770,7 +2085,9 @@
       "pollOpenLine": "Poll open · {{responded}} / {{eligible}} responded",
       "pollClosed": "Polls closed for this date",
       "pollNotOpenDraft": "Publish and share menu to open poll",
-      "pollNotOpen": "No poll open yet"
+      "pollNotOpen": "No poll open yet",
+      "guidedEmptyTitle": "No menu planned",
+      "guidedEmptyBody": "Plan today's menu to start serving customers."
     },
     "quickActions": {
       "title": "Quick actions",
@@ -1795,8 +2112,19 @@
       "poll": "Availability Poll",
       "deliveryLocations": "Delivery locations",
       "deliveryLocationsSubtitle": "Drop points · Reorder · Edit addresses",
+      "subscriptionPlansSubtitle": "Manage meal subscriptions",
       "pendingActions": "Pending actions",
-      "pendingActionsSubtitle": "{{count}} items need your attention"
+      "pendingActionsSubtitle": "{{count}} items need your attention",
+      "setupCreateMenuLibrary": "Create menu library",
+      "setupCreateMenuLibrarySubtitle": "Reusable dishes for daily menus",
+      "setupPlanTodaysMenu": "Plan today's menu",
+      "setupPlanTodaysMenuSubtitle": "Choose what you will serve today",
+      "setupAddCustomers": "Add customers",
+      "setupAddCustomersSubtitle": "People who receive menus and confirm meals",
+      "setupShareTodaysMenu": "Share today's menu",
+      "setupShareTodaysMenuSubtitle": "Send today's menu so customers can confirm",
+      "setupConfigurePayments": "Configure payments",
+      "setupConfigurePaymentsSubtitle": "Set how customers pay for meals"
     },
     "pendingActions": {
       "screenSubtitle": "Review and complete these items to keep operations running smoothly.",
@@ -2247,11 +2575,11 @@
       "slotDetailPollOpen": "{{count}} members chose",
       "slotDetailPollClosed": "Poll closed · {{count}} chose",
       "slotChoseShort": "{{count}} chose",
-      "dayHintStart": "Tap Breakfast, Lunch, or Dinner below to add today's food.",
-      "dayHintShareAll": "{{count}} meal(s) are ready. Tap Share menu to send them to members.",
-      "dayHintShareSome": "{{shared}} shared · {{notShared}} still need sharing. Tap Share menu.",
-      "dayHintAllShared": "All meals are shared. Members can choose in the app now.",
-      "dayHintNeedsReshare": "{{count}} meal(s) edited — share changes so members see the update.",
+      "dayHintStart": "Today's menu hasn't been planned yet. Tap Breakfast, Lunch, or Dinner to add items.",
+      "dayHintShareAll": "{{count}} meal(s) are ready. Share the menu so customers can confirm.",
+      "dayHintShareSome": "{{shared}} shared with customers · {{notShared}} still need sharing.",
+      "dayHintAllShared": "Today's menu is shared. Customers can confirm meals in the app.",
+      "dayHintNeedsReshare": "{{count}} meal(s) edited — share again so customers see the update.",
       "dayHintPartial": "{{shared}} shared · {{empty}} still empty. Plan or share the rest.",
       "membersCanChoose": "Members who can choose",
       "membersCanChooseHint": "These members have active meal access for this day.",
@@ -2259,11 +2587,71 @@
       "shareMenuFootnote": "Sharing sends the menu and opens meal choice in the app.",
       "eligibleSlot": "Active meal members: {{count}}",
       "eligibleMembers": "Active meal members: {{count}}",
+      "eligibleMembersMess": "Active meal members in this mess: {{count}}",
+      "activeMembersLabel": "Active meal members",
+      "membersCount": "{{count}} Members",
       "noEligibleMembersCta": "Review members",
+      "noEligibleMembersCtaMess": "Add customers",
+      "noEligibleMembersTitleMess": "No customers yet",
       "noEligibleMembersHint": "No active meal members yet. For mess customers, turn on meal access. For PG tenants, complete move-in with food included.",
+      "noEligibleMembersHintMess": "No customers have been added yet. You can still plan today's menu, but it cannot be shared until customers are added to this mess.",
+      "noEligibleMembersContinueMess": "Continue planning",
+      "shareBlockedNoCustomersTitle": "No customers yet",
+      "shareBlockedNoCustomersBody": "No customers are enrolled in this mess yet. Add customers first so they can receive today's menu.",
+      "shareBlockedNoCustomersCta": "Add customers",
+      "dayStatusVisual": "{{shared}} shared · {{notShared}} not shared · {{empty}} empty",
+      "dayStatusNotSharedYet": "Today's menu hasn't been shared yet. After sharing, customers will receive meal confirmations.",
+      "dayShare": {
+        "notShared": "Not shared",
+        "shared": "Shared",
+        "updated": "Updated since last share",
+        "action": "Share today's menu",
+        "subtitle": "Share Breakfast, Lunch and Dinner together"
+      },
+      "selector": {
+        "notPlanned": "Not planned",
+        "planned": "Planned",
+        "shared": "Shared",
+        "updated": "Updated",
+        "planMenu": "Plan menu",
+        "viewMenu": "View menu"
+      },
+      "summaryItems": "{{count}} items",
+      "summaryCombos": "{{count}} combos",
+      "shareMealAction": "Share meal",
+      "previewMenuAction": "Preview menu",
       "copyYesterday": "Copy yesterday",
+      "copyMenu": "Copy Menu",
       "copySuccess": "Menu copied from yesterday",
       "copyFailed": "Could not copy menu",
+      "copyEmptySource": "No {{meal}} menu found for yesterday. Plan it once, or use Select menu.",
+      "copyFrom": {
+        "title": "Copy Menu From",
+        "quickSuggestions": "Quick suggestions",
+        "yesterday": "Yesterday",
+        "lastPlanned": "Last planned menu",
+        "lastWeek": "Same day last week",
+        "previousMenus": "Previous menus",
+        "chooseDate": "Choose date",
+        "selectMeals": "Choose the meals you want to copy.",
+        "notPlanned": "Not planned",
+        "copyEntireDay": "Select entire day",
+        "copySelected": "Copy selected meals",
+        "success": "Menu copied successfully.",
+        "conflictTitle": "Replace existing menu?",
+        "conflictMessage": "One or more selected meals already have a menu. Copying will replace them.",
+        "replace": "Replace and copy",
+        "previousDateOnly": "Choose a date before the menu date.",
+        "noMenus": "No planned menus were found on that date.",
+        "loadFailed": "Could not load previous menus.",
+        "empty": "No previous planned menus found."
+      },
+      "quickAccess": {
+        "librarySubtitle": "Browse items & combos",
+        "todayMenuSubtitle": "View planned menu",
+        "deliverySubtitle": "Manage delivery locations",
+        "subscriptionsSubtitle": "Manage meal subscriptions"
+      },
       "selectCombo": "Select combo",
       "selectComboHint": "Tap a combo to add it to this meal. One tap — done.",
       "selectComboHintMulti": "Check combos below. Tap Save when done.",
@@ -2286,35 +2674,50 @@
       "tabCombos": "Combos",
       "tabIndividualItems": "Individual Items",
       "extrasSectionTitle": "Extras",
-      "extrasSectionHint": "Turn on add-ons for this meal. Edit prices here — they update Menu Library too.",
+      "extrasSectionHint": "Turn on add-ons for this meal.",
       "extrasConfiguredCount": "{{count}} configured",
       "extrasEnabledCount": "{{count}} enabled for this meal",
-      "extrasSelectMealFirst": "Select combos or items above to see suggested extras for this meal.",
-      "extrasFromMealTitle": "Already in today's meal ({{count}})",
-      "extrasFromMealHint": "These items are in your selected combos. Offer them as paid add-ons too.",
-      "extrasRelatedTitle": "Similar add-ons ({{count}})",
-      "extrasRelatedHint": "Other extras from the same food groups as today's meal.",
+      "extrasSelectMealFirst": "Select combos or items above first.",
+      "extrasFromMealTitle": "In your meal ({{count}})",
+      "extrasFromMealHint": "Offer these as paid add-ons.",
+      "extrasRelatedTitle": "Other extras ({{count}})",
+      "extrasRelatedHint": "Other extras from the same food groups.",
       "extrasSuggestedTitle": "Suggested ({{count}})",
       "extrasBadgeInMeal": "In meal",
       "extrasBadgeRelated": "Same category",
-      "extrasNoSuggestions": "No extras match this meal yet. Browse the library below, or add meal items as extras.",
-      "extrasMissingTitle": "Not yet extras ({{count}})",
-      "extrasMissingHint": "Enter a price (optional) and tap Add. Saved to Extras Library for reuse.",
-      "extrasAddMissing": "+ Add",
-      "extrasAddAllMissing": "Add all",
-      "extraAddedToLibrary": "{{name}} added as an extra",
+      "extrasNoSuggestions": "Turn on extras below, or configure more in Menu Library.",
+      "extrasMissingTitle": "From your combos ({{count}})",
+      "extrasMissingHint": "Turn on as paid add-ons.",
+      "extrasAddMissing": "Turn on",
+      "extrasAddAllMissing": "Turn on all",
+      "extraAddedToLibrary": "{{name}} is now an extra for this meal",
       "extraAddedNeedsPrice": "{{name}} added — enter a price to finish",
-      "extrasAddedToLibraryCount": "{{count}} items added as extras",
+      "extrasAddedToLibraryCount": "{{count}} items turned on as extras",
       "extraNeedsPrice": "Enter price",
       "extrasBrowseShow": "Browse all extras ({{count}})",
       "extrasBrowseHide": "Hide library ({{count}})",
       "extrasBrowseSearch": "Search extras…",
       "extrasBrowseEmpty": "No extras match your search.",
+      "extrasConfigureMoreLink": "Configure more extras",
+      "extrasConfigureMoreHint": "Add other items in extras",
+      "progressive": {
+        "stepOf": "Step {{current}} of {{total}}",
+        "mealsSelectedNextExtras": "✓ Meals selected  ·  Next: Review extras",
+        "readyToSave": "✓ Meals selected  ·  ✓ Extras reviewed  ·  Ready to save",
+        "nextStep": "Next step",
+        "nextStepA11y": "Next step: Review extras",
+        "reviewExtrasTitle": "Review extras (optional)",
+        "reviewExtrasHint": "Extras help you offer beverages, desserts and add-ons.",
+        "continueToExtras": "Continue to Extras ↓",
+        "continueToExtrasHint": "Scrolls to the Extras section on this page",
+        "emptyExtrasTitle": "No extras available.",
+        "emptyExtrasBody": "Create extras later if needed. Continue to save your menu."
+      },
       "manageExtrasCta": "Manage available extras >",
       "manageExtrasConfigureFirst": "Configure extras in Menu Library >",
       "manageExtrasTitle": "Available extras",
       "manageExtrasHint": "Choose which library extras are available for this meal. Prices come from Menu Library.",
-      "manageExtrasEmpty": "No extras in Menu Library yet. Select meal items and add them here, or open Menu Library → Extras.",
+      "manageExtrasEmpty": "No add-ons from this selection yet.",
       "manageExtrasApply": "Apply",
       "savedCombosTitle": "Saved Combos",
       "itemCategoriesLabel": "Categories",
@@ -2676,7 +3079,9 @@
         "viewPlans": "View plans",
         "contactOwner": "Contact owner",
         "catalogSubtitle": "Browse available plans, pay offline, then submit your activation request.",
-        "noPlans": "No subscription plans are available yet. Please contact the mess owner.",
+        "noPlansTitle": "No plans published yet",
+        "noPlans": "The mess owner has not published subscription plans for this space.",
+        "noPlansHint": "Ask the owner to add a plan under Meal Subscription Plan, then return here to request activation.",
         "requestTitle": "Request activation",
         "requestHint": "Pay the amount to the owner (UPI/cash), then submit your payment reference below.",
         "paymentReferenceLabel": "Payment reference",
@@ -2705,7 +3110,7 @@
       }
     },
     "subscriptionPlans": {
-      "title": "Subscription Plans",
+      "title": "Meal Subscription Plan",
       "ownerSubtitle": "Create reusable meal packs that customers can browse and request.",
       "createAction": "Create plan",
       "createTitle": "Create subscription plan",
@@ -3521,6 +3926,87 @@
       "load": "Failed to load complaint.",
       "action": "Action failed.",
       "maxPhotos": "You can attach up to 5 photos."
+    }
+  },
+  "spaceLifecycle": {
+    "milestones": {
+      "spaceCreated": {
+        "title": "Space created",
+        "reason": "Your space is ready — continue with the next setup step.",
+        "cta": "Continue Setup"
+      },
+      "propertyReady": {
+        "title": "Get your property ready",
+        "reason": "Beds, residents, and payments all depend on your property layout.",
+        "cta": "Continue Setup"
+      },
+      "residentsReady": {
+        "title": "Add members",
+        "reason": "Add people so you can allocate inventory, collect payments, and run meals.",
+        "cta": "Add Members"
+      },
+      "mealsReady": {
+        "title": "Configure your menu library",
+        "reason": "Customers and residents need menu items before they can order.",
+        "cta": "Open Menu Library"
+      },
+      "todaysMenuReady": {
+        "title": "Plan today's menu",
+        "reason": "Plan what you will serve so customers can order.",
+        "cta": "Plan Menu"
+      },
+      "menuShared": {
+        "title": "Share today's menu",
+        "reason": "Share the menu so customers can see options and place orders.",
+        "cta": "Share Menu"
+      },
+      "deliveryReady": {
+        "title": "Add delivery locations",
+        "reason": "Delivery locations help customers receive meals reliably.",
+        "cta": "Add Delivery Locations"
+      },
+      "opsReady": {
+        "title": "Ready for daily operations",
+        "reason": "Required setup is complete.",
+        "cta": "Go to Dashboard"
+      },
+      "mess": {
+        "spaceCreated": {
+          "title": "Mess created",
+          "reason": "Your mess space is ready — next you'll set up dishes, customers, and today's menu.",
+          "cta": "Continue Setup"
+        },
+        "mealsReady": {
+          "title": "Create menu library",
+          "reason": "Create reusable dishes you'll use when planning daily menus. You need items before you can plan meals.",
+          "cta": "Open Menu Library"
+        },
+        "residentsReady": {
+          "title": "Add customers",
+          "reason": "Optional — add people who will receive menus and confirm meals. You can skip and add them later.",
+          "cta": "Add customers"
+        },
+        "todaysMenuReady": {
+          "title": "Plan today's menu",
+          "reason": "Select what will be served today so customers can start receiving meal confirmations.",
+          "cta": "Plan Menu"
+        },
+        "menuShared": {
+          "title": "Share today's menu",
+          "reason": "Customers won't receive today's menu until you share it. Sharing opens meal confirmations in the app.",
+          "cta": "Share Menu"
+        },
+        "deliveryReady": {
+          "title": "Add delivery locations",
+          "reason": "Optional — delivery locations help customers receive meals at the right place.",
+          "cta": "Add Delivery Locations"
+        },
+        "opsReady": {
+          "title": "Ready to operate",
+          "reason": "Your mess is ready for daily operations — manage meals, confirmations, and payments.",
+          "cta": "Go to Dashboard"
+        }
+      }
     }
   }
 }

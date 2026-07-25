@@ -198,6 +198,30 @@ Kitchen notes
 [Save Draft]  [Publish]  [Preview share]    ← preview = 5.2D
 ```
 
+#### Progressive Meal Planning Flow (Mess / meal-priced spaces)
+
+UX-only guided journey on the **same page** (no wizard, no popups, no API changes).
+
+**Why:** Owners often tapped Save/Share before noticing Extras further down.
+
+**Sequence**
+
+1. **Select meals** — footer shows Save Draft / Share Meal (unchanged when nothing selected).
+2. **After ≥1 combo or item selected** — hide Save/Share; show **Continue to Extras ↓** with “Step 1 of 2”.
+3. **Extras reviewed** (optional) — footer returns to Save Draft / Share Meal with “Step 2 of 2”.
+
+**Extras are optional.** Review is satisfied when the owner:
+
+- taps Continue (smooth-scrolls to Extras + brief highlight), or
+- manually scrolls so Extras is meaningfully visible / scrolls past it, or
+- interacts with Extras controls.
+
+No extra must be enabled. Empty library still scrolls to Extras with a short empty message; workflow is not blocked.
+
+**Components:** `ProgressiveMealPlanningFooter`, extras highlight on `MealExtrasEnableSection`. Editing an existing draft skips the Continue gate so power users stay fast.
+
+**Not changed:** backend, APIs, combo/item/extras/draft/share validation or calculations.
+
 ### 4.3 Today's Menu (`DailyMenuTodayScreen`) — keep, demote
 
 Read-only stack screen for residents and manager quick check. Not the Meals tab default.

@@ -49,7 +49,9 @@ export type MainStackParamList = {
     role?: MembershipRole;
     memberName?: string;
   };
-  AddMember: { spaceId: UUID };
+  AddMember: { spaceId: UUID; initialMode?: 'new' | 'search' };
+  AddCustomersHub: { spaceId: UUID };
+  ImportExistingPeople: { spaceId: UUID };
   MemberDetails: { spaceId: UUID; memberId: UUID };
   MemberOccupancyHistory: { spaceId: UUID; memberId: UUID; memberName: string };
   EditMember: { spaceId: UUID; memberId: UUID };
@@ -180,7 +182,7 @@ export type MainStackParamList = {
     mealType: 'BREAKFAST' | 'LUNCH' | 'DINNER';
   };
   MealComboForm: { spaceId: UUID; mode: 'create' | 'edit'; comboId?: UUID };
-  MenuLibrary: { spaceId: UUID };
+  MenuLibrary: { spaceId: UUID; initialTab?: 'items' | 'combos' | 'extras' };
   MenuPlanning: {
     spaceId: UUID;
     menuDate?: string;
@@ -201,6 +203,7 @@ export type MainStackParamList = {
   CustomerSubscriptionPlans: { spaceId: UUID; memberId: UUID };
   SubscriptionActivationRequests: { spaceId: UUID };
   DashboardPendingActions: { spaceId: UUID };
+  DashboardSpaceHealth: { spaceId: UUID };
   DashboardOccupancyList: {
     spaceId: UUID;
     mode: 'active' | 'moveInsThisMonth';

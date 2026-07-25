@@ -277,7 +277,9 @@ export function BedInventoryBrowser({
         {filterOverlayLayout ? (
           <DashboardBedInventoryFilterDropdownOverlay
             layout={filterOverlayLayout}
-            onSelect={value => filtersBarRef.current?.selectOption(value)}
+            onSelect={value =>
+              filtersBarRef.current?.selectOption(value, filterOverlayLayout.openField)
+            }
             onClose={() => filtersBarRef.current?.closeDropdown()}
           />
         ) : null}
@@ -322,7 +324,9 @@ export function BedInventoryBrowser({
       {filterOverlayLayout ? (
         <DashboardBedInventoryFilterDropdownOverlay
           layout={filterOverlayLayout}
-          onSelect={value => filtersBarRef.current?.selectOption(value)}
+          onSelect={value =>
+            filtersBarRef.current?.selectOption(value, filterOverlayLayout.openField)
+          }
           onClose={() => filtersBarRef.current?.closeDropdown()}
         />
       ) : null}

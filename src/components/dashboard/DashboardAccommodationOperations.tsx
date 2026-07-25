@@ -59,7 +59,6 @@ export function DashboardAccommodationOperations({
 const styles = StyleSheet.create({
   wrap: {
     marginBottom: spacing.lg,
-    gap: spacing.xs,
   },
   row: {
     flexDirection: 'row',

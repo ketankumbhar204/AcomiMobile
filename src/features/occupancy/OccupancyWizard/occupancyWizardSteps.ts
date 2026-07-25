@@ -8,7 +8,9 @@ export function getWizardSteps(
   >,
 ): OccupancyWizardStep[] {
   const hasMember = Boolean(params.memberId);
-  const hasTarget = Boolean(params.bedId || params.unitId || params.roomId);
+  // Only skip the target step when a concrete allocatable target id is present.
+  // roomId alone is not enough (PG/Hostel allocate to beds).
+  const hasTarget = Boolean(params.bedId || params.unitId);
 
   switch (mode) {
     case 'ALLOCATE': {

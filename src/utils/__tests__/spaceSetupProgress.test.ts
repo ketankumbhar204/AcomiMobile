@@ -73,6 +73,7 @@ describe('aggregateBuildingStructure', () => {
 
     expect(aggregateBuildingStructure(summaries)).toEqual({
       floors: 3,
+      units: 0,
       rooms: 3,
       beds: 7,
     });

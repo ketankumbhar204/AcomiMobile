@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import type { OccupancyResponse, TransferRentPolicy, AmenityAssignment } from '../../../../api/types';
 import { ContractTermsForm } from '../../../../components/occupancy/ContractTermsForm';
 import { OccupancyAmenitiesSection } from '../../../../components/occupancy/OccupancyAmenitiesSection';
+import { progressiveSectionHighlightStyle } from '../../../../components/progressive';
 import { fetchSpaceFoodPolicy, type SpaceFoodPolicy } from '../../../../utils/fetchSpaceFoodPolicy';
 import {
   contractTermsFromOccupancy,
@@ -40,6 +41,9 @@ type ContractTermsStepProps = {
   spaceAmenities?: AmenityAssignment[];
   assignedAmenities?: AmenityAssignment[];
   onAssignedAmenitiesChange?: (value: AmenityAssignment[]) => void;
+  /** Progressive Guided Workflow — deposit/charges/amenities scroll target (ScrollView content Y). */
+  onAddonsLayout?: (y: number, height: number) => void;
+  addonsHighlighted?: boolean;
 };
 
 export function ContractTermsStep({
@@ -52,7 +56,6 @@ export function ContractTermsStep({
   rentPolicy = 'APPLY_NEW',
   onRentPolicyChange,
   currentOccupancy,
-  displayPath,
   moveInDate,
   agreementSigned = false,
   onAgreementSignedChange,
@@ -61,6 +64,8 @@ export function ContractTermsStep({
   spaceAmenities = [],
   assignedAmenities = [],
   onAssignedAmenitiesChange,
+  onAddonsLayout,
+  addonsHighlighted = false,
 }: ContractTermsStepProps) {
   const { t } = useTranslation();
   const needsEarlyMoveIn = mode === 'MOVE_IN' && isMoveInDateInFuture(moveInDate);
@@ -69,11 +74,29 @@ export function ContractTermsStep({
     defaultFoodCharge: null,
   });
   const [loading, setLoading] = useState(true);
+  const stepOffsetRef = useRef(0);
+  const formOffsetRef = useRef(0);
 
   const effectiveFoodPolicy = resolveContractFoodPolicy(
     foodPolicy,
     mode === 'TRANSFER' && rentPolicy === 'KEEP' ? currentOccupancy : null,
   );
+
+  const showRentDeposit =
+    mode !== 'TRANSFER' || rentPolicy === 'APPLY_NEW' || rentPolicy === 'CUSTOM';
+
+  const reportAddonsLayout = (localY: number, height: number) => {
+    onAddonsLayout?.(stepOffsetRef.current + formOffsetRef.current + localY, height);
+  };
+
+  const amenitiesSection =
+    spaceAmenities.length > 0 && onAssignedAmenitiesChange ? (
+      <OccupancyAmenitiesSection
+        available={spaceAmenities}
+        assigned={assignedAmenities}
+        onChange={onAssignedAmenitiesChange}
+      />
+    ) : null;
 
   useEffect(() => {
     setLoading(true);
@@ -87,7 +110,12 @@ export function ContractTermsStep({
   }
 
   return (
-    <View style={styles.wrap}>
+    <View
+      collapsable={false}
+      style={styles.wrap}
+      onLayout={event => {
+        stepOffsetRef.current = event.nativeEvent.layout.y;
+      }}>
       <Text style={styles.title}>{t('occupancyWizard.steps.contract')}</Text>
 
       {mode === 'MOVE_IN' && needsEarlyMoveIn && onAllowEarlyMoveInChange ? (
@@ -151,39 +179,51 @@ export function ContractTermsStep({
         </>
       ) : null}
 
-      <ContractTermsForm
-        values={values}
-        onChange={onChange}
-        showRentDeposit={
-          mode !== 'TRANSFER' || rentPolicy === 'APPLY_NEW' || rentPolicy === 'CUSTOM'
-        }
-        rentRequired={
-          mode === 'ALLOCATE' ||
-          mode === 'MOVE_IN' ||
-          rentPolicy === 'CUSTOM' ||
-          (mode === 'TRANSFER' && rentPolicy === 'APPLY_NEW')
-        }
-        readOnlyRent={
-          mode === 'TRANSFER' && rentPolicy === 'KEEP'
-            ? currentOccupancy?.rentSnapshot ?? null
-            : undefined
-        }
-        readOnlyDeposit={
-          mode === 'TRANSFER' && rentPolicy === 'KEEP'
-            ? currentOccupancy?.depositSnapshot ?? 0
-            : undefined
-        }
-        catalogRentHint={catalogRent}
-        catalogDepositHint={catalogDeposit}
-        foodPolicy={effectiveFoodPolicy}
-      />
-
-      {spaceAmenities.length > 0 && onAssignedAmenitiesChange ? (
-        <OccupancyAmenitiesSection
-          available={spaceAmenities}
-          assigned={assignedAmenities}
-          onChange={onAssignedAmenitiesChange}
+      <View
+        collapsable={false}
+        onLayout={event => {
+          formOffsetRef.current = event.nativeEvent.layout.y;
+        }}>
+        <ContractTermsForm
+          values={values}
+          onChange={onChange}
+          showRentDeposit={showRentDeposit}
+          rentRequired={
+            mode === 'ALLOCATE' ||
+            mode === 'MOVE_IN' ||
+            rentPolicy === 'CUSTOM' ||
+            (mode === 'TRANSFER' && rentPolicy === 'APPLY_NEW')
+          }
+          readOnlyRent={
+            mode === 'TRANSFER' && rentPolicy === 'KEEP'
+              ? currentOccupancy?.rentSnapshot ?? null
+              : undefined
+          }
+          readOnlyDeposit={
+            mode === 'TRANSFER' && rentPolicy === 'KEEP'
+              ? currentOccupancy?.depositSnapshot ?? 0
+              : undefined
+          }
+          catalogRentHint={catalogRent}
+          catalogDepositHint={catalogDeposit}
+          foodPolicy={effectiveFoodPolicy}
+          onAddonsLayout={showRentDeposit ? reportAddonsLayout : undefined}
+          addonsHighlighted={showRentDeposit ? addonsHighlighted : false}
+          addonsFooter={showRentDeposit ? amenitiesSection : undefined}
         />
+      </View>
+
+      {!showRentDeposit && amenitiesSection ? (
+        <View
+          collapsable={false}
+          style={addonsHighlighted ? styles.addonsHighlight : undefined}
+          onLayout={event => {
+            const { y, height } = event.nativeEvent.layout;
+            formOffsetRef.current = 0;
+            reportAddonsLayout(y, height);
+          }}>
+          {amenitiesSection}
+        </View>
       ) : null}
     </View>
   );
@@ -192,7 +232,6 @@ export function ContractTermsStep({
 const styles = StyleSheet.create({
   wrap: { gap: spacing.xs },
   title: { ...typography.h3, marginBottom: spacing.xs },
-  path: { ...typography.caption, color: colors.muted, marginBottom: spacing.md },
   loader: { marginVertical: spacing.lg },
   policyLabel: { ...typography.bodyStrong, marginBottom: spacing.sm },
   policyRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.md },
@@ -219,4 +258,11 @@ const styles = StyleSheet.create({
   switchCopy: { flex: 1 },
   switchLabel: { ...typography.bodyStrong },
   switchHint: { ...typography.caption, color: colors.muted, marginTop: spacing.xs },
+  addonsHighlight: {
+    ...progressiveSectionHighlightStyle,
+    borderWidth: 1,
+    borderRadius: radius.card,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+  },
 });

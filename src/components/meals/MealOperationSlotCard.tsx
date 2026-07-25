@@ -106,7 +106,7 @@ export function MealOperationSlotCard({
 const styles = StyleSheet.create({
   slotCard: {
     flex: 1,
-    minHeight: 108,
+    minHeight: 96,
     borderRadius: radius.card,
     borderWidth: 1,
     paddingVertical: spacing.sm,
@@ -117,22 +117,22 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   slotCardDesignA: {
-    minHeight: 124,
-    paddingVertical: spacing.md,
+    minHeight: 104,
+    paddingVertical: spacing.sm,
     gap: spacing.xs,
     ...shadows.sm,
   },
   slotCardCompact: {
-    minHeight: 96,
+    minHeight: 88,
     paddingVertical: spacing.xs,
   },
   slotCardUnselectedCompact: {
-    minHeight: 88,
+    minHeight: 80,
     opacity: 0.92,
   },
   slotCardSelected: {
     borderWidth: 2.5,
-    minHeight: 112,
+    minHeight: 100,
     paddingVertical: spacing.sm,
     ...shadows.md,
     elevation: 4,

@@ -24,12 +24,16 @@ import type { BuildingResponse, BuildingSummaryResponse, SpaceType } from '../..
 import { AccommodationSearchBar, BuildingListCard } from '../../components/accommodation';
 import { AccommodationHomeSpeedDial } from '../../components/accommodation/AccommodationHomeSpeedDial';
 import { DashboardAccommodationOperations } from '../../components/dashboard/DashboardAccommodationOperations';
+import { CoachmarkAnchor, CoachmarkSequence } from '../../components/coachmarks';
 import { Button, EmptyState, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
+import { ENABLE_SETUP_COACHMARKS } from '../../coachmarks';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useBuildings } from '../../hooks/useBuildings';
 import { useDashboardAccommodationOperationsQuick } from '../../hooks/useDashboardAccommodationOperationsQuick';
 import { useNavigateFromSpaceTab } from '../../hooks/useNavigateFromSpaceTab';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
+import { useSpaceLifecycle } from '../../hooks/useSpaceLifecycle';
+import { useSpaceLifecycleSignals } from '../../hooks/useSpaceLifecycleSignals';
 import { useSpaceTabHeader } from '../../hooks/useSpaceTabHeader';
 import type { MainStackParamList, SpaceTabParamList } from '../../navigation/types';
 import { useSpaceStore } from '../../store/spaceStore';
@@ -39,6 +43,9 @@ import { matchesSearch } from '../../utils/accommodationSearch';
 import { renameBuildingName } from '../../utils/accommodationInlineRename';
 import { currentMonthKey } from '../../utils/dashboardFinancial';
 import { peekDashboardSummary } from '../../utils/dashboardQueryCache';
+import { peekPendingActions } from '../../utils/pendingActionsQueryCache';
+import { canManageNotifications } from '../../utils/spaceOperator';
+import { isAccommodationApplicable } from '../../utils/accommodationProfile';
 
 type AccommodationNav = CompositeNavigationProp<
   BottomTabNavigationProp<SpaceTabParamList, 'Accommodation'>,
@@ -68,6 +75,27 @@ export function AccommodationHomeScreen() {
     permissions.canManageOccupancy || permissions.canViewSpaceOccupancies === true;
   const navigateFromTab = useNavigateFromSpaceTab();
   const showToast = useToastStore(state => state.showToast);
+  const showOwnerSetup =
+    canManageNotifications(permissions) &&
+    Boolean(spaceType) &&
+    isAccommodationApplicable(spaceType);
+
+  const pendingActionCount = spaceId
+    ? peekPendingActions(spaceId)?.length ?? 0
+    : 0;
+  const { context: lifecycleContext } = useSpaceLifecycleSignals({
+    spaceId,
+    spaceType,
+    permissions,
+    enabled: showOwnerSetup,
+    pendingActionCount,
+    hasOperationalSignal: false,
+  });
+  const { lifecycle } = useSpaceLifecycle({
+    spaceType,
+    context: lifecycleContext,
+    enabled: showOwnerSetup,
+  });
 
   const [isFocused, setIsFocused] = useState(false);
   const { buildings, loading, error, refresh, patchBuilding } = useBuildings(spaceId);
@@ -230,105 +258,140 @@ export function AccommodationHomeScreen() {
 
   const showLoading = loading && !refreshing && buildings.length === 0;
   const isEmpty = !showLoading && filteredBuildings.length === 0;
+  const hasBuildings = buildings.length > 0;
+  const canOpenOccupancyDrilldown = hasBuildings && canViewOccupancyDrilldown;
+  const coachmarksEnabled =
+    ENABLE_SETUP_COACHMARKS &&
+    showOwnerSetup &&
+    isFocused &&
+    isEmpty &&
+    canManage;
 
   return (
     <RequireAccommodationAccess spaceId={spaceId}>
-      <View style={styles.root}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
-          />
-        }>
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-        {accommodationOperations ? (
-          <DashboardAccommodationOperations
-            hideTitle
-            operations={accommodationOperations}
-            onOccupiedPress={canViewOccupancyDrilldown ? handleOccupiedBedsPress : undefined}
-            onVacantPress={canViewOccupancyDrilldown ? handleVacantBedsPress : undefined}
-            onMoveInsPress={canViewOccupancyDrilldown ? handleMoveInsPress : undefined}
-          />
-        ) : null}
-
-        {!isEmpty ? (
-          <AccommodationSearchBar value={searchQuery} onChangeText={setSearchQuery} />
-        ) : null}
-
-        {showLoading ? (
-          <>
-            <SkeletonCard />
-            <View style={styles.gap} />
-            <SkeletonCard />
-          </>
-        ) : isEmpty ? (
-          <View style={styles.emptyWrap}>
-            <EmptyState
-              title={t('accommodation.home.emptyTitle')}
-              description={t('accommodation.home.emptyDescription')}
-              icon="🏢"
-            />
-            {canManage ? (
-              <View style={styles.emptyActions}>
-                <Button
-                  label={t('accommodation.home.quickSetup')}
-                  onPress={openQuickSetup}
-                />
-                <Button
-                  label={t('accommodation.home.addBuildingManually')}
-                  variant="secondary"
-                  onPress={openManualBuilding}
-                />
-              </View>
-            ) : null}
-          </View>
-        ) : (
-          <View style={styles.list}>
-            {filteredBuildings.map(building => (
-              <BuildingListCard
-                key={building.buildingId}
-                building={building}
-                summary={summaries[building.buildingId]}
-                spaceType={spaceType}
-                editableName={canManage}
-                onSaveName={async name => {
-                  await renameBuildingName(spaceId, building.buildingId, name, {
-                    code: building.code,
-                    layoutMode: building.layoutMode,
-                  });
-                  patchBuilding(building.buildingId, { name });
-                  setSummaries(prev => {
-                    const existing = prev[building.buildingId];
-                    if (!existing) {
-                      return prev;
-                    }
-                    return {
-                      ...prev,
-                      [building.buildingId]: { ...existing, name },
-                    };
-                  });
-                  showToast(t('accommodation.buildings.updateSuccess'));
-                }}
-                onPress={() => openBuilder(building)}
+      <CoachmarkSequence
+        spaceId={spaceId}
+        tourId="setup.accommodation.v1"
+        lifecycle={lifecycle}
+        enabled={coachmarksEnabled}>
+        <View style={styles.root}>
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={colors.primary}
+                colors={[colors.primary]}
               />
-            ))}
-          </View>
-        )}
-      </ScrollView>
+            }>
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-      <AccommodationHomeSpeedDial
-        visible={showFab && !isEmpty}
-        onQuickSetup={openQuickSetup}
-        onAddManually={openManualBuilding}
-      />
-      </View>
+            {accommodationOperations ? (
+              <DashboardAccommodationOperations
+                hideTitle
+                operations={accommodationOperations}
+                onOccupiedPress={
+                  canOpenOccupancyDrilldown ? handleOccupiedBedsPress : undefined
+                }
+                onVacantPress={
+                  canOpenOccupancyDrilldown ? handleVacantBedsPress : undefined
+                }
+                onMoveInsPress={
+                  canOpenOccupancyDrilldown ? handleMoveInsPress : undefined
+                }
+              />
+            ) : null}
+
+            {!isEmpty ? (
+              <AccommodationSearchBar
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+            ) : null}
+
+            {showLoading ? (
+              <>
+                <SkeletonCard />
+                <View style={styles.gap} />
+                <SkeletonCard />
+              </>
+            ) : isEmpty ? (
+              <CoachmarkAnchor id="propertyLayout" active={coachmarksEnabled}>
+                <View style={styles.emptyWrap}>
+                  <CoachmarkAnchor id="nextGuidance" active={coachmarksEnabled}>
+                    <EmptyState
+                      title={t('accommodation.home.emptyTitle')}
+                      description={t('accommodation.home.emptyDescription')}
+                      icon="🏢"
+                    />
+                  </CoachmarkAnchor>
+                  {canManage ? (
+                    <CoachmarkAnchor
+                      id="continueSetup"
+                      active={coachmarksEnabled}
+                      style={styles.emptyActions}>
+                      <Button
+                        label={t('accommodation.home.quickSetup')}
+                        onPress={openQuickSetup}
+                      />
+                      <Button
+                        label={t('accommodation.home.addBuildingManually')}
+                        variant="secondary"
+                        onPress={openManualBuilding}
+                      />
+                    </CoachmarkAnchor>
+                  ) : null}
+                </View>
+              </CoachmarkAnchor>
+            ) : (
+              <View style={styles.list}>
+                {filteredBuildings.map(building => (
+                  <BuildingListCard
+                    key={building.buildingId}
+                    building={building}
+                    summary={summaries[building.buildingId]}
+                    spaceType={spaceType}
+                    editableName={canManage}
+                    onSaveName={async name => {
+                      await renameBuildingName(
+                        spaceId,
+                        building.buildingId,
+                        name,
+                        {
+                          code: building.code,
+                          layoutMode: building.layoutMode,
+                        },
+                      );
+                      patchBuilding(building.buildingId, { name });
+                      setSummaries(prev => {
+                        const existing = prev[building.buildingId];
+                        if (!existing) {
+                          return prev;
+                        }
+                        return {
+                          ...prev,
+                          [building.buildingId]: { ...existing, name },
+                        };
+                      });
+                      showToast(t('accommodation.buildings.updateSuccess'));
+                    }}
+                    onPress={() => openBuilder(building)}
+                  />
+                ))}
+              </View>
+            )}
+          </ScrollView>
+
+          <AccommodationHomeSpeedDial
+            visible={showFab && !isEmpty}
+            onQuickSetup={openQuickSetup}
+            onAddManually={openManualBuilding}
+          />
+        </View>
+      </CoachmarkSequence>
     </RequireAccommodationAccess>
   );
 }

@@ -47,7 +47,7 @@ export const DashboardActionRow = memo(function DashboardActionRow({
           { backgroundColor: highlight ? '#FEF3C7' : `${accent}18` },
           disabled && styles.iconWrapDisabled,
         ]}>
-        <Icon size={22} color={highlight ? '#D97706' : accent} strokeWidth={2.2} />
+        <Icon size={18} color={highlight ? '#D97706' : accent} strokeWidth={2.2} />
       </View>
       <View style={styles.body}>
         <Text style={[styles.title, disabled && styles.titleDisabled]} numberOfLines={1}>
@@ -79,9 +79,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
-    minHeight: 72,
+    minHeight: 64,
     ...shadows.sm,
   },
   cardHighlight: {
@@ -97,8 +97,8 @@ const styles = StyleSheet.create({
     borderColor: `${colors.primary}66`,
   },
   iconWrap: {
-    width: 44,
-    height: 44,
+    width: 36,
+    height: 36,
     borderRadius: radius.button,
     alignItems: 'center',
     justifyContent: 'center',
@@ -109,10 +109,12 @@ const styles = StyleSheet.create({
   body: {
     flex: 1,
     minWidth: 0,
-    gap: 2,
+    gap: spacing.xxs,
   },
   title: {
     ...typography.bodyStrong,
+    fontSize: 14,
+    lineHeight: 18,
     color: colors.textPrimary,
   },
   titleDisabled: {
@@ -120,6 +122,8 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     ...typography.caption,
+    fontSize: 12,
+    lineHeight: 16,
     color: colors.textSecondary,
   },
   subtitleDisabled: {

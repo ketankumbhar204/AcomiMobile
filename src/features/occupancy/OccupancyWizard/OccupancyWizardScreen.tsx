@@ -1,5 +1,14 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { memberApi } from '../../../api/memberApi';
@@ -11,9 +20,14 @@ import type {
   OccupancyResponse,
   TransferRentPolicy,
 } from '../../../api/types';
-import { Button } from '../../../components/ui';
+import { ProgressiveWorkflowFooter, StickyFormActions } from '../../../components/progressive';
 import { Screen } from '../../../components/ui/Screen';
 import { useMemberSearch } from '../../../hooks/useMemberSearch';
+import { useProgressiveSectionReview } from '../../../hooks/useProgressiveSectionReview';
+import {
+  useResidentImportSearch,
+  type ResidentPickerItem,
+} from '../../../hooks/useResidentImportSearch';
 import type { MainStackParamList } from '../../../navigation/types';
 import { useSpaceStore } from '../../../store/spaceStore';
 import { colors, spacing, typography } from '../../../theme';
@@ -40,6 +54,7 @@ import { getWizardSteps, getWizardStepTitleKey, getWizardTitleKey } from './occu
 import { navigateToMemberDetailsAfterOccupancy } from './navigation';
 import { ContractTermsStep } from './steps/ContractTermsStep';
 import { getMembershipErrorMessage } from '../../../utils/membershipErrors';
+import { getOccupancyErrorMessage } from '../../../utils/occupancyErrors';
 import {
   hasFieldErrors,
   validateNewMemberFields,
@@ -53,6 +68,7 @@ import { TransferCurrentStep } from './steps/TransferCurrentStep';
 import { VacateConfirmStep } from './steps/VacateConfirmStep';
 import { useOccupancyWizardSubmit } from './useOccupancyWizardSubmit';
 import type { OccupancyWizardStep } from './types';
+import { resolveProgressivePhase } from '../../../utils/progressivePhase';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'OccupancyWizard'>;
 
@@ -126,20 +142,27 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
   const [assignedAmenities, setAssignedAmenities] = useState<AmenityAssignment[]>([]);
   const memberAutoSelectSuppressRef = useRef(false);
   const memberAutoSelectKeyRef = useRef<string | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
 
   const allowAddNewMember = mode === 'ALLOCATE' || mode === 'RESERVE';
 
   const memberSearchStatus =
     mode === 'VACATE' || mode === 'TRANSFER' ? 'ALLOCATED' : 'VACATED';
 
-  const { members, loading: membersLoading, error: membersError } = useMemberSearch(
-    spaceId,
-    memberQuery,
-    {
-      occupancyStatus: memberSearchStatus,
-      enabled: currentStep === 'member',
-    },
-  );
+  const localMemberSearch = useMemberSearch(spaceId, memberQuery, {
+    occupancyStatus: memberSearchStatus,
+    enabled: currentStep === 'member' && !allowAddNewMember,
+  });
+
+  const importMemberSearch = useResidentImportSearch(spaceId, memberQuery, {
+    enabled: currentStep === 'member' && allowAddNewMember && memberPickerMode === 'search',
+  });
+
+  const members = allowAddNewMember ? importMemberSearch.members : localMemberSearch.members;
+  const membersLoading = allowAddNewMember
+    ? importMemberSearch.loading
+    : localMemberSearch.loading;
+  const membersError = allowAddNewMember ? importMemberSearch.error : localMemberSearch.error;
 
   const { submit, loading: submitting } = useOccupancyWizardSubmit(spaceId);
   const { buildings } = useBuildings(spaceId);
@@ -383,11 +406,28 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
   }, [goBack, mode, navigation, t]);
 
   const handleMemberSelect = useCallback(
-    async (selected: MemberResponse) => {
+    async (selected: ResidentPickerItem) => {
       memberAutoSelectSuppressRef.current = false;
-      setMember(selected);
+      setFormError(null);
+
+      let resolved: MemberResponse = selected;
+      if (allowAddNewMember && selected.needsImport && selected.memberId) {
+        setCreatingMember(true);
+        try {
+          resolved = await memberApi.importMember(spaceId, {
+            sourceMemberId: selected.memberId,
+          });
+        } catch (err) {
+          setFormError(getMembershipErrorMessage(err, 'occupancyWizard.errors.importMember'));
+          return;
+        } finally {
+          setCreatingMember(false);
+        }
+      }
+
+      setMember(resolved);
       if (mode === 'TRANSFER' || mode === 'VACATE') {
-        const bundle = await occupancyApi.getMemberOccupancies(spaceId, selected.memberId);
+        const bundle = await occupancyApi.getMemberOccupancies(spaceId, resolved.memberId);
         const active =
           bundle.currentOccupancy ??
           bundle.occupancies?.find(o => o.status === 'ACTIVE') ??
@@ -406,7 +446,7 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
       }
       goNext();
     },
-    [goNext, mode, spaceAmenities, spaceId, t],
+    [allowAddNewMember, goNext, mode, spaceAmenities, spaceId, t],
   );
 
   useEffect(() => {
@@ -417,6 +457,10 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
       return;
     }
     const candidate = members[0];
+    // Never auto-import across spaces — require an explicit tap.
+    if (candidate.needsImport) {
+      return;
+    }
     const autoKey = `${candidate.memberId}:${memberQuery}`;
     if (memberAutoSelectKeyRef.current === autoKey) {
       return;
@@ -514,61 +558,92 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
   }, [member?.memberId, mode, navigation, spaceId]);
 
   const handleConfirm = useCallback(async () => {
-    if (!spaceType || !member || !targetSelection) {
+    setFormError(null);
+
+    if (!spaceType || !member) {
       if (mode === 'VACATE' && member && occupancyId) {
-        await submit({
-          mode,
-          spaceType: spaceType!,
-          memberId: member.memberId,
-          target: targetSelection ?? {
-            targetType: 'BED',
-            buildingId: '',
-            buildingName: '',
-          },
-          occupancyId,
-          remarks,
-          onSuccess: () => navigation.goBack(),
-        });
+        try {
+          await submit({
+            mode,
+            spaceType: spaceType!,
+            memberId: member.memberId,
+            target: targetSelection ?? {
+              targetType: 'BED',
+              buildingId: '',
+              buildingName: '',
+            },
+            occupancyId,
+            remarks,
+            onSuccess: () => navigation.goBack(),
+          });
+        } catch (err) {
+          setFormError(getOccupancyErrorMessage(err));
+        }
         return;
       }
       setFormError(t('occupancy.errors.generic'));
       return;
     }
 
-    // #region agent log
-    agentDebugLog({
-      hypothesisId: 'B',
-      location: 'OccupancyWizardScreen.tsx:handleConfirm',
-      message: 'wizard submit food policy',
-      data: {
-        mode,
-        foodIncludedInRent: effectiveFoodPolicy.foodIncludedInRent,
-        foodEnabled: contractValues.foodEnabled,
-      },
-      runId: 'movein-food',
-    });
-    // #endregion
+    let resolvedTarget = targetSelection;
+    if (
+      !resolvedTarget &&
+      (mode === 'ALLOCATE' || mode === 'RESERVE' || mode === 'TRANSFER' || mode === 'MOVE_IN') &&
+      (bedId || unitId)
+    ) {
+      try {
+        const prefilled = await fetchPrefilledAllocationTarget(spaceId, {
+          bedId,
+          roomId,
+          unitId,
+          buildingId,
+        });
+        if (prefilled) {
+          resolvedTarget = prefilled.selection;
+          setTargetSelection(prefilled.selection);
+          if (catalogRent == null && prefilled.row.defaultRent != null) {
+            setCatalogRent(prefilled.row.defaultRent);
+          }
+        }
+      } catch {
+        // Fall through to target-required error below.
+      }
+    }
 
-    await submit({
-      mode,
-      spaceType,
-      memberId: member.memberId,
-      target: targetSelection,
-      catalogRent,
-      contractValues,
-      foodPolicy: effectiveFoodPolicy,
-      rentPolicy,
-      moveInDate,
-      expectedExitDate,
-      remarks,
-      agreementSigned,
-      allowEarlyMoveIn,
-      occupancyId,
-      currentOccupancy,
-      assignedAmenities,
-      onSuccess: handleOccupancySuccess,
-    });
+    if (
+      (mode === 'ALLOCATE' || mode === 'RESERVE' || mode === 'TRANSFER') &&
+      !resolvedTarget
+    ) {
+      setFormError(t('occupancy.errors.targetRequired'));
+      return;
+    }
+
+    try {
+      await submit({
+        mode,
+        spaceType,
+        memberId: member.memberId,
+        target: resolvedTarget!,
+        catalogRent,
+        contractValues,
+        foodPolicy: effectiveFoodPolicy,
+        rentPolicy,
+        moveInDate,
+        expectedExitDate,
+        remarks,
+        agreementSigned,
+        allowEarlyMoveIn,
+        occupancyId,
+        currentOccupancy,
+        assignedAmenities,
+        onSuccess: handleOccupancySuccess,
+      });
+    } catch (err) {
+      setFormError(getOccupancyErrorMessage(err));
+    }
   }, [
+    bedId,
+    buildingId,
     catalogRent,
     contractValues,
     effectiveFoodPolicy,
@@ -577,6 +652,7 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
     member,
     mode,
     moveInDate,
+    navigation,
     occupancyId,
     currentOccupancy,
     remarks,
@@ -584,10 +660,13 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
     allowEarlyMoveIn,
     rentPolicy,
     assignedAmenities,
+    roomId,
+    spaceId,
     spaceType,
     submit,
     t,
     targetSelection,
+    unitId,
   ]);
 
   const handlePrimary = useCallback(() => {
@@ -625,6 +704,47 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
     t,
   ]);
 
+  const usesListStep = currentStep === 'member' || currentStep === 'target';
+  const autoAdvanceStep = currentStep === 'member' && memberPickerMode === 'search';
+  const showPrimaryButton = !autoAdvanceStep && currentStep !== 'target';
+  const isContractStep = currentStep === 'contract';
+  const showContractRent =
+    mode !== 'TRANSFER' || rentPolicy === 'APPLY_NEW' || rentPolicy === 'CUSTOM';
+  const contractProgressiveEnabled =
+    isContractStep && (showContractRent || spaceAmenities.length > 0);
+
+  const {
+    reviewed: addonsReviewed,
+    highlighted: addonsHighlighted,
+    onSectionLayout: onAddonsLayout,
+    onScroll: onAddonsScroll,
+    onScrollBeginDrag: onAddonsScrollBeginDrag,
+    continueToSection: continueToAddons,
+    clearReviewed: clearAddonsReviewed,
+  } = useProgressiveSectionReview({
+    enabled: contractProgressiveEnabled,
+  });
+
+  useEffect(() => {
+    if (isContractStep) {
+      clearAddonsReviewed();
+    }
+  }, [clearAddonsReviewed, isContractStep, rentPolicy]);
+
+  const contractFooterPhase = resolveProgressivePhase({
+    enabled: contractProgressiveEnabled,
+    prerequisiteMet: true,
+    sectionReviewed: addonsReviewed,
+  });
+
+  const handleContractScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const { contentOffset, layoutMeasurement } = event.nativeEvent;
+      onAddonsScroll(contentOffset.y, layoutMeasurement.height);
+    },
+    [onAddonsScroll],
+  );
+
   if (!spaceType || bootLoading) {
     return (
       <Screen>
@@ -646,20 +766,16 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
               : t('occupancy.actions.allocate')
       : t('common.continue');
 
-  const usesListStep = currentStep === 'member' || currentStep === 'target';
-  const autoAdvanceStep = currentStep === 'member' && memberPickerMode === 'search';
-  const showPrimaryButton = !autoAdvanceStep && currentStep !== 'target';
-
   return (
     <Screen
-      scrollable={!usesListStep}
+      scrollable={false}
       style={usesListStep ? styles.listScreen : undefined}
       contentStyle={
         usesListStep
           ? isTargetStep
             ? styles.targetScreenContent
             : styles.listScreenContent
-          : styles.content
+          : styles.stickyScreenContent
       }>
       {isTargetStep ? (
         <View style={styles.targetStepRoot}>
@@ -690,158 +806,249 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
 
           {formError ? <Text style={styles.error}>{formError}</Text> : null}
 
-          <View style={styles.targetStepFooter}>
-            <Button
-              label={t('common.back')}
-              variant="ghost"
-              onPress={goBack}
-              disabled={submitting || applyingTarget}
+          <StickyFormActions
+            secondary={{
+              label: t('common.back'),
+              onPress: goBack,
+              disabled: submitting || applyingTarget,
+            }}
+          />
+        </View>
+      ) : usesListStep ? (
+        <View style={styles.listStepRoot}>
+          <Text style={styles.heading}>{t(getWizardTitleKey(mode))}</Text>
+
+          {showMemberContext && member ? (
+            <View style={styles.memberContext}>
+              <Text style={styles.memberLabel}>{t('occupancyWizard.context.member')}</Text>
+              <Text style={styles.memberValue}>
+                {member.fullName}
+                {member.mobileNumber ? ` · ${member.mobileNumber}` : ''}
+              </Text>
+            </View>
+          ) : null}
+
+          {showStepHeader ? (
+            <OccupancyWizardStepHeader
+              stepProgress={{ current: stepIndex + 1, total: steps.length }}
+              stepTitle={stepTitle}
+              hierarchyContext={hierarchyContext}
             />
+          ) : null}
+
+          <View style={styles.listStepBody}>
+            {currentStep === 'member' ? (
+              <MemberPickerStep
+                query={memberQuery}
+                onQueryChange={setMemberQuery}
+                members={members}
+                loading={membersLoading}
+                error={membersError}
+                preferredStatus={memberSearchStatus}
+                allowAddNew={allowAddNewMember}
+                crossSpaceReuse={allowAddNewMember}
+                hideTitle
+                pickerMode={memberPickerMode}
+                onPickerModeChange={mode => {
+                  setMemberPickerMode(mode);
+                  setFormError(null);
+                  setNewMemberErrors({});
+                }}
+                newMemberName={newMemberName}
+                newMemberMobile={newMemberMobile}
+                onNewMemberNameChange={value => {
+                  setNewMemberName(value);
+                  if (newMemberErrors.fullName) {
+                    setNewMemberErrors(prev => ({ ...prev, fullName: undefined }));
+                  }
+                }}
+                onNewMemberMobileChange={value => {
+                  setNewMemberMobile(value);
+                  if (newMemberErrors.mobileNumber) {
+                    setNewMemberErrors(prev => ({ ...prev, mobileNumber: undefined }));
+                  }
+                }}
+                newMemberErrors={newMemberErrors}
+                creatingMember={creatingMember}
+                selectedMemberId={member?.memberId}
+                onSelect={handleMemberSelect}
+              />
+            ) : null}
           </View>
+
+          {formError ? <Text style={styles.error}>{formError}</Text> : null}
+
+          {showPrimaryButton ? (
+            <StickyFormActions
+              primary={{
+                label: primaryLabel,
+                onPress: handlePrimary,
+                loading: submitting || creatingMember,
+                disabled: submitting || creatingMember,
+              }}
+              secondary={{
+                label: t('common.back'),
+                onPress: goBack,
+                disabled: submitting || applyingTarget,
+              }}
+            />
+          ) : (
+            <StickyFormActions
+              secondary={{
+                label: t('common.back'),
+                onPress: goBack,
+                disabled: submitting || applyingTarget,
+              }}
+            />
+          )}
         </View>
       ) : (
-        <>
-      <Text style={styles.heading}>{t(getWizardTitleKey(mode))}</Text>
+        <View style={styles.formStepRoot}>
+          <ScrollView
+            ref={scrollRef}
+            style={styles.formStepScroll}
+            contentContainerStyle={styles.formStepScrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            scrollEventThrottle={16}
+            onScrollBeginDrag={isContractStep ? onAddonsScrollBeginDrag : undefined}
+            onScroll={isContractStep ? handleContractScroll : undefined}>
+            <Text style={styles.heading}>{t(getWizardTitleKey(mode))}</Text>
 
-      {showMemberContext && member ? (
-        <View style={styles.memberContext}>
-          <Text style={styles.memberLabel}>{t('occupancyWizard.context.member')}</Text>
-          <Text style={styles.memberValue}>
-            {member.fullName}
-            {member.mobileNumber ? ` · ${member.mobileNumber}` : ''}
-          </Text>
+            {showMemberContext && member ? (
+              <View style={styles.memberContext}>
+                <Text style={styles.memberLabel}>{t('occupancyWizard.context.member')}</Text>
+                <Text style={styles.memberValue}>
+                  {member.fullName}
+                  {member.mobileNumber ? ` · ${member.mobileNumber}` : ''}
+                </Text>
+              </View>
+            ) : null}
+
+            {showStepHeader ? (
+              <OccupancyWizardStepHeader
+                stepProgress={{ current: stepIndex + 1, total: steps.length }}
+                stepTitle={stepTitle}
+                hierarchyContext={hierarchyContext}
+              />
+            ) : null}
+
+            {currentStep === 'reserve_dates' ? (
+              <ReserveDatesStep
+                moveInDate={moveInDate}
+                expectedExitDate={expectedExitDate}
+                remarks={remarks}
+                onMoveInDateChange={setMoveInDate}
+                onExpectedExitDateChange={setExpectedExitDate}
+                onRemarksChange={setRemarks}
+              />
+            ) : null}
+
+            {currentStep === 'transfer_current' && member && currentOccupancy ? (
+              <TransferCurrentStep
+                memberName={member.fullName}
+                memberMobile={member.mobileNumber}
+                occupancy={currentOccupancy}
+              />
+            ) : null}
+
+            {currentStep === 'contract' ? (
+              <ContractTermsStep
+                spaceId={spaceId}
+                mode={mode === 'TRANSFER' ? 'TRANSFER' : mode === 'MOVE_IN' ? 'MOVE_IN' : 'ALLOCATE'}
+                values={contractValues}
+                onChange={setContractValues}
+                catalogRent={catalogRent}
+                catalogDeposit={catalogDeposit}
+                rentPolicy={rentPolicy}
+                onRentPolicyChange={setRentPolicy}
+                currentOccupancy={currentOccupancy}
+                moveInDate={currentOccupancy?.moveInDate}
+                agreementSigned={agreementSigned}
+                onAgreementSignedChange={setAgreementSigned}
+                allowEarlyMoveIn={allowEarlyMoveIn}
+                onAllowEarlyMoveInChange={setAllowEarlyMoveIn}
+                spaceAmenities={spaceAmenities}
+                assignedAmenities={assignedAmenities}
+                onAssignedAmenitiesChange={setAssignedAmenities}
+                onAddonsLayout={onAddonsLayout}
+                addonsHighlighted={addonsHighlighted}
+              />
+            ) : null}
+
+            {currentStep === 'review' && mode !== 'VACATE' ? (
+              <ReviewStep
+                mode={mode === 'MOVE_IN' ? 'MOVE_IN' : mode === 'TRANSFER' ? 'TRANSFER' : mode}
+                member={member}
+                hierarchyContext={hierarchyContext}
+                contractValues={contractValues}
+                foodPolicy={effectiveFoodPolicy}
+                rentPolicy={mode === 'TRANSFER' ? rentPolicy : undefined}
+                moveInDate={moveInDate}
+                expectedExitDate={expectedExitDate}
+                remarks={remarks}
+              />
+            ) : null}
+
+            {currentStep === 'vacate_confirm' && member && currentOccupancy ? (
+              <VacateConfirmStep
+                memberName={member.fullName}
+                memberMobile={member.mobileNumber}
+                occupancy={currentOccupancy}
+                remarks={remarks}
+                onRemarksChange={setRemarks}
+              />
+            ) : null}
+
+            {formError ? <Text style={styles.error}>{formError}</Text> : null}
+          </ScrollView>
+
+          {isContractStep && contractProgressiveEnabled ? (
+            <ProgressiveWorkflowFooter
+              phase={contractFooterPhase}
+              stepLabel={t('progressiveWorkflow.stepOf', {
+                current: contractFooterPhase === 'continue' ? 1 : 2,
+                total: 2,
+              })}
+              progressLine={
+                contractFooterPhase === 'continue'
+                  ? t('progressiveWorkflow.occupancy.progressRentNext')
+                  : t('progressiveWorkflow.occupancy.progressReady')
+              }
+              continueEyebrow={t('progressiveWorkflow.nextStep')}
+              continueTitle={t('progressiveWorkflow.occupancy.reviewAddonsTitle')}
+              continueHint={t('progressiveWorkflow.occupancy.reviewAddonsHint')}
+              continueLabel={t('progressiveWorkflow.occupancy.continueToAddons')}
+              onContinue={() => continueToAddons(scrollRef)}
+              primaryAction={{
+                label: primaryLabel,
+                onPress: handlePrimary,
+                loading: submitting || creatingMember,
+                disabled: submitting || creatingMember,
+              }}
+              secondaryAction={{
+                label: t('common.back'),
+                onPress: goBack,
+                disabled: submitting || applyingTarget,
+              }}
+              minHeight={160}
+            />
+          ) : showPrimaryButton ? (
+            <StickyFormActions
+              primary={{
+                label: primaryLabel,
+                onPress: handlePrimary,
+                loading: submitting || creatingMember,
+                disabled: submitting || creatingMember,
+              }}
+              secondary={{
+                label: t('common.back'),
+                onPress: goBack,
+                disabled: submitting || applyingTarget,
+              }}
+            />
+          ) : null}
         </View>
-      ) : null}
-
-      {showStepHeader ? (
-        <OccupancyWizardStepHeader
-          stepProgress={{ current: stepIndex + 1, total: steps.length }}
-          stepTitle={stepTitle}
-          hierarchyContext={hierarchyContext}
-        />
-      ) : null}
-
-      {currentStep === 'member' ? (
-        <MemberPickerStep
-          query={memberQuery}
-          onQueryChange={setMemberQuery}
-          members={members}
-          loading={membersLoading}
-          error={membersError}
-          preferredStatus={memberSearchStatus}
-          allowAddNew={allowAddNewMember}
-          hideTitle
-          pickerMode={memberPickerMode}
-          onPickerModeChange={mode => {
-            setMemberPickerMode(mode);
-            setFormError(null);
-            setNewMemberErrors({});
-          }}
-          newMemberName={newMemberName}
-          newMemberMobile={newMemberMobile}
-          onNewMemberNameChange={value => {
-            setNewMemberName(value);
-            if (newMemberErrors.fullName) {
-              setNewMemberErrors(prev => ({ ...prev, fullName: undefined }));
-            }
-          }}
-          onNewMemberMobileChange={value => {
-            setNewMemberMobile(value);
-            if (newMemberErrors.mobileNumber) {
-              setNewMemberErrors(prev => ({ ...prev, mobileNumber: undefined }));
-            }
-          }}
-          newMemberErrors={newMemberErrors}
-          creatingMember={creatingMember}
-          selectedMemberId={member?.memberId}
-          onSelect={handleMemberSelect}
-        />
-      ) : null}
-
-      {currentStep === 'reserve_dates' ? (
-        <ReserveDatesStep
-          moveInDate={moveInDate}
-          expectedExitDate={expectedExitDate}
-          remarks={remarks}
-          onMoveInDateChange={setMoveInDate}
-          onExpectedExitDateChange={setExpectedExitDate}
-          onRemarksChange={setRemarks}
-        />
-      ) : null}
-
-      {currentStep === 'transfer_current' && member && currentOccupancy ? (
-        <TransferCurrentStep
-          memberName={member.fullName}
-          memberMobile={member.mobileNumber}
-          occupancy={currentOccupancy}
-        />
-      ) : null}
-
-      {currentStep === 'contract' ? (
-        <ContractTermsStep
-          spaceId={spaceId}
-          mode={mode === 'TRANSFER' ? 'TRANSFER' : mode === 'MOVE_IN' ? 'MOVE_IN' : 'ALLOCATE'}
-          values={contractValues}
-          onChange={setContractValues}
-          catalogRent={catalogRent}
-          catalogDeposit={catalogDeposit}
-          rentPolicy={rentPolicy}
-          onRentPolicyChange={setRentPolicy}
-          currentOccupancy={currentOccupancy}
-          moveInDate={currentOccupancy?.moveInDate}
-          agreementSigned={agreementSigned}
-          onAgreementSignedChange={setAgreementSigned}
-          allowEarlyMoveIn={allowEarlyMoveIn}
-          onAllowEarlyMoveInChange={setAllowEarlyMoveIn}
-          spaceAmenities={spaceAmenities}
-          assignedAmenities={assignedAmenities}
-          onAssignedAmenitiesChange={setAssignedAmenities}
-        />
-      ) : null}
-
-      {currentStep === 'review' && mode !== 'VACATE' ? (
-        <ReviewStep
-          mode={mode === 'MOVE_IN' ? 'MOVE_IN' : mode === 'TRANSFER' ? 'TRANSFER' : mode}
-          member={member}
-          hierarchyContext={hierarchyContext}
-          contractValues={contractValues}
-          foodPolicy={effectiveFoodPolicy}
-          rentPolicy={mode === 'TRANSFER' ? rentPolicy : undefined}
-          moveInDate={moveInDate}
-          expectedExitDate={expectedExitDate}
-          remarks={remarks}
-        />
-      ) : null}
-
-      {currentStep === 'vacate_confirm' && member && currentOccupancy ? (
-        <VacateConfirmStep
-          memberName={member.fullName}
-          memberMobile={member.mobileNumber}
-          occupancy={currentOccupancy}
-          remarks={remarks}
-          onRemarksChange={setRemarks}
-        />
-      ) : null}
-
-      {formError ? <Text style={styles.error}>{formError}</Text> : null}
-
-      <View style={styles.actions}>
-        {showPrimaryButton ? (
-          <Button
-            label={primaryLabel}
-            onPress={handlePrimary}
-            loading={submitting || creatingMember}
-            disabled={submitting || creatingMember}
-          />
-        ) : null}
-        <Button
-          label={t('common.back')}
-          variant="ghost"
-          onPress={goBack}
-          disabled={submitting || applyingTarget}
-        />
-      </View>
-        </>
       )}
     </Screen>
   );
@@ -852,6 +1059,31 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   content: { paddingBottom: spacing.section },
+  stickyScreenContent: {
+    flex: 1,
+    padding: 0,
+    minHeight: 0,
+  },
+  formStepRoot: {
+    flex: 1,
+    minHeight: 0,
+  },
+  formStepScroll: {
+    flex: 1,
+  },
+  formStepScrollContent: {
+    paddingHorizontal: spacing.xxl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
+  },
+  listStepRoot: {
+    flex: 1,
+    minHeight: 0,
+  },
+  listStepBody: {
+    flex: 1,
+    minHeight: 0,
+  },
   listScreenContent: {
     flex: 1,
     paddingHorizontal: spacing.xxl,
@@ -876,9 +1108,6 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 0,
   },
-  targetStepFooter: {
-    paddingTop: spacing.sm,
-  },
   heading: { ...typography.h2, marginBottom: spacing.sm },
   memberContext: {
     marginBottom: spacing.sm,
@@ -894,5 +1123,4 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
   },
   error: { ...typography.caption, color: '#DC2626', marginVertical: spacing.sm },
-  actions: { marginTop: spacing.lg, gap: spacing.sm },
 });

@@ -7,10 +7,12 @@ import {
   CreateMemberDocumentRequest,
   CreateMemberNoteRequest,
   CreateMemberRequest,
+  ImportMemberRequest,
   InvitationResponse,
   MemberDetailsResponse,
   MemberDocumentResponse,
   MemberHistoryResponse,
+  MemberImportCandidateResponse,
   MemberNoteResponse,
   MemberResponse,
   MemberSearchParams,
@@ -66,6 +68,43 @@ export const memberApi = {
     );
 
     console.log(`${LOG_TAG} getMembers response`, response.length);
+    return response;
+  },
+
+  searchImportCandidates: async (
+    spaceId: UUID,
+    search?: string,
+  ): Promise<MemberImportCandidateResponse[]> => {
+    const q = new URLSearchParams();
+    if (search?.trim()) {
+      q.set('search', search.trim());
+    }
+    const query = q.toString();
+    const path = `/spaces/${spaceId}/members/import-candidates${query ? `?${query}` : ''}`;
+    console.log(`${LOG_TAG} GET ${path}`);
+
+    const response = await unwrapApiResponse(
+      apiClient.get<ApiResponse<MemberImportCandidateResponse[]>>(path),
+    );
+
+    console.log(`${LOG_TAG} searchImportCandidates response`, response.length);
+    return response;
+  },
+
+  importMember: async (
+    spaceId: UUID,
+    body: ImportMemberRequest,
+  ): Promise<MemberResponse> => {
+    console.log(`${LOG_TAG} POST /spaces/${spaceId}/members/import`, body);
+
+    const response = await unwrapApiResponse(
+      apiClient.post<ApiResponse<MemberResponse>>(
+        `/spaces/${spaceId}/members/import`,
+        body,
+      ),
+    );
+
+    console.log(`${LOG_TAG} importMember response`, response.memberId);
     return response;
   },
 

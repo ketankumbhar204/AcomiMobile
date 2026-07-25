@@ -33,6 +33,7 @@ export type DashboardStatCardProps = {
 
 /**
  * Design A statistic card — shared by Customer + Owner dashboards.
+ * Centered icon → value → label for consistent KPI rhythm.
  */
 export const DashboardStatCard = memo(function DashboardStatCard({
   label,
@@ -54,17 +55,24 @@ export const DashboardStatCard = memo(function DashboardStatCard({
             compact && styles.iconWrapCompact,
             { backgroundColor: `${accent}18` },
           ]}>
-          <Icon size={compact ? 13 : 18} color={accent} strokeWidth={2.2} />
+          <Icon size={compact ? 14 : 16} color={accent} strokeWidth={2.2} />
         </View>
       ) : null}
       <Text
-        style={[styles.value, compact && styles.valueCompact, { color: accent }, valueStyle]}
+        style={[
+          styles.value,
+          compact && styles.valueCompact,
+          { color: accent },
+          valueStyle,
+        ]}
         numberOfLines={1}
         adjustsFontSizeToFit={compact}
         minimumFontScale={0.75}>
         {value}
       </Text>
-      <Text style={[styles.label, compact && styles.labelCompact]} numberOfLines={2}>
+      <Text
+        style={[styles.label, compact && styles.labelCompact]}
+        numberOfLines={2}>
         {label}
       </Text>
       {onPress && !compact ? (
@@ -84,7 +92,10 @@ export const DashboardStatCard = memo(function DashboardStatCard({
 
   if (!onPress) {
     return (
-      <View style={cardStyle} accessibilityRole="summary" accessibilityLabel={`${label}: ${value}`}>
+      <View
+        style={cardStyle}
+        accessibilityRole="summary"
+        accessibilityLabel={`${label}: ${value}`}>
         {body}
       </View>
     );
@@ -93,7 +104,11 @@ export const DashboardStatCard = memo(function DashboardStatCard({
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [...cardStyle, styles.pressable, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        ...cardStyle,
+        styles.pressable,
+        pressed && styles.pressed,
+      ]}
       accessibilityRole="button"
       accessibilityLabel={`${label}: ${value}`}>
       {body}
@@ -109,21 +124,25 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.md,
-    minHeight: 96,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    minHeight: 78,
     gap: spacing.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
     position: 'relative',
     ...shadows.sm,
   },
   cardCompact: {
     flex: 1,
     minWidth: 0,
-    minHeight: 78,
+    minHeight: 72,
     paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
     borderRadius: radius.button,
-    gap: 2,
+    gap: spacing.xxs,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   gridItem: {
     flexGrow: 1,
@@ -142,32 +161,36 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   iconWrapCompact: {
-    width: 24,
-    height: 24,
+    width: 28,
+    height: 28,
     borderRadius: radius.sm,
-    marginBottom: 2,
   },
   value: {
     ...typography.h3,
-    fontSize: 18,
-    lineHeight: 24,
+    fontSize: 24,
+    lineHeight: 28,
+    fontWeight: '700',
     color: colors.textPrimary,
+    textAlign: 'center',
   },
   valueCompact: {
-    fontSize: 13,
-    lineHeight: 16,
+    fontSize: 14,
+    lineHeight: 18,
     fontWeight: '700',
     textAlign: 'center',
     width: '100%',
   },
   label: {
     ...typography.caption,
+    fontSize: 12,
+    lineHeight: 14,
     color: colors.muted,
     fontWeight: '600',
+    textAlign: 'center',
   },
   labelCompact: {
-    fontSize: 10,
-    lineHeight: 12,
+    fontSize: 11,
+    lineHeight: 13,
     textAlign: 'center',
     width: '100%',
   },

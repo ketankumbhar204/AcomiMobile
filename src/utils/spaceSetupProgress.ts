@@ -41,16 +41,18 @@ type BuildSetupProgressInput = {
 
 export function aggregateBuildingStructure(summaries: BuildingSummaryResponse[]): {
   floors: number;
+  units: number;
   rooms: number;
   beds: number;
 } {
   return summaries.reduce(
     (acc, summary) => ({
       floors: acc.floors + (summary.floors ?? 0),
+      units: acc.units + (summary.units ?? 0),
       rooms: acc.rooms + (summary.rooms ?? 0),
       beds: acc.beds + (summary.beds ?? 0),
     }),
-    { floors: 0, rooms: 0, beds: 0 },
+    { floors: 0, units: 0, rooms: 0, beds: 0 },
   );
 }
 

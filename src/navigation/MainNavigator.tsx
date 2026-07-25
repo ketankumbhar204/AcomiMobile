@@ -24,6 +24,8 @@ import { CompleteProfileScreen } from '../screens/onboarding/CompleteProfileScre
 import { JoinSpaceScreen } from '../screens/JoinSpaceScreen';
 import { OnboardingChoiceScreen } from '../screens/OnboardingChoiceScreen';
 import { AddMemberScreen } from '../screens/AddMemberScreen';
+import { AddCustomersHubScreen } from '../screens/AddCustomersHubScreen';
+import { ImportExistingPeopleScreen } from '../screens/ImportExistingPeopleScreen';
 import { CreateSpaceScreen } from '../screens/CreateSpaceScreen';
 import { EditMemberScreen } from '../screens/EditMemberScreen';
 import { MemberSubscriptionScreen } from '../screens/MemberSubscriptionScreen';
@@ -51,6 +53,7 @@ import { SubscriptionActivationRequestsScreen } from '../screens/meals/Subscript
 import { DashboardPendingActionsScreen } from '../screens/dashboard/DashboardPendingActionsScreen';
 import { DashboardBedInventoryScreen } from '../screens/dashboard/DashboardBedInventoryScreen';
 import { DashboardOccupancyListScreen } from '../screens/dashboard/DashboardOccupancyListScreen';
+import { DashboardSpaceHealthScreen } from '../screens/dashboard/DashboardSpaceHealthScreen';
 import { MemberPaymentsScreen } from '../screens/payments/MemberPaymentsScreen';
 import { PaymentReviewScreen } from '../screens/payments/PaymentReviewScreen';
 import { PaymentDetailScreen } from '../screens/payments/PaymentDetailScreen';
@@ -188,6 +191,16 @@ export function MainNavigator() {
         options={{ title: 'Add Member' }}
       />
       <Stack.Screen
+        name="AddCustomersHub"
+        component={AddCustomersHubScreen}
+        options={{ title: 'Add Customers' }}
+      />
+      <Stack.Screen
+        name="ImportExistingPeople"
+        component={ImportExistingPeopleScreen}
+        options={{ title: 'Import Existing People' }}
+      />
+      <Stack.Screen
         name="MemberDetails"
         component={MemberDetailsScreen}
         options={{ title: 'Member Details' }}
@@ -239,7 +252,12 @@ export function MainNavigator() {
       <Stack.Screen
         name="MenuLibrary"
         options={{ title: 'Menu Library' }}
-        children={({ route }) => <MenuLibraryScreen spaceId={route.params.spaceId} />}
+        children={({ route }) => (
+          <MenuLibraryScreen
+            spaceId={route.params.spaceId}
+            initialTab={route.params.initialTab}
+          />
+        )}
       />
       <Stack.Screen
         name="DailyMenuToday"
@@ -344,12 +362,12 @@ export function MainNavigator() {
       />
       <Stack.Screen
         name="SubscriptionPlans"
-        options={{ title: 'Subscription Plans' }}
+        options={{ title: 'Meal Subscription Plan' }}
         children={({ route }) => <SubscriptionPlansScreen spaceId={route.params.spaceId} />}
       />
       <Stack.Screen
         name="CustomerSubscriptionPlans"
-        options={{ title: 'Subscription Plans' }}
+        options={{ title: 'Meal Subscription Plan' }}
         children={({ route }) => (
           <CustomerSubscriptionPlansScreen
             spaceId={route.params.spaceId}
@@ -363,6 +381,11 @@ export function MainNavigator() {
         children={({ route }) => (
           <DashboardPendingActionsScreen spaceId={route.params.spaceId} />
         )}
+      />
+      <Stack.Screen
+        name="DashboardSpaceHealth"
+        options={{ title: 'Space Health' }}
+        component={DashboardSpaceHealthScreen}
       />
       <Stack.Screen
         name="DashboardOccupancyList"

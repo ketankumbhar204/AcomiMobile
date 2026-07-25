@@ -69,10 +69,10 @@ export function FormInput({
 
 const styles = StyleSheet.create({
   wrapper: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   wrapperCompact: {
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   label: {
     ...typography.label,

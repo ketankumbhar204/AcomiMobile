@@ -33,10 +33,19 @@ import {
 type MealExtrasEnableSectionProps = {
   spaceId: UUID;
   catalogItems: FoodItemResponse[];
+  /** Combo constituent IDs — shown under “In your meal”. */
   selectedMealItemIds: Set<string>;
+  /** Broader IDs (incl. individual mains) for related-extra categories only. */
+  categorySeedItemIds?: Set<string>;
   enabledExtras: MenuSelectionItemPackage[];
   onChange: (extras: MenuSelectionItemPackage[]) => void;
   onCatalogItemUpdated?: (item: FoodItemResponse) => void;
+  /** Open Menu Library → Extras to configure more add-ons. */
+  onConfigureMoreExtras?: () => void;
+  /** Brief highlight after “Continue to Extras”. */
+  highlighted?: boolean;
+  /** Fired when the owner interacts with extras controls. */
+  onInteract?: () => void;
   disabled?: boolean;
 };
 
@@ -48,9 +57,13 @@ export function MealExtrasEnableSection({
   spaceId,
   catalogItems,
   selectedMealItemIds,
+  categorySeedItemIds,
   enabledExtras,
   onChange,
   onCatalogItemUpdated,
+  onConfigureMoreExtras,
+  highlighted = false,
+  onInteract,
   disabled = false,
 }: MealExtrasEnableSectionProps) {
   const { t } = useTranslation();
@@ -90,8 +103,13 @@ export function MealExtrasEnableSection({
   );
 
   const buckets = useMemo(
-    () => buildMealExtraSuggestionBuckets(catalogItems, selectedMealItemIds),
-    [catalogItems, selectedMealItemIds],
+    () =>
+      buildMealExtraSuggestionBuckets(
+        catalogItems,
+        selectedMealItemIds,
+        categorySeedItemIds ?? selectedMealItemIds,
+      ),
+    [catalogItems, categorySeedItemIds, selectedMealItemIds],
   );
 
   const browseList = useMemo(() => {
@@ -215,6 +233,7 @@ export function MealExtrasEnableSection({
       if (disabled) {
         return;
       }
+      onInteract?.();
       if (!enabled) {
         onChange(enabledExtras.filter(extra => extra.itemId !== item.itemId));
         return;
@@ -236,7 +255,18 @@ export function MealExtrasEnableSection({
       }
       onChange([...enabledExtrasRef.current, toExtraPackage(nextItem)]);
     },
-    [disabled, enabledExtras, enabledIdSet, onChange, persistPrice],
+    [disabled, enabledExtras, enabledIdSet, onChange, onInteract, persistPrice],
+  );
+
+  const missingPriceDraft = useCallback(
+    (item: FoodItemResponse) => {
+      const drafted = missingDraftPrices[item.itemId];
+      if (drafted != null) {
+        return drafted;
+      }
+      return hasComboPrice(item.defaultPrice) ? String(item.defaultPrice) : '';
+    },
+    [missingDraftPrices],
   );
 
   const addMissingAsLibraryExtra = useCallback(
@@ -244,7 +274,8 @@ export function MealExtrasEnableSection({
       if (disabled || busyId) {
         return;
       }
-      const priceDraft = (missingDraftPrices[item.itemId] ?? '').trim();
+      onInteract?.();
+      const priceDraft = missingPriceDraft(item).trim();
       if (priceDraft) {
         const validation = validatePriceInput(priceDraft);
         if (validation === 'invalid' || validation === 'nonPositive') {
@@ -302,12 +333,13 @@ export function MealExtrasEnableSection({
       disabled,
       enabledExtras,
       enabledIdSet,
-      missingDraftPrices,
+      missingPriceDraft,
       onCatalogItemUpdated,
       onChange,
       showToast,
       spaceId,
       t,
+      onInteract,
     ],
   );
 
@@ -315,6 +347,7 @@ export function MealExtrasEnableSection({
     if (disabled || addingAll || buckets.missing.length === 0) {
       return;
     }
+    onInteract?.();
     setAddingAll(true);
     try {
       const nextExtras = [...enabledExtras];
@@ -323,7 +356,7 @@ export function MealExtrasEnableSection({
         let updated = await mealsApi.updateFoodItemExtra(spaceId, item.itemId, {
           isExtra: true,
         });
-        const priceDraft = (missingDraftPrices[item.itemId] ?? '').trim();
+        const priceDraft = missingPriceDraft(item).trim();
         if (priceDraft && validatePriceInput(priceDraft) == null) {
           const priced = await persistItemPriceDraft(
             spaceId,
@@ -357,17 +390,27 @@ export function MealExtrasEnableSection({
     disabled,
     enabledExtras,
     enabledIdSet,
-    missingDraftPrices,
+    missingPriceDraft,
     onCatalogItemUpdated,
     onChange,
     showToast,
     spaceId,
     t,
+    onInteract,
   ]);
 
   const libraryExtraCount =
     buckets.relevant.length + buckets.related.length + buckets.other.length;
-  const hasSelection = selectedMealItemIds.size > 0;
+  const hasComboConstituents = selectedMealItemIds.size > 0;
+  const hasMealSelection =
+    hasComboConstituents || (categorySeedItemIds?.size ?? 0) > 0;
+
+  /** Combo contents for this meal — one list whether or not already marked as extras. */
+  const fromSelectionItems = useMemo(() => {
+    return [...buckets.relevant, ...buckets.missing].sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+  }, [buckets.missing, buckets.relevant]);
 
   const renderPriceInput = (item: FoodItemResponse) => {
     const priceDraft = getEffectivePriceDraft(
@@ -429,46 +472,31 @@ export function MealExtrasEnableSection({
   };
 
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, highlighted ? styles.wrapHighlighted : null]}>
       <Text style={styles.title}>{t('meals.planning.extrasSectionTitle')}</Text>
-      <Text style={styles.hint}>{t('meals.planning.extrasSectionHint')}</Text>
 
-      {!hasSelection ? (
+      {!hasMealSelection ? (
         <Text style={styles.hint}>{t('meals.planning.extrasSelectMealFirst')}</Text>
       ) : null}
 
-      {hasSelection && buckets.relevant.length > 0 ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            {t('meals.planning.extrasFromMealTitle', { count: buckets.relevant.length })}
+      {hasMealSelection &&
+      fromSelectionItems.length === 0 &&
+      libraryExtraCount === 0 ? (
+        <View style={styles.emptyExtrasBlock}>
+          <Text style={styles.hint}>{t('meals.planning.progressive.emptyExtrasTitle')}</Text>
+          <Text style={styles.emptyExtrasBody}>
+            {t('meals.planning.progressive.emptyExtrasBody')}
           </Text>
-          <Text style={styles.sectionHint}>{t('meals.planning.extrasFromMealHint')}</Text>
-          {buckets.relevant.map(item => renderExtraRow(item))}
         </View>
       ) : null}
 
-      {hasSelection && buckets.related.length > 0 ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            {t('meals.planning.extrasRelatedTitle', { count: buckets.related.length })}
-          </Text>
-          <Text style={styles.sectionHint}>{t('meals.planning.extrasRelatedHint')}</Text>
-          {buckets.related.map(item => renderExtraRow(item))}
-        </View>
-      ) : null}
-
-      {hasSelection &&
-      buckets.relevant.length === 0 &&
-      buckets.related.length === 0 &&
-      libraryExtraCount > 0 ? (
-        <Text style={styles.hint}>{t('meals.planning.extrasNoSuggestions')}</Text>
-      ) : null}
-
-      {hasSelection && buckets.missing.length > 0 ? (
+      {hasComboConstituents && fromSelectionItems.length > 0 ? (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              {t('meals.planning.extrasMissingTitle', { count: buckets.missing.length })}
+            <Text style={[styles.sectionTitle, styles.sectionTitleInHeader]}>
+              {t('meals.planning.extrasMissingTitle', {
+                count: fromSelectionItems.length,
+              })}
             </Text>
             {buckets.missing.length > 1 ? (
               <Pressable
@@ -483,13 +511,16 @@ export function MealExtrasEnableSection({
               </Pressable>
             ) : null}
           </View>
-          <Text style={styles.sectionHint}>{t('meals.planning.extrasMissingHint')}</Text>
-          {buckets.missing.map(item => {
+          {fromSelectionItems.map(item => {
+            if (item.isExtra === true) {
+              return renderExtraRow(item);
+            }
             const busy = busyId === item.itemId;
             const errorKey = priceErrors[item.itemId];
+            const priceDraft = missingPriceDraft(item);
             return (
-              <View key={item.itemId} style={styles.missingRow}>
-                <Text style={styles.missingName} numberOfLines={1}>
+              <View key={item.itemId} style={styles.row}>
+                <Text style={styles.name} numberOfLines={1}>
                   {item.name}
                 </Text>
                 <View style={styles.inlinePriceBlock}>
@@ -501,7 +532,7 @@ export function MealExtrasEnableSection({
                     <Text style={styles.inlineCurrency}>₹</Text>
                     <TextInput
                       style={styles.inlinePriceInput}
-                      value={missingDraftPrices[item.itemId] ?? ''}
+                      value={priceDraft}
                       onChangeText={text => {
                         const sanitized = text.replace(/[^\d.]/g, '');
                         setMissingDraftPrices(prev => ({
@@ -521,32 +552,52 @@ export function MealExtrasEnableSection({
                       placeholder={t('meals.pricing.pricePlaceholder')}
                       placeholderTextColor={colors.muted}
                       editable={!disabled && !busy && !addingAll}
+                      selectTextOnFocus
+                      accessibilityLabel={`${item.name} ${t('meals.pricing.enterPrice')}`}
                     />
                   </View>
-                </View>
-                <Pressable
-                  style={[
-                    styles.addBtn,
-                    (disabled || busy || addingAll) && styles.addBtnDisabled,
-                  ]}
-                  disabled={disabled || busy || addingAll}
-                  onPress={() => void addMissingAsLibraryExtra(item)}>
-                  {busy ? (
-                    <ActivityIndicator size="small" color={colors.primaryDark} />
-                  ) : (
-                    <Text style={styles.addBtnText}>
-                      {t('meals.planning.extrasAddMissing')}
+                  {errorKey ? (
+                    <Text style={styles.inlinePriceError} numberOfLines={1}>
+                      {comboPriceDraftErrorMessage(errorKey, t)}
                     </Text>
-                  )}
-                </Pressable>
+                  ) : null}
+                </View>
+                {busy || addingAll ? (
+                  <ActivityIndicator color={colors.primary} />
+                ) : (
+                  <Switch
+                    value={false}
+                    disabled={disabled}
+                    onValueChange={value => {
+                      if (value) {
+                        void addMissingAsLibraryExtra(item);
+                      }
+                    }}
+                    trackColor={{ true: colors.primary, false: colors.border }}
+                    thumbColor={colors.white}
+                    accessibilityLabel={t('meals.planning.extrasAddMissing')}
+                  />
+                )}
               </View>
             );
           })}
         </View>
       ) : null}
 
-      {libraryExtraCount === 0 && buckets.missing.length === 0 ? (
-        <Text style={styles.hint}>{t('meals.planning.manageExtrasEmpty')}</Text>
+      {hasMealSelection && buckets.related.length > 0 ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>
+            {t('meals.planning.extrasRelatedTitle', { count: buckets.related.length })}
+          </Text>
+          {buckets.related.map(item => renderExtraRow(item))}
+        </View>
+      ) : null}
+
+      {hasMealSelection &&
+      fromSelectionItems.length === 0 &&
+      buckets.related.length === 0 &&
+      libraryExtraCount > 0 ? (
+        <Text style={styles.hint}>{t('meals.planning.extrasNoSuggestions')}</Text>
       ) : null}
 
       {libraryExtraCount > 0 ? (
@@ -583,6 +634,26 @@ export function MealExtrasEnableSection({
         </View>
       ) : null}
 
+      {onConfigureMoreExtras ? (
+        <View style={styles.configureMoreBlock}>
+          <Pressable
+            onPress={() => {
+              onInteract?.();
+              onConfigureMoreExtras();
+            }}
+            disabled={disabled}
+            accessibilityRole="button"
+            hitSlop={8}>
+            <Text style={styles.configureMoreLink}>
+              {t('meals.planning.extrasConfigureMoreLink')}
+            </Text>
+          </Pressable>
+          <Text style={styles.configureMoreHint}>
+            {t('meals.planning.extrasConfigureMoreHint')}
+          </Text>
+        </View>
+      ) : null}
+
       {enabledExtras.length > 0 ? (
         <Text style={styles.footerMeta}>
           {t('meals.planning.extrasEnabledCount', { count: enabledExtras.length })}
@@ -601,10 +672,20 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: spacing.md,
   },
+  wrapHighlighted: {
+    borderColor: '#F59E0B',
+    backgroundColor: '#FFFBEB',
+  },
   title: { ...typography.bodyStrong, marginBottom: spacing.xxs },
   hint: {
     ...typography.caption,
     color: colors.muted,
+    marginBottom: spacing.sm,
+  },
+  emptyExtrasBlock: { marginBottom: spacing.sm },
+  emptyExtrasBody: {
+    ...typography.caption,
+    color: colors.textSecondary,
     marginBottom: spacing.sm,
   },
   section: { marginBottom: spacing.md },
@@ -613,7 +694,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
-    marginBottom: spacing.xxs,
+    marginBottom: spacing.sm,
   },
   sectionTitle: {
     ...typography.caption,
@@ -621,12 +702,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.3,
-  },
-  sectionHint: {
-    ...typography.caption,
-    color: colors.muted,
     marginBottom: spacing.sm,
-    marginTop: 2,
+  },
+  sectionTitleInHeader: {
+    marginBottom: 0,
+    flex: 1,
   },
   row: {
     flexDirection: 'row',
@@ -681,27 +761,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
     textAlign: 'right',
   },
-  missingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  missingName: { ...typography.bodyStrong, flex: 1, minWidth: 0 },
-  addBtn: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.button,
-    backgroundColor: colors.lightGreen,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    minWidth: 64,
-    alignItems: 'center',
-  },
-  addBtnDisabled: { opacity: 0.5 },
-  addBtnText: { ...typography.caption, color: colors.primaryDark, fontWeight: '700' },
   link: { ...typography.caption, color: colors.primaryDark, fontWeight: '700' },
   browseBlock: {
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -721,6 +780,21 @@ const styles = StyleSheet.create({
   },
   chevron: { ...typography.caption, color: colors.muted },
   browseBody: { marginTop: spacing.sm },
+  configureMoreBlock: {
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    gap: spacing.xxs,
+  },
+  configureMoreLink: {
+    ...typography.bodyStrong,
+    color: colors.primaryDark,
+  },
+  configureMoreHint: {
+    ...typography.caption,
+    color: colors.muted,
+  },
   search: {
     minHeight: 40,
     borderWidth: 1,

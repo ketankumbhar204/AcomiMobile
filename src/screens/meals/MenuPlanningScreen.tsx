@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   LayoutAnimation,
   Platform,
   Pressable,
@@ -10,11 +11,20 @@ import {
   UIManager,
   View,
 } from 'react-native';
-import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronRight } from 'lucide-react-native';
+import {
+  BookOpen,
+  Calendar,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Crown,
+  MapPin,
+  Users,
+} from 'lucide-react-native';
 import { mealsApi } from '../../api/mealsApi';
 import type {
   DailyMenuResponse,
@@ -24,13 +34,19 @@ import type {
   MealType,
   UUID,
 } from '../../api/types';
-import { DailyMenuSlotCard, MealHeadcountBottomSheet, MenuPlanningDayOverview } from '../../components/meals';
-import { MenuDateContextHints } from '../../components/meals/MenuDateContextHints';
+import {
+  CopyPreviousMenuSheet,
+  DailyMenuSlotCard,
+  MealHeadcountBottomSheet,
+  MenuPlanningDayOverview,
+} from '../../components/meals';
 import { MenuDatePickerModal } from '../../components/meals/MenuDatePickerModal';
 import { PollCloseAtPickerModal } from '../../components/meals/PollCloseAtPickerModal';
 import { navigateToMembersTab } from '../../navigation/navigationRef';
 import type { MainStackParamList } from '../../navigation/types';
+import { HeaderOverflowMenu } from '../../components/ui/HeaderOverflowMenu';
 import { PermissionDeniedScreen } from '../../components/ui/PermissionDeniedScreen';
+import { Button } from '../../components/ui/Button';
 import { StackTitleWithSubtitle } from '../../components/ui/StackTitleWithSubtitle';
 import { useMainStackNavigation } from '../../hooks/useMainStackNavigation';
 import { useOwnerMealHeadcount } from '../../hooks/useOwnerMealHeadcount';
@@ -43,10 +59,12 @@ import {
   addDaysIsoDate,
   formatMenuDate,
   isPastMenuDate,
+  relativeMenuDateKind,
+  relativeMenuDateLabelKey,
   todayIsoDate,
   tomorrowIsoDate,
 } from '../../utils/mealDates';
-import { summarizeDailyMenuDay, type DailyMenuDaySummary } from '../../utils/dailyMenuDayStatus';
+import { summarizeDailyMenuDay } from '../../utils/dailyMenuDayStatus';
 import { buildDashboardMealSlotRows } from '../../utils/dashboardMealSlotDisplay';
 import { fetchSpaceMenuCatalog } from '../../utils/fetchSpaceMenuCatalog';
 import { MEAL_TYPES } from '../../utils/mealLabels';
@@ -85,10 +103,6 @@ function hasPlannedMenu(menu?: DailyMenuResponse | null): boolean {
   return (menu?.options?.filter(option => option.isAvailable) ?? []).length > 0;
 }
 
-function dayStatusSummary(menus: DailyMenuResponse[]): DailyMenuDaySummary {
-  return summarizeDailyMenuDay(menus);
-}
-
 export function MenuPlanningScreen({
   spaceId,
   initialDate,
@@ -97,8 +111,6 @@ export function MenuPlanningScreen({
   const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
-  const route = useRoute();
-  const isStackRoute = route.name === 'MenuPlanning';
   const { navigate: navigateMain } = useMainStackNavigation();
   const permissions = useSpacePermissions(spaceId);
   const showToast = useToastStore(state => state.showToast);
@@ -110,17 +122,6 @@ export function MenuPlanningScreen({
     const entry = findMySpaceEntry(mySpaces, spaceId);
     return entry?.spaceName ?? (currentSpace?.spaceId === spaceId ? currentSpace.spaceName : null);
   }, [currentSpace?.spaceId, currentSpace?.spaceName, mySpaces, spaceId]);
-
-  useLayoutEffect(() => {
-    if (!isStackRoute) {
-      return;
-    }
-    navigation.setOptions({
-      headerTitle: () => (
-        <StackTitleWithSubtitle title={t('meals.planning.title')} subtitle={spaceName} />
-      ),
-    });
-  }, [isStackRoute, navigation, spaceName, t, i18n.language]);
 
   const [menuDate, setMenuDate] = useState(initialDate ?? todayIsoDate());
   const headcount = useOwnerMealHeadcount(spaceId, menuDate, canManage);
@@ -135,7 +136,8 @@ export function MenuPlanningScreen({
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [closeAtEditMealType, setCloseAtEditMealType] = useState<MealType | null>(null);
   const [closeAtSaving, setCloseAtSaving] = useState(false);
-  const [copyYesterdayLoading, setCopyYesterdayLoading] = useState(false);
+  const [copyMenuOpen, setCopyMenuOpen] = useState(false);
+  const [dismissCustomersHint, setDismissCustomersHint] = useState(false);
   /** Remembers the active meal while this screen stays mounted. */
   const [selectedMealType, setSelectedMealType] = useState<MealType>(
     initialMealType ?? 'BREAKFAST',
@@ -178,7 +180,7 @@ export function MenuPlanningScreen({
 
   useFocusEffect(
     useCallback(() => {
-      void load();
+      load().catch(() => undefined);
     }, [load]),
   );
 
@@ -214,7 +216,7 @@ export function MenuPlanningScreen({
     }
     return map;
   }, [headcount.slots]);
-  const statusSummary = useMemo(() => dayStatusSummary(menus), [menus]);
+  const statusSummary = useMemo(() => summarizeDailyMenuDay(menus), [menus]);
   const dateReadOnly = isPastMenuDate(menuDate);
   const canShareMenu = !dateReadOnly && MEAL_TYPES.some(type => hasPlannedMenu(menuMap[type]));
   const distinctEligible = useMemo(() => {
@@ -274,13 +276,35 @@ export function MenuPlanningScreen({
       if (!guardEditable()) {
         return;
       }
+      if (permissions.spaceType === 'MESS' && distinctEligible === 0) {
+        Alert.alert(
+          t('meals.planning.shareBlockedNoCustomersTitle'),
+          t('meals.planning.shareBlockedNoCustomersBody'),
+          [
+            { text: t('common.cancel'), style: 'cancel' },
+            {
+              text: t('meals.planning.shareBlockedNoCustomersCta'),
+              onPress: () => navigateMain('AddCustomersHub', { spaceId }),
+            },
+          ],
+        );
+        return;
+      }
       navigateMain('MenuSharePreview', {
         spaceId,
         menuDate,
         ...(mealType ? { mealType } : {}),
       });
     },
-    [guardEditable, menuDate, navigateMain, spaceId],
+    [
+      distinctEligible,
+      guardEditable,
+      menuDate,
+      navigateMain,
+      permissions.spaceType,
+      spaceId,
+      t,
+    ],
   );
 
   const closePoll = useCallback(
@@ -328,7 +352,7 @@ export function MenuPlanningScreen({
 
   const closeHeadcount = useCallback(() => {
     setHeadcountMealType(null);
-    void headcount.reload();
+    headcount.reload().catch(() => undefined);
   }, [headcount]);
 
   const selectMealType = useCallback((mealType: MealType) => {
@@ -336,41 +360,41 @@ export function MenuPlanningScreen({
     setSelectedMealType(mealType);
   }, []);
 
-  const copyYesterdayForSelected = useCallback(async () => {
-    if (!guardEditable()) {
-      return;
-    }
-    setCopyYesterdayLoading(true);
-    try {
-      await mealsApi.copyDailyMenu(
-        spaceId,
-        menuDate,
-        selectedMealType,
-        addDaysIsoDate(menuDate, -1),
-      );
-      showToast(t('meals.planning.copySuccess'));
-      await load();
-    } catch {
-      showToast(t('meals.planning.copyFailed'));
-    } finally {
-      setCopyYesterdayLoading(false);
-    }
-  }, [guardEditable, load, menuDate, selectedMealType, showToast, spaceId, t]);
-
-  const openPolls = useMemo(
-    () => polls.filter(poll => poll.status === 'OPEN'),
-    [polls],
-  );
-  const hasOpenPolls = openPolls.length > 0;
-  const respondedCount = useMemo(() => {
-    if (openPolls.length === 0) {
-      return 0;
-    }
-    return Math.max(...openPolls.map(poll => poll.responseCount));
-  }, [openPolls]);
-
   const selectedPoll = pollMap[selectedMealType];
   const selectedEligibility = eligibilityMap[selectedMealType];
+  const relativeKind = relativeMenuDateKind(menuDate);
+  const renderHeaderTitle = useCallback(
+    () => <StackTitleWithSubtitle title={t('meals.planning.title')} subtitle={spaceName} />,
+    [spaceName, t],
+  );
+  const renderHeaderRight = useCallback(
+    () => (
+      <HeaderOverflowMenu
+        accessibilityLabel={t('spaces.menu.open')}
+        items={[
+          {
+            id: 'view-menu',
+            label: t('meals.todayMenu'),
+            onPress: () => navigateMain('DailyMenuToday', { spaceId, menuDate }),
+          },
+          {
+            id: 'copy-menu',
+            label: t('meals.planning.copyMenu'),
+            visible: !dateReadOnly,
+            onPress: () => setCopyMenuOpen(true),
+          },
+        ]}
+      />
+    ),
+    [dateReadOnly, menuDate, navigateMain, spaceId, t],
+  );
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerTitle: renderHeaderTitle,
+      headerRight: renderHeaderRight,
+    });
+  }, [navigation, renderHeaderRight, renderHeaderTitle]);
 
   if (!canManage) {
     return <PermissionDeniedScreen spaceId={spaceId} />;
@@ -379,20 +403,62 @@ export function MenuPlanningScreen({
   return (
     <View style={styles.root}>
       <View style={styles.stickyHeader}>
-        {!isStackRoute && spaceName ? (
-          <View style={styles.spaceChip} accessibilityRole="text">
-            <Text style={styles.spaceChipLabel} numberOfLines={1}>
-              {spaceName}
+        {!loading &&
+        !error &&
+        permissions.canManageMeals &&
+        distinctEligible === 0 &&
+        !dismissCustomersHint ? (
+          <View style={styles.enrollBanner}>
+            <Text style={styles.enrollBannerTitle}>
+              {t(
+                permissions.spaceType === 'MESS'
+                  ? 'meals.planning.noEligibleMembersTitleMess'
+                  : 'meals.planning.noEligibleMembersCta',
+              )}
             </Text>
+            <Text style={styles.enrollBannerHint}>
+              {t(
+                permissions.spaceType === 'MESS'
+                  ? 'meals.planning.noEligibleMembersHintMess'
+                  : 'meals.planning.noEligibleMembersHint',
+              )}
+            </Text>
+            {permissions.spaceType === 'MESS' ? (
+              <View style={styles.enrollBannerActions}>
+                <Button
+                  label={t('meals.planning.noEligibleMembersCtaMess')}
+                  onPress={() => navigateMain('AddCustomersHub', { spaceId })}
+                  style={styles.enrollBannerPrimary}
+                />
+                <Button
+                  label={t('meals.planning.noEligibleMembersContinueMess')}
+                  variant="secondary"
+                  onPress={() => setDismissCustomersHint(true)}
+                  style={styles.enrollBannerSecondary}
+                />
+              </View>
+            ) : (
+              <Pressable
+                onPress={() => navigateToMembersTab(spaceId)}
+                accessibilityRole="button"
+                style={styles.enrollBannerTapArea}>
+                <Text style={styles.enrollBannerLink}>
+                  {t('meals.planning.noEligibleMembersCta')}
+                </Text>
+              </Pressable>
+            )}
           </View>
         ) : null}
 
         <View style={styles.planningCard}>
           <View style={styles.dateRow}>
             <Pressable
-              style={styles.dateNavBtn}
-              onPress={() => setMenuDate(prev => addDaysIsoDate(prev, -1))}>
-              <Text style={styles.dateNavText}>◀</Text>
+              style={({ pressed }) => [styles.dateNavBtn, pressed && styles.dateNavBtnPressed]}
+              onPress={() => setMenuDate(prev => addDaysIsoDate(prev, -1))}
+              android_ripple={{ color: 'rgba(18, 140, 126, 0.12)', borderless: true }}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.back')}>
+              <ChevronLeft size={20} color={colors.primaryDark} strokeWidth={2.4} />
             </Pressable>
             <Pressable
               style={({ pressed }) => [styles.dateCenter, pressed && styles.dateCenterPressed]}
@@ -400,17 +466,40 @@ export function MenuPlanningScreen({
               accessibilityRole="button"
               accessibilityLabel={formatMenuDate(menuDate, i18n.language)}
               accessibilityHint={t('meals.planning.openCalendar')}>
-              <Text style={styles.dateLabel}>{formatMenuDate(menuDate, i18n.language)}</Text>
-              <MenuDateContextHints
-                menuDate={menuDate}
-                onJumpToToday={() => setMenuDate(todayIsoDate())}
-                onJumpToTomorrow={() => setMenuDate(tomorrowIsoDate())}
-              />
+              <View style={styles.dateLabelRow}>
+                <Calendar size={16} color={colors.primaryDark} strokeWidth={2.2} />
+                <Text style={styles.dateLabel}>{formatMenuDate(menuDate, i18n.language)}</Text>
+              </View>
+              {relativeKind != null ? (
+                <View style={styles.todayChip}>
+                  <Text style={styles.todayChipText}>
+                    {t(relativeMenuDateLabelKey(relativeKind))}
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.dateJumpRow}>
+                  <Pressable
+                    onPress={() => setMenuDate(todayIsoDate())}
+                    hitSlop={6}
+                    accessibilityRole="button">
+                    <Text style={styles.dateJumpLink}>{t('meals.dates.goToToday')}</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setMenuDate(tomorrowIsoDate())}
+                    hitSlop={6}
+                    accessibilityRole="button">
+                    <Text style={styles.dateJumpLink}>{t('meals.dates.goToTomorrow')}</Text>
+                  </Pressable>
+                </View>
+              )}
             </Pressable>
             <Pressable
-              style={styles.dateNavBtn}
-              onPress={() => setMenuDate(prev => addDaysIsoDate(prev, 1))}>
-              <Text style={styles.dateNavText}>▶</Text>
+              style={({ pressed }) => [styles.dateNavBtn, pressed && styles.dateNavBtnPressed]}
+              onPress={() => setMenuDate(prev => addDaysIsoDate(prev, 1))}
+              android_ripple={{ color: 'rgba(18, 140, 126, 0.12)', borderless: true }}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.next')}>
+              <ChevronRight size={20} color={colors.primaryDark} strokeWidth={2.4} />
             </Pressable>
           </View>
 
@@ -423,17 +512,16 @@ export function MenuPlanningScreen({
           {!loading && !error ? (
             <MenuPlanningDayOverview
               menuMap={menuMap}
-              pollMap={pollMap}
-              eligibilityByMeal={eligibleCountByMeal}
               statusSummary={statusSummary}
-              eligibleCount={distinctEligible}
               selectedMealType={selectedMealType}
               onSelectMealType={selectMealType}
+              onShareDay={
+                permissions.canManageMeals && canShareMenu
+                  ? () => openShare()
+                  : undefined
+              }
               shareDisabled={!canShareMenu}
-              onShare={permissions.canManageMeals ? () => openShare() : undefined}
               dateReadOnly={dateReadOnly}
-              hasOpenPolls={hasOpenPolls}
-              respondedCount={respondedCount}
             />
           ) : null}
         </View>
@@ -454,20 +542,11 @@ export function MenuPlanningScreen({
             <Text style={styles.error}>{error}</Text>
             <Pressable
               style={({ pressed }) => [styles.retryButton, pressed && styles.retryButtonPressed]}
-              onPress={() => void load()}
+              onPress={() => load().catch(() => undefined)}
               accessibilityRole="button">
               <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
             </Pressable>
           </View>
-        ) : null}
-
-        {!loading && !error && permissions.canManageMeals && distinctEligible === 0 ? (
-          <Pressable
-            style={styles.enrollBanner}
-            onPress={() => navigateToMembersTab(spaceId)}>
-            <Text style={styles.enrollBannerTitle}>{t('meals.planning.noEligibleMembersCta')}</Text>
-            <Text style={styles.enrollBannerHint}>{t('meals.planning.noEligibleMembersHint')}</Text>
-          </Pressable>
         ) : null}
 
         {!loading && !error ? (
@@ -480,12 +559,11 @@ export function MenuPlanningScreen({
               readOnly={dateReadOnly}
               onSelectMenu={() => openSelectMenu(selectedMealType)}
               onEdit={() => openEdit(selectedMealType)}
-              onCopyYesterday={
+              onCopyMenu={
                 !dateReadOnly && permissions.canManageMeals
-                  ? () => void copyYesterdayForSelected()
+                  ? () => setCopyMenuOpen(true)
                   : undefined
               }
-              copyYesterdayLoading={copyYesterdayLoading}
               onShare={
                 permissions.canManageMeals && hasPlannedMenu(menuMap[selectedMealType])
                   ? () => openShare(selectedMealType)
@@ -493,7 +571,7 @@ export function MenuPlanningScreen({
               }
               onClosePoll={
                 permissions.canManageMeals && selectedPoll?.status === 'OPEN'
-                  ? () => void closePoll(selectedMealType)
+                  ? () => closePoll(selectedMealType).catch(() => undefined)
                   : undefined
               }
               onEditPollCloseAt={
@@ -530,11 +608,14 @@ export function MenuPlanningScreen({
               pollCloseSource={selectedPoll?.closeSource ?? null}
             />
             {selectedEligibility ? (
-              <Text style={styles.eligibleLine}>
-                {t('meals.planning.eligibleSlot', {
-                  count: selectedEligibility.eligibleCount,
-                })}
-              </Text>
+              <View style={styles.membersRow} accessibilityRole="text">
+                <Users size={14} color={colors.muted} strokeWidth={2.2} />
+                <Text style={styles.membersInline}>
+                  {t('meals.planning.membersCount', {
+                    count: selectedEligibility.eligibleCount,
+                  })}
+                </Text>
+              </View>
             ) : null}
           </View>
         ) : null}
@@ -542,41 +623,79 @@ export function MenuPlanningScreen({
         {permissions.canManageMeals ? (
           <View style={styles.linksCard}>
             <Pressable
-              style={styles.linkRow}
-              onPress={() => navigateMain('MenuLibrary', { spaceId })}>
-              <Text style={styles.linkText}>{t('meals.library.title')}</Text>
-              <ChevronRight size={16} color={colors.muted} strokeWidth={2.4} />
+              style={({ pressed }) => [styles.linkRow, pressed && styles.linkRowPressed]}
+              android_ripple={{ color: 'rgba(18, 140, 126, 0.08)' }}
+              onPress={() => navigateMain('MenuLibrary', { spaceId })}
+              accessibilityRole="button">
+              <View style={styles.linkIconWrap}>
+                <BookOpen size={18} color={colors.primaryDark} strokeWidth={2.2} />
+              </View>
+              <View style={styles.linkCopy}>
+                <Text style={styles.linkTitle}>{t('meals.library.title')}</Text>
+                <Text style={styles.linkSubtitle}>
+                  {t('meals.planning.quickAccess.librarySubtitle')}
+                </Text>
+              </View>
+              <ChevronRight size={18} color={colors.muted} strokeWidth={2.4} />
             </Pressable>
             <View style={styles.linkDivider} />
             <Pressable
-              style={styles.linkRow}
-              onPress={() =>
-                navigateMain('DailyMenuToday', { spaceId, menuDate })
-              }>
-              <Text style={styles.linkText}>
-                {menuDate === todayIsoDate()
-                  ? t('meals.todayMenu')
-                  : t('meals.menuDetails.heading')}
-              </Text>
-              <ChevronRight size={16} color={colors.muted} strokeWidth={2.4} />
+              style={({ pressed }) => [styles.linkRow, pressed && styles.linkRowPressed]}
+              android_ripple={{ color: 'rgba(18, 140, 126, 0.08)' }}
+              onPress={() => navigateMain('DailyMenuToday', { spaceId, menuDate })}
+              accessibilityRole="button">
+              <View style={styles.linkIconWrap}>
+                <CalendarDays size={18} color={colors.primaryDark} strokeWidth={2.2} />
+              </View>
+              <View style={styles.linkCopy}>
+                <Text style={styles.linkTitle}>
+                  {menuDate === todayIsoDate()
+                    ? t('meals.todayMenu')
+                    : t('meals.menuDetails.heading')}
+                </Text>
+                <Text style={styles.linkSubtitle}>
+                  {t('meals.planning.quickAccess.todayMenuSubtitle')}
+                </Text>
+              </View>
+              <ChevronRight size={18} color={colors.muted} strokeWidth={2.4} />
             </Pressable>
             {permissions.spaceType === 'MESS' ? (
               <>
                 <View style={styles.linkDivider} />
                 <Pressable
-                  style={styles.linkRow}
-                  onPress={() => navigateMain('MealDeliveryLocations', { spaceId })}>
-                  <Text style={styles.linkText}>{t('meals.deliveryLocations.manage')}</Text>
-                  <ChevronRight size={16} color={colors.muted} strokeWidth={2.4} />
+                  style={({ pressed }) => [styles.linkRow, pressed && styles.linkRowPressed]}
+                  android_ripple={{ color: 'rgba(18, 140, 126, 0.08)' }}
+                  onPress={() => navigateMain('MealDeliveryLocations', { spaceId })}
+                  accessibilityRole="button">
+                  <View style={styles.linkIconWrap}>
+                    <MapPin size={18} color={colors.primaryDark} strokeWidth={2.2} />
+                  </View>
+                  <View style={styles.linkCopy}>
+                    <Text style={styles.linkTitle}>{t('meals.deliveryLocations.manage')}</Text>
+                    <Text style={styles.linkSubtitle}>
+                      {t('meals.planning.quickAccess.deliverySubtitle')}
+                    </Text>
+                  </View>
+                  <ChevronRight size={18} color={colors.muted} strokeWidth={2.4} />
                 </Pressable>
               </>
             ) : null}
             <View style={styles.linkDivider} />
             <Pressable
-              style={styles.linkRow}
-              onPress={() => navigateMain('SubscriptionPlans', { spaceId })}>
-              <Text style={styles.linkText}>{t('meals.subscriptionPlans.title')}</Text>
-              <ChevronRight size={16} color={colors.muted} strokeWidth={2.4} />
+              style={({ pressed }) => [styles.linkRow, pressed && styles.linkRowPressed]}
+              android_ripple={{ color: 'rgba(18, 140, 126, 0.08)' }}
+              onPress={() => navigateMain('SubscriptionPlans', { spaceId })}
+              accessibilityRole="button">
+              <View style={styles.linkIconWrap}>
+                <Crown size={18} color={colors.primaryDark} strokeWidth={2.2} />
+              </View>
+              <View style={styles.linkCopy}>
+                <Text style={styles.linkTitle}>{t('meals.subscriptionPlans.title')}</Text>
+                <Text style={styles.linkSubtitle}>
+                  {t('meals.planning.quickAccess.subscriptionsSubtitle')}
+                </Text>
+              </View>
+              <ChevronRight size={18} color={colors.muted} strokeWidth={2.4} />
             </Pressable>
           </View>
         ) : null}
@@ -603,6 +722,16 @@ export function MenuPlanningScreen({
         onConfirm={setMenuDate}
       />
 
+      <CopyPreviousMenuSheet
+        visible={copyMenuOpen}
+        spaceId={spaceId}
+        targetDate={menuDate}
+        targetMenus={menus}
+        initialMealType={selectedMealType}
+        onClose={() => setCopyMenuOpen(false)}
+        onCopied={load}
+      />
+
       <PollCloseAtPickerModal
         visible={closeAtEditMealType != null}
         initialCloseAt={
@@ -612,18 +741,20 @@ export function MenuPlanningScreen({
         }
         saving={closeAtSaving}
         onCancel={() => setCloseAtEditMealType(null)}
-        onSave={value => void savePollCloseAt(value)}
+        onSave={value => savePollCloseAt(value).catch(() => undefined)}
       />
     </View>
   );
 }
 
+const CARD_RADIUS = 18;
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   stickyHeader: {
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
-    paddingBottom: spacing.sm,
+    paddingBottom: 0,
     backgroundColor: colors.background,
     gap: spacing.sm,
   },
@@ -645,31 +776,37 @@ const styles = StyleSheet.create({
   },
   planningCard: {
     backgroundColor: colors.white,
-    borderRadius: radius.card,
+    borderRadius: CARD_RADIUS,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.md,
-    gap: spacing.sm,
+    padding: spacing.lg,
+    gap: spacing.md,
     ...shadows.sm,
   },
   scroll: { flex: 1 },
-  content: { paddingHorizontal: spacing.md, paddingTop: spacing.sm },
+  content: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    gap: spacing.lg,
+  },
   dateRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
   },
   dateNavBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.button,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface,
   },
-  dateNavText: { ...typography.bodyStrong, color: colors.primaryDark, fontSize: 13 },
+  dateNavBtnPressed: {
+    backgroundColor: colors.lightGreen,
+  },
   readOnlyBanner: {
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -681,17 +818,47 @@ const styles = StyleSheet.create({
   dateCenter: {
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: spacing.xs,
     borderRadius: radius.button,
+    gap: spacing.xs,
   },
   dateCenterPressed: {
     backgroundColor: colors.surface,
   },
+  dateLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
   dateLabel: {
     ...typography.bodyStrong,
     color: colors.primaryDark,
-    textDecorationLine: 'underline',
     fontSize: 14,
+    fontWeight: '700',
+  },
+  todayChip: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: radius.full,
+    backgroundColor: colors.lightGreen,
+  },
+  todayChipText: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    fontWeight: '700',
+    fontSize: 11,
+  },
+  dateJumpRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  dateJumpLink: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    fontWeight: '600',
+    fontSize: 11,
   },
   loader: { marginVertical: spacing.lg },
   error: { ...typography.caption, color: '#DC2626', marginBottom: spacing.sm },
@@ -721,27 +888,46 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.primary,
-    borderRadius: radius.card,
+    borderRadius: CARD_RADIUS,
     padding: spacing.md,
-    marginBottom: spacing.md,
     ...shadows.sm,
   },
   enrollBannerTitle: { ...typography.bodyStrong, color: colors.primaryDark, marginBottom: spacing.xxs },
-  enrollBannerHint: { ...typography.caption, color: colors.muted },
-  detailPanel: {
-    marginBottom: spacing.sm,
+  enrollBannerHint: { ...typography.caption, color: colors.muted, marginBottom: spacing.sm },
+  enrollBannerActions: {
+    gap: spacing.sm,
   },
-  eligibleLine: {
+  enrollBannerPrimary: {
+    marginTop: spacing.xxs,
+  },
+  enrollBannerSecondary: {},
+  enrollBannerTapArea: {
+    marginTop: spacing.xs,
+  },
+  enrollBannerLink: {
     ...typography.caption,
-    color: colors.muted,
-    marginTop: -spacing.sm,
-    marginBottom: spacing.md,
-    marginLeft: spacing.xs,
+    color: colors.primaryDark,
+    fontWeight: '700',
+  },
+  detailPanel: {
+    gap: spacing.sm,
+  },
+  membersRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  membersInline: {
+    ...typography.caption,
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: '500',
   },
   linksCard: {
-    marginTop: spacing.sm,
     backgroundColor: colors.white,
-    borderRadius: radius.card,
+    borderRadius: CARD_RADIUS,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
@@ -750,16 +936,40 @@ const styles = StyleSheet.create({
   linkRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
+    gap: spacing.md,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
-    minHeight: 48,
+    minHeight: 64,
+  },
+  linkRowPressed: {
+    backgroundColor: colors.surface,
+  },
+  linkIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.lightGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  linkCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  linkTitle: {
+    ...typography.bodyStrong,
+    fontSize: 14,
+    color: colors.textPrimary,
+  },
+  linkSubtitle: {
+    ...typography.caption,
+    fontSize: 12,
+    color: colors.textSecondary,
   },
   linkDivider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: colors.border,
-    marginLeft: spacing.md,
+    marginLeft: 64,
   },
-  linkText: { ...typography.body, color: colors.primaryDark, fontWeight: '600', flex: 1 },
 });

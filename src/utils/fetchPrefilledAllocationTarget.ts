@@ -20,13 +20,23 @@ export async function fetchPrefilledAllocationTarget(
     buildingId?: UUID;
   },
 ): Promise<PrefilledTargetResult | null> {
-  if (ids.bedId && ids.roomId) {
+  let bedId = ids.bedId;
+  let roomId = ids.roomId;
+  let buildingId = ids.buildingId;
+
+  // Resolve room from bed when callers only pass bedId (common for inventory menus).
+  if (bedId && !roomId) {
+    const bed = await accommodationApi.getBedById(spaceId, bedId);
+    roomId = bed.roomId;
+  }
+
+  if (bedId && roomId) {
     const [bed, room] = await Promise.all([
-      accommodationApi.getBed(spaceId, ids.roomId, ids.bedId),
-      accommodationApi.getRoom(spaceId, ids.roomId),
+      accommodationApi.getBed(spaceId, roomId, bedId),
+      accommodationApi.getRoom(spaceId, roomId),
     ]);
 
-    const buildingId = ids.buildingId ?? room.buildingId ?? undefined;
+    buildingId = buildingId ?? room.buildingId ?? undefined;
     let buildingName = '';
     let floorName = '';
 
@@ -48,15 +58,15 @@ export async function fetchPrefilledAllocationTarget(
 
     const row: AllocationTargetSearchResponse = {
       targetType: 'BED',
-      targetId: ids.bedId,
+      targetId: bedId,
       buildingId: buildingId ?? '',
       buildingName,
       floorId: room.floorId,
       floorName: floorName || null,
-      roomId: ids.roomId,
+      roomId,
       roomName: room.name,
       roomNumber: room.roomNumber,
-      bedId: ids.bedId,
+      bedId,
       bedName: bed.name,
       bedNumber: bed.bedNumber,
       displayPath,
@@ -73,14 +83,14 @@ export async function fetchPrefilledAllocationTarget(
 
   if (ids.unitId) {
     const unit = await accommodationApi.getUnitById(spaceId, ids.unitId);
-    const buildingId = ids.buildingId ?? unit.buildingId;
-    const building = await accommodationApi.getBuilding(spaceId, buildingId);
+    const resolvedBuildingId = buildingId ?? unit.buildingId;
+    const building = await accommodationApi.getBuilding(spaceId, resolvedBuildingId);
     const displayPath = [building.name, unit.name].filter(Boolean).join(' · ');
 
     const row: AllocationTargetSearchResponse = {
       targetType: 'UNIT',
       targetId: ids.unitId,
-      buildingId,
+      buildingId: resolvedBuildingId,
       buildingName: building.name,
       unitId: ids.unitId,
       unitName: unit.name,

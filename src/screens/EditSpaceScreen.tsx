@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -24,7 +24,9 @@ import type {
   PrepaidBalanceUnit,
   SpaceType,
 } from '../api/types';
-import { Button, Card, FormInput, HeaderBackButton, useConfirmDialog } from '../components/ui';
+import { StickyFormActions } from '../components/progressive';
+import { Button, Card, FormInput, HeaderBackButton, ListFilterChips, useConfirmDialog } from '../components/ui';
+import type { ListFilterChipOption } from '../components/ui/ListFilterChips';
 import {
   MealBillingSettingsSection,
   type MealBillingSettingsFormValues,
@@ -150,6 +152,33 @@ export function EditSpaceScreen() {
   const isMessSpace = spaceType === 'MESS';
   const showAmenities = supportsSpaceAmenities(spaceType as SpaceType | null);
   const showPropertyCategory = supportsSpacePropertyCategory(spaceType as SpaceType | null);
+  const showMealsTab = isMessSpace && owner;
+  const showPollsTab = owner;
+
+  type EditSpaceTab = 'general' | 'meals' | 'polls';
+  const [activeTab, setActiveTab] = useState<EditSpaceTab>('general');
+
+  const tabOptions = useMemo((): ListFilterChipOption<EditSpaceTab>[] => {
+    const options: ListFilterChipOption<EditSpaceTab>[] = [
+      { id: 'general', label: t('progressiveWorkflow.editSpace.tabGeneral') },
+    ];
+    if (showMealsTab) {
+      options.push({ id: 'meals', label: t('progressiveWorkflow.editSpace.tabMeals') });
+    }
+    if (showPollsTab) {
+      options.push({ id: 'polls', label: t('progressiveWorkflow.editSpace.tabPolls') });
+    }
+    return options;
+  }, [showMealsTab, showPollsTab, t]);
+
+  useEffect(() => {
+    if (activeTab === 'meals' && !showMealsTab) {
+      setActiveTab('general');
+    }
+    if (activeTab === 'polls' && !showPollsTab) {
+      setActiveTab('general');
+    }
+  }, [activeTab, showMealsTab, showPollsTab]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -161,8 +190,6 @@ export function EditSpaceScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      console.log('[EditSpace] screen focused', { spaceId });
-
       loadSpaceDetails(spaceId).then(async loaded => {
         if (loaded) {
           setName(loaded.name);
@@ -234,7 +261,6 @@ export function EditSpaceScreen() {
       return;
     }
 
-    console.log('[EditSpace] save started', { spaceId });
     setIsSubmitting(true);
 
     const updated = await updateSpace(spaceId, {
@@ -288,7 +314,6 @@ export function EditSpaceScreen() {
     setIsSubmitting(false);
 
     if (updated) {
-      console.log('[EditSpace] save success', updated.id);
       const goBack = () => navigation.goBack();
       showConfirm({
         title: t('spaces.editSpace.successTitle'),
@@ -306,120 +331,133 @@ export function EditSpaceScreen() {
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}>
+        <View style={styles.flex}>
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}>
+            <Text style={styles.eyebrow}>{t('spaces.editSpace.eyebrow')}</Text>
+            <Text style={styles.heading}>{t('spaces.editSpace.heading')}</Text>
+            <Text style={styles.subheading}>{t('spaces.editSpace.subheading')}</Text>
 
-          <Text style={styles.eyebrow}>{t('spaces.editSpace.eyebrow')}</Text>
-          <Text style={styles.heading}>{t('spaces.editSpace.heading')}</Text>
-          <Text style={styles.subheading}>{t('spaces.editSpace.subheading')}</Text>
+            {error ? (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorBannerText}>{error}</Text>
+              </View>
+            ) : null}
 
-          {error ? (
-            <View style={styles.errorBanner}>
-              <Text style={styles.errorBannerText}>{error}</Text>
-            </View>
-          ) : null}
+            {tabOptions.length > 1 ? (
+              <View style={styles.tabWrap}>
+                <ListFilterChips
+                  options={tabOptions}
+                  value={activeTab}
+                  onChange={setActiveTab}
+                />
+              </View>
+            ) : null}
 
-          <FormInput
-            label={t('spaces.createSpace.nameLabel')}
-            placeholder={t('spaces.createSpace.namePlaceholder')}
-            value={name}
-            onChangeText={text => {
-              setName(text);
-              if (fieldErrors.name) {
-                setFieldErrors({});
-              }
+            {activeTab === 'general' ? (
+              <>
+                <FormInput
+                  label={t('spaces.createSpace.nameLabel')}
+                  placeholder={t('spaces.createSpace.namePlaceholder')}
+                  value={name}
+                  onChangeText={text => {
+                    setName(text);
+                    if (fieldErrors.name) {
+                      setFieldErrors({});
+                    }
+                  }}
+                  error={fieldErrors.name}
+                  autoCapitalize="words"
+                  returnKeyType="next"
+                />
+
+                <FormInput
+                  label={t('spaces.createSpace.addressLabel')}
+                  placeholder={t('spaces.createSpace.addressPlaceholder')}
+                  value={address}
+                  onChangeText={setAddress}
+                  autoCapitalize="sentences"
+                  returnKeyType="next"
+                />
+
+                <FormInput
+                  label={t('spaces.createSpace.contactLabel')}
+                  placeholder={t('spaces.createSpace.contactPlaceholder')}
+                  value={contactNumber}
+                  onChangeText={setContactNumber}
+                  keyboardType="phone-pad"
+                  returnKeyType="done"
+                  maxLength={15}
+                />
+
+                <Card style={styles.readOnlyCard}>
+                  <Text style={styles.readOnlyLabel}>{t('spaces.editSpace.typeLabel')}</Text>
+                  <Text style={styles.readOnlyValue}>{typeLabel || '—'}</Text>
+                </Card>
+
+                {showPropertyCategory && spaceType ? (
+                  <SpacePropertyCategoryPicker
+                    spaceType={spaceType as SpaceType}
+                    value={genderPolicy}
+                    onChange={setGenderPolicy}
+                  />
+                ) : null}
+
+                {showAmenities ? (
+                  <SpaceAmenitiesField
+                    value={amenities}
+                    onChange={setAmenities}
+                    disabled={isSubmitting || isLoading}
+                  />
+                ) : null}
+              </>
+            ) : null}
+
+            {activeTab === 'meals' && showMealsTab ? (
+              <MealBillingSettingsSection
+                values={billingValues}
+                onChange={setBillingValues}
+                disabled={isSubmitting || isLoading}
+              />
+            ) : null}
+
+            {activeTab === 'polls' && showPollsTab ? (
+              <PollClosingDefaultsSection
+                values={pollClosingValues}
+                onChange={setPollClosingValues}
+                disabled={isSubmitting || isLoading}
+              />
+            ) : null}
+
+            {owner ? (
+              <Button
+                label={t('spaces.details.deactivate')}
+                variant="ghost"
+                onPress={() => confirmDeactivate(spaceId, name)}
+                loading={isDeactivating}
+                disabled={isSubmitting || isLoading || isDeactivating}
+                style={styles.deactivateButton}
+              />
+            ) : null}
+          </ScrollView>
+
+          <StickyFormActions
+            primary={{
+              label: t('spaces.editSpace.save'),
+              onPress: handleSave,
+              loading: isSubmitting || isLoading,
+              disabled: isSubmitting || isLoading || isDeactivating,
             }}
-            error={fieldErrors.name}
-            autoCapitalize="words"
-            returnKeyType="next"
+            secondary={{
+              label: t('spaces.createSpace.cancel'),
+              onPress: () => navigation.goBack(),
+              disabled: isSubmitting,
+            }}
           />
-
-          <FormInput
-            label={t('spaces.createSpace.addressLabel')}
-            placeholder={t('spaces.createSpace.addressPlaceholder')}
-            value={address}
-            onChangeText={setAddress}
-            autoCapitalize="sentences"
-            returnKeyType="next"
-          />
-
-          <FormInput
-            label={t('spaces.createSpace.contactLabel')}
-            placeholder={t('spaces.createSpace.contactPlaceholder')}
-            value={contactNumber}
-            onChangeText={setContactNumber}
-            keyboardType="phone-pad"
-            returnKeyType="done"
-            maxLength={15}
-          />
-
-          <Card style={styles.readOnlyCard}>
-            <Text style={styles.readOnlyLabel}>{t('spaces.editSpace.typeLabel')}</Text>
-            <Text style={styles.readOnlyValue}>{typeLabel || '—'}</Text>
-          </Card>
-
-          {showPropertyCategory && spaceType ? (
-            <SpacePropertyCategoryPicker
-              spaceType={spaceType as SpaceType}
-              value={genderPolicy}
-              onChange={setGenderPolicy}
-            />
-          ) : null}
-
-          {showAmenities ? (
-            <SpaceAmenitiesField
-              value={amenities}
-              onChange={setAmenities}
-              disabled={isSubmitting || isLoading}
-            />
-          ) : null}
-
-          {isMessSpace && owner ? (
-            <MealBillingSettingsSection
-              values={billingValues}
-              onChange={setBillingValues}
-              disabled={isSubmitting || isLoading}
-            />
-          ) : null}
-
-          {owner ? (
-            <PollClosingDefaultsSection
-              values={pollClosingValues}
-              onChange={setPollClosingValues}
-              disabled={isSubmitting || isLoading}
-            />
-          ) : null}
-
-          <View style={styles.footer}>
-            <Button
-              label={t('spaces.editSpace.save')}
-              onPress={handleSave}
-              loading={isSubmitting || isLoading}
-              disabled={isSubmitting || isLoading || isDeactivating}
-            />
-            <Button
-              label={t('spaces.createSpace.cancel')}
-              variant="ghost"
-              onPress={() => navigation.goBack()}
-              disabled={isSubmitting}
-              style={styles.cancelButton}
-            />
-          </View>
-
-          {owner ? (
-            <Button
-              label={t('spaces.details.deactivate')}
-              variant="ghost"
-              onPress={() => confirmDeactivate(spaceId, name)}
-              loading={isDeactivating}
-              disabled={isSubmitting || isLoading || isDeactivating}
-              style={styles.deactivateButton}
-            />
-          ) : null}
-        </ScrollView>
+        </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
@@ -436,7 +474,10 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.xxl,
-    paddingBottom: spacing.section,
+    paddingBottom: spacing.xl,
+  },
+  tabWrap: {
+    marginBottom: spacing.lg,
   },
   eyebrow: {
     ...typography.eyebrow,
@@ -472,13 +513,6 @@ const styles = StyleSheet.create({
   },
   readOnlyValue: {
     ...typography.bodyStrong,
-  },
-  footer: {
-    marginTop: spacing.xl,
-    gap: spacing.md,
-  },
-  cancelButton: {
-    marginTop: spacing.xs,
   },
   deactivateButton: {
     borderColor: '#FECACA',

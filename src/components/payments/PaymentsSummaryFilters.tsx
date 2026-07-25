@@ -129,7 +129,10 @@ export function PaymentsSummaryFilters({
 
   return (
     <View style={styles.wrap}>
-      <DashboardSectionTitle title={t('dashboard.financial.title')} />
+      <DashboardSectionTitle
+        title={t('dashboard.financial.title')}
+        subtitle={t('dashboard.financial.period')}
+      />
       {loading && !financial ? (
         <ActivityIndicator color={colors.primary} style={styles.loader} />
       ) : (

@@ -23,6 +23,7 @@ import { PaymentRequestUpdateModal } from '../../components/payments/PaymentRequ
 import { PaymentStatusBadge } from '../../components/payments/PaymentStatusBadge';
 import { PaymentStatusCardFrame } from '../../components/payments/PaymentStatusCardFrame';
 import { UniversalPaymentProofModal } from '../../components/payments/UniversalPaymentProofModal';
+import { StickyFormActions } from '../../components/progressive';
 import { Button, EmptyState, HeaderBackButton, Screen, SkeletonCard } from '../../components/ui';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../../navigation/types';
@@ -294,7 +295,7 @@ export function PaymentDetailScreen() {
 
   if (loading && !payment && !serviceUnavailable) {
     return (
-      <Screen contentStyle={styles.content}>
+      <Screen contentStyle={styles.loadingPad}>
         <SkeletonCard />
       </Screen>
     );
@@ -302,7 +303,7 @@ export function PaymentDetailScreen() {
 
   if (serviceUnavailable) {
     return (
-      <Screen contentStyle={styles.content}>
+      <Screen contentStyle={styles.loadingPad}>
         <EmptyState
           title={t('paymentCollection.serviceUnavailable.title')}
           description={t('paymentCollection.serviceUnavailable.description')}
@@ -314,7 +315,7 @@ export function PaymentDetailScreen() {
 
   if (!payment) {
     return (
-      <Screen contentStyle={styles.content}>
+      <Screen contentStyle={styles.loadingPad}>
         <Text style={styles.error}>{t('paymentCollection.errors.loadPayment')}</Text>
       </Screen>
     );
@@ -336,9 +337,15 @@ export function PaymentDetailScreen() {
       ? payment.rejectionReason.trim()
       : null;
 
+  const hasStickyActions = canOwnerReview || canPay || canEditProof;
+
   return (
-    <Screen scrollable={false} contentStyle={styles.content}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+    <Screen scrollable={false} contentStyle={styles.screen}>
+      <View style={styles.flex}>
+      <ScrollView
+        style={styles.flex}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}>
         {isOwnerOperator && memberId ? (
           <Pressable
             onPress={openMemberProfile}
@@ -454,43 +461,6 @@ export function PaymentDetailScreen() {
           </View>
         ) : null}
 
-        {canOwnerReview ? (
-          <View style={styles.ownerActions}>
-            <Button
-              label={t('paymentCollection.approval.approve')}
-              onPress={() => void handleReview('APPROVE')}
-              loading={reviewing}
-              style={styles.action}
-            />
-            <Button
-              label={t('paymentCollection.approval.needsUpdateAction')}
-              variant="secondary"
-              onPress={() => setRequestUpdateVisible(true)}
-              disabled={reviewing}
-              style={styles.action}
-            />
-            <Button
-              label={t('paymentCollection.approval.reject')}
-              variant="secondary"
-              onPress={() => setRejectVisible(true)}
-              disabled={reviewing}
-              style={styles.action}
-            />
-          </View>
-        ) : null}
-
-        {canPay && payment.paymentStatus !== 'UPDATE_REQUESTED' ? (
-          <Button
-            label={
-              payment.paymentStatus === 'REJECTED'
-                ? t('paymentCollection.updatePayment')
-                : t('paymentCollection.payNow')
-            }
-            onPress={openSubmitProof}
-            style={styles.action}
-          />
-        ) : null}
-
         {canViewProof ? (
           <Button
             label={t('paymentCollection.proof.viewProof')}
@@ -498,23 +468,6 @@ export function PaymentDetailScreen() {
             onPress={() => setProofPreviewVisible(true)}
             style={styles.action}
           />
-        ) : null}
-
-        {canEditProof ? (
-          <>
-            <Button
-              label={t('paymentCollection.proof.replaceProof')}
-              variant="secondary"
-              onPress={openEditProof}
-              style={styles.action}
-            />
-            <Button
-              label={t('paymentCollection.proof.editDetails')}
-              variant="secondary"
-              onPress={openEditProof}
-              style={styles.action}
-            />
-          </>
         ) : null}
 
         <Button
@@ -527,6 +480,57 @@ export function PaymentDetailScreen() {
         <Text style={styles.sectionTitle}>{t('paymentCollection.timeline.recent')}</Text>
         <PaymentHistoryTimeline events={timeline} />
       </ScrollView>
+
+      {hasStickyActions ? (
+        <StickyFormActions>
+          {canOwnerReview ? (
+            <View style={styles.stickyStack}>
+              <Button
+                label={t('paymentCollection.approval.approve')}
+                onPress={() => void handleReview('APPROVE')}
+                loading={reviewing}
+              />
+              <Button
+                label={t('paymentCollection.approval.needsUpdateAction')}
+                variant="secondary"
+                onPress={() => setRequestUpdateVisible(true)}
+                disabled={reviewing}
+              />
+              <Button
+                label={t('paymentCollection.approval.reject')}
+                variant="secondary"
+                onPress={() => setRejectVisible(true)}
+                disabled={reviewing}
+              />
+            </View>
+          ) : null}
+          {canPay && payment.paymentStatus !== 'UPDATE_REQUESTED' ? (
+            <Button
+              label={
+                payment.paymentStatus === 'REJECTED'
+                  ? t('paymentCollection.updatePayment')
+                  : t('paymentCollection.payNow')
+              }
+              onPress={openSubmitProof}
+            />
+          ) : null}
+          {canEditProof ? (
+            <View style={styles.stickyStack}>
+              <Button
+                label={t('paymentCollection.proof.replaceProof')}
+                variant="secondary"
+                onPress={openEditProof}
+              />
+              <Button
+                label={t('paymentCollection.proof.editDetails')}
+                variant="secondary"
+                onPress={openEditProof}
+              />
+            </View>
+          ) : null}
+        </StickyFormActions>
+      ) : null}
+      </View>
 
       <UniversalPaymentProofModal
         visible={proofVisible}
@@ -605,9 +609,22 @@ export function PaymentDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: {
+  screen: {
+    flex: 1,
+  },
+  loadingPad: {
     flex: 1,
     padding: spacing.xl,
+  },
+  scrollContent: {
+    padding: spacing.xl,
+    paddingBottom: spacing.xl,
+  },
+  flex: {
+    flex: 1,
+  },
+  stickyStack: {
+    gap: spacing.sm,
   },
   memberCard: {
     flexDirection: 'row',
@@ -677,9 +694,6 @@ const styles = StyleSheet.create({
   mealSummaryWrap: {
     marginTop: spacing.md,
     marginBottom: spacing.md,
-  },
-  ownerActions: {
-    marginBottom: spacing.sm,
   },
   metaBlock: {
     marginTop: spacing.md,

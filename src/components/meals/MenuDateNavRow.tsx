@@ -1,8 +1,14 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { colors, radius, spacing, typography } from '../../theme';
-import { addDaysIsoDate, formatMenuDate } from '../../utils/mealDates';
+import {
+  addDaysIsoDate,
+  formatMenuDate,
+  formatMenuDateShort,
+  relativeMenuDateKind,
+  relativeMenuDateLabelKey,
+} from '../../utils/mealDates';
 import { MenuDateContextHints } from './MenuDateContextHints';
 
 type MenuDateNavRowProps = {
@@ -11,7 +17,7 @@ type MenuDateNavRowProps = {
   onOpenCalendar?: () => void;
   onJumpToToday?: () => void;
   onJumpToTomorrow?: () => void;
-  /** Compact density for bottom-sheet headers. */
+  /** Compact density for dashboard / sheet headers. */
   compact?: boolean;
 };
 
@@ -27,6 +33,17 @@ export function MenuDateNavRow({
   compact = false,
 }: MenuDateNavRowProps) {
   const { t, i18n } = useTranslation();
+  const relativeKind = relativeMenuDateKind(menuDate);
+
+  const compactLabel = useMemo(() => {
+    const datePart = formatMenuDateShort(menuDate, i18n.language);
+    if (relativeKind == null) {
+      return datePart;
+    }
+    return `${datePart} · ${t(relativeMenuDateLabelKey(relativeKind))}`;
+  }, [i18n.language, menuDate, relativeKind, t]);
+
+  const fullLabel = formatMenuDate(menuDate, i18n.language);
 
   return (
     <View style={[styles.dateRow, compact && styles.dateRowCompact]}>
@@ -40,22 +57,32 @@ export function MenuDateNavRow({
       <Pressable
         style={({ pressed }) => [
           styles.dateCenter,
+          compact && styles.dateCenterCompact,
           pressed && styles.dateCenterPressed,
           !onOpenCalendar && styles.dateCenterStatic,
         ]}
         onPress={onOpenCalendar}
         disabled={!onOpenCalendar}
         accessibilityRole={onOpenCalendar ? 'button' : undefined}
-        accessibilityLabel={formatMenuDate(menuDate, i18n.language)}
+        accessibilityLabel={fullLabel}
         accessibilityHint={onOpenCalendar ? t('meals.planning.openCalendar') : undefined}>
-        <Text style={[styles.dateLabel, onOpenCalendar && styles.dateLabelLink]}>
-          {formatMenuDate(menuDate, i18n.language)}
+        <Text
+          style={[
+            styles.dateLabel,
+            compact && styles.dateLabelCompact,
+            onOpenCalendar && styles.dateLabelLink,
+          ]}
+          numberOfLines={1}>
+          {compact ? compactLabel : fullLabel}
         </Text>
-        <MenuDateContextHints
-          menuDate={menuDate}
-          onJumpToToday={onJumpToToday}
-          onJumpToTomorrow={onJumpToTomorrow}
-        />
+        {!compact || relativeKind == null ? (
+          <MenuDateContextHints
+            menuDate={menuDate}
+            onJumpToToday={onJumpToToday}
+            onJumpToTomorrow={onJumpToTomorrow}
+            showJumpLinks={!compact || relativeKind == null}
+          />
+        ) : null}
       </Pressable>
       <Pressable
         style={[styles.dateNavBtn, compact && styles.dateNavBtnCompact]}
@@ -75,11 +102,12 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   dateRowCompact: {
-    gap: 2,
+    gap: spacing.xs,
+    minHeight: 36,
   },
   dateNavBtn: {
-    width: 32,
-    height: 32,
+    width: 36,
+    height: 36,
     borderRadius: radius.button,
     borderWidth: 1,
     borderColor: colors.border,
@@ -88,8 +116,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   dateNavBtnCompact: {
-    width: 28,
-    height: 28,
+    width: 32,
+    height: 32,
   },
   dateNavText: {
     ...typography.bodyStrong,
@@ -103,6 +131,10 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     borderRadius: radius.button,
   },
+  dateCenterCompact: {
+    paddingVertical: 0,
+    minHeight: 32,
+  },
   dateCenterStatic: {
     // non-pressable center still keeps layout
   },
@@ -114,6 +146,11 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     fontWeight: '700',
     textAlign: 'center',
+  },
+  dateLabelCompact: {
+    fontSize: 13,
+    lineHeight: 16,
+    fontWeight: '600',
   },
   dateLabelLink: {
     textDecorationLine: 'underline',

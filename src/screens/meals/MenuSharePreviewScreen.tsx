@@ -1,7 +1,10 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Pressable,
+  ScrollView,
   Share,
   StyleSheet,
   Text,
@@ -13,8 +16,12 @@ import { useTranslation } from 'react-i18next';
 import { mealsApi } from '../../api/mealsApi';
 import type { DailyMenuResponse, MealPollSlot, MealType, UUID } from '../../api/types';
 import { ShareMealSlotCheckbox } from '../../components/meals/ShareMealSlotCheckbox';
+import {
+  ProgressiveWorkflowFooter,
+  progressiveSectionHighlightStyle,
+} from '../../components/progressive';
 import { ChevronRightIcon } from '../../components/ui/icons/ChevronRightIcon';
-import { Screen } from '../../components/ui/Screen';
+import { useProgressiveSectionReview } from '../../hooks/useProgressiveSectionReview';
 import { resetToDashboard } from '../../navigation/navigationRef';
 import type { MainStackParamList } from '../../navigation/types';
 import { useSpaceStore } from '../../store/spaceStore';
@@ -37,6 +44,7 @@ import {
   validateShareMenusToSpace,
 } from '../../utils/shareMenuToSpaces';
 import { formatSpaceDisplayName } from '../../utils/spaceLabels';
+import { resolveProgressivePhase } from '../../utils/progressivePhase';
 
 type MenuSharePreviewScreenProps = {
   spaceId: UUID;
@@ -58,6 +66,7 @@ export function MenuSharePreviewScreen({
   const loadMySpaces = useSpaceStore(state => state.loadMySpaces);
   const spacesLoading = useSpaceStore(state => state.loading);
   const dateReadOnly = isPastMenuDate(menuDate);
+  const scrollRef = useRef<ScrollView>(null);
 
   const [loadingMenus, setLoadingMenus] = useState(true);
   const [loadingPreview, setLoadingPreview] = useState(false);
@@ -89,6 +98,34 @@ export function MenuSharePreviewScreen({
     () => mySpaces.find(space => space.spaceId === spaceId),
     [mySpaces, spaceId],
   );
+
+  const hasSlots = selectedTypes.length > 0;
+  const progressiveEnabled = !dateReadOnly && hasShareableSlot;
+
+  const {
+    reviewed: messageReviewed,
+    highlighted: messageHighlighted,
+    onSectionLayout: onMessageLayout,
+    onScroll: onMessageScroll,
+    onScrollBeginDrag: onMessageScrollBeginDrag,
+    continueToSection: continueToMessage,
+    clearReviewed: clearMessageReviewed,
+    markReviewed: markMessageReviewed,
+  } = useProgressiveSectionReview({
+    enabled: progressiveEnabled,
+  });
+
+  useEffect(() => {
+    if (!hasSlots) {
+      clearMessageReviewed();
+    }
+  }, [clearMessageReviewed, hasSlots]);
+
+  const progressivePhase = resolveProgressivePhase({
+    enabled: progressiveEnabled,
+    prerequisiteMet: hasSlots,
+    sectionReviewed: messageReviewed,
+  });
 
   useLayoutEffect(() => {
     navigation.setOptions({ title: t('meals.planning.shareTitle') });
@@ -127,10 +164,11 @@ export function MenuSharePreviewScreen({
       const next = !prev;
       if (next) {
         void loadMySpaces();
+        markMessageReviewed();
       }
       return next;
     });
-  }, [loadMySpaces]);
+  }, [loadMySpaces, markMessageReviewed]);
 
   useEffect(() => {
     if (!initialized || selectedTypes.length === 0) {
@@ -173,6 +211,7 @@ export function MenuSharePreviewScreen({
   };
 
   const toggleOtherSpace = (targetId: UUID) => {
+    markMessageReviewed();
     setOtherSpaceIds(prev =>
       prev.includes(targetId)
         ? prev.filter(id => id !== targetId)
@@ -181,7 +220,6 @@ export function MenuSharePreviewScreen({
   };
 
   const leaveAfterShare = useCallback(() => {
-    // Prefer Menu Planning (where share usually starts). Soft-navigate to avoid Fabric reset crashes.
     if (navigation.canGoBack()) {
       navigation.navigate('MenuPlanning', { spaceId, menuDate });
       return;
@@ -204,7 +242,6 @@ export function MenuSharePreviewScreen({
         otherSpaceIds.includes(space.spaceId),
       );
 
-      // Validate additional spaces before mutating the current space share flow.
       const validations = await Promise.all(
         selectedOthers.map(async space => ({
           space,
@@ -261,7 +298,6 @@ export function MenuSharePreviewScreen({
         );
       }
 
-      // Native share sheet dismiss must not block leaving this screen (iOS throws on cancel).
       try {
         await Share.share({ message: latestMessage || messageText });
       } catch {
@@ -277,177 +313,229 @@ export function MenuSharePreviewScreen({
   };
 
   const loading = loadingMenus || loadingPreview;
-  const shareDisabled = dateReadOnly || !messageText || loading || sharing;
+  const shareDisabled = dateReadOnly || !messageText || loading || sharing || !hasSlots;
+
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const { contentOffset, layoutMeasurement } = event.nativeEvent;
+      onMessageScroll(contentOffset.y, layoutMeasurement.height);
+    },
+    [onMessageScroll],
+  );
 
   return (
-    <Screen scrollable contentStyle={styles.content}>
-      <Text style={styles.title}>{t('meals.planning.previewShare')}</Text>
-      <Text style={styles.date}>{formatMenuDate(menuDate, i18n.language)}</Text>
-      {dateReadOnly ? (
-        <Text style={styles.readOnlyHint}>{t('meals.planning.pastDateReadOnly')}</Text>
-      ) : (
-        <Text style={styles.hint}>{t('meals.planning.shareHint')}</Text>
-      )}
+    <View style={styles.screen}>
+      <ScrollView
+        ref={scrollRef}
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScrollBeginDrag={onMessageScrollBeginDrag}
+        onScroll={handleScroll}>
+        <Text style={styles.title}>{t('meals.planning.previewShare')}</Text>
+        <Text style={styles.date}>{formatMenuDate(menuDate, i18n.language)}</Text>
+        {dateReadOnly ? (
+          <Text style={styles.readOnlyHint}>{t('meals.planning.pastDateReadOnly')}</Text>
+        ) : (
+          <Text style={styles.hint}>{t('meals.planning.shareHint')}</Text>
+        )}
 
-      {loadingMenus ? <ActivityIndicator color={colors.primary} style={styles.loader} /> : null}
+        {loadingMenus ? <ActivityIndicator color={colors.primary} style={styles.loader} /> : null}
 
-      {!loadingMenus && !hasShareableSlot ? (
-        <Text style={styles.empty}>{t('meals.planning.shareEmpty')}</Text>
-      ) : null}
+        {!loadingMenus && !hasShareableSlot ? (
+          <Text style={styles.empty}>{t('meals.planning.shareEmpty')}</Text>
+        ) : null}
 
-      {!loadingMenus && hasShareableSlot ? (
-        <>
-          <Text style={styles.sectionLabel}>{t('meals.planning.shareSelectMeals')}</Text>
-          {MEAL_TYPES.map(type => (
-            <ShareMealSlotCheckbox
-              key={type}
-              mealType={type}
-              state={getSlotShareState(menuMap[type])}
-              selected={selectedTypes.includes(type)}
-              onToggle={() => toggleMealType(type)}
-              menu={menuMap[type]}
-              poll={pollMap[type]}
-              disabled={dateReadOnly}
-            />
-          ))}
+        {!loadingMenus && hasShareableSlot ? (
+          <>
+            <Text style={styles.sectionLabel}>{t('meals.planning.shareSelectMeals')}</Text>
+            {MEAL_TYPES.map(type => (
+              <ShareMealSlotCheckbox
+                key={type}
+                mealType={type}
+                state={getSlotShareState(menuMap[type])}
+                selected={selectedTypes.includes(type)}
+                onToggle={() => toggleMealType(type)}
+                menu={menuMap[type]}
+                poll={pollMap[type]}
+                disabled={dateReadOnly}
+              />
+            ))}
 
-          {selectedTypes.length === 0 ? (
-            <Text style={styles.selectHint}>{t('meals.planning.shareSelectAtLeastOne')}</Text>
-          ) : null}
+            {selectedTypes.length === 0 ? (
+              <Text style={styles.selectHint}>{t('meals.planning.shareSelectAtLeastOne')}</Text>
+            ) : null}
 
-          {!dateReadOnly ? (
-            <View style={styles.otherSpacesBlock}>
-              <Pressable
-                onPress={handleToggleOtherSpaces}
-                style={({ pressed }) => [
-                  styles.otherSpacesRow,
-                  showOtherSpaces && styles.otherSpacesRowExpanded,
-                  pressed && styles.otherSpacesRowPressed,
-                ]}
-                accessibilityRole="button"
-                accessibilityState={{ expanded: showOtherSpaces }}
-                accessibilityLabel={t(
-                  showOtherSpaces
-                    ? 'meals.planning.shareToOtherSpacesHide'
-                    : 'meals.planning.shareToOtherSpacesShow',
-                )}
-                accessibilityHint={t('meals.planning.shareToOtherSpacesHint')}>
-                <Text style={styles.otherSpacesPlus}>{showOtherSpaces ? '−' : '+'}</Text>
-                <View style={styles.otherSpacesTextCol}>
-                  <Text style={styles.otherSpacesTitle}>
-                    {t(
+            <View
+              collapsable={false}
+              style={[
+                styles.messageSection,
+                messageHighlighted ? styles.messageHighlight : null,
+              ]}
+              onLayout={event => {
+                const { y, height } = event.nativeEvent.layout;
+                onMessageLayout(y, height);
+              }}>
+              {!dateReadOnly ? (
+                <View style={styles.otherSpacesBlock}>
+                  <Pressable
+                    onPress={handleToggleOtherSpaces}
+                    style={({ pressed }) => [
+                      styles.otherSpacesRow,
+                      showOtherSpaces && styles.otherSpacesRowExpanded,
+                      pressed && styles.otherSpacesRowPressed,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: showOtherSpaces }}
+                    accessibilityLabel={t(
                       showOtherSpaces
                         ? 'meals.planning.shareToOtherSpacesHide'
                         : 'meals.planning.shareToOtherSpacesShow',
                     )}
-                  </Text>
-                  <Text style={styles.otherSpacesSubtitle}>
-                    {showOtherSpaces
-                      ? otherSpaceIds.length > 0
-                        ? t('meals.planning.shareToOtherSpacesSelected', {
-                            count: otherSpaceIds.length,
-                          })
-                        : t('meals.planning.shareToOtherSpacesOpenHint')
-                      : t('meals.planning.shareToOtherSpacesHint')}
-                  </Text>
-                </View>
-                <View
-                  style={[
-                    styles.otherSpacesChevron,
-                    showOtherSpaces && styles.otherSpacesChevronExpanded,
-                  ]}>
-                  <ChevronRightIcon
-                    size={18}
-                    color={colors.primaryDark}
-                    strokeWidth={2.5}
-                  />
-                </View>
-              </Pressable>
-
-              {showOtherSpaces ? (
-                <>
-                  <Text style={[styles.sectionLabel, styles.shareToSectionLabel]}>
-                    {t('meals.planning.shareToSection')}
-                  </Text>
-                  <Text style={styles.shareToHint}>{t('meals.planning.shareToHint')}</Text>
-
-                  <View style={styles.spaceRowLocked}>
-                    <View style={[styles.checkbox, styles.checkboxSelected]}>
-                      <Text style={styles.checkmark}>✓</Text>
+                    accessibilityHint={t('meals.planning.shareToOtherSpacesHint')}>
+                    <Text style={styles.otherSpacesPlus}>{showOtherSpaces ? '−' : '+'}</Text>
+                    <View style={styles.otherSpacesTextCol}>
+                      <Text style={styles.otherSpacesTitle}>
+                        {t(
+                          showOtherSpaces
+                            ? 'meals.planning.shareToOtherSpacesHide'
+                            : 'meals.planning.shareToOtherSpacesShow',
+                        )}
+                      </Text>
+                      <Text style={styles.otherSpacesSubtitle}>
+                        {showOtherSpaces
+                          ? otherSpaceIds.length > 0
+                            ? t('meals.planning.shareToOtherSpacesSelected', {
+                                count: otherSpaceIds.length,
+                              })
+                            : t('meals.planning.shareToOtherSpacesOpenHint')
+                          : t('meals.planning.shareToOtherSpacesHint')}
+                      </Text>
                     </View>
-                    <Text style={styles.spaceLabel}>
-                      {currentSpace
-                        ? formatSpaceDisplayName(currentSpace)
-                        : t('meals.planning.shareToCurrentSpace')}
-                    </Text>
-                    <Text style={styles.currentTag}>{t('meals.planning.shareToCurrent')}</Text>
-                  </View>
+                    <View
+                      style={[
+                        styles.otherSpacesChevron,
+                        showOtherSpaces && styles.otherSpacesChevronExpanded,
+                      ]}>
+                      <ChevronRightIcon
+                        size={18}
+                        color={colors.primaryDark}
+                        strokeWidth={2.5}
+                      />
+                    </View>
+                  </Pressable>
 
-                  {spacesLoading && otherTargets.length === 0 ? (
-                    <ActivityIndicator color={colors.primary} style={styles.loader} />
-                  ) : null}
+                  {showOtherSpaces ? (
+                    <>
+                      <Text style={[styles.sectionLabel, styles.shareToSectionLabel]}>
+                        {t('meals.planning.shareToSection')}
+                      </Text>
+                      <Text style={styles.shareToHint}>{t('meals.planning.shareToHint')}</Text>
 
-                  {!spacesLoading && otherTargets.length === 0 ? (
-                    <Text style={styles.selectHint}>
-                      {t('meals.planning.shareToNoOtherSpaces')}
-                    </Text>
-                  ) : null}
-
-                  {otherTargets.map(space => {
-                    const selected = otherSpaceIds.includes(space.spaceId);
-                    return (
-                      <Pressable
-                        key={space.spaceId}
-                        style={styles.spaceRow}
-                        onPress={() => toggleOtherSpace(space.spaceId)}
-                        accessibilityRole="checkbox"
-                        accessibilityState={{ checked: selected }}>
-                        <View
-                          style={[
-                            styles.checkbox,
-                            selected && styles.checkboxSelected,
-                          ]}>
-                          {selected ? <Text style={styles.checkmark}>✓</Text> : null}
+                      <View style={styles.spaceRowLocked}>
+                        <View style={[styles.checkbox, styles.checkboxSelected]}>
+                          <Text style={styles.checkmark}>✓</Text>
                         </View>
-                        <Text style={styles.spaceLabel}>{formatSpaceDisplayName(space)}</Text>
-                      </Pressable>
-                    );
-                  })}
-                </>
+                        <Text style={styles.spaceLabel}>
+                          {currentSpace
+                            ? formatSpaceDisplayName(currentSpace)
+                            : t('meals.planning.shareToCurrentSpace')}
+                        </Text>
+                        <Text style={styles.currentTag}>{t('meals.planning.shareToCurrent')}</Text>
+                      </View>
+
+                      {spacesLoading && otherTargets.length === 0 ? (
+                        <ActivityIndicator color={colors.primary} style={styles.loader} />
+                      ) : null}
+
+                      {!spacesLoading && otherTargets.length === 0 ? (
+                        <Text style={styles.selectHint}>
+                          {t('meals.planning.shareToNoOtherSpaces')}
+                        </Text>
+                      ) : null}
+
+                      {otherTargets.map(space => {
+                        const selected = otherSpaceIds.includes(space.spaceId);
+                        return (
+                          <Pressable
+                            key={space.spaceId}
+                            style={styles.spaceRow}
+                            onPress={() => toggleOtherSpace(space.spaceId)}
+                            accessibilityRole="checkbox"
+                            accessibilityState={{ checked: selected }}>
+                            <View
+                              style={[
+                                styles.checkbox,
+                                selected && styles.checkboxSelected,
+                              ]}>
+                              {selected ? <Text style={styles.checkmark}>✓</Text> : null}
+                            </View>
+                            <Text style={styles.spaceLabel}>{formatSpaceDisplayName(space)}</Text>
+                          </Pressable>
+                        );
+                      })}
+                    </>
+                  ) : null}
+                </View>
+              ) : null}
+
+              {loadingPreview ? (
+                <ActivityIndicator color={colors.primary} style={styles.loader} />
+              ) : null}
+
+              {messageText && !loadingPreview ? (
+                <View style={styles.messageBox}>
+                  <Text style={styles.message} selectable>
+                    {messageText}
+                  </Text>
+                </View>
               ) : null}
             </View>
-          ) : null}
+          </>
+        ) : null}
+      </ScrollView>
 
-          {loadingPreview ? (
-            <ActivityIndicator color={colors.primary} style={styles.loader} />
-          ) : null}
-
-          {messageText && !loadingPreview ? (
-            <View style={styles.messageBox}>
-              <Text style={styles.message} selectable>
-                {messageText}
-              </Text>
-            </View>
-          ) : null}
-
-          {!dateReadOnly ? (
-            <Pressable
-              style={[styles.shareBtn, shareDisabled && styles.shareBtnDisabled]}
-              disabled={shareDisabled}
-              onPress={() => void shareMessage()}>
-              <Text style={styles.shareBtnText}>
-                {sharing ? t('meals.poll.openingPolls') : t('meals.planning.copyMessage')}
-              </Text>
-            </Pressable>
-          ) : null}
-        </>
+      {!dateReadOnly && hasShareableSlot ? (
+        <ProgressiveWorkflowFooter
+          phase={progressivePhase}
+          stepLabel={
+            progressivePhase === 'continue' || progressivePhase === 'ready'
+              ? t('progressiveWorkflow.stepOf', {
+                  current: progressivePhase === 'continue' ? 1 : 2,
+                  total: 2,
+                })
+              : undefined
+          }
+          progressLine={
+            progressivePhase === 'continue'
+              ? t('progressiveWorkflow.sharePreview.progressSlotsNext')
+              : progressivePhase === 'ready'
+                ? t('progressiveWorkflow.sharePreview.progressReady')
+                : undefined
+          }
+          continueEyebrow={t('progressiveWorkflow.nextStep')}
+          continueTitle={t('progressiveWorkflow.sharePreview.reviewMessageTitle')}
+          continueHint={t('progressiveWorkflow.sharePreview.reviewMessageHint')}
+          continueLabel={t('progressiveWorkflow.sharePreview.continueToMessage')}
+          onContinue={() => continueToMessage(scrollRef)}
+          primaryAction={{
+            label: sharing ? t('meals.poll.openingPolls') : t('meals.planning.copyMessage'),
+            onPress: () => void shareMessage(),
+            disabled: shareDisabled,
+            loading: sharing,
+          }}
+        />
       ) : null}
-    </Screen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: spacing.section },
+  screen: { flex: 1, backgroundColor: colors.background },
+  scroll: { flex: 1 },
+  content: { padding: spacing.xxl, paddingBottom: spacing.section },
   title: { ...typography.h2, marginBottom: spacing.xs },
   date: { ...typography.bodyStrong, marginBottom: spacing.sm },
   hint: { ...typography.caption, color: colors.muted, marginBottom: spacing.lg },
@@ -462,6 +550,16 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.muted,
     marginBottom: spacing.md,
+  },
+  messageSection: {
+    marginTop: spacing.sm,
+    borderRadius: radius.card,
+  },
+  messageHighlight: {
+    ...progressiveSectionHighlightStyle,
+    borderWidth: 1,
+    borderRadius: radius.card,
+    padding: spacing.sm,
   },
   otherSpacesBlock: {
     marginTop: spacing.md,
@@ -582,12 +680,4 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   message: { ...typography.body, lineHeight: 22 },
-  shareBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
-  shareBtnDisabled: { opacity: 0.5 },
-  shareBtnText: { ...typography.bodyStrong, color: colors.white },
 });

@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import type { MemberDocumentType, MemberGender } from '../../api/types';
 import { memberApi } from '../../api/memberApi';
 import { DocumentTypePicker } from '../../components/member/DocumentTypePicker';
+import { StickyFormActions } from '../../components/progressive';
 import {
   Button,
   FormInput,
@@ -337,174 +338,200 @@ export function CompleteProfileScreen() {
 
   return (
     <Screen scrollable={false} contentStyle={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.stepLabel}>{stepLabel}</Text>
-        <Text style={styles.sectionTitle}>{t(`profileCompletion.wizard.sections.${step}`)}</Text>
+      <View style={styles.flex}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}>
+          <Text style={styles.stepLabel} accessibilityRole="text">
+            {stepLabel}
+          </Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header">
+            {t(`profileCompletion.wizard.sections.${step}`)}
+          </Text>
 
-        {step === 'personal' ? (
-          <>
-            <FormInput
-              label={`${t('profileCompletion.fields.fullName')} *`}
-              value={fullName}
-              onChangeText={setFullName}
-              autoCapitalize="words"
-            />
-            <GenderPicker value={gender} onChange={setGender} />
-            <FormInput
-              label={t('profileCompletion.fields.dateOfBirth')}
-              value={dateOfBirth}
-              onChangeText={setDateOfBirth}
-              placeholder={t('profileCompletion.fields.dateOfBirthPlaceholder')}
-            />
-            <FormInput
-              label={t('profileCompletion.fields.mobileNumber')}
-              value={user?.mobileNumber ?? ''}
-              editable={false}
-            />
-            <FormInput
-              label={t('profileCompletion.fields.email')}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            {renderUploadRow(
-              t('profileCompletion.fields.profilePhoto'),
-              profilePhotoUrl,
-              'profile',
-            )}
-          </>
-        ) : null}
-
-        {step === 'address' ? (
-          <>
-            <FormInput
-              label={`${t('profileCompletion.fields.permanentAddress')} *`}
-              value={permanentAddress}
-              onChangeText={setPermanentAddress}
-              multiline
-            />
-            <FormInput
-              label={`${t('profileCompletion.fields.city')} *`}
-              value={city}
-              onChangeText={setCity}
-            />
-            <FormInput
-              label={`${t('profileCompletion.fields.state')} *`}
-              value={stateName}
-              onChangeText={setStateName}
-            />
-            <FormInput
-              label={`${t('profileCompletion.fields.pincode')} *`}
-              value={pincode}
-              onChangeText={setPincode}
-              keyboardType="number-pad"
-            />
-          </>
-        ) : null}
-
-        {step === 'emergency' ? (
-          <>
-            <FormInput
-              label={t('profileCompletion.fields.guardianName')}
-              value={emergencyContactName}
-              onChangeText={setEmergencyContactName}
-            />
-            <FormInput
-              label={t('profileCompletion.fields.guardianMobile')}
-              value={emergencyContactMobile}
-              onChangeText={setEmergencyContactMobile}
-              keyboardType="phone-pad"
-            />
-            <FormInput
-              label={t('profileCompletion.fields.relationship')}
-              value={emergencyContactRelation}
-              onChangeText={setEmergencyContactRelation}
-            />
-          </>
-        ) : null}
-
-        {step === 'documents' ? (
-          <>
-            <Text style={styles.optionalHint}>{t('profileCompletion.wizard.documentsOptional')}</Text>
-            <DocumentTypePicker
-              value={identityDocumentType}
-              onChange={type => {
-                userEditedDocumentsRef.current = true;
-                setIdentityDocumentType(type);
-              }}
-            />
-            <FormInput
-              label={t('profileCompletion.fields.documentNumber')}
-              value={identityDocumentNumber}
-              onChangeText={value => {
-                userEditedDocumentsRef.current = true;
-                setIdentityDocumentNumber(value);
-              }}
-            />
-            {renderUploadRow(
-              t('profileCompletion.fields.addressProof'),
-              addressProofFileUrl,
-              'address',
-            )}
-            {renderUploadRow(
-              t('profileCompletion.fields.identityProof'),
-              identityProofFileUrl,
-              'identity',
-            )}
-            {renderUploadRow(
-              t('profileCompletion.fields.additionalDocument'),
-              additionalDocumentFileUrl,
-              'additional',
-            )}
-          </>
-        ) : null}
-
-        {fieldError ? <Text style={styles.errorText}>{fieldError}</Text> : null}
-        {error ? <Text style={styles.errorText}>{error.startsWith('profileCompletion') ? t(error) : error}</Text> : null}
-
-        <View style={styles.footer}>
-          {stepIndex > 0 ? (
-            <Button
-              label={t('common.back')}
-              variant="ghost"
-              onPress={() => setStepIndex(stepIndex - 1)}
-              disabled={isSubmitting}
-            />
+          {step === 'personal' ? (
+            <>
+              <FormInput
+                label={`${t('profileCompletion.fields.fullName')} *`}
+                value={fullName}
+                onChangeText={setFullName}
+                autoCapitalize="words"
+              />
+              <GenderPicker value={gender} onChange={setGender} />
+              <FormInput
+                label={t('profileCompletion.fields.dateOfBirth')}
+                value={dateOfBirth}
+                onChangeText={setDateOfBirth}
+                placeholder={t('profileCompletion.fields.dateOfBirthPlaceholder')}
+              />
+              <FormInput
+                label={t('profileCompletion.fields.mobileNumber')}
+                value={user?.mobileNumber ?? ''}
+                editable={false}
+              />
+              <FormInput
+                label={t('profileCompletion.fields.email')}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              {renderUploadRow(
+                t('profileCompletion.fields.profilePhoto'),
+                profilePhotoUrl,
+                'profile',
+              )}
+            </>
           ) : null}
-          <Button
-            label={
+
+          {step === 'address' ? (
+            <>
+              <FormInput
+                label={`${t('profileCompletion.fields.permanentAddress')} *`}
+                value={permanentAddress}
+                onChangeText={setPermanentAddress}
+                multiline
+              />
+              <FormInput
+                label={`${t('profileCompletion.fields.city')} *`}
+                value={city}
+                onChangeText={setCity}
+              />
+              <FormInput
+                label={`${t('profileCompletion.fields.state')} *`}
+                value={stateName}
+                onChangeText={setStateName}
+              />
+              <FormInput
+                label={`${t('profileCompletion.fields.pincode')} *`}
+                value={pincode}
+                onChangeText={setPincode}
+                keyboardType="number-pad"
+              />
+            </>
+          ) : null}
+
+          {step === 'emergency' ? (
+            <>
+              <FormInput
+                label={t('profileCompletion.fields.guardianName')}
+                value={emergencyContactName}
+                onChangeText={setEmergencyContactName}
+              />
+              <FormInput
+                label={t('profileCompletion.fields.guardianMobile')}
+                value={emergencyContactMobile}
+                onChangeText={setEmergencyContactMobile}
+                keyboardType="phone-pad"
+              />
+              <FormInput
+                label={t('profileCompletion.fields.relationship')}
+                value={emergencyContactRelation}
+                onChangeText={setEmergencyContactRelation}
+              />
+            </>
+          ) : null}
+
+          {step === 'documents' ? (
+            <>
+              <Text style={styles.optionalHint}>
+                {t('profileCompletion.wizard.documentsOptional')}
+              </Text>
+              <DocumentTypePicker
+                value={identityDocumentType}
+                onChange={type => {
+                  userEditedDocumentsRef.current = true;
+                  setIdentityDocumentType(type);
+                }}
+              />
+              <FormInput
+                label={t('profileCompletion.fields.documentNumber')}
+                value={identityDocumentNumber}
+                onChangeText={value => {
+                  userEditedDocumentsRef.current = true;
+                  setIdentityDocumentNumber(value);
+                }}
+              />
+              {renderUploadRow(
+                t('profileCompletion.fields.addressProof'),
+                addressProofFileUrl,
+                'address',
+              )}
+              {renderUploadRow(
+                t('profileCompletion.fields.identityProof'),
+                identityProofFileUrl,
+                'identity',
+              )}
+              {renderUploadRow(
+                t('profileCompletion.fields.additionalDocument'),
+                additionalDocumentFileUrl,
+                'additional',
+              )}
+            </>
+          ) : null}
+
+          {fieldError ? <Text style={styles.errorText}>{fieldError}</Text> : null}
+          {error ? (
+            <Text style={styles.errorText}>
+              {error.startsWith('profileCompletion') ? t(error) : error}
+            </Text>
+          ) : null}
+        </ScrollView>
+
+        <StickyFormActions
+          layout="row"
+          accessibilityLabel={t('profileCompletion.wizard.title')}
+          primary={{
+            label:
               stepIndex === STEPS.length - 1
                 ? isEditMode
                   ? t('settings.profile.save')
                   : t('profileCompletion.wizard.submit')
-                : t('common.next')
-            }
-            onPress={() => void handleNext()}
-            loading={isSubmitting}
-          />
-          <Pressable
-            disabled={isLoggingOut}
-            onPress={() => {
-              if (isEditMode) {
-                navigation.goBack();
-                return;
-              }
-              void (async () => {
-                setIsLoggingOut(true);
-                try {
-                  await logout();
-                } finally {
-                  setIsLoggingOut(false);
+                : t('common.next'),
+            onPress: () => void handleNext(),
+            loading: isSubmitting,
+            disabled: isSubmitting,
+          }}
+          secondary={
+            stepIndex > 0
+              ? {
+                  label: t('common.back'),
+                  onPress: () => setStepIndex(stepIndex - 1),
+                  disabled: isSubmitting,
                 }
-              })();
-            }}>
-            <Text style={styles.logoutLink}>
-              {isEditMode ? t('common.cancel') : t('settings.profile.logout')}
-            </Text>
-          </Pressable>
-        </View>
-      </ScrollView>
+              : undefined
+          }
+          footerExtra={
+            <Pressable
+              disabled={isLoggingOut}
+              accessibilityRole="button"
+              accessibilityLabel={
+                isEditMode ? t('common.cancel') : t('settings.profile.logout')
+              }
+              onPress={() => {
+                if (isEditMode) {
+                  navigation.goBack();
+                  return;
+                }
+                void (async () => {
+                  setIsLoggingOut(true);
+                  try {
+                    await logout();
+                  } finally {
+                    setIsLoggingOut(false);
+                  }
+                })();
+              }}>
+              <Text style={styles.logoutLink}>
+                {isEditMode ? t('common.cancel') : t('settings.profile.logout')}
+              </Text>
+            </Pressable>
+          }
+        />
+      </View>
     </Screen>
   );
 }
@@ -512,10 +539,17 @@ export function CompleteProfileScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+    padding: 0,
+  },
+  flex: {
+    flex: 1,
+  },
+  scroll: {
+    flex: 1,
   },
   content: {
     padding: spacing.xl,
-    paddingBottom: spacing.section,
+    paddingBottom: spacing.xl,
   },
   stepLabel: {
     ...typography.caption,
@@ -553,14 +587,11 @@ const styles = StyleSheet.create({
     color: '#DC2626',
     marginBottom: spacing.sm,
   },
-  footer: {
-    marginTop: spacing.lg,
-    gap: spacing.sm,
-  },
   logoutLink: {
     ...typography.body,
     color: colors.muted,
     textAlign: 'center',
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
+    minHeight: 44,
   },
 });

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import {
   CompositeNavigationProp,
@@ -9,19 +9,20 @@ import {
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { Bell, MapPin, Users, UtensilsCrossed, Wallet } from 'lucide-react-native';
+import { Bell, Crown, MapPin, Share2, Users, UtensilsCrossed, Wallet } from 'lucide-react-native';
 import { formatSpaceType, getSpaceTypeLabel } from '../../api';
 import {
   DashboardAccommodationOperations,
   DashboardFinancialSnapshot,
   DashboardMealOperations,
+  DashboardOwnerLoadingSkeleton,
   DashboardSectionTitle,
   DashboardSetupProgressCard,
 } from '../../components/dashboard';
 import { DashboardActionRow } from '../../components/dashboard/shared/DashboardActionRow';
 import { DashboardOwnerHero } from '../../components/dashboard/shared/DashboardOwnerHero';
 import { DashboardCustomerMealsSection } from '../../components/meals/DashboardCustomerMealsSection';
-import { ModuleActionCard, SkeletonCard, useQuickActionSheet } from '../../components/ui';
+import { ModuleActionCard, useQuickActionSheet } from '../../components/ui';
 import type { QuickActionSheetOption } from '../../components/ui';
 import { Screen } from '../../components/ui/Screen';
 import { useDashboardAccommodationOperationsQuick } from '../../hooks/useDashboardAccommodationOperationsQuick';
@@ -32,7 +33,9 @@ import { usePendingActions } from '../../hooks/usePendingActions';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useSpaceDashboard } from '../../hooks/useSpaceDashboard';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
-import { useSpaceSetupProgress } from '../../hooks/useSpaceSetupProgress';
+import { useSpaceLifecycle } from '../../hooks/useSpaceLifecycle';
+import { useSpaceLifecycleSignals } from '../../hooks/useSpaceLifecycleSignals';
+import { useSpaceHealth } from '../../spaceLifecycle/health';
 import type { MainStackParamList, SpaceTabParamList } from '../../navigation/types';
 import {
   navigateToMembersTab,
@@ -45,14 +48,27 @@ import { canManagePayments, currentMonthKey } from '../../utils/dashboardFinanci
 import { canManageNotifications } from '../../utils/spaceOperator';
 import { peekDashboardSummary } from '../../utils/dashboardQueryCache';
 import { peekPendingActions } from '../../utils/pendingActionsQueryCache';
-import { tomorrowIsoDate } from '../../utils/mealDates';
+import { todayIsoDate, tomorrowIsoDate } from '../../utils/mealDates';
 import { shouldShowDashboardMealOperations } from '../../utils/dashboardMealOperations';
+import {
+  dismissOptionalMilestone,
+  loadDismissedOptionalMilestones,
+  saveDismissedOptionalMilestones,
+  undismissOptionalMilestone,
+} from '../../utils/setupMilestoneDismissals';
+import type { MilestoneId, SetupNavigationTarget } from '../../spaceLifecycle';
 import { findMySpaceEntry } from '../../utils/spacePermissions';
-import type { SetupStepId } from '../../utils/spaceSetupProgress';
+import {
+  dashboardVisibilityForLifecycle,
+  mapSetupNavigationTarget,
+  shouldShowSetupChrome,
+} from '../../spaceLifecycle';
 import {
   hasAutoOpenedAccommodation,
   markAutoOpenedAccommodation,
 } from '../../utils/spaceSetupStorage';
+import { CoachmarkSequence } from '../../components/coachmarks';
+import { ENABLE_SETUP_COACHMARKS } from '../../coachmarks';
 
 type DashboardRoute = RouteProp<SpaceTabParamList, 'Dashboard'>;
 type DashboardNav = CompositeNavigationProp<
@@ -109,12 +125,6 @@ export function DashboardScreen() {
   const showOwnerDashboard = canManageNotifications(permissions);
   const showPaymentsQuickAction = canManagePayments(permissions.membershipRole);
   const canViewAccommodation = permissions.canViewAccommodation === true;
-  const setupEnabled = showOwnerDashboard;
-  const { progress: setupProgress, refresh: refreshSetupProgress } = useSpaceSetupProgress(
-    spaceId,
-    spaceType,
-    setupEnabled,
-  );
   const autoNavAttemptedRef = useRef<string | null>(null);
 
   const dashboard = useSpaceDashboard(spaceId, spaceType, showOwnerDashboard);
@@ -125,76 +135,237 @@ export function DashboardScreen() {
   );
   const accommodationOperations =
     dashboard.accommodationOperations ?? quickAccommodation.operations;
+
+  const pendingActions =
+    dashboard.pendingActions ??
+    peekDashboardSummary(spaceId, currentMonthKey())?.pendingActions ??
+    null;
+  const tenantPendingActions = usePendingActions(spaceId, !showOwnerDashboard, false);
+  const monthKey = currentMonthKey();
+  // Prefer live dashboard summary once available — peeks are fallback only.
+  const pendingActionCount = showOwnerDashboard
+    ? (pendingActions?.totalCount ??
+      peekPendingActions(spaceId, monthKey)?.totalCount ??
+      0)
+    : tenantPendingActions.totalCount;
+
+  const hasOperationalSignal = useMemo(() => {
+    const occupied = accommodationOperations?.occupiedBeds ?? 0;
+    const moveIns = accommodationOperations?.moveInsThisMonth ?? 0;
+    const collected = dashboard.financial?.collected ?? 0;
+    return occupied > 0 || moveIns > 0 || collected > 0;
+  }, [
+    accommodationOperations?.moveInsThisMonth,
+    accommodationOperations?.occupiedBeds,
+    dashboard.financial?.collected,
+  ]);
+
+  const [dismissedOptionalIds, setDismissedOptionalIds] = useState<MilestoneId[]>(
+    [],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadDismissedOptionalMilestones(spaceId).then(ids => {
+      if (cancelled) {
+        return;
+      }
+      // Do not keep a stale "skipped customers" across visits when the owner
+      // still has no customers — Add customers should be selected on land.
+      const withoutCustomersSkip = ids.filter(id => id !== 'RESIDENTS_READY');
+      setDismissedOptionalIds(withoutCustomersSkip);
+      if (withoutCustomersSkip.length !== ids.length) {
+        void saveDismissedOptionalMilestones(spaceId, withoutCustomersSkip);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [spaceId]);
+
+  const {
+    context: lifecycleContext,
+    loading: lifecycleLoading,
+    refresh: refreshLifecycle,
+    needsPropertyStructure,
+  } = useSpaceLifecycleSignals({
+    spaceId,
+    spaceType,
+    permissions,
+    enabled: showOwnerDashboard,
+    pendingActionCount: showOwnerDashboard ? pendingActionCount : 0,
+    hasOperationalSignal,
+    dismissedOptionalMilestoneIds: dismissedOptionalIds,
+  });
+
+  const {
+    lifecycle,
+    progress: lifecycleProgress,
+    nextRecommendedAction,
+    evaluation,
+  } = useSpaceLifecycle({
+    spaceType,
+    context: lifecycleContext,
+    enabled: showOwnerDashboard,
+  });
+
+  const healthExtras = useMemo(() => {
+    const financial = dashboard.financial;
+    const reviewFromPending =
+      pendingActions?.groups?.find(g => g.actionType === 'PAYMENT_NEEDS_REVIEW')
+        ?.count ?? 0;
+    return {
+      occupiedBeds: accommodationOperations?.occupiedBeds ?? null,
+      vacantBeds: accommodationOperations?.vacantBeds ?? null,
+      underReviewPaymentCount:
+        reviewFromPending > 0
+          ? reviewFromPending
+          : financial?.underReview != null && financial.underReview > 0
+            ? 1
+            : 0,
+    };
+  }, [
+    accommodationOperations?.occupiedBeds,
+    accommodationOperations?.vacantBeds,
+    dashboard.financial,
+    pendingActions?.groups,
+  ]);
+
+  const { health } = useSpaceHealth({
+    evaluation,
+    context: lifecycleContext,
+    extras: healthExtras,
+    enabled: showOwnerDashboard,
+  });
+
+  const visibility = useMemo(
+    () => dashboardVisibilityForLifecycle(lifecycle, { spaceType }),
+    [lifecycle, spaceType],
+  );
+
   const handleDashboardRefresh = useCallback(() => {
     void dashboard.reload(true);
     void quickAccommodation.reload();
-    void refreshSetupProgress();
-  }, [dashboard.reload, quickAccommodation.reload, refreshSetupProgress]);
+    void refreshLifecycle();
+  }, [dashboard.reload, quickAccommodation.reload, refreshLifecycle]);
+
   const showMealOperations = shouldShowDashboardMealOperations({
     showOwnerDashboard,
     canManageMeals: showMealsActions,
     isMess,
     accommodationApplicable,
   });
-  const pendingActions =
-    dashboard.pendingActions ??
-    peekDashboardSummary(spaceId, currentMonthKey())?.pendingActions ??
-    null;
-  // Owners: dashboard-summary.pendingActions (synced once).
-  // Tenants: dedicated pending-actions fetch (filtered). Shared cache dedupes with the bell.
-  const tenantPendingActions = usePendingActions(spaceId, !showOwnerDashboard, false);
-  // Match NotificationBellButton: prefer pending-actions cache, then summary.
-  // Otherwise a stale/empty summary soft-cache hides the Quick Actions card while the bell still shows the count.
-  const monthKey = currentMonthKey();
-  const pendingActionCount = showOwnerDashboard
-    ? (peekPendingActions(spaceId, monthKey)?.totalCount ??
-      pendingActions?.totalCount ??
-      peekDashboardSummary(spaceId, monthKey)?.pendingActions?.totalCount ??
-      0)
-    : tenantPendingActions.totalCount;
 
   const handlePendingActionsPress = useCallback(() => {
     navigateFromTab('DashboardPendingActions', { spaceId });
   }, [navigateFromTab, spaceId]);
 
-  const handleSetupContinue = useCallback(() => {
-    const next = setupProgress?.nextStepId;
-    const structureSteps: SetupStepId[] = [
-      'createBuilding',
-      'addFloors',
-      'addRooms',
-      'addBeds',
-    ];
-    if (next && structureSteps.includes(next) && canViewAccommodation) {
-      navigation.navigate('Accommodation', { spaceId });
-      return;
-    }
-    if (next === 'addMembers' && permissions.canManageMembers) {
-      navigateToMembersTab(spaceId);
-      return;
-    }
-    if (next === 'configureMeals') {
-      navigation.navigate('Meals', { spaceId });
-      return;
-    }
-    if (canViewAccommodation && setupProgress?.needsPropertyStructure) {
-      navigation.navigate('Accommodation', { spaceId });
-    }
-  }, [
-    canViewAccommodation,
-    navigation,
-    permissions.canManageMembers,
-    setupProgress?.needsPropertyStructure,
-    setupProgress?.nextStepId,
-    spaceId,
-  ]);
+  const navigateToSetupTarget = useCallback(
+    (target: SetupNavigationTarget) => {
+      const dest = mapSetupNavigationTarget(target, { spaceType });
+      if (dest.kind === 'tab') {
+        if (dest.tab === 'Accommodation' && canViewAccommodation) {
+          navigation.navigate('Accommodation', { spaceId });
+          return;
+        }
+        if (dest.tab === 'Members' && permissions.canManageMembers) {
+          navigateToMembersTab(spaceId);
+          return;
+        }
+        if (dest.tab === 'Meals') {
+          navigation.navigate('Meals', { spaceId });
+        }
+        return;
+      }
 
-  // First open of an empty property → Accommodation tab (once per space).
+      switch (dest.screen) {
+        case 'QuickSetupWizard':
+          navigateFromTab('QuickSetupWizard', { spaceId });
+          break;
+        case 'BuildingForm':
+          navigateFromTab('BuildingForm', { spaceId, mode: 'create' });
+          break;
+        case 'AddMember':
+          navigateFromTab('AddMember', { spaceId });
+          break;
+        case 'AddCustomersHub':
+          navigateFromTab('AddCustomersHub', { spaceId });
+          break;
+        case 'MenuLibrary':
+          navigateFromTab('MenuLibrary', { spaceId });
+          break;
+        case 'MenuPlanning':
+          navigateFromTab('MenuPlanning', { spaceId });
+          break;
+        case 'MenuSharePreview':
+          navigateFromTab('MenuSharePreview', {
+            spaceId,
+            menuDate: todayIsoDate(),
+          });
+          break;
+        case 'MealDeliveryLocations':
+          navigateFromTab('MealDeliveryLocations', { spaceId });
+          break;
+        case 'DashboardPendingActions':
+          navigateFromTab('DashboardPendingActions', { spaceId });
+          break;
+        default:
+          break;
+      }
+    },
+    [
+      canViewAccommodation,
+      navigateFromTab,
+      navigation,
+      permissions.canManageMembers,
+      spaceId,
+      spaceType,
+    ],
+  );
+
+  const handleSetupContinue = useCallback(() => {
+    const target = nextRecommendedAction?.navigationTarget;
+    if (!target) {
+      return;
+    }
+    navigateToSetupTarget(target);
+  }, [navigateToSetupTarget, nextRecommendedAction?.navigationTarget]);
+
+  const handleSkipOptionalSetup = useCallback(() => {
+    const milestoneId = nextRecommendedAction?.milestoneId;
+    if (!milestoneId || nextRecommendedAction?.kind !== 'optional') {
+      return;
+    }
+    void dismissOptionalMilestone(spaceId, milestoneId).then(ids => {
+      setDismissedOptionalIds(ids);
+    });
+  }, [nextRecommendedAction?.kind, nextRecommendedAction?.milestoneId, spaceId]);
+
+  const handleSetupStepPress = useCallback(
+    (milestoneId: MilestoneId) => {
+      const status = evaluation?.statuses.find(s => s.id === milestoneId);
+      const target = status?.navigationTarget;
+      if (!target || target === 'DASHBOARD') {
+        return;
+      }
+      if (
+        milestoneId === 'RESIDENTS_READY' &&
+        dismissedOptionalIds.includes('RESIDENTS_READY')
+      ) {
+        void undismissOptionalMilestone(spaceId, 'RESIDENTS_READY').then(ids => {
+          setDismissedOptionalIds(ids);
+        });
+      }
+      navigateToSetupTarget(target);
+    },
+    [dismissedOptionalIds, evaluation?.statuses, navigateToSetupTarget, spaceId],
+  );
+
   useEffect(() => {
     if (!showOwnerDashboard || !accommodationApplicable || !canViewAccommodation) {
       return;
     }
-    if (!setupProgress?.needsPropertyStructure) {
+    if (!needsPropertyStructure || lifecycleLoading) {
       return;
     }
     if (autoNavAttemptedRef.current === spaceId) {
@@ -221,8 +392,9 @@ export function DashboardScreen() {
   }, [
     accommodationApplicable,
     canViewAccommodation,
+    lifecycleLoading,
     navigation,
-    setupProgress?.needsPropertyStructure,
+    needsPropertyStructure,
     showOwnerDashboard,
     spaceId,
   ]);
@@ -281,6 +453,10 @@ export function DashboardScreen() {
 
   const handleDeliveryLocationsPress = useCallback(() => {
     navigateFromTab('MealDeliveryLocations', { spaceId });
+  }, [navigateFromTab, spaceId]);
+
+  const handleSubscriptionPlansPress = useCallback(() => {
+    navigateFromTab('SubscriptionPlans', { spaceId });
   }, [navigateFromTab, spaceId]);
 
   const handleMembersPress = useCallback(() => {
@@ -368,6 +544,13 @@ export function DashboardScreen() {
           onPress={handleDeliveryLocationsPress}
         />
         <DashboardActionRow
+          icon={Crown}
+          accent="#7C3AED"
+          title={t('meals.subscriptionPlans.title')}
+          subtitle={t('dashboard.quickActions.subscriptionPlansSubtitle')}
+          onPress={handleSubscriptionPlansPress}
+        />
+        <DashboardActionRow
           icon={Users}
           accent="#2563EB"
           title={t('dashboard.quickActions.members')}
@@ -388,6 +571,7 @@ export function DashboardScreen() {
     handleMealsPress,
     handleMembersPress,
     handlePaymentsPress,
+    handleSubscriptionPlansPress,
     isMess,
     pendingActionsCard,
     showMealsActions,
@@ -452,8 +636,6 @@ export function DashboardScreen() {
       );
     }
 
-    // Meal participants get Design A quick actions (Orders / Payments / Complaints)
-    // inside DashboardCustomerMealsSection — avoid duplicating My payments here.
     if ((isTenant || isCustomer) && linkedMemberId && !isMealParticipant) {
       return (
         <View style={styles.quickStack}>
@@ -500,13 +682,144 @@ export function DashboardScreen() {
     t,
   ]);
 
-  const quickActions = isMess ? messQuickActions : accommodationQuickActions;
-  const showQuickSection = quickActions != null || pendingActionsCard != null;
+  const fullQuickActions = isMess ? messQuickActions : accommodationQuickActions;
+
+  const messSetupQuickActions =
+    visibility.showMessSetupQuickActions && showMealsActions && isMess ? (
+      <View style={styles.quickStack}>
+        {pendingActionsCard}
+        <DashboardActionRow
+          icon={UtensilsCrossed}
+          accent={colors.primaryDark}
+          title={t('dashboard.quickActions.setupCreateMenuLibrary')}
+          subtitle={t('dashboard.quickActions.setupCreateMenuLibrarySubtitle')}
+          onPress={() => navigateFromTab('MenuLibrary', { spaceId })}
+        />
+        <DashboardActionRow
+          icon={Users}
+          accent="#2563EB"
+          title={t('dashboard.quickActions.setupAddCustomers')}
+          subtitle={t('dashboard.quickActions.setupAddCustomersSubtitle')}
+          onPress={() => navigateFromTab('AddCustomersHub', { spaceId })}
+        />
+        <DashboardActionRow
+          icon={UtensilsCrossed}
+          accent="#0F766E"
+          title={t('dashboard.quickActions.setupPlanTodaysMenu')}
+          subtitle={t('dashboard.quickActions.setupPlanTodaysMenuSubtitle')}
+          onPress={() =>
+            navigateFromTab('MenuPlanning', { spaceId, menuDate: todayIsoDate() })
+          }
+        />
+        <DashboardActionRow
+          icon={Share2}
+          accent="#7C3AED"
+          title={t('dashboard.quickActions.setupShareTodaysMenu')}
+          subtitle={t('dashboard.quickActions.setupShareTodaysMenuSubtitle')}
+          onPress={() =>
+            navigateFromTab('MenuSharePreview', {
+              spaceId,
+              menuDate: todayIsoDate(),
+            })
+          }
+        />
+        {showPaymentsQuickAction ? (
+          <DashboardActionRow
+            icon={Wallet}
+            accent="#D97706"
+            title={t('dashboard.quickActions.setupConfigurePayments')}
+            subtitle={t('dashboard.quickActions.setupConfigurePaymentsSubtitle')}
+            onPress={handlePaymentsPress}
+          />
+        ) : null}
+      </View>
+    ) : null;
+
+  const ownerQuickActions = visibility.showFullQuickActions
+    ? fullQuickActions
+    : messSetupQuickActions ??
+      (pendingActionsCard ? (
+        <View style={styles.quickStack}>{pendingActionsCard}</View>
+      ) : null);
+
+  const quickActions = showOwnerDashboard ? ownerQuickActions : fullQuickActions;
 
   const showInitialDashboardLoader =
     dashboard.loading &&
     dashboard.summary == null &&
     quickAccommodation.operations == null;
+
+  const accommodationOpsReady =
+    isMess ||
+    !accommodationApplicable ||
+    accommodationOperations != null ||
+    (!quickAccommodation.loading && !showInitialDashboardLoader);
+
+  /**
+   * Single aggregate gate: never paint Hero / Health / Lifecycle / ops with
+   * incomplete or previous-space values. Pull-to-refresh keeps content visible.
+   */
+  const ownerDashboardReady =
+    !lifecycleLoading &&
+    lifecycleContext != null &&
+    evaluation != null &&
+    !dashboard.loading &&
+    accommodationOpsReady;
+
+  const showOwnerDashboardBody = showOwnerDashboard && ownerDashboardReady;
+
+  const showQuickSection = showOwnerDashboard
+    ? showOwnerDashboardBody &&
+      (quickActions != null ||
+        (visibility.elevatePendingActions && pendingActionsCard != null))
+    : quickActions != null || pendingActionsCard != null;
+
+  const showSetupCard =
+    showOwnerDashboardBody &&
+    shouldShowSetupChrome(lifecycle) &&
+    lifecycleProgress != null &&
+    evaluation != null &&
+    !lifecycleProgress.isRequiredComplete;
+
+  const remainingRequiredSteps = lifecycleProgress
+    ? Math.max(0, lifecycleProgress.requiredTotal - lifecycleProgress.requiredCompleted)
+    : 0;
+
+  const nextMessMilestoneId = evaluation?.recommendation?.milestoneId ?? null;
+
+  const heroSubtitle = (() => {
+    if (!showOwnerDashboardBody) {
+      return undefined;
+    }
+    if (isMess) {
+      if (lifecycle === 'READY') {
+        return t('dashboard.owner.heroSubtitleMessReady');
+      }
+      if (!showSetupCard) {
+        return undefined;
+      }
+      switch (nextMessMilestoneId) {
+        case 'RESIDENTS_READY':
+          return t('dashboard.owner.heroSubtitleMessLibraryDone');
+        case 'TODAYS_MENU_READY':
+          return t('dashboard.owner.heroSubtitleMessCustomersDone');
+        case 'MENU_SHARED':
+          return t('dashboard.owner.heroSubtitleMessMenuDone');
+        case 'MEALS_READY':
+        default:
+          return t('dashboard.owner.heroSubtitleSetupMess', {
+            count: remainingRequiredSteps,
+          });
+      }
+    }
+    return showSetupCard ? t('dashboard.owner.heroSubtitleSetup') : undefined;
+  })();
+
+  const showOpsBlock =
+    showOwnerDashboardBody &&
+    (visibility.showFinancial ||
+      visibility.showAccommodationOps ||
+      visibility.showMealOps);
 
   return (
     <Screen
@@ -515,10 +828,28 @@ export function DashboardScreen() {
       refreshing={dashboard.refreshing}
       onRefresh={showOwnerDashboard ? handleDashboardRefresh : undefined}>
       {hierarchyPicker.pickerModal}
-      {showOwnerDashboard && spaceEntry ? (
+      {showOwnerDashboard && !ownerDashboardReady ? (
+        <DashboardOwnerLoadingSkeleton
+          showPropertyOps={!isMess && accommodationApplicable}
+          showMealOps={showMealOperations}
+        />
+      ) : null}
+      {showOwnerDashboardBody && spaceEntry ? (
         <DashboardOwnerHero
           spaceName={spaceEntry.spaceName}
           spaceTypeLabel={spaceType ? getSpaceTypeLabel(spaceType) : undefined}
+          subtitle={heroSubtitle}
+          health={health}
+          onWelcomePress={
+            spaceId
+              ? () => navigateFromTab('SpaceDetails', { spaceId })
+              : undefined
+          }
+          onHealthPress={
+            spaceId && health
+              ? () => navigateFromTab('DashboardSpaceHealth', { spaceId })
+              : undefined
+          }
         />
       ) : null}
       {spaceEntry && !showOwnerDashboard && !isMealParticipant ? (
@@ -534,42 +865,74 @@ export function DashboardScreen() {
         <DashboardCustomerMealsSection spaceId={spaceId} showCustomerChrome />
       ) : null}
 
-      {showOwnerDashboard ? (
+      {showOwnerDashboardBody ? (
         <>
-          {setupProgress && !setupProgress.isComplete ? (
-            <DashboardSetupProgressCard
-              progress={setupProgress}
-              onContinue={handleSetupContinue}
-            />
-          ) : null}
-
-          {showInitialDashboardLoader ? (
-            <SkeletonCard />
-          ) : null}
-
-          {dashboard.summary || !showInitialDashboardLoader ? (
-            <>
-              {/* 1. This month — common across all space types */}
-              <DashboardFinancialSnapshot
-                alwaysShow
-                loading={dashboard.financialLoading && dashboard.financial == null}
-                financial={dashboard.financial}
-                onExpectedPress={
-                  showPaymentsQuickAction ? () => handlePaymentsNavigate('all') : undefined
-                }
-                onCollectedPress={
-                  showPaymentsQuickAction ? () => handlePaymentsNavigate('collected') : undefined
-                }
-                onUnderReviewPress={
-                  showPaymentsQuickAction ? () => handlePaymentsNavigate('underReview') : undefined
-                }
-                onPendingPress={
-                  showPaymentsQuickAction ? () => handlePaymentsNavigate('pending') : undefined
-                }
+          {showSetupCard && evaluation && lifecycleProgress ? (
+            <CoachmarkSequence
+              spaceId={spaceId}
+              tourId="setup.mess.v1"
+              lifecycle={lifecycle}
+              enabled={
+                ENABLE_SETUP_COACHMARKS &&
+                isMess &&
+                showOwnerDashboard &&
+                showSetupCard
+              }>
+              <DashboardSetupProgressCard
+                progress={lifecycleProgress}
+                recommendation={nextRecommendedAction}
+                milestones={evaluation.statuses}
+                onContinue={handleSetupContinue}
+                onStepPress={handleSetupStepPress}
+                onSkipOptional={handleSkipOptionalSetup}
+                dismissedOptionalIds={dismissedOptionalIds}
+                spaceType={spaceType}
+                enableCoachmarkAnchors={isMess}
               />
+            </CoachmarkSequence>
+          ) : null}
 
-              {/* 2. Operational summary — accommodation only (Mess uses Meal operations below) */}
-              {!isMess && accommodationOperations ? (
+          {showOpsBlock ? (
+            <>
+              {visibility.showFinancial ? (
+                <View
+                  style={
+                    visibility.softenFinancial ? styles.softenedOps : undefined
+                  }>
+                  <DashboardFinancialSnapshot
+                    alwaysShow
+                    loading={false}
+                    financial={dashboard.financial}
+                    emptyHint={
+                      isMess && visibility.softenFinancial
+                        ? t('dashboard.financial.emptyHintMess')
+                        : undefined
+                    }
+                    onExpectedPress={
+                      showPaymentsQuickAction
+                        ? () => handlePaymentsNavigate('all')
+                        : undefined
+                    }
+                    onCollectedPress={
+                      showPaymentsQuickAction
+                        ? () => handlePaymentsNavigate('collected')
+                        : undefined
+                    }
+                    onUnderReviewPress={
+                      showPaymentsQuickAction
+                        ? () => handlePaymentsNavigate('underReview')
+                        : undefined
+                    }
+                    onPendingPress={
+                      showPaymentsQuickAction
+                        ? () => handlePaymentsNavigate('pending')
+                        : undefined
+                    }
+                  />
+                </View>
+              ) : null}
+
+              {visibility.showAccommodationOps && !isMess && accommodationOperations ? (
                 <DashboardAccommodationOperations
                   operations={accommodationOperations}
                   onOccupiedPress={
@@ -590,9 +953,12 @@ export function DashboardScreen() {
                 />
               ) : null}
 
-              {/* 3. Meal operations — common when meals are managed */}
-              {showMealOperations ? (
-                <DashboardMealOperations spaceId={spaceId} enabled={showMealOperations} />
+              {visibility.showMealOps && showMealOperations ? (
+                <DashboardMealOperations
+                  spaceId={spaceId}
+                  enabled={showMealOperations}
+                  guidedEmpty={isMess && Boolean(showSetupCard)}
+                />
               ) : null}
             </>
           ) : null}
@@ -612,13 +978,21 @@ export function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: spacing.section },
+  content: {
+    // Override Screen's uniform 24dp padding for tighter AppBar → Hero (12dp).
+    paddingTop: spacing.md,
+    paddingHorizontal: spacing.xxl,
+    paddingBottom: spacing.section,
+  },
   spaceDetails: { marginBottom: spacing.lg },
   spaceName: { ...typography.h2, marginBottom: spacing.xs },
   spaceType: { ...typography.body, color: colors.muted },
   quickSection: { marginBottom: spacing.lg },
   quickStack: {
     gap: spacing.sm,
+  },
+  softenedOps: {
+    opacity: 0.72,
   },
   tenantHint: {
     ...typography.body,

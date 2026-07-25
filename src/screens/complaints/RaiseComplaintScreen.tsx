@@ -1,7 +1,9 @@
-import React, { useLayoutEffect, useMemo, useState } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Platform,
   Pressable,
   ScrollView,
@@ -23,10 +25,17 @@ import type {
   SpaceType,
 } from '../../api/types';
 import { ApiError } from '../../api/types';
-import { Button, FormInput, HeaderBackButton, ListFilterChips } from '../../components/ui';
+import { FormInput, HeaderBackButton, ListFilterChips } from '../../components/ui';
+import {
+  ProgressiveWorkflowFooter,
+  StickyFormActions,
+  progressiveSectionHighlightStyle,
+} from '../../components/progressive';
+import { useProgressiveSectionReview } from '../../hooks/useProgressiveSectionReview';
 import type { MainStackParamList } from '../../navigation/types';
 import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
+import { resolveProgressivePhase } from '../../utils/progressivePhase';
 import { colors, radius, spacing, typography } from '../../theme';
 import { categoriesForSpaceType } from '../../utils/complaintPermissions';
 import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
@@ -44,13 +53,14 @@ export function RaiseComplaintScreen() {
   const route = useRoute<Route>();
   const { spaceId } = route.params;
   const showToast = useToastStore(state => state.showToast);
+  const scrollRef = useRef<ScrollView>(null);
 
   const mySpaces = useSpaceStore(state => state.mySpaces);
-  const spaceType = useMemo(
+  const spaceType = React.useMemo(
     () => mySpaces.find(s => s.spaceId === spaceId)?.spaceType as SpaceType | undefined,
     [mySpaces, spaceId],
   );
-  const categories = useMemo(() => categoriesForSpaceType(spaceType), [spaceType]);
+  const categories = React.useMemo(() => categoriesForSpaceType(spaceType), [spaceType]);
 
   const [category, setCategory] = useState<ComplaintCategory>(categories[0] ?? 'OTHER');
   const [priority, setPriority] = useState<ComplaintPriority>('MEDIUM');
@@ -64,6 +74,38 @@ export function RaiseComplaintScreen() {
 
   const foodRelated =
     category === 'FOOD' || category === 'FOOD_QUALITY' || category === 'FOOD_SERVICE';
+
+  const detailsComplete = Boolean(title.trim() && description.trim());
+  const progressiveEnabled = detailsComplete;
+
+  const {
+    reviewed: photosReviewed,
+    highlighted: photosHighlighted,
+    onSectionLayout: onPhotosLayout,
+    onScroll: onPhotosScroll,
+    onScrollBeginDrag: onPhotosScrollBeginDrag,
+    continueToSection: continueToPhotos,
+    clearReviewed: clearPhotosReviewed,
+  } = useProgressiveSectionReview({
+    enabled: progressiveEnabled,
+  });
+
+  React.useEffect(() => {
+    if (!detailsComplete) {
+      clearPhotosReviewed();
+    }
+  }, [clearPhotosReviewed, detailsComplete]);
+
+  const progressivePhase = resolveProgressivePhase({
+    enabled: progressiveEnabled,
+    prerequisiteMet: true,
+    sectionReviewed: photosReviewed,
+  });
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, layoutMeasurement } = event.nativeEvent;
+    onPhotosScroll(contentOffset.y, layoutMeasurement.height);
+  };
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -120,93 +162,151 @@ export function RaiseComplaintScreen() {
     <KeyboardAvoidingView
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.label}>{t('complaints.fields.category')}</Text>
-        <ListFilterChips
-          options={categories.map(id => ({
-            id,
-            label: t(`complaints.category.${id}`),
-          }))}
-          value={category}
-          onChange={setCategory}
-        />
+      <View style={styles.flex}>
+        <ScrollView
+          ref={scrollRef}
+          style={styles.scroll}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          scrollEventThrottle={16}
+          onScrollBeginDrag={progressiveEnabled ? onPhotosScrollBeginDrag : undefined}
+          onScroll={progressiveEnabled ? handleScroll : undefined}>
+          <Text style={styles.sectionTitle}>
+            {t('progressiveWorkflow.raiseComplaint.detailsTitle')}
+          </Text>
 
-        <Text style={styles.label}>{t('complaints.fields.priority')}</Text>
-        <ListFilterChips
-          options={PRIORITIES.map(id => ({
-            id,
-            label: t(`complaints.priority.${id}`),
-          }))}
-          value={priority}
-          onChange={setPriority}
-        />
+          <Text style={styles.label}>{t('complaints.fields.category')}</Text>
+          <ListFilterChips
+            options={categories.map(id => ({
+              id,
+              label: t(`complaints.category.${id}`),
+            }))}
+            value={category}
+            onChange={setCategory}
+          />
 
-        <FormInput
-          label={t('complaints.fields.title')}
-          value={title}
-          onChangeText={setTitle}
-          maxLength={200}
-          placeholder={t(`complaints.placeholders.subject.${category}`)}
-        />
-        <FormInput
-          label={t('complaints.fields.description')}
-          value={description}
-          onChangeText={setDescription}
-          multiline
-          numberOfLines={5}
-          style={styles.multiline}
-          placeholder={t(`complaints.placeholders.description.${category}`)}
-        />
+          <Text style={styles.label}>{t('complaints.fields.priority')}</Text>
+          <ListFilterChips
+            options={PRIORITIES.map(id => ({
+              id,
+              label: t(`complaints.priority.${id}`),
+            }))}
+            value={priority}
+            onChange={setPriority}
+          />
 
-        {foodRelated ? (
-          <>
-            <FormInput
-              label={t('complaints.fields.mealDate')}
-              value={mealDate}
-              onChangeText={setMealDate}
-              placeholder="YYYY-MM-DD"
-            />
-            <Text style={styles.label}>{t('complaints.fields.mealType')}</Text>
-            <ListFilterChips
-              options={MEAL_TYPES.map(id => ({
-                id,
-                label: t(`complaints.mealType.${id}`),
-              }))}
-              value={mealType ?? MEAL_TYPES[0]}
-              onChange={value => setMealType(value)}
-            />
-          </>
-        ) : null}
+          <FormInput
+            label={t('complaints.fields.title')}
+            value={title}
+            onChangeText={setTitle}
+            maxLength={200}
+            placeholder={t(`complaints.placeholders.subject.${category}`)}
+          />
+          <FormInput
+            label={t('complaints.fields.description')}
+            value={description}
+            onChangeText={setDescription}
+            multiline
+            numberOfLines={5}
+            style={styles.multiline}
+            placeholder={t(`complaints.placeholders.description.${category}`)}
+          />
 
-        <Text style={styles.label}>{t('complaints.fields.photos')}</Text>
-        <View style={styles.photoRow}>
-          {photos.map((uri, index) => (
-            <Image key={`${index}`} source={{ uri }} style={styles.thumb} />
-          ))}
-          <Pressable onPress={onAddPhoto} style={styles.addPhoto}>
-            <Text style={styles.addPhotoText}>+</Text>
-          </Pressable>
-        </View>
+          {foodRelated ? (
+            <>
+              <Text style={styles.sectionTitle}>
+                {t('progressiveWorkflow.raiseComplaint.contextTitle')}
+              </Text>
+              <FormInput
+                label={t('complaints.fields.mealDate')}
+                value={mealDate}
+                onChangeText={setMealDate}
+                placeholder="YYYY-MM-DD"
+              />
+              <Text style={styles.label}>{t('complaints.fields.mealType')}</Text>
+              <ListFilterChips
+                options={MEAL_TYPES.map(id => ({
+                  id,
+                  label: t(`complaints.mealType.${id}`),
+                }))}
+                value={mealType ?? MEAL_TYPES[0]}
+                onChange={value => setMealType(value)}
+              />
+            </>
+          ) : null}
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+          <View
+            style={[styles.photosSection, photosHighlighted && styles.photosHighlight]}
+            onLayout={event => {
+              onPhotosLayout(event.nativeEvent.layout.y, event.nativeEvent.layout.height);
+            }}>
+            <Text style={styles.sectionTitle}>
+              {t('progressiveWorkflow.raiseComplaint.photosTitle')}
+            </Text>
+            <View style={styles.photoRow}>
+              {photos.map((uri, index) => (
+                <Image key={`${index}`} source={{ uri }} style={styles.thumb} />
+              ))}
+              <Pressable onPress={onAddPhoto} style={styles.addPhoto}>
+                <Text style={styles.addPhotoText}>+</Text>
+              </Pressable>
+            </View>
+          </View>
 
-        <Button
-          label={t('complaints.submit')}
-          onPress={onSubmit}
-          loading={submitting}
-          disabled={submitting}
-        />
-      </ScrollView>
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+        </ScrollView>
+
+        {progressiveEnabled ? (
+          <ProgressiveWorkflowFooter
+            phase={progressivePhase}
+            stepLabel={t('progressiveWorkflow.stepOf', {
+              current: progressivePhase === 'continue' ? 1 : 2,
+              total: 2,
+            })}
+            progressLine={
+              progressivePhase === 'continue'
+                ? t('progressiveWorkflow.raiseComplaint.progressDetailsNext')
+                : t('progressiveWorkflow.raiseComplaint.progressReady')
+            }
+            continueEyebrow={t('progressiveWorkflow.nextStep')}
+            continueTitle={t('progressiveWorkflow.raiseComplaint.reviewPhotosTitle')}
+            continueHint={t('progressiveWorkflow.raiseComplaint.reviewPhotosHint')}
+            continueLabel={t('progressiveWorkflow.raiseComplaint.continueToPhotos')}
+            onContinue={() => continueToPhotos(scrollRef)}
+            primaryAction={{
+              label: t('complaints.submit'),
+              onPress: onSubmit,
+              loading: submitting,
+              disabled: submitting,
+            }}
+          />
+        ) : (
+          <StickyFormActions
+            primary={{
+              label: t('complaints.submit'),
+              onPress: onSubmit,
+              loading: submitting,
+              disabled: submitting,
+            }}
+          />
+        )}
+      </View>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
+  scroll: { flex: 1 },
   content: {
     padding: spacing.lg,
     gap: spacing.sm,
-    paddingBottom: spacing.xxl,
+    paddingBottom: spacing.xl,
+  },
+  sectionTitle: {
+    ...typography.h3,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
   },
   label: {
     ...typography.caption,
@@ -216,6 +316,15 @@ const styles = StyleSheet.create({
   multiline: {
     minHeight: 120,
     textAlignVertical: 'top',
+  },
+  photosSection: {
+    marginTop: spacing.sm,
+  },
+  photosHighlight: {
+    ...progressiveSectionHighlightStyle,
+    borderWidth: 1,
+    borderRadius: radius.card,
+    padding: spacing.sm,
   },
   photoRow: {
     flexDirection: 'row',

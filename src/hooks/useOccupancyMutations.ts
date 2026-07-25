@@ -27,7 +27,7 @@ export function useOccupancyMutations(spaceId: UUID) {
       } catch (err) {
         const message = getOccupancyErrorMessage(err, 'occupancy.errors.allocate');
         setError(message);
-        throw new Error(message);
+        throw err;
       } finally {
         setLoading(false);
       }
@@ -46,7 +46,7 @@ export function useOccupancyMutations(spaceId: UUID) {
       } catch (err) {
         const message = getOccupancyErrorMessage(err, 'occupancy.errors.reserve');
         setError(message);
-        throw new Error(message);
+        throw err;
       } finally {
         setLoading(false);
       }
@@ -65,7 +65,7 @@ export function useOccupancyMutations(spaceId: UUID) {
       } catch (err) {
         const message = getOccupancyErrorMessage(err, 'occupancy.errors.moveIn');
         setError(message);
-        throw new Error(message);
+        throw err;
       } finally {
         setLoading(false);
       }
@@ -84,7 +84,7 @@ export function useOccupancyMutations(spaceId: UUID) {
       } catch (err) {
         const message = getOccupancyErrorMessage(err, 'occupancy.errors.cancelReservation');
         setError(message);
-        throw new Error(message);
+        throw err;
       } finally {
         setLoading(false);
       }
@@ -103,7 +103,7 @@ export function useOccupancyMutations(spaceId: UUID) {
       } catch (err) {
         const message = getOccupancyErrorMessage(err, 'occupancy.errors.transfer');
         setError(message);
-        throw new Error(message);
+        throw err;
       } finally {
         setLoading(false);
       }
@@ -122,7 +122,7 @@ export function useOccupancyMutations(spaceId: UUID) {
       } catch (err) {
         const message = getOccupancyErrorMessage(err, 'occupancy.errors.vacate');
         setError(message);
-        throw new Error(message);
+        throw err;
       } finally {
         setLoading(false);
       }

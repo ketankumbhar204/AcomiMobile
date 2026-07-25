@@ -64,9 +64,10 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.lg,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
     gap: spacing.md,
-    minHeight: 76,
+    minHeight: 64,
     ...shadows.sm,
   },
   pressed: {
@@ -74,15 +75,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   icon: {
-    width: 48,
-    height: 48,
+    width: 36,
+    height: 36,
     borderRadius: radius.button,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.white,
   },
@@ -92,11 +93,13 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     ...typography.caption,
-    marginTop: 2,
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: spacing.xxs,
     color: colors.textSecondary,
   },
   status: {
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
   },
   trailingBadge: {
     flexShrink: 0,

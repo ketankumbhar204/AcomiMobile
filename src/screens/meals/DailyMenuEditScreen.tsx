@@ -15,6 +15,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { mealsApi } from '../../api/mealsApi';
 import type { FoodItemResponse, MealType, MealComboResponse, UUID } from '../../api/types';
+import { CopyPreviousMenuSheet } from '../../components/meals';
 import {
   MenuSelectionPanel,
   type MenuSelectionPanelHandle,
@@ -22,21 +23,26 @@ import {
 } from '../../components/meals/MenuSelectionPanel';
 import { MealExtrasEnableSection } from '../../components/meals/MealExtrasEnableSection';
 import { MealStatusBadge } from '../../components/meals/MealStatusBadge';
+import {
+  ProgressiveMealPlanningFooter,
+  type ProgressiveMealPlanningPhase,
+} from '../../components/meals/ProgressiveMealPlanningFooter';
+import { StickyFormActions } from '../../components/progressive';
 import { Button, HeaderBackButton, PermissionDeniedScreen } from '../../components/ui';
 import { useMealPricingPolicy } from '../../hooks/useMealPricingPolicy';
+import { useProgressiveSectionReview } from '../../hooks/useProgressiveSectionReview';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { navigateMainStack } from '../../navigation/mainStackNavigation';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, spacing, typography } from '../../theme';
-import { addDaysIsoDate, formatMenuDate, isPastMenuDate } from '../../utils/mealDates';
+import { formatMenuDate, isPastMenuDate } from '../../utils/mealDates';
 import { fetchSpaceMenuCatalog, patchSpaceMenuCatalogItem } from '../../utils/fetchSpaceMenuCatalog';
 import {
   loadMenuDraft,
   mergeSelectionIntoOptions,
   optionChipId,
   saveMenuDraft,
-  toMenuDraftOption,
   type MenuDraftOption,
   type MenuSelectionItemPackage,
 } from '../../utils/dailyMenuDraft';
@@ -53,7 +59,7 @@ import {
   type ComboPriceDraftErrors,
 } from '../../utils/comboSelectionPricing';
 import { countPlannedEntries, getPlannedEntryKind, plannedSummaryI18nKey } from '../../utils/plannedMenuSummary';
-import { collectSelectedMealItemIds } from '../../utils/mealExtrasSuggestions';
+import { collectSelectedMealItemIds, collectMealExtraCategorySeedIds } from '../../utils/mealExtrasSuggestions';
 
 type Nav = NativeStackNavigationProp<MainStackParamList>;
 
@@ -115,12 +121,29 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
   const [priceErrors, setPriceErrors] = useState<ComboPriceDraftErrors>({});
   const [panelSeedKey, setPanelSeedKey] = useState(0);
   const [panelHasSelection, setPanelHasSelection] = useState(false);
+  const [copyMenuOpen, setCopyMenuOpen] = useState(false);
   const [catalogItems, setCatalogItems] = useState<FoodItemResponse[]>([]);
   const latestSelectionRef = useRef<MenuSelectionSaveResult | null>(null);
   const baselineRef = useRef<DraftSnapshot | null>(null);
   const allowLeaveRef = useRef(false);
   const panelRef = useRef<MenuSelectionPanelHandle>(null);
   const scrollRef = useRef<ScrollView>(null);
+  const loadHadMealsRef = useRef(false);
+
+  const progressiveExtrasEnabled = mealPricing.requiresMealPrices && !dateReadOnly;
+  const {
+    reviewed: extrasReviewed,
+    highlighted: extrasHighlighted,
+    onSectionLayout: onExtrasLayout,
+    onScroll: onExtrasScroll,
+    onScrollBeginDrag: onExtrasScrollBeginDrag,
+    continueToSection,
+    markReviewed: markExtrasReviewed,
+    clearReviewed: clearExtrasReviewed,
+    setReviewed: setExtrasReviewed,
+  } = useProgressiveSectionReview({
+    enabled: progressiveExtrasEnabled,
+  });
 
   const isDirty = useMemo(() => {
     if (loading || dateReadOnly || baselineRef.current == null) {
@@ -150,9 +173,10 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     setLoading(true);
     setPriceDrafts({});
     setPriceErrors({});
+    loadHadMealsRef.current = false;
     baselineRef.current = null;
     allowLeaveRef.current = false;
-  }, [mealType, menuDate, spaceId]);
+  }, [mealType, menuDate, mealPricing.requiresMealPrices, spaceId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -174,6 +198,12 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
           setOptions(comboOptions);
           setNotes(draft.notes);
           setStatus(draft.menu?.status ?? 'DRAFT');
+          const hadMeals = comboOptions.some(
+            option =>
+              option.isExtra !== true &&
+              (option.entryType === 'COMBO' || option.entryType === 'PACKAGE'),
+          );
+          loadHadMealsRef.current = hadMeals;
           const comboMap = new Map(comboList.map(combo => [combo.comboId, combo]));
           const nextPrices = comboOptions.reduce<Record<string, string>>((acc, option) => {
             acc[optionChipId(option)] = comboPriceDraftFromOption(
@@ -198,7 +228,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
       return () => {
         active = false;
       };
-    }, [mealType, menuDate, showToast, spaceId, t]),
+    }, [mealPricing.requiresMealPrices, mealType, menuDate, showToast, spaceId, t]),
   );
 
   const plannedCombos = useMemo(
@@ -227,6 +257,50 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     () => collectSelectedMealItemIds(options, comboById),
     [comboById, options],
   );
+
+  const mealExtraCategorySeedIds = useMemo(
+    () => collectMealExtraCategorySeedIds(options, comboById),
+    [comboById, options],
+  );
+
+  const hasMealSelection = panelHasSelection || plannedCombos.some(option => option.isExtra !== true);
+
+  const progressivePhase: ProgressiveMealPlanningPhase = useMemo(() => {
+    if (!progressiveExtrasEnabled) {
+      return 'ready';
+    }
+    if (!hasMealSelection) {
+      return 'select';
+    }
+    if (!extrasReviewed) {
+      return 'review_extras';
+    }
+    return 'ready';
+  }, [extrasReviewed, hasMealSelection, progressiveExtrasEnabled]);
+
+  useEffect(() => {
+    if (!progressiveExtrasEnabled) {
+      return;
+    }
+    if (!hasMealSelection) {
+      clearExtrasReviewed();
+      loadHadMealsRef.current = false;
+      return;
+    }
+    // Editing an existing draft: don't force the Continue gate.
+    if (loadHadMealsRef.current) {
+      setExtrasReviewed(true);
+    }
+  }, [
+    clearExtrasReviewed,
+    hasMealSelection,
+    progressiveExtrasEnabled,
+    setExtrasReviewed,
+  ]);
+
+  const continueToExtras = useCallback(() => {
+    continueToSection(scrollRef);
+  }, [continueToSection]);
 
   const patchCatalogItem = useCallback(
     (item: FoodItemResponse) => {
@@ -293,7 +367,11 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
           next[combo.comboId] = getEffectivePriceDraft(combo.comboId, drafts, combo.price);
         }
         for (const item of itemPackages) {
-          next[item.itemId] = String(item.price);
+          if (item.price != null && item.price > 0) {
+            next[item.itemId] = String(item.price);
+          } else if (next[item.itemId] == null) {
+            next[item.itemId] = getEffectivePriceDraft(item.itemId, drafts, null);
+          }
         }
         for (const item of extrasFromOptions(prev)) {
           next[`extra:${item.itemId}`] =
@@ -407,36 +485,6 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     },
     [],
   );
-
-  const copyFromYesterday = async () => {
-    const sourceDate = addDaysIsoDate(menuDate, -1);
-    setSaving(true);
-    try {
-      const copied = await mealsApi.copyDailyMenu(spaceId, menuDate, mealType, sourceDate);
-      const copiedCombos = copied.options
-        .map(toMenuDraftOption)
-        .filter(option => option.entryType !== 'ITEM');
-      const nextNotes = copied.notes ?? '';
-      const nextPrices = copiedCombos.reduce<Record<string, string>>((acc, option) => {
-        acc[optionChipId(option)] = comboPriceDraftFromOption(
-          resolveMenuOptionPrice(option, comboById),
-        );
-        return acc;
-      }, {});
-      setOptions(copiedCombos);
-      setNotes(nextNotes);
-      setStatus(copied.status);
-      setPriceDrafts(nextPrices);
-      baselineRef.current = snapshotDraft(copiedCombos, nextNotes, nextPrices);
-      allowLeaveRef.current = false;
-      setPanelSeedKey(key => key + 1);
-      showToast(t('meals.planning.copySuccess'));
-    } catch {
-      showToast(t('meals.planning.copyFailed'));
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const buildOptionsFromLatestSelection = useCallback(
     (base: MenuDraftOption[]): MenuDraftOption[] => {
@@ -741,7 +789,15 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
-        onScrollBeginDrag={Keyboard.dismiss}>
+        scrollEventThrottle={100}
+        onScroll={event => {
+          const { contentOffset, layoutMeasurement } = event.nativeEvent;
+          onExtrasScroll(contentOffset.y, layoutMeasurement.height);
+        }}
+        onScrollBeginDrag={() => {
+          onExtrasScrollBeginDrag();
+          Keyboard.dismiss();
+        }}>
         <View style={styles.metaRow}>
           <View style={styles.metaLeft}>
             <Text style={styles.date}>{formatMenuDate(menuDate, i18n.language)}</Text>
@@ -766,10 +822,9 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
 
         {!dateReadOnly && !loading && plannedCombos.length === 0 ? (
           <Button
-            label={t('meals.menu.copyYesterdayButton')}
+            label={t('meals.planning.copyMenu')}
             variant="secondary"
-            loading={saving}
-            onPress={() => void copyFromYesterday()}
+            onPress={() => setCopyMenuOpen(true)}
             style={styles.copyButton}
           />
         ) : null}
@@ -800,14 +855,30 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
                   onSelectionPresenceChange={setPanelHasSelection}
                 />
                 {mealPricing.requiresMealPrices ? (
-                  <MealExtrasEnableSection
-                    spaceId={spaceId}
-                    catalogItems={catalogItems}
-                    selectedMealItemIds={selectedMealItemIds}
-                    enabledExtras={enabledExtras}
-                    onChange={handleExtrasChange}
-                    onCatalogItemUpdated={patchCatalogItem}
-                  />
+                  <View
+                    collapsable={false}
+                    onLayout={event => {
+                      const { y, height } = event.nativeEvent.layout;
+                      onExtrasLayout(y, height);
+                    }}>
+                    <MealExtrasEnableSection
+                      spaceId={spaceId}
+                      catalogItems={catalogItems}
+                      selectedMealItemIds={selectedMealItemIds}
+                      categorySeedItemIds={mealExtraCategorySeedIds}
+                      enabledExtras={enabledExtras}
+                      onChange={handleExtrasChange}
+                      onCatalogItemUpdated={patchCatalogItem}
+                      highlighted={extrasHighlighted}
+                      onInteract={markExtrasReviewed}
+                      onConfigureMoreExtras={() =>
+                        navigateMainStack('MenuLibrary', {
+                          spaceId,
+                          initialTab: 'extras',
+                        })
+                      }
+                    />
+                  </View>
                 ) : null}
               </>
             ) : plannedCombos.length === 0 ? (
@@ -846,34 +917,61 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
       </ScrollView>
 
       {!dateReadOnly ? (
-        <View style={styles.stickyFooter}>
-        {status === 'DRAFT' && options.length > 0 ? (
-          <Pressable
-            style={styles.deleteLink}
-            disabled={saving}
-            onPress={() => void clearDraft()}>
-            <Text style={styles.deleteLinkText}>{t('meals.actions.deleteDraft')}</Text>
-          </Pressable>
-        ) : null}
-        <View style={styles.footerActions}>
-          <Button
-            label={t('meals.actions.saveDraft')}
-            variant="secondary"
-            loading={saving}
-            disabled={options.length === 0 && !panelHasSelection}
-            onPress={() => void persist()}
-            style={styles.footerButton}
+        progressiveExtrasEnabled ? (
+          <ProgressiveMealPlanningFooter
+            phase={progressivePhase}
+            saving={saving}
+            canDeleteDraft={status === 'DRAFT' && options.length > 0}
+            saveDisabled={options.length === 0 && !panelHasSelection}
+            shareDisabled={options.length === 0 && !panelHasSelection}
+            onContinueToExtras={continueToExtras}
+            onSaveDraft={() => void persist()}
+            onShareMeal={() => void shareMeal()}
+            onDeleteDraft={() => void clearDraft()}
           />
-          <Button
-            label={t('meals.actions.shareMeal')}
-            loading={saving}
-            disabled={options.length === 0 && !panelHasSelection}
-            onPress={() => void shareMeal()}
-            style={styles.footerButton}
-          />
-        </View>
-      </View>
+        ) : (
+          <StickyFormActions>
+            {status === 'DRAFT' && options.length > 0 ? (
+              <Pressable
+                style={styles.deleteLink}
+                disabled={saving}
+                onPress={() => void clearDraft()}>
+                <Text style={styles.deleteLinkText}>{t('meals.actions.deleteDraft')}</Text>
+              </Pressable>
+            ) : null}
+            <View style={styles.footerActions}>
+              <Button
+                label={t('meals.actions.saveDraft')}
+                variant="secondary"
+                loading={saving}
+                disabled={options.length === 0 && !panelHasSelection}
+                onPress={() => void persist()}
+                style={styles.footerButton}
+              />
+              <Button
+                label={t('meals.actions.shareMeal')}
+                loading={saving}
+                disabled={options.length === 0 && !panelHasSelection}
+                onPress={() => void shareMeal()}
+                style={styles.footerButton}
+              />
+            </View>
+          </StickyFormActions>
+        )
       ) : null}
+
+      <CopyPreviousMenuSheet
+        visible={copyMenuOpen}
+        spaceId={spaceId}
+        targetDate={menuDate}
+        targetMenus={[]}
+        initialMealType={mealType}
+        onClose={() => setCopyMenuOpen(false)}
+        onCopied={() => {
+          allowLeaveRef.current = true;
+          navigation.goBack();
+        }}
+      />
     </View>
   );
 }
@@ -948,15 +1046,6 @@ const styles = StyleSheet.create({
     ...typography.body,
   },
   notesInput: { minHeight: 80, textAlignVertical: 'top', marginBottom: spacing.xl },
-  stickyFooter: {
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.white,
-    paddingHorizontal: spacing.xxl,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.lg,
-    gap: spacing.sm,
-  },
   deleteLink: { alignItems: 'center', paddingVertical: spacing.xs },
   deleteLinkText: { ...typography.caption, color: '#DC2626', fontWeight: '600' },
   footerActions: { flexDirection: 'row', gap: spacing.sm },

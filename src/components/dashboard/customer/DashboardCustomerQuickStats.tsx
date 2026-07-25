@@ -48,7 +48,7 @@ function StatCard({ stat, compact }: { stat: CustomerQuickStat; compact: boolean
       accessibilityRole="summary"
       accessibilityLabel={`${stat.label}: ${stat.value}`}>
       <View style={[styles.iconWrap, { backgroundColor: `${stat.accent}18` }]}>
-        <Icon size={18} color={stat.accent} strokeWidth={2.2} />
+        <Icon size={16} color={stat.accent} strokeWidth={2.2} />
       </View>
       <Text style={styles.value} numberOfLines={1}>
         {stat.value}
@@ -150,14 +150,17 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.md,
-    minHeight: 96,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    minHeight: 78,
     gap: spacing.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
     ...shadows.sm,
   },
   cardCompact: {
     padding: spacing.sm,
-    minHeight: 88,
+    minHeight: 72,
   },
   iconWrap: {
     width: 32,
@@ -168,12 +171,18 @@ const styles = StyleSheet.create({
   },
   value: {
     ...typography.h3,
-    fontSize: 20,
+    fontSize: 22,
     lineHeight: 26,
+    fontWeight: '700',
     color: colors.textPrimary,
+    textAlign: 'center',
   },
   label: {
     ...typography.caption,
+    fontSize: 12,
+    lineHeight: 14,
+    fontWeight: '600',
     color: colors.muted,
+    textAlign: 'center',
   },
 });

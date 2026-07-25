@@ -1,6 +1,6 @@
 import React from 'react';
 import { Image, StyleSheet, View, type ImageSourcePropType, type StyleProp, type ViewStyle } from 'react-native';
-import { Moon, Sun, UtensilsCrossed, type LucideIcon } from 'lucide-react-native';
+import { Moon, Sun, SunMedium, type LucideIcon } from 'lucide-react-native';
 import type { MealType } from '../../api/types';
 import { colors, radius } from '../../theme';
 
@@ -18,7 +18,7 @@ type MealTypeVisualProps = {
 
 const MEAL_ICONS: Record<MealType, LucideIcon> = {
   BREAKFAST: Sun,
-  LUNCH: UtensilsCrossed,
+  LUNCH: SunMedium,
   DINNER: Moon,
 };
 

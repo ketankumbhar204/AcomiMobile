@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.white,
     borderRadius: radius.card,
-    padding: spacing.xl,
+    padding: spacing.lg,
     width: '100%',
     maxWidth: 420,
     zIndex: 1,
@@ -152,13 +152,18 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.h3,
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: '600',
     color: colors.textPrimary,
     marginBottom: spacing.sm,
   },
   message: {
     ...typography.body,
+    fontSize: 14,
+    lineHeight: 20,
     color: colors.muted,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   actions: {
     flexDirection: 'row',
