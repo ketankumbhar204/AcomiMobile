@@ -1,10 +1,16 @@
 import React from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import {
+  MapPin,
+  Phone,
+  ShieldCheck,
+  UserRound,
+} from 'lucide-react-native';
 import type { MemberDocumentType, UserResponse } from '../../api/types';
-import { Card } from '../ui';
-import { MemberDetailRow, MemberSectionTitle } from '../member/MemberDetailRow';
-import { colors, radius, spacing, typography } from '../../theme';
+import { DashboardSectionHeader } from '../dashboard/shared/DashboardSectionHeader';
+import { MemberDetailRow } from '../member/MemberDetailRow';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { isSelectableMemberGender, memberGenderLabelKey } from '../../utils/memberGender';
 import { ProfileAssetUploadRow } from './ProfileAssetUploadRow';
 
@@ -16,6 +22,8 @@ type UserProfileFieldsProps = {
     mobile?: string | null;
   };
   showPhoto?: boolean;
+  /** When false, photo card shows upload only (hero already shows identity). */
+  showPhotoMeta?: boolean;
   identityDocument?: {
     type: MemberDocumentType;
     number: string;
@@ -54,6 +62,7 @@ export function UserProfileFields({
   user,
   emergencyContact,
   showPhoto = true,
+  showPhotoMeta = true,
   identityDocument,
   identityProofPreviewUri,
   addressProofPreviewUri,
@@ -78,28 +87,32 @@ export function UserProfileFields({
     : '—';
 
   const photoUri = previewUriForStoredFile(user.profilePhotoUrl);
+  const showPhotoCard =
+    showPhoto && (showPhotoMeta || (canUploadAssets && onUploadProfilePhoto));
 
   return (
-    <View>
-      {showPhoto ? (
-        <Card style={styles.card}>
-          <View style={styles.photoRow}>
-            {photoUri ? (
-              <Image source={{ uri: photoUri }} style={styles.photo} />
-            ) : (
-              <View style={styles.avatarFallback}>
-                <Text style={styles.avatarText}>
-                  {(user.fullName ?? 'U').charAt(0).toUpperCase()}
+    <View style={styles.root}>
+      {showPhotoCard ? (
+        <View style={styles.card}>
+          {showPhotoMeta ? (
+            <View style={styles.photoRow}>
+              {photoUri ? (
+                <Image source={{ uri: photoUri }} style={styles.photo} />
+              ) : (
+                <View style={styles.avatarFallback}>
+                  <Text style={styles.avatarText}>
+                    {(user.fullName ?? 'U').charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              <View style={styles.photoMeta}>
+                <Text style={styles.name}>{user.fullName}</Text>
+                <Text style={styles.mobile}>
+                  {user.mobileNumber ? `+91 ${user.mobileNumber}` : '—'}
                 </Text>
               </View>
-            )}
-            <View style={styles.photoMeta}>
-              <Text style={styles.name}>{user.fullName}</Text>
-              <Text style={styles.mobile}>
-                {user.mobileNumber ? `+91 ${user.mobileNumber}` : '—'}
-              </Text>
             </View>
-          </View>
+          ) : null}
           {canUploadAssets && onUploadProfilePhoto ? (
             <ProfileAssetUploadRow
               label={t('profileCompletion.fields.profilePhoto')}
@@ -108,11 +121,14 @@ export function UserProfileFields({
               showPreview={false}
             />
           ) : null}
-        </Card>
+        </View>
       ) : null}
 
-      <MemberSectionTitle title={t('settings.profile.personalSection')} />
-      <Card style={styles.card}>
+      <DashboardSectionHeader
+        title={t('settings.profile.personalSection')}
+        icon={UserRound}
+      />
+      <View style={styles.card}>
         <MemberDetailRow label={t('settings.profile.fullNameLabel')} value={user.fullName || '—'} />
         <MemberDetailRow
           label={t('settings.profile.mobileLabel')}
@@ -151,10 +167,13 @@ export function UserProfileFields({
             }
           />
         ) : null}
-      </Card>
+      </View>
 
-      <MemberSectionTitle title={t('settings.profile.addressSection')} />
-      <Card style={styles.card}>
+      <DashboardSectionHeader
+        title={t('settings.profile.addressSection')}
+        icon={MapPin}
+      />
+      <View style={styles.card}>
         <MemberDetailRow
           label={t('settings.profile.permanentAddressLabel')}
           value={user.permanentAddress ?? '—'}
@@ -174,12 +193,15 @@ export function UserProfileFields({
             loading={uploadingAsset === 'addressProof'}
           />
         ) : null}
-      </Card>
+      </View>
 
       {emergencyContact ? (
         <>
-          <MemberSectionTitle title={t('settings.profile.emergencySection')} />
-          <Card style={styles.card}>
+          <DashboardSectionHeader
+            title={t('settings.profile.emergencySection')}
+            icon={Phone}
+          />
+          <View style={styles.card}>
             <MemberDetailRow
               label={t('membership.emergency.name')}
               value={emergencyContact.name ?? '—'}
@@ -193,12 +215,15 @@ export function UserProfileFields({
               value={emergencyContact.mobile ?? '—'}
               isLast
             />
-          </Card>
+          </View>
         </>
       ) : null}
 
-      <MemberSectionTitle title={t('settings.profile.kycSection')} />
-      <Card style={styles.card}>
+      <DashboardSectionHeader
+        title={t('settings.profile.kycSection')}
+        icon={ShieldCheck}
+      />
+      <View style={styles.card}>
         <MemberDetailRow
           label={t('settings.profile.profileStatusLabel')}
           value={profileStatusLabel}
@@ -213,36 +238,46 @@ export function UserProfileFields({
           value={formatDate(user.profileCompletedAt)}
           isLast
         />
-      </Card>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    gap: spacing.sm,
+  },
   card: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
+    backgroundColor: colors.white,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    ...shadows.sm,
   },
   photoRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+    marginBottom: spacing.sm,
   },
   photo: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: colors.surface,
   },
   avatarFallback: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: colors.primary,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primaryDark,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: '700',
     color: colors.white,
   },
@@ -250,11 +285,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   name: {
-    ...typography.h2,
+    ...typography.h3,
     marginBottom: spacing.xxs,
+    color: colors.textPrimary,
   },
   mobile: {
-    ...typography.body,
+    ...typography.caption,
     color: colors.textSecondary,
   },
 });

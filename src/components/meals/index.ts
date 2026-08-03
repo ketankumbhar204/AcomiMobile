@@ -1,5 +1,7 @@
 export { MealParticipationStatusBadge, MealPlanBadge } from './MealBadges';
 export { MealStatusBadge } from './MealStatusBadge';
+export { MealFormHero } from './MealFormHero';
+export { MealTypeVisual } from './MealTypeVisual';
 export { ComboPickerCard } from './ComboPickerCard';
 export { DailyMenuSlotCard } from './DailyMenuSlotCard';
 export { CopyPreviousMenuSheet } from './CopyPreviousMenuSheet';

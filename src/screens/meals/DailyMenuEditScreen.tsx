@@ -7,15 +7,15 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Pencil } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { mealsApi } from '../../api/mealsApi';
 import type { FoodItemResponse, MealType, MealComboResponse, UUID } from '../../api/types';
-import { CopyPreviousMenuSheet } from '../../components/meals';
+import { CopyPreviousMenuSheet, MealFormHero } from '../../components/meals';
 import {
   MenuSelectionPanel,
   type MenuSelectionPanelHandle,
@@ -28,14 +28,14 @@ import {
   type ProgressiveMealPlanningPhase,
 } from '../../components/meals/ProgressiveMealPlanningFooter';
 import { StickyFormActions } from '../../components/progressive';
-import { Button, HeaderBackButton, PermissionDeniedScreen } from '../../components/ui';
+import { Button, FormInput, HeaderBackButton, PermissionDeniedScreen } from '../../components/ui';
 import { useMealPricingPolicy } from '../../hooks/useMealPricingPolicy';
 import { useProgressiveSectionReview } from '../../hooks/useProgressiveSectionReview';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { navigateMainStack } from '../../navigation/mainStackNavigation';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, spacing, typography } from '../../theme';
 import { formatMenuDate, isPastMenuDate } from '../../utils/mealDates';
 import { fetchSpaceMenuCatalog, patchSpaceMenuCatalogItem } from '../../utils/fetchSpaceMenuCatalog';
 import {
@@ -118,7 +118,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
   const [status, setStatus] = useState<'DRAFT' | 'PUBLISHED' | 'MODIFIED'>('DRAFT');
   const [comboById, setComboById] = useState<Map<string, MealComboResponse>>(new Map());
   const [priceDrafts, setPriceDrafts] = useState<Record<string, string>>({});
-  const [priceErrors, setPriceErrors] = useState<ComboPriceDraftErrors>({});
+  const [, setPriceErrors] = useState<ComboPriceDraftErrors>({});
   const [panelSeedKey, setPanelSeedKey] = useState(0);
   const [panelHasSelection, setPanelHasSelection] = useState(false);
   const [copyMenuOpen, setCopyMenuOpen] = useState(false);
@@ -798,6 +798,12 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
           onExtrasScrollBeginDrag();
           Keyboard.dismiss();
         }}>
+        <MealFormHero
+          icon={Pencil}
+          eyebrow={t('meals.title')}
+          heading={t('meals.planning.editTitle', { meal: t(mealTypeLabelKey(mealType)) })}
+          subheading={formatMenuDate(menuDate, i18n.language)}
+        />
         <View style={styles.metaRow}>
           <View style={styles.metaLeft}>
             <Text style={styles.date}>{formatMenuDate(menuDate, i18n.language)}</Text>
@@ -849,6 +855,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
                   ref={panelRef}
                   key={`${menuDate}-${mealType}-${panelSeedKey}`}
                   spaceId={spaceId}
+                  mealType={mealType}
                   initialOptions={options}
                   onChange={handleSelectCombos}
                   requiresMealPrices={mealPricing.requiresMealPrices}
@@ -905,9 +912,9 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
           </>
         ) : null}
 
-        <Text style={styles.sectionLabel}>{t('meals.menu.notes')}</Text>
-        <TextInput
-          style={[styles.input, styles.notesInput]}
+        <FormInput
+          label={t('meals.menu.notes')}
+          style={styles.notesInput}
           value={notes}
           onChangeText={setNotes}
           multiline
@@ -985,6 +992,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.md,
     marginBottom: spacing.md,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 18,
+    padding: spacing.md,
   },
   metaLeft: { flex: 1, minWidth: 0 },
   metaRight: { alignItems: 'flex-end', flexShrink: 0 },
@@ -1013,14 +1025,14 @@ const styles = StyleSheet.create({
   },
   copyButton: { marginBottom: spacing.sm },
   readOnlyBanner: {
-    backgroundColor: colors.surface,
+    backgroundColor: '#FEF2F2',
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.button,
+    borderColor: '#FECACA',
+    borderRadius: 18,
     padding: spacing.md,
     marginBottom: spacing.md,
   },
-  readOnlyBannerText: { ...typography.caption, color: colors.muted, lineHeight: 18 },
+  readOnlyBannerText: { ...typography.caption, color: '#991B1B', lineHeight: 18 },
   previewLink: { marginBottom: spacing.md },
   previewLinkText: { ...typography.body, color: colors.primaryDark, fontWeight: '600' },
   loader: { marginVertical: spacing.md },
@@ -1036,16 +1048,7 @@ const styles = StyleSheet.create({
   },
   readOnlyName: { ...typography.bodyStrong, flex: 1, minWidth: 0 },
   readOnlyPrice: { ...typography.body, color: colors.textSecondary },
-  sectionLabel: { ...typography.bodyStrong, marginTop: spacing.md, marginBottom: spacing.sm },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.button,
-    padding: spacing.md,
-    backgroundColor: colors.white,
-    ...typography.body,
-  },
-  notesInput: { minHeight: 80, textAlignVertical: 'top', marginBottom: spacing.xl },
+  notesInput: { minHeight: 80, textAlignVertical: 'top' },
   deleteLink: { alignItems: 'center', paddingVertical: spacing.xs },
   deleteLinkText: { ...typography.caption, color: '#DC2626', fontWeight: '600' },
   footerActions: { flexDirection: 'row', gap: spacing.sm },

@@ -1,10 +1,11 @@
 import React, { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { BedSingle, ChevronRight, UserPlus, Bookmark } from 'lucide-react-native';
 import type { BedSpaceListItemResponse } from '../../api/types';
 import { AccommodationStatusBadge } from '../accommodation/AccommodationStatusBadge';
 import { Button } from '../ui';
-import { colors, spacing, typography } from '../../theme';
+import { colors, radius, spacing, typography } from '../../theme';
 import { formatBedDisplayLabel } from '../../utils/formatBedDisplayLabel';
 
 export type BedInventoryFlowAction = 'dashboard' | 'allocate' | 'reserve' | 'transfer';
@@ -59,13 +60,17 @@ function DashboardBedInventoryBedRowComponent({
           pressed && styles.mainPressed,
           showSingleFlowAction && !isAvailable && styles.mainDisabled,
         ]}
-        accessibilityRole="button">
+        accessibilityRole="button"
+        accessibilityLabel={formatBedDisplayLabel(bed.label, t)}>
+        <View style={styles.iconWrap}>
+          <BedSingle size={16} color={colors.primaryDark} strokeWidth={2.2} />
+        </View>
         <View style={styles.info}>
           <Text style={styles.label}>{formatBedDisplayLabel(bed.label, t)}</Text>
           <AccommodationStatusBadge status={bed.status} />
         </View>
         {!showDashboardActions && !showSingleFlowAction ? (
-          <Text style={styles.chevron}>›</Text>
+          <ChevronRight size={18} color={colors.muted} strokeWidth={2.4} />
         ) : null}
       </Pressable>
       {showDashboardActions ? (
@@ -73,12 +78,14 @@ function DashboardBedInventoryBedRowComponent({
           <Button
             label={t('occupancy.actions.allocate')}
             onPress={onAllocate}
+            icon={UserPlus}
             style={styles.actionBtn}
           />
           <Button
             label={t('occupancy.actions.reserve')}
             variant="secondary"
             onPress={onReserve}
+            icon={Bookmark}
             style={styles.actionBtn}
           />
         </View>
@@ -105,11 +112,20 @@ const styles = StyleSheet.create({
   },
   main: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: spacing.sm,
+    minHeight: 48,
   },
   mainPressed: {
     opacity: 0.85,
+  },
+  iconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.button,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.lightGreen,
   },
   info: {
     flex: 1,
@@ -118,7 +134,7 @@ const styles = StyleSheet.create({
   },
   label: {
     ...typography.body,
-    fontWeight: '500',
+    fontWeight: '600',
     color: colors.textPrimary,
   },
   actions: {
@@ -139,10 +155,5 @@ const styles = StyleSheet.create({
   },
   mainDisabled: {
     opacity: 0.55,
-  },
-  chevron: {
-    fontSize: 20,
-    fontWeight: '300',
-    color: colors.muted,
   },
 });

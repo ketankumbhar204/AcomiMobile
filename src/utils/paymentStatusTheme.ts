@@ -4,6 +4,7 @@ import type {
   UniversalPaymentStatus,
 } from '../api/types';
 import type { DayMealPaymentDisplayStatus } from './dayMealPayments';
+import { colors } from '../theme';
 
 export type PaymentStatusVariant =
   | 'pending'
@@ -74,8 +75,8 @@ export const PAYMENT_STATUS_THEME: Record<PaymentStatusVariant, PaymentStatusThe
     accent: '#DC2626',
   },
   neutral: {
-    background: '#F8FAFC',
-    border: '#CBD5E1',
+    background: colors.surfaceSecondary,
+    border: colors.border,
     text: '#475569',
     accent: '#94A3B8',
   },

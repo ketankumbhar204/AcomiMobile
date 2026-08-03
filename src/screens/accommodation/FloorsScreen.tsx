@@ -11,18 +11,23 @@ import type {
   NativeStackNavigationProp,
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
+import { Layers } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import type { FloorListItemResponse } from '../../api/types';
-import { AccommodationListFooter, AccommodationSearchBar } from '../../components/accommodation';
-import { EmptyState, FAB, HeaderBackButton, ListCard, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
+import {
+  AccommodationEntityRow,
+  AccommodationListFooter,
+  AccommodationSearchBar,
+} from '../../components/accommodation';
+import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
+import { EmptyState, FAB, HeaderBackButton, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useFloors } from '../../hooks/useFloors';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../../navigation/types';
-import { colors, spacing, typography } from '../../theme';
+import { colors, radius, spacing, typography } from '../../theme';
 import { renameFloorName } from '../../utils/accommodationInlineRename';
 import { useToastStore } from '../../store/toastStore';
-import { formatFloorHeaderTitle } from '../../utils/accommodationLabels';
 
 type FloorsNav = NativeStackNavigationProp<MainStackParamList, 'Floors'>;
 type FloorsRoute = NativeStackScreenProps<MainStackParamList, 'Floors'>['route'];
@@ -95,7 +100,12 @@ export function FloorsScreen() {
 
   const listHeader = (
     <View style={styles.header}>
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      {error ? (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorBannerText}>{error}</Text>
+        </View>
+      ) : null}
+      <DashboardSectionTitle title={t('accommodation.floors.title')} />
       <AccommodationSearchBar value={searchQuery} onChangeText={setSearchQuery} />
       {showLoading ? <SkeletonCard /> : null}
     </View>
@@ -106,7 +116,7 @@ export function FloorsScreen() {
       <EmptyState
         title={t('accommodation.floors.emptyTitle')}
         description={t('accommodation.floors.emptyDescription')}
-        icon="🏗️"
+        Icon={Layers}
       />
     ) : null;
 
@@ -130,24 +140,22 @@ export function FloorsScreen() {
         }}
         onEndReachedThreshold={0.3}
         renderItem={({ item: floor }) => (
-          <View style={styles.listCard}>
-            <ListCard
-              title={floor.name}
-              subtitle={t('accommodation.listItem.floor', {
-                roomCount: floor.roomCount,
-                bedCount: floor.bedCount,
-              })}
-              iconLabel={floor.name.charAt(0).toUpperCase()}
-              editableName={canManage}
-              onSaveName={async name => {
-                await renameFloorName(spaceId, buildingId, floor.floorId, name);
-                patchFloor(floor.floorId, { name });
-                showToast(t('accommodation.floors.updateSuccess'));
-              }}
-              onPress={() => openRooms(floor)}
-              onLongPress={() => openFloorDetail(floor)}
-            />
-          </View>
+          <AccommodationEntityRow
+            title={floor.name}
+            subtitle={t('accommodation.listItem.floor', {
+              roomCount: floor.roomCount,
+              bedCount: floor.bedCount,
+            })}
+            hierarchyLevel="floor"
+            editableName={canManage}
+            onSaveName={async name => {
+              await renameFloorName(spaceId, buildingId, floor.floorId, name);
+              patchFloor(floor.floorId, { name });
+              showToast(t('accommodation.floors.updateSuccess'));
+            }}
+            onPress={() => openRooms(floor)}
+            onLongPress={() => openFloorDetail(floor)}
+          />
         )}
       />
 
@@ -170,8 +178,19 @@ export function FloorsScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.xl, paddingBottom: 96, flexGrow: 1 },
+  content: { padding: spacing.lg, paddingBottom: 96, flexGrow: 1 },
   header: { marginBottom: spacing.md },
-  errorText: { ...typography.body, color: '#DC2626', marginBottom: spacing.lg },
-  listCard: { marginBottom: spacing.md },
+  errorBanner: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: radius.button,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  errorBannerText: {
+    ...typography.body,
+    fontSize: 14,
+    color: '#DC2626',
+  },
 });

@@ -15,14 +15,19 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { CircleDollarSign, Hash, Type } from 'lucide-react-native';
 import type { AccommodationStatus } from '../../api/types';
 import { accommodationApi } from '../../api/accommodationApi';
-import { AccommodationStatusPicker, PricingAfterCreateHint } from '../../components/accommodation';
+import {
+  AccommodationFormHero,
+  AccommodationStatusPicker,
+  PricingAfterCreateHint,
+} from '../../components/accommodation';
 import { FormInput, HeaderBackButton } from '../../components/ui';
 import { StickyFormActions } from '../../components/progressive';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
-import { colors, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'BedForm'>;
@@ -121,36 +126,66 @@ export function BedFormScreen() {
           <ScrollView
             style={styles.scroll}
             contentContainerStyle={styles.content}
-            keyboardShouldPersistTaps="handled">
-            {!isEdit ? <PricingAfterCreateHint entityKey="bed" /> : null}
-            <FormInput label={t('accommodation.fields.name')} value={name} onChangeText={setName} />
-            <FormInput
-              label={t('accommodation.beds.bedNumberLabel')}
-              value={bedNumber}
-              onChangeText={setBedNumber}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}>
+            <AccommodationFormHero
+              level="bed"
+              eyebrow={t('accommodation.beds.formEyebrow')}
+              heading={
+                isEdit ? t('accommodation.beds.editTitle') : t('accommodation.beds.createTitle')
+              }
+              subheading={
+                isEdit
+                  ? t('accommodation.beds.formSubheadingEdit')
+                  : t('accommodation.beds.formSubheadingCreate')
+              }
             />
-            {isEdit ? (
-              <AccommodationStatusPicker value={status} onChange={setStatus} />
+
+            {!isEdit ? <PricingAfterCreateHint entityKey="bed" /> : null}
+
+            {submitError ? (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorBannerText}>{submitError}</Text>
+              </View>
             ) : null}
-            {isEdit ? (
-              <>
-                <FormInput
-                  label={t('accommodation.fields.defaultRent')}
-                  value={defaultRent}
-                  onChangeText={setDefaultRent}
-                  keyboardType="numeric"
-                  placeholder={t('occupancy.contract.amountPlaceholder')}
-                />
-                <FormInput
-                  label={t('accommodation.fields.defaultDeposit')}
-                  value={defaultDeposit}
-                  onChangeText={setDefaultDeposit}
-                  keyboardType="numeric"
-                  placeholder="0"
-                />
-              </>
-            ) : null}
-            {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
+
+            <View style={styles.formCard}>
+              <FormInput
+                label={t('accommodation.fields.name')}
+                value={name}
+                onChangeText={setName}
+                leadingIcon={Type}
+              />
+              <FormInput
+                label={t('accommodation.beds.bedNumberLabel')}
+                value={bedNumber}
+                onChangeText={setBedNumber}
+                leadingIcon={Hash}
+              />
+              {isEdit ? (
+                <AccommodationStatusPicker value={status} onChange={setStatus} />
+              ) : null}
+              {isEdit ? (
+                <>
+                  <FormInput
+                    label={t('accommodation.fields.defaultRent')}
+                    value={defaultRent}
+                    onChangeText={setDefaultRent}
+                    keyboardType="numeric"
+                    placeholder={t('occupancy.contract.amountPlaceholder')}
+                    leadingIcon={CircleDollarSign}
+                  />
+                  <FormInput
+                    label={t('accommodation.fields.defaultDeposit')}
+                    value={defaultDeposit}
+                    onChangeText={setDefaultDeposit}
+                    keyboardType="numeric"
+                    placeholder="0"
+                    leadingIcon={CircleDollarSign}
+                  />
+                </>
+              ) : null}
+            </View>
           </ScrollView>
           <StickyFormActions
             primary={{
@@ -167,7 +202,28 @@ export function BedFormScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
-  scroll: { flex: 1 },
-  content: { padding: spacing.xxl, paddingBottom: spacing.xl },
-  errorText: { ...typography.body, color: '#DC2626', marginBottom: spacing.md },
+  scroll: { flex: 1, backgroundColor: colors.background },
+  content: { padding: spacing.lg, paddingBottom: spacing.xxl },
+  formCard: {
+    marginBottom: spacing.md,
+    padding: spacing.md,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+    gap: spacing.xs,
+    ...shadows.sm,
+  },
+  errorBanner: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: radius.button,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  errorBannerText: {
+    ...typography.body,
+    color: '#DC2626',
+  },
 });

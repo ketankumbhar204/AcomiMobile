@@ -231,7 +231,7 @@ export function ContractTermsStep({
 
 const styles = StyleSheet.create({
   wrap: { gap: spacing.xs },
-  title: { ...typography.h3, marginBottom: spacing.xs },
+  title: { ...typography.h3, fontSize: 18, lineHeight: 22, fontWeight: '600', marginBottom: spacing.xs },
   loader: { marginVertical: spacing.lg },
   policyLabel: { ...typography.bodyStrong, marginBottom: spacing.sm },
   policyRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.md },

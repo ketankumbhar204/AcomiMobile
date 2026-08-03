@@ -1,7 +1,11 @@
 import React, { useCallback, useMemo, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { UtensilsCrossed } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import type { MealBillingType, UUID } from '../../api/types';
+import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
+import { MealFormHero } from '../../components/meals';
 import { MemberMealActivitySection } from '../../components/meals/MemberMealActivitySection';
 import { Screen } from '../../components/ui/Screen';
 import { useCustomerSubscriptionStatus } from '../../hooks/useCustomerSubscriptionStatus';
@@ -31,6 +35,7 @@ function resolveCustomerBillingType(
 }
 
 export function MealsHomeScreen({ spaceId }: MealsHomeScreenProps) {
+  const { t } = useTranslation();
   const permissions = useSpacePermissions(spaceId);
   const role = permissions.membershipRole;
   const isCustomerOrTenant = role === 'TENANT' || role === 'CUSTOMER';
@@ -94,20 +99,29 @@ export function MealsHomeScreen({ spaceId }: MealsHomeScreenProps) {
   if (isCustomerOrTenant) {
     return (
       <Screen scrollable contentStyle={styles.content}>
+        <MealFormHero
+          icon={UtensilsCrossed}
+          eyebrow={t('meals.title')}
+          heading={t('meals.todayMealsTitle')}
+          subheading={t('meals.poll.responseHint')}
+        />
         {linkedMemberId ? (
-          <MemberMealActivitySection
-            spaceId={spaceId}
-            memberId={linkedMemberId}
-            effectiveMealBillingType={effectiveMealBillingType}
-            canManageBalance={false}
-            audience="customer"
-            embedInParentScroll
-            selectedDate={selectedActivityDate}
-            onSelectDate={handleSelectActivityDate}
-            onBindReload={reload => {
-              activityReloadRef.current = reload;
-            }}
-          />
+          <>
+            <DashboardSectionTitle title={t('meals.activity.title')} />
+            <MemberMealActivitySection
+              spaceId={spaceId}
+              memberId={linkedMemberId}
+              effectiveMealBillingType={effectiveMealBillingType}
+              canManageBalance={false}
+              audience="customer"
+              embedInParentScroll
+              selectedDate={selectedActivityDate}
+              onSelectDate={handleSelectActivityDate}
+              onBindReload={reload => {
+                activityReloadRef.current = reload;
+              }}
+            />
+          </>
         ) : null}
       </Screen>
     );
@@ -118,6 +132,7 @@ export function MealsHomeScreen({ spaceId }: MealsHomeScreenProps) {
 
 const styles = StyleSheet.create({
   content: {
+    padding: spacing.lg,
     paddingBottom: spacing.section,
   },
 });

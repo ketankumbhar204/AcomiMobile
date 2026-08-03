@@ -21,25 +21,25 @@ export const MENU_PLANNING_POLL_OPEN_COLOR = '#2563EB';
 export const MEAL_STATUS_THEME: Record<MealStatusKind, MealStatusTheme> = {
   empty: {
     color: colors.muted,
-    background: colors.surface,
+    background: colors.surfaceSecondary,
     icon: '○',
     labelKey: 'meals.status.empty',
   },
   draft: {
     color: '#D97706',
-    background: '#FFF7ED',
+    background: colors.warningTint,
     icon: '●',
     labelKey: 'meals.status.notShared',
   },
   shared: {
     color: colors.success,
-    background: colors.lightGreen,
+    background: colors.successTint,
     icon: '✓',
     labelKey: 'meals.status.shared',
   },
   needs_reshare: {
     color: '#B45309',
-    background: '#FFFBEB',
+    background: colors.warningTint,
     icon: '⚠',
     labelKey: 'meals.status.needsReshare',
   },

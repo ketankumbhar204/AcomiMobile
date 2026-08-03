@@ -1,17 +1,20 @@
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
+import { ClipboardCheck, CreditCard, Package, Plus } from 'lucide-react-native';
 import { subscriptionPlansApi } from '../../api/subscriptionPlansApi';
 import type { SubscriptionPlanResponse, UUID } from '../../api/types';
+import { MealFormHero } from '../../components/meals/MealFormHero';
 import { SubscriptionPlanCard } from '../../components/meals/SubscriptionPlanCard';
 import { SubscriptionPlanFormBottomSheet } from '../../components/meals/SubscriptionPlanFormBottomSheet';
-import { Button, PermissionDeniedScreen } from '../../components/ui';
+import { Button, EmptyState, PermissionDeniedScreen, Skeleton } from '../../components/ui';
 import { Screen } from '../../components/ui/Screen';
+import { DashboardActionRow } from '../../components/dashboard/shared/DashboardActionRow';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { navigateMainStack } from '../../navigation/mainStackNavigation';
 import { useToastStore } from '../../store/toastStore';
-import { colors, spacing, typography } from '../../theme';
+import { spacing } from '../../theme';
 
 type SubscriptionPlansScreenProps = {
   spaceId: UUID;
@@ -80,20 +83,34 @@ export function SubscriptionPlansScreen({ spaceId }: SubscriptionPlansScreenProp
 
   return (
     <Screen scrollable contentStyle={styles.content}>
-      <Text style={styles.subtitle}>{t('meals.subscriptionPlans.ownerSubtitle')}</Text>
+      <MealFormHero
+        icon={Package}
+        eyebrow={t('meals.subscriptionPlans.eyebrow', { defaultValue: 'Billing' })}
+        heading={t('meals.subscriptionPlans.title', { defaultValue: 'Subscription plans' })}
+        subheading={t('meals.subscriptionPlans.ownerSubtitle')}
+        compact
+      />
 
       <Button
         label={t('meals.subscriptionPlans.createAction')}
+        icon={Plus}
         onPress={openCreate}
         style={styles.createButton}
       />
 
       {loading ? (
-        <ActivityIndicator color={colors.primary} style={styles.loader} />
-      ) : plans.length === 0 ? (
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyText}>{t('meals.subscriptionPlans.empty')}</Text>
+        <View style={styles.skeletonWrap}>
+          <Skeleton width="100%" height={96} borderRadius={18} />
+          <Skeleton width="100%" height={96} borderRadius={18} />
         </View>
+      ) : plans.length === 0 ? (
+        <EmptyState
+          Icon={CreditCard}
+          title={t('meals.subscriptionPlans.empty')}
+          description={t('meals.subscriptionPlans.emptyHint', {
+            defaultValue: 'Create a prepaid meal pack customers can request.',
+          })}
+        />
       ) : (
         plans.map(plan => (
           <SubscriptionPlanCard
@@ -101,20 +118,19 @@ export function SubscriptionPlansScreen({ spaceId }: SubscriptionPlansScreenProp
             plan={plan}
             showStatus
             onEdit={() => openEdit(plan)}
-            onPress={
-              plan.isActive
-                ? () => openEdit(plan)
-                : undefined
-            }
+            onPress={plan.isActive ? () => openEdit(plan) : undefined}
           />
         ))
       )}
 
-      <Button
-        label={t('meals.subscriptionPlans.viewRequests')}
-        variant="secondary"
+      <DashboardActionRow
+        title={t('meals.subscriptionPlans.viewRequests')}
+        subtitle={t('meals.subscriptionPlans.viewRequestsHint', {
+          defaultValue: 'Review pending activation requests',
+        })}
+        icon={ClipboardCheck}
+        accent="#B45309"
         onPress={() => navigateMainStack('SubscriptionActivationRequests', { spaceId })}
-        style={styles.requestsButton}
       />
 
       <SubscriptionPlanFormBottomSheet
@@ -131,32 +147,12 @@ export function SubscriptionPlansScreen({ spaceId }: SubscriptionPlansScreenProp
 const styles = StyleSheet.create({
   content: {
     paddingBottom: spacing.xl,
-  },
-  subtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
-    lineHeight: 20,
+    gap: spacing.md,
   },
   createButton: {
-    marginBottom: spacing.md,
-    alignSelf: 'flex-start',
+    alignSelf: 'stretch',
   },
-  requestsButton: {
-    marginTop: spacing.md,
-    alignSelf: 'flex-start',
-  },
-  loader: {
-    marginVertical: spacing.xl,
-  },
-  emptyCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: spacing.lg,
-  },
-  emptyText: {
-    ...typography.body,
-    color: colors.textSecondary,
-    textAlign: 'center',
+  skeletonWrap: {
+    gap: spacing.sm,
   },
 });

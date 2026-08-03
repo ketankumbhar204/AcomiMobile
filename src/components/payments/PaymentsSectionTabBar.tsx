@@ -28,7 +28,7 @@ type PaymentsSectionTabBarProps = {
 const BADGE_TONE = {
   primary: { bg: colors.primary, text: colors.white },
   info: { bg: '#2563EB', text: colors.white },
-  muted: { bg: '#E2E8F0', text: colors.textSecondary },
+  muted: { bg: colors.border, text: colors.textSecondary },
 } as const;
 
 /** Shared segmented control used by owner and tenant Payments screens. */

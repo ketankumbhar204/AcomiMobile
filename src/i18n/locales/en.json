@@ -91,6 +91,7 @@
     "close": "Close",
     "back": "Back",
     "next": "Next",
+    "clear": "Clear",
     "retry": "Retry",
     "continue": "Continue",
     "select": "Select",
@@ -438,6 +439,7 @@
     "members": {
       "emptyTitle": "No members yet",
       "emptyDescription": "Add your first tenant, customer, or staff member to this space.",
+      "listSubtitle": "People in this space",
       "onCountIn": "On CountIn",
       "notOnCountInYet": "Not on CountIn yet",
       "mobile": "Mobile: {{value}}",
@@ -574,6 +576,7 @@
     "pending": {
       "emptyTitle": "No pending invitations",
       "emptyDescription": "Invitations you send will appear here until they are accepted.",
+      "listSubtitle": "Invites waiting to be accepted",
       "invitedBy": "Invited by: {{name}}",
       "created": "Sent: {{date}}",
       "cancel": "Cancel Invitation"
@@ -903,6 +906,9 @@
     "setup": {
       "title": "Quick Setup",
       "step": "Step {{current}} of {{total}}",
+      "formEyebrow": "Quick setup",
+      "formHeading": "Build your property",
+      "formSubheading": "Answer a few steps to generate floors, rooms, and beds.",
       "buildingStep": "Building",
       "floorsStep": "Floors",
       "floorsAndApartmentsStep": "Floors & Apartments",
@@ -1133,6 +1139,9 @@
       "detailTitle": "Building Details",
       "createTitle": "Add Building",
       "editTitle": "Edit Building",
+      "formEyebrow": "Building",
+      "formSubheadingCreate": "Name your building and choose how rooms are organized.",
+      "formSubheadingEdit": "Update the building name, code, or layout.",
       "namePlaceholder": "e.g. Building A",
       "codePlaceholder": "e.g. BLD-A",
       "nameRequired": "Building name is required.",
@@ -1164,6 +1173,9 @@
       "detailTitle": "Floor Details",
       "createTitle": "Add Floor",
       "editTitle": "Edit Floor",
+      "formEyebrow": "Floor",
+      "formSubheadingCreate": "Add a floor with its number and display order.",
+      "formSubheadingEdit": "Update this floor’s name, number, or sort order.",
       "nameRequired": "Floor name is required.",
       "floorNumberRequired": "Enter a valid floor number.",
       "createSuccess": "Floor added successfully.",
@@ -1180,6 +1192,9 @@
       "detailTitle": "Unit Details",
       "createTitle": "Add Unit",
       "editTitle": "Edit Unit",
+      "formEyebrow": "Unit",
+      "formSubheadingCreate": "Create a unit with a name and number.",
+      "formSubheadingEdit": "Update unit details, status, or default pricing.",
       "nameRequired": "Unit name is required.",
       "unitNumberRequired": "Unit number is required.",
       "createSuccess": "Unit added successfully.",
@@ -1197,6 +1212,9 @@
       "detailTitle": "Room Details",
       "createTitle": "Add Room",
       "editTitle": "Edit Room",
+      "formEyebrow": "Room",
+      "formSubheadingCreate": "Set the room name, number, type, and capacity.",
+      "formSubheadingEdit": "Update room details, status, or default pricing.",
       "validationError": "Please fill in all required room fields.",
       "createSuccess": "Room added successfully.",
       "updateSuccess": "Room updated successfully."
@@ -1212,6 +1230,9 @@
       "detailTitle": "Bed Details",
       "createTitle": "Add Bed",
       "editTitle": "Edit Bed",
+      "formEyebrow": "Bed",
+      "formSubheadingCreate": "Add a bed with a name and number in this room.",
+      "formSubheadingEdit": "Update bed details, status, or default pricing.",
       "validationError": "Please fill in all required bed fields.",
       "createSuccess": "Bed added successfully.",
       "updateSuccess": "Bed updated successfully."
@@ -2115,6 +2136,8 @@
       "subscriptionPlansSubtitle": "Manage meal subscriptions",
       "pendingActions": "Pending actions",
       "pendingActionsSubtitle": "{{count}} items need your attention",
+      "inventory": "Inventory",
+      "inventorySubtitle": "Track stock, purchases, and suppliers",
       "setupCreateMenuLibrary": "Create menu library",
       "setupCreateMenuLibrarySubtitle": "Reusable dishes for daily menus",
       "setupPlanTodaysMenu": "Plan today's menu",
@@ -2671,8 +2694,24 @@
       "addMenu": "+ Add Menu",
       "addMenuDone": "Done",
       "noMenusSelectedYet": "No menus selected yet",
+      "tabHistory": "History",
       "tabCombos": "Combos",
       "tabIndividualItems": "Individual Items",
+      "searchHistory": "Search history...",
+      "historyHint": "Suggestions from {{meal}} only — items used more for other meals stay in their history.",
+      "clearHistory": "Clear history",
+      "historyCleared": "History cleared.",
+      "historyLoadFailed": "Could not load menu history. Try refreshing.",
+      "historyEmpty": "No previous {{meal}} menus found.",
+      "browseCombos": "Browse Combos",
+      "browseItems": "Browse Items",
+      "historyGroupToday": "Today",
+      "historyGroupYesterday": "Yesterday",
+      "historyGroupLast7Days": "Last 7 Days",
+      "historyGroupOlder": "Older",
+      "historyUsedCount": "Used {{count}} times",
+      "historyRecent": "Recent",
+      "historyOlder": "Older",
       "extrasSectionTitle": "Extras",
       "extrasSectionHint": "Turn on add-ons for this meal.",
       "extrasConfiguredCount": "{{count}} configured",
@@ -4006,6 +4045,161 @@
           "reason": "Your mess is ready for daily operations — manage meals, confirmations, and payments.",
           "cta": "Go to Dashboard"
         }
+      }
+    }
+  },
+  "inventory": {
+    "eyebrow": "Inventory",
+    "hero": {
+      "subheading": "Track stock levels, purchases, and suppliers."
+    },
+    "kpi": {
+      "value": "Value",
+      "items": "Items",
+      "low": "Low",
+      "out": "Out",
+      "suppliers": "Suppliers"
+    },
+    "sections": {
+      "quickActions": "Quick actions",
+      "attention": "Needs attention",
+      "recent": "Recent activity"
+    },
+    "actions": {
+      "addItem": "Add item",
+      "addItemHint": "Create a catalog item",
+      "catalog": "Browse catalog",
+      "catalogHint": "Search and filter stock",
+      "stockIn": "Stock in",
+      "stockInHint": "Purchases, stock in/out, consumption",
+      "stockInItemHint": "Add units to current stock",
+      "stockOut": "Stock out",
+      "stockOutItemHint": "Remove units from stock",
+      "purchase": "Record purchase",
+      "purchaseHint": "Log a vendor purchase",
+      "categories": "Categories",
+      "categoriesHint": "Organize your catalog",
+      "suppliers": "Suppliers",
+      "suppliersHint": "Vendors and purchase contacts",
+      "editItem": "Edit item",
+      "editItemHint": "Update catalog details"
+    },
+    "status": {
+      "HEALTHY": "Healthy",
+      "LOW": "Low",
+      "CRITICAL": "Critical",
+      "OUT_OF_STOCK": "Out of stock",
+      "DISCONTINUED": "Discontinued",
+      "INACTIVE": "Inactive"
+    },
+    "txn": {
+      "STOCK_IN": "Stock in",
+      "STOCK_OUT": "Stock out",
+      "ADJUSTMENT": "Adjustment",
+      "TRANSFER": "Transfer",
+      "PURCHASE": "Purchase",
+      "CONSUMPTION": "Consumption"
+    },
+    "empty": {
+      "healthyTitle": "Stock looks healthy",
+      "healthyBody": "No low or out-of-stock items right now.",
+      "activity": "No recent movements yet.",
+      "itemsTitle": "No items yet",
+      "itemsBody": "Add your first inventory item to start tracking stock."
+    },
+    "items": {
+      "title": "Catalog",
+      "heading": "Catalog",
+      "subheading": "{{count}} items in catalog",
+      "search": "Search items…"
+    },
+    "details": {
+      "title": "Item details",
+      "notFound": "Item not found",
+      "uncategorized": "Uncategorized",
+      "current": "Current",
+      "available": "Available",
+      "reserved": "Reserved",
+      "minimum": "Min",
+      "avgPrice": "Avg price",
+      "activity": "Activity",
+      "moveSuccess": "Stock updated"
+    },
+    "form": {
+      "createTitle": "Add item",
+      "editTitle": "Edit item",
+      "subheading": "Fill in catalog and stock details.",
+      "sectionBasics": "Basics",
+      "sectionStock": "Stock",
+      "sectionPurchase": "Purchase",
+      "name": "Name",
+      "namePlaceholder": "Item name",
+      "nameRequired": "Name is required",
+      "category": "Category",
+      "categoryRequired": "Select a category",
+      "selectCategory": "Select category",
+      "unit": "Unit",
+      "openingStock": "Opening stock",
+      "minimumStock": "Minimum stock",
+      "location": "Location",
+      "locationPlaceholder": "Storage location",
+      "supplier": "Supplier",
+      "noSupplier": "No supplier",
+      "purchasePrice": "Purchase price (₹)",
+      "notes": "Notes",
+      "quantity": "Quantity",
+      "amount": "Total amount (₹)",
+      "reason": "Reason",
+      "reasonPlaceholder": "Optional note",
+      "qtyRequired": "Enter a valid quantity",
+      "createSuccess": "Item created",
+      "updateSuccess": "Item updated"
+    },
+    "categories": {
+      "title": "Categories",
+      "heading": "Categories",
+      "subheading": "{{count}} categories",
+      "add": "Add category",
+      "namePlaceholder": "Category name",
+      "itemCount": "{{count}} items",
+      "system": "System",
+      "emptyTitle": "No categories",
+      "emptyBody": "Add a category to organize your catalog.",
+      "created": "Category added",
+      "deleted": "Category deleted",
+      "deleteTitle": "Delete category?",
+      "deleteBody": "Delete \"{{name}}\"? This cannot be undone.",
+      "deleteBlocked": "Remove items from this category first"
+    },
+    "transactions": {
+      "title": "Stock activity",
+      "heading": "Stock activity",
+      "subheading": "{{count}} movements",
+      "emptyTitle": "No activity yet",
+      "emptyBody": "Purchases, stock moves, and consumption will appear here."
+    },
+    "suppliers": {
+      "title": "Suppliers",
+      "heading": "Suppliers",
+      "subheading": "{{count}} vendors",
+      "add": "Add supplier",
+      "namePlaceholder": "Vendor name",
+      "phone": "Phone",
+      "address": "Address",
+      "itemCount": "{{count}} items supplied",
+      "emptyTitle": "No suppliers",
+      "emptyBody": "Add vendors you purchase inventory from.",
+      "created": "Supplier added"
+    },
+    "profiles": {
+      "food": {
+        "title": "Food Inventory"
+      },
+      "asset": {
+        "title": "Asset Inventory"
+      },
+      "furniture": {
+        "title": "Furniture & Appliances"
       }
     }
   }

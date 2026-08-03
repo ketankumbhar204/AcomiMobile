@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
   addonsHighlight: {
     borderWidth: 1,
     borderColor: '#F59E0B',
-    backgroundColor: '#FFFBEB',
+    backgroundColor: colors.warningTint,
     borderRadius: radius.card,
     padding: spacing.sm,
     marginBottom: spacing.sm,

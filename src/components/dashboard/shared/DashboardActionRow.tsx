@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
   },
   cardHighlight: {
     borderColor: '#F59E0B',
-    backgroundColor: '#FFFBEB',
+    backgroundColor: colors.warningTint,
   },
   cardDisabled: {
     backgroundColor: colors.surface,

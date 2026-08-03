@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   NativeScrollEvent,
   NativeSyntheticEvent,
   ScrollView,
@@ -11,9 +10,10 @@ import {
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { ClipboardList } from 'lucide-react-native';
+import { ClipboardList, Clock3, Hash, Package, StickyNote } from 'lucide-react-native';
 import { subscriptionPlansApi } from '../../api/subscriptionPlansApi';
 import type { SubscriptionPlanResponse, UUID } from '../../api/types';
+import { MealFormHero } from '../../components/meals/MealFormHero';
 import { PaymentProofUploadField } from '../../components/meals/PaymentProofUploadField';
 import { SubscriptionPlanCard } from '../../components/meals/SubscriptionPlanCard';
 import { SubscriptionPlanDetailsPanel } from '../../components/meals/SubscriptionPlanDetailsPanel';
@@ -21,13 +21,13 @@ import {
   ProgressiveWorkflowFooter,
   progressiveSectionHighlightStyle,
 } from '../../components/progressive';
-import { FormInput } from '../../components/ui';
+import { EmptyState, FormInput, Skeleton } from '../../components/ui';
 import { useCustomerSubscriptionStatus } from '../../hooks/useCustomerSubscriptionStatus';
 import { useProgressiveSectionReview } from '../../hooks/useProgressiveSectionReview';
 import { useToastStore } from '../../store/toastStore';
 import type { MainStackParamList } from '../../navigation/types';
 import { resolveProgressivePhase } from '../../utils/progressivePhase';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 
 type Route = NativeStackScreenProps<MainStackParamList, 'CustomerSubscriptionPlans'>['route'];
 
@@ -206,33 +206,50 @@ export function CustomerSubscriptionPlansScreen({
         scrollEventThrottle={16}
         onScrollBeginDrag={onPaymentScrollBeginDrag}
         onScroll={handleScroll}>
-        <Text style={styles.subtitle}>
-          {hasPendingRequest
-            ? t('meals.subscription.customer.pendingCatalogSubtitle')
-            : t('meals.subscription.customer.catalogSubtitle')}
-        </Text>
+        <MealFormHero
+          icon={Package}
+          eyebrow={t('meals.subscription.customer.eyebrow', { defaultValue: 'Subscription' })}
+          heading={t('meals.subscription.customer.title', {
+            defaultValue: 'Choose a plan',
+          })}
+          subheading={
+            hasPendingRequest
+              ? t('meals.subscription.customer.pendingCatalogSubtitle')
+              : t('meals.subscription.customer.catalogSubtitle')
+          }
+          compact
+        />
 
         {hasPendingRequest ? (
           <View style={styles.pendingCard} accessibilityRole="summary">
-            <Text style={styles.pendingBadge}>{t('meals.subscription.customer.pendingBadge')}</Text>
-            <Text style={styles.pendingTitle}>{t('meals.subscription.customer.pendingTitle')}</Text>
-            <Text style={styles.pendingBody}>
-              {t('meals.subscription.customer.pendingBody', {
-                plan: status?.pendingPlanName ?? t('meals.subscription.customer.selectedPlan'),
-              })}
-            </Text>
+            <View style={styles.pendingIcon}>
+              <Clock3 size={18} color="#B45309" strokeWidth={2.2} />
+            </View>
+            <View style={styles.pendingBodyWrap}>
+              <Text style={styles.pendingBadge}>
+                {t('meals.subscription.customer.pendingBadge')}
+              </Text>
+              <Text style={styles.pendingTitle}>
+                {t('meals.subscription.customer.pendingTitle')}
+              </Text>
+              <Text style={styles.pendingBody}>
+                {t('meals.subscription.customer.pendingBody', {
+                  plan: status?.pendingPlanName ?? t('meals.subscription.customer.selectedPlan'),
+                })}
+              </Text>
+            </View>
           </View>
         ) : loading ? (
-          <ActivityIndicator color={colors.primary} style={styles.loader} />
-        ) : plans.length === 0 ? (
-          <View style={styles.emptyCard} accessibilityRole="text">
-            <View style={styles.emptyIconWrap}>
-              <ClipboardList size={20} color={colors.primaryDark} strokeWidth={2.2} />
-            </View>
-            <Text style={styles.emptyTitle}>{t('meals.subscription.customer.noPlansTitle')}</Text>
-            <Text style={styles.emptyText}>{t('meals.subscription.customer.noPlans')}</Text>
-            <Text style={styles.emptyHint}>{t('meals.subscription.customer.noPlansHint')}</Text>
+          <View style={styles.skeletonWrap}>
+            <Skeleton width="100%" height={96} borderRadius={18} />
+            <Skeleton width="100%" height={96} borderRadius={18} />
           </View>
+        ) : plans.length === 0 ? (
+          <EmptyState
+            Icon={ClipboardList}
+            title={t('meals.subscription.customer.noPlansTitle')}
+            description={t('meals.subscription.customer.noPlans')}
+          />
         ) : (
           <>
             <Text style={styles.sectionLabel}>
@@ -275,6 +292,7 @@ export function CustomerSubscriptionPlansScreen({
                 setPaymentReference(value);
               }}
               placeholder={t('meals.subscription.customer.paymentReferencePlaceholder')}
+              leadingIcon={Hash}
             />
 
             <PaymentProofUploadField
@@ -295,6 +313,7 @@ export function CustomerSubscriptionPlansScreen({
               }}
               placeholder={t('meals.subscription.customer.notesPlaceholder')}
               multiline
+              leadingIcon={StickyNote}
             />
           </View>
         ) : null}
@@ -340,63 +359,40 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
   content: {
-    padding: spacing.xxl,
+    padding: spacing.lg,
     paddingBottom: spacing.section,
-  },
-  subtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
-    lineHeight: 20,
+    gap: spacing.md,
   },
   sectionLabel: {
     ...typography.bodyStrong,
-    marginBottom: spacing.sm,
     color: colors.textPrimary,
   },
-  loader: {
-    marginVertical: spacing.xl,
-  },
-  emptyCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
+  skeletonWrap: {
     gap: spacing.sm,
-    alignItems: 'flex-start',
   },
-  emptyIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.sm,
-    backgroundColor: colors.white,
+  pendingCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    backgroundColor: colors.warningTint,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: `${colors.primary}33`,
+    borderColor: '#FDE68A',
+    padding: spacing.md,
+    ...shadows.sm,
+  },
+  pendingIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.button,
+    backgroundColor: '#FEF3C7',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emptyTitle: {
-    ...typography.bodyStrong,
-    color: colors.primaryDark,
-  },
-  emptyText: {
-    ...typography.body,
-    color: colors.textSecondary,
-    lineHeight: 20,
-  },
-  emptyHint: {
-    ...typography.caption,
-    color: colors.muted,
-    lineHeight: 18,
-  },
-  pendingCard: {
-    backgroundColor: '#FFFBEB',
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: '#F59E0B',
-    padding: spacing.lg,
-    marginBottom: spacing.md,
+  pendingBodyWrap: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
   },
   pendingBadge: {
     ...typography.caption,
@@ -404,12 +400,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.4,
-    marginBottom: spacing.xs,
   },
   pendingTitle: {
     ...typography.bodyStrong,
     color: colors.textPrimary,
-    marginBottom: spacing.xs,
   },
   pendingBody: {
     ...typography.body,
@@ -417,13 +411,13 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   requestCard: {
-    marginTop: spacing.lg,
-    padding: spacing.lg,
-    borderRadius: radius.card,
+    padding: spacing.md,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.primary,
     backgroundColor: colors.lightGreen,
     gap: spacing.md,
+    ...shadows.sm,
   },
   requestHighlight: {
     ...progressiveSectionHighlightStyle,

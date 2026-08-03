@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: radius.section,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: colors.successTint,
     borderWidth: 1,
     borderColor: `${colors.primary}33`,
     overflow: 'hidden',

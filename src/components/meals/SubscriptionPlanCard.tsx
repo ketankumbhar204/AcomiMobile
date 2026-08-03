@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Check, Package, SquarePen, UtensilsCrossed } from 'lucide-react-native';
 import type { SubscriptionPlanResponse } from '../../api/types';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { formatComboPrice } from '../../utils/comboPrice';
@@ -31,31 +32,68 @@ export function SubscriptionPlanCard({
   const content = (
     <>
       <View style={styles.headerRow}>
-        <Text style={styles.name} numberOfLines={2}>
-          {plan.name}
-        </Text>
-        <Text style={styles.price}>{priceLabel}</Text>
+        <View style={styles.iconWell}>
+          <Package size={18} color={colors.primaryDark} strokeWidth={2.2} />
+        </View>
+        <View style={styles.headerText}>
+          <Text style={styles.name} numberOfLines={2}>
+            {plan.name}
+          </Text>
+          <Text style={styles.price}>{priceLabel}</Text>
+        </View>
+        {selectable && selected ? (
+          <View style={styles.selectedBadge}>
+            <Check size={14} color={colors.white} strokeWidth={2.8} />
+          </View>
+        ) : null}
       </View>
-      <Text style={styles.meta}>
-        {t('meals.subscriptionPlans.mealsLine', { count: plan.mealsIncluded })}
-        {' · '}
-        {t('meals.subscriptionPlans.validityLine', { days: plan.validityDays })}
-      </Text>
+
+      <View style={styles.metaRow}>
+        <View style={styles.metaChip}>
+          <UtensilsCrossed size={12} color={colors.primaryDark} strokeWidth={2.2} />
+          <Text style={styles.metaChipText}>
+            {t('meals.subscriptionPlans.mealsLine', { count: plan.mealsIncluded })}
+          </Text>
+        </View>
+        <View style={styles.metaChip}>
+          <Text style={styles.metaChipText}>
+            {t('meals.subscriptionPlans.validityLine', { days: plan.validityDays })}
+          </Text>
+        </View>
+      </View>
+
       <Text style={styles.policy}>{unusedPolicy}</Text>
       {plan.description ? (
         <Text style={styles.description} numberOfLines={2}>
           {plan.description}
         </Text>
       ) : null}
+
       {showStatus ? (
-        <Text style={[styles.status, !plan.isActive && styles.statusInactive]}>
-          {plan.isActive
-            ? t('meals.subscriptionPlans.statusActive')
-            : t('meals.subscriptionPlans.statusInactive')}
-        </Text>
+        <View
+          style={[
+            styles.statusChip,
+            plan.isActive ? styles.statusActive : styles.statusInactive,
+          ]}>
+          <Text
+            style={[
+              styles.statusText,
+              plan.isActive ? styles.statusTextActive : styles.statusTextInactive,
+            ]}>
+            {plan.isActive
+              ? t('meals.subscriptionPlans.statusActive')
+              : t('meals.subscriptionPlans.statusInactive')}
+          </Text>
+        </View>
       ) : null}
+
       {onEdit ? (
-        <Pressable onPress={onEdit} style={styles.editLink} accessibilityRole="button">
+        <Pressable
+          onPress={onEdit}
+          style={({ pressed }) => [styles.editLink, pressed && styles.editPressed]}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.edit')}>
+          <SquarePen size={14} color={colors.primaryDark} strokeWidth={2.2} />
           <Text style={styles.editLinkText}>{t('common.edit')}</Text>
         </Pressable>
       ) : null}
@@ -76,16 +114,7 @@ export function SubscriptionPlanCard({
         selectable && selected && styles.cardSelected,
         pressed && styles.cardPressed,
       ]}>
-      {selectable ? (
-        <View style={styles.selectRow}>
-          <View style={[styles.radio, selected && styles.radioSelected]}>
-            {selected ? <View style={styles.radioDot} /> : null}
-          </View>
-          <View style={styles.selectContent}>{content}</View>
-        </View>
-      ) : (
-        content
-      )}
+      {content}
     </Pressable>
   );
 }
@@ -93,69 +122,78 @@ export function SubscriptionPlanCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.white,
-    borderRadius: radius.card,
+    borderRadius: 18,
     borderWidth: 1.5,
     borderColor: colors.border,
-    padding: spacing.lg,
+    padding: spacing.md,
     marginBottom: spacing.sm,
+    gap: spacing.sm,
     ...shadows.sm,
   },
   cardSelected: {
     borderColor: colors.primary,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: colors.successTint,
   },
   cardPressed: {
     opacity: 0.92,
   },
-  selectRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    alignItems: 'flex-start',
-  },
-  selectContent: {
-    flex: 1,
-    minWidth: 0,
-  },
-  radio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 2,
-  },
-  radioSelected: {
-    borderColor: colors.primary,
-  },
-  radioDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.primary,
-  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    justifyContent: 'space-between',
     gap: spacing.sm,
-    marginBottom: spacing.xs,
+  },
+  iconWell: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.button,
+    backgroundColor: colors.lightGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
   name: {
     ...typography.bodyStrong,
-    flex: 1,
+    fontSize: 16,
     color: colors.textPrimary,
   },
   price: {
-    ...typography.bodyStrong,
+    ...typography.h3,
+    fontSize: 18,
+    lineHeight: 22,
     color: colors.primaryDark,
-    flexShrink: 0,
+    fontWeight: '700',
   },
-  meta: {
-    ...typography.body,
+  selectedBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  metaChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.surface,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+  },
+  metaChipText: {
+    ...typography.caption,
+    fontSize: 12,
+    fontWeight: '600',
     color: colors.textSecondary,
-    marginBottom: spacing.xxs,
   },
   policy: {
     ...typography.caption,
@@ -165,24 +203,47 @@ const styles = StyleSheet.create({
   description: {
     ...typography.caption,
     color: colors.textSecondary,
-    marginTop: spacing.xs,
     lineHeight: 18,
   },
-  status: {
-    ...typography.caption,
-    color: colors.success,
-    fontWeight: '700',
-    marginTop: spacing.sm,
+  statusChip: {
+    alignSelf: 'flex-start',
+    borderRadius: radius.full,
+    borderWidth: 1,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+  },
+  statusActive: {
+    backgroundColor: colors.successTint,
+    borderColor: '#A7F3D0',
   },
   statusInactive: {
+    backgroundColor: '#F1F5F9',
+    borderColor: colors.border,
+  },
+  statusText: {
+    ...typography.caption,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  statusTextActive: {
+    color: '#059669',
+  },
+  statusTextInactive: {
     color: colors.muted,
   },
   editLink: {
-    marginTop: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     alignSelf: 'flex-start',
+    paddingVertical: spacing.xs,
+  },
+  editPressed: {
+    opacity: 0.75,
   },
   editLinkText: {
     ...typography.bodyStrong,
+    fontSize: 14,
     color: colors.primaryDark,
   },
 });

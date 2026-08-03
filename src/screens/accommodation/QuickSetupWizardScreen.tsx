@@ -16,6 +16,7 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { Hash, Tag, Type } from 'lucide-react-native';
 import type {
   AccommodationSetupPreviewResponse,
   AccommodationSetupRequest,
@@ -26,6 +27,7 @@ import type {
   UnitSetupConfig,
 } from '../../api/types';
 import {
+  AccommodationFormHero,
   PropertyLayoutModePicker,
   RoomTypePicker,
   SetupStructureEditor,
@@ -34,12 +36,12 @@ import {
 import { expandToEditableStructure } from '../../components/accommodation/setup-preview/setupStructureModel';
 import type { EditableSetupStructure } from '../../components/accommodation/setup-preview/setupStructureTypes';
 import { StickyFormActions } from '../../components/progressive';
-import { Button, FormInput, HeaderBackButton } from '../../components/ui';
+import { FormInput, HeaderBackButton } from '../../components/ui';
 import { useQuickSetup } from '../../hooks/useQuickSetup';
 import type { MainStackParamList } from '../../navigation/types';
 import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
-import { colors, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import {
   buildSetupRequest,
   validateCoLivingSetup,
@@ -453,6 +455,15 @@ export function QuickSetupWizardScreen() {
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}>
+          {stepIndex === 0 ? (
+            <AccommodationFormHero
+              level="building"
+              eyebrow={t('accommodation.setup.formEyebrow')}
+              heading={t('accommodation.setup.formHeading')}
+              subheading={t('accommodation.setup.formSubheading')}
+            />
+          ) : null}
+
           {currentStep !== 'preview' ? (
             <Text style={styles.stepLabel}>
               {t('accommodation.setup.step', {
@@ -463,7 +474,7 @@ export function QuickSetupWizardScreen() {
           ) : null}
 
           {currentStep === 'building' ? (
-            <View>
+            <View style={styles.formCard}>
               <Text style={styles.sectionTitle}>{t('accommodation.setup.buildingStep')}</Text>
               <FormInput
                 label={t('accommodation.fields.name')}
@@ -471,12 +482,14 @@ export function QuickSetupWizardScreen() {
                 onChangeText={setBuildingName}
                 placeholder={t('accommodation.buildings.namePlaceholder')}
                 error={buildingNameError}
+                leadingIcon={Type}
               />
               <FormInput
                 label={t('accommodation.fields.code')}
                 value={buildingCode}
                 onChangeText={setBuildingCode}
                 placeholder={t('accommodation.buildings.codePlaceholder')}
+                leadingIcon={Tag}
               />
               {spaceType && isLayoutModeSelectable(spaceType) ? (
                 <PropertyLayoutModePicker
@@ -497,7 +510,7 @@ export function QuickSetupWizardScreen() {
           ) : null}
 
           {currentStep === 'structure' && isPgHostel ? (
-            <View>
+            <View style={styles.formCard}>
               <Text style={styles.sectionTitle}>
                 {isApartmentPg
                   ? t('accommodation.setup.floorsAndApartmentsStep')
@@ -511,6 +524,7 @@ export function QuickSetupWizardScreen() {
                 value={floorCount}
                 onChangeText={setFloorCount}
                 keyboardType="number-pad"
+                leadingIcon={Hash}
               />
               <View style={styles.toggleRow}>
                 <View style={styles.toggleCopy}>
@@ -532,24 +546,27 @@ export function QuickSetupWizardScreen() {
                   value={apartmentsPerFloor}
                   onChangeText={setApartmentsPerFloor}
                   keyboardType="number-pad"
+                  leadingIcon={Hash}
                 />
               ) : null}
             </View>
           ) : null}
 
           {currentStep === 'structure' && (spaceType === 'CO_LIVING' || spaceType === 'RENTAL') ? (
-            <View>
+            <View style={styles.formCard}>
               <Text style={styles.sectionTitle}>{t('accommodation.setup.unitsStep')}</Text>
               <FormInput
                 label={t('accommodation.setup.unitCount')}
                 value={unitCount}
                 onChangeText={setUnitCount}
                 keyboardType="number-pad"
+                leadingIcon={Hash}
               />
               <FormInput
                 label={t('accommodation.setup.startNumber')}
                 value={startNumber}
                 onChangeText={setStartNumber}
+                leadingIcon={Hash}
               />
               {spaceType === 'CO_LIVING' ? (
                 <FormInput
@@ -557,13 +574,14 @@ export function QuickSetupWizardScreen() {
                   value={numberingStep}
                   onChangeText={setNumberingStep}
                   keyboardType="number-pad"
+                  leadingIcon={Hash}
                 />
               ) : null}
             </View>
           ) : null}
 
           {currentStep === 'rooms' ? (
-            <View>
+            <View style={styles.formCard}>
               <Text style={styles.sectionTitle}>
                 {isApartmentPg
                   ? t('accommodation.setup.roomsAndBedsApartmentStep')
@@ -583,12 +601,14 @@ export function QuickSetupWizardScreen() {
                 value={roomsPerParent}
                 onChangeText={setRoomsPerParent}
                 keyboardType="number-pad"
+                leadingIcon={Hash}
               />
               <FormInput
                 label={t('accommodation.setup.bedsPerRoom')}
                 value={bedsPerRoom}
                 onChangeText={setBedsPerRoom}
                 keyboardType="number-pad"
+                leadingIcon={Hash}
               />
               <RoomTypePicker value={roomType} onChange={setRoomType} />
               {estimatedBeds > 0 ? (
@@ -627,8 +647,16 @@ export function QuickSetupWizardScreen() {
             </View>
           ) : null}
 
-          {stepError ? <Text style={styles.errorText}>{stepError}</Text> : null}
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          {stepError ? (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorBannerText}>{stepError}</Text>
+            </View>
+          ) : null}
+          {error ? (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorBannerText}>{error}</Text>
+            </View>
+          ) : null}
 
           {currentStep === 'preview' ? (
             <Text style={styles.previewHint}>
@@ -669,8 +697,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   content: {
-    padding: spacing.xl,
-    paddingBottom: spacing.xxxl,
+    padding: spacing.lg,
+    paddingBottom: spacing.xxl,
   },
   centered: {
     flex: 1,
@@ -680,12 +708,28 @@ const styles = StyleSheet.create({
   },
   stepLabel: {
     ...typography.caption,
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
     color: colors.muted,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  formCard: {
+    marginBottom: spacing.md,
+    padding: spacing.md,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+    gap: spacing.xs,
+    ...shadows.sm,
   },
   sectionTitle: {
-    ...typography.h2,
-    marginBottom: spacing.lg,
+    ...typography.h3,
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: spacing.sm,
   },
   layoutReminder: {
     ...typography.caption,
@@ -695,14 +739,14 @@ const styles = StyleSheet.create({
   stepHint: {
     ...typography.body,
     color: colors.muted,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     paddingVertical: spacing.md,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.sm,
   },
   toggleCopy: {
     flex: 1,
@@ -718,7 +762,8 @@ const styles = StyleSheet.create({
   estimate: {
     ...typography.caption,
     color: colors.muted,
-    marginBottom: spacing.lg,
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
   },
   warnings: {
     marginTop: spacing.lg,
@@ -733,6 +778,19 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textSecondary,
     marginTop: spacing.md,
+  },
+  errorBanner: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: radius.button,
+    padding: spacing.md,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  errorBannerText: {
+    ...typography.body,
+    color: '#DC2626',
   },
   errorText: {
     ...typography.body,

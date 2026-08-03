@@ -12,6 +12,7 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { Grid2x2 } from 'lucide-react-native';
 import type { UnitListItemResponse } from '../../api/types';
 import {
   AccommodationContextTrail,
@@ -196,7 +197,7 @@ export function AccommodationFloorApartmentsScreen() {
         roomCount: item.roomCount,
         bedCount: item.bedCount,
       })}
-      iconLabel={item.name.charAt(0).toUpperCase()}
+      hierarchyLevel="unit"
       badge={<AccommodationStatusBadge status={item.status} />}
       editableName={canManage}
       onSaveName={async name => {
@@ -277,7 +278,7 @@ export function AccommodationFloorApartmentsScreen() {
             <EmptyState
               title={t('accommodation.apartments.emptyTitle')}
               description={t('accommodation.apartments.emptyMessage')}
-              icon="🏠"
+              Icon={Grid2x2}
             />
           ) : null
         }

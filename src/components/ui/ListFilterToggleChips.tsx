@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xxs,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceSecondary,
   },
   countBadgeActive: {
     backgroundColor: colors.white,

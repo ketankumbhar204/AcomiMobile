@@ -12,24 +12,27 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { AlignLeft, Package, Type } from 'lucide-react-native';
 import { mealsApi } from '../../api/mealsApi';
 import type { FoodCategoryResponse, FoodItemResponse, FoodType } from '../../api/types';
-import { ComboSelectionReview, FoodItemMultiPicker } from '../../components/meals';
+import { ComboSelectionReview, FoodItemMultiPicker, MealFormHero } from '../../components/meals';
 import { ComboPriceInput } from '../../components/meals/ComboPriceInput';
+import { ComboItemQuantityEditor } from '../../components/meals/ComboItemQuantityEditor';
+import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
 import { Button, FormInput, PermissionDeniedScreen } from '../../components/ui';
 import { Screen } from '../../components/ui/Screen';
+import { StickyFormActions } from '../../components/progressive';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useMealPricingPolicy } from '../../hooks/useMealPricingPolicy';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
-import { colors, spacing, typography } from '../../theme';
+import { colors, shadows, spacing, typography } from '../../theme';
 import { parsePriceInput, validatePriceInput } from '../../utils/comboPrice';
 import {
   buildItemQuantitiesPayload,
   syncItemQuantities,
 } from '../../utils/comboIncludes';
 import { fetchSpaceMenuCatalog } from '../../utils/fetchSpaceMenuCatalog';
-import { ComboItemQuantityEditor } from '../../components/meals/ComboItemQuantityEditor';
 
 type Nav = NativeStackNavigationProp<MainStackParamList>;
 type Route = NativeStackScreenProps<MainStackParamList, 'MealComboForm'>['route'];
@@ -226,61 +229,77 @@ export function MealComboFormScreen() {
           keyboardDismissMode="on-drag"
           nestedScrollEnabled
           showsVerticalScrollIndicator>
-            <View style={styles.formFields}>
-              <FormInput
-                size="compact"
-                label={t('meals.library.comboNameLabel')}
-                value={name}
-                onChangeText={text => {
-                  setName(text);
-                  if (nameError) {
-                    setNameError(null);
-                  }
-                }}
-                error={nameError}
-                placeholder={t('meals.library.comboNamePlaceholder')}
-              />
+          <MealFormHero
+            icon={Package}
+            accent="#D97706"
+            soft={colors.warningTint}
+            border="#FDE68A"
+            eyebrow={t('meals.library.combos')}
+            heading={
+              isEdit
+                ? t('meals.library.editCombo')
+                : t('meals.planning.createComboTitle')
+            }
+            subheading={t('meals.library.addComboHint')}
+          />
 
-              <FormInput
-                size="compact"
-                label={t('meals.library.comboDescriptionLabel')}
-                value={description}
-                onChangeText={setDescription}
-                placeholder={t('meals.library.comboDescriptionPlaceholder')}
-              />
-
-              <ComboPriceInput
-                value={priceText}
-                onChangeText={text => {
-                  setPriceText(text);
-                  if (priceError) setPriceError(null);
-                }}
-                error={priceError}
-              />
-
-            </View>
-
-            <FoodItemMultiPicker
-              items={items}
-              selectedIds={selectedItemIds}
-              onChange={ids => {
-                setSelectedItemIds(ids);
-                setItemQuantities(prev => syncItemQuantities(prev, ids));
-                if (itemsError && ids.length > 0) {
-                  setItemsError(null);
+          <View style={styles.formCard}>
+            <FormInput
+              size="compact"
+              label={t('meals.library.comboNameLabel')}
+              value={name}
+              onChangeText={text => {
+                setName(text);
+                if (nameError) {
+                  setNameError(null);
                 }
               }}
-              variant="planning"
-              canAddItem
-              canAddCategory
-              categories={categories}
-              onAddItem={addItemInline}
-              onAddCategory={addCategoryInline}
+              error={nameError}
+              placeholder={t('meals.library.comboNamePlaceholder')}
+              leadingIcon={Type}
             />
 
-            {enableItemQuantities && selectedItemIds.length > 0 ? (
-              <View style={styles.quantitySection}>
-                <Text style={styles.quantityTitle}>{t('meals.combo.itemQuantitiesTitle')}</Text>
+            <FormInput
+              size="compact"
+              label={t('meals.library.comboDescriptionLabel')}
+              value={description}
+              onChangeText={setDescription}
+              placeholder={t('meals.library.comboDescriptionPlaceholder')}
+              leadingIcon={AlignLeft}
+            />
+
+            <ComboPriceInput
+              value={priceText}
+              onChangeText={text => {
+                setPriceText(text);
+                if (priceError) setPriceError(null);
+              }}
+              error={priceError}
+            />
+          </View>
+
+          <FoodItemMultiPicker
+            items={items}
+            selectedIds={selectedItemIds}
+            onChange={ids => {
+              setSelectedItemIds(ids);
+              setItemQuantities(prev => syncItemQuantities(prev, ids));
+              if (itemsError && ids.length > 0) {
+                setItemsError(null);
+              }
+            }}
+            variant="planning"
+            canAddItem
+            canAddCategory
+            categories={categories}
+            onAddItem={addItemInline}
+            onAddCategory={addCategoryInline}
+          />
+
+          {enableItemQuantities && selectedItemIds.length > 0 ? (
+            <View style={styles.quantitySection}>
+              <DashboardSectionTitle title={t('meals.combo.itemQuantitiesTitle')} />
+              <View style={styles.quantityCard}>
                 <ComboItemQuantityEditor
                   items={items}
                   selectedIds={selectedItemIds}
@@ -290,71 +309,80 @@ export function MealComboFormScreen() {
                   }
                 />
               </View>
-            ) : null}
-          </ScrollView>
+            </View>
+          ) : null}
+        </ScrollView>
 
-          <View style={styles.footer}>
-            <ComboSelectionReview
-              comboName={name}
-              description={description}
-              items={items}
-              selectedIds={selectedItemIds}
-              onRemoveItem={itemId => {
-                setSelectedItemIds(current => {
-                  const next = current.filter(id => id !== itemId);
-                  setItemQuantities(prev => syncItemQuantities(prev, next));
-                  return next;
-                });
-              }}
-              error={itemsError}
-            />
-            {submitError ? <Text style={styles.footerError}>{submitError}</Text> : null}
-            <Button
-              label={t('common.save')}
-              onPress={submit}
-              loading={submitting}
-              style={styles.saveButton}
-            />
-          </View>
+        <StickyFormActions>
+          <ComboSelectionReview
+            comboName={name}
+            description={description}
+            items={items}
+            selectedIds={selectedItemIds}
+            onRemoveItem={itemId => {
+              setSelectedItemIds(current => {
+                const next = current.filter(id => id !== itemId);
+                setItemQuantities(prev => syncItemQuantities(prev, next));
+                return next;
+              });
+            }}
+            error={itemsError}
+          />
+          {submitError ? (
+            <View style={styles.footerErrorBanner}>
+              <Text style={styles.errorBannerText}>{submitError}</Text>
+            </View>
+          ) : null}
+          <Button
+            label={t('common.save')}
+            onPress={submit}
+            loading={submitting}
+          />
+        </StickyFormActions>
       </View>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
+  flex: { flex: 1, backgroundColor: colors.background },
   content: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.lg,
   },
-  formFields: {
+  formCard: {
     marginBottom: spacing.sm,
+    padding: spacing.lg,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+    gap: spacing.xs,
+    ...shadows.sm,
   },
   quantitySection: {
     marginTop: spacing.md,
     marginBottom: spacing.sm,
   },
-  quantityTitle: {
-    ...typography.bodyStrong,
-    marginBottom: spacing.xs,
+  quantityCard: {
+    padding: spacing.lg,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+    ...shadows.sm,
   },
-  footer: {
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+  footerErrorBanner: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 18,
+    padding: spacing.md,
   },
-  footerError: {
-    ...typography.caption,
+  errorBannerText: {
+    ...typography.body,
     color: '#DC2626',
-    marginBottom: spacing.sm,
-    paddingHorizontal: spacing.xs,
-  },
-  saveButton: {
-    marginTop: spacing.sm,
   },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });

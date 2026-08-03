@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.button,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceSecondary,
     alignItems: 'center',
     justifyContent: 'center',
   },

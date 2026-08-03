@@ -1,6 +1,10 @@
 import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import {
+  useFocusEffect,
+  useNavigation,
+  useRoute,
+} from '@react-navigation/native';
 import type {
   NativeStackNavigationProp,
   NativeStackScreenProps,
@@ -11,13 +15,25 @@ import type { BedResponse } from '../../api/types';
 import {
   AccommodationContextTrail,
   AccommodationDetailRow,
+  AccommodationEntityHero,
+  AccommodationStatusBadge,
   BedDetailHero,
   BuilderRowLifecycleMenu,
   formatAccommodationDate,
   HeaderMenuSlot,
 } from '../../components/accommodation';
-import { AccommodationOccupantSection, AccommodationOccupancyActions } from '../../components/occupancy';
-import { Card, HeaderBackButton, RequireAccommodationAccess, Screen, SkeletonCard } from '../../components/ui';
+import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
+import {
+  AccommodationOccupantSection,
+  AccommodationOccupancyActions,
+} from '../../components/occupancy';
+import {
+  Card,
+  HeaderBackButton,
+  RequireAccommodationAccess,
+  Screen,
+  SkeletonCard,
+} from '../../components/ui';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useTargetOccupancy } from '../../hooks/useTargetOccupancy';
@@ -72,7 +88,9 @@ export function BedDetailScreen() {
   } = useTargetOccupancy(
     spaceId,
     { bedId },
-    { enabled: showsOccupant && (canViewOccupant || canManageOccupancyActions) },
+    {
+      enabled: showsOccupant && (canViewOccupant || canManageOccupancyActions),
+    },
   );
 
   const occupancyTarget = useMemo(() => {
@@ -155,7 +173,9 @@ export function BedDetailScreen() {
       const data = await accommodationApi.getBedById(spaceId, bedId);
       setBed(data);
     } catch (err) {
-      setError(getAccommodationErrorMessage(err, 'accommodation.errors.loadBeds'));
+      setError(
+        getAccommodationErrorMessage(err, 'accommodation.errors.loadBeds'),
+      );
     } finally {
       setLoading(false);
     }
@@ -231,81 +251,125 @@ export function BedDetailScreen() {
   );
 
   if (loading && !bed) {
-    return <Screen contentStyle={styles.content}><SkeletonCard /></Screen>;
+    return (
+      <Screen contentStyle={styles.content}>
+        <SkeletonCard />
+        <View style={styles.gap} />
+        <SkeletonCard />
+        <View style={styles.gap} />
+        <SkeletonCard />
+      </Screen>
+    );
   }
 
   return (
     <RequireAccommodationAccess spaceId={spaceId}>
-    <Screen scrollable contentStyle={styles.content}>
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
-      {bed ? (
-        <>
-          <AccommodationContextTrail segments={trailSegments} onNavigate={onTrailNavigate} />
-          <BedDetailHero
-            label={displayBedLabel}
-            status={bed.status}
-            occupantName={
-              bed.occupant?.memberName ??
-              occupancy?.memberName ??
-              null
-            }
-            subtitle={
-              occupancy?.moveInDate
-                ? t('occupancy.section.moveInDate') + ': ' + formatAccommodationDate(occupancy.moveInDate)
-                : null
-            }
-          />
-          <Card>
-            <AccommodationDetailRow label={t('accommodation.fields.name')} value={bed.name} />
-            <AccommodationDetailRow
-              label={t('accommodation.beds.bedNumberLabel')}
-              value={bed.bedNumber}
+      <Screen scrollable contentStyle={styles.content}>
+        {error ? (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : null}
+        {bed ? (
+          <>
+            <AccommodationContextTrail
+              segments={trailSegments}
+              onNavigate={onTrailNavigate}
             />
-            <AccommodationDetailRow
-              label={t('accommodation.status.label')}
-              value={t(`accommodation.status.${bed.status}`)}
+            <AccommodationEntityHero
+              level="bed"
+              title={displayBedLabel}
+              subtitle={roomName ?? parentName}
+              meta={`${t('accommodation.beds.bedNumberLabel')}: ${
+                bed.bedNumber
+              }`}
+              badge={<AccommodationStatusBadge status={bed.status} />}
             />
-            <AccommodationDetailRow
-              label={t('accommodation.fields.created')}
-              value={formatAccommodationDate(bed.createdAt)}
+            <BedDetailHero
+              label={displayBedLabel}
+              status={bed.status}
+              occupantName={
+                bed.occupant?.memberName ?? occupancy?.memberName ?? null
+              }
+              subtitle={
+                occupancy?.moveInDate
+                  ? t('occupancy.section.moveInDate') +
+                    ': ' +
+                    formatAccommodationDate(occupancy.moveInDate)
+                  : null
+              }
             />
-            <AccommodationDetailRow
-              label={t('accommodation.fields.updated')}
-              value={formatAccommodationDate(bed.updatedAt)}
-            />
-          </Card>
 
-          {showsOccupant && canViewOccupant ? (
-            <AccommodationOccupantSection
-              spaceId={spaceId}
-              occupant={bed.occupant}
-              occupancy={occupancy}
-              loading={!hasBedOccupant && occupancyLoading}
-              error={!hasBedOccupant ? occupancyError : null}
+            <DashboardSectionTitle
+              title={t('accommodation.setup.propertyOverview')}
             />
-          ) : null}
+            <Card style={styles.infoCard}>
+              <AccommodationDetailRow
+                label={t('accommodation.fields.name')}
+                value={bed.name}
+              />
+              <AccommodationDetailRow
+                label={t('accommodation.beds.bedNumberLabel')}
+                value={bed.bedNumber}
+              />
+              <AccommodationDetailRow
+                label={t('accommodation.status.label')}
+                value={t(`accommodation.status.${bed.status}`)}
+              />
+              <AccommodationDetailRow
+                label={t('accommodation.fields.created')}
+                value={formatAccommodationDate(bed.createdAt)}
+              />
+              <AccommodationDetailRow
+                label={t('accommodation.fields.updated')}
+                value={formatAccommodationDate(bed.updatedAt)}
+              />
+            </Card>
 
-          {bed && spaceType && occupancyTarget && canManageOccupancyActions ? (
-            <AccommodationOccupancyActions
-              spaceId={spaceId}
-              spaceType={spaceType}
-              accommodationStatus={bed.status}
-              target={occupancyTarget}
-              occupancy={occupancy}
-              onSuccess={() => {
-                void loadBed();
-                void refreshOccupancy();
-              }}
-            />
-          ) : null}
-        </>
-      ) : null}
-    </Screen>
+            {showsOccupant && canViewOccupant ? (
+              <AccommodationOccupantSection
+                spaceId={spaceId}
+                occupant={bed.occupant}
+                occupancy={occupancy}
+                loading={!hasBedOccupant && occupancyLoading}
+                error={!hasBedOccupant ? occupancyError : null}
+              />
+            ) : null}
+
+            {bed &&
+            spaceType &&
+            occupancyTarget &&
+            canManageOccupancyActions ? (
+              <AccommodationOccupancyActions
+                spaceId={spaceId}
+                spaceType={spaceType}
+                accommodationStatus={bed.status}
+                target={occupancyTarget}
+                occupancy={occupancy}
+                onSuccess={() => {
+                  void loadBed();
+                  void refreshOccupancy();
+                }}
+              />
+            ) : null}
+          </>
+        ) : null}
+      </Screen>
     </RequireAccommodationAccess>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.xxl, paddingBottom: spacing.section },
-  errorText: { ...typography.body, color: '#DC2626' },
+  content: { padding: spacing.lg, paddingBottom: spacing.xxxl },
+  infoCard: { borderRadius: 18, marginBottom: spacing.xl },
+  gap: { height: spacing.md },
+  errorBanner: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 18,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  errorText: { ...typography.body, fontSize: 14, color: '#DC2626' },
 });

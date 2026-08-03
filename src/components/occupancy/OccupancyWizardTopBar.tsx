@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     marginBottom: spacing.sm,
     minHeight: 44,
   },
@@ -68,6 +68,9 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     ...typography.h3,
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: '600',
     flex: 1,
     textAlign: 'center',
   },

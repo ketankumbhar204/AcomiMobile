@@ -1,11 +1,22 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo } from 'react';
+import { StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { History, User, UtensilsCrossed, Wallet } from 'lucide-react-native';
+import type { LucideIcon } from 'lucide-react-native';
+import { SegmentedTabs, type SegmentedTabItem } from '../ui';
+import { spacing } from '../../theme';
 
 export type MemberDetailTab = 'profile' | 'meals' | 'deposit' | 'history';
 
 const BASE_TABS: MemberDetailTab[] = ['profile', 'deposit', 'history'];
+const ALL_TABS: MemberDetailTab[] = ['profile', 'meals', 'deposit', 'history'];
+
+const TAB_ICONS: Record<MemberDetailTab, LucideIcon> = {
+  profile: User,
+  meals: UtensilsCrossed,
+  deposit: Wallet,
+  history: History,
+};
 
 type MemberDetailTabBarProps = {
   activeTab: MemberDetailTab;
@@ -22,67 +33,32 @@ export function MemberDetailTabBar({
 }: MemberDetailTabBarProps) {
   const { t } = useTranslation();
 
-  const tabs = showMealsTab
-    ? (['profile', 'meals', 'deposit', 'history'] as MemberDetailTab[])
-    : BASE_TABS;
+  const items = useMemo<SegmentedTabItem<MemberDetailTab>[]>(
+    () =>
+      (showMealsTab ? ALL_TABS : BASE_TABS).map(tab => ({
+        key: tab,
+        label: t(`membership.detailTabs.${tab}`),
+        icon: TAB_ICONS[tab],
+      })),
+    [showMealsTab, t],
+  );
 
   return (
-    <View style={[styles.tabs, compact && styles.tabsCompact]}>
-      {tabs.map(tab => {
-        const isActive = activeTab === tab;
-        return (
-          <Pressable
-            key={tab}
-            onPress={() => onTabChange(tab)}
-            style={[styles.tab, isActive && styles.tabActive]}>
-            <Text
-              style={[styles.tabLabel, isActive && styles.tabLabelActive]}
-              numberOfLines={1}>
-              {t(`membership.detailTabs.${tab}`)}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
+    <SegmentedTabs
+      items={items}
+      value={activeTab}
+      onChange={onTabChange}
+      compact
+      style={compact ? styles.wrapCompact : styles.wrap}
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  tabs: {
-    flexDirection: 'row',
-    flexWrap: 'nowrap',
+  wrap: {
     marginBottom: spacing.lg,
-    backgroundColor: colors.surface,
-    borderRadius: radius.button,
-    padding: spacing.xs,
-    gap: spacing.xxs,
   },
-  tabsCompact: {
+  wrapCompact: {
     marginBottom: spacing.sm,
-    padding: 2,
-    gap: 2,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xs,
-    borderRadius: radius.button,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 0,
-  },
-  tabActive: {
-    backgroundColor: colors.white,
-    ...shadows.sm,
-  },
-  tabLabel: {
-    ...typography.caption,
-    color: colors.muted,
-    textAlign: 'center',
-  },
-  tabLabelActive: {
-    ...typography.bodyStrong,
-    fontSize: 13,
-    color: colors.primaryDark,
   },
 });

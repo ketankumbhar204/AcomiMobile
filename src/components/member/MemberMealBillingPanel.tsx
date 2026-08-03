@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
   },
   badgeSubscription: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: colors.successTint,
     borderColor: '#A7F3D0',
   },
   badgePayPerMeal: {

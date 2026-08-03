@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
   },
   pressed: {
     borderColor: `${colors.primary}66`,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.hover,
   },
   icon: {
     width: 36,

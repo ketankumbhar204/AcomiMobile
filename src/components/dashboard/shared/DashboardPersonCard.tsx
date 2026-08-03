@@ -9,12 +9,19 @@ type IconProps = {
   strokeWidth?: number;
 };
 
-export type DashboardPersonRoleTone = 'customer' | 'resident' | 'former' | 'staff' | 'neutral';
+export type DashboardPersonRoleTone =
+  | 'owner'
+  | 'customer'
+  | 'resident'
+  | 'former'
+  | 'staff'
+  | 'neutral';
 
 const ROLE_TONE: Record<
   DashboardPersonRoleTone,
   { bg: string; text: string; border: string }
 > = {
+  owner: { bg: colors.lightGreen, text: colors.primaryDark, border: `${colors.primary}40` },
   customer: { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE' },
   resident: { bg: '#F5F3FF', text: '#6D28D9', border: '#DDD6FE' },
   former: { bg: '#FFF7ED', text: '#C2410C', border: '#FED7AA' },

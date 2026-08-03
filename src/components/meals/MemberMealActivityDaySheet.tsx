@@ -47,7 +47,7 @@ const STATUS_CHIP: Record<
   MemberMealActivitySlotStatus,
   { bg: string; text: string; dot: string }
 > = {
-  ACCEPTED: { bg: '#ECFDF5', text: colors.success, dot: '🟢' },
+  ACCEPTED: { bg: colors.successTint, text: colors.success, dot: '🟢' },
   PENDING: { bg: '#FEFCE8', text: '#CA8A04', dot: '🟡' },
   SKIPPED: { bg: '#FEF2F2', text: '#DC2626', dot: '🔴' },
   NO_MENU: { bg: '#F3F4F6', text: colors.muted, dot: '⚪' },

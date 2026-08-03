@@ -1,10 +1,15 @@
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import type { MemberDetailsResponse, SpaceType } from '../../api/types';
+import { Phone, UtensilsCrossed } from 'lucide-react-native';
+import type { MemberDetailsResponse, MembershipRole, SpaceType } from '../../api/types';
 import { setMemberMealAccess } from '../../api/mealsApi';
+import {
+  DashboardRoleChip,
+  type DashboardPersonRoleTone,
+} from '../dashboard/shared/DashboardPersonCard';
 import { useToastStore } from '../../store/toastStore';
-import { colors, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { isReceivingMeals } from '../../utils/mealAccess';
 import { memberCountInBadgeLabel } from '../../utils/memberAppStatus';
 import { getMemberStatusColor, getMemberStatusLabelKey } from '../../utils/memberStatus';
@@ -17,6 +22,20 @@ type MemberCompactHeaderProps = {
   canManageMeals?: boolean;
   onRefreshMember?: () => void;
 };
+
+function roleTone(role: MembershipRole): DashboardPersonRoleTone {
+  switch (role) {
+    case 'OWNER':
+      return 'owner';
+    case 'MANAGER':
+    case 'CUSTOMER':
+      return 'customer';
+    case 'TENANT':
+      return 'resident';
+    default:
+      return 'staff';
+  }
+}
 
 export function MemberCompactHeader({
   member,
@@ -35,6 +54,7 @@ export function MemberCompactHeader({
   const statusLabel = t(getMemberStatusLabelKey(member.status));
   const roleLabel = t(`spaces.roles.${member.role}`);
   const countInLabel = memberCountInBadgeLabel(member, t);
+  const initial = member.fullName?.trim()?.charAt(0)?.toUpperCase();
 
   const onToggleMeals = useCallback(
     async (enabled: boolean) => {
@@ -65,84 +85,210 @@ export function MemberCompactHeader({
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.name} numberOfLines={1}>
-        {member.fullName}
-      </Text>
-      <View style={styles.metaRow}>
-        <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-        <Text style={styles.metaText} numberOfLines={2}>
-          {statusLabel} • {roleLabel} • {countInLabel}
-          {showMealsMeta ? (
-            <>
-              {' • '}
-              {canManageMeals && spaceType === 'MESS' ? null : mealAccessLabel}
-            </>
-          ) : null}
-        </Text>
-        {showMealsMeta && spaceType === 'MESS' && canManageMeals ? (
-          toggling ? (
-            <ActivityIndicator color={colors.primary} size="small" />
-          ) : (
-            <Pressable
-              style={styles.mealToggle}
-              onPress={() => void onToggleMeals(!receiving)}
-              hitSlop={8}>
-              <Text style={[styles.mealToggleText, receiving && styles.mealToggleOn]}>
-                {mealAccessLabel}
+      <View style={styles.decorBlob} pointerEvents="none" />
+
+      <View style={styles.topRow}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{initial ?? '?'}</Text>
+        </View>
+        <View style={styles.copy}>
+          <Text style={styles.name} numberOfLines={2}>
+            {member.fullName}
+          </Text>
+          <View style={styles.chipRow}>
+            <DashboardRoleChip label={roleLabel} tone={roleTone(member.role)} />
+            <View style={styles.statusChip}>
+              <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+              <Text style={[styles.statusText, { color: statusColor }]} numberOfLines={1}>
+                {statusLabel}
               </Text>
-              <Switch
-                value={receiving}
-                onValueChange={value => void onToggleMeals(value)}
-                trackColor={{ false: colors.border, true: colors.lightGreen }}
-                thumbColor={receiving ? colors.primary : colors.muted}
-                style={styles.switch}
-              />
-            </Pressable>
-          )
-        ) : null}
+            </View>
+          </View>
+        </View>
       </View>
+
+      <View style={styles.factRow}>
+        <View style={styles.fact}>
+          <Phone size={13} color={colors.muted} strokeWidth={2.2} />
+          <Text style={styles.factText} numberOfLines={1}>
+            {member.mobileNumber}
+          </Text>
+        </View>
+        <View style={styles.factDivider} />
+        <Text style={styles.factText} numberOfLines={1}>
+          {countInLabel}
+        </Text>
+      </View>
+
+      {showMealsMeta ? (
+        <View style={styles.mealRow}>
+          <View style={styles.mealIconWrap}>
+            <UtensilsCrossed size={16} color={colors.primaryDark} strokeWidth={2.2} />
+          </View>
+          {canManageMeals && spaceType === 'MESS' ? (
+            toggling ? (
+              <ActivityIndicator color={colors.primary} size="small" />
+            ) : (
+              <Pressable
+                style={styles.mealToggle}
+                onPress={() => onToggleMeals(!receiving).catch(() => undefined)}
+                hitSlop={8}
+                accessibilityRole="switch"
+                accessibilityState={{ checked: receiving }}>
+                <Text style={[styles.mealToggleText, receiving && styles.mealToggleOn]}>
+                  {mealAccessLabel}
+                </Text>
+                <Switch
+                  value={receiving}
+                  onValueChange={value => onToggleMeals(value).catch(() => undefined)}
+                  trackColor={{ false: colors.border, true: colors.lightGreen }}
+                  thumbColor={receiving ? colors.primary : colors.muted}
+                  style={styles.switch}
+                />
+              </Pressable>
+            )
+          ) : (
+            <Text style={styles.mealToggleText}>{mealAccessLabel}</Text>
+          )}
+        </View>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: {
-    gap: spacing.xxs,
-    marginBottom: spacing.sm,
+    gap: spacing.md,
+    marginBottom: spacing.md,
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    overflow: 'hidden',
+    ...shadows.sm,
+  },
+  decorBlob: {
+    position: 'absolute',
+    top: -48,
+    right: -36,
+    width: 132,
+    height: 132,
+    borderRadius: 66,
+    backgroundColor: colors.lightGreen,
+    opacity: 0.55,
+  },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.lightGreen,
+    borderWidth: 1,
+    borderColor: `${colors.primary}33`,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    ...typography.h2,
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.primaryDark,
+  },
+  copy: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacing.xs,
   },
   name: {
     ...typography.h2,
     fontSize: 20,
     lineHeight: 26,
+    fontWeight: '600',
+    color: colors.textPrimary,
   },
-  metaRow: {
+  chipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  statusChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    flexWrap: 'wrap',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface,
   },
   statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    flexShrink: 0,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
-  metaText: {
+  statusText: {
     ...typography.caption,
-    color: colors.muted,
-    fontWeight: '600',
-    flex: 1,
+    fontSize: 11,
+    fontWeight: '700',
   },
-  mealToggle: {
+  factRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
-    flexShrink: 0,
+    gap: spacing.sm,
+  },
+  fact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  factDivider: {
+    width: 1,
+    height: 12,
+    backgroundColor: colors.border,
+  },
+  factText: {
+    ...typography.caption,
+    fontSize: 12,
+    color: colors.textSecondary,
+    flexShrink: 1,
+  },
+  mealRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  mealIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.lightGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mealToggle: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    minHeight: 48,
   },
   mealToggleText: {
     ...typography.caption,
+    fontSize: 12,
     color: colors.muted,
     fontWeight: '700',
+    flex: 1,
   },
   mealToggleOn: {
     color: colors.primaryDark,

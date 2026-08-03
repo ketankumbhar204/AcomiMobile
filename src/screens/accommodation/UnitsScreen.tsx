@@ -11,6 +11,7 @@ import type {
   NativeStackNavigationProp,
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
+import { Grid2x2 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import type { UnitListItemResponse } from '../../api/types';
 import {
@@ -18,6 +19,7 @@ import {
   AccommodationSearchBar,
   AccommodationStatusBadge,
 } from '../../components/accommodation';
+import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
 import {
   AccommodationOccupancyFlowModals,
   AccommodationOccupancyQuickActions,
@@ -28,7 +30,7 @@ import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useUnits } from '../../hooks/useUnits';
 import type { MainStackParamList } from '../../navigation/types';
-import { colors, spacing, typography } from '../../theme';
+import { colors, radius, spacing, typography } from '../../theme';
 import { buildUnitOccupancyTarget, isOccupancyTargetSupported } from '../../utils/buildOccupancyTarget';
 import { renameUnitName } from '../../utils/accommodationInlineRename';
 import { useToastStore } from '../../store/toastStore';
@@ -156,7 +158,12 @@ export function UnitsScreen() {
 
   const listHeader = (
     <View style={styles.header}>
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      {error ? (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorBannerText}>{error}</Text>
+        </View>
+      ) : null}
+      <DashboardSectionTitle title={t('accommodation.units.title')} />
       <AccommodationSearchBar value={searchQuery} onChangeText={setSearchQuery} />
       {showLoading ? <SkeletonCard /> : null}
     </View>
@@ -167,7 +174,7 @@ export function UnitsScreen() {
       <EmptyState
         title={t('accommodation.units.emptyTitle')}
         description={t('accommodation.units.emptyDescription')}
-        icon="🚪"
+        Icon={Grid2x2}
       />
     ) : null;
 
@@ -207,6 +214,7 @@ export function UnitsScreen() {
               }}
               onPress={() => openUnit(unit)}
               onLongPress={() => openUnitDetail(unit)}
+              style={styles.unitCard}
             />
             {supportsUnitOccupancy && spaceType && canManageOccupancyActions ? (
               <AccommodationOccupancyQuickActions
@@ -250,9 +258,22 @@ export function UnitsScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.xl, paddingBottom: 96, flexGrow: 1 },
+  content: { padding: spacing.lg, paddingBottom: 96, flexGrow: 1 },
   header: { marginBottom: spacing.md },
-  errorText: { ...typography.body, color: '#DC2626', marginBottom: spacing.lg },
+  errorBanner: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: radius.button,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  errorBannerText: {
+    ...typography.body,
+    fontSize: 14,
+    color: '#DC2626',
+  },
   listItem: { gap: spacing.xs, marginBottom: spacing.md },
   badgeRow: { marginBottom: spacing.xs },
+  unitCard: { borderRadius: 18 },
 });

@@ -1,10 +1,12 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Building2 } from 'lucide-react-native';
 import type { BuildingSummaryResponse } from '../../api/types';
 import { Card, InlineEditableName, Skeleton } from '../ui';
-import { colors, spacing, typography } from '../../theme';
+import { colors, shadows, spacing, typography } from '../../theme';
 import type { AccommodationUiProfile } from '../../utils/accommodationProfile';
+import { getAccommodationHierarchyAccent } from '../../utils/accommodationHierarchy';
 import { getLayoutModeLabelKey } from '../../utils/propertyLayoutMode';
 
 type BuildingSummaryHeaderProps = {
@@ -25,6 +27,7 @@ export function BuildingSummaryHeader({
   actions,
 }: BuildingSummaryHeaderProps) {
   const { t } = useTranslation();
+  const accent = getAccommodationHierarchyAccent('building');
 
   if (loading && !summary) {
     return (
@@ -48,12 +51,23 @@ export function BuildingSummaryHeader({
 
   return (
     <Card style={styles.card}>
-      <InlineEditableName
-        value={summary.name}
-        editable={editableName}
-        onSave={onSaveName}
-      />
-      <Text style={styles.metadata}>{metadataParts.join(' · ')}</Text>
+      <View style={styles.headerRow}>
+        <View
+          style={[
+            styles.iconWell,
+            { backgroundColor: accent.soft, borderColor: accent.border },
+          ]}>
+          <Building2 size={20} color={accent.accent} strokeWidth={2.2} />
+        </View>
+        <View style={styles.copy}>
+          <InlineEditableName
+            value={summary.name}
+            editable={editableName}
+            onSave={onSaveName}
+          />
+          <Text style={styles.metadata}>{metadataParts.join(' · ')}</Text>
+        </View>
+      </View>
       {actions ? <View style={styles.actions}>{actions}</View> : null}
     </Card>
   );
@@ -61,20 +75,40 @@ export function BuildingSummaryHeader({
 
 const styles = StyleSheet.create({
   card: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
+    borderRadius: 18,
+    ...shadows.sm,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  iconWell: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  copy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
   gap: {
     height: spacing.sm,
   },
   metadata: {
     ...typography.caption,
+    fontSize: 12,
     color: colors.textSecondary,
-    marginTop: spacing.xs,
   },
   actions: {
     marginTop: spacing.md,
     paddingTop: spacing.md,
-    borderTopWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
   },
 });

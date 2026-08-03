@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   cancelBtn: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceSecondary,
     borderWidth: 1,
     borderColor: colors.border,
   },

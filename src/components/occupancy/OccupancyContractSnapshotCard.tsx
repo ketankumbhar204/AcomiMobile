@@ -111,9 +111,12 @@ export function OccupancyContractSnapshotCard({
 const styles = StyleSheet.create({
   card: {
     gap: spacing.sm,
+    borderRadius: 18,
   },
   title: {
     ...typography.bodyStrong,
+    fontSize: 16,
+    fontWeight: '600',
   },
   locked: {
     ...typography.caption,

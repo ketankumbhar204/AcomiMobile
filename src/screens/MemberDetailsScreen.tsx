@@ -144,6 +144,10 @@ export function MemberDetailsScreen() {
     return (
       <Screen contentStyle={styles.contentCompact}>
         <SkeletonCard />
+        <View style={styles.gap} />
+        <SkeletonCard />
+        <View style={styles.gap} />
+        <SkeletonCard />
       </Screen>
     );
   }
@@ -190,6 +194,9 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.lg,
+  },
+  gap: {
+    height: spacing.sm,
   },
   contentMeals: {
     flex: 1,

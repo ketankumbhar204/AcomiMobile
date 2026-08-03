@@ -93,6 +93,11 @@ export function defaultSubscriptionValidTillIso(reference = new Date()): string 
   return end.toISOString().slice(0, 10);
 }
 
+/** Default valid-till for a renewal cycle (same calendar-month end rule as create). */
+export function defaultRenewalValidTillIso(reference = new Date()): string {
+  return defaultSubscriptionValidTillIso(reference);
+}
+
 export function parseValidTillInput(value: string): string | null {
   const trimmed = value.trim();
   if (!trimmed) {

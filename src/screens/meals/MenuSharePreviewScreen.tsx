@@ -12,15 +12,18 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Share2, UtensilsCrossed } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { mealsApi } from '../../api/mealsApi';
 import type { DailyMenuResponse, MealPollSlot, MealType, UUID } from '../../api/types';
+import { MealFormHero } from '../../components/meals';
 import { ShareMealSlotCheckbox } from '../../components/meals/ShareMealSlotCheckbox';
 import {
   ProgressiveWorkflowFooter,
   progressiveSectionHighlightStyle,
 } from '../../components/progressive';
 import { ChevronRightIcon } from '../../components/ui/icons/ChevronRightIcon';
+import { EmptyState } from '../../components/ui';
 import { useProgressiveSectionReview } from '../../hooks/useProgressiveSectionReview';
 import { resetToDashboard } from '../../navigation/navigationRef';
 import type { MainStackParamList } from '../../navigation/types';
@@ -334,18 +337,25 @@ export function MenuSharePreviewScreen({
         scrollEventThrottle={16}
         onScrollBeginDrag={onMessageScrollBeginDrag}
         onScroll={handleScroll}>
-        <Text style={styles.title}>{t('meals.planning.previewShare')}</Text>
-        <Text style={styles.date}>{formatMenuDate(menuDate, i18n.language)}</Text>
+        <MealFormHero
+          icon={Share2}
+          eyebrow={formatMenuDate(menuDate, i18n.language)}
+          heading={t('meals.planning.previewShare')}
+          subheading={t('meals.planning.shareHint')}
+        />
         {dateReadOnly ? (
-          <Text style={styles.readOnlyHint}>{t('meals.planning.pastDateReadOnly')}</Text>
-        ) : (
-          <Text style={styles.hint}>{t('meals.planning.shareHint')}</Text>
-        )}
+          <View style={styles.readOnlyBanner}>
+            <Text style={styles.readOnlyHint}>{t('meals.planning.pastDateReadOnly')}</Text>
+          </View>
+        ) : null}
 
         {loadingMenus ? <ActivityIndicator color={colors.primary} style={styles.loader} /> : null}
 
         {!loadingMenus && !hasShareableSlot ? (
-          <Text style={styles.empty}>{t('meals.planning.shareEmpty')}</Text>
+          <EmptyState
+            title={t('meals.planning.shareEmpty')}
+            Icon={UtensilsCrossed}
+          />
         ) : null}
 
         {!loadingMenus && hasShareableSlot ? (
@@ -535,14 +545,18 @@ export function MenuSharePreviewScreen({
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
-  content: { padding: spacing.xxl, paddingBottom: spacing.section },
-  title: { ...typography.h2, marginBottom: spacing.xs },
-  date: { ...typography.bodyStrong, marginBottom: spacing.sm },
-  hint: { ...typography.caption, color: colors.muted, marginBottom: spacing.lg },
+  content: { padding: spacing.lg, paddingBottom: spacing.section },
+  readOnlyBanner: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: radius.card,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+  },
   readOnlyHint: {
     ...typography.caption,
-    color: colors.muted,
-    marginBottom: spacing.lg,
+    color: '#991B1B',
     lineHeight: 18,
   },
   sectionLabel: { ...typography.bodyStrong, marginBottom: spacing.sm },
@@ -669,7 +683,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   loader: { marginVertical: spacing.lg },
-  empty: { ...typography.body, color: colors.muted },
   messageBox: {
     backgroundColor: colors.white,
     borderWidth: 1,

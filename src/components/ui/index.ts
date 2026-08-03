@@ -51,5 +51,9 @@ export type { MonthlySummaryCardItem, MonthlySummaryCardTone } from './MonthlySu
 export { MonthlySummaryHeader } from './MonthlySummaryHeader';
 export { PermissionDeniedScreen, RequireAccommodationAccess } from './PermissionDeniedScreen';
 export { Screen } from './Screen';
+export { SegmentedTabs } from './SegmentedTabs';
+export type { SegmentedTabItem } from './SegmentedTabs';
 export { Skeleton, SkeletonCard } from './Skeleton';
+export { Timeline } from './Timeline';
+export type { TimelineGroup, TimelineItem } from './Timeline';
 export { Toast } from './Toast';

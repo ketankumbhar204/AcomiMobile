@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { radius, spacing, typography } from '../../theme';
+import { getPaymentStatusIcon } from '../../utils/billingVisuals';
 import {
   getPaymentStatusLabelKey,
   getPaymentStatusTheme,
@@ -31,6 +32,7 @@ export function PaymentStatusBadge({
 
   const theme = getPaymentStatusTheme(status);
   const displayLabel = label ?? t(getPaymentStatusLabelKey(status));
+  const Icon = getPaymentStatusIcon(variant);
 
   return (
     <View
@@ -44,7 +46,7 @@ export function PaymentStatusBadge({
       ]}
       accessibilityRole="text"
       accessibilityLabel={displayLabel}>
-      <View style={[styles.dot, { backgroundColor: theme.accent }]} />
+      <Icon size={12} color={theme.accent} strokeWidth={2.4} />
       <Text style={[styles.label, { color: theme.text }]} numberOfLines={1}>
         {displayLabel}
       </Text>
@@ -64,11 +66,6 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: radius.full,
     maxWidth: '100%',
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
   },
   label: {
     ...typography.caption,

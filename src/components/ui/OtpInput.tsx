@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   NativeSyntheticEvent,
   StyleSheet,
@@ -6,7 +6,7 @@ import {
   TextInputKeyPressEventData,
   View,
 } from 'react-native';
-import { colors, radius, spacing } from '../../theme';
+import { colors, shadows, spacing } from '../../theme';
 
 const OTP_LENGTH = 6;
 
@@ -18,6 +18,7 @@ type OtpInputProps = {
 
 export function OtpInput({ value, onChange, disabled = false }: OtpInputProps) {
   const inputRefs = useRef<Array<TextInput | null>>([]);
+  const [focusedIndex, setFocusedIndex] = useState<number | null>(0);
 
   const digits = Array.from({ length: OTP_LENGTH }, (_, i) => value[i] ?? '');
 
@@ -52,12 +53,10 @@ export function OtpInput({ value, onChange, disabled = false }: OtpInputProps) {
   ) => {
     if (e.nativeEvent.key === 'Backspace') {
       if (digits[index]) {
-        // Clear current box
         const newDigits = [...digits];
         newDigits[index] = '';
         onChange(newDigits.join(''));
       } else if (index > 0) {
-        // Move back and clear previous
         const newDigits = [...digits];
         newDigits[index - 1] = '';
         onChange(newDigits.join(''));
@@ -67,9 +66,10 @@ export function OtpInput({ value, onChange, disabled = false }: OtpInputProps) {
   };
 
   return (
-    <View style={styles.row}>
+    <View style={styles.row} accessibilityLabel="One-time password">
       {digits.map((digit, index) => {
         const isFilled = digit.length > 0;
+        const isFocused = focusedIndex === index;
         return (
           <TextInput
             key={index}
@@ -79,9 +79,12 @@ export function OtpInput({ value, onChange, disabled = false }: OtpInputProps) {
             value={digit}
             onChangeText={text => handleChange(text, index)}
             onKeyPress={e => handleKeyPress(e, index)}
+            onFocus={() => setFocusedIndex(index)}
+            onBlur={() => setFocusedIndex(prev => (prev === index ? null : prev))}
             style={[
               styles.box,
               isFilled && styles.boxFilled,
+              isFocused && styles.boxFocused,
             ]}
             keyboardType="number-pad"
             maxLength={6}
@@ -106,7 +109,7 @@ const styles = StyleSheet.create({
   box: {
     flex: 1,
     height: 56,
-    borderRadius: radius.input,
+    borderRadius: 14,
     borderWidth: 1.5,
     borderColor: colors.border,
     backgroundColor: colors.white,
@@ -119,5 +122,9 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     backgroundColor: colors.lightGreen,
     color: colors.primaryDark,
+  },
+  boxFocused: {
+    borderColor: colors.primaryDark,
+    ...shadows.sm,
   },
 });

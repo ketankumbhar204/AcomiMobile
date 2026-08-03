@@ -9,7 +9,7 @@ import {
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { Bell, Crown, MapPin, Share2, Users, UtensilsCrossed, Wallet } from 'lucide-react-native';
+import { Bell, Crown, MapPin, Package, Share2, Users, UtensilsCrossed, Wallet } from 'lucide-react-native';
 import { formatSpaceType, getSpaceTypeLabel } from '../../api';
 import {
   DashboardAccommodationOperations,
@@ -45,6 +45,7 @@ import { useSpaceStore } from '../../store/spaceStore';
 import { colors, spacing, typography } from '../../theme';
 import { isAccommodationApplicable } from '../../utils/accommodationProfile';
 import { canManagePayments, currentMonthKey } from '../../utils/dashboardFinancial';
+import { canViewInventory } from '../../utils/inventoryPermissions';
 import { canManageNotifications } from '../../utils/spaceOperator';
 import { peekDashboardSummary } from '../../utils/dashboardQueryCache';
 import { peekPendingActions } from '../../utils/pendingActionsQueryCache';
@@ -125,6 +126,7 @@ export function DashboardScreen() {
   const showOwnerDashboard = canManageNotifications(permissions);
   const showPaymentsQuickAction = canManagePayments(permissions.membershipRole);
   const canViewAccommodation = permissions.canViewAccommodation === true;
+  const showInventoryQuickAction = canViewInventory(permissions);
   const autoNavAttemptedRef = useRef<string | null>(null);
 
   const dashboard = useSpaceDashboard(spaceId, spaceType, showOwnerDashboard);
@@ -521,6 +523,22 @@ export function DashboardScreen() {
       <PendingActionsQuickCard count={pendingActionCount} onPress={handlePendingActionsPress} />
     ) : null;
 
+  const handleInventoryPress = useCallback(() => {
+    navigateFromTab('InventoryDashboard', { spaceId });
+  }, [navigateFromTab, spaceId]);
+
+  const inventoryQuickAction = showInventoryQuickAction ? (
+    <DashboardActionRow
+      icon={Package}
+      accent="#0F766E"
+      title={t('dashboard.quickActions.inventory', { defaultValue: 'Inventory' })}
+      subtitle={t('dashboard.quickActions.inventorySubtitle', {
+        defaultValue: 'Track stock, purchases, and suppliers',
+      })}
+      onPress={handleInventoryPress}
+    />
+  ) : null;
+
   const messQuickActions = useMemo(() => {
     if (!showMealsActions || !isMess) {
       return null;
@@ -564,6 +582,7 @@ export function DashboardScreen() {
           subtitle={t('dashboard.quickActions.paymentsSubtitle')}
           onPress={handlePaymentsPress}
         />
+        {inventoryQuickAction}
       </View>
     );
   }, [
@@ -572,6 +591,7 @@ export function DashboardScreen() {
     handleMembersPress,
     handlePaymentsPress,
     handleSubscriptionPlansPress,
+    inventoryQuickAction,
     isMess,
     pendingActionsCard,
     showMealsActions,
@@ -610,6 +630,7 @@ export function DashboardScreen() {
               onPress={handlePaymentsPress}
             />
           ) : null}
+          {inventoryQuickAction}
         </View>
       );
     }
@@ -679,6 +700,7 @@ export function DashboardScreen() {
     showMyStay,
     showResidentsActions,
     showPaymentsQuickAction,
+    inventoryQuickAction,
     t,
   ]);
 
@@ -732,6 +754,7 @@ export function DashboardScreen() {
             onPress={handlePaymentsPress}
           />
         ) : null}
+        {inventoryQuickAction}
       </View>
     ) : null;
 

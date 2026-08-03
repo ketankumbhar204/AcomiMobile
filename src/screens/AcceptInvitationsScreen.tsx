@@ -1,6 +1,5 @@
 import React, { useCallback, useLayoutEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -11,17 +10,19 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { MailPlus, TriangleAlert } from 'lucide-react-native';
 import { formatSpaceType } from '../api';
 import { memberApi } from '../api/memberApi';
 import type { MyInvitationResponse } from '../api/types';
-import { Badge, Button, EmptyState, ListCard } from '../components/ui';
+import { AuthHero, InvitationCard } from '../components/auth';
+import { EmptyState, SkeletonCard } from '../components/ui';
 import { ProfileHeaderButton } from '../components/ui/ProfileHeaderButton';
 import { useAcceptInvitationFlow } from '../hooks/useAcceptInvitationFlow';
 import { resetToOnboardingChoice, resetToMySpaces } from '../navigation/navigationRef';
 import type { MainStackParamList } from '../navigation/types';
 import { useSpaceStore } from '../store/spaceStore';
 import { useToastStore } from '../store/toastStore';
-import { colors, radius, spacing, typography } from '../theme';
+import { colors, spacing, typography } from '../theme';
 
 type AcceptInvitationsNav = NativeStackNavigationProp<
   MainStackParamList,
@@ -59,13 +60,15 @@ export function AcceptInvitationsScreen() {
   const [invitations, setInvitations] = useState<MyInvitationResponse[]>([]);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
 
+  const headerRight = useCallback(() => <ProfileHeaderButton />, []);
+
   useLayoutEffect(() => {
     navigation.setOptions({
       title: t('onboarding.join.title'),
-      headerRight: () => <ProfileHeaderButton />,
+      headerRight,
       headerBackVisible: navigation.canGoBack(),
     });
-  }, [navigation, t, i18n.language]);
+  }, [headerRight, navigation, t, i18n.language]);
 
   const load = useCallback(async () => {
     clearError();
@@ -133,60 +136,67 @@ export function AcceptInvitationsScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} />
         }>
-        <Text style={styles.eyebrow}>{t('onboarding.join.eyebrow')}</Text>
-        <Text style={styles.heading}>{t('onboarding.join.pendingHeading')}</Text>
-        <Text style={styles.subheading}>{t('onboarding.join.pendingSubheading')}</Text>
+        <AuthHero
+          icon={MailPlus}
+          eyebrow={t('onboarding.join.eyebrow')}
+          heading={t('onboarding.join.pendingHeading')}
+          subheading={t('onboarding.join.pendingSubheading')}
+        />
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error ? (
+          <View style={styles.errorBanner}>
+            <TriangleAlert size={16} color="#B91C1C" strokeWidth={2.2} />
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : null}
 
         {showLoading ? (
-          <ActivityIndicator color={colors.primary} style={styles.loader} />
+          <View style={styles.skeletonBlock}>
+            <SkeletonCard />
+            <SkeletonCard />
+          </View>
         ) : invitations.length === 0 ? (
           <EmptyState
+            Icon={MailPlus}
             title={t('onboarding.join.emptyTitle')}
             description={t('onboarding.join.emptyDescription')}
-            icon="✉️"
           />
         ) : (
           <View style={styles.list}>
             {invitations.map(invitation => {
               const accepting = acceptingId === invitation.invitationId;
               return (
-                <View key={invitation.invitationId} style={styles.card}>
-                  <ListCard
-                    title={invitation.spaceName}
-                    subtitle={`${formatSpaceType(invitation.spaceType)} · ${formatRoleLabel(invitation.role, t)}`}
-                    iconLabel={invitation.spaceName.charAt(0).toUpperCase()}
-                    style={styles.listCard}
-                  />
-                  <View style={styles.metaBlock}>
-                    <Badge label={formatRoleLabel(invitation.role, t)} />
-                    <Text style={styles.meta}>
-                      {t('membership.incoming.invitedBy', { name: invitation.invitedBy })}
-                    </Text>
-                    <Text style={styles.meta}>
-                      {t('membership.incoming.expires', {
-                        date: formatDate(invitation.expiresAt),
-                      })}
-                    </Text>
-                  </View>
-                  <Button
-                    label={
-                      accepting
-                        ? t('membership.incoming.accepting')
-                        : t('onboarding.join.accept')
-                    }
-                    onPress={() => void handleAccept(invitation)}
-                    disabled={busy}
-                    style={styles.acceptButton}
-                  />
-                </View>
+                <InvitationCard
+                  key={invitation.invitationId}
+                  spaceName={invitation.spaceName}
+                  spaceTypeLabel={formatSpaceType(invitation.spaceType)}
+                  roleLabel={formatRoleLabel(invitation.role, t)}
+                  invitedBy={t('membership.incoming.invitedBy', {
+                    name: invitation.invitedBy,
+                  })}
+                  expiresLabel={t('membership.incoming.expires', {
+                    date: formatDate(invitation.expiresAt),
+                  })}
+                  acceptLabel={
+                    accepting
+                      ? t('membership.incoming.accepting')
+                      : t('onboarding.join.accept')
+                  }
+                  accepting={accepting}
+                  disabled={busy}
+                  onAccept={() => void handleAccept(invitation)}
+                />
               );
             })}
           </View>
         )}
 
-        <Pressable style={styles.skipButton} onPress={handleSkip} disabled={busy}>
+        <Pressable
+          style={({ pressed }) => [styles.skipButton, pressed && styles.skipPressed]}
+          onPress={handleSkip}
+          disabled={busy}
+          accessibilityRole="button"
+          accessibilityLabel={t('onboarding.join.notNow')}>
           <Text style={styles.skipText}>{t('onboarding.join.notNow')}</Text>
         </Pressable>
       </ScrollView>
@@ -200,68 +210,40 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   content: {
-    padding: spacing.xl,
+    padding: spacing.lg,
     paddingBottom: spacing.section,
+    gap: spacing.md,
   },
-  eyebrow: {
-    ...typography.caption,
-    color: colors.primary,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-    marginBottom: spacing.xs,
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 18,
+    padding: spacing.md,
   },
-  heading: {
-    ...typography.h2,
-    marginBottom: spacing.sm,
-  },
-  subheading: {
+  errorText: {
     ...typography.body,
-    color: colors.muted,
-    marginBottom: spacing.lg,
-  },
-  error: {
-    ...typography.caption,
+    flex: 1,
     color: '#DC2626',
-    marginBottom: spacing.md,
   },
-  loader: {
-    marginVertical: spacing.xl,
+  skeletonBlock: {
+    gap: spacing.md,
   },
   list: {
     gap: spacing.md,
   },
-  card: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.card,
-    padding: spacing.md,
-    gap: spacing.sm,
-  },
-  listCard: {
-    borderWidth: 0,
-    shadowOpacity: 0,
-    elevation: 0,
-    paddingHorizontal: 0,
-    paddingVertical: 0,
-    minHeight: 0,
-  },
-  metaBlock: {
-    gap: spacing.xs,
-    paddingHorizontal: spacing.xs,
-  },
-  meta: {
-    ...typography.caption,
-    color: colors.muted,
-  },
-  acceptButton: {
-    marginTop: spacing.xs,
-  },
   skipButton: {
-    marginTop: spacing.xl,
+    marginTop: spacing.sm,
     alignItems: 'center',
+    minHeight: 48,
+    justifyContent: 'center',
     paddingVertical: spacing.md,
+  },
+  skipPressed: {
+    opacity: 0.8,
   },
   skipText: {
     ...typography.bodyStrong,

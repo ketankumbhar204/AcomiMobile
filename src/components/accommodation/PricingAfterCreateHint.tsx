@@ -32,7 +32,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.md,
     alignItems: 'flex-start',
-    backgroundColor: '#ECFDF5',
+    backgroundColor: colors.successTint,
     borderWidth: 1,
     borderColor: `${colors.primary}33`,
     borderRadius: radius.card,

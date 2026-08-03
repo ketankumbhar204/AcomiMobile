@@ -1,6 +1,7 @@
-import React, { useLayoutEffect, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useState } from 'react';
 import {
   Keyboard,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,10 +13,13 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { Button, HeaderBackButton, OtpInput } from '../../components/ui';
+import { Pencil, ShieldCheck, TriangleAlert } from 'lucide-react-native';
+import { AuthHero } from '../../components/auth';
+import { StickyFormActions } from '../../components/progressive';
+import { HeaderBackButton, OtpInput } from '../../components/ui';
 import { useVerifyOtp } from '../../hooks/useAuth';
 import type { AuthStackParamList } from '../../navigation/types';
-import { colors, spacing, typography } from '../../theme';
+import { colors, shadows, spacing, typography } from '../../theme';
 
 type OtpNav = NativeStackNavigationProp<AuthStackParamList, 'OtpVerification'>;
 type OtpRoute = NativeStackScreenProps<AuthStackParamList, 'OtpVerification'>['route'];
@@ -31,13 +35,15 @@ export function OtpScreen() {
 
   const isComplete = otp.length === 6;
 
+  const headerLeft = useCallback(() => <HeaderBackButton />, []);
+
   useLayoutEffect(() => {
     navigation.setOptions({
       title: t('navigation.verifyOtp'),
-      headerLeft: () => <HeaderBackButton />,
+      headerLeft,
       headerBackVisible: false,
     });
-  }, [navigation, t, i18n.language]);
+  }, [headerLeft, navigation, t, i18n.language]);
 
   async function handleVerify() {
     Keyboard.dismiss();
@@ -58,53 +64,63 @@ export function OtpScreen() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}>
-        <Text style={styles.eyebrow}>{t('auth.otp.eyebrow')}</Text>
-        <Text style={styles.heading}>{t('auth.otp.heading')}</Text>
-        <Text style={styles.subheading}>
-          {t('auth.otp.subheading')}{' '}
-          <Text style={styles.mobile}>+91 {mobileNumber}</Text>
-        </Text>
+        <AuthHero
+          icon={ShieldCheck}
+          eyebrow={t('auth.otp.eyebrow')}
+          heading={t('auth.otp.heading')}
+          subheading={`${t('auth.otp.subheading')} +91 ${mobileNumber}`}
+        />
 
         {error ? (
           <View style={styles.errorBanner}>
+            <TriangleAlert size={16} color="#B91C1C" strokeWidth={2.2} />
             <Text style={styles.errorBannerText}>{error}</Text>
           </View>
         ) : null}
 
-        <OtpInput
-          value={otp}
-          onChange={value => {
-            setOtp(value);
-            if (error) {
-              clearError();
-            }
-          }}
-          disabled={isLoading}
-        />
-
-        {__DEV__ ? (
-          <View style={styles.devHint}>
-            <Text style={styles.devHintText}>{t('auth.otp.devHint')}</Text>
-          </View>
-        ) : null}
-
-        <Button
-          label={t('auth.otp.verifyContinue')}
-          onPress={handleVerify}
-          loading={isLoading}
-          disabled={isLoading || !isComplete}
-          style={styles.button}
-        />
-
-        <Text style={styles.changeNumber}>
-          {t('auth.otp.wrongNumber')}{' '}
-          <Text
-            style={styles.changeNumberLink}
-            onPress={() => !isLoading && navigation.goBack()}>
-            {t('auth.otp.changeIt')}
+        <View style={styles.otpCard}>
+          <Text style={styles.otpLabel}>
+            {t('auth.otp.codeLabel', { defaultValue: '6-digit code' })}
           </Text>
-        </Text>
+          <OtpInput
+            value={otp}
+            onChange={value => {
+              setOtp(value);
+              if (error) {
+                clearError();
+              }
+            }}
+            disabled={isLoading}
+          />
+          {__DEV__ ? (
+            <View style={styles.devHint}>
+              <Text style={styles.devHintText}>{t('auth.otp.devHint')}</Text>
+            </View>
+          ) : null}
+        </View>
+
+        <Pressable
+          style={({ pressed }) => [styles.changeRow, pressed && styles.changeRowPressed]}
+          onPress={() => !isLoading && navigation.goBack()}
+          disabled={isLoading}
+          accessibilityRole="button"
+          accessibilityLabel={t('auth.otp.changeIt')}>
+          <Pencil size={14} color={colors.primaryDark} strokeWidth={2.2} />
+          <Text style={styles.changeNumber}>
+            {t('auth.otp.wrongNumber')}{' '}
+            <Text style={styles.changeNumberLink}>{t('auth.otp.changeIt')}</Text>
+          </Text>
+        </Pressable>
       </ScrollView>
+
+      <StickyFormActions
+        primary={{
+          label: t('auth.otp.verifyContinue'),
+          onPress: () => void handleVerify(),
+          loading: isLoading,
+          disabled: isLoading || !isComplete,
+        }}
+      />
     </View>
   );
 }
@@ -120,42 +136,45 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
-    padding: spacing.xxl,
-    justifyContent: 'center',
-  },
-  eyebrow: {
-    ...typography.eyebrow,
-    marginBottom: spacing.sm,
-  },
-  heading: {
-    ...typography.h1,
-    marginBottom: spacing.sm,
-  },
-  subheading: {
-    ...typography.body,
-    marginBottom: spacing.xxl,
-  },
-  mobile: {
-    ...typography.bodyStrong,
-    color: colors.textPrimary,
+    padding: spacing.lg,
+    paddingBottom: spacing.xl,
   },
   errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FECACA',
-    borderRadius: 12,
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
+    borderRadius: 18,
+    padding: spacing.md,
+    marginBottom: spacing.md,
   },
   errorBannerText: {
     ...typography.body,
+    flex: 1,
     color: '#DC2626',
   },
-  devHint: {
-    marginTop: spacing.lg,
+  otpCard: {
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: spacing.md,
+    gap: spacing.md,
+    ...shadows.sm,
+  },
+  otpLabel: {
+    ...typography.caption,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  devHint: {
+    padding: spacing.sm,
     backgroundColor: '#FFF7ED',
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#FED7AA',
     alignItems: 'center',
@@ -165,17 +184,23 @@ const styles = StyleSheet.create({
     color: '#C2410C',
     fontWeight: '600',
   },
-  button: {
-    marginTop: spacing.xxl,
+  changeRow: {
+    marginTop: spacing.lg,
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  changeRowPressed: {
+    opacity: 0.8,
   },
   changeNumber: {
     ...typography.caption,
-    textAlign: 'center',
-    marginTop: spacing.xl,
     color: colors.textSecondary,
   },
   changeNumberLink: {
-    color: colors.primary,
-    fontWeight: '600',
+    color: colors.primaryDark,
+    fontWeight: '700',
   },
 });

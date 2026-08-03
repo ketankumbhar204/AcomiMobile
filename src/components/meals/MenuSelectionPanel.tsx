@@ -23,6 +23,8 @@ import type {
   FoodItemResponse,
   FoodType,
   MealComboResponse,
+  MealType,
+  MenuHistoryItemResponse,
   UUID,
 } from '../../api/types';
 import { useToastStore } from '../../store/toastStore';
@@ -47,8 +49,10 @@ import { persistItemPriceDraft } from '../../utils/itemSelectionPricing';
 import { agentDebugLog } from '../../utils/agentDebugLog';
 import { fetchSpaceMenuCatalog } from '../../utils/fetchSpaceMenuCatalog';
 import { formatComboIncludeLine } from '../../utils/comboIncludes';
+import { groupMenuHistoryItems, filterHistoryForMealType } from '../../utils/menuHistoryGroups';
 import { ComboPickerCard } from './ComboPickerCard';
 import { CreateComboSheet } from './CreateComboSheet';
+import { HistoryPickerCard } from './HistoryPickerCard';
 import { PlanningItemPickerList } from './PlanningItemPickerList';
 import { MenuSelectionSummary } from './MenuSelectionSummary';
 import { MenuSelectionTabBar, type MenuSelectionTab } from './MenuSelectionTabBar';
@@ -70,6 +74,7 @@ export type MenuSelectionPanelHandle = {
 
 type MenuSelectionPanelProps = {
   spaceId: UUID;
+  mealType: MealType;
   initialOptions: MenuDraftOption[];
   onChange: (result: MenuSelectionSaveResult) => void;
   requiresMealPrices?: boolean;
@@ -78,17 +83,6 @@ type MenuSelectionPanelProps = {
 
 function adHocPackageChipId(label: string): string {
   return `package:${label}`;
-}
-
-function defaultTabForSeed(seed: ReturnType<typeof seedFromOptions>): MenuSelectionTab {
-  if (
-    seed.selectedItemIds.length > 0 &&
-    seed.selectedComboIds.length === 0 &&
-    seed.adHocPackages.length === 0
-  ) {
-    return 'items';
-  }
-  return 'combos';
 }
 
 function seedFromOptions(options: MenuDraftOption[]) {
@@ -145,6 +139,7 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
   function MenuSelectionPanel(
     {
       spaceId,
+      mealType,
       initialOptions,
       onChange,
       requiresMealPrices = true,
@@ -155,9 +150,13 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
   const seed = seedFromOptions(initialOptions);
   const { t } = useTranslation();
   const showToast = useToastStore(state => state.showToast);
-  const [loading, setLoading] = useState(true);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+  const [loadingCatalog, setLoadingCatalog] = useState(false);
+  const [catalogLoaded, setCatalogLoaded] = useState(false);
   const [createComboOpen, setCreateComboOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<MenuSelectionTab>(() => defaultTabForSeed(seed));
+  const [activeTab, setActiveTab] = useState<MenuSelectionTab>('history');
+  const [historyItems, setHistoryItems] = useState<MenuHistoryItemResponse[]>([]);
+  const [historySearch, setHistorySearch] = useState('');
   const [combos, setCombos] = useState<MealComboResponse[]>([]);
   const [foodItems, setFoodItems] = useState<FoodItemResponse[]>([]);
   const [categories, setCategories] = useState<FoodCategoryResponse[]>([]);
@@ -178,49 +177,82 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
     setActiveTab(tab);
   }, []);
 
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    void fetchSpaceMenuCatalog(spaceId)
-      .then(catalog => {
-        if (!active) {
-          return;
-        }
-        setCombos(catalog.combos.filter(combo => combo.isActive));
-        setFoodItems(catalog.items.filter(item => item.isActive));
-        setCategories(catalog.categories.filter(category => category.isActive));
-        agentDebugLog({
-          hypothesisId: 'D',
-          location: 'MenuSelectionPanel.tsx:loadCatalog',
-          message: 'Loaded space-scoped menu catalog',
-          data: {
-            spaceId,
-            comboSample: catalog.combos.slice(0, 3).map(combo => ({
-              comboId: combo.comboId,
-              name: combo.name,
-              price: combo.price ?? null,
-            })),
-            itemSample: catalog.items.slice(0, 3).map(item => ({
-              itemId: item.itemId,
-              name: item.name,
-              defaultPrice: item.defaultPrice ?? null,
-            })),
-          },
+  const loadHistory = useCallback(
+    async (search?: string) => {
+      setLoadingHistory(true);
+      setHistoryItems([]);
+      try {
+        const page = await mealsApi.getMenuHistory(spaceId, mealType, {
+          search: search?.trim() || undefined,
+          page: 0,
+          limit: 100,
         });
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (active) {
-          setLoading(false);
-        }
+        setHistoryItems(filterHistoryForMealType(page.items ?? [], mealType));
+      } catch {
+        setHistoryItems([]);
+        showToast(
+          t('meals.planning.historyLoadFailed', {
+            defaultValue: 'Could not load menu history. Try again after refreshing.',
+          }),
+        );
+      } finally {
+        setLoadingHistory(false);
+      }
+    },
+    [mealType, showToast, spaceId, t],
+  );
+
+  const ensureCatalogLoaded = useCallback(async () => {
+    if (catalogLoaded || loadingCatalog) return;
+    setLoadingCatalog(true);
+    try {
+      const catalog = await fetchSpaceMenuCatalog(spaceId);
+      setCombos(catalog.combos.filter(combo => combo.isActive));
+      setFoodItems(catalog.items.filter(item => item.isActive));
+      setCategories(catalog.categories.filter(category => category.isActive));
+      setCatalogLoaded(true);
+      agentDebugLog({
+        hypothesisId: 'D',
+        location: 'MenuSelectionPanel.tsx:loadCatalog',
+        message: 'Loaded space-scoped menu catalog',
+        data: {
+          spaceId,
+          comboSample: catalog.combos.slice(0, 3).map(combo => ({
+            comboId: combo.comboId,
+            name: combo.name,
+            price: combo.price ?? null,
+          })),
+          itemSample: catalog.items.slice(0, 3).map(item => ({
+            itemId: item.itemId,
+            name: item.name,
+            defaultPrice: item.defaultPrice ?? null,
+          })),
+        },
       });
-    return () => {
-      active = false;
-    };
-  }, [spaceId]);
+    } catch {
+      // keep prior catalog state
+    } finally {
+      setLoadingCatalog(false);
+    }
+  }, [catalogLoaded, loadingCatalog, spaceId]);
 
   useEffect(() => {
-    if (loading) {
+    const timer = setTimeout(() => {
+      void loadHistory(historySearch);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [historySearch, loadHistory]);
+
+  // Initial history load is covered by historySearch effect (starts as '').
+
+  useEffect(() => {
+    if (activeTab === 'combos' || activeTab === 'items') {
+      void ensureCatalogLoaded();
+    }
+  }, [activeTab, ensureCatalogLoaded]);
+
+  useEffect(() => {
+    if (!catalogLoaded) {
       return;
     }
     setDraftPrices(prev => {
@@ -238,7 +270,7 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
       }
       return changed ? next : prev;
     });
-  }, [foodItems, loading, selectedItemIds]);
+  }, [catalogLoaded, foodItems, selectedItemIds]);
 
   const addItemInline = useCallback(
     async (categoryId: string, itemName: string, foodType: FoodType = 'VEG') => {
@@ -411,13 +443,16 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
   );
 
   useEffect(() => {
-    if (loading) {
+    if (loadingHistory && activeTab === 'history') {
+      return;
+    }
+    if ((activeTab === 'combos' || activeTab === 'items') && !catalogLoaded) {
       return;
     }
     // Always sync selection (even before prices are filled) so Extras can list
     // items inside selected combos without waiting for Menu Library.
     onChange(buildSelectionResult);
-  }, [buildSelectionResult, loading, onChange]);
+  }, [activeTab, buildSelectionResult, catalogLoaded, loadingHistory, onChange]);
 
   const filteredCombos = useMemo(() => {
     const query = comboSearch.trim().toLowerCase();
@@ -426,6 +461,11 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
     }
     return combos.filter(combo => combo.name.toLowerCase().includes(query));
   }, [comboSearch, combos]);
+
+  const historyGroups = useMemo(
+    () => groupMenuHistoryItems(filterHistoryForMealType(historyItems, mealType)),
+    [historyItems, mealType],
+  );
 
   const toggleCombo = (comboId: string) => {
     setSelectedComboIds(prev => {
@@ -481,6 +521,100 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
 
       return [...prev, itemId];
     });
+  };
+
+  const toggleHistoryItem = (item: MenuHistoryItemResponse) => {
+    if (item.type === 'COMBO' && item.comboId) {
+      const comboId = item.comboId;
+      setCombos(prev =>
+        prev.some(row => row.comboId === comboId)
+          ? prev
+          : [
+              ...prev,
+              {
+                comboId,
+                name: item.name,
+                isActive: true,
+                price: item.price ?? null,
+                currencyCode: item.currencyCode ?? 'INR',
+                foodType: item.foodType ?? 'VEG',
+                items: (item.itemIds ?? []).map(id => ({
+                  itemId: id,
+                  name: '',
+                  foodType: item.foodType ?? 'VEG',
+                })),
+              },
+            ],
+      );
+      setSelectedComboIds(prev => {
+        if (prev.includes(comboId)) {
+          setDraftPrices(current => {
+            const next = { ...current };
+            delete next[comboId];
+            return next;
+          });
+          return prev.filter(id => id !== comboId);
+        }
+        if (hasComboPrice(item.price)) {
+          setDraftPrices(current => ({
+            ...current,
+            [comboId]: current[comboId] ?? String(item.price),
+          }));
+        }
+        return [...prev, comboId];
+      });
+      return;
+    }
+
+    if (item.type === 'ITEM' && item.itemId) {
+      const itemId = item.itemId;
+      setFoodItems(prev =>
+        prev.some(row => row.itemId === itemId)
+          ? prev
+          : [
+              ...prev,
+              {
+                itemId,
+                name: item.name,
+                isActive: true,
+                isCustom: false,
+                scope: 'SPACE',
+                foodType: item.foodType ?? 'VEG',
+                defaultPrice: item.price ?? null,
+                currencyCode: item.currencyCode ?? 'INR',
+                categoryId: '',
+                categoryName: item.summary ?? undefined,
+              } as FoodItemResponse,
+            ],
+      );
+      setSelectedItemIds(prev => {
+        if (prev.includes(itemId)) {
+          setDraftPrices(current => {
+            const next = { ...current };
+            delete next[itemId];
+            return next;
+          });
+          return prev.filter(id => id !== itemId);
+        }
+        if (hasComboPrice(item.price)) {
+          setDraftPrices(current => ({
+            ...current,
+            [itemId]: current[itemId] ?? String(item.price),
+          }));
+        }
+        return [...prev, itemId];
+      });
+    }
+  };
+
+  const clearHistory = async () => {
+    try {
+      await mealsApi.clearMenuHistory(spaceId, mealType);
+      setHistoryItems([]);
+      showToast(t('meals.planning.historyCleared'));
+    } catch {
+      showToast(t('meals.errors.actionFailed'));
+    }
   };
 
   const removeSelection = (id: string) => {
@@ -679,6 +813,7 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
       setFoodItems(catalog.items.filter(item => item.isActive));
       setCategories(catalog.categories.filter(category => category.isActive));
       setCombos(catalog.combos.filter(combo => combo.isActive));
+      setCatalogLoaded(true);
     } catch {
       showToast(t('meals.errors.saveFailed'));
       throw new Error('createCombo failed');
@@ -701,9 +836,86 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
 
       <View style={styles.divider} />
 
-      {loading ? <ActivityIndicator color={colors.primary} style={styles.loader} /> : null}
+      {activeTab === 'history' && loadingHistory ? (
+        <ActivityIndicator color={colors.primary} style={styles.loader} />
+      ) : null}
+      {(activeTab === 'combos' || activeTab === 'items') && loadingCatalog && !catalogLoaded ? (
+        <ActivityIndicator color={colors.primary} style={styles.loader} />
+      ) : null}
 
-      {!loading && activeTab === 'combos' ? (
+      {activeTab === 'history' && !loadingHistory ? (
+        <View>
+          <TextInput
+            style={styles.search}
+            value={historySearch}
+            onChangeText={setHistorySearch}
+            placeholder={t('meals.planning.searchHistory')}
+            placeholderTextColor={colors.muted}
+          />
+          <View style={styles.historyBanner}>
+            <Text style={styles.historyBannerText}>
+              {t('meals.planning.historyHint', {
+                meal: t(`meals.mealType.${mealType}`),
+              })}
+            </Text>
+            {historyItems.length > 0 ? (
+              <Pressable onPress={() => void clearHistory()}>
+                <Text style={styles.historyClear}>{t('meals.planning.clearHistory')}</Text>
+              </Pressable>
+            ) : null}
+          </View>
+
+          {historyItems.length === 0 ? (
+            <View style={styles.historyEmpty}>
+              <Text style={styles.empty}>
+                {t('meals.planning.historyEmpty', {
+                  meal: t(`meals.mealType.${mealType}`),
+                })}
+              </Text>
+              <Pressable style={styles.historyCta} onPress={() => handleTabChange('combos')}>
+                <Text style={styles.createComboLinkText}>{t('meals.planning.browseCombos')}</Text>
+              </Pressable>
+              <Pressable style={styles.historyCta} onPress={() => handleTabChange('items')}>
+                <Text style={styles.createComboLinkText}>{t('meals.planning.browseItems')}</Text>
+              </Pressable>
+            </View>
+          ) : (
+            historyGroups.map(group => (
+              <View key={group.key}>
+                <Text style={styles.sectionTitle}>
+                  {group.key === 'today'
+                    ? t('meals.planning.historyGroupToday')
+                    : group.key === 'yesterday'
+                      ? t('meals.planning.historyGroupYesterday')
+                      : group.key === 'last7Days'
+                        ? t('meals.planning.historyGroupLast7Days')
+                        : t('meals.planning.historyGroupOlder')}
+                </Text>
+                {group.items.map(item => {
+                  const selected =
+                    (item.type === 'COMBO' &&
+                      !!item.comboId &&
+                      selectedComboIds.includes(item.comboId)) ||
+                    (item.type === 'ITEM' &&
+                      !!item.itemId &&
+                      selectedItemIds.includes(item.itemId));
+                  return (
+                    <HistoryPickerCard
+                      key={item.historyId}
+                      item={item}
+                      selected={selected}
+                      showMealPrices={requiresMealPrices}
+                      onPress={() => toggleHistoryItem(item)}
+                    />
+                  );
+                })}
+              </View>
+            ))
+          )}
+        </View>
+      ) : null}
+
+      {activeTab === 'combos' && catalogLoaded ? (
         <View>
           <Text style={styles.sectionTitle}>{t('meals.planning.savedCombosTitle')}</Text>
           <TextInput
@@ -764,7 +976,7 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
         </View>
       ) : null}
 
-      {!loading && activeTab === 'items' ? (
+      {activeTab === 'items' && catalogLoaded ? (
         <View>
           <Text style={styles.sectionTitle}>{t('meals.planning.individualItemsTitle')}</Text>
           <TextInput
@@ -844,6 +1056,34 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   empty: { ...typography.body, color: colors.muted, marginBottom: spacing.md },
+  historyBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.button,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  historyBannerText: {
+    ...typography.caption,
+    color: colors.muted,
+    flex: 1,
+  },
+  historyClear: {
+    ...typography.bodyStrong,
+    color: colors.primaryDark,
+    fontSize: 13,
+  },
+  historyEmpty: {
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+  },
+  historyCta: {
+    paddingVertical: spacing.sm,
+  },
   createComboLink: {
     paddingVertical: spacing.md,
     borderTopWidth: 1,

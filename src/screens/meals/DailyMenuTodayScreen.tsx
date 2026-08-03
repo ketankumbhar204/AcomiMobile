@@ -1,11 +1,13 @@
 import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { CalendarDays, UtensilsCrossed } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { mealsApi } from '../../api/mealsApi';
 import type { DailyMenuResponse, MealComboResponse, MealType, UUID } from '../../api/types';
-import { DailyMenuSlotCard } from '../../components/meals';
+import { DailyMenuSlotCard, MealFormHero } from '../../components/meals';
+import { EmptyState } from '../../components/ui';
 import { Screen } from '../../components/ui/Screen';
 import type { MainStackParamList } from '../../navigation/types';
 import { colors, spacing, typography } from '../../theme';
@@ -100,10 +102,18 @@ export function DailyMenuTodayScreen({
 
   return (
     <Screen scrollable contentStyle={styles.content}>
-      <Text style={styles.title}>{heading}</Text>
-      <Text style={styles.subtitle}>{subtitle}</Text>
+      <MealFormHero
+        icon={isToday ? UtensilsCrossed : CalendarDays}
+        eyebrow={t('meals.title')}
+        heading={heading}
+        subheading={subtitle}
+      />
       {loading ? <ActivityIndicator color={colors.primary} /> : null}
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? (
+        <View style={styles.errorBanner}>
+          <Text style={styles.error}>{error}</Text>
+        </View>
+      ) : null}
       {MEAL_TYPES.map(mealType => (
         <DailyMenuSlotCard
           key={mealType}
@@ -114,20 +124,21 @@ export function DailyMenuTodayScreen({
         />
       ))}
       {!loading && !error && menus.length === 0 ? (
-        <Text style={styles.empty}>{emptyLabel}</Text>
+        <EmptyState title={emptyLabel} Icon={UtensilsCrossed} />
       ) : null}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: spacing.section },
-  title: { ...typography.h2, marginBottom: spacing.xs },
-  subtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginBottom: spacing.lg,
+  content: { padding: spacing.lg, paddingBottom: spacing.section },
+  errorBanner: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 12,
+    padding: spacing.md,
+    marginBottom: spacing.md,
   },
-  error: { ...typography.caption, color: '#DC2626', marginBottom: spacing.md },
-  empty: { ...typography.body, color: colors.muted, marginTop: spacing.lg },
+  error: { ...typography.caption, color: '#B91C1C' },
 });

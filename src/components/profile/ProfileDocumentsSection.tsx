@@ -1,12 +1,14 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { FileText, Trash2 } from 'lucide-react-native';
 import { memberApi, PENDING_UPLOAD_FILE_URL } from '../../api/memberApi';
 import type { MemberDocumentResponse, UUID } from '../../api/types';
-import { Button, Card, SkeletonCard, useConfirmDialog } from '../ui';
+import { DashboardSectionHeader } from '../dashboard/shared/DashboardSectionHeader';
+import { Button, EmptyState, SkeletonCard, useConfirmDialog } from '../ui';
 import { useToastStore } from '../../store/toastStore';
-import { colors, radius, spacing, typography } from '../../theme';
-import { MemberDetailRow, MemberSectionTitle } from '../member/MemberDetailRow';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { MemberDetailRow } from '../member/MemberDetailRow';
 
 type ProfileDocumentsSectionProps = {
   spaceId: UUID;
@@ -87,7 +89,10 @@ export function ProfileDocumentsSection({
   if (documentsLoading && documents.length === 0) {
     return (
       <View style={styles.wrap}>
-        <MemberSectionTitle title={t('settings.profile.documentsSection')} />
+        <DashboardSectionHeader
+          title={t('settings.profile.documentsSection')}
+          icon={FileText}
+        />
         <SkeletonCard />
       </View>
     );
@@ -95,25 +100,31 @@ export function ProfileDocumentsSection({
 
   return (
     <View style={styles.wrap}>
-      <MemberSectionTitle title={t('settings.profile.documentsSection')} />
+      <DashboardSectionHeader
+        title={t('settings.profile.documentsSection')}
+        icon={FileText}
+      />
       <Text style={styles.description}>{t('settings.profile.documentsDescription')}</Text>
 
       <Button
         label={t('settings.profile.documents.upload')}
         variant="secondary"
+        icon={FileText}
         onPress={onRequestUpload}
         style={styles.uploadButton}
       />
 
       {documents.length === 0 ? (
-        <Card style={styles.card}>
-          <Text style={styles.emptyText}>{t('settings.profile.documentsEmpty')}</Text>
-        </Card>
+        <EmptyState
+          Icon={FileText}
+          title={t('settings.profile.documentsEmpty')}
+          description={t('settings.profile.documentsDescription')}
+        />
       ) : (
         documents.map(doc => {
           const preview = previewUriForFile(doc.fileUrl);
           return (
-            <Card key={doc.documentId} style={styles.card}>
+            <View key={doc.documentId} style={styles.card}>
               {preview ? <Image source={{ uri: preview }} style={styles.previewImage} /> : null}
               <MemberDetailRow
                 label={t('membership.documents.typeLabel')}
@@ -143,11 +154,12 @@ export function ProfileDocumentsSection({
               <Button
                 label={t('membership.documents.deleteConfirm')}
                 variant="ghost"
+                icon={Trash2}
                 onPress={() => confirmDelete(doc.documentId)}
                 disabled={loading}
                 style={styles.deleteButton}
               />
-            </Card>
+            </View>
           );
         })
       )}
@@ -158,17 +170,25 @@ export function ProfileDocumentsSection({
 const styles = StyleSheet.create({
   wrap: {
     marginBottom: spacing.lg,
+    gap: spacing.xs,
   },
   description: {
-    ...typography.body,
+    ...typography.caption,
     color: colors.muted,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
+    lineHeight: 18,
   },
   uploadButton: {
     marginBottom: spacing.sm,
   },
   card: {
     marginBottom: spacing.sm,
+    backgroundColor: colors.white,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    ...shadows.sm,
   },
   previewImage: {
     width: '100%',
@@ -179,9 +199,8 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     marginTop: spacing.xs,
-  },
-  emptyText: {
-    ...typography.body,
-    color: colors.muted,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    backgroundColor: '#FEF2F2',
   },
 });

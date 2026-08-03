@@ -1,15 +1,17 @@
 import React, { useCallback, useLayoutEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type {
   NativeStackNavigationProp,
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { History, TriangleAlert } from 'lucide-react-native';
 import { PaymentServiceUnavailableError, paymentsApi } from '../../api/paymentsApi';
 import type { PaymentTimelineEventResponse } from '../../api/types';
+import { MealFormHero } from '../../components/meals/MealFormHero';
 import { PaymentHistoryTimeline } from '../../components/payments/PaymentHistoryTimeline';
-import { EmptyState, HeaderBackButton, Screen, SkeletonCard } from '../../components/ui';
+import { EmptyState, HeaderBackButton, Screen, Skeleton } from '../../components/ui';
 import type { MainStackParamList } from '../../navigation/types';
 import { colors, spacing, typography } from '../../theme';
 
@@ -61,16 +63,40 @@ export function PaymentHistoryScreen() {
 
   return (
     <Screen contentStyle={styles.content}>
+      <MealFormHero
+        icon={History}
+        eyebrow={t('paymentCollection.timeline.eyebrow', { defaultValue: 'Payment' })}
+        heading={t('paymentCollection.timeline.title')}
+        subheading={t('paymentCollection.timeline.subtitle', {
+          defaultValue: 'Status changes and review events for this payment.',
+        })}
+        compact
+      />
+
       {loading ? (
-        <SkeletonCard />
+        <View style={styles.skeletonWrap}>
+          <Skeleton width="100%" height={72} borderRadius={18} />
+          <Skeleton width="100%" height={72} borderRadius={18} />
+          <Skeleton width="100%" height={72} borderRadius={18} />
+        </View>
       ) : serviceUnavailable ? (
         <EmptyState
+          Icon={TriangleAlert}
           title={t('paymentCollection.serviceUnavailable.title')}
           description={t('paymentCollection.serviceUnavailable.description')}
-          icon="⚠️"
         />
       ) : error ? (
-        <Text style={styles.error}>{error}</Text>
+        <View style={styles.errorBanner}>
+          <Text style={styles.error}>{error}</Text>
+        </View>
+      ) : events.length === 0 ? (
+        <EmptyState
+          Icon={History}
+          title={t('paymentCollection.timeline.empty')}
+          description={t('paymentCollection.timeline.emptyHint', {
+            defaultValue: 'Events will appear as this payment moves through review.',
+          })}
+        />
       ) : (
         <ScrollView showsVerticalScrollIndicator={false}>
           <PaymentHistoryTimeline events={events} />
@@ -83,7 +109,18 @@ export function PaymentHistoryScreen() {
 const styles = StyleSheet.create({
   content: {
     flex: 1,
-    padding: spacing.xl,
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  skeletonWrap: {
+    gap: spacing.sm,
+  },
+  errorBanner: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 18,
+    padding: spacing.md,
   },
   error: {
     ...typography.body,

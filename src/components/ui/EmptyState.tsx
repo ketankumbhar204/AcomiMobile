@@ -1,20 +1,32 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import type { LucideIcon } from 'lucide-react-native';
 import { colors, radius, spacing, typography } from '../../theme';
 import { Card } from './Card';
 
 type EmptyStateProps = {
   title: string;
   description?: string;
+  /** Emoji / glyph fallback (legacy). Prefer `Icon` for Design A. */
   icon?: string;
+  Icon?: LucideIcon;
 };
 
-export function EmptyState({ title, description, icon = '○' }: EmptyStateProps) {
+export function EmptyState({
+  title,
+  description,
+  icon = '○',
+  Icon,
+}: EmptyStateProps) {
   return (
     <View style={styles.container}>
       <Card style={styles.card}>
         <View style={styles.iconWrap}>
-          <Text style={styles.icon}>{icon}</Text>
+          {Icon ? (
+            <Icon size={18} color={colors.primaryDark} strokeWidth={2.2} />
+          ) : (
+            <Text style={styles.icon}>{icon}</Text>
+          )}
         </View>
         <Text style={styles.title}>{title}</Text>
         {description ? (

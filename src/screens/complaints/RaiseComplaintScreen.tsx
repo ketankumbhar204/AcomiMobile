@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
@@ -17,6 +17,17 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import {
+  AlignLeft,
+  CalendarDays,
+  CirclePlus,
+  ImagePlus,
+  MessageSquareWarning,
+  Type,
+  UtensilsCrossed,
+  Wrench,
+  X,
+} from 'lucide-react-native';
 import { complaintsApi } from '../../api/complaintsApi';
 import type {
   ComplaintCategory,
@@ -25,6 +36,12 @@ import type {
   SpaceType,
 } from '../../api/types';
 import { ApiError } from '../../api/types';
+import {
+  ComplaintCategoryPicker,
+  ComplaintPriorityPicker,
+  ComplaintSelectionSummary,
+} from '../../components/complaints';
+import { MealFormHero } from '../../components/meals/MealFormHero';
 import { FormInput, HeaderBackButton, ListFilterChips } from '../../components/ui';
 import {
   ProgressiveWorkflowFooter,
@@ -36,7 +53,7 @@ import type { MainStackParamList } from '../../navigation/types';
 import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
 import { resolveProgressivePhase } from '../../utils/progressivePhase';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, shadows, spacing, typography } from '../../theme';
 import { categoriesForSpaceType } from '../../utils/complaintPermissions';
 import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
 import { pickPaymentProofImage } from '../../utils/pickPaymentProofImage';
@@ -107,13 +124,15 @@ export function RaiseComplaintScreen() {
     onPhotosScroll(contentOffset.y, layoutMeasurement.height);
   };
 
+  const headerLeft = useCallback(() => <HeaderBackButton />, []);
+
   useLayoutEffect(() => {
     navigation.setOptions({
       title: t('complaints.raiseTitle'),
       headerBackVisible: false,
-      headerLeft: () => <HeaderBackButton />,
+      headerLeft,
     });
-  }, [navigation, t]);
+  }, [headerLeft, navigation, t]);
 
   const onAddPhoto = async () => {
     if (photos.length >= 5) {
@@ -124,6 +143,10 @@ export function RaiseComplaintScreen() {
     if (image) {
       setPhotos(prev => [...prev, image]);
     }
+  };
+
+  const onRemovePhoto = (index: number) => {
+    setPhotos(prev => prev.filter((_, i) => i !== index));
   };
 
   const onSubmit = async () => {
@@ -158,6 +181,34 @@ export function RaiseComplaintScreen() {
     }
   };
 
+  const categoryOptions = React.useMemo(
+    () =>
+      categories.map(id => ({
+        id,
+        label: t(`complaints.category.${id}`),
+      })),
+    [categories, t],
+  );
+
+  const priorityOptions = React.useMemo(
+    () =>
+      PRIORITIES.map(id => ({
+        id,
+        label: t(`complaints.priority.${id}`),
+        description: t(`complaints.priorityHint.${id}`, {
+          defaultValue:
+            id === 'LOW'
+              ? 'Minor issue'
+              : id === 'MEDIUM'
+                ? 'Needs attention'
+                : id === 'HIGH'
+                  ? 'Resolve soon'
+                  : 'Immediate action',
+        }),
+      })),
+    [t],
+  );
+
   return (
     <KeyboardAvoidingView
       style={styles.flex}
@@ -171,50 +222,71 @@ export function RaiseComplaintScreen() {
           scrollEventThrottle={16}
           onScrollBeginDrag={progressiveEnabled ? onPhotosScrollBeginDrag : undefined}
           onScroll={progressiveEnabled ? handleScroll : undefined}>
-          <Text style={styles.sectionTitle}>
-            {t('progressiveWorkflow.raiseComplaint.detailsTitle')}
-          </Text>
-
-          <Text style={styles.label}>{t('complaints.fields.category')}</Text>
-          <ListFilterChips
-            options={categories.map(id => ({
-              id,
-              label: t(`complaints.category.${id}`),
-            }))}
-            value={category}
-            onChange={setCategory}
+          <MealFormHero
+            icon={CirclePlus}
+            eyebrow={t('complaints.raiseHero.eyebrow', { defaultValue: 'New issue' })}
+            heading={t('complaints.raiseTitle')}
+            subheading={t('complaints.raiseHero.subheading', {
+              defaultValue: 'Describe the issue, set priority, and attach photos.',
+            })}
+            accent="#B45309"
+            soft={colors.warningTint}
+            border="#FDE68A"
+            compact
           />
 
-          <Text style={styles.label}>{t('complaints.fields.priority')}</Text>
-          <ListFilterChips
-            options={PRIORITIES.map(id => ({
-              id,
-              label: t(`complaints.priority.${id}`),
-            }))}
-            value={priority}
-            onChange={setPriority}
-          />
+          <View style={styles.sectionCard}>
+            <Text style={styles.cardTitle}>
+              {t('progressiveWorkflow.raiseComplaint.detailsTitle')}
+            </Text>
+            <ComplaintCategoryPicker
+              options={categoryOptions}
+              value={category}
+              onChange={setCategory}
+              TitleIcon={Wrench}
+              title={t('complaints.fields.categorySection', {
+                defaultValue: 'Category',
+              })}
+              helper={t('complaints.fields.categoryHelper', {
+                defaultValue: 'Choose the issue type',
+              })}
+            />
 
-          <FormInput
-            label={t('complaints.fields.title')}
-            value={title}
-            onChangeText={setTitle}
-            maxLength={200}
-            placeholder={t(`complaints.placeholders.subject.${category}`)}
-          />
-          <FormInput
-            label={t('complaints.fields.description')}
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            numberOfLines={5}
-            style={styles.multiline}
-            placeholder={t(`complaints.placeholders.description.${category}`)}
-          />
+            <ComplaintPriorityPicker
+              options={priorityOptions}
+              value={priority}
+              onChange={setPriority}
+              title={t('complaints.fields.prioritySection', {
+                defaultValue: 'Priority',
+              })}
+              helper={t('complaints.fields.priorityHelper', {
+                defaultValue: 'How urgent is this issue?',
+              })}
+            />
+
+            <FormInput
+              label={t('complaints.fields.title')}
+              value={title}
+              onChangeText={setTitle}
+              maxLength={200}
+              placeholder={t(`complaints.placeholders.subject.${category}`)}
+              leadingIcon={Type}
+            />
+            <FormInput
+              label={t('complaints.fields.description')}
+              value={description}
+              onChangeText={setDescription}
+              multiline
+              numberOfLines={5}
+              style={styles.multiline}
+              placeholder={t(`complaints.placeholders.description.${category}`)}
+              leadingIcon={AlignLeft}
+            />
+          </View>
 
           {foodRelated ? (
-            <>
-              <Text style={styles.sectionTitle}>
+            <View style={styles.sectionCard}>
+              <Text style={styles.cardTitle}>
                 {t('progressiveWorkflow.raiseComplaint.contextTitle')}
               </Text>
               <FormInput
@@ -222,38 +294,95 @@ export function RaiseComplaintScreen() {
                 value={mealDate}
                 onChangeText={setMealDate}
                 placeholder="YYYY-MM-DD"
+                leadingIcon={CalendarDays}
               />
-              <Text style={styles.label}>{t('complaints.fields.mealType')}</Text>
-              <ListFilterChips
-                options={MEAL_TYPES.map(id => ({
-                  id,
-                  label: t(`complaints.mealType.${id}`),
-                }))}
-                value={mealType ?? MEAL_TYPES[0]}
-                onChange={value => setMealType(value)}
-              />
-            </>
+              <View style={styles.fieldBlock}>
+                <View style={styles.fieldLabelRow}>
+                  <UtensilsCrossed size={14} color="#B45309" strokeWidth={2.2} />
+                  <Text style={styles.label}>{t('complaints.fields.mealType')}</Text>
+                </View>
+                <ListFilterChips
+                  options={MEAL_TYPES.map(id => ({
+                    id,
+                    label: t(`complaints.mealType.${id}`),
+                  }))}
+                  value={mealType ?? MEAL_TYPES[0]}
+                  onChange={value => setMealType(value)}
+                />
+              </View>
+            </View>
           ) : null}
 
           <View
-            style={[styles.photosSection, photosHighlighted && styles.photosHighlight]}
+            style={[
+              styles.sectionCard,
+              photosHighlighted && styles.photosHighlight,
+            ]}
             onLayout={event => {
               onPhotosLayout(event.nativeEvent.layout.y, event.nativeEvent.layout.height);
             }}>
-            <Text style={styles.sectionTitle}>
-              {t('progressiveWorkflow.raiseComplaint.photosTitle')}
-            </Text>
+            <View style={styles.photosHeader}>
+              <Text style={styles.cardTitle}>
+                {t('progressiveWorkflow.raiseComplaint.photosTitle')}
+              </Text>
+              <Text style={styles.helper}>
+                {t('complaints.photos.helper', {
+                  defaultValue: 'Add up to 5 photos so the team can act faster.',
+                })}
+              </Text>
+            </View>
             <View style={styles.photoRow}>
               {photos.map((uri, index) => (
-                <Image key={`${index}`} source={{ uri }} style={styles.thumb} />
+                <View key={`${index}`} style={styles.thumbWrap}>
+                  <Image source={{ uri }} style={styles.thumb} />
+                  <Pressable
+                    onPress={() => onRemovePhoto(index)}
+                    style={styles.removeThumb}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('common.remove', { defaultValue: 'Remove' })}>
+                    <X size={12} color={colors.white} strokeWidth={2.6} />
+                  </Pressable>
+                </View>
               ))}
-              <Pressable onPress={onAddPhoto} style={styles.addPhoto}>
-                <Text style={styles.addPhotoText}>+</Text>
-              </Pressable>
+              {photos.length < 5 ? (
+                <Pressable
+                  onPress={onAddPhoto}
+                  style={({ pressed }) => [
+                    styles.addPhoto,
+                    pressed && styles.addPhotoPressed,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('complaints.actions.addPhoto')}>
+                  <ImagePlus size={20} color="#B45309" strokeWidth={2.2} />
+                  <Text style={styles.addPhotoText}>
+                    {t('complaints.actions.addPhoto')}
+                  </Text>
+                </Pressable>
+              ) : null}
             </View>
           </View>
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {detailsComplete ? (
+            <ComplaintSelectionSummary
+              title={t('complaints.summary.title', {
+                defaultValue: 'Complaint Summary',
+              })}
+              categoryCaption={t('complaints.fields.category')}
+              priorityCaption={t('complaints.fields.priority')}
+              category={category}
+              priority={priority}
+              categoryLabel={t(`complaints.category.${category}`)}
+              priorityLabel={t(`complaints.priority.${priority}`)}
+            />
+          ) : null}
+
+          {error ? (
+            <View style={styles.errorBanner}>
+              <MessageSquareWarning size={16} color="#B91C1C" strokeWidth={2.2} />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
         </ScrollView>
 
         {progressiveEnabled ? (
@@ -299,61 +428,114 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
   content: {
-    padding: spacing.lg,
-    gap: spacing.sm,
-    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
+    gap: spacing.md,
   },
-  sectionTitle: {
+  sectionCard: {
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    gap: spacing.md,
+    ...shadows.sm,
+  },
+  cardTitle: {
     ...typography.h3,
-    marginTop: spacing.sm,
-    marginBottom: spacing.xs,
+    fontSize: 16,
+    lineHeight: 20,
+    fontWeight: '700',
+  },
+  photosHeader: {
+    gap: 2,
+  },
+  fieldBlock: {
+    gap: spacing.xs,
+  },
+  fieldLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   label: {
     ...typography.caption,
-    marginTop: spacing.sm,
-    marginBottom: spacing.xs,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  helper: {
+    ...typography.caption,
+    fontSize: 11,
+    color: colors.muted,
   },
   multiline: {
-    minHeight: 120,
+    minHeight: 96,
     textAlignVertical: 'top',
-  },
-  photosSection: {
-    marginTop: spacing.sm,
   },
   photosHighlight: {
     ...progressiveSectionHighlightStyle,
-    borderWidth: 1,
-    borderRadius: radius.card,
-    padding: spacing.sm,
   },
   photoRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
-    marginBottom: spacing.md,
+  },
+  thumbWrap: {
+    position: 'relative',
   },
   thumb: {
-    width: 72,
-    height: 72,
-    borderRadius: radius.sm,
+    width: 76,
+    height: 76,
+    borderRadius: 14,
+    backgroundColor: colors.surface,
   },
-  addPhoto: {
-    width: 72,
-    height: 72,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
+  removeThumb: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(15, 23, 42, 0.72)',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.white,
+  },
+  addPhoto: {
+    width: 108,
+    minHeight: 76,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#F59E0B',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    backgroundColor: colors.warningTint,
+    paddingHorizontal: spacing.sm,
+  },
+  addPhotoPressed: {
+    backgroundColor: '#FEF3C7',
   },
   addPhotoText: {
-    ...typography.h2,
-    color: colors.primary,
+    ...typography.caption,
+    fontWeight: '600',
+    color: '#B45309',
+    textAlign: 'center',
   },
-  error: {
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: 18,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  errorText: {
     ...typography.body,
+    flex: 1,
     color: '#B91C1C',
-    marginBottom: spacing.sm,
   },
 });

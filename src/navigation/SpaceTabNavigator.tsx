@@ -20,6 +20,7 @@ import { PaymentsScreen } from '../screens/payments/PaymentsScreen';
 import { TenantPaymentsTabScreen } from '../screens/payments/TenantPaymentsTabScreen';
 import { ComplaintsListScreen } from '../screens/complaints/ComplaintsListScreen';
 import type { SpaceTabParamList } from './types';
+import { SpaceTabBarIcon, SpaceTabBarLabel } from './SpaceTabBarIcon';
 import { canManagePayments, currentMonthKey } from '../utils/dashboardFinancial';
 import { usePaymentsUnderReviewBadge } from '../hooks/usePaymentsUnderReviewBadge';
 import { seedPaymentsUnderReviewFromPendingActions } from '../utils/paymentsReviewAttentionCache';
@@ -27,6 +28,20 @@ import { peekPendingActions } from '../utils/pendingActionsQueryCache';
 import { peekDashboardSummary } from '../utils/dashboardQueryCache';
 
 const Tab = createBottomTabNavigator<SpaceTabParamList>();
+
+function renderSpaceTabIcon(
+  routeName: keyof SpaceTabParamList,
+  props: { color: string; focused: boolean },
+) {
+  return (
+    <SpaceTabBarIcon
+      routeName={routeName}
+      color={props.color}
+      size={24}
+      focused={props.focused}
+    />
+  );
+}
 
 type SpaceTabNavigatorProps = {
   spaceId: string;
@@ -141,19 +156,41 @@ export function SpaceTabNavigator({ spaceId }: SpaceTabNavigatorProps) {
       // Fabric + react-native-screens: remounting inactive screens causes
       // addViewAt "child already has a parent" when opening Mess (fewer tabs).
       detachInactiveScreens={false}
-      screenOptions={tabScreenOptions}>
+      screenOptions={({ route }) => ({
+        ...tabScreenOptions,
+        tabBarIcon: ({ color, focused }) =>
+          renderSpaceTabIcon(route.name as keyof SpaceTabParamList, {
+            color,
+            focused,
+          }),
+        tabBarIconStyle: {
+          width: 28,
+          height: 28,
+        },
+      })}>
       <Tab.Screen
         name="Dashboard"
         component={DashboardTabScreen}
         initialParams={{ spaceId }}
-        options={{ title: t('navigation.dashboard') }}
+        options={{
+          title: t('navigation.dashboard'),
+          tabBarLabel: ({ focused, color }) => (
+            <SpaceTabBarLabel label={t('navigation.dashboard')} focused={focused} color={color} />
+          ),
+        }}
       />
       {showMembersTab ? (
         <Tab.Screen
           name="Members"
           component={MembersTabScreen}
           initialParams={{ spaceId }}
-          options={{ headerShown: true, title: t('navigation.members') }}
+          options={{
+            headerShown: true,
+            title: t('navigation.members'),
+            tabBarLabel: ({ focused, color }) => (
+              <SpaceTabBarLabel label={t('navigation.members')} focused={focused} color={color} />
+            ),
+          }}
         />
       ) : null}
       {showAccommodation ? (
@@ -161,14 +198,28 @@ export function SpaceTabNavigator({ spaceId }: SpaceTabNavigatorProps) {
           name="Accommodation"
           component={AccommodationHomeScreen}
           initialParams={{ spaceId }}
-          options={{ title: t('navigation.accommodation') }}
+          options={{
+            title: t('navigation.accommodation'),
+            tabBarLabel: ({ focused, color }) => (
+              <SpaceTabBarLabel
+                label={t('navigation.accommodation')}
+                focused={focused}
+                color={color}
+              />
+            ),
+          }}
         />
       ) : null}
       <Tab.Screen
         name="Meals"
         component={MealsTabScreen}
         initialParams={{ spaceId }}
-        options={{ title: t('navigation.meals') }}
+        options={{
+          title: t('navigation.meals'),
+          tabBarLabel: ({ focused, color }) => (
+            <SpaceTabBarLabel label={t('navigation.meals')} focused={focused} color={color} />
+          ),
+        }}
       />
       <Tab.Screen
         name="Payments"
@@ -176,6 +227,9 @@ export function SpaceTabNavigator({ spaceId }: SpaceTabNavigatorProps) {
         initialParams={{ spaceId }}
         options={{
           title: t('navigation.payments'),
+          tabBarLabel: ({ focused, color }) => (
+            <SpaceTabBarLabel label={t('navigation.payments')} focused={focused} color={color} />
+          ),
           tabBarBadge:
             canManagePay && paymentsReviewBadge > 0
               ? paymentsReviewBadge > 99
@@ -197,7 +251,12 @@ export function SpaceTabNavigator({ spaceId }: SpaceTabNavigatorProps) {
         name="Complaints"
         component={ComplaintsTabScreen}
         initialParams={{ spaceId }}
-        options={{ title: t('navigation.complaints') }}
+        options={{
+          title: t('navigation.complaints'),
+          tabBarLabel: ({ focused, color }) => (
+            <SpaceTabBarLabel label={t('navigation.complaints')} focused={focused} color={color} />
+          ),
+        }}
       />
     </Tab.Navigator>
   );

@@ -12,10 +12,12 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { Button } from '../../components/ui';
-import { useSendOtp } from '../../hooks/useAuth';
+import { LogIn, Smartphone, TriangleAlert } from 'lucide-react-native';
+import { AuthHero } from '../../components/auth';
+import { StickyFormActions } from '../../components/progressive';
 import type { AuthStackParamList } from '../../navigation/types';
-import { colors, radius, spacing, typography } from '../../theme';
+import { useSendOtp } from '../../hooks/useAuth';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { isValidIndianMobile, normalizeIndianMobileDigits } from '../../utils/indianMobile';
 
 type LoginNav = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
@@ -28,6 +30,7 @@ export function LoginScreen() {
 
   const [mobileNumber, setMobileNumber] = useState('');
   const [mobileError, setMobileError] = useState<string | null>(null);
+  const [focused, setFocused] = useState(false);
 
   const isValid = isValidIndianMobile(mobileNumber);
   const formatError =
@@ -67,7 +70,6 @@ export function LoginScreen() {
         styles.flex,
         {
           paddingTop: insets.top,
-          paddingBottom: insets.bottom,
         },
       ]}
       collapsable={false}>
@@ -85,25 +87,42 @@ export function LoginScreen() {
           <Text style={styles.appName}>{t('common.appName')}</Text>
         </View>
 
-        <Text style={styles.heading}>{t('auth.login.heading')}</Text>
-        <Text style={styles.subheading}>{t('auth.login.subheading')}</Text>
+        <AuthHero
+          icon={LogIn}
+          eyebrow={t('auth.login.eyebrow', { defaultValue: 'Sign in' })}
+          heading={t('auth.login.heading')}
+          subheading={t('auth.login.subheading')}
+        />
 
         {error ? (
           <View style={styles.errorBanner}>
+            <TriangleAlert size={16} color="#B91C1C" strokeWidth={2.2} />
             <Text style={styles.errorBannerText}>{error}</Text>
           </View>
         ) : null}
 
-        <View style={styles.phoneField}>
+        <View style={styles.phoneCard}>
+          <View style={styles.fieldLabelRow}>
+            <Smartphone size={14} color={colors.primaryDark} strokeWidth={2.2} />
+            <Text style={styles.fieldLabel}>
+              {t('auth.login.mobileLabel', { defaultValue: 'Mobile number' })}
+            </Text>
+          </View>
           <View style={styles.inputRow}>
             <View style={styles.prefix}>
               <Text style={styles.prefixText}>+91</Text>
             </View>
             <TextInput
-              style={[styles.phoneInput, fieldError ? styles.phoneInputError : null]}
+              style={[
+                styles.phoneInput,
+                focused && styles.phoneInputFocused,
+                fieldError ? styles.phoneInputError : null,
+              ]}
               placeholder={t('auth.login.mobilePlaceholder')}
               placeholderTextColor={colors.muted}
               value={mobileNumber}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
               onChangeText={text => {
                 const digits = normalizeIndianMobileDigits(text);
                 setMobileNumber(digits);
@@ -119,21 +138,30 @@ export function LoginScreen() {
               maxLength={10}
               onSubmitEditing={handleSendOtp}
               autoCorrect={false}
+              accessibilityLabel={t('auth.login.mobileLabel', {
+                defaultValue: 'Mobile number',
+              })}
             />
           </View>
           {fieldError ? <Text style={styles.fieldError}>{fieldError}</Text> : null}
+          <Text style={styles.helper}>
+            {t('auth.login.mobileHelper', {
+              defaultValue: 'We will text a 6-digit code. Standard SMS rates may apply.',
+            })}
+          </Text>
         </View>
-
-        <Button
-          label={t('auth.login.sendOtp')}
-          onPress={handleSendOtp}
-          loading={isLoading}
-          disabled={isLoading || !isValid}
-          style={styles.button}
-        />
 
         <Text style={styles.disclaimer}>{t('auth.login.disclaimer')}</Text>
       </ScrollView>
+
+      <StickyFormActions
+        primary={{
+          label: t('auth.login.sendOtp'),
+          onPress: () => void handleSendOtp(),
+          loading: isLoading,
+          disabled: isLoading || !isValid,
+        }}
+      />
     </View>
   );
 }
@@ -149,12 +177,13 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
-    padding: spacing.xxl,
-    justifyContent: 'center',
+    padding: spacing.lg,
+    paddingBottom: spacing.xl,
   },
   brandSection: {
     alignItems: 'center',
-    marginBottom: spacing.section,
+    marginBottom: spacing.lg,
+    marginTop: spacing.md,
   },
   logoWrap: {
     width: 72,
@@ -164,6 +193,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,
+    ...shadows.md,
   },
   logoText: {
     fontSize: 36,
@@ -175,28 +205,42 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
   },
-  heading: {
-    ...typography.h1,
-    marginBottom: spacing.sm,
-  },
-  subheading: {
-    ...typography.body,
-    marginBottom: spacing.xxl,
-  },
   errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FECACA',
-    borderRadius: 12,
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
+    borderRadius: 18,
+    padding: spacing.md,
+    marginBottom: spacing.md,
   },
   errorBannerText: {
     ...typography.body,
+    flex: 1,
     color: '#DC2626',
   },
-  phoneField: {
-    marginBottom: spacing.lg,
+  phoneCard: {
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    gap: spacing.sm,
+    ...shadows.sm,
+  },
+  fieldLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  fieldLabel: {
+    ...typography.caption,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   inputRow: {
     flexDirection: 'row',
@@ -210,7 +254,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.input,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -227,9 +271,13 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     paddingHorizontal: spacing.lg,
     paddingVertical: Platform.OS === 'android' ? 0 : spacing.md,
-    fontSize: 15,
+    fontSize: 16,
+    fontWeight: '600',
     color: colors.textPrimary,
     ...(Platform.OS === 'android' ? { textAlignVertical: 'center' as const } : null),
+  },
+  phoneInputFocused: {
+    borderColor: colors.primary,
   },
   phoneInputError: {
     borderColor: '#F87171',
@@ -238,15 +286,16 @@ const styles = StyleSheet.create({
   fieldError: {
     ...typography.caption,
     color: '#DC2626',
-    marginTop: spacing.xs,
   },
-  button: {
-    marginTop: 0,
+  helper: {
+    ...typography.caption,
+    color: colors.muted,
   },
   disclaimer: {
     ...typography.caption,
     textAlign: 'center',
-    marginTop: spacing.xl,
+    marginTop: spacing.lg,
     color: colors.textSecondary,
+    lineHeight: 18,
   },
 });

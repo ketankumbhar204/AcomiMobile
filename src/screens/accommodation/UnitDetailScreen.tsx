@@ -1,22 +1,39 @@
 import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import {
+  useFocusEffect,
+  useNavigation,
+  useRoute,
+} from '@react-navigation/native';
 import type {
   NativeStackNavigationProp,
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { DoorOpen } from 'lucide-react-native';
 import { accommodationApi } from '../../api/accommodationApi';
 import type { UnitResponse } from '../../api/types';
 import {
   AccommodationContextTrail,
   AccommodationDetailRow,
+  AccommodationEntityHero,
   AccommodationLifecycleActions,
   AccommodationStatusBadge,
   formatAccommodationDate,
 } from '../../components/accommodation';
-import { Button, Card, HeaderBackButton, RequireAccommodationAccess, Screen, SkeletonCard } from '../../components/ui';
-import { AccommodationOccupantSection, AccommodationOccupancyActions } from '../../components/occupancy';
+import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
+import { DashboardActionRow } from '../../components/dashboard/shared/DashboardActionRow';
+import {
+  Card,
+  HeaderBackButton,
+  RequireAccommodationAccess,
+  Screen,
+  SkeletonCard,
+} from '../../components/ui';
+import {
+  AccommodationOccupantSection,
+  AccommodationOccupancyActions,
+} from '../../components/occupancy';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useTargetOccupancy } from '../../hooks/useTargetOccupancy';
@@ -72,7 +89,9 @@ export function UnitDetailScreen() {
   } = useTargetOccupancy(
     spaceId,
     { unitId },
-    { enabled: showsOccupant && (canViewOccupant || canManageOccupancyActions) },
+    {
+      enabled: showsOccupant && (canViewOccupant || canManageOccupancyActions),
+    },
   );
 
   const occupancyTarget = useMemo(() => {
@@ -125,7 +144,9 @@ export function UnitDetailScreen() {
       const data = await accommodationApi.getUnitById(spaceId, unitId);
       setUnit(data);
     } catch (err) {
-      setError(getAccommodationErrorMessage(err, 'accommodation.errors.loadUnits'));
+      setError(
+        getAccommodationErrorMessage(err, 'accommodation.errors.loadUnits'),
+      );
     } finally {
       setLoading(false);
     }
@@ -139,130 +160,179 @@ export function UnitDetailScreen() {
   );
 
   if (loading && !unit) {
-    return <Screen contentStyle={styles.content}><SkeletonCard /></Screen>;
+    return (
+      <Screen contentStyle={styles.content}>
+        <SkeletonCard />
+        <View style={styles.gap} />
+        <SkeletonCard />
+        <View style={styles.gap} />
+        <SkeletonCard />
+      </Screen>
+    );
   }
 
   return (
     <RequireAccommodationAccess spaceId={spaceId}>
-    <Screen scrollable contentStyle={styles.content}>
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
-      {unit ? (
-        <>
-          <AccommodationContextTrail segments={trailSegments} onNavigate={onTrailNavigate} />
-          <View style={styles.badgeRow}>
-            <AccommodationStatusBadge status={unit.status} />
+      <Screen scrollable contentStyle={styles.content}>
+        {error ? (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorText}>{error}</Text>
           </View>
-          <Card>
-            <AccommodationDetailRow label={t('accommodation.fields.name')} value={unit.name} />
-            <AccommodationDetailRow
-              label={t('accommodation.units.unitNumberLabel')}
-              value={unit.unitNumber}
+        ) : null}
+        {unit ? (
+          <>
+            <AccommodationContextTrail
+              segments={trailSegments}
+              onNavigate={onTrailNavigate}
             />
-            <AccommodationDetailRow
-              label={t('accommodation.status.label')}
-              value={t(`accommodation.status.${unit.status}`)}
+            <AccommodationEntityHero
+              level="unit"
+              title={unit.name}
+              subtitle={buildingName}
+              meta={`${t('accommodation.units.unitNumberLabel')}: ${
+                unit.unitNumber
+              }`}
+              badge={<AccommodationStatusBadge status={unit.status} />}
             />
-            <AccommodationDetailRow
-              label={t('accommodation.fields.created')}
-              value={formatAccommodationDate(unit.createdAt)}
-            />
-            <AccommodationDetailRow
-              label={t('accommodation.fields.updated')}
-              value={formatAccommodationDate(unit.updatedAt)}
-            />
-          </Card>
 
-          {showsOccupant && canViewOccupant ? (
-            <AccommodationOccupantSection
-              spaceId={spaceId}
-              occupancy={occupancy}
-              loading={occupancyLoading}
-              error={occupancyError}
+            <DashboardSectionTitle
+              title={t('accommodation.setup.propertyOverview')}
             />
-          ) : null}
+            <Card style={styles.infoCard}>
+              <AccommodationDetailRow
+                label={t('accommodation.fields.name')}
+                value={unit.name}
+              />
+              <AccommodationDetailRow
+                label={t('accommodation.units.unitNumberLabel')}
+                value={unit.unitNumber}
+              />
+              <AccommodationDetailRow
+                label={t('accommodation.status.label')}
+                value={t(`accommodation.status.${unit.status}`)}
+              />
+              <AccommodationDetailRow
+                label={t('accommodation.fields.created')}
+                value={formatAccommodationDate(unit.createdAt)}
+              />
+              <AccommodationDetailRow
+                label={t('accommodation.fields.updated')}
+                value={formatAccommodationDate(unit.updatedAt)}
+              />
+            </Card>
 
-          {unit && spaceType && occupancyTarget && canManageOccupancyActions ? (
-            <AccommodationOccupancyActions
-              spaceId={spaceId}
-              spaceType={spaceType}
-              accommodationStatus={unit.status}
-              target={occupancyTarget}
-              occupancy={occupancy}
-              onSuccess={() => {
-                void loadUnit();
-                void refreshOccupancy();
-              }}
-            />
-          ) : null}
+            {showsOccupant && canViewOccupant ? (
+              <AccommodationOccupantSection
+                spaceId={spaceId}
+                occupancy={occupancy}
+                loading={occupancyLoading}
+                error={occupancyError}
+              />
+            ) : null}
 
-          {profile?.showRoomsUnderUnit ? (
-            <Button
-              label={t('accommodation.rooms.view')}
-              onPress={() =>
-                navigation.navigate('AccommodationRooms', {
+            {unit &&
+            spaceType &&
+            occupancyTarget &&
+            canManageOccupancyActions ? (
+              <AccommodationOccupancyActions
+                spaceId={spaceId}
+                spaceType={spaceType}
+                accommodationStatus={unit.status}
+                target={occupancyTarget}
+                occupancy={occupancy}
+                onSuccess={() => {
+                  void loadUnit();
+                  void refreshOccupancy();
+                }}
+              />
+            ) : null}
+
+            {profile?.showRoomsUnderUnit ? (
+              <View style={styles.actionsSection}>
+                <DashboardSectionTitle
+                  title={t('membership.details.actionsHeading', {
+                    defaultValue: 'Actions',
+                  })}
+                />
+                <DashboardActionRow
+                  icon={DoorOpen}
+                  accent="#EA580C"
+                  title={t('accommodation.rooms.view')}
+                  subtitle={t('accommodation.layout.dashboard.roomsSection')}
+                  onPress={() =>
+                    navigation.navigate('AccommodationRooms', {
+                      spaceId,
+                      buildingId,
+                      buildingName,
+                      parentType: 'unit',
+                      parentId: unit.unitId,
+                      parentName: unit.name,
+                    })
+                  }
+                />
+              </View>
+            ) : null}
+
+            <AccommodationLifecycleActions
+              actions={unit.actions}
+              role={permissions.membershipRole}
+              loading={lifecycleLoading}
+              onEdit={() =>
+                navigation.navigate('UnitForm', {
                   spaceId,
                   buildingId,
-                  buildingName,
-                  parentType: 'unit',
-                  parentId: unit.unitId,
-                  parentName: unit.name,
+                  mode: 'edit',
+                  unitId,
                 })
               }
-              style={styles.action}
+              onDeactivate={() =>
+                confirmDeactivate(
+                  () => deactivateUnit(spaceId, unitId),
+                  () => {
+                    showToast(t('accommodation.lifecycle.deactivateSuccess'));
+                    navigation.goBack();
+                  },
+                )
+              }
+              onRestore={() =>
+                confirmRestore(
+                  () => restoreUnit(spaceId, unitId),
+                  () => {
+                    showToast(t('accommodation.lifecycle.restoreSuccess'));
+                    void loadUnit();
+                  },
+                )
+              }
+              onDelete={() =>
+                confirmDelete(
+                  'unit',
+                  () => deleteUnit(spaceId, unitId),
+                  () => {
+                    showToast(t('accommodation.lifecycle.deleteSuccess'));
+                    navigation.goBack();
+                  },
+                )
+              }
             />
-          ) : null}
-
-          <AccommodationLifecycleActions
-            actions={unit.actions}
-            role={permissions.membershipRole}
-            loading={lifecycleLoading}
-            onEdit={() =>
-              navigation.navigate('UnitForm', {
-                spaceId,
-                buildingId,
-                mode: 'edit',
-                unitId,
-              })
-            }
-            onDeactivate={() =>
-              confirmDeactivate(
-                () => deactivateUnit(spaceId, unitId),
-                () => {
-                  showToast(t('accommodation.lifecycle.deactivateSuccess'));
-                  navigation.goBack();
-                },
-              )
-            }
-            onRestore={() =>
-              confirmRestore(
-                () => restoreUnit(spaceId, unitId),
-                () => {
-                  showToast(t('accommodation.lifecycle.restoreSuccess'));
-                  void loadUnit();
-                },
-              )
-            }
-            onDelete={() =>
-              confirmDelete(
-                'unit',
-                () => deleteUnit(spaceId, unitId),
-                () => {
-                  showToast(t('accommodation.lifecycle.deleteSuccess'));
-                  navigation.goBack();
-                },
-              )
-            }
-          />
-        </>
-      ) : null}
-    </Screen>
+          </>
+        ) : null}
+      </Screen>
     </RequireAccommodationAccess>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.xxl, paddingBottom: spacing.section },
-  errorText: { ...typography.body, color: '#DC2626' },
-  badgeRow: { marginBottom: spacing.md },
-  action: { marginTop: spacing.sm },
+  content: { padding: spacing.lg, paddingBottom: spacing.xxxl },
+  infoCard: { borderRadius: 18, marginBottom: spacing.xl },
+  actionsSection: { marginBottom: spacing.xl },
+  gap: { height: spacing.md },
+  errorBanner: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 18,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  errorText: { ...typography.body, fontSize: 14, color: '#DC2626' },
 });

@@ -1,4 +1,6 @@
 export { BedDetailHero } from './BedDetailHero';
+export { AccommodationEntityHero } from './AccommodationEntityHero';
+export { AccommodationFormHero } from './AccommodationFormHero';
 export { AccommodationDetailRow, formatAccommodationDate } from './AccommodationDetailRows';
 export { AccommodationListFooter } from './AccommodationListFooter';
 export { AccommodationSearchBar } from './AccommodationSearchBar';

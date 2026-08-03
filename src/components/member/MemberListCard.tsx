@@ -1,14 +1,19 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { CalendarDays, ChevronRight } from 'lucide-react-native';
+import { DashboardAvatar } from '../dashboard/shared/DashboardPersonCard';
+import { colors, shadows, spacing, typography } from '../../theme';
 
 type MemberListCardProps = {
   title: string;
-  subtitle?: string;
   iconLabel?: string;
   onPress: () => void;
+  roleChip?: React.ReactNode;
   statusChip?: React.ReactNode;
-  metaLine?: string;
+  statusLabel?: string;
+  countInLabel?: string;
+  countInActive?: boolean;
+  footerLine?: string;
   foodLine?: {
     label: string;
     manageControl?: React.ReactNode;
@@ -17,45 +22,62 @@ type MemberListCardProps = {
 
 export function MemberListCard({
   title,
-  subtitle,
   iconLabel,
   onPress,
+  roleChip,
   statusChip,
-  metaLine,
+  statusLabel,
+  countInLabel,
+  countInActive = false,
+  footerLine,
   foodLine,
 }: MemberListCardProps) {
+  const hasStatusLine = Boolean(statusLabel || countInLabel);
+
   return (
     <Pressable
       onPress={onPress}
+      android_ripple={{ color: 'rgba(18, 140, 126, 0.08)' }}
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-      accessibilityRole="button">
-      {iconLabel ? (
-        <View style={styles.icon}>
-          <Text style={styles.iconText}>{iconLabel}</Text>
-        </View>
-      ) : null}
+      accessibilityRole="button"
+      accessibilityLabel={title}>
+      <DashboardAvatar label={iconLabel ?? title} />
       <View style={styles.body}>
         <View style={styles.titleRow}>
-          <Text style={styles.title} numberOfLines={1}>
-            {title}
-          </Text>
-          {statusChip ? <View style={styles.chipSlot}>{statusChip}</View> : null}
-          <Text style={styles.chevron}>›</Text>
+          <View style={styles.identity}>
+            <Text style={styles.title} numberOfLines={1}>
+              {title}
+            </Text>
+            {roleChip ? <View style={styles.roleSlot}>{roleChip}</View> : null}
+          </View>
+          <View style={styles.trailing}>
+            {statusChip}
+            <ChevronRight size={18} color={colors.muted} strokeWidth={2.4} />
+          </View>
         </View>
-        {subtitle ? (
-          <Text style={styles.subtitle} numberOfLines={1}>
-            {subtitle}
-          </Text>
-        ) : null}
-        {metaLine || foodLine ? (
+
+        {hasStatusLine || foodLine ? (
           <View style={styles.metaRow}>
-            {metaLine ? (
-              <Text style={styles.metaLine} numberOfLines={2}>
-                {metaLine}
-              </Text>
-            ) : (
-              <View style={styles.metaLineSpacer} />
-            )}
+            <View style={styles.statusLine}>
+              {statusLabel ? (
+                <Text style={styles.statusLabel} numberOfLines={1}>
+                  {statusLabel}
+                </Text>
+              ) : null}
+              {countInLabel ? (
+                <>
+                  <View
+                    style={[
+                      styles.separatorDot,
+                      countInActive && styles.separatorDotActive,
+                    ]}
+                  />
+                  <Text style={styles.countInLabel} numberOfLines={1}>
+                    {countInLabel}
+                  </Text>
+                </>
+              ) : null}
+            </View>
             {foodLine ? (
               <View style={styles.foodRow}>
                 <Text style={styles.foodLabel} numberOfLines={1}>
@@ -64,6 +86,15 @@ export function MemberListCard({
                 {foodLine.manageControl}
               </View>
             ) : null}
+          </View>
+        ) : null}
+
+        {footerLine ? (
+          <View style={styles.footerRow}>
+            <CalendarDays size={12} color={colors.muted} strokeWidth={2.2} />
+            <Text style={styles.footerLine} numberOfLines={1}>
+              {footerLine}
+            </Text>
           </View>
         ) : null}
       </View>
@@ -76,10 +107,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     backgroundColor: colors.white,
-    borderRadius: radius.card,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.lg,
+    padding: spacing.md,
     gap: spacing.md,
     minHeight: 72,
     ...shadows.sm,
@@ -88,74 +119,94 @@ const styles = StyleSheet.create({
     borderColor: `${colors.primary}66`,
     backgroundColor: colors.surface,
   },
-  icon: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.button,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  iconText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.white,
-  },
   body: {
     flex: 1,
     minWidth: 0,
-    gap: 2,
+    gap: spacing.xs,
   },
   titleRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: spacing.sm,
+  },
+  identity: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacing.xs,
+    alignItems: 'flex-start',
   },
   title: {
     ...typography.bodyStrong,
     fontSize: 16,
-    flex: 1,
-    minWidth: 0,
+    lineHeight: 20,
+    fontWeight: '600',
+    color: colors.textPrimary,
   },
-  chipSlot: {
+  roleSlot: {
     flexShrink: 0,
   },
-  chevron: {
-    fontSize: 24,
-    fontWeight: '300',
-    color: colors.muted,
-    lineHeight: 24,
+  trailing: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     flexShrink: 0,
-  },
-  subtitle: {
-    ...typography.caption,
-    color: colors.muted,
+    paddingTop: 2,
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
-    marginTop: spacing.xxs,
   },
-  metaLine: {
-    ...typography.caption,
-    color: colors.muted,
-    flex: 1,
+  statusLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    flexShrink: 1,
     minWidth: 0,
   },
-  metaLineSpacer: {
-    flex: 1,
+  statusLabel: {
+    ...typography.caption,
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: '600',
+    flexShrink: 1,
+  },
+  separatorDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: colors.border,
+  },
+  separatorDotActive: {
+    backgroundColor: colors.primary,
+  },
+  countInLabel: {
+    ...typography.caption,
+    fontSize: 12,
+    color: colors.muted,
+    flexShrink: 1,
   },
   foodRow: {
     flexDirection: 'row',
     alignItems: 'center',
     flexShrink: 0,
-    gap: spacing.xxs,
+    gap: spacing.xs,
   },
   foodLabel: {
     ...typography.caption,
+    fontSize: 12,
     color: colors.muted,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  footerLine: {
+    ...typography.caption,
+    fontSize: 11,
+    color: colors.muted,
+    flexShrink: 1,
   },
 });

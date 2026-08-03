@@ -211,7 +211,11 @@ export function MemberPickerStep({
           />
 
           {loading ? <ActivityIndicator color={colors.primary} style={styles.loader} /> : null}
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error ? (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorBannerText}>{error}</Text>
+            </View>
+          ) : null}
 
           <FlatList
             data={members}
@@ -328,7 +332,7 @@ const styles = StyleSheet.create({
   wrap: { flex: 1, minHeight: 360 },
   list: { flex: 1 },
   listContent: { paddingBottom: spacing.md, gap: spacing.sm },
-  title: { ...typography.h3, marginBottom: spacing.xs },
+  title: { ...typography.h3, fontSize: 18, lineHeight: 22, fontWeight: '600', marginBottom: spacing.xs },
   hint: { ...typography.caption, color: colors.muted, marginBottom: spacing.md },
   modeRow: {
     flexDirection: 'row',
@@ -366,13 +370,25 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   loader: { marginVertical: spacing.lg },
-  error: { ...typography.caption, color: '#DC2626', marginBottom: spacing.sm },
+  errorBanner: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: radius.button,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  errorBannerText: {
+    ...typography.body,
+    fontSize: 14,
+    color: '#DC2626',
+  },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     backgroundColor: colors.white,
-    borderRadius: radius.card,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.md,

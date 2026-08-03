@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Check } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import type { DailyMenuResponse, MealPollSlot, MealType } from '../../api/types';
 import { colors, radius, spacing, typography } from '../../theme';
@@ -7,6 +8,7 @@ import type { SlotShareState } from '../../utils/shareMenuSelection';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
 import { resolveMealStatusKind } from '../../utils/mealStatusTheme';
 import { MealStatusBadge } from './MealStatusBadge';
+import { MealTypeVisual } from './MealTypeVisual';
 
 type ShareMealSlotCheckboxProps = {
   mealType: MealType;
@@ -47,25 +49,39 @@ export function ShareMealSlotCheckbox({
         disabled={!shareable}
         accessibilityRole="checkbox"
         accessibilityState={{ checked: selected, disabled: !shareable }}>
+        <MealTypeVisual
+          mealType={mealType}
+          size={20}
+          style={!shareable ? styles.visualDisabled : undefined}
+        />
+        <View style={styles.labelBlock}>
+          <View style={styles.labelRow}>
+            <Text style={[styles.label, !shareable && styles.labelDisabled]}>{mealLabel}</Text>
+            {shareable || statusKind === 'empty' ? (
+              <MealStatusBadge kind={statusKind} size="compact" />
+            ) : null}
+          </View>
+          {shareable && statusKind === 'needs_reshare' ? (
+            <Text style={styles.needsReshareHint}>
+              {t('meals.planning.shareNeedsReshareHint')}
+            </Text>
+          ) : shareable && statusKind === 'shared' ? (
+            <Text style={styles.sharedHint}>{t('meals.planning.shareAlreadySharedHint')}</Text>
+          ) : !shareable ? (
+            <Text style={styles.hint}>{disabledMessage}</Text>
+          ) : null}
+        </View>
         <View
           style={[
             styles.checkbox,
             selected && shareable && styles.checkboxSelected,
             !shareable && styles.checkboxDisabled,
           ]}>
-          {selected && shareable ? <Text style={styles.checkmark}>✓</Text> : null}
+          {selected && shareable ? (
+            <Check size={15} color={colors.white} strokeWidth={3} />
+          ) : null}
         </View>
-        <Text style={[styles.label, !shareable && styles.labelDisabled]}>{mealLabel}</Text>
-        {shareable || statusKind === 'empty' ? (
-          <MealStatusBadge kind={statusKind} size="compact" />
-        ) : null}
       </Pressable>
-      {shareable && statusKind === 'needs_reshare' ? (
-        <Text style={styles.needsReshareHint}>{t('meals.planning.shareNeedsReshareHint')}</Text>
-      ) : shareable && statusKind === 'shared' ? (
-        <Text style={styles.sharedHint}>{t('meals.planning.shareAlreadySharedHint')}</Text>
-      ) : null}
-      {!shareable ? <Text style={styles.hint}>{disabledMessage}</Text> : null}
     </View>
   );
 }
@@ -78,16 +94,35 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     padding: spacing.md,
     marginBottom: spacing.sm,
-    gap: spacing.xs,
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 1,
   },
   rowDisabled: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceSecondary,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   checkboxHit: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: spacing.sm,
+  },
+  visualDisabled: {
+    opacity: 0.55,
+  },
+  labelBlock: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacing.xs,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flexWrap: 'wrap',
+    gap: spacing.sm,
   },
   checkbox: {
     width: 24,
@@ -105,11 +140,6 @@ const styles = StyleSheet.create({
     borderColor: colors.muted,
     backgroundColor: colors.surface,
   },
-  checkmark: {
-    color: colors.white,
-    fontSize: 14,
-    fontWeight: '700',
-  },
   label: {
     ...typography.bodyStrong,
   },
@@ -119,16 +149,16 @@ const styles = StyleSheet.create({
   hint: {
     ...typography.caption,
     color: colors.muted,
-    marginLeft: 36,
+    lineHeight: 18,
   },
   sharedHint: {
     ...typography.caption,
     color: colors.success,
-    marginLeft: 36,
+    lineHeight: 18,
   },
   needsReshareHint: {
     ...typography.caption,
     color: '#B45309',
-    marginLeft: 36,
+    lineHeight: 18,
   },
 });

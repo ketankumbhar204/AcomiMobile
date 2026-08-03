@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
     borderRadius: radius.section,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: colors.successTint,
     borderWidth: 1,
     borderColor: `${colors.primary}33`,
     overflow: 'hidden',

@@ -140,10 +140,15 @@ export function ReviewStep({
 
 const styles = StyleSheet.create({
   wrap: { gap: spacing.md },
-  title: { ...typography.h3 },
+  title: { ...typography.h3, fontSize: 18, lineHeight: 22, fontWeight: '600' },
   section: { gap: spacing.xs },
-  card: { gap: spacing.sm },
-  sectionTitle: { ...typography.caption, color: colors.muted, fontWeight: '600' },
+  card: { gap: spacing.sm, borderRadius: 18 },
+  sectionTitle: {
+    ...typography.caption,
+    color: colors.muted,
+    fontWeight: '600',
+    fontSize: 12,
+  },
   gap: { marginTop: spacing.sm },
   value: { ...typography.bodyStrong },
   lineRow: {

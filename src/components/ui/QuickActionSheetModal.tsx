@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   menuItemPressed: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceSecondary,
   },
   menuItemLabel: {
     ...typography.body,
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceSecondary,
   },
   cancelLabel: {
     ...typography.bodyStrong,

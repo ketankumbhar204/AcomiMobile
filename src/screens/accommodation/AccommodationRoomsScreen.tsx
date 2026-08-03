@@ -12,6 +12,7 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { DoorOpen } from 'lucide-react-native';
 import type { RoomListItemResponse } from '../../api/types';
 import {
   AccommodationContextTrail,
@@ -386,7 +387,7 @@ export function AccommodationRoomsScreen() {
       <EmptyState
         title={t('accommodation.rooms.emptyTitle')}
         description={t('accommodation.rooms.emptyDescription')}
-        icon="🛏️"
+        Icon={DoorOpen}
       />
     ) : null;
 
@@ -447,7 +448,7 @@ export function AccommodationRoomsScreen() {
                 availableBeds: room.availableBeds,
                 occupiedBeds: room.occupiedBeds,
               })}
-              iconLabel={room.name.charAt(0).toUpperCase()}
+              hierarchyLevel="room"
               editableName={showFab}
               onSaveName={async name => {
                 await renameRoomName(spaceId, room.roomId, name);

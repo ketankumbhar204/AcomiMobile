@@ -5,17 +5,17 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
-  TextInput,
   View,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { BedDouble, BedSingle } from 'lucide-react-native';
 import type { AccommodationStatus, BedSpaceListItemResponse, SpaceType, UUID } from '../../api/types';
-import { EmptyState, SkeletonCard } from '../ui';
+import { EmptyState, ListSearchBar, SkeletonCard } from '../ui';
 import { useBuildings } from '../../hooks/useBuildings';
 import { useSpaceBedSearch } from '../../hooks/useSpaceBedSearch';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import {
   groupBedsForInventoryBrowse,
   type BedInventoryListGroup,
@@ -174,13 +174,22 @@ export function BedInventoryBrowser({
 
   const summaryBlock =
     showSummary && !beds.loading && beds.items.length > 0 ? (
-      <View style={styles.summary}>
-        <Text style={styles.summaryPrimary}>
-          {status === 'AVAILABLE'
-            ? t('dashboard.drilldown.showingAvailableBeds', { count: beds.items.length })
-            : t('dashboard.drilldown.showingBeds', { count: beds.items.length })}
-        </Text>
-        <Text style={styles.summaryScope}>{summaryScope}</Text>
+      <View style={styles.summaryCard}>
+        <View style={styles.summaryIcon}>
+          {status === 'AVAILABLE' ? (
+            <BedSingle size={16} color={colors.primaryDark} strokeWidth={2.2} />
+          ) : (
+            <BedDouble size={16} color={colors.primaryDark} strokeWidth={2.2} />
+          )}
+        </View>
+        <View style={styles.summaryText}>
+          <Text style={styles.summaryPrimary}>
+            {status === 'AVAILABLE'
+              ? t('dashboard.drilldown.showingAvailableBeds', { count: beds.items.length })
+              : t('dashboard.drilldown.showingBeds', { count: beds.items.length })}
+          </Text>
+          <Text style={styles.summaryScope}>{summaryScope}</Text>
+        </View>
       </View>
     ) : null;
 
@@ -196,14 +205,10 @@ export function BedInventoryBrowser({
         overlayHostRef={overlayHostRef}
         onOverlayLayoutChange={setFilterOverlayLayout}
       />
-      <TextInput
-        style={styles.searchInput}
+      <ListSearchBar
         value={searchQuery}
         onChangeText={setSearchQuery}
         placeholder={t('dashboard.drilldown.searchBeds')}
-        placeholderTextColor={colors.muted}
-        autoCorrect={false}
-        clearButtonMode="while-editing"
       />
     </>
   );
@@ -240,10 +245,22 @@ export function BedInventoryBrowser({
       return <SkeletonCard />;
     }
     if (beds.error) {
-      return <EmptyState title={t('common.errors.generic')} description={beds.error} />;
+      return (
+        <EmptyState
+          Icon={BedDouble}
+          title={t('common.errors.generic')}
+          description={beds.error}
+        />
+      );
     }
-    return <EmptyState title={empty.title} description={empty.description} />;
-  }, [beds.error, beds.items.length, beds.loading, empty.description, empty.title, t]);
+    return (
+      <EmptyState
+        Icon={status === 'AVAILABLE' ? BedSingle : BedDouble}
+        title={empty.title}
+        description={empty.description}
+      />
+    );
+  }, [beds.error, beds.items.length, beds.loading, empty.description, empty.title, status, t]);
 
   if (unifiedScroll) {
     return (
@@ -293,11 +310,19 @@ export function BedInventoryBrowser({
       {beds.loading && beds.items.length === 0 ? (
         <SkeletonCard />
       ) : beds.error ? (
-        <EmptyState title={t('common.errors.generic')} description={beds.error} />
+        <EmptyState
+          Icon={BedDouble}
+          title={t('common.errors.generic')}
+          description={beds.error}
+        />
       ) : inventoryGroups.length === 0 ? (
         <>
           {listHeader}
-          <EmptyState title={empty.title} description={empty.description} />
+          <EmptyState
+            Icon={status === 'AVAILABLE' ? BedSingle : BedDouble}
+            title={empty.title}
+            description={empty.description}
+          />
         </>
       ) : (
         <FlatList
@@ -356,21 +381,30 @@ const styles = StyleSheet.create({
   subtitleCompact: {
     paddingTop: 0,
   },
-  searchInput: {
-    minHeight: 44,
+  summaryCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
     backgroundColor: colors.white,
-    borderRadius: radius.input,
+    borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    ...typography.body,
-    color: colors.textPrimary,
-    marginTop: spacing.xs,
-    marginBottom: spacing.sm,
+    ...shadows.sm,
   },
-  summary: {
-    marginBottom: spacing.md,
+  summaryIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.button,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.lightGreen,
+  },
+  summaryText: {
+    flex: 1,
+    minWidth: 0,
     gap: spacing.xxs,
   },
   summaryPrimary: {

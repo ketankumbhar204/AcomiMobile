@@ -8,6 +8,7 @@ import {
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { BookOpen, FolderOpen, PlusCircle, UtensilsCrossed } from 'lucide-react-native';
 import { mealsApi } from '../../api/mealsApi';
 import type { FoodCategoryResponse, FoodItemResponse, FoodType, MealComboResponse, UUID } from '../../api/types';
 import {
@@ -15,11 +16,14 @@ import {
   ComboChipRail,
   ComboPreviewBar,
   ItemChipGrid,
+  MealFormHero,
   MenuLibraryTabBar,
   type MenuLibraryTab,
 } from '../../components/meals';
 import { ConfigureLibraryExtrasSheet } from '../../components/meals/ConfigureLibraryExtrasSheet';
-import { PermissionDeniedScreen } from '../../components/ui';
+import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
+import { DashboardActionRow } from '../../components/dashboard/shared/DashboardActionRow';
+import { EmptyState, PermissionDeniedScreen } from '../../components/ui';
 import { Screen } from '../../components/ui/Screen';
 import { useMenuLibrary } from '../../hooks/useMenuLibrary';
 import { useMainStackNavigation } from '../../hooks/useMainStackNavigation';
@@ -27,7 +31,7 @@ import { useMealPricingPolicy } from '../../hooks/useMealPricingPolicy';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList, SpaceTabParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
-import { colors, spacing, typography } from '../../theme';
+import { colors, shadows, spacing, typography } from '../../theme';
 
 type MenuLibraryScreenProps = {
   spaceId: UUID;
@@ -349,8 +353,15 @@ export function MenuLibraryScreen({ spaceId, initialTab }: MenuLibraryScreenProp
   return (
     <>
     <Screen scrollable contentStyle={styles.content}>
-      <Text style={styles.title}>{t('meals.library.title')}</Text>
-      <Text style={styles.subtitle}>{t('meals.library.subtitle')}</Text>
+      <MealFormHero
+        icon={BookOpen}
+        accent="#0D9488"
+        soft="#F0FDFA"
+        border="#99F6E4"
+        eyebrow={t('meals.library.setupSteps')}
+        heading={t('meals.library.title')}
+        subheading={t('meals.library.subtitle')}
+      />
 
       {loading ? <ActivityIndicator color={colors.primary} style={styles.loader} /> : null}
 
@@ -381,6 +392,10 @@ export function MenuLibraryScreen({ spaceId, initialTab }: MenuLibraryScreenProp
 
       {!loading && !loadFailed && activeTab === 'items' && (activeCategories.length > 0 || canManage) ? (
         <>
+          <DashboardSectionTitle
+            title={t('meals.library.categories')}
+            subtitle={t('meals.library.categoriesHint')}
+          />
           <CategoryChipRail
             categories={activeCategories}
             selectedCategoryId={selectedCategoryId}
@@ -432,11 +447,18 @@ export function MenuLibraryScreen({ spaceId, initialTab }: MenuLibraryScreenProp
       ) : null}
 
       {!loading && !loadFailed && activeTab === 'items' && activeCategories.length === 0 && !canManage ? (
-        <Text style={styles.empty}>{t('meals.library.categoriesEmpty')}</Text>
+        <EmptyState
+          title={t('meals.library.categoriesEmpty')}
+          Icon={FolderOpen}
+        />
       ) : null}
 
       {!loading && !loadFailed && activeTab === 'combos' ? (
         <>
+          <DashboardSectionTitle
+            title={t('meals.library.combos')}
+            subtitle={t('meals.library.combosHint')}
+          />
           <ComboChipRail
             combos={activeCombos}
             selectedComboId={selectedComboId}
@@ -462,12 +484,18 @@ export function MenuLibraryScreen({ spaceId, initialTab }: MenuLibraryScreenProp
 
       {!loading && !loadFailed && showExtrasTab && activeTab === 'extras' ? (
         <>
-          <Text style={styles.extrasHint}>{t('meals.library.extrasTabHint')}</Text>
+          <DashboardSectionTitle
+            title={t('meals.library.tabExtras')}
+            subtitle={t('meals.library.extrasTabHint')}
+          />
 
           {stats.extraCount === 0 ? (
-            <View style={styles.extrasEmptyCard}>
-              <Text style={styles.extrasEmptyTitle}>{t('meals.library.extrasEmpty')}</Text>
-              <Text style={styles.extrasEmptyBody}>{t('meals.library.extrasEmptyBody')}</Text>
+            <>
+              <EmptyState
+                title={t('meals.library.extrasEmpty')}
+                description={t('meals.library.extrasEmptyBody')}
+                Icon={PlusCircle}
+              />
               {canManage ? (
                 <Pressable
                   style={styles.configureExtrasButton}
@@ -478,7 +506,7 @@ export function MenuLibraryScreen({ spaceId, initialTab }: MenuLibraryScreenProp
                   </Text>
                 </Pressable>
               ) : null}
-            </View>
+            </>
           ) : (
             <>
               {canManage ? (
@@ -531,11 +559,12 @@ export function MenuLibraryScreen({ spaceId, initialTab }: MenuLibraryScreenProp
 
       {canManage ? (
         <View style={styles.links}>
-          <Pressable
-            style={styles.linkRow}
-            onPress={() => navigateMain('SubscriptionPlans', { spaceId })}>
-            <Text style={styles.linkText}>{t('meals.subscriptionPlans.title')}</Text>
-          </Pressable>
+          <DashboardActionRow
+            icon={UtensilsCrossed}
+            accent="#0D9488"
+            title={t('meals.subscriptionPlans.title')}
+            onPress={() => navigateMain('SubscriptionPlans', { spaceId })}
+          />
         </View>
       ) : null}
 
@@ -558,21 +587,16 @@ export function MenuLibraryScreen({ spaceId, initialTab }: MenuLibraryScreenProp
 
 const styles = StyleSheet.create({
   content: { paddingBottom: spacing.section },
-  title: { ...typography.h2, marginBottom: spacing.xxs },
-  subtitle: {
-    ...typography.caption,
-    color: colors.muted,
-    marginBottom: spacing.sm,
-  },
   loader: { marginBottom: spacing.sm },
   banner: {
     backgroundColor: colors.white,
-    borderRadius: 12,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.md,
+    padding: spacing.lg,
     marginBottom: spacing.md,
     gap: spacing.xxs,
+    ...shadows.sm,
   },
   bannerTitle: { ...typography.bodyStrong },
   bannerBody: { ...typography.caption, color: colors.muted },
@@ -581,33 +605,6 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontWeight: '600',
     marginBottom: spacing.md,
-  },
-  empty: {
-    ...typography.body,
-    color: colors.muted,
-    textAlign: 'center',
-    marginVertical: spacing.md,
-  },
-  extrasHint: {
-    ...typography.caption,
-    color: colors.muted,
-    marginBottom: spacing.sm,
-  },
-  extrasEmptyCard: {
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    gap: spacing.sm,
-  },
-  extrasEmptyTitle: {
-    ...typography.bodyStrong,
-  },
-  extrasEmptyBody: {
-    ...typography.caption,
-    color: colors.muted,
   },
   configureExtrasButton: {
     marginTop: spacing.xs,
@@ -642,13 +639,5 @@ const styles = StyleSheet.create({
   links: {
     marginTop: spacing.md,
     gap: spacing.xxs,
-  },
-  linkRow: {
-    paddingVertical: spacing.sm,
-  },
-  linkText: {
-    ...typography.body,
-    color: colors.primaryDark,
-    fontWeight: '600',
   },
 });

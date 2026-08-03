@@ -3,6 +3,7 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,6 +16,19 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import {
+  Building2,
+  CalendarClock,
+  MapPin,
+  Phone,
+  Settings2,
+  ShieldCheck,
+  Sparkles,
+  Tag,
+  Trash2,
+  UtensilsCrossed,
+  type LucideIcon,
+} from 'lucide-react-native';
 import { formatSpaceType } from '../api';
 import { mealBillingApi } from '../api/mealBillingApi';
 import { mealPollClosingApi } from '../api/mealPollClosingApi';
@@ -25,7 +39,8 @@ import type {
   SpaceType,
 } from '../api/types';
 import { StickyFormActions } from '../components/progressive';
-import { Button, Card, FormInput, HeaderBackButton, ListFilterChips, useConfirmDialog } from '../components/ui';
+import { FormInput, HeaderBackButton, ListFilterChips, useConfirmDialog } from '../components/ui';
+import { MealFormHero } from '../components/meals/MealFormHero';
 import type { ListFilterChipOption } from '../components/ui/ListFilterChips';
 import {
   MealBillingSettingsSection,
@@ -44,7 +59,7 @@ import { supportsSpacePropertyCategory } from '../utils/spacePropertyCategory';
 import { useAuthenticatedUserId } from '../hooks/useAuth';
 import type { MainStackParamList } from '../navigation/types';
 import { useSpaceStore } from '../store/spaceStore';
-import { colors, spacing, typography } from '../theme';
+import { colors, radius, shadows, spacing, typography } from '../theme';
 import { isSpaceOwner } from '../utils/spaceOwnership';
 
 type EditSpaceNav = NativeStackNavigationProp<MainStackParamList, 'EditSpace'>;
@@ -53,6 +68,35 @@ type EditSpaceRoute = NativeStackScreenProps<MainStackParamList, 'EditSpace'>['r
 type FieldErrors = {
   name?: string;
 };
+
+function EditSectionCard({
+  icon: Icon,
+  title,
+  helper,
+  accent = colors.primaryDark,
+  children,
+}: {
+  icon: LucideIcon;
+  title: string;
+  helper?: string;
+  accent?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <View style={styles.sectionCard}>
+      <View style={styles.sectionHeader}>
+        <View style={[styles.sectionIcon, { backgroundColor: `${accent}14` }]}>
+          <Icon size={15} color={accent} strokeWidth={2.2} />
+        </View>
+        <View style={styles.sectionHeaderText}>
+          <Text style={styles.sectionTitle}>{title}</Text>
+          {helper ? <Text style={styles.sectionHelper}>{helper}</Text> : null}
+        </View>
+      </View>
+      {children}
+    </View>
+  );
+}
 
 const DEFAULT_BILLING: MealBillingSettingsFormValues = {
   billingType: 'PAY_PER_MEAL',
@@ -337,9 +381,13 @@ export function EditSpaceScreen() {
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}>
-            <Text style={styles.eyebrow}>{t('spaces.editSpace.eyebrow')}</Text>
-            <Text style={styles.heading}>{t('spaces.editSpace.heading')}</Text>
-            <Text style={styles.subheading}>{t('spaces.editSpace.subheading')}</Text>
+            <MealFormHero
+              icon={Settings2}
+              eyebrow={t('spaces.editSpace.eyebrow')}
+              heading={t('spaces.editSpace.heading')}
+              subheading={t('spaces.editSpace.subheading')}
+              compact
+            />
 
             {error ? (
               <View style={styles.errorBanner}>
@@ -359,88 +407,144 @@ export function EditSpaceScreen() {
 
             {activeTab === 'general' ? (
               <>
-                <FormInput
-                  label={t('spaces.createSpace.nameLabel')}
-                  placeholder={t('spaces.createSpace.namePlaceholder')}
-                  value={name}
-                  onChangeText={text => {
-                    setName(text);
-                    if (fieldErrors.name) {
-                      setFieldErrors({});
-                    }
-                  }}
-                  error={fieldErrors.name}
-                  autoCapitalize="words"
-                  returnKeyType="next"
-                />
+                <EditSectionCard
+                  icon={Building2}
+                  title={t('spaces.details.generalInfo', {
+                    defaultValue: 'General information',
+                  })}
+                  helper={t('spaces.editSpace.generalHelper', {
+                    defaultValue: 'Basic details shown across the space.',
+                  })}>
+                  <FormInput
+                    label={t('spaces.createSpace.nameLabel')}
+                    placeholder={t('spaces.createSpace.namePlaceholder')}
+                    value={name}
+                    onChangeText={text => {
+                      setName(text);
+                      if (fieldErrors.name) {
+                        setFieldErrors({});
+                      }
+                    }}
+                    error={fieldErrors.name}
+                    autoCapitalize="words"
+                    returnKeyType="next"
+                    leadingIcon={Building2}
+                  />
 
-                <FormInput
-                  label={t('spaces.createSpace.addressLabel')}
-                  placeholder={t('spaces.createSpace.addressPlaceholder')}
-                  value={address}
-                  onChangeText={setAddress}
-                  autoCapitalize="sentences"
-                  returnKeyType="next"
-                />
+                  <View style={styles.readOnlyRow}>
+                    <View style={styles.readOnlyIcon}>
+                      <Tag size={16} color={colors.primaryDark} strokeWidth={2.2} />
+                    </View>
+                    <View style={styles.readOnlyText}>
+                      <Text style={styles.readOnlyLabel}>
+                        {t('spaces.editSpace.typeLabel')}
+                      </Text>
+                      <Text style={styles.readOnlyValue}>{typeLabel || '—'}</Text>
+                    </View>
+                  </View>
+                </EditSectionCard>
 
-                <FormInput
-                  label={t('spaces.createSpace.contactLabel')}
-                  placeholder={t('spaces.createSpace.contactPlaceholder')}
-                  value={contactNumber}
-                  onChangeText={setContactNumber}
-                  keyboardType="phone-pad"
-                  returnKeyType="done"
-                  maxLength={15}
-                />
+                <EditSectionCard
+                  icon={MapPin}
+                  title={t('spaces.details.contactInfo', {
+                    defaultValue: 'Contact information',
+                  })}
+                  helper={t('spaces.editSpace.contactHelper', {
+                    defaultValue: 'How residents and staff can reach this space.',
+                  })}>
+                  <FormInput
+                    label={t('spaces.createSpace.addressLabel')}
+                    placeholder={t('spaces.createSpace.addressPlaceholder')}
+                    value={address}
+                    onChangeText={setAddress}
+                    autoCapitalize="sentences"
+                    returnKeyType="next"
+                    leadingIcon={MapPin}
+                  />
 
-                <Card style={styles.readOnlyCard}>
-                  <Text style={styles.readOnlyLabel}>{t('spaces.editSpace.typeLabel')}</Text>
-                  <Text style={styles.readOnlyValue}>{typeLabel || '—'}</Text>
-                </Card>
+                  <FormInput
+                    label={t('spaces.createSpace.contactLabel')}
+                    placeholder={t('spaces.createSpace.contactPlaceholder')}
+                    value={contactNumber}
+                    onChangeText={setContactNumber}
+                    keyboardType="phone-pad"
+                    returnKeyType="done"
+                    maxLength={15}
+                    leadingIcon={Phone}
+                  />
+                </EditSectionCard>
 
                 {showPropertyCategory && spaceType ? (
-                  <SpacePropertyCategoryPicker
-                    spaceType={spaceType as SpaceType}
-                    value={genderPolicy}
-                    onChange={setGenderPolicy}
-                  />
+                  <EditSectionCard
+                    icon={ShieldCheck}
+                    title={t('spaces.editSpace.rulesTitle', {
+                      defaultValue: 'Rules & policy',
+                    })}>
+                    <SpacePropertyCategoryPicker
+                      spaceType={spaceType as SpaceType}
+                      value={genderPolicy}
+                      onChange={setGenderPolicy}
+                    />
+                  </EditSectionCard>
                 ) : null}
 
                 {showAmenities ? (
-                  <SpaceAmenitiesField
-                    value={amenities}
-                    onChange={setAmenities}
-                    disabled={isSubmitting || isLoading}
-                  />
+                  <EditSectionCard
+                    icon={Sparkles}
+                    title={t('spaces.amenities.title')}
+                    helper={t('spaces.amenities.hint')}>
+                    <SpaceAmenitiesField
+                      value={amenities}
+                      onChange={setAmenities}
+                      disabled={isSubmitting || isLoading}
+                    />
+                  </EditSectionCard>
                 ) : null}
               </>
             ) : null}
 
             {activeTab === 'meals' && showMealsTab ? (
-              <MealBillingSettingsSection
-                values={billingValues}
-                onChange={setBillingValues}
-                disabled={isSubmitting || isLoading}
-              />
+              <EditSectionCard
+                icon={UtensilsCrossed}
+                title={t('spaces.mealBilling.title')}
+                accent="#C2410C">
+                <MealBillingSettingsSection
+                  values={billingValues}
+                  onChange={setBillingValues}
+                  disabled={isSubmitting || isLoading}
+                />
+              </EditSectionCard>
             ) : null}
 
             {activeTab === 'polls' && showPollsTab ? (
-              <PollClosingDefaultsSection
-                values={pollClosingValues}
-                onChange={setPollClosingValues}
-                disabled={isSubmitting || isLoading}
-              />
+              <EditSectionCard
+                icon={CalendarClock}
+                title={t('progressiveWorkflow.editSpace.tabPolls')}
+                accent="#7C3AED">
+                <PollClosingDefaultsSection
+                  values={pollClosingValues}
+                  onChange={setPollClosingValues}
+                  disabled={isSubmitting || isLoading}
+                />
+              </EditSectionCard>
             ) : null}
 
             {owner ? (
-              <Button
-                label={t('spaces.details.deactivate')}
-                variant="ghost"
+              <Pressable
                 onPress={() => confirmDeactivate(spaceId, name)}
-                loading={isDeactivating}
                 disabled={isSubmitting || isLoading || isDeactivating}
-                style={styles.deactivateButton}
-              />
+                style={({ pressed }) => [
+                  styles.deactivate,
+                  pressed && styles.deactivatePressed,
+                  (isSubmitting || isLoading || isDeactivating) && styles.deactivateDisabled,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={t('spaces.details.deactivate')}>
+                <Trash2 size={16} color="#DC2626" strokeWidth={2.2} />
+                <Text style={styles.deactivateText}>
+                  {t('spaces.details.deactivate')}
+                </Text>
+              </Pressable>
             ) : null}
           </ScrollView>
 
@@ -473,49 +577,115 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   content: {
-    padding: spacing.xxl,
+    padding: spacing.lg,
     paddingBottom: spacing.xl,
+    gap: spacing.md,
   },
   tabWrap: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xs,
   },
-  eyebrow: {
-    ...typography.eyebrow,
-    marginBottom: spacing.sm,
+  sectionCard: {
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    gap: spacing.md,
+    ...shadows.sm,
   },
-  heading: {
-    ...typography.h1,
-    marginBottom: spacing.sm,
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
-  subheading: {
-    ...typography.body,
-    marginBottom: spacing.xxl,
+  sectionIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionHeaderText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  sectionTitle: {
+    ...typography.h3,
+    fontSize: 16,
+    lineHeight: 20,
+    fontWeight: '700',
+  },
+  sectionHelper: {
+    ...typography.caption,
+    fontSize: 12,
+    color: colors.muted,
   },
   errorBanner: {
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FECACA',
-    borderRadius: 12,
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
+    borderRadius: radius.card,
+    padding: spacing.md,
   },
   errorBannerText: {
     ...typography.body,
     color: '#DC2626',
   },
-  readOnlyCard: {
-    marginBottom: spacing.lg,
+  readOnlyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.input,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+  },
+  readOnlyIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.sm,
+    backgroundColor: colors.lightGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  readOnlyText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
   readOnlyLabel: {
     ...typography.caption,
+    fontSize: 12,
     color: colors.muted,
-    marginBottom: spacing.xs,
+    fontWeight: '600',
   },
   readOnlyValue: {
     ...typography.bodyStrong,
+    fontSize: 15,
   },
-  deactivateButton: {
+  deactivate: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+    paddingVertical: spacing.md,
+    borderRadius: radius.button,
+    borderWidth: 1,
     borderColor: '#FECACA',
-    marginTop: spacing.lg,
+    backgroundColor: '#FEF2F2',
+  },
+  deactivatePressed: {
+    opacity: 0.85,
+  },
+  deactivateDisabled: {
+    opacity: 0.6,
+  },
+  deactivateText: {
+    ...typography.bodyStrong,
+    color: '#DC2626',
+    fontWeight: '700',
   },
 });

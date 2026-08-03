@@ -1,17 +1,19 @@
 import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type {
   NativeStackNavigationProp,
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { AlertTriangle, History } from 'lucide-react-native';
 import { mealBalanceApi } from '../api/mealBalanceApi';
 import type { MemberMealBalanceActivityEvent, MemberSubscriptionLifetimeSummary } from '../api/types';
+import { DashboardSectionTitle } from '../components/dashboard/DashboardSectionTitle';
 import { MemberSubscriptionHistoryList } from '../components/meals/MemberSubscriptionHistoryList';
 import { MemberSubscriptionHistorySummary } from '../components/meals/MemberSubscriptionHistorySummary';
 import { SubscriptionHistoryFilterDrawer } from '../components/meals/SubscriptionHistoryFilterDrawer';
-import { HeaderBackButton, ListSearchFilterBar, Screen, SkeletonCard } from '../components/ui';
+import { EmptyState, HeaderBackButton, ListSearchFilterBar, Screen, SkeletonCard } from '../components/ui';
 import type { MainStackParamList } from '../navigation/types';
 import { colors, spacing, typography } from '../theme';
 import {
@@ -63,6 +65,8 @@ export function MemberSubscriptionHistoryScreen() {
   );
 
   const activeFilterCount = countSubscriptionHistoryFilters(filters);
+  const isFilteredEmpty = events.length > 0 && filteredEvents.length === 0;
+  const isTrulyEmpty = !loading && !error && events.length === 0;
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -81,7 +85,10 @@ export function MemberSubscriptionHistoryScreen() {
   return (
     <Screen contentStyle={styles.content}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator>
-        <Text style={styles.subtitle}>{t('meals.subscription.historySubtitle')}</Text>
+        <DashboardSectionTitle
+          title={t('meals.subscription.historyTitle')}
+          subtitle={t('meals.subscription.historySubtitle')}
+        />
 
         {!loading && !error ? (
           <ListSearchFilterBar
@@ -101,20 +108,44 @@ export function MemberSubscriptionHistoryScreen() {
           onApply={setFilters}
         />
 
-        {error ? <Text style={styles.error}>{t('meals.errors.loadFailed')}</Text> : null}
-        {loading && events.length === 0 && !summary ? (
-          <SkeletonCard />
+        {error ? (
+          <View style={styles.errorBanner}>
+            <AlertTriangle size={16} color="#DC2626" strokeWidth={2.2} />
+            <Text style={styles.errorBannerText}>{t('meals.errors.loadFailed')}</Text>
+            <Pressable
+              onPress={() => {
+                load().catch(() => undefined);
+              }}
+              hitSlop={8}
+              style={({ pressed }) => [styles.retryButton, pressed && styles.retryPressed]}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.retry')}>
+              <Text style={styles.retryText}>{t('common.retry')}</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {loading ? (
+          <>
+            <SkeletonCard />
+            <View style={styles.gap} />
+            <SkeletonCard />
+            <View style={styles.gap} />
+            <SkeletonCard />
+          </>
+        ) : isTrulyEmpty ? (
+          <EmptyState
+            title={t('meals.subscription.historyEmpty')}
+            Icon={History}
+          />
+        ) : isFilteredEmpty ? (
+          <EmptyState title={t('list.emptyFiltered')} Icon={History} />
         ) : (
           <>
             <MemberSubscriptionHistorySummary summary={summary} />
             <MemberSubscriptionHistoryList
               events={filteredEvents}
-              loading={loading}
-              emptyKey={
-                events.length > 0 && filteredEvents.length === 0
-                  ? 'list.emptyFiltered'
-                  : undefined
-              }
+              loading={false}
             />
           </>
         )}
@@ -128,17 +159,45 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scroll: {
-    padding: spacing.md,
+    padding: spacing.lg,
     gap: spacing.sm,
     paddingBottom: spacing.xl,
   },
-  subtitle: {
-    ...typography.caption,
-    color: colors.muted,
-    lineHeight: 18,
+  gap: {
+    height: spacing.sm,
   },
-  error: {
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 14,
+    padding: spacing.md,
+  },
+  errorBannerText: {
+    ...typography.body,
+    fontSize: 14,
+    color: '#DC2626',
+    flex: 1,
+  },
+  retryButton: {
+    minHeight: 32,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    backgroundColor: colors.white,
+  },
+  retryPressed: {
+    backgroundColor: '#FEE2E2',
+  },
+  retryText: {
     ...typography.caption,
-    color: '#B91C1C',
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#DC2626',
   },
 });

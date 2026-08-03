@@ -74,7 +74,7 @@ export function GlobalAttentionCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: colors.warningTint,
     borderRadius: radius.card,
     borderWidth: 1.5,
     borderColor: '#F59E0B',

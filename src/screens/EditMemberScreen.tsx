@@ -17,6 +17,7 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { Pencil, Phone, User } from 'lucide-react-native';
 import { mealBalanceApi } from '../api/mealBalanceApi';
 import { mealBillingApi } from '../api/mealBillingApi';
 import type { MealBillingType, MemberGender, MembershipRole, PrepaidBalanceUnit } from '../api/types';
@@ -27,15 +28,16 @@ import {
 import { MemberSubscriptionSetupFields } from '../components/member/MemberSubscriptionSetupFields';
 import {
   ProgressiveWorkflowFooter,
+  StickyFormActions,
   progressiveSectionHighlightStyle,
 } from '../components/progressive';
-import { Button, FormInput, GenderPicker, HeaderBackButton, RolePicker } from '../components/ui';
+import { FormInput, GenderPicker, HeaderBackButton, RolePicker } from '../components/ui';
 import { useProgressiveSectionReview } from '../hooks/useProgressiveSectionReview';
 import type { MainStackParamList } from '../navigation/types';
 import { useMemberStore } from '../store/memberStore';
 import { useSpaceStore } from '../store/spaceStore';
 import { useToastStore } from '../store/toastStore';
-import { colors, radius, spacing, typography } from '../theme';
+import { colors, radius, shadows, spacing, typography } from '../theme';
 import { isRoleAssignableInSpace } from '../utils/memberRoles';
 import { isMemberGenderRequired, isSelectableMemberGender } from '../utils/memberGender';
 import { isValidIndianMobile, normalizeIndianMobileDigits } from '../utils/indianMobile';
@@ -236,9 +238,16 @@ export function EditMemberScreen() {
             scrollEventThrottle={16}
             onScrollBeginDrag={messProgressiveEnabled ? onMealsScrollBeginDrag : undefined}
             onScroll={messProgressiveEnabled ? handleScroll : undefined}>
-            <Text style={styles.eyebrow}>{t('membership.edit.eyebrow')}</Text>
-            <Text style={styles.heading}>{t('membership.edit.heading')}</Text>
-            <Text style={styles.subheading}>{t('membership.edit.subheading')}</Text>
+            <View style={styles.hero}>
+              <View style={styles.decorBlob} pointerEvents="none" />
+              <View style={styles.decorRing} pointerEvents="none" />
+              <View style={styles.heroIconWrap} accessibilityElementsHidden>
+                <Pencil size={18} color={colors.primaryDark} strokeWidth={2.2} />
+              </View>
+              <Text style={styles.eyebrow}>{t('membership.edit.eyebrow')}</Text>
+              <Text style={styles.heading}>{t('membership.edit.heading')}</Text>
+              <Text style={styles.subheading}>{t('membership.edit.subheading')}</Text>
+            </View>
 
             {storeError ? (
               <View style={styles.errorBanner}>
@@ -259,6 +268,7 @@ export function EditMemberScreen() {
               error={fieldErrors.fullName}
               autoCapitalize="words"
               returnKeyType="next"
+              leadingIcon={User}
             />
 
             <FormInput
@@ -275,6 +285,7 @@ export function EditMemberScreen() {
               keyboardType="phone-pad"
               returnKeyType="done"
               maxLength={15}
+              leadingIcon={Phone}
             />
 
             <RolePicker
@@ -349,24 +360,23 @@ export function EditMemberScreen() {
               </View>
             ) : null}
 
-            {!messProgressiveEnabled ? (
-              <View style={styles.footer}>
-                <Button
-                  label={t('membership.edit.save')}
-                  onPress={handleSave}
-                  loading={isSubmitting || loading}
-                  disabled={isSubmitting || loading}
-                />
-                <Button
-                  label={t('common.cancel')}
-                  variant="ghost"
-                  onPress={() => navigation.goBack()}
-                  disabled={isSubmitting || loading}
-                  style={styles.cancelButton}
-                />
-              </View>
-            ) : null}
           </ScrollView>
+
+          {!messProgressiveEnabled ? (
+            <StickyFormActions
+              primary={{
+                label: t('membership.edit.save'),
+                onPress: handleSave,
+                loading: isSubmitting || loading,
+                disabled: isSubmitting || loading,
+              }}
+              secondary={{
+                label: t('common.cancel'),
+                onPress: () => navigation.goBack(),
+                disabled: isSubmitting || loading,
+              }}
+            />
+          ) : null}
 
           {messProgressiveEnabled ? (
             <ProgressiveWorkflowFooter
@@ -414,31 +424,83 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   content: {
-    padding: spacing.xxl,
-    paddingBottom: spacing.section,
+    padding: spacing.lg,
+    paddingBottom: spacing.xxl,
+  },
+  hero: {
+    marginBottom: spacing.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.section,
+    backgroundColor: colors.successTint,
+    borderWidth: 1,
+    borderColor: `${colors.primary}33`,
+    overflow: 'hidden',
+    position: 'relative',
+    ...shadows.sm,
+  },
+  decorBlob: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: `${colors.primary}1F`,
+    top: -48,
+    right: -28,
+  },
+  decorRing: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 8,
+    borderColor: `${colors.primary}14`,
+    bottom: -16,
+    right: 40,
+  },
+  heroIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.sm,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: `${colors.primary}33`,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+    zIndex: 1,
   },
   eyebrow: {
     ...typography.eyebrow,
-    marginBottom: spacing.sm,
+    marginBottom: 2,
+    zIndex: 1,
   },
   heading: {
-    ...typography.h1,
-    marginBottom: spacing.sm,
+    ...typography.h2,
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: '600',
+    color: colors.primaryDark,
+    marginBottom: 2,
+    zIndex: 1,
   },
   subheading: {
-    ...typography.body,
-    marginBottom: spacing.xxl,
+    ...typography.caption,
+    fontSize: 12,
+    color: colors.muted,
+    zIndex: 1,
   },
   errorBanner: {
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FECACA',
-    borderRadius: 12,
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
+    borderRadius: radius.button,
+    padding: spacing.md,
+    marginBottom: spacing.md,
   },
   errorBannerText: {
     ...typography.body,
+    fontSize: 14,
     color: '#DC2626',
   },
   mealsSection: {
@@ -449,12 +511,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: radius.card,
     padding: spacing.sm,
-  },
-  footer: {
-    marginTop: spacing.xl,
-    gap: spacing.md,
-  },
-  cancelButton: {
-    marginTop: spacing.xs,
   },
 });

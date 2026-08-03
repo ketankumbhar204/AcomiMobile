@@ -3,8 +3,10 @@ import { StyleSheet } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { BedDouble, BedSingle } from 'lucide-react-native';
 import type { AccommodationStatus, BedSpaceListItemResponse, UUID } from '../../api/types';
 import { BedInventoryBrowser } from '../../components/dashboard/BedInventoryBrowser';
+import { MealFormHero } from '../../components/meals/MealFormHero';
 import { Screen } from '../../components/ui/Screen';
 import { useAccommodationOccupancyFlow } from '../../hooks/useAccommodationOccupancyFlow';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
@@ -95,6 +97,8 @@ export function DashboardBedInventoryScreen() {
     [buildOccupancyContext, occupancyFlow],
   );
 
+  const isVacant = status === 'AVAILABLE';
+
   return (
     <Screen style={styles.screen} contentStyle={styles.content}>
       <BedInventoryBrowser
@@ -107,10 +111,23 @@ export function DashboardBedInventoryScreen() {
         onAllocate={handleAllocate}
         onReserve={handleReserve}
         refreshTrigger={refreshToken}
-        subtitle={
-          status === 'AVAILABLE'
-            ? t('dashboard.drilldown.vacantBedsSubtitle')
-            : t('dashboard.drilldown.occupiedBedsSubtitle')
+        showSubtitle={false}
+        headerAccessory={
+          <MealFormHero
+            icon={isVacant ? BedSingle : BedDouble}
+            eyebrow={t('dashboard.pendingActions.eyebrow', { defaultValue: 'Dashboard' })}
+            heading={
+              isVacant
+                ? t('dashboard.drilldown.vacantBedsTitle')
+                : t('dashboard.drilldown.occupiedBedsTitle')
+            }
+            subheading={
+              isVacant
+                ? t('dashboard.drilldown.vacantBedsSubtitle')
+                : t('dashboard.drilldown.occupiedBedsSubtitle')
+            }
+            compact
+          />
         }
       />
     </Screen>
@@ -123,7 +140,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.xxl,
-    paddingTop: 0,
+    paddingTop: spacing.md,
     flex: 1,
   },
 });

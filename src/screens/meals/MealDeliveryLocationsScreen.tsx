@@ -1,20 +1,32 @@
 import React, { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
   Modal,
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
+import {
+  ChevronDown,
+  ChevronUp,
+  MapPin,
+  Pencil,
+} from 'lucide-react-native';
 import { mealsApi } from '../../api/mealsApi';
 import type { MealDeliveryLocation, UUID } from '../../api/types';
-import { Button, Screen } from '../../components/ui';
+import { MealFormHero } from '../../components/meals/MealFormHero';
+import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
+import {
+  Button,
+  EmptyState,
+  FormInput,
+  Screen,
+  SkeletonCard,
+} from '../../components/ui';
 import { useToastStore } from '../../store/toastStore';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { formatDeliveryLocationSecondary } from '../../utils/deliveryLocationLabel';
 
 type MealDeliveryLocationsScreenProps = {
@@ -143,23 +155,35 @@ export function MealDeliveryLocationsScreen({ spaceId }: MealDeliveryLocationsSc
 
   return (
     <Screen scrollable contentStyle={styles.content}>
-      <Text style={styles.subtitle}>{t('meals.deliveryLocations.subtitle')}</Text>
+      <MealFormHero
+        icon={MapPin}
+        accent="#0D9488"
+        soft="#F0FDFA"
+        border="#99F6E4"
+        eyebrow={t('meals.deliveryLocations.eyebrow', { defaultValue: 'Delivery' })}
+        heading={t('meals.deliveryLocations.title', { defaultValue: 'Delivery locations' })}
+        subheading={t('meals.deliveryLocations.subtitle')}
+      />
 
-      <View style={styles.form}>
-        <TextInput
-          style={styles.input}
+      <View style={styles.formCard}>
+        <Text style={styles.formCardTitle}>
+          {t('meals.deliveryLocations.addSection', { defaultValue: 'Add location' })}
+        </Text>
+        <FormInput
+          label={t('meals.deliveryLocations.nameLabel', { defaultValue: 'Name' })}
           placeholder={t('meals.deliveryLocations.namePlaceholder')}
           value={name}
           onChangeText={setName}
+          leadingIcon={MapPin}
         />
-        <TextInput
-          style={styles.input}
+        <FormInput
+          label={t('meals.deliveryLocations.addressLabel', { defaultValue: 'Address' })}
           placeholder={t('meals.deliveryLocations.addressPlaceholder')}
           value={address}
           onChangeText={setAddress}
         />
-        <TextInput
-          style={[styles.input, styles.inputMultiline]}
+        <FormInput
+          label={t('meals.deliveryLocations.descriptionLabel', { defaultValue: 'Notes' })}
           placeholder={t('meals.deliveryLocations.descriptionPlaceholder')}
           value={description}
           onChangeText={setDescription}
@@ -167,75 +191,136 @@ export function MealDeliveryLocationsScreen({ spaceId }: MealDeliveryLocationsSc
         />
         <Button
           label={t('meals.deliveryLocations.add')}
-          onPress={() => void handleCreate()}
+          onPress={() => {
+            handleCreate().catch(() => undefined);
+          }}
           loading={saving}
           disabled={!name.trim()}
         />
       </View>
 
+      <DashboardSectionTitle
+        title={t('meals.deliveryLocations.listTitle', { defaultValue: 'Locations' })}
+        subtitle={t('meals.deliveryLocations.listSubtitle', {
+          defaultValue: 'Reorder with arrows · tap Edit to update',
+        })}
+      />
+
       {loading ? (
-        <ActivityIndicator color={colors.primary} style={styles.loader} />
+        <View style={styles.skeletonStack}>
+          <SkeletonCard />
+          <SkeletonCard />
+        </View>
       ) : locations.length === 0 ? (
-        <Text style={styles.empty}>{t('meals.deliveryLocations.empty')}</Text>
+        <EmptyState
+          title={t('meals.deliveryLocations.empty')}
+          description={t('meals.deliveryLocations.emptyHint', {
+            defaultValue: 'Add a location above so members can pick delivery points.',
+          })}
+          Icon={MapPin}
+        />
       ) : (
         <View style={styles.list}>
           {locations.map((location, index) => {
             const secondary = formatDeliveryLocationSecondary(location);
             return (
-            <View
-              key={location.id}
-              style={[styles.row, !location.active && styles.rowInactive]}>
-              <View style={styles.rowText}>
-                <Text style={styles.rowName} numberOfLines={1}>
-                  {location.name}
-                </Text>
-                {secondary ? (
-                  <Text style={styles.rowAddress} numberOfLines={2}>
-                    {secondary}
+              <View
+                key={location.id}
+                style={[styles.row, !location.active && styles.rowInactive]}>
+                <View style={styles.iconWell}>
+                  <MapPin size={18} color="#0D9488" strokeWidth={2.2} />
+                </View>
+                <View style={styles.rowText}>
+                  <Text style={styles.rowName} numberOfLines={1}>
+                    {location.name}
                   </Text>
-                ) : null}
+                  {secondary ? (
+                    <Text style={styles.rowAddress} numberOfLines={2}>
+                      {secondary}
+                    </Text>
+                  ) : null}
+                  {!location.active ? (
+                    <View style={styles.inactiveChip}>
+                      <Text style={styles.inactiveChipText}>
+                        {t('meals.deliveryLocations.inactive')}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+                <View style={styles.rowActions}>
+                  <Pressable
+                    onPress={() => {
+                      moveLocation(index, -1).catch(() => undefined);
+                    }}
+                    disabled={saving || index === 0}
+                    hitSlop={8}
+                    style={({ pressed }) => [
+                      styles.iconButton,
+                      (saving || index === 0) && styles.iconButtonDisabled,
+                      pressed && styles.iconButtonPressed,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('common.moveUp', { defaultValue: 'Move up' })}>
+                    <ChevronUp size={16} color={colors.primaryDark} strokeWidth={2.4} />
+                  </Pressable>
+                  <Pressable
+                    onPress={() => {
+                      moveLocation(index, 1).catch(() => undefined);
+                    }}
+                    disabled={saving || index === locations.length - 1}
+                    hitSlop={8}
+                    style={({ pressed }) => [
+                      styles.iconButton,
+                      (saving || index === locations.length - 1) && styles.iconButtonDisabled,
+                      pressed && styles.iconButtonPressed,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('common.moveDown', { defaultValue: 'Move down' })}>
+                    <ChevronDown size={16} color={colors.primaryDark} strokeWidth={2.4} />
+                  </Pressable>
+                  <Pressable
+                    onPress={() => openEdit(location)}
+                    hitSlop={8}
+                    style={({ pressed }) => [
+                      styles.editButton,
+                      pressed && styles.editButtonPressed,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('common.edit')}>
+                    <Pencil size={14} color={colors.primaryDark} strokeWidth={2.4} />
+                    <Text style={styles.editButtonLabel}>{t('common.edit')}</Text>
+                  </Pressable>
+                </View>
               </View>
-              <View style={styles.rowActions}>
-                <Pressable
-                  onPress={() => void moveLocation(index, -1)}
-                  disabled={saving || index === 0}
-                  style={styles.iconButton}>
-                  <Text style={styles.iconButtonLabel}>↑</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => void moveLocation(index, 1)}
-                  disabled={saving || index === locations.length - 1}
-                  style={styles.iconButton}>
-                  <Text style={styles.iconButtonLabel}>↓</Text>
-                </Pressable>
-                <Pressable onPress={() => openEdit(location)} style={styles.editButton}>
-                  <Text style={styles.editButtonLabel}>{t('common.edit')}</Text>
-                </Pressable>
-              </View>
-            </View>
             );
           })}
         </View>
       )}
 
-      <Modal visible={editingLocation != null} transparent animationType="fade">
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalSheet}>
+      <Modal
+        visible={editingLocation != null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEditingLocation(null)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setEditingLocation(null)}>
+          <Pressable style={styles.modalSheet} onPress={e => e.stopPropagation()}>
+            <View style={styles.dragHandle} />
             <Text style={styles.modalTitle}>{t('meals.deliveryLocations.editTitle')}</Text>
-            <TextInput
-              style={styles.input}
+            <FormInput
+              label={t('meals.deliveryLocations.nameLabel', { defaultValue: 'Name' })}
               placeholder={t('meals.deliveryLocations.namePlaceholder')}
               value={editForm.name}
               onChangeText={value => setEditForm(prev => ({ ...prev, name: value }))}
+              leadingIcon={MapPin}
             />
-            <TextInput
-              style={styles.input}
+            <FormInput
+              label={t('meals.deliveryLocations.addressLabel', { defaultValue: 'Address' })}
               placeholder={t('meals.deliveryLocations.addressPlaceholder')}
               value={editForm.address}
               onChangeText={value => setEditForm(prev => ({ ...prev, address: value }))}
             />
-            <TextInput
-              style={[styles.input, styles.inputMultiline]}
+            <FormInput
+              label={t('meals.deliveryLocations.descriptionLabel', { defaultValue: 'Notes' })}
               placeholder={t('meals.deliveryLocations.descriptionPlaceholder')}
               value={editForm.description}
               onChangeText={value => setEditForm(prev => ({ ...prev, description: value }))}
@@ -243,105 +328,218 @@ export function MealDeliveryLocationsScreen({ spaceId }: MealDeliveryLocationsSc
             />
             <Pressable
               onPress={() => setEditForm(prev => ({ ...prev, active: !prev.active }))}
-              style={styles.activeToggle}>
+              style={[
+                styles.activeToggle,
+                !editForm.active && styles.activeToggleOff,
+              ]}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: editForm.active }}>
               <Text style={styles.activeToggleLabel}>
                 {editForm.active
                   ? t('meals.deliveryLocations.active')
                   : t('meals.deliveryLocations.inactive')}
               </Text>
             </Pressable>
-            <Button
-              label={t('common.save')}
-              onPress={() => void handleSaveEdit()}
-              loading={saving}
-              disabled={!editForm.name.trim()}
-            />
-            <Button
-              label={t('common.cancel')}
-              variant="ghost"
-              onPress={() => setEditingLocation(null)}
-              disabled={saving}
-            />
-          </View>
-        </View>
+            <View style={styles.modalActions}>
+              <Button
+                label={t('common.cancel')}
+                variant="ghost"
+                onPress={() => setEditingLocation(null)}
+                disabled={saving}
+                style={styles.modalButton}
+              />
+              <Button
+                label={t('common.save')}
+                onPress={() => {
+                  handleSaveEdit().catch(() => undefined);
+                }}
+                loading={saving}
+                disabled={!editForm.name.trim() || saving}
+                style={styles.modalButton}
+              />
+            </View>
+          </Pressable>
+        </Pressable>
       </Modal>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: spacing.section },
-  subtitle: { ...typography.body, color: colors.muted, marginBottom: spacing.lg, lineHeight: 22 },
-  form: { gap: spacing.sm, marginBottom: spacing.xl },
-  input: {
+  content: {
+    padding: spacing.lg,
+    paddingBottom: spacing.section,
+  },
+  formCard: {
+    backgroundColor: colors.white,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.button,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    ...typography.body,
-    backgroundColor: colors.white,
+    padding: spacing.md,
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+    ...shadows.sm,
   },
-  inputMultiline: { minHeight: 72, textAlignVertical: 'top' },
-  loader: { marginTop: spacing.xl },
-  empty: { ...typography.body, color: colors.muted, marginTop: spacing.lg },
-  list: { gap: spacing.sm },
+  formCardTitle: {
+    ...typography.bodyStrong,
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
+  },
+  skeletonStack: {
+    gap: spacing.md,
+  },
+  list: {
+    gap: spacing.sm,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     gap: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.card,
+    borderRadius: 18,
     padding: spacing.md,
     backgroundColor: colors.white,
+    ...shadows.sm,
   },
-  rowInactive: { opacity: 0.55, backgroundColor: colors.surface },
-  rowText: { flex: 1, gap: spacing.xxs },
-  rowName: { ...typography.bodyStrong },
-  rowAddress: { ...typography.caption, color: colors.primaryDark, fontWeight: '600' },
-  rowDescription: { ...typography.body, color: colors.muted },
-  rowActions: { alignItems: 'flex-end', gap: spacing.xxs },
-  iconButton: {
-    width: 32,
-    height: 32,
+  rowInactive: {
+    opacity: 0.7,
+    backgroundColor: colors.surface,
+  },
+  iconWell: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#F0FDFA',
+    borderWidth: 1,
+    borderColor: '#99F6E4',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowText: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacing.xxs,
+  },
+  rowName: {
+    ...typography.bodyStrong,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  rowAddress: {
+    ...typography.caption,
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  inactiveChip: {
+    alignSelf: 'flex-start',
+    marginTop: spacing.xxs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
     borderRadius: radius.full,
+    backgroundColor: '#F3F4F6',
+  },
+  inactiveChipText: {
+    ...typography.caption,
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.muted,
+  },
+  rowActions: {
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  iconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.white,
   },
-  iconButtonLabel: { ...typography.bodyStrong, color: colors.primaryDark },
+  iconButtonDisabled: {
+    opacity: 0.35,
+  },
+  iconButtonPressed: {
+    backgroundColor: colors.surface,
+  },
   editButton: {
-    paddingVertical: spacing.xxs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    minHeight: 36,
+    paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
-    borderRadius: radius.full,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.primary,
     backgroundColor: colors.lightGreen,
   },
-  editButtonLabel: { ...typography.caption, color: colors.primaryDark, fontWeight: '700' },
+  editButtonPressed: {
+    backgroundColor: colors.surface,
+  },
+  editButtonLabel: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    fontWeight: '700',
+  },
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'center',
-    padding: spacing.lg,
+    justifyContent: 'flex-end',
   },
   modalSheet: {
     backgroundColor: colors.white,
-    borderRadius: radius.card,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     padding: spacing.lg,
+    paddingBottom: spacing.xl,
     gap: spacing.sm,
   },
-  modalTitle: { ...typography.h3, marginBottom: spacing.xs },
+  dragHandle: {
+    alignSelf: 'center',
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.border,
+    marginBottom: spacing.sm,
+  },
+  modalTitle: {
+    ...typography.h2,
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: spacing.xs,
+  },
   activeToggle: {
     alignSelf: 'flex-start',
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
     borderRadius: radius.full,
     backgroundColor: colors.lightGreen,
+    borderWidth: 1,
+    borderColor: `${colors.primary}33`,
+    minHeight: 40,
+    justifyContent: 'center',
   },
-  activeToggleLabel: { ...typography.caption, color: colors.primaryDark, fontWeight: '700' },
+  activeToggleOff: {
+    backgroundColor: '#F3F4F6',
+    borderColor: colors.border,
+  },
+  activeToggleLabel: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    fontWeight: '700',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  modalButton: {
+    flex: 1,
+  },
 });

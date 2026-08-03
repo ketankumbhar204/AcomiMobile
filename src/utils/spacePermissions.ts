@@ -6,6 +6,7 @@ import type {
   UUID,
 } from '../api/types';
 import { isAccommodationApplicable } from './accommodationProfile';
+import { deriveInventoryPermissions } from './inventoryPermissions';
 import { deriveMealPermissions } from './mealPermissions';
 
 /** Local fallback when GET /spaces/my omits the permissions block. */
@@ -30,6 +31,7 @@ export function deriveSpacePermissions(
     canRaiseComplaint: isOwner || isManager || role === 'TENANT' || role === 'CUSTOMER',
     canViewAllComplaints: isOwner || isManager,
     canManageComplaints: isOwner || isManager,
+    ...deriveInventoryPermissions(role),
   };
 }
 
@@ -39,7 +41,18 @@ export function resolveSpacePermissions(
   if (!entry) {
     return deriveSpacePermissions(undefined, undefined);
   }
-  return entry.permissions ?? deriveSpacePermissions(entry.membershipRole, entry.spaceType);
+  const derived = deriveSpacePermissions(entry.membershipRole, entry.spaceType);
+  if (!entry.permissions) {
+    return derived;
+  }
+  // Merge server permissions over local defaults. New client flags (e.g. inventory)
+  // must survive when the API omits them until the backend ships those fields.
+  return {
+    ...derived,
+    ...entry.permissions,
+    canViewInventory: entry.permissions.canViewInventory ?? derived.canViewInventory,
+    canManageInventory: entry.permissions.canManageInventory ?? derived.canManageInventory,
+  };
 }
 
 export function findMySpaceEntry(

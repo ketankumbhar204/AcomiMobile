@@ -15,9 +15,11 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { CircleDollarSign, Hash, Type } from 'lucide-react-native';
 import type { AccommodationStatus } from '../../api/types';
 import { accommodationApi } from '../../api/accommodationApi';
 import {
+  AccommodationFormHero,
   AccommodationStatusPicker,
   PricingAfterCreateHint,
 } from '../../components/accommodation';
@@ -25,7 +27,7 @@ import { FormInput, HeaderBackButton } from '../../components/ui';
 import { StickyFormActions } from '../../components/progressive';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
-import { colors, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'UnitForm'>;
@@ -133,35 +135,68 @@ export function UnitFormScreen() {
           <ScrollView
             style={styles.scroll}
             contentContainerStyle={styles.content}
-            keyboardShouldPersistTaps="handled">
-            {!isEdit ? <PricingAfterCreateHint entityKey="unit" /> : null}
-            <FormInput label={t('accommodation.fields.name')} value={name} onChangeText={setName} error={nameError} />
-            <FormInput
-              label={t('accommodation.units.unitNumberLabel')}
-              value={unitNumber}
-              onChangeText={setUnitNumber}
-              error={unitNumberError}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}>
+            <AccommodationFormHero
+              level="unit"
+              eyebrow={t('accommodation.units.formEyebrow')}
+              heading={
+                isEdit
+                  ? t('accommodation.units.editTitle')
+                  : t('accommodation.units.createTitle')
+              }
+              subheading={
+                isEdit
+                  ? t('accommodation.units.formSubheadingEdit')
+                  : t('accommodation.units.formSubheadingCreate')
+              }
             />
-            {isEdit ? (
-              <AccommodationStatusPicker value={status} onChange={setStatus} error={statusError} />
+
+            {!isEdit ? <PricingAfterCreateHint entityKey="unit" /> : null}
+
+            {submitError ? (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorBannerText}>{submitError}</Text>
+              </View>
             ) : null}
-            {isEdit ? (
-              <>
-                <FormInput
-                  label={t('accommodation.fields.defaultRent')}
-                  value={defaultRent}
-                  onChangeText={setDefaultRent}
-                  keyboardType="numeric"
-                />
-                <FormInput
-                  label={t('accommodation.fields.defaultDeposit')}
-                  value={defaultDeposit}
-                  onChangeText={setDefaultDeposit}
-                  keyboardType="numeric"
-                />
-              </>
-            ) : null}
-            {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
+
+            <View style={styles.formCard}>
+              <FormInput
+                label={t('accommodation.fields.name')}
+                value={name}
+                onChangeText={setName}
+                error={nameError}
+                leadingIcon={Type}
+              />
+              <FormInput
+                label={t('accommodation.units.unitNumberLabel')}
+                value={unitNumber}
+                onChangeText={setUnitNumber}
+                error={unitNumberError}
+                leadingIcon={Hash}
+              />
+              {isEdit ? (
+                <AccommodationStatusPicker value={status} onChange={setStatus} error={statusError} />
+              ) : null}
+              {isEdit ? (
+                <>
+                  <FormInput
+                    label={t('accommodation.fields.defaultRent')}
+                    value={defaultRent}
+                    onChangeText={setDefaultRent}
+                    keyboardType="numeric"
+                    leadingIcon={CircleDollarSign}
+                  />
+                  <FormInput
+                    label={t('accommodation.fields.defaultDeposit')}
+                    value={defaultDeposit}
+                    onChangeText={setDefaultDeposit}
+                    keyboardType="numeric"
+                    leadingIcon={CircleDollarSign}
+                  />
+                </>
+              ) : null}
+            </View>
           </ScrollView>
           <StickyFormActions
             primary={{
@@ -178,7 +213,28 @@ export function UnitFormScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
-  scroll: { flex: 1 },
-  content: { padding: spacing.xxl, paddingBottom: spacing.xl },
-  errorText: { ...typography.body, color: '#DC2626', marginBottom: spacing.md },
+  scroll: { flex: 1, backgroundColor: colors.background },
+  content: { padding: spacing.lg, paddingBottom: spacing.xxl },
+  formCard: {
+    marginBottom: spacing.md,
+    padding: spacing.md,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+    gap: spacing.xs,
+    ...shadows.sm,
+  },
+  errorBanner: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: radius.button,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  errorBannerText: {
+    ...typography.body,
+    color: '#DC2626',
+  },
 });

@@ -14,6 +14,7 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { BedDouble } from 'lucide-react-native';
 import { accommodationApi } from '../../api/accommodationApi';
 import type { BedListItemResponse, RoomResponse } from '../../api/types';
 import {
@@ -445,7 +446,7 @@ export function AccommodationBedsScreen() {
       <EmptyState
         title={t('accommodation.beds.emptyTitle')}
         description={t('accommodation.beds.emptyDescription')}
-        icon="🛌"
+        Icon={BedDouble}
       />
     ) : null;
 

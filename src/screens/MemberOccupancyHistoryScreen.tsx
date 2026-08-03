@@ -6,8 +6,16 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import type { OccupancyHistoryEntryResponse } from '../api/types';
-import { Card, HeaderBackButton, Screen, SkeletonCard } from '../components/ui';
+import { History } from 'lucide-react-native';
+import { DashboardSectionTitle } from '../components/dashboard/DashboardSectionTitle';
+import {
+  EmptyState,
+  HeaderBackButton,
+  Screen,
+  SkeletonCard,
+  Timeline,
+  type TimelineGroup,
+} from '../components/ui';
 import type { MainStackParamList } from '../navigation/types';
 import { useMemberOccupancies } from '../hooks/useMemberOccupancies';
 import { colors, spacing, typography } from '../theme';
@@ -15,6 +23,15 @@ import { formatOccupancyAllocatedDate } from '../utils/occupancyRules';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'MemberOccupancyHistory'>;
 type Route = NativeStackScreenProps<MainStackParamList, 'MemberOccupancyHistory'>['route'];
+
+const EVENT_ACCENT: Record<string, string> = {
+  ALLOCATED: colors.primary,
+  MOVE_IN: colors.primary,
+  RESERVED: '#D97706',
+  TRANSFERRED: '#2563EB',
+  VACATED: colors.muted,
+  RESERVATION_CANCELLED: '#DC2626',
+};
 
 function formatEventDate(value?: string | null): string {
   if (!value) {
@@ -30,16 +47,15 @@ function formatEventDate(value?: string | null): string {
   });
 }
 
-function HistoryEventRow({ entry }: { entry: OccupancyHistoryEntryResponse }) {
-  const { t } = useTranslation();
-
-  return (
-    <Card style={styles.card}>
-      <Text style={styles.eventType}>{t(`occupancy.history.${entry.eventType}`)}</Text>
-      <Text style={styles.meta}>{formatEventDate(entry.performedAt)}</Text>
-      {entry.remarks ? <Text style={styles.remarks}>{entry.remarks}</Text> : null}
-    </Card>
-  );
+function monthKey(value?: string | null): { key: string; label: string } {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) {
+    return { key: 'unknown', label: '—' };
+  }
+  return {
+    key: `${date.getFullYear()}-${date.getMonth()}`,
+    label: date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
+  };
 }
 
 export function MemberOccupancyHistoryScreen() {
@@ -56,6 +72,26 @@ export function MemberOccupancyHistoryScreen() {
     );
     return entries;
   }, [data?.history]);
+
+  const timelineGroups = useMemo<TimelineGroup[]>(() => {
+    const groups: TimelineGroup[] = [];
+    chronologicalHistory.forEach(entry => {
+      const { key, label } = monthKey(entry.performedAt);
+      let group = groups.find(candidate => candidate.key === key);
+      if (!group) {
+        group = { key, label, items: [] };
+        groups.push(group);
+      }
+      group.items.push({
+        id: entry.historyId,
+        title: t(`occupancy.history.${entry.eventType}`),
+        meta: formatEventDate(entry.performedAt),
+        description: entry.remarks ?? undefined,
+        accent: EVENT_ACCENT[entry.eventType] ?? colors.primary,
+      });
+    });
+    return groups;
+  }, [chronologicalHistory, t]);
 
   React.useLayoutEffect(() => {
     navigation.setOptions({
@@ -75,6 +111,10 @@ export function MemberOccupancyHistoryScreen() {
     return (
       <Screen contentStyle={styles.content}>
         <SkeletonCard />
+        <View style={styles.gap} />
+        <SkeletonCard />
+        <View style={styles.gap} />
+        <SkeletonCard />
       </Screen>
     );
   }
@@ -82,16 +122,26 @@ export function MemberOccupancyHistoryScreen() {
   return (
     <Screen scrollable={false} contentStyle={styles.content}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <Text style={styles.heading}>{memberName}</Text>
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        <DashboardSectionTitle
+          title={memberName}
+          subtitle={t('occupancy.history.title')}
+        />
+
+        {error ? (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorBannerText}>{error}</Text>
+          </View>
+        ) : null}
 
         <View style={styles.section}>
-          {chronologicalHistory.length === 0 ? (
-            <Text style={styles.empty}>{t('occupancy.history.emptyEvents')}</Text>
+          {timelineGroups.length === 0 ? (
+            <EmptyState
+              title={t('occupancy.history.emptyEvents')}
+              description={t('membership.history.emptyDescription')}
+              Icon={History}
+            />
           ) : (
-            chronologicalHistory.map(entry => (
-              <HistoryEventRow key={entry.historyId} entry={entry} />
-            ))
+            <Timeline groups={timelineGroups} />
           )}
         </View>
       </ScrollView>
@@ -102,37 +152,26 @@ export function MemberOccupancyHistoryScreen() {
 const styles = StyleSheet.create({
   content: {
     flex: 1,
-    padding: spacing.xl,
+    padding: spacing.lg,
   },
-  heading: {
-    ...typography.h2,
-    marginBottom: spacing.lg,
+  gap: {
+    height: spacing.sm,
   },
   section: {
     marginBottom: spacing.lg,
+    gap: spacing.sm,
   },
-  card: {
-    marginBottom: spacing.sm,
-  },
-  eventType: {
-    ...typography.bodyStrong,
-    marginBottom: spacing.xs,
-  },
-  meta: {
-    ...typography.caption,
-    color: colors.muted,
-  },
-  remarks: {
-    ...typography.body,
-    marginTop: spacing.xs,
-  },
-  empty: {
-    ...typography.body,
-    color: colors.muted,
-  },
-  errorText: {
-    ...typography.body,
-    color: '#DC2626',
+  errorBanner: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 14,
+    padding: spacing.md,
     marginBottom: spacing.md,
+  },
+  errorBannerText: {
+    ...typography.body,
+    fontSize: 14,
+    color: '#DC2626',
   },
 });

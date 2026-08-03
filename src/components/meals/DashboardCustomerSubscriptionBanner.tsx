@@ -115,11 +115,11 @@ const styles = StyleSheet.create({
   },
   warning: {
     borderColor: '#F59E0B',
-    backgroundColor: '#FFFBEB',
+    backgroundColor: colors.warningTint,
   },
   pending: {
     borderColor: '#F59E0B',
-    backgroundColor: '#FFFBEB',
+    backgroundColor: colors.warningTint,
   },
   pendingBadge: {
     ...typography.caption,

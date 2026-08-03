@@ -1,15 +1,18 @@
 import React, { useMemo } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { CheckCircle2, Clock3, TriangleAlert } from 'lucide-react-native';
 import type { UUID } from '../../api/types';
 import { PendingActionsList } from '../../components/dashboard/PendingActionGroupCard';
-import { Screen } from '../../components/ui/Screen';
+import { DashboardStatCard } from '../../components/dashboard/shared/DashboardStatCard';
+import { MealFormHero } from '../../components/meals/MealFormHero';
+import { EmptyState, Screen, Skeleton, SkeletonCard } from '../../components/ui';
 import { usePendingActions } from '../../hooks/usePendingActions';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../../navigation/types';
-import { colors, spacing, typography } from '../../theme';
+import { colors, radius, spacing } from '../../theme';
 import { canManageNotifications } from '../../utils/spaceOperator';
 
 type Route = NativeStackScreenProps<MainStackParamList, 'DashboardPendingActions'>['route'];
@@ -41,18 +44,96 @@ export function DashboardPendingActionsScreen({
     return (pendingActions?.totalCount ?? 0) === 0;
   }, [pendingActions?.totalCount, showInitialLoader]);
 
+  const criticalCount = useMemo(() => {
+    const groups = pendingActions?.groups ?? [];
+    return groups
+      .filter(g => g.priority === 'CRITICAL' || g.priority === 'HIGH')
+      .reduce((sum, g) => sum + g.count, 0);
+  }, [pendingActions?.groups]);
+
+  const todayCount = useMemo(() => {
+    const groups = pendingActions?.groups ?? [];
+    return groups
+      .filter(
+        g =>
+          g.actionType === 'MOVE_IN_SCHEDULED_TODAY' ||
+          g.actionType === 'MOVE_OUT_SCHEDULED_TODAY' ||
+          g.actionType === 'RESERVATION_STARTING_TODAY',
+      )
+      .reduce((sum, g) => sum + g.count, 0);
+  }, [pendingActions?.groups]);
+
+  const totalCount = pendingActions?.totalCount ?? 0;
+
   return (
     <Screen scrollable contentStyle={styles.content}>
-      <Text style={styles.subtitle}>{t('dashboard.pendingActions.screenSubtitle')}</Text>
+      <MealFormHero
+        icon={Clock3}
+        eyebrow={t('dashboard.pendingActions.eyebrow', { defaultValue: 'Dashboard' })}
+        heading={t('dashboard.attention.pendingActions')}
+        subheading={
+          empty
+            ? t('dashboard.pendingActions.empty')
+            : t('dashboard.attention.pendingActionsSubtitle', { count: totalCount })
+        }
+        compact
+      />
 
       {showInitialLoader ? (
-        <ActivityIndicator color={colors.primary} style={styles.loader} />
-      ) : empty ? (
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyText}>{t('dashboard.pendingActions.empty')}</Text>
+        <View style={styles.loadingWrap}>
+          <View style={styles.kpiRow}>
+            {[0, 1, 2].map(i => (
+              <View key={i} style={styles.kpiSkeleton}>
+                <Skeleton width={28} height={28} borderRadius={radius.sm} />
+                <Skeleton width={36} height={18} />
+                <Skeleton width={48} height={12} />
+              </View>
+            ))}
+          </View>
+          <SkeletonCard />
+          <SkeletonCard />
         </View>
+      ) : empty ? (
+        <EmptyState
+          Icon={CheckCircle2}
+          title={t('dashboard.pendingActions.emptyTitle', {
+            defaultValue: 'All clear',
+          })}
+          description={t('dashboard.pendingActions.empty')}
+        />
       ) : (
-        <PendingActionsList spaceId={spaceId} groups={pendingActions?.groups ?? []} />
+        <>
+          <View style={styles.kpiRow}>
+            <DashboardStatCard
+              label={t('dashboard.pendingActions.kpi.pending', {
+                defaultValue: 'Pending',
+              })}
+              value={String(totalCount)}
+              icon={Clock3}
+              accent={colors.primaryDark}
+              compact
+            />
+            <DashboardStatCard
+              label={t('dashboard.pendingActions.kpi.critical', {
+                defaultValue: 'Critical',
+              })}
+              value={String(criticalCount)}
+              icon={TriangleAlert}
+              accent={criticalCount > 0 ? '#DC2626' : colors.muted}
+              compact
+            />
+            <DashboardStatCard
+              label={t('dashboard.pendingActions.kpi.today', {
+                defaultValue: 'Today',
+              })}
+              value={String(todayCount)}
+              icon={Clock3}
+              accent={todayCount > 0 ? '#D97706' : colors.muted}
+              compact
+            />
+          </View>
+          <PendingActionsList spaceId={spaceId} groups={pendingActions?.groups ?? []} />
+        </>
       )}
     </Screen>
   );
@@ -61,25 +142,25 @@ export function DashboardPendingActionsScreen({
 const styles = StyleSheet.create({
   content: {
     paddingBottom: spacing.xl,
+    gap: spacing.md,
   },
-  subtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
-    lineHeight: 20,
+  loadingWrap: {
+    gap: spacing.md,
   },
-  loader: {
-    marginVertical: spacing.xl,
+  kpiRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
-  emptyCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: spacing.lg,
-  },
-  emptyText: {
-    ...typography.body,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
+  kpiSkeleton: {
+    flex: 1,
+    minHeight: 72,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.white,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.sm,
   },
 });

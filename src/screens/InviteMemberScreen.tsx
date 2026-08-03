@@ -15,14 +15,16 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { Phone, UserPlus } from 'lucide-react-native';
 import type { MembershipRole } from '../api/types';
-import { Button, FormInput, RolePicker } from '../components/ui';
+import { FormInput, RolePicker } from '../components/ui';
 import { HeaderBackButton } from '../components/ui/HeaderBackButton';
+import { StickyFormActions } from '../components/progressive';
 import type { MainStackParamList } from '../navigation/types';
 import { useMemberStore } from '../store/memberStore';
 import { useSpaceStore } from '../store/spaceStore';
 import { useToastStore } from '../store/toastStore';
-import { colors, spacing, typography } from '../theme';
+import { colors, radius, shadows, spacing, typography } from '../theme';
 import { defaultRoleForSpaceType } from '../utils/memberRoles';
 import { isValidIndianMobile, normalizeIndianMobileDigits } from '../utils/indianMobile';
 import { findMySpaceEntry } from '../utils/spacePermissions';
@@ -94,7 +96,6 @@ export function InviteMemberScreen() {
     });
 
     if (invitation) {
-      console.log('[InviteMember] success', invitation.id);
       await loadPendingInvitations();
       showToast(t('membership.invite.successToast'));
       navigation.goBack();
@@ -106,69 +107,79 @@ export function InviteMemberScreen() {
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}>
-          <Text style={styles.eyebrow}>{t('membership.invite.eyebrow')}</Text>
-          <Text style={styles.heading}>
-            {memberName
-              ? t('membership.invite.prefillHeading', { name: memberName })
-              : t('membership.invite.heading')}
-          </Text>
-          <Text style={styles.subheading}>{t('membership.invite.subheading')}</Text>
-
-          {storeError ? (
-            <View style={styles.errorBanner}>
-              <Text style={styles.errorBannerText}>{storeError}</Text>
+        <View style={styles.flex}>
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}>
+            <View style={styles.hero}>
+              <View style={styles.decorBlob} pointerEvents="none" />
+              <View style={styles.decorRing} pointerEvents="none" />
+              <View style={styles.heroIconWrap} accessibilityElementsHidden>
+                <UserPlus size={18} color={colors.primaryDark} strokeWidth={2.2} />
+              </View>
+              <Text style={styles.eyebrow}>{t('membership.invite.eyebrow')}</Text>
+              <Text style={styles.heading}>
+                {memberName
+                  ? t('membership.invite.prefillHeading', { name: memberName })
+                  : t('membership.invite.heading')}
+              </Text>
+              <Text style={styles.subheading}>{t('membership.invite.subheading')}</Text>
             </View>
-          ) : null}
 
-          <FormInput
-            label={t('membership.invite.mobileLabel')}
-            placeholder={t('membership.invite.mobilePlaceholder')}
-            value={mobileNumber}
-            onChangeText={text => {
-              setMobileNumber(text);
-              if (fieldErrors.mobileNumber) {
-                setFieldErrors(prev => ({ ...prev, mobileNumber: undefined }));
-              }
-            }}
-            error={fieldErrors.mobileNumber}
-            keyboardType="phone-pad"
-            returnKeyType="done"
-            maxLength={15}
-          />
+            {storeError ? (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorBannerText}>{storeError}</Text>
+              </View>
+            ) : null}
 
-          <RolePicker
-            value={role}
-            spaceType={spaceType}
-            onChange={selected => {
-              setRole(selected);
-              if (fieldErrors.role) {
-                setFieldErrors(prev => ({ ...prev, role: undefined }));
-              }
-            }}
-            error={fieldErrors.role}
-          />
-
-          <View style={styles.footer}>
-            <Button
-              label={t('membership.invite.send')}
-              onPress={handleSend}
-              loading={loading}
-              disabled={loading}
+            <FormInput
+              label={t('membership.invite.mobileLabel')}
+              placeholder={t('membership.invite.mobilePlaceholder')}
+              value={mobileNumber}
+              onChangeText={text => {
+                setMobileNumber(text);
+                if (fieldErrors.mobileNumber) {
+                  setFieldErrors(prev => ({ ...prev, mobileNumber: undefined }));
+                }
+              }}
+              error={fieldErrors.mobileNumber}
+              keyboardType="phone-pad"
+              returnKeyType="done"
+              maxLength={15}
+              leadingIcon={Phone}
             />
-            <Button
-              label={t('common.cancel')}
-              variant="ghost"
-              onPress={() => navigation.goBack()}
-              disabled={loading}
-              style={styles.cancelButton}
+
+            <RolePicker
+              value={role}
+              spaceType={spaceType}
+              onChange={selected => {
+                setRole(selected);
+                if (fieldErrors.role) {
+                  setFieldErrors(prev => ({ ...prev, role: undefined }));
+                }
+              }}
+              error={fieldErrors.role}
             />
-          </View>
-        </ScrollView>
+          </ScrollView>
+
+          <StickyFormActions
+            primary={{
+              label: t('membership.invite.send'),
+              onPress: () => {
+                handleSend().catch(() => undefined);
+              },
+              loading,
+              disabled: loading,
+            }}
+            secondary={{
+              label: t('common.cancel'),
+              onPress: () => navigation.goBack(),
+              disabled: loading,
+            }}
+          />
+        </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
@@ -184,38 +195,83 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   content: {
-    padding: spacing.xxl,
-    paddingBottom: spacing.section,
+    padding: spacing.lg,
+    paddingBottom: spacing.xxl,
+  },
+  hero: {
+    marginBottom: spacing.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.section,
+    backgroundColor: colors.successTint,
+    borderWidth: 1,
+    borderColor: `${colors.primary}33`,
+    overflow: 'hidden',
+    position: 'relative',
+    ...shadows.sm,
+  },
+  decorBlob: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: `${colors.primary}1F`,
+    top: -48,
+    right: -28,
+  },
+  decorRing: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 8,
+    borderColor: `${colors.primary}14`,
+    bottom: -16,
+    right: 40,
+  },
+  heroIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.sm,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: `${colors.primary}33`,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+    zIndex: 1,
   },
   eyebrow: {
     ...typography.eyebrow,
-    marginBottom: spacing.sm,
+    marginBottom: 2,
+    zIndex: 1,
   },
   heading: {
-    ...typography.h1,
-    marginBottom: spacing.sm,
+    ...typography.h2,
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: '600',
+    color: colors.primaryDark,
+    marginBottom: 2,
+    zIndex: 1,
   },
   subheading: {
-    ...typography.body,
-    marginBottom: spacing.xxl,
+    ...typography.caption,
+    fontSize: 12,
+    color: colors.muted,
+    zIndex: 1,
   },
   errorBanner: {
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FECACA',
-    borderRadius: 12,
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
+    borderRadius: radius.button,
+    padding: spacing.md,
+    marginBottom: spacing.md,
   },
   errorBannerText: {
     ...typography.body,
+    fontSize: 14,
     color: '#DC2626',
-  },
-  footer: {
-    marginTop: spacing.xl,
-    gap: spacing.md,
-  },
-  cancelButton: {
-    marginTop: spacing.xs,
   },
 });

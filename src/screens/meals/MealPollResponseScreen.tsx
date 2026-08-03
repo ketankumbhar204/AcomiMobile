@@ -10,13 +10,15 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { ClipboardList, Vote } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { MealPollPaymentStatus, UUID } from '../../api/types';
 import { MealPollDayContent } from '../../components/meals/MealPollDayContent';
+import { MealFormHero } from '../../components/meals';
 import { MealPollPaymentProofModal } from '../../components/meals/MealPollPaymentProofModal';
 import { MealSelectionSummary } from '../../components/meals/MealSelectionSummary';
-import { Button } from '../../components/ui';
+import { Button, EmptyState } from '../../components/ui';
 import { useMealPollDay } from '../../hooks/useMealPollDay';
 import { useMealPricingPolicy } from '../../hooks/useMealPricingPolicy';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
@@ -235,12 +237,23 @@ export function MealPollResponseScreen({ spaceId, menuDate }: MealPollResponseSc
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
+          <MealFormHero
+            icon={Vote}
+            eyebrow={t('meals.title')}
+            heading={
+              paymentStep ? t('meals.poll.paymentTitle') : t('meals.poll.responseTitle')
+            }
+            subheading={formatMenuDate(menuDate, i18n.language)}
+          />
           {!poll.loading && visiblePolls.length === 0 ? (
-            <Text style={styles.empty}>
-              {dateReadOnly
-                ? t('dashboard.pollCard.notPublished')
-                : t('meals.poll.noOpenPolls')}
-            </Text>
+            <EmptyState
+              title={
+                dateReadOnly
+                  ? t('dashboard.pollCard.notPublished')
+                  : t('meals.poll.noOpenPolls')
+              }
+              Icon={ClipboardList}
+            />
           ) : paymentStep && !viewOnly ? (
             <View style={styles.paymentBlock}>
               <MealSelectionSummary
@@ -408,15 +421,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: spacing.xxl,
+    padding: spacing.lg,
   },
-  empty: { ...typography.body, color: colors.muted, marginTop: spacing.md },
   button: { marginTop: spacing.sm },
   stickyBar: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
     backgroundColor: colors.white,
-    paddingHorizontal: spacing.xxl,
+    paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     gap: spacing.sm,
   },
@@ -484,16 +496,16 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   lockBanner: {
-    backgroundColor: colors.surface,
+    backgroundColor: '#FEF2F2',
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
+    borderColor: '#FECACA',
+    borderRadius: 18,
     padding: spacing.md,
     marginBottom: spacing.md,
   },
   lockBannerText: {
     ...typography.body,
-    color: colors.textSecondary,
+    color: '#991B1B',
     lineHeight: 22,
   },
   paymentStatusBlock: {

@@ -1,23 +1,23 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
-import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
+import type {
+  NativeStackNavigationProp,
+  NativeStackScreenProps,
+} from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { CalendarDays, IndianRupee, TriangleAlert, WalletCards } from 'lucide-react-native';
 import { mealsApi } from '../../api/mealsApi';
 import type { MemberMealActivityDayDetail } from '../../api/types';
+import { MealFormHero } from '../../components/meals/MealFormHero';
 import { MealSelectionSummary } from '../../components/meals/MealSelectionSummary';
 import { PaymentReferenceLabel } from '../../components/payments/PaymentReferenceLabel';
 import { PaymentStatusBadge } from '../../components/payments/PaymentStatusBadge';
-import { Button, Screen } from '../../components/ui';
+import { Button, EmptyState, Screen, Skeleton } from '../../components/ui';
+import { StickyFormActions } from '../../components/progressive';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { formatComboPrice } from '../../utils/comboPrice';
 import { resolveDayMealPaymentDisplayStatus } from '../../utils/dayMealPayments';
 import { formatMenuDate } from '../../utils/mealDates';
@@ -90,104 +90,143 @@ export function DayMealPaymentDetailScreen() {
   }, [amount, currencyCode, date, memberId, memberName, navigation, spaceId]);
 
   return (
-    <Screen scrollable contentStyle={styles.content}>
-      <Text style={styles.title}>{t('paymentCollection.dayMeals.detailTitle')}</Text>
-      <Text style={styles.date}>{formatMenuDate(date, i18n.language)}</Text>
+    <View style={styles.flex}>
+      <Screen scrollable contentStyle={styles.content}>
+        <MealFormHero
+          icon={WalletCards}
+          eyebrow={t('paymentCollection.dayMeals.detailEyebrow', { defaultValue: 'Day meal' })}
+          heading={t('paymentCollection.dayMeals.detailTitle')}
+          subheading={formatMenuDate(date, i18n.language)}
+          compact
+        />
 
-      {loading ? <ActivityIndicator color={colors.primary} style={styles.loader} /> : null}
-
-      {!loading && detail && summary ? (
-        <>
-          <View style={styles.amountCard}>
-            <View style={styles.amountHeader}>
-              <Text style={styles.amountLabel}>{t('paymentCollection.dayMeals.totalAmount')}</Text>
-              <Text style={styles.amountValue}>
-                {formatComboPrice(amount, currencyCode) ?? '—'}
-              </Text>
-            </View>
-            <View style={styles.metaRow}>
-              {hasReference ? (
-                <PaymentReferenceLabel
-                  source={detail.payment}
-                  compact={false}
-                  style={styles.reference}
-                />
-              ) : (
-                <View style={styles.metaSpacer} />
-              )}
-              <PaymentStatusBadge status={displayStatus} style={styles.statusBadge} />
-            </View>
+        {loading ? (
+          <View style={styles.skeletonWrap}>
+            <Skeleton width="100%" height={96} borderRadius={18} />
+            <Skeleton width="100%" height={140} borderRadius={18} />
           </View>
+        ) : null}
 
-          <MealSelectionSummary model={summary} showTotals />
+        {!loading && detail && summary ? (
+          <>
+            <View style={styles.amountCard}>
+              <View style={styles.amountIcon}>
+                <IndianRupee size={20} color={colors.primaryDark} strokeWidth={2.2} />
+              </View>
+              <View style={styles.amountBody}>
+                <Text style={styles.amountLabel}>
+                  {t('paymentCollection.dayMeals.totalAmount')}
+                </Text>
+                <Text style={styles.amountValue}>
+                  {formatComboPrice(amount, currencyCode) ?? '—'}
+                </Text>
+                <View style={styles.metaRow}>
+                  {hasReference ? (
+                    <PaymentReferenceLabel
+                      source={detail.payment}
+                      compact={false}
+                      style={styles.reference}
+                    />
+                  ) : (
+                    <View style={styles.dateMeta}>
+                      <CalendarDays size={12} color={colors.muted} strokeWidth={2.2} />
+                      <Text style={styles.dateMetaText}>
+                        {formatMenuDate(date, i18n.language)}
+                      </Text>
+                    </View>
+                  )}
+                  <PaymentStatusBadge status={displayStatus} style={styles.statusBadge} />
+                </View>
+              </View>
+            </View>
 
-          {detail.payment?.rejectionReason ? (
-            <Text style={styles.rejection}>
-              {t('meals.poll.rejectionReason', { reason: detail.payment.rejectionReason })}
-            </Text>
-          ) : null}
+            <MealSelectionSummary model={summary} showTotals />
 
-          {canPay ? (
-            <Button
-              label={t('paymentCollection.payNow')}
-              onPress={openSubmitPayment}
-              style={styles.payBtn}
+            {detail.payment?.rejectionReason ? (
+              <View style={styles.rejectionBanner}>
+                <TriangleAlert size={16} color="#DC2626" strokeWidth={2.2} />
+                <Text style={styles.rejection}>
+                  {t('meals.poll.rejectionReason', { reason: detail.payment.rejectionReason })}
+                </Text>
+              </View>
+            ) : null}
+
+            {displayStatus === 'PENDING_APPROVAL' ? (
+              <Text style={styles.waiting}>{t('paymentCollection.waitingApproval')}</Text>
+            ) : null}
+          </>
+        ) : null}
+
+        {!loading && !detail ? (
+          <View style={styles.retryWrap}>
+            <EmptyState
+              Icon={WalletCards}
+              title={t('paymentCollection.dayMeals.errors.loadDetail')}
+              description={t('common.retry')}
             />
-          ) : null}
+            <Button label={t('common.retry')} variant="secondary" onPress={() => void load()} />
+          </View>
+        ) : null}
+      </Screen>
 
-          {displayStatus === 'PENDING_APPROVAL' ? (
-            <Text style={styles.waiting}>{t('paymentCollection.waitingApproval')}</Text>
-          ) : null}
-        </>
+      {canPay && !loading && detail ? (
+        <StickyFormActions
+          primary={{
+            label: t('paymentCollection.payNow'),
+            onPress: openSubmitPayment,
+          }}
+        />
       ) : null}
-
-      {!loading && !detail ? (
-        <Pressable onPress={() => void load()}>
-          <Text style={styles.retry}>{t('common.retry')}</Text>
-        </Pressable>
-      ) : null}
-    </Screen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   content: {
     paddingBottom: spacing.section,
+    gap: spacing.md,
   },
-  title: {
-    ...typography.h2,
-    marginBottom: spacing.xs,
-  },
-  date: {
-    ...typography.bodyStrong,
-    color: colors.textSecondary,
-    marginBottom: spacing.lg,
-  },
-  loader: {
-    marginVertical: spacing.xl,
-  },
-  amountCard: {
-    backgroundColor: colors.white,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
+  skeletonWrap: {
     gap: spacing.sm,
   },
-  amountHeader: {
+  amountCard: {
     flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     gap: spacing.md,
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    ...shadows.sm,
+  },
+  amountIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.button,
+    backgroundColor: colors.lightGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  amountBody: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacing.xs,
   },
   amountLabel: {
     ...typography.caption,
     color: colors.muted,
-    flexShrink: 1,
+    fontWeight: '600',
   },
   amountValue: {
     ...typography.h2,
+    fontSize: 24,
+    lineHeight: 28,
+    color: colors.primaryDark,
   },
   metaRow: {
     flexDirection: 'row',
@@ -195,31 +234,44 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.sm,
   },
-  metaSpacer: {
-    flex: 1,
-  },
   reference: {
     flex: 1,
     minWidth: 0,
   },
+  dateMeta: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  dateMetaText: {
+    ...typography.caption,
+    color: colors.muted,
+  },
   statusBadge: {
     flexShrink: 0,
   },
+  rejectionBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 18,
+    padding: spacing.md,
+  },
   rejection: {
     ...typography.body,
+    flex: 1,
     color: '#DC2626',
-    marginTop: spacing.sm,
-  },
-  payBtn: {
-    marginTop: spacing.lg,
   },
   waiting: {
     ...typography.body,
     color: colors.muted,
-    marginTop: spacing.md,
+    textAlign: 'center',
   },
-  retry: {
-    ...typography.bodyStrong,
-    color: colors.primaryDark,
+  retryWrap: {
+    gap: spacing.md,
   },
 });

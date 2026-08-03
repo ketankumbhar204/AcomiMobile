@@ -2,7 +2,8 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { PaymentTimelineEventResponse } from '../../api/types';
-import { colors, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { getPaymentStatusIcon } from '../../utils/billingVisuals';
 import {
   PAYMENT_STATUS_THEME,
   resolveTimelineEventVariant,
@@ -36,14 +37,18 @@ export function PaymentHistoryTimeline({ events }: PaymentHistoryTimelineProps) 
       {events.map((event, index) => {
         const variant = resolveTimelineEventVariant(event.eventType);
         const accent = PAYMENT_STATUS_THEME[variant].accent;
+        const Icon = getPaymentStatusIcon(variant);
+        const isLast = index === events.length - 1;
 
         return (
           <View key={event.eventId} style={styles.row}>
             <View style={styles.rail}>
-              <View style={[styles.dot, { backgroundColor: accent }]} />
-              {index < events.length - 1 ? <View style={[styles.line, { backgroundColor: accent }]} /> : null}
+              <View style={[styles.marker, { borderColor: accent }]}>
+                <Icon size={12} color={accent} strokeWidth={2.4} />
+              </View>
+              {!isLast ? <View style={styles.line} /> : null}
             </View>
-            <View style={styles.content}>
+            <View style={styles.card}>
               <Text style={styles.eventType}>
                 {t(`paymentCollection.timeline.${event.eventType}`)}
               </Text>
@@ -59,47 +64,64 @@ export function PaymentHistoryTimeline({ events }: PaymentHistoryTimelineProps) 
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
+    gap: spacing.xs,
   },
   row: {
     flexDirection: 'row',
-    marginBottom: spacing.md,
+    gap: spacing.md,
   },
   rail: {
-    width: 36,
+    width: 24,
     alignItems: 'center',
   },
-  dot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+  marker: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   line: {
     flex: 1,
     width: 2,
-    marginTop: spacing.xs,
-    minHeight: 24,
-    opacity: 0.35,
+    minHeight: 16,
+    marginVertical: 4,
+    backgroundColor: colors.border,
   },
-  content: {
+  card: {
     flex: 1,
-    paddingBottom: spacing.sm,
+    minWidth: 0,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    gap: spacing.xxs,
+    ...shadows.sm,
   },
   eventType: {
     ...typography.bodyStrong,
+    fontSize: 15,
+    color: colors.textPrimary,
   },
   time: {
     ...typography.caption,
+    fontSize: 12,
     color: colors.muted,
-    marginTop: 2,
   },
   remarks: {
     ...typography.body,
-    marginTop: spacing.xs,
-    color: colors.textPrimary,
+    fontSize: 14,
+    marginTop: spacing.xxs,
+    color: colors.textSecondary,
   },
   empty: {
     ...typography.body,
     color: colors.muted,
+    paddingVertical: spacing.md,
   },
 });

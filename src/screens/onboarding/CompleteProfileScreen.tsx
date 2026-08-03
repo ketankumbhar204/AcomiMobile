@@ -11,8 +11,21 @@ import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/nativ
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
+import {
+  CalendarDays,
+  FileText,
+  Hash,
+  Mail,
+  MapPin,
+  Phone,
+  Smartphone,
+  TriangleAlert,
+  UserRound,
+  Users,
+} from 'lucide-react-native';
 import type { MemberDocumentType, MemberGender } from '../../api/types';
 import { memberApi } from '../../api/memberApi';
+import { AuthHero } from '../../components/auth';
 import { DocumentTypePicker } from '../../components/member/DocumentTypePicker';
 import { StickyFormActions } from '../../components/progressive';
 import {
@@ -29,7 +42,7 @@ import type { MainStackParamList } from '../../navigation/types';
 import { resetToDashboard, resetToMySpaces } from '../../navigation/navigationRef';
 import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, shadows, spacing, typography } from '../../theme';
 import { pickProfileImage } from '../../utils/pickProfileImage';
 import { profileDocumentsToFormState } from '../../utils/profileDocuments';
 import { isConsumerMembershipRole } from '../../utils/profileCompletion';
@@ -164,20 +177,27 @@ export function CompleteProfileScreen() {
     }, [isEditMode, mySpaces, selectedSpaceId]),
   );
 
+  const headerLeft = useCallback(
+    () => (isEditMode && stepIndex === 0 ? <HeaderBackButton /> : null),
+    [isEditMode, stepIndex],
+  );
+
   useLayoutEffect(() => {
     navigation.setOptions({
       title: isEditMode
         ? t('settings.profile.editProfileTitle')
         : t('profileCompletion.wizard.title'),
       headerBackVisible: isEditMode && stepIndex === 0,
-      headerLeft: () => (isEditMode && stepIndex === 0 ? <HeaderBackButton /> : null),
+      headerLeft,
     });
-  }, [isEditMode, navigation, stepIndex, t]);
+  }, [headerLeft, isEditMode, navigation, stepIndex, t]);
 
   const stepLabel = useMemo(
     () => t('profileCompletion.wizard.stepProgress', { current: stepIndex + 1, total: STEPS.length }),
     [stepIndex, t],
   );
+
+  const progressPercent = ((stepIndex + 1) / STEPS.length) * 100;
 
   function validateStep(current: WizardStep): boolean {
     clearError();
@@ -345,13 +365,33 @@ export function CompleteProfileScreen() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}>
-          <Text style={styles.stepLabel} accessibilityRole="text">
-            {stepLabel}
-          </Text>
-          <Text style={styles.sectionTitle} accessibilityRole="header">
-            {t(`profileCompletion.wizard.sections.${step}`)}
-          </Text>
+          <AuthHero
+            icon={UserRound}
+            eyebrow={stepLabel}
+            heading={t(`profileCompletion.wizard.sections.${step}`)}
+            subheading={t('profileCompletion.wizard.helper', {
+              defaultValue: 'A few details help us personalize CountIn for you.',
+            })}
+          />
 
+          <View style={styles.progressCard}>
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
+            </View>
+            <View style={styles.stepDots}>
+              {STEPS.map((key, index) => (
+                <View
+                  key={key}
+                  style={[
+                    styles.stepDot,
+                    index <= stepIndex && styles.stepDotActive,
+                  ]}
+                />
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.sectionCard}>
           {step === 'personal' ? (
             <>
               <FormInput
@@ -359,6 +399,7 @@ export function CompleteProfileScreen() {
                 value={fullName}
                 onChangeText={setFullName}
                 autoCapitalize="words"
+                leadingIcon={UserRound}
               />
               <GenderPicker value={gender} onChange={setGender} />
               <FormInput
@@ -366,11 +407,13 @@ export function CompleteProfileScreen() {
                 value={dateOfBirth}
                 onChangeText={setDateOfBirth}
                 placeholder={t('profileCompletion.fields.dateOfBirthPlaceholder')}
+                leadingIcon={CalendarDays}
               />
               <FormInput
                 label={t('profileCompletion.fields.mobileNumber')}
                 value={user?.mobileNumber ?? ''}
                 editable={false}
+                leadingIcon={Smartphone}
               />
               <FormInput
                 label={t('profileCompletion.fields.email')}
@@ -378,6 +421,7 @@ export function CompleteProfileScreen() {
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                leadingIcon={Mail}
               />
               {renderUploadRow(
                 t('profileCompletion.fields.profilePhoto'),
@@ -394,22 +438,26 @@ export function CompleteProfileScreen() {
                 value={permanentAddress}
                 onChangeText={setPermanentAddress}
                 multiline
+                leadingIcon={MapPin}
               />
               <FormInput
                 label={`${t('profileCompletion.fields.city')} *`}
                 value={city}
                 onChangeText={setCity}
+                leadingIcon={MapPin}
               />
               <FormInput
                 label={`${t('profileCompletion.fields.state')} *`}
                 value={stateName}
                 onChangeText={setStateName}
+                leadingIcon={MapPin}
               />
               <FormInput
                 label={`${t('profileCompletion.fields.pincode')} *`}
                 value={pincode}
                 onChangeText={setPincode}
                 keyboardType="number-pad"
+                leadingIcon={Hash}
               />
             </>
           ) : null}
@@ -420,17 +468,20 @@ export function CompleteProfileScreen() {
                 label={t('profileCompletion.fields.guardianName')}
                 value={emergencyContactName}
                 onChangeText={setEmergencyContactName}
+                leadingIcon={Users}
               />
               <FormInput
                 label={t('profileCompletion.fields.guardianMobile')}
                 value={emergencyContactMobile}
                 onChangeText={setEmergencyContactMobile}
                 keyboardType="phone-pad"
+                leadingIcon={Phone}
               />
               <FormInput
                 label={t('profileCompletion.fields.relationship')}
                 value={emergencyContactRelation}
                 onChangeText={setEmergencyContactRelation}
+                leadingIcon={Users}
               />
             </>
           ) : null}
@@ -454,6 +505,7 @@ export function CompleteProfileScreen() {
                   userEditedDocumentsRef.current = true;
                   setIdentityDocumentNumber(value);
                 }}
+                leadingIcon={FileText}
               />
               {renderUploadRow(
                 t('profileCompletion.fields.addressProof'),
@@ -473,12 +525,21 @@ export function CompleteProfileScreen() {
             </>
           ) : null}
 
-          {fieldError ? <Text style={styles.errorText}>{fieldError}</Text> : null}
-          {error ? (
-            <Text style={styles.errorText}>
-              {error.startsWith('profileCompletion') ? t(error) : error}
-            </Text>
+          {fieldError ? (
+            <View style={styles.errorBanner}>
+              <TriangleAlert size={14} color="#B91C1C" strokeWidth={2.2} />
+              <Text style={styles.errorText}>{fieldError}</Text>
+            </View>
           ) : null}
+          {error ? (
+            <View style={styles.errorBanner}>
+              <TriangleAlert size={14} color="#B91C1C" strokeWidth={2.2} />
+              <Text style={styles.errorText}>
+                {error.startsWith('profileCompletion') ? t(error) : error}
+              </Text>
+            </View>
+          ) : null}
+          </View>
         </ScrollView>
 
         <StickyFormActions
@@ -548,44 +609,85 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: spacing.xl,
+    padding: spacing.lg,
     paddingBottom: spacing.xl,
+    gap: spacing.md,
   },
-  stepLabel: {
-    ...typography.caption,
-    color: colors.muted,
-    marginBottom: spacing.xs,
+  progressCard: {
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    gap: spacing.sm,
+    ...shadows.sm,
   },
-  sectionTitle: {
-    ...typography.h3,
-    marginBottom: spacing.lg,
+  progressTrack: {
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: colors.surface,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: colors.primary,
+  },
+  stepDots: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  stepDot: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.border,
+  },
+  stepDotActive: {
+    backgroundColor: colors.primaryDark,
+  },
+  sectionCard: {
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    gap: spacing.sm,
+    ...shadows.sm,
   },
   optionalHint: {
     ...typography.body,
     color: colors.muted,
-    marginBottom: spacing.md,
+    marginBottom: spacing.xs,
   },
   uploadRow: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.sm,
     gap: spacing.sm,
   },
   uploadLabel: {
     ...typography.label,
     color: colors.textPrimary,
   },
-  required: {
-    color: '#DC2626',
-  },
   previewImage: {
     width: 96,
     height: 96,
-    borderRadius: radius.card,
+    borderRadius: 18,
     backgroundColor: colors.surface,
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 14,
+    padding: spacing.sm,
   },
   errorText: {
     ...typography.caption,
     color: '#DC2626',
-    marginBottom: spacing.sm,
+    flex: 1,
   },
   logoutLink: {
     ...typography.body,

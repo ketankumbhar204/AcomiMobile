@@ -1,57 +1,70 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import type { PendingActionGroup, UUID } from '../../api/types';
+import { ChevronRight } from 'lucide-react-native';
+import type { NotificationPriority, PendingActionGroup, UUID } from '../../api/types';
+import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { navigateFromPendingActionGroup } from '../../utils/notificationDeepLinks';
 import { canManageNotifications } from '../../utils/spaceOperator';
-import { useSpacePermissions } from '../../hooks/useSpacePermissions';
+import {
+  getNotificationCategoryColor,
+  getNotificationIcon,
+} from '../../utils/spaceVisuals';
 
 type PendingActionGroupCardProps = {
   spaceId: UUID;
   group: PendingActionGroup;
 };
 
-function actionIcon(actionType: PendingActionGroup['actionType']): string {
-  switch (actionType) {
-    case 'PAYMENT_NEEDS_REVIEW':
-    case 'PAYMENT_NEEDS_UPDATE':
-    case 'PAYMENT_OVERDUE':
-    case 'PAYMENT_UPDATE_REQUESTED':
-      return '💳';
-    case 'MENU_NOT_PLANNED':
-    case 'MENU_DRAFT_PENDING_PUBLISH':
-    case 'MEAL_POLL_NOT_PUBLISHED':
-    case 'MEAL_RESPONSES_BELOW_THRESHOLD':
-      return '🍽';
-    case 'SUBSCRIPTION_ACTIVATION_PENDING':
-      return '📋';
-    case 'MOVE_IN_SCHEDULED_TODAY':
-    case 'MOVE_OUT_SCHEDULED_TODAY':
-    case 'RESERVATION_STARTING_TODAY':
-      return '🏠';
-    case 'COMPLAINT_PENDING':
-    case 'COMPLAINT_OVERDUE':
-      return '⚠';
-    case 'PENDING_INVITATION':
-      return '✉️';
+function priorityTone(priority: NotificationPriority): {
+  labelKey: string;
+  color: string;
+} {
+  switch (priority) {
+    case 'CRITICAL':
+      return { labelKey: 'dashboard.pendingActions.priority.CRITICAL', color: '#DC2626' };
+    case 'HIGH':
+      return { labelKey: 'dashboard.pendingActions.priority.HIGH', color: '#D97706' };
+    case 'LOW':
+      return { labelKey: 'dashboard.pendingActions.priority.LOW', color: colors.muted };
+    case 'MEDIUM':
     default:
-      return '🔔';
+      return { labelKey: 'dashboard.pendingActions.priority.MEDIUM', color: '#2563EB' };
   }
+}
+
+function isTodayFocusedAction(actionType: PendingActionGroup['actionType']): boolean {
+  return (
+    actionType === 'MOVE_IN_SCHEDULED_TODAY' ||
+    actionType === 'MOVE_OUT_SCHEDULED_TODAY' ||
+    actionType === 'RESERVATION_STARTING_TODAY'
+  );
 }
 
 export function PendingActionGroupCard({ spaceId, group }: PendingActionGroupCardProps) {
   const { t } = useTranslation();
   const permissions = useSpacePermissions(spaceId);
   const isOperator = canManageNotifications(permissions);
+  const sample = group.items[0];
+  const category = sample?.category ?? 'ACTION_REQUIRED';
+  const accent = getNotificationCategoryColor(category);
+  const Icon = getNotificationIcon(group.actionType, category);
+  const tone = priorityTone(group.priority);
+
   const title =
     t(`dashboard.pendingActions.groups.${group.actionType}`, {
       defaultValue: group.title,
     }) + (group.count > 0 ? ` (${group.count})` : '');
 
   const subtitle =
-    group.items[0]?.message ??
+    sample?.message ??
     group.actionLabel ??
+    t('dashboard.pendingActions.tapToOpen');
+
+  const actionLabel =
+    group.actionLabel ??
+    sample?.actionLabel ??
     t('dashboard.pendingActions.tapToOpen');
 
   const onPress = useCallback(() => {
@@ -62,19 +75,45 @@ export function PendingActionGroupCard({ spaceId, group }: PendingActionGroupCar
     <Pressable
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
       onPress={onPress}
-      accessibilityRole="button">
+      accessibilityRole="button"
+      accessibilityLabel={title}>
+      <View style={[styles.iconWrap, { backgroundColor: `${accent}18` }]}>
+        <Icon size={18} color={accent} strokeWidth={2.2} />
+      </View>
       <View style={styles.content}>
         <View style={styles.titleRow}>
-          <Text style={styles.icon}>{actionIcon(group.actionType)}</Text>
           <Text style={styles.title} numberOfLines={2}>
             {title}
           </Text>
+          <View
+            style={[
+              styles.priorityChip,
+              { backgroundColor: `${tone.color}14`, borderColor: `${tone.color}33` },
+            ]}>
+            <Text style={[styles.priorityText, { color: tone.color }]}>
+              {t(tone.labelKey, {
+                defaultValue: group.priority,
+              })}
+            </Text>
+          </View>
         </View>
         <Text style={styles.subtitle} numberOfLines={2}>
           {subtitle}
         </Text>
+        <View style={styles.metaRow}>
+          <View style={[styles.actionPill, { backgroundColor: `${accent}12` }]}>
+            <Text style={[styles.actionPillText, { color: accent }]} numberOfLines={1}>
+              {actionLabel}
+            </Text>
+          </View>
+          {sample?.createdAt ? (
+            <Text style={styles.metaTime} numberOfLines={1}>
+              {new Date(sample.createdAt).toLocaleDateString()}
+            </Text>
+          ) : null}
+        </View>
       </View>
-      <Text style={styles.chevron}>›</Text>
+      <ChevronRight size={18} color={colors.muted} strokeWidth={2.4} />
     </Pressable>
   );
 }
@@ -85,18 +124,55 @@ type PendingActionsListProps = {
 };
 
 export function PendingActionsList({ spaceId, groups }: PendingActionsListProps) {
+  const { t } = useTranslation();
+
+  const sections = useMemo(() => {
+    const today: PendingActionGroup[] = [];
+    const attention: PendingActionGroup[] = [];
+    for (const group of groups) {
+      if (isTodayFocusedAction(group.actionType)) {
+        today.push(group);
+      } else {
+        attention.push(group);
+      }
+    }
+    return [
+      {
+        id: 'today',
+        title: t('dashboard.pendingActions.sections.today', {
+          defaultValue: "Today's tasks",
+        }),
+        items: today,
+      },
+      {
+        id: 'attention',
+        title: t('dashboard.pendingActions.sections.attention', {
+          defaultValue: 'Needs attention',
+        }),
+        items: attention,
+      },
+    ].filter(section => section.items.length > 0);
+  }, [groups, t]);
+
   if (groups.length === 0) {
     return null;
   }
 
   return (
     <View style={styles.list}>
-      {groups.map(group => (
-        <PendingActionGroupCard
-          key={group.actionType}
-          spaceId={spaceId}
-          group={group}
-        />
+      {sections.map(section => (
+        <View key={section.id} style={styles.section}>
+          {sections.length > 1 ? (
+            <Text style={styles.sectionLabel}>{section.title}</Text>
+          ) : null}
+          {section.items.map(group => (
+            <PendingActionGroupCard
+              key={group.actionType}
+              spaceId={spaceId}
+              group={group}
+            />
+          ))}
+        </View>
       ))}
     </View>
   );
@@ -104,7 +180,19 @@ export function PendingActionsList({ spaceId, groups }: PendingActionsListProps)
 
 const styles = StyleSheet.create({
   list: {
+    gap: spacing.md,
+  },
+  section: {
     gap: spacing.sm,
+  },
+  sectionLabel: {
+    ...typography.caption,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    fontSize: 11,
+    marginBottom: spacing.xxs,
   },
   card: {
     width: '100%',
@@ -124,19 +212,22 @@ const styles = StyleSheet.create({
     borderColor: `${colors.primary}66`,
     backgroundColor: colors.surface,
   },
+  iconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.button,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   content: {
     flex: 1,
     minWidth: 0,
-    gap: 2,
+    gap: spacing.xxs,
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.xs,
-  },
-  icon: {
-    fontSize: 16,
-    lineHeight: 20,
   },
   title: {
     ...typography.bodyStrong,
@@ -145,16 +236,44 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
   },
+  priorityChip: {
+    borderWidth: 1,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  priorityText: {
+    ...typography.caption,
+    fontWeight: '700',
+    fontSize: 10,
+    lineHeight: 14,
+  },
   subtitle: {
     ...typography.caption,
     color: colors.muted,
-    marginLeft: 22,
     lineHeight: 16,
   },
-  chevron: {
-    fontSize: 22,
-    fontWeight: '300',
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xxs,
+    flexWrap: 'wrap',
+  },
+  actionPill: {
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    maxWidth: '70%',
+  },
+  actionPillText: {
+    ...typography.caption,
+    fontWeight: '700',
+    fontSize: 11,
+  },
+  metaTime: {
+    ...typography.caption,
     color: colors.muted,
-    paddingLeft: spacing.xxs,
+    fontSize: 11,
   },
 });

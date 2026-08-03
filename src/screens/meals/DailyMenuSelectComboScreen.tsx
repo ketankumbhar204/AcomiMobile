@@ -3,11 +3,15 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { mealsApi } from '../../api/mealsApi';
+import { Package } from 'lucide-react-native';
 import type { MealComboResponse, MealType, UUID } from '../../api/types';
 import { ComboPickerCard } from '../../components/meals/ComboPickerCard';
+import { MealFormHero } from '../../components/meals/MealFormHero';
+import { MealTypeVisual } from '../../components/meals/MealTypeVisual';
 import { PlanningSelectionSection } from '../../components/meals/PlanningSelectionSection';
-import { Button, PermissionDeniedScreen } from '../../components/ui';
+import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
+import { EmptyState, PermissionDeniedScreen } from '../../components/ui';
+import { StickyFormActions } from '../../components/progressive';
 import { useMealPricingPolicy } from '../../hooks/useMealPricingPolicy';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../../navigation/types';
@@ -245,9 +249,31 @@ export function DailyMenuSelectComboScreen({
   return (
     <View style={styles.root}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.eyebrow}>{t(mealTypeLabelKey(mealType))}</Text>
-        <Text style={styles.title}>{t('meals.planning.selectCombo')}</Text>
-        <Text style={styles.subtitle}>{t('meals.planning.selectComboHintMulti')}</Text>
+        <MealFormHero
+          icon={Package}
+          accent="#D97706"
+          soft={colors.warningTint}
+          border="#FDE68A"
+          eyebrow={t(mealTypeLabelKey(mealType))}
+          heading={t('meals.planning.selectCombo')}
+          subheading={t('meals.planning.selectComboHintMulti')}
+        />
+
+        <View style={styles.mealChip}>
+          <MealTypeVisual mealType={mealType} size={18} />
+          <Text style={styles.mealChipText}>{t(mealTypeLabelKey(mealType))}</Text>
+        </View>
+
+        {Object.keys(priceErrors).length > 0 ? (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorBannerText}>
+              {comboPriceDraftErrorMessage(
+                priceErrors[Object.keys(priceErrors)[0]],
+                t,
+              )}
+            </Text>
+          </View>
+        ) : null}
 
         {loading ? <ActivityIndicator color={colors.primary} style={styles.loader} /> : null}
 
@@ -267,7 +293,7 @@ export function DailyMenuSelectComboScreen({
           emptyText={t('meals.planning.noCombosSelected')}
         />
 
-        <Text style={styles.sectionLabel}>{t('meals.planning.availableCombos')}</Text>
+        <DashboardSectionTitle title={t('meals.planning.availableCombos')} />
 
         {combos.map(combo => {
           const selected = selectedComboIds.includes(combo.comboId);
@@ -304,7 +330,10 @@ export function DailyMenuSelectComboScreen({
         })}
 
         {combos.length === 0 && !loading ? (
-          <Text style={styles.empty}>{t('meals.library.combosEmpty')}</Text>
+          <EmptyState
+            title={t('meals.library.combosEmpty')}
+            Icon={Package}
+          />
         ) : null}
 
         <Pressable
@@ -314,37 +343,56 @@ export function DailyMenuSelectComboScreen({
         </Pressable>
       </ScrollView>
 
-      <View style={styles.footer}>
-        <Button
-          label={t('common.save')}
-          loading={saving}
-          onPress={() => void saveSelection()}
-          style={styles.footerButton}
-        />
-      </View>
+      <StickyFormActions
+        primary={{
+          label: t('common.save'),
+          loading: saving,
+          onPress: () => {
+            void saveSelection();
+          },
+        }}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.xxl, paddingBottom: spacing.md },
-  eyebrow: { ...typography.caption, color: colors.muted, fontWeight: '600', marginBottom: spacing.xxs },
-  title: { ...typography.h2, marginBottom: spacing.xs },
-  subtitle: { ...typography.body, color: colors.muted, marginBottom: spacing.lg },
-  multiSelectHint: { ...typography.caption, color: colors.muted, marginBottom: spacing.sm },
-  sectionLabel: { ...typography.bodyStrong, marginBottom: spacing.sm },
-  empty: { ...typography.body, color: colors.muted, marginBottom: spacing.md },
+  content: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
+  },
+  mealChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    alignSelf: 'flex-start',
+    marginBottom: spacing.md,
+  },
+  mealChipText: {
+    ...typography.bodyStrong,
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  multiSelectHint: {
+    ...typography.caption,
+    color: colors.muted,
+    marginBottom: spacing.sm,
+  },
+  errorBanner: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 18,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  errorBannerText: {
+    ...typography.body,
+    color: '#DC2626',
+  },
   createLink: { marginTop: spacing.md, paddingVertical: spacing.md },
   createLinkText: { ...typography.bodyStrong, color: colors.primaryDark },
-  footer: {
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.white,
-    paddingHorizontal: spacing.xxl,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.lg,
-  },
-  footerButton: { width: '100%' },
   loader: { marginVertical: spacing.lg },
 });

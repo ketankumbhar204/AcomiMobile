@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   menuItemPressed: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceSecondary,
   },
   menuItemLabel: {
     ...typography.body,

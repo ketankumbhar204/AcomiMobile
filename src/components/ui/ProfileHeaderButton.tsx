@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   buttonPressed: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceSecondary,
   },
   label: {
     fontSize: 15,

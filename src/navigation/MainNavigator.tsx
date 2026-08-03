@@ -65,6 +65,10 @@ import { RaiseComplaintScreen } from '../screens/complaints/RaiseComplaintScreen
 import { ComplaintDetailScreen } from '../screens/complaints/ComplaintDetailScreen';
 import { GlobalAttentionListScreen } from '../screens/spaces/GlobalAttentionListScreen';
 import { GlobalActivityListScreen } from '../screens/spaces/GlobalActivityListScreen';
+import { InventoryDashboardScreen } from '../screens/inventory/InventoryDashboardScreen';
+import { InventoryItemsScreen } from '../screens/inventory/InventoryItemsScreen';
+import { InventoryItemDetailsScreen } from '../screens/inventory/InventoryItemDetailsScreen';
+import { InventoryItemFormScreen } from '../screens/inventory/InventoryItemFormScreen';
 import { stackHeaderOptions } from '../theme';
 import { useSpaceStore } from '../store/spaceStore';
 import { useProfileCompletionGate } from '../hooks/useProfileCompletionGate';
@@ -423,6 +427,10 @@ export function MainNavigator() {
       <Stack.Screen name="ComplaintDetail" component={ComplaintDetailScreen} />
       <Stack.Screen name="GlobalAttentionList" component={GlobalAttentionListScreen} />
       <Stack.Screen name="GlobalActivityList" component={GlobalActivityListScreen} />
+      <Stack.Screen name="InventoryDashboard" component={InventoryDashboardScreen} />
+      <Stack.Screen name="InventoryItems" component={InventoryItemsScreen} />
+      <Stack.Screen name="InventoryItemDetails" component={InventoryItemDetailsScreen} />
+      <Stack.Screen name="InventoryItemForm" component={InventoryItemFormScreen} />
       <Stack.Screen
         name="SpaceTabs"
         component={SpaceTabsScreen}

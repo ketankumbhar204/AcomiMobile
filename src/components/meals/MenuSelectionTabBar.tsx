@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { colors, spacing, typography } from '../../theme';
 
-export type MenuSelectionTab = 'combos' | 'items';
+export type MenuSelectionTab = 'history' | 'combos' | 'items';
 
 type MenuSelectionTabBarProps = {
   activeTab: MenuSelectionTab;
@@ -12,7 +12,13 @@ type MenuSelectionTabBarProps = {
 
 export function MenuSelectionTabBar({ activeTab, onTabChange }: MenuSelectionTabBarProps) {
   const { t } = useTranslation();
-  const tabs: MenuSelectionTab[] = ['combos', 'items'];
+  const tabs: MenuSelectionTab[] = ['history', 'combos', 'items'];
+
+  const labelFor = (tab: MenuSelectionTab) => {
+    if (tab === 'history') return t('meals.planning.tabHistory');
+    if (tab === 'combos') return t('meals.planning.tabCombos');
+    return t('meals.planning.tabIndividualItems');
+  };
 
   return (
     <View style={styles.wrapper}>
@@ -27,9 +33,7 @@ export function MenuSelectionTabBar({ activeTab, onTabChange }: MenuSelectionTab
               accessibilityRole="tab"
               accessibilityState={{ selected: isActive }}>
               <Text style={[styles.label, isActive && styles.labelActive]} numberOfLines={1}>
-                {tab === 'combos'
-                  ? t('meals.planning.tabCombos')
-                  : t('meals.planning.tabIndividualItems')}
+                {labelFor(tab)}
               </Text>
               {isActive ? <View style={styles.indicator} /> : <View style={styles.indicatorPlaceholder} />}
             </Pressable>

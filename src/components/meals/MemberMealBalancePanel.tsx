@@ -424,11 +424,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   statusActive: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: colors.successTint,
     borderColor: '#A7F3D0',
   },
   statusExpiring: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: colors.warningTint,
     borderColor: '#FDE68A',
   },
   statusExpiredBadge: {

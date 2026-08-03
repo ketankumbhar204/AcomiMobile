@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   chipPressed: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceSecondary,
   },
   chipLabel: {
     ...typography.caption,

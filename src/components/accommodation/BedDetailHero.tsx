@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { AccommodationStatus } from '../../api/types';
-import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { colors, shadows, spacing, typography } from '../../theme';
 import { AccommodationStatusBadge } from './AccommodationStatusBadge';
 import { LayoutIllustration } from './layout/cards/LayoutIllustration';
 import { getBedIllustration } from './layout/illustrations/illustrationAssets';
@@ -13,11 +13,19 @@ type BedDetailHeroProps = {
   subtitle?: string | null;
 };
 
-export function BedDetailHero({ label, status, occupantName, subtitle }: BedDetailHeroProps) {
+export function BedDetailHero({
+  label,
+  status,
+  occupantName,
+  subtitle,
+}: BedDetailHeroProps) {
   return (
     <View style={styles.card}>
       <View style={styles.row}>
-        <LayoutIllustration source={getBedIllustration(status)} size="bedHero" />
+        <LayoutIllustration
+          source={getBedIllustration(status)}
+          size="bedHero"
+        />
         <View style={styles.info}>
           <Text style={styles.label}>{label}</Text>
           <View style={styles.badgeRow}>
@@ -42,10 +50,12 @@ export function BedDetailHero({ label, status, occupantName, subtitle }: BedDeta
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.white,
-    borderRadius: radius.card,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#CCFBF1',
     padding: spacing.lg,
     marginBottom: spacing.lg,
-    ...shadows.md,
+    ...shadows.sm,
   },
   row: {
     flexDirection: 'row',

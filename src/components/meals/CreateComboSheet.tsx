@@ -60,7 +60,7 @@ export function CreateComboSheet({
   const [suggestedName, setSuggestedName] = useState('Combo 1');
   const [priceText, setPriceText] = useState('');
   const [priceError, setPriceError] = useState<string | null>(null);
-  const [saveToLibrary, setSaveToLibrary] = useState(false);
+  const [saveToLibrary, setSaveToLibrary] = useState(true);
 
   useEffect(() => {
     if (!visible) return;
@@ -68,7 +68,7 @@ export function CreateComboSheet({
     setPriceError(null);
     setSelectedIds([]);
     setItemQuantities({});
-    setSaveToLibrary(false);
+    setSaveToLibrary(true);
 
     let active = true;
     setLoading(true);

@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
   },
   statusShared: {
     borderColor: '#6EE7B7',
-    backgroundColor: '#ECFDF5',
+    backgroundColor: colors.successTint,
   },
   statusUpdated: {
     borderColor: '#93C5FD',

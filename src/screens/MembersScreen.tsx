@@ -19,19 +19,25 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { Mail, UserPlus, Users, X } from 'lucide-react-native';
 import type { MemberResponse, MembershipRole, PendingInvitationResponse } from '../api/types';
 import { MemberListCard } from '../components/member/MemberListCard';
 import { MemberOccupancyStatusBadge, MemberStatusBadge } from '../components/member';
 import { MemberListMealAccessSwitch } from '../components/meals/MemberListMealAccessRow';
 import {
-  Button,
   EmptyState,
   FAB,
   ListSearchFilterBar,
+  SegmentedTabs,
   SkeletonCard,
   useConfirmDialog,
 } from '../components/ui';
 import { MembersFilterDrawer } from '../components/member/MembersFilterDrawer';
+import { DashboardSectionTitle } from '../components/dashboard/DashboardSectionTitle';
+import {
+  DashboardRoleChip,
+  type DashboardPersonRoleTone,
+} from '../components/dashboard/shared/DashboardPersonCard';
 import { useActiveSpaceId } from '../hooks/useActiveSpaceId';
 import { useMealParticipationMap } from '../hooks/useMealParticipationMap';
 import { useSpacePermissions } from '../hooks/useSpacePermissions';
@@ -77,20 +83,18 @@ function formatDate(value: string): string {
   return new Date(value).toLocaleDateString();
 }
 
-function buildMemberSubtitle(
-  member: MemberResponse,
-  t: (key: string, options?: Record<string, string>) => string,
-): string {
-  return formatRoleLabel(member.role, t);
-}
-
-function buildMemberMetaLine(
-  member: MemberResponse,
-  t: (key: string, options?: Record<string, string>) => string,
-): string {
-  const statusLabel = t(getMemberStatusLabelKey(member.status ?? 'ACTIVE'));
-  const countInLabel = memberCountInBadgeLabel(member, t);
-  return `${statusLabel} • ${countInLabel}`;
+function memberRoleTone(role: MembershipRole): DashboardPersonRoleTone {
+  switch (role) {
+    case 'OWNER':
+      return 'owner';
+    case 'MANAGER':
+    case 'CUSTOMER':
+      return 'customer';
+    case 'TENANT':
+      return 'resident';
+    default:
+      return 'staff';
+  }
 }
 
 function buildMemberStatusChip(
@@ -107,7 +111,7 @@ function buildMemberStatusChip(
 }
 
 export function MembersScreen() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const navigation = useNavigation<MembersNavigation>();
   const route = useRoute<MembersRoute>();
   const spaceId = useActiveSpaceId(route.params?.spaceId);
@@ -181,7 +185,9 @@ export function MembersScreen() {
             pressed && styles.inviteButtonPressed,
           ]}
           hitSlop={8}
+          accessibilityRole="button"
           accessibilityLabel={t('membership.invite.headerAction')}>
+          <UserPlus size={16} color={colors.primaryDark} strokeWidth={2.2} />
           <Text style={styles.inviteButtonText}>
             {t('membership.invite.headerAction')}
           </Text>
@@ -248,22 +254,15 @@ export function MembersScreen() {
 
   return (
     <View style={styles.root}>
-      <View style={styles.tabs}>
-        <Pressable
-          onPress={() => setActiveTab('members')}
-          style={[styles.tab, activeTab === 'members' && styles.tabActive]}>
-          <Text style={[styles.tabLabel, activeTab === 'members' && styles.tabLabelActive]}>
-            {t('membership.tabs.members')}
-          </Text>
-        </Pressable>
-        <Pressable
-          onPress={() => setActiveTab('pending')}
-          style={[styles.tab, activeTab === 'pending' && styles.tabActive]}>
-          <Text style={[styles.tabLabel, activeTab === 'pending' && styles.tabLabelActive]}>
-            {t('membership.tabs.pending')}
-          </Text>
-        </Pressable>
-      </View>
+      <SegmentedTabs
+        style={styles.tabs}
+        value={activeTab}
+        onChange={setActiveTab}
+        items={[
+          { key: 'members', label: t('membership.tabs.members'), icon: Users },
+          { key: 'pending', label: t('membership.tabs.pending'), icon: Mail },
+        ]}
+      />
 
       <ScrollView
         style={styles.scroll}
@@ -278,7 +277,24 @@ export function MembersScreen() {
             colors={[colors.primary]}
           />
         }>
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        {error ? (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorBannerText}>{error}</Text>
+          </View>
+        ) : null}
+
+        <DashboardSectionTitle
+          title={
+            activeTab === 'members'
+              ? t('membership.tabs.members')
+              : t('membership.tabs.pending')
+          }
+          subtitle={
+            activeTab === 'members'
+              ? t('membership.members.listSubtitle')
+              : t('membership.pending.listSubtitle')
+          }
+        />
 
         <ListSearchFilterBar
           searchValue={searchQuery}
@@ -299,6 +315,8 @@ export function MembersScreen() {
               <SkeletonCard />
               <View style={styles.gap} />
               <SkeletonCard />
+              <View style={styles.gap} />
+              <SkeletonCard />
             </>
           ) : sortedMembers.length === 0 ? (
             <EmptyState
@@ -312,7 +330,7 @@ export function MembersScreen() {
                   ? t('membership.members.emptyDescription')
                   : undefined
               }
-              icon="👥"
+              Icon={Users}
             />
           ) : (
             <View style={styles.list}>
@@ -328,48 +346,54 @@ export function MembersScreen() {
                 });
 
                 return (
-                  <View key={member.memberId} style={styles.listItem}>
-                    <MemberListCard
-                      title={member.fullName}
-                      subtitle={buildMemberSubtitle(member, t)}
-                      iconLabel={member.fullName.charAt(0).toUpperCase()}
-                      onPress={() => openMemberDetails(member)}
-                      statusChip={buildMemberStatusChip(member, showTenantOccupancyStatus)}
-                      metaLine={buildMemberMetaLine(member, t)}
-                      foodLine={
-                        showFoodLine
-                          ? {
-                              label: getMemberListFoodLabel(
-                                receiving,
-                                permissions.spaceType,
-                                t,
-                              ),
-                              manageControl: (
-                                <MemberListMealAccessSwitch
-                                  spaceId={spaceId}
-                                  memberId={member.memberId}
-                                  participation={participation}
-                                  canManage={canManageMeals}
-                                  spaceType={permissions.spaceType}
-                                  occupancyStatus={member.occupancyStatus}
-                                  onParticipationChanged={() => void reloadParticipations()}
-                                  labelKey={
-                                    isMess
-                                      ? 'meals.mealAccess.label'
-                                      : 'meals.foodIncluded.label'
-                                  }
-                                />
-                              ),
-                            }
-                          : undefined
-                      }
-                    />
-                    <Text style={styles.createdMeta}>
-                      {t('membership.members.created', {
-                        date: formatDate(member.createdAt),
-                      })}
-                    </Text>
-                  </View>
+                  <MemberListCard
+                    key={member.memberId}
+                    title={member.fullName}
+                    iconLabel={member.fullName.charAt(0).toUpperCase()}
+                    onPress={() => openMemberDetails(member)}
+                    roleChip={
+                      <DashboardRoleChip
+                        label={formatRoleLabel(member.role, t)}
+                        tone={memberRoleTone(member.role)}
+                      />
+                    }
+                    statusChip={buildMemberStatusChip(member, showTenantOccupancyStatus)}
+                    statusLabel={t(getMemberStatusLabelKey(member.status ?? 'ACTIVE'))}
+                    countInLabel={memberCountInBadgeLabel(member, t)}
+                    countInActive={member.membershipId != null}
+                    footerLine={t('membership.members.created', {
+                      date: formatDate(member.createdAt),
+                    })}
+                    foodLine={
+                      showFoodLine
+                        ? {
+                            label: getMemberListFoodLabel(
+                              receiving,
+                              permissions.spaceType,
+                              t,
+                            ),
+                            manageControl: (
+                              <MemberListMealAccessSwitch
+                                spaceId={spaceId}
+                                memberId={member.memberId}
+                                participation={participation}
+                                canManage={canManageMeals}
+                                spaceType={permissions.spaceType}
+                                occupancyStatus={member.occupancyStatus}
+                                onParticipationChanged={() =>
+                                  reloadParticipations().catch(() => undefined)
+                                }
+                                labelKey={
+                                  isMess
+                                    ? 'meals.mealAccess.label'
+                                    : 'meals.foodIncluded.label'
+                                }
+                              />
+                            ),
+                          }
+                        : undefined
+                    }
+                  />
                 );
               })}
             </View>
@@ -384,35 +408,55 @@ export function MembersScreen() {
           <EmptyState
             title={t('membership.pending.emptyTitle')}
             description={t('membership.pending.emptyDescription')}
-            icon="✉️"
+            Icon={Mail}
           />
         ) : filteredPendingInvitations.length === 0 ? (
-          <EmptyState title={t('list.emptyFiltered')} icon="✉️" />
+          <EmptyState title={t('list.emptyFiltered')} Icon={Mail} />
         ) : (
           <View style={styles.list}>
             {filteredPendingInvitations.map(invitation => (
-              <View key={invitation.invitationId} style={styles.card}>
-                <Text style={styles.cardTitle}>{invitation.mobileNumber}</Text>
-                <Text style={styles.cardMeta}>
-                  {formatRoleLabel(invitation.role, t)}
-                </Text>
-                <Text style={styles.cardMeta}>
-                  {t('membership.pending.invitedBy', { name: invitation.invitedBy })}
-                </Text>
-                <Text style={styles.cardMeta}>
-                  {t('membership.pending.created', {
-                    date: formatDate(invitation.createdAt),
-                  })}
-                </Text>
-
-                {showCancelInvitation ? (
-                  <Button
-                    label={t('membership.pending.cancel')}
-                    variant="ghost"
-                    onPress={() => confirmCancelInvitation(invitation)}
-                    style={styles.actionButton}
-                  />
-                ) : null}
+              <View key={invitation.invitationId} style={styles.inviteCard}>
+                <View style={styles.inviteTopRow}>
+                  <View style={styles.inviteIconWrap}>
+                    <Mail size={18} color="#2563EB" strokeWidth={2.2} />
+                  </View>
+                  <View style={styles.inviteBody}>
+                    <Text style={styles.inviteTitle} numberOfLines={1}>
+                      {invitation.mobileNumber}
+                    </Text>
+                    <View style={styles.inviteChipRow}>
+                      <DashboardRoleChip
+                        label={formatRoleLabel(invitation.role, t)}
+                        tone={memberRoleTone(invitation.role)}
+                      />
+                      <Text style={styles.inviteSubtitle} numberOfLines={1}>
+                        {t('membership.pending.invitedBy', { name: invitation.invitedBy })}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+                <View style={styles.inviteMetaRow}>
+                  <Text style={styles.inviteMeta} numberOfLines={1}>
+                    {t('membership.pending.created', {
+                      date: formatDate(invitation.createdAt),
+                    })}
+                  </Text>
+                  {showCancelInvitation ? (
+                    <Pressable
+                      onPress={() => confirmCancelInvitation(invitation)}
+                      hitSlop={8}
+                      android_ripple={{ color: 'rgba(220, 38, 38, 0.08)' }}
+                      style={({ pressed }) => [
+                        styles.inviteCancelButton,
+                        pressed && styles.inviteCancelPressed,
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('membership.pending.cancel')}>
+                      <X size={14} color="#DC2626" strokeWidth={2.4} />
+                      <Text style={styles.inviteCancel}>{t('membership.pending.cancel')}</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
               </View>
             ))}
           </View>
@@ -447,32 +491,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   tabs: {
-    flexDirection: 'row',
     marginHorizontal: spacing.xl,
     marginTop: spacing.md,
-    marginBottom: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: radius.button,
-    padding: spacing.xs,
-    gap: spacing.xs,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.button,
-    alignItems: 'center',
-  },
-  tabActive: {
-    backgroundColor: colors.white,
-    ...shadows.sm,
-  },
-  tabLabel: {
-    ...typography.body,
-    color: colors.muted,
-  },
-  tabLabelActive: {
-    ...typography.bodyStrong,
-    color: colors.primaryDark,
+    marginBottom: spacing.xs,
   },
   scroll: {
     flex: 1,
@@ -481,55 +502,117 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     paddingBottom: 96,
   },
-  errorText: {
+  errorBanner: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: radius.button,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  errorBannerText: {
     ...typography.body,
+    fontSize: 14,
     color: '#DC2626',
-    marginBottom: spacing.lg,
   },
   list: {
     gap: spacing.md,
   },
-  listItem: {
-    gap: spacing.xs,
-  },
-  createdMeta: {
-    ...typography.caption,
-    color: colors.muted,
-    marginTop: -spacing.xs,
-    marginLeft: spacing.xs,
-  },
   gap: {
     height: spacing.md,
   },
-  card: {
+  inviteCard: {
     backgroundColor: colors.white,
-    borderRadius: radius.card,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.lg,
+    padding: spacing.md,
+    gap: spacing.sm,
     ...shadows.sm,
   },
-  cardTitle: {
+  inviteTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  inviteIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inviteBody: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacing.xs,
+  },
+  inviteTitle: {
     ...typography.bodyStrong,
     fontSize: 16,
-    marginBottom: spacing.xs,
+    lineHeight: 20,
+    fontWeight: '600',
+    color: colors.textPrimary,
   },
-  cardMeta: {
-    ...typography.body,
+  inviteChipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  inviteSubtitle: {
+    ...typography.caption,
+    fontSize: 12,
     color: colors.muted,
-    marginBottom: spacing.xs,
+    flexShrink: 1,
   },
-  actionButton: {
-    marginTop: spacing.sm,
+  inviteMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  inviteMeta: {
+    ...typography.caption,
+    fontSize: 11,
+    color: colors.muted,
+    flex: 1,
+  },
+  inviteCancelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    minHeight: 36,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.button,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    backgroundColor: '#FEF2F2',
+  },
+  inviteCancelPressed: {
+    backgroundColor: '#FEE2E2',
+  },
+  inviteCancel: {
+    ...typography.caption,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#DC2626',
   },
   inviteButton: {
     marginRight: spacing.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+    minHeight: 40,
     borderRadius: radius.button,
     backgroundColor: colors.lightGreen,
     borderWidth: 1,
     borderColor: `${colors.primary}33`,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   inviteButtonPressed: {
     backgroundColor: colors.surface,
@@ -537,6 +620,7 @@ const styles = StyleSheet.create({
   inviteButtonText: {
     ...typography.bodyStrong,
     fontSize: 13,
+    fontWeight: '600',
     color: colors.primaryDark,
   },
 });

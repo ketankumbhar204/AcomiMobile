@@ -1122,7 +1122,11 @@ export function HierarchyOccupancyPickerModal({
           }
         />
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error ? (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorBannerText}>{error}</Text>
+          </View>
+        ) : null}
 
         {phase === 'hierarchy' ? (
           <>
@@ -1363,11 +1367,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     marginBottom: spacing.sm,
   },
-  error: {
-    ...typography.body,
-    color: '#DC2626',
-    paddingHorizontal: spacing.xl,
+  errorBanner: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: radius.button,
+    padding: spacing.md,
+    marginHorizontal: spacing.xl,
     marginBottom: spacing.sm,
+  },
+  errorBannerText: {
+    ...typography.body,
+    fontSize: 14,
+    color: '#DC2626',
   },
   list: {
     flex: 1,
@@ -1389,7 +1401,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: spacing.md,
     backgroundColor: colors.white,
-    borderRadius: radius.card,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.md,

@@ -11,6 +11,7 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { Building2, Sparkles, Wrench } from 'lucide-react-native';
 import {
   RefreshControl,
   ScrollView,
@@ -24,8 +25,10 @@ import type { BuildingResponse, BuildingSummaryResponse, SpaceType } from '../..
 import { AccommodationSearchBar, BuildingListCard } from '../../components/accommodation';
 import { AccommodationHomeSpeedDial } from '../../components/accommodation/AccommodationHomeSpeedDial';
 import { DashboardAccommodationOperations } from '../../components/dashboard/DashboardAccommodationOperations';
+import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
+import { DashboardActionRow } from '../../components/dashboard/shared/DashboardActionRow';
 import { CoachmarkAnchor, CoachmarkSequence } from '../../components/coachmarks';
-import { Button, EmptyState, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
+import { EmptyState, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
 import { ENABLE_SETUP_COACHMARKS } from '../../coachmarks';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useBuildings } from '../../hooks/useBuildings';
@@ -38,7 +41,7 @@ import { useSpaceTabHeader } from '../../hooks/useSpaceTabHeader';
 import type { MainStackParamList, SpaceTabParamList } from '../../navigation/types';
 import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
-import { colors, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { matchesSearch } from '../../utils/accommodationSearch';
 import { renameBuildingName } from '../../utils/accommodationInlineRename';
 import { currentMonthKey } from '../../utils/dashboardFinancial';
@@ -287,29 +290,104 @@ export function AccommodationHomeScreen() {
                 colors={[colors.primary]}
               />
             }>
-            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            {error ? (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorBannerText}>{error}</Text>
+              </View>
+            ) : null}
+
+            <View style={styles.hero}>
+              <View style={styles.decorBlob} pointerEvents="none" />
+              <View style={styles.heroIconWrap} accessibilityElementsHidden>
+                <Building2 size={18} color="#2563EB" strokeWidth={2.2} />
+              </View>
+              <Text style={styles.eyebrow}>
+                {t('accommodation.home.eyebrow', { defaultValue: 'Property' })}
+              </Text>
+              <Text style={styles.heading}>
+                {t('accommodation.home.title', { defaultValue: 'Accommodation' })}
+              </Text>
+              <Text style={styles.subheading}>
+                {t('accommodation.home.subtitle', {
+                  defaultValue: 'Buildings, floors, rooms, and beds in one place',
+                })}
+              </Text>
+            </View>
 
             {accommodationOperations ? (
-              <DashboardAccommodationOperations
-                hideTitle
-                operations={accommodationOperations}
-                onOccupiedPress={
-                  canOpenOccupancyDrilldown ? handleOccupiedBedsPress : undefined
-                }
-                onVacantPress={
-                  canOpenOccupancyDrilldown ? handleVacantBedsPress : undefined
-                }
-                onMoveInsPress={
-                  canOpenOccupancyDrilldown ? handleMoveInsPress : undefined
-                }
-              />
+              <>
+                <DashboardSectionTitle
+                  title={t('dashboard.accommodationOps.title', {
+                    defaultValue: 'Property operations',
+                  })}
+                  subtitle={t('dashboard.accommodationOps.subtitle', {
+                    defaultValue: 'Occupancy at a glance',
+                  })}
+                />
+                <DashboardAccommodationOperations
+                  hideTitle
+                  operations={accommodationOperations}
+                  onOccupiedPress={
+                    canOpenOccupancyDrilldown ? handleOccupiedBedsPress : undefined
+                  }
+                  onVacantPress={
+                    canOpenOccupancyDrilldown ? handleVacantBedsPress : undefined
+                  }
+                  onMoveInsPress={
+                    canOpenOccupancyDrilldown ? handleMoveInsPress : undefined
+                  }
+                />
+              </>
+            ) : showLoading ? (
+              <>
+                <SkeletonCard />
+                <View style={styles.gap} />
+              </>
+            ) : null}
+
+            {canManage && !isEmpty ? (
+              <View style={styles.quickActions}>
+                <DashboardSectionTitle
+                  title={t('accommodation.home.quickActions', {
+                    defaultValue: 'Quick actions',
+                  })}
+                />
+                <DashboardActionRow
+                  icon={Sparkles}
+                  accent="#7C3AED"
+                  title={t('accommodation.home.quickSetup')}
+                  subtitle={t('accommodation.home.quickSetupHint', {
+                    defaultValue: 'Guided building structure setup',
+                  })}
+                  onPress={openQuickSetup}
+                />
+                <DashboardActionRow
+                  icon={Wrench}
+                  accent="#2563EB"
+                  title={t('accommodation.home.addBuildingManually')}
+                  subtitle={t('accommodation.home.addBuildingHint', {
+                    defaultValue: 'Create a building step by step',
+                  })}
+                  onPress={openManualBuilding}
+                />
+              </View>
             ) : null}
 
             {!isEmpty ? (
-              <AccommodationSearchBar
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
+              <>
+                <DashboardSectionTitle
+                  title={t('accommodation.home.buildingsTitle', {
+                    defaultValue: 'Buildings',
+                  })}
+                  subtitle={t('accommodation.home.buildingsSubtitle', {
+                    defaultValue: 'Open a building to manage floors and beds',
+                  })}
+                />
+                <AccommodationSearchBar
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
+              </>
             ) : null}
 
             {showLoading ? (
@@ -325,7 +403,7 @@ export function AccommodationHomeScreen() {
                     <EmptyState
                       title={t('accommodation.home.emptyTitle')}
                       description={t('accommodation.home.emptyDescription')}
-                      icon="🏢"
+                      Icon={Building2}
                     />
                   </CoachmarkAnchor>
                   {canManage ? (
@@ -333,13 +411,22 @@ export function AccommodationHomeScreen() {
                       id="continueSetup"
                       active={coachmarksEnabled}
                       style={styles.emptyActions}>
-                      <Button
-                        label={t('accommodation.home.quickSetup')}
+                      <DashboardActionRow
+                        icon={Sparkles}
+                        accent="#7C3AED"
+                        title={t('accommodation.home.quickSetup')}
+                        subtitle={t('accommodation.home.quickSetupHint', {
+                          defaultValue: 'Guided building structure setup',
+                        })}
                         onPress={openQuickSetup}
                       />
-                      <Button
-                        label={t('accommodation.home.addBuildingManually')}
-                        variant="secondary"
+                      <DashboardActionRow
+                        icon={Wrench}
+                        accent="#2563EB"
+                        title={t('accommodation.home.addBuildingManually')}
+                        subtitle={t('accommodation.home.addBuildingHint', {
+                          defaultValue: 'Create a building step by step',
+                        })}
                         onPress={openManualBuilding}
                       />
                     </CoachmarkAnchor>
@@ -405,13 +492,78 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: spacing.xl,
+    padding: spacing.lg,
     paddingBottom: 120,
   },
-  errorText: {
+  hero: {
+    marginBottom: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.section,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    overflow: 'hidden',
+    position: 'relative',
+    ...shadows.sm,
+  },
+  decorBlob: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(37, 99, 235, 0.12)',
+    top: -48,
+    right: -28,
+  },
+  heroIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.sm,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+    zIndex: 1,
+  },
+  eyebrow: {
+    ...typography.eyebrow,
+    marginBottom: 2,
+    zIndex: 1,
+  },
+  heading: {
+    ...typography.h2,
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: '600',
+    color: '#1D4ED8',
+    marginBottom: 2,
+    zIndex: 1,
+  },
+  subheading: {
+    ...typography.caption,
+    fontSize: 12,
+    color: colors.muted,
+    zIndex: 1,
+  },
+  errorBanner: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: radius.button,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  errorBannerText: {
     ...typography.body,
+    fontSize: 14,
     color: '#DC2626',
-    marginBottom: spacing.lg,
+  },
+  quickActions: {
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
   list: {
     gap: spacing.md,
@@ -426,7 +578,6 @@ const styles = StyleSheet.create({
   },
   emptyActions: {
     marginTop: spacing.xl,
-    gap: spacing.md,
-    paddingHorizontal: spacing.xl,
+    gap: spacing.sm,
   },
 });

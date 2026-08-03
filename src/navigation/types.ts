@@ -246,6 +246,16 @@ export type MainStackParamList = {
   ComplaintDetail: { spaceId: UUID; complaintId: UUID };
   GlobalAttentionList: undefined;
   GlobalActivityList: undefined;
+  InventoryDashboard: {
+    spaceId: UUID;
+    stockFilter?: 'LOW' | 'CRITICAL' | 'OUT_OF_STOCK' | 'HEALTHY' | 'ALL' | 'ATTENTION';
+  };
+  InventoryItems: {
+    spaceId: UUID;
+    stockFilter?: 'LOW' | 'CRITICAL' | 'OUT_OF_STOCK' | 'HEALTHY' | 'ALL' | 'ATTENTION';
+  };
+  InventoryItemDetails: { spaceId: UUID; itemId: UUID };
+  InventoryItemForm: { spaceId: UUID; mode: 'create' | 'edit'; itemId?: UUID };
 };
 
 export type RootStackParamList = {

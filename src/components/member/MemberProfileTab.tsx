@@ -3,19 +3,28 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import {
+  Pencil,
+  Phone,
+  ShieldAlert,
+  Trash2,
+  UserPlus,
+} from 'lucide-react-native';
 import type { MemberDetailsResponse, MemberStatus, SpaceType } from '../../api/types';
 import { MemberAccommodationSection } from '../occupancy';
 import { Button, Card, FormInput, useConfirmDialog } from '../ui';
+import { DashboardActionRow } from '../dashboard/shared/DashboardActionRow';
+import { DashboardSectionTitle } from '../dashboard/DashboardSectionTitle';
 import type { MainStackParamList } from '../../navigation/types';
 import { useMemberStore } from '../../store/memberStore';
 import { useToastStore } from '../../store/toastStore';
-import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { colors, shadows, spacing, typography } from '../../theme';
 import { memberCountInBadgeLabel, memberInviteHint } from '../../utils/memberAppStatus';
 import { isSelectableMemberGender, memberGenderLabelKey } from '../../utils/memberGender';
 import { MemberDocumentsSection } from './MemberDocumentsSection';
 import { MemberProfileCorrectionSection } from '../profile/MemberProfileCorrectionSection';
 import { UserProfileFields } from '../profile/UserProfileFields';
-import { MemberDetailRow, MemberSectionTitle } from './MemberDetailRow';
+import { MemberDetailRow } from './MemberDetailRow';
 import { MemberMealBillingPanel } from './MemberMealBillingPanel';
 import { MemberNotesSection } from './MemberNotesSection';
 import { StatusPicker } from './StatusPicker';
@@ -224,7 +233,7 @@ export function MemberProfileTab({
         />
       ) : null}
 
-      <MemberSectionTitle title={t('membership.emergency.heading')} />
+      <DashboardSectionTitle title={t('membership.emergency.heading')} />
       {!member.linkedUserProfile ? (
         <Card style={styles.card}>
           <MemberDetailRow
@@ -250,58 +259,71 @@ export function MemberProfileTab({
       />
       <MemberNotesSection memberId={member.memberId} canEdit={canEdit} />
 
-      {canInvite ? (
-        <Card style={styles.inviteCard}>
-          <Text style={styles.inviteHint}>{memberInviteHint(member, t)}</Text>
-          <Button
-            label={
+      <DashboardSectionTitle title={t('membership.details.actionsHeading', {
+        defaultValue: 'Actions',
+      })} />
+      <View style={styles.actionsStack}>
+        {canInvite ? (
+          <DashboardActionRow
+            icon={UserPlus}
+            accent={colors.primaryDark}
+            title={
               hasPendingInvite
                 ? t('membership.invite.pending')
                 : t('membership.invite.send')
             }
-            onPress={openInviteScreen}
+            subtitle={memberInviteHint(member, t)}
+            onPress={hasPendingInvite ? undefined : openInviteScreen}
             disabled={hasPendingInvite}
-            style={styles.actionButton}
           />
-        </Card>
-      ) : null}
-
-      {canEdit ? (
-        <>
-          <Button
-            label={t('membership.details.edit')}
-            onPress={() =>
-              navigation.navigate('EditMember', {
-                spaceId,
-                memberId: member.memberId,
-              })
-            }
-            style={styles.actionButton}
+        ) : null}
+        {canEdit ? (
+          <>
+            <DashboardActionRow
+              icon={Pencil}
+              accent={colors.primaryDark}
+              title={t('membership.details.edit')}
+              subtitle={t('membership.details.editSubtitle', {
+                defaultValue: 'Update name, role, and profile details',
+              })}
+              onPress={() =>
+                navigation.navigate('EditMember', {
+                  spaceId,
+                  memberId: member.memberId,
+                })
+              }
+            />
+            <DashboardActionRow
+              icon={ShieldAlert}
+              accent="#2563EB"
+              title={t('membership.status.change')}
+              subtitle={t('membership.status.changeSubtitle', {
+                defaultValue: 'Active, left, or other status',
+              })}
+              onPress={openStatusModal}
+            />
+            <DashboardActionRow
+              icon={Phone}
+              accent="#D97706"
+              title={t('membership.emergency.edit')}
+              subtitle={t('membership.emergency.editSubtitle', {
+                defaultValue: 'Name, relation, and mobile',
+              })}
+              onPress={openEmergencyModal}
+            />
+          </>
+        ) : null}
+        {canRemove ? (
+          <DashboardActionRow
+            icon={Trash2}
+            accent="#DC2626"
+            title={t('membership.members.remove')}
+            subtitle={t('membership.remove.message')}
+            onPress={confirmRemove}
+            disabled={loading}
           />
-          <Button
-            label={t('membership.status.change')}
-            variant="secondary"
-            onPress={openStatusModal}
-            style={styles.actionButton}
-          />
-          <Button
-            label={t('membership.emergency.edit')}
-            variant="secondary"
-            onPress={openEmergencyModal}
-            style={styles.actionButton}
-          />
-        </>
-      ) : null}
-
-      {canRemove ? (
-        <Button
-          label={t('membership.members.remove')}
-          variant="ghost"
-          onPress={confirmRemove}
-          disabled={loading}
-          style={styles.actionButton}
-        />
-      ) : null}
+        ) : null}
+      </View>
 
       <Modal
         visible={statusModalVisible}
@@ -392,17 +414,11 @@ export function MemberProfileTab({
 const styles = StyleSheet.create({
   card: {
     marginBottom: spacing.md,
+    borderRadius: 18,
   },
-  inviteCard: {
-    marginBottom: spacing.md,
+  actionsStack: {
     gap: spacing.sm,
-  },
-  inviteHint: {
-    ...typography.body,
-    color: colors.muted,
-  },
-  actionButton: {
-    marginBottom: spacing.sm,
+    marginBottom: spacing.lg,
   },
   modalBackdrop: {
     flex: 1,
@@ -412,12 +428,14 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     backgroundColor: colors.white,
-    borderRadius: radius.card,
+    borderRadius: 18,
     padding: spacing.xl,
     ...shadows.md,
   },
   modalTitle: {
     ...typography.h2,
+    fontSize: 20,
+    fontWeight: '600',
     marginBottom: spacing.lg,
   },
   modalActions: {

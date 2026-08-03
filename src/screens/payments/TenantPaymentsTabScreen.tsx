@@ -9,13 +9,15 @@ import {
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { TriangleAlert, WalletCards } from 'lucide-react-native';
 import { PaymentServiceUnavailableError, paymentsApi } from '../../api/paymentsApi';
 import type { SpacePaymentResponse } from '../../api/types';
+import { MealFormHero } from '../../components/meals/MealFormHero';
 import { DayMealPaymentsPanel } from '../../components/payments/DayMealPaymentsPanel';
 import { PaymentsSectionTabBar } from '../../components/payments/PaymentsSectionTabBar';
 import { UniversalPaymentCard } from '../../components/payments/UniversalPaymentCard';
 import { UniversalPaymentProofModal } from '../../components/payments/UniversalPaymentProofModal';
-import { Button, EmptyState, ListFilterChips, SkeletonCard } from '../../components/ui';
+import { Button, EmptyState, ListFilterChips, Skeleton, SkeletonCard } from '../../components/ui';
 import { useCustomerSubscriptionStatus } from '../../hooks/useCustomerSubscriptionStatus';
 import { useLinkedMember } from '../../hooks/useLinkedMember';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
@@ -234,7 +236,7 @@ export function TenantPaymentsTabScreen() {
       <View style={styles.screen}>
         <View style={styles.content}>
           <EmptyState
-            icon="💳"
+            Icon={WalletCards}
             title={t('paymentCollection.memberPayments.emptyTitle')}
             description={t('paymentCollection.memberPayments.noLinkedMember')}
           />
@@ -261,8 +263,18 @@ export function TenantPaymentsTabScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} />
         }>
-        <Text style={styles.heading}>{t('paymentCollection.memberPayments.title')}</Text>
-        <Text style={styles.subheading}>{member?.fullName}</Text>
+        <MealFormHero
+          icon={WalletCards}
+          eyebrow={t('paymentCollection.memberPayments.eyebrow', { defaultValue: 'Billing' })}
+          heading={t('paymentCollection.memberPayments.title')}
+          subheading={
+            member?.fullName ??
+            t('paymentCollection.memberPayments.subtitle', {
+              defaultValue: 'Your payments and proofs for this space.',
+            })
+          }
+          compact
+        />
 
         <PaymentsSectionTabBar
           sections={sectionTabs}
@@ -288,15 +300,18 @@ export function TenantPaymentsTabScreen() {
 
         {serviceUnavailable ? (
           <EmptyState
+            Icon={TriangleAlert}
             title={t('paymentCollection.serviceUnavailable.title')}
             description={t('paymentCollection.serviceUnavailable.description')}
-            icon="⚠️"
           />
         ) : null}
 
         {error ? (
           <View style={styles.errorBlock}>
-            <Text style={styles.errorText}>{t(error)}</Text>
+            <View style={styles.errorBanner}>
+              <TriangleAlert size={16} color="#DC2626" strokeWidth={2.2} />
+              <Text style={styles.errorText}>{t(error)}</Text>
+            </View>
             <Button label={t('common.retry')} variant="secondary" onPress={() => void reload()} />
           </View>
         ) : null}
@@ -308,14 +323,17 @@ export function TenantPaymentsTabScreen() {
         ) : null}
 
         {!serviceUnavailable && !error && loading && payments.length === 0 ? (
-          <SkeletonCard />
+          <View style={styles.skeletonWrap}>
+            <Skeleton width="100%" height={88} borderRadius={18} />
+            <Skeleton width="100%" height={88} borderRadius={18} />
+          </View>
         ) : null}
 
         {!serviceUnavailable && !error && !loading && visiblePayments.length === 0 ? (
           <EmptyState
+            Icon={WalletCards}
             title={t('paymentCollection.memberPayments.emptyTitle')}
             description={t(`paymentCollection.tenantSections.empty.${section}`)}
-            icon="💳"
           />
         ) : null}
 
@@ -359,24 +377,29 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: spacing.xxl,
+    padding: spacing.lg,
     paddingBottom: spacing.section,
-  },
-  heading: {
-    ...typography.h2,
-    marginBottom: spacing.xs,
-  },
-  subheading: {
-    ...typography.body,
-    color: colors.muted,
-    marginBottom: spacing.md,
+    gap: spacing.md,
   },
   errorBlock: {
-    marginBottom: spacing.md,
     gap: spacing.sm,
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 18,
+    padding: spacing.md,
   },
   errorText: {
     ...typography.body,
+    flex: 1,
     color: '#DC2626',
+  },
+  skeletonWrap: {
+    gap: spacing.sm,
   },
 });

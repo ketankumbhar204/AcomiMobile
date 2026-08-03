@@ -1,13 +1,15 @@
 import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type {
   NativeStackNavigationProp,
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { AlertTriangle, CreditCard } from 'lucide-react-native';
 import { PaymentServiceUnavailableError, paymentsApi } from '../../api/paymentsApi';
 import type { SpacePaymentResponse } from '../../api/types';
+import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
 import { UniversalPaymentCard } from '../../components/payments/UniversalPaymentCard';
 import { UniversalPaymentProofModal } from '../../components/payments/UniversalPaymentProofModal';
 import { EmptyState, HeaderBackButton, ListFilterChips, Screen, SkeletonCard } from '../../components/ui';
@@ -15,7 +17,7 @@ import { useToastStore } from '../../store/toastStore';
 import { useMealPaymentActivitySummaries } from '../../hooks/useMealPaymentActivitySummaries';
 import { useUniversalPayments } from '../../hooks/useUniversalPayments';
 import type { MainStackParamList } from '../../navigation/types';
-import { colors, spacing, typography } from '../../theme';
+import { spacing, typography } from '../../theme';
 import {
   countTenantPaymentFilter,
   filterTenantPayments,
@@ -130,8 +132,10 @@ export function MemberPaymentsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} />
         }
         showsVerticalScrollIndicator={false}>
-        <Text style={styles.heading}>{memberName}</Text>
-        <Text style={styles.subheading}>{t('paymentCollection.memberPayments.subtitle')}</Text>
+        <DashboardSectionTitle
+          title={memberName}
+          subtitle={t('paymentCollection.memberPayments.subtitle')}
+        />
 
         <ListFilterChips options={filterOptions} value={filter} onChange={setFilter} />
 
@@ -139,21 +143,30 @@ export function MemberPaymentsScreen() {
           <EmptyState
             title={t('paymentCollection.serviceUnavailable.title')}
             description={t('paymentCollection.serviceUnavailable.description')}
-            icon="⚠️"
+            Icon={AlertTriangle}
           />
         ) : null}
 
-        {error ? <Text style={styles.error}>{t(error)}</Text> : null}
+        {error ? (
+          <View style={styles.errorBanner}>
+            <AlertTriangle size={16} color="#DC2626" strokeWidth={2.2} />
+            <Text style={styles.errorBannerText}>{t(error)}</Text>
+          </View>
+        ) : null}
 
         {!serviceUnavailable && loading && payments.length === 0 ? (
-          <SkeletonCard />
+          <>
+            <SkeletonCard />
+            <View style={styles.gap} />
+            <SkeletonCard />
+          </>
         ) : null}
 
         {!serviceUnavailable && !loading && visiblePayments.length === 0 ? (
           <EmptyState
             title={t('paymentCollection.memberPayments.emptyTitle')}
             description={t('paymentCollection.memberPayments.emptyDescription')}
-            icon="💳"
+            Icon={CreditCard}
           />
         ) : null}
 
@@ -185,20 +198,26 @@ export function MemberPaymentsScreen() {
 const styles = StyleSheet.create({
   content: {
     flex: 1,
-    padding: spacing.xl,
+    padding: spacing.lg,
   },
-  heading: {
-    ...typography.h2,
-    marginBottom: spacing.xs,
+  gap: {
+    height: spacing.sm,
   },
-  subheading: {
-    ...typography.body,
-    color: colors.muted,
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 14,
+    padding: spacing.md,
     marginBottom: spacing.md,
   },
-  error: {
+  errorBannerText: {
     ...typography.body,
+    fontSize: 14,
     color: '#DC2626',
-    marginBottom: spacing.md,
+    flex: 1,
   },
 });

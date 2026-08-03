@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { MemberResponse } from '../../../../api/types';
-import { colors, radius, spacing, typography } from '../../../../theme';
+import { colors, spacing, typography } from '../../../../theme';
 
 type WizardContextBannerProps = {
   member?: MemberResponse | null;
@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: `${colors.primary}33`,
     backgroundColor: `${colors.primary}0D`,
-    borderRadius: radius.input,
+    borderRadius: 18,
     padding: spacing.md,
     marginBottom: spacing.lg,
     gap: spacing.sm,

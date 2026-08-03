@@ -1,3 +1,4 @@
+export { inventoryApi } from './inventoryApi';
 export { dashboardApi } from './dashboardApi';
 export { paymentsApi, PaymentServiceUnavailableError } from './paymentsApi';
 export { default as apiClient, getAuthToken, setAuthToken } from './client';

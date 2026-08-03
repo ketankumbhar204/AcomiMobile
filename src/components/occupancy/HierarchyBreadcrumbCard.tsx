@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, spacing, typography } from '../../theme';
 
 export type OccupancyHierarchyContext = {
   spaceName?: string;
@@ -69,7 +69,7 @@ export function HierarchyBreadcrumbCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: `${colors.muted}14`,
-    borderRadius: radius.input,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: `${colors.muted}33`,
     borderStyle: 'dashed',

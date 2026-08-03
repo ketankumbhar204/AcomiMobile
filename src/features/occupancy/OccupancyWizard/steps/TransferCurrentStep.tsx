@@ -49,7 +49,7 @@ export function TransferCurrentStep({
 
 const styles = StyleSheet.create({
   wrap: { gap: spacing.sm },
-  title: { ...typography.h3 },
+  title: { ...typography.h3, fontSize: 18, lineHeight: 22, fontWeight: '600' },
   member: { ...typography.bodyStrong },
   path: { ...typography.body, color: colors.textSecondary },
 });

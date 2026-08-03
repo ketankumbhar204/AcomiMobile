@@ -13,6 +13,7 @@ import type {
   FoodCategoryResponse,
   FoodItemResponse,
   MealComboResponse,
+  MenuHistoryPageResponse,
   UpdateFoodItemExtraRequest,
   MealEligibilitySummaryResponse,
   MealEligibleParticipantResponse,
@@ -360,6 +361,31 @@ export const mealsApi = {
     return unwrapApiResponse(
       apiClient.get<ApiResponse<DailyMenuResponse[]>>(path),
     );
+  },
+
+  getMenuHistory: async (
+    spaceId: UUID,
+    mealType: MealType,
+    params?: { search?: string; page?: number; limit?: number },
+  ): Promise<MenuHistoryPageResponse> => {
+    const search = params?.search?.trim();
+    const page = params?.page ?? 0;
+    const limit = params?.limit ?? 50;
+    const qs = new URLSearchParams({
+      mealType,
+      page: String(page),
+      limit: String(limit),
+    });
+    if (search) qs.set('search', search);
+    const path = `/spaces/${spaceId}/menu-history?${qs.toString()}`;
+    console.log(`${LOG_TAG} GET ${path}`);
+    return unwrapApiResponse(apiClient.get<ApiResponse<MenuHistoryPageResponse>>(path));
+  },
+
+  clearMenuHistory: async (spaceId: UUID, mealType: MealType): Promise<void> => {
+    const path = `/spaces/${spaceId}/menu-history?mealType=${mealType}`;
+    console.log(`${LOG_TAG} DELETE ${path}`);
+    await unwrapVoidResponse(apiClient.delete(path));
   },
 
   getDailyMenu: async (

@@ -117,6 +117,9 @@ export interface SpacePermissionsResponse {
   canRaiseComplaint?: boolean;
   canViewAllComplaints?: boolean;
   canManageComplaints?: boolean;
+  /** Stock / asset inventory (operators). */
+  canViewInventory?: boolean;
+  canManageInventory?: boolean;
 }
 
 export type MealPlanCode =
@@ -248,6 +251,35 @@ export interface MealComboResponse {
   currencyCode?: string | null;
   foodType?: FoodType;
   items?: Array<{ itemId: UUID; name: string; foodType?: FoodType; quantity?: number }>;
+}
+
+/** Meal-specific planner history entry (combo or single item). */
+export type MenuHistoryEntryType = 'COMBO' | 'ITEM';
+
+export interface MenuHistoryItemResponse {
+  historyId: UUID;
+  type: MenuHistoryEntryType;
+  mealType: MealType;
+  name: string;
+  thumbnailUrl?: string | null;
+  foodType?: FoodType | null;
+  summary?: string | null;
+  lastUsedAt: string;
+  lastUsedMenuDate?: string | null;
+  usageCount: number;
+  price?: number | null;
+  currencyCode?: string | null;
+  comboId?: UUID | null;
+  itemId?: UUID | null;
+  itemIds?: UUID[] | null;
+}
+
+export interface MenuHistoryPageResponse {
+  items: MenuHistoryItemResponse[];
+  page: number;
+  limit: number;
+  total: number;
+  hasMore: boolean;
 }
 
 export interface DailyMenuOptionResponse {

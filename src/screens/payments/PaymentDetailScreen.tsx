@@ -6,6 +6,13 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import {
+  ChevronRight,
+  History,
+  TriangleAlert,
+  UserRound,
+  WalletCards,
+} from 'lucide-react-native';
 import { PaymentServiceUnavailableError, paymentsApi } from '../../api/paymentsApi';
 import { mealsApi } from '../../api/mealsApi';
 import type {
@@ -14,6 +21,7 @@ import type {
   PaymentTimelineEventResponse,
   SpacePaymentResponse,
 } from '../../api/types';
+import { MealFormHero } from '../../components/meals/MealFormHero';
 import { MealSelectionSummary } from '../../components/meals/MealSelectionSummary';
 import { PaymentHistoryTimeline } from '../../components/payments/PaymentHistoryTimeline';
 import { PaymentNeedsUpdatePanel } from '../../components/payments/PaymentNeedsUpdatePanel';
@@ -24,11 +32,11 @@ import { PaymentStatusBadge } from '../../components/payments/PaymentStatusBadge
 import { PaymentStatusCardFrame } from '../../components/payments/PaymentStatusCardFrame';
 import { UniversalPaymentProofModal } from '../../components/payments/UniversalPaymentProofModal';
 import { StickyFormActions } from '../../components/progressive';
-import { Button, EmptyState, HeaderBackButton, Screen, SkeletonCard } from '../../components/ui';
+import { Button, EmptyState, HeaderBackButton, Screen, Skeleton, SkeletonCard } from '../../components/ui';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { canManagePayments } from '../../utils/dashboardFinancial';
 import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
 import { invalidatePaymentsMonthCaches } from '../../utils/paymentsMonthCache';
@@ -296,7 +304,11 @@ export function PaymentDetailScreen() {
   if (loading && !payment && !serviceUnavailable) {
     return (
       <Screen contentStyle={styles.loadingPad}>
-        <SkeletonCard />
+        <View style={styles.skeletonWrap}>
+          <Skeleton width="100%" height={72} borderRadius={18} />
+          <SkeletonCard />
+          <Skeleton width="100%" height={120} borderRadius={18} />
+        </View>
       </Screen>
     );
   }
@@ -305,9 +317,9 @@ export function PaymentDetailScreen() {
     return (
       <Screen contentStyle={styles.loadingPad}>
         <EmptyState
+          Icon={TriangleAlert}
           title={t('paymentCollection.serviceUnavailable.title')}
           description={t('paymentCollection.serviceUnavailable.description')}
-          icon="⚠️"
         />
       </Screen>
     );
@@ -316,7 +328,11 @@ export function PaymentDetailScreen() {
   if (!payment) {
     return (
       <Screen contentStyle={styles.loadingPad}>
-        <Text style={styles.error}>{t('paymentCollection.errors.loadPayment')}</Text>
+        <EmptyState
+          Icon={WalletCards}
+          title={t('paymentCollection.errors.loadPayment')}
+          description={t('common.retry')}
+        />
       </Screen>
     );
   }
@@ -346,12 +362,23 @@ export function PaymentDetailScreen() {
         style={styles.flex}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
+        <MealFormHero
+          icon={WalletCards}
+          eyebrow={t('paymentCollection.detail.eyebrow', { defaultValue: 'Payment' })}
+          heading={displayTitle}
+          subheading={formatPaymentAmount(payment.amount, payment.currencyCode)}
+          compact
+        />
+
         {isOwnerOperator && memberId ? (
           <Pressable
             onPress={openMemberProfile}
             style={({ pressed }) => [styles.memberCard, pressed && styles.memberCardPressed]}
             accessibilityRole="button"
             accessibilityLabel={t('paymentCollection.detail.viewMember')}>
+            <View style={styles.memberAvatar}>
+              <UserRound size={18} color={colors.primaryDark} strokeWidth={2.2} />
+            </View>
             <View style={styles.memberMain}>
               <Text style={styles.memberName} numberOfLines={1}>
                 {memberName || t('paymentCollection.memberPayments.title')}
@@ -362,7 +389,7 @@ export function PaymentDetailScreen() {
                   : t('spaces.roles.TENANT')}
               </Text>
             </View>
-            <Text style={styles.viewMemberLink}>{t('paymentCollection.detail.viewMember')} ›</Text>
+            <ChevronRight size={18} color={colors.muted} strokeWidth={2.4} />
           </Pressable>
         ) : null}
 
@@ -473,6 +500,7 @@ export function PaymentDetailScreen() {
         <Button
           label={t('paymentCollection.timeline.viewFull')}
           variant="secondary"
+          icon={History}
           onPress={openTimeline}
           style={styles.action}
         />
@@ -614,11 +642,15 @@ const styles = StyleSheet.create({
   },
   loadingPad: {
     flex: 1,
-    padding: spacing.xl,
+    padding: spacing.lg,
+  },
+  skeletonWrap: {
+    gap: spacing.md,
   },
   scrollContent: {
-    padding: spacing.xl,
+    padding: spacing.lg,
     paddingBottom: spacing.xl,
+    gap: spacing.md,
   },
   flex: {
     flex: 1,
@@ -629,17 +661,24 @@ const styles = StyleSheet.create({
   memberCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     gap: spacing.sm,
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.card,
+    borderRadius: 18,
     padding: spacing.md,
-    marginBottom: spacing.md,
+    ...shadows.sm,
   },
   memberCardPressed: {
     opacity: 0.85,
+  },
+  memberAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.button,
+    backgroundColor: colors.lightGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   memberMain: {
     flex: 1,
@@ -653,14 +692,8 @@ const styles = StyleSheet.create({
     color: colors.muted,
     marginTop: 2,
   },
-  viewMemberLink: {
-    ...typography.caption,
-    color: colors.primaryDark,
-    fontWeight: '700',
-  },
   summaryCard: {
-    padding: spacing.lg,
-    marginBottom: spacing.md,
+    padding: spacing.md,
   },
   headerRow: {
     flexDirection: 'row',

@@ -10,6 +10,17 @@ import {
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { LucideIcon } from 'lucide-react-native';
+import {
+  ArrowRightLeft,
+  BedDouble,
+  CalendarDays,
+  ClipboardCheck,
+  FileText,
+  Home,
+  LogOut,
+  UserRound,
+} from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { memberApi } from '../../../api/memberApi';
 import { occupancyApi } from '../../../api/occupancyApi';
@@ -30,7 +41,7 @@ import {
 } from '../../../hooks/useResidentImportSearch';
 import type { MainStackParamList } from '../../../navigation/types';
 import { useSpaceStore } from '../../../store/spaceStore';
-import { colors, spacing, typography } from '../../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../../theme';
 import { buildBedOccupancyTarget } from '../../../utils/buildOccupancyTarget';
 import { fetchTargetCatalogDefaults } from '../../../utils/fetchTargetCatalogDefaults';
 import { fetchSpaceFoodPolicy, type SpaceFoodPolicy } from '../../../utils/fetchSpaceFoodPolicy';
@@ -71,6 +82,44 @@ import type { OccupancyWizardStep } from './types';
 import { resolveProgressivePhase } from '../../../utils/progressivePhase';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'OccupancyWizard'>;
+
+function getWizardModeIcon(mode: Props['route']['params']['mode']): LucideIcon {
+  switch (mode) {
+    case 'ALLOCATE':
+      return Home;
+    case 'RESERVE':
+      return CalendarDays;
+    case 'MOVE_IN':
+      return Home;
+    case 'TRANSFER':
+      return ArrowRightLeft;
+    case 'VACATE':
+      return LogOut;
+    default:
+      return Home;
+  }
+}
+
+function getWizardStepIcon(step: OccupancyWizardStep): LucideIcon {
+  switch (step) {
+    case 'member':
+      return UserRound;
+    case 'target':
+      return BedDouble;
+    case 'contract':
+      return FileText;
+    case 'reserve_dates':
+      return CalendarDays;
+    case 'transfer_current':
+      return ArrowRightLeft;
+    case 'vacate_confirm':
+      return LogOut;
+    case 'review':
+      return ClipboardCheck;
+    default:
+      return ClipboardCheck;
+  }
+}
 
 export function OccupancyWizardScreen({ navigation, route }: Props) {
   const { t } = useTranslation();
@@ -219,6 +268,9 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
   const stepTitle = t(getWizardStepTitleKey(currentStep));
   const showStepHeader =
     currentStep !== 'review' && currentStep !== 'vacate_confirm' && !isTargetStep;
+  const ModeIcon = getWizardModeIcon(mode);
+  const StepIcon = getWizardStepIcon(currentStep);
+  const wizardTitle = t(getWizardTitleKey(mode));
 
   const spaceContextLine = useMemo(() => {
     const parts = [spaceName, spaceTypeLabel].filter(Boolean);
@@ -780,7 +832,14 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
       {isTargetStep ? (
         <View style={styles.targetStepRoot}>
           <View style={styles.targetStepHeader}>
-            <Text style={styles.heading}>{t(getWizardTitleKey(mode))}</Text>
+            <View style={styles.hero}>
+              <View style={styles.decorBlob} pointerEvents="none" />
+              <View style={styles.decorRing} pointerEvents="none" />
+              <View style={styles.heroIconWrap} accessibilityElementsHidden>
+                <ModeIcon size={18} color={colors.primaryDark} strokeWidth={2.2} />
+              </View>
+              <Text style={styles.heading}>{wizardTitle}</Text>
+            </View>
             {member ? (
               <View style={styles.memberContext}>
                 <Text style={styles.memberLabel}>{t('occupancyWizard.context.member')}</Text>
@@ -804,7 +863,11 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
             />
           </View>
 
-          {formError ? <Text style={styles.error}>{formError}</Text> : null}
+          {formError ? (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorBannerText}>{formError}</Text>
+            </View>
+          ) : null}
 
           <StickyFormActions
             secondary={{
@@ -816,7 +879,14 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
         </View>
       ) : usesListStep ? (
         <View style={styles.listStepRoot}>
-          <Text style={styles.heading}>{t(getWizardTitleKey(mode))}</Text>
+          <View style={styles.hero}>
+            <View style={styles.decorBlob} pointerEvents="none" />
+            <View style={styles.decorRing} pointerEvents="none" />
+            <View style={styles.heroIconWrap} accessibilityElementsHidden>
+              <ModeIcon size={18} color={colors.primaryDark} strokeWidth={2.2} />
+            </View>
+            <Text style={styles.heading}>{wizardTitle}</Text>
+          </View>
 
           {showMemberContext && member ? (
             <View style={styles.memberContext}>
@@ -832,6 +902,7 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
             <OccupancyWizardStepHeader
               stepProgress={{ current: stepIndex + 1, total: steps.length }}
               stepTitle={stepTitle}
+              Icon={StepIcon}
               hierarchyContext={hierarchyContext}
             />
           ) : null}
@@ -876,7 +947,11 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
             ) : null}
           </View>
 
-          {formError ? <Text style={styles.error}>{formError}</Text> : null}
+          {formError ? (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorBannerText}>{formError}</Text>
+            </View>
+          ) : null}
 
           {showPrimaryButton ? (
             <StickyFormActions
@@ -913,7 +988,14 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
             scrollEventThrottle={16}
             onScrollBeginDrag={isContractStep ? onAddonsScrollBeginDrag : undefined}
             onScroll={isContractStep ? handleContractScroll : undefined}>
-            <Text style={styles.heading}>{t(getWizardTitleKey(mode))}</Text>
+            <View style={styles.hero}>
+              <View style={styles.decorBlob} pointerEvents="none" />
+              <View style={styles.decorRing} pointerEvents="none" />
+              <View style={styles.heroIconWrap} accessibilityElementsHidden>
+                <ModeIcon size={18} color={colors.primaryDark} strokeWidth={2.2} />
+              </View>
+              <Text style={styles.heading}>{wizardTitle}</Text>
+            </View>
 
             {showMemberContext && member ? (
               <View style={styles.memberContext}>
@@ -929,6 +1011,7 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
               <OccupancyWizardStepHeader
                 stepProgress={{ current: stepIndex + 1, total: steps.length }}
                 stepTitle={stepTitle}
+                Icon={StepIcon}
                 hierarchyContext={hierarchyContext}
               />
             ) : null}
@@ -1000,7 +1083,11 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
               />
             ) : null}
 
-            {formError ? <Text style={styles.error}>{formError}</Text> : null}
+            {formError ? (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorBannerText}>{formError}</Text>
+              </View>
+            ) : null}
           </ScrollView>
 
           {isContractStep && contractProgressiveEnabled ? (
@@ -1072,7 +1159,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   formStepScrollContent: {
-    paddingHorizontal: spacing.xxl,
+    paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.xl,
   },
@@ -1086,13 +1173,13 @@ const styles = StyleSheet.create({
   },
   listScreenContent: {
     flex: 1,
-    paddingHorizontal: spacing.xxl,
+    paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.section,
   },
   targetScreenContent: {
     flex: 1,
-    paddingHorizontal: spacing.xxl,
+    paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.md,
     minHeight: 0,
@@ -1108,7 +1195,57 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 0,
   },
-  heading: { ...typography.h2, marginBottom: spacing.sm },
+  hero: {
+    marginBottom: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.section,
+    backgroundColor: colors.successTint,
+    borderWidth: 1,
+    borderColor: `${colors.primary}33`,
+    overflow: 'hidden',
+    position: 'relative',
+    ...shadows.sm,
+  },
+  decorBlob: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: `${colors.primary}1F`,
+    top: -48,
+    right: -28,
+  },
+  decorRing: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 8,
+    borderColor: `${colors.primary}14`,
+    bottom: -16,
+    right: 40,
+  },
+  heroIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.sm,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: `${colors.primary}33`,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+    zIndex: 1,
+  },
+  heading: {
+    ...typography.h2,
+    fontSize: 22,
+    lineHeight: 28,
+    color: colors.primaryDark,
+    marginBottom: 0,
+    zIndex: 1,
+  },
   memberContext: {
     marginBottom: spacing.sm,
     gap: spacing.xs,
@@ -1122,5 +1259,17 @@ const styles = StyleSheet.create({
     ...typography.bodyStrong,
     color: colors.primaryDark,
   },
-  error: { ...typography.caption, color: '#DC2626', marginVertical: spacing.sm },
+  errorBanner: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: radius.button,
+    padding: spacing.md,
+    marginVertical: spacing.sm,
+  },
+  errorBannerText: {
+    ...typography.body,
+    fontSize: 14,
+    color: '#DC2626',
+  },
 });

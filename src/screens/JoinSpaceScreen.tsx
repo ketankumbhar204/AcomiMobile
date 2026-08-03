@@ -1,14 +1,18 @@
 import React, { useCallback, useLayoutEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { Button } from '../components/ui';
+import { Building2, MailPlus, UsersRound } from 'lucide-react-native';
+import { AuthHero } from '../components/auth';
+import { DashboardActionRow } from '../components/dashboard/shared/DashboardActionRow';
+import { EmptyState } from '../components/ui';
 import { ProfileHeaderButton } from '../components/ui/ProfileHeaderButton';
 import { Screen } from '../components/ui/Screen';
+import { StickyFormActions } from '../components/progressive';
 import type { MainStackParamList } from '../navigation/types';
 import { useSpaceStore } from '../store/spaceStore';
-import { colors, spacing, typography } from '../theme';
+import { colors, shadows, spacing } from '../theme';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'JoinSpace'>;
 
@@ -18,14 +22,16 @@ export function JoinSpaceScreen() {
   const refreshStartupNavigation = useSpaceStore(state => state.refreshStartupNavigation);
   const [refreshing, setRefreshing] = useState(false);
 
+  const headerRight = useCallback(() => <ProfileHeaderButton />, []);
+
   useLayoutEffect(() => {
     navigation.setOptions({
       title: t('onboarding.join.title'),
       headerLeft: undefined,
       headerBackVisible: navigation.canGoBack(),
-      headerRight: () => <ProfileHeaderButton />,
+      headerRight,
     });
-  }, [navigation, t, i18n.language]);
+  }, [headerRight, navigation, t, i18n.language]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -37,55 +43,62 @@ export function JoinSpaceScreen() {
   }, [refreshStartupNavigation]);
 
   return (
-    <Screen scrollable contentStyle={styles.content}>
-      <Text style={styles.eyebrow}>{t('onboarding.join.eyebrow')}</Text>
-      <Text style={styles.heading}>{t('onboarding.join.heading')}</Text>
-      <Text style={styles.body}>{t('onboarding.join.body')}</Text>
+    <View style={styles.flex}>
+      <Screen scrollable contentStyle={styles.content}>
+        <AuthHero
+          icon={UsersRound}
+          eyebrow={t('onboarding.join.eyebrow')}
+          heading={t('onboarding.join.heading')}
+          subheading={t('onboarding.join.body')}
+          accent="#1D4ED8"
+          soft="#EFF6FF"
+          border="#BFDBFE"
+        />
 
-      <Button
-        label={refreshing ? t('onboarding.join.refreshing') : t('onboarding.join.refresh')}
-        onPress={() => void handleRefresh()}
-        loading={refreshing}
-        style={styles.refreshButton}
+        <View style={styles.infoCard}>
+          <EmptyState
+            Icon={MailPlus}
+            title={t('onboarding.join.emptyTitle')}
+            description={t('onboarding.join.emptyDescription')}
+          />
+        </View>
+
+        <DashboardActionRow
+          icon={Building2}
+          title={t('onboarding.join.manageInstead')}
+          subtitle={t('onboarding.choice.manageSubtitle')}
+          onPress={() => navigation.navigate('OnboardingChoice')}
+          disabled={refreshing}
+        />
+      </Screen>
+
+      <StickyFormActions
+        primary={{
+          label: refreshing ? t('onboarding.join.refreshing') : t('onboarding.join.refresh'),
+          onPress: () => void handleRefresh(),
+          loading: refreshing,
+          disabled: refreshing,
+        }}
       />
-
-      <Pressable
-        style={styles.altLink}
-        onPress={() => navigation.navigate('OnboardingChoice')}
-        disabled={refreshing}>
-        <Text style={styles.altLinkText}>{t('onboarding.join.manageInstead')}</Text>
-      </Pressable>
-    </Screen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   content: {
     paddingBottom: spacing.section,
+    gap: spacing.md,
   },
-  eyebrow: {
-    ...typography.eyebrow,
-    marginBottom: spacing.sm,
-  },
-  heading: {
-    ...typography.h2,
-    marginBottom: spacing.md,
-  },
-  body: {
-    ...typography.body,
-    color: colors.textSecondary,
-    lineHeight: 24,
-    marginBottom: spacing.xxl,
-  },
-  refreshButton: {
-    marginBottom: spacing.lg,
-  },
-  altLink: {
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-  },
-  altLinkText: {
-    ...typography.bodyStrong,
-    color: colors.primaryDark,
+  infoCard: {
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+    ...shadows.sm,
   },
 });

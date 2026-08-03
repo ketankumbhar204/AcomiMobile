@@ -3,19 +3,33 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import {
+  Building2,
+  FileText,
+  Info,
+  Languages,
+  LogOut,
+  SquarePen,
+  TriangleAlert,
+  UserRound,
+} from 'lucide-react-native';
 import { authApi } from '../api/authApi';
 import { memberApi } from '../api/memberApi';
-import type { MemberDetailsResponse, MemberDocumentType } from '../api/types';
+import type { MemberDetailsResponse, MemberDocumentType, MembershipRole } from '../api/types';
 import { LanguagePicker } from '../components/settings/LanguagePicker';
 import { ProfileDocumentsSection } from '../components/profile/ProfileDocumentsSection';
 import { ProfileDocumentUploadModal } from '../components/profile/ProfileDocumentUploadModal';
-import { MemberSectionTitle } from '../components/member/MemberDetailRow';
+import { ProfileHero } from '../components/profile/ProfileHero';
+import { SettingsGroupCard } from '../components/profile/SettingsGroupCard';
 import { UserProfileFields } from '../components/profile/UserProfileFields';
+import { DashboardActionRow } from '../components/dashboard/shared/DashboardActionRow';
 import {
   Button,
-  Card,
+  EmptyState,
   HeaderBackButton,
   Screen,
+  Skeleton,
+  SkeletonCard,
   useConfirmDialog,
 } from '../components/ui';
 import { useAuthenticatedUser } from '../hooks/useAuth';
@@ -26,10 +40,13 @@ import { useAuthStore } from '../store/authStore';
 import { useMemberStore } from '../store/memberStore';
 import { useSpaceStore } from '../store/spaceStore';
 import { useToastStore } from '../store/toastStore';
-import { colors, spacing, typography } from '../theme';
+import { colors, radius, shadows, spacing, typography } from '../theme';
 import { buildCompleteProfilePayloadFromUser } from '../utils/buildCompleteProfilePayload';
 import { invalidateDashboardQueries } from '../utils/dashboardQueryCache';
-import { isConsumerMembershipRole } from '../utils/profileCompletion';
+import {
+  isConsumerMembershipRole,
+  profileCompletionPercentage,
+} from '../utils/profileCompletion';
 import {
   findPrimaryIdentityDocument,
   profileDocumentsToFormState,
@@ -42,6 +59,16 @@ import {
 } from '../utils/profileCorrection';
 
 type ProfileNav = NativeStackNavigationProp<MainStackParamList, 'Profile'>;
+
+function roleToneLabel(
+  role: MembershipRole | undefined,
+  t: (key: string, opts?: { defaultValue?: string }) => string,
+): string | null {
+  if (!role) {
+    return null;
+  }
+  return t(`spaces.roles.${role}`, { defaultValue: role });
+}
 
 export function ProfileScreen() {
   const { t, i18n } = useTranslation();
@@ -58,6 +85,7 @@ export function ProfileScreen() {
   const loadNotes = useMemberStore(state => state.loadNotes);
 
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [contextLoading, setContextLoading] = useState(true);
   const [linkedMember, setLinkedMember] = useState<MemberDetailsResponse | null>(null);
   const [linkedMemberId, setLinkedMemberId] = useState<string | null>(null);
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
@@ -85,44 +113,56 @@ export function ProfileScreen() {
     );
   }, [mySpaces, selectedSpaceId]);
 
-  const loadProfileContext = useCallback(async () => {
-    await refreshUser();
-
-    if (!consumerSpaceId) {
-      setLinkedMember(null);
-      setLinkedMemberId(null);
-      setIdentityDocument(null);
-      setDocumentState(null);
-      return;
+  const currentSpace = useMemo(() => {
+    if (selectedSpaceId) {
+      return mySpaces.find(space => space.spaceId === selectedSpaceId) ?? null;
     }
+    return mySpaces[0] ?? null;
+  }, [mySpaces, selectedSpaceId]);
 
+  const loadProfileContext = useCallback(async () => {
+    setContextLoading(true);
     try {
-      const linked = await memberApi.getMyLinkedMember(consumerSpaceId);
-      setLinkedMemberId(linked.memberId);
+      await refreshUser();
 
-      const details = await memberApi.getMember(consumerSpaceId, linked.memberId);
-      setLinkedMember(details);
-      await loadNotes(linked.memberId, true);
+      if (!consumerSpaceId) {
+        setLinkedMember(null);
+        setLinkedMemberId(null);
+        setIdentityDocument(null);
+        setDocumentState(null);
+        return;
+      }
 
-      const documents = await memberApi.getMemberDocuments(consumerSpaceId, linked.memberId);
-      const docState = profileDocumentsToFormState(documents);
-      setDocumentState(docState);
-      const primary = findPrimaryIdentityDocument(documents);
-      setIdentityDocument(
-        primary
-          ? { type: primary.documentType, number: primary.documentNumber }
-          : docState.identityDocumentType && docState.identityDocumentNumber
-            ? {
-                type: docState.identityDocumentType,
-                number: docState.identityDocumentNumber,
-              }
-            : null,
-      );
-    } catch {
-      setLinkedMember(null);
-      setLinkedMemberId(null);
-      setIdentityDocument(null);
-      setDocumentState(null);
+      try {
+        const linked = await memberApi.getMyLinkedMember(consumerSpaceId);
+        setLinkedMemberId(linked.memberId);
+
+        const details = await memberApi.getMember(consumerSpaceId, linked.memberId);
+        setLinkedMember(details);
+        await loadNotes(linked.memberId, true);
+
+        const documents = await memberApi.getMemberDocuments(consumerSpaceId, linked.memberId);
+        const docState = profileDocumentsToFormState(documents);
+        setDocumentState(docState);
+        const primary = findPrimaryIdentityDocument(documents);
+        setIdentityDocument(
+          primary
+            ? { type: primary.documentType, number: primary.documentNumber }
+            : docState.identityDocumentType && docState.identityDocumentNumber
+              ? {
+                  type: docState.identityDocumentType,
+                  number: docState.identityDocumentNumber,
+                }
+              : null,
+        );
+      } catch {
+        setLinkedMember(null);
+        setLinkedMemberId(null);
+        setIdentityDocument(null);
+        setDocumentState(null);
+      }
+    } finally {
+      setContextLoading(false);
     }
   }, [consumerSpaceId, loadNotes, refreshUser]);
 
@@ -142,6 +182,10 @@ export function ProfileScreen() {
 
   const handleEditProfile = () => {
     navigation.navigate('CompleteProfile', { mode: 'edit' });
+  };
+
+  const handleOpenMySpaces = () => {
+    navigation.navigate('MySpaces');
   };
 
   const handleOpenUpload = () => {
@@ -244,10 +288,25 @@ export function ProfileScreen() {
     });
   };
 
+  const completionPercent = profileCompletionPercentage(user);
+  const profileStatusLabel = user?.profileStatus
+    ? t(`settings.profile.profileStatus.${user.profileStatus}`)
+    : null;
+  const profileStatusTone =
+    user?.profileStatus === 'VERIFIED' || user?.profileStatus === 'COMPLETED'
+      ? ('active' as const)
+      : user?.profileStatus === 'REJECTED'
+        ? ('inactive' as const)
+        : ('neutral' as const);
+
   if (!user) {
     return (
       <Screen contentStyle={styles.content}>
-        <Text style={styles.subheading}>{t('common.errors.authRequired')}</Text>
+        <EmptyState
+          Icon={UserRound}
+          title={t('common.errors.authRequired')}
+          description={t('settings.profile.subheading')}
+        />
       </Screen>
     );
   }
@@ -255,100 +314,176 @@ export function ProfileScreen() {
   return (
     <View style={styles.root}>
       <Screen scrollable contentStyle={styles.content}>
-      <Text style={styles.eyebrow}>{t('settings.profile.eyebrow')}</Text>
-      <Text style={styles.heading}>{t('settings.profile.heading')}</Text>
-      <Text style={styles.subheading}>{t('settings.profile.subheading')}</Text>
-
-      {correctionNotes.length > 0 ? (
-        <>
-          <MemberSectionTitle title={t('settings.profile.correctionRequests')} />
-          {correctionNotes.map(note => (
-            <Card key={note.noteId} style={styles.correctionCard}>
-              <Text style={styles.correctionMessage}>{profileCorrectionMessage(note.note)}</Text>
-              <Text style={styles.correctionMeta}>
-                {t('settings.profile.correctionFromOwner', { name: note.createdByName })}
-              </Text>
-              <Button
-                label={t('settings.profile.editProfile')}
-                variant="secondary"
-                onPress={handleEditProfile}
-                style={styles.correctionAction}
-              />
-            </Card>
-          ))}
-        </>
-      ) : null}
-
-      <View style={styles.profileHeader}>
-        <Button
-          label={t('settings.profile.editProfile')}
-          variant="secondary"
-          onPress={handleEditProfile}
+        <ProfileHero
+          fullName={user.fullName ?? ''}
+          mobile={user.mobileNumber}
+          photoUrl={user.profilePhotoUrl}
+          roleLabel={roleToneLabel(currentSpace?.membershipRole, t)}
+          spaceName={currentSpace?.spaceName ?? null}
+          statusLabel={profileStatusLabel}
+          statusTone={profileStatusTone}
+          membershipLabel={
+            mySpaces.length > 0
+              ? t('settings.profile.spacesJoined', {
+                  count: mySpaces.length,
+                  defaultValue: '{{count}} spaces',
+                })
+              : null
+          }
+          completionPercent={completionPercent}
+          completionLabel={t('settings.profile.completionLabel', {
+            defaultValue: 'Profile completion',
+          })}
+          editLabel={t('settings.profile.editProfile')}
+          onEdit={handleEditProfile}
         />
-      </View>
 
-      <UserProfileFields
-        user={user}
-        identityDocument={identityDocument}
-        identityProofPreviewUri={documentState?.identityProofFileUrl}
-        addressProofPreviewUri={documentState?.addressProofFileUrl}
-        canUploadAssets={canUploadAssets}
-        uploadingAsset={uploadingAsset}
-        onUploadProfilePhoto={handleUploadProfilePhoto}
-        onUploadIdentityProof={handleUploadIdentityProof}
-        onUploadAddressProof={handleUploadAddressProof}
-        emergencyContact={
-          linkedMember
-            ? {
-                name: linkedMember.emergencyContactName,
-                relation: linkedMember.emergencyContactRelation,
-                mobile: linkedMember.emergencyContactMobile,
-              }
-            : undefined
-        }
-      />
+        <View style={styles.quickActions}>
+          <DashboardActionRow
+            title={t('settings.profile.editProfile')}
+            subtitle={t('settings.profile.quickEditSubtitle', {
+              defaultValue: 'Update personal details and KYC',
+            })}
+            icon={SquarePen}
+            onPress={handleEditProfile}
+          />
+          <DashboardActionRow
+            title={t('settings.profile.switchSpace', {
+              defaultValue: 'Switch space',
+            })}
+            subtitle={
+              currentSpace?.spaceName ??
+              t('settings.profile.switchSpaceSubtitle', {
+                defaultValue: 'Open My Spaces',
+              })
+            }
+            icon={Building2}
+            onPress={handleOpenMySpaces}
+          />
+          {canUploadAssets ? (
+            <DashboardActionRow
+              title={t('settings.profile.documentsSection')}
+              subtitle={t('settings.profile.documentsDescription', {
+                defaultValue: 'Upload identity and address proofs',
+              })}
+              icon={FileText}
+              onPress={handleOpenUpload}
+            />
+          ) : null}
+        </View>
 
-      {linkedMemberId && consumerSpaceId ? (
-        <ProfileDocumentsSection
-          spaceId={consumerSpaceId}
-          memberId={linkedMemberId}
-          onRequestUpload={handleOpenUpload}
-          refreshKey={documentsRefreshKey}
-        />
-      ) : (
-        <>
-          <MemberSectionTitle title={t('settings.profile.documentsSection')} />
-          <Card style={styles.emptyCard}>
-            <Text style={styles.emptyText}>{t('settings.profile.documentsNoSpace')}</Text>
+        {correctionNotes.length > 0 ? (
+          <SettingsGroupCard
+            title={t('settings.profile.correctionRequests')}
+            icon={TriangleAlert}
+            accent="#D97706">
+            {correctionNotes.map(note => (
+              <View key={note.noteId} style={styles.correctionCard}>
+                <View style={styles.correctionIcon}>
+                  <TriangleAlert size={16} color="#D97706" strokeWidth={2.2} />
+                </View>
+                <View style={styles.correctionBody}>
+                  <Text style={styles.correctionMessage}>
+                    {profileCorrectionMessage(note.note)}
+                  </Text>
+                  <Text style={styles.correctionMeta}>
+                    {t('settings.profile.correctionFromOwner', { name: note.createdByName })}
+                  </Text>
+                  <Button
+                    label={t('settings.profile.editProfile')}
+                    variant="secondary"
+                    onPress={handleEditProfile}
+                    style={styles.correctionAction}
+                  />
+                </View>
+              </View>
+            ))}
+          </SettingsGroupCard>
+        ) : null}
+
+        {contextLoading && !linkedMemberId ? (
+          <View style={styles.loadingWrap}>
+            <SkeletonCard />
+            <View style={styles.skeletonRow}>
+              <Skeleton width={28} height={28} borderRadius={radius.sm} />
+              <Skeleton width="70%" height={14} />
+            </View>
+            <SkeletonCard />
+          </View>
+        ) : (
+          <UserProfileFields
+            user={user}
+            showPhoto
+            showPhotoMeta={false}
+            identityDocument={identityDocument}
+            identityProofPreviewUri={documentState?.identityProofFileUrl}
+            addressProofPreviewUri={documentState?.addressProofFileUrl}
+            canUploadAssets={canUploadAssets}
+            uploadingAsset={uploadingAsset}
+            onUploadProfilePhoto={handleUploadProfilePhoto}
+            onUploadIdentityProof={handleUploadIdentityProof}
+            onUploadAddressProof={handleUploadAddressProof}
+            emergencyContact={
+              linkedMember
+                ? {
+                    name: linkedMember.emergencyContactName,
+                    relation: linkedMember.emergencyContactRelation,
+                    mobile: linkedMember.emergencyContactMobile,
+                  }
+                : undefined
+            }
+          />
+        )}
+
+        {linkedMemberId && consumerSpaceId ? (
+          <ProfileDocumentsSection
+            spaceId={consumerSpaceId}
+            memberId={linkedMemberId}
+            onRequestUpload={handleOpenUpload}
+            refreshKey={documentsRefreshKey}
+          />
+        ) : (
+          <SettingsGroupCard
+            title={t('settings.profile.documentsSection')}
+            icon={FileText}
+            description={t('settings.profile.documentsNoSpace')}>
             <Button
               label={t('settings.profile.editProfile')}
               variant="secondary"
               onPress={handleEditProfile}
               style={styles.documentsFallbackButton}
             />
-          </Card>
-        </>
-      )}
+          </SettingsGroupCard>
+        )}
 
-      <Card style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>{t('settings.language.title')}</Text>
-        <Text style={styles.sectionBody}>{t('settings.language.description')}</Text>
-        <LanguagePicker value={currentLanguage} />
-      </Card>
+        <SettingsGroupCard
+          title={t('settings.language.title')}
+          icon={Languages}
+          description={t('settings.language.description')}>
+          <LanguagePicker value={currentLanguage} />
+        </SettingsGroupCard>
 
-      <Card style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>{t('settings.profile.sessionTitle')}</Text>
-        <Text style={styles.sectionBody}>{t('settings.profile.sessionBody')}</Text>
-      </Card>
+        <SettingsGroupCard
+          title={t('settings.profile.sessionTitle')}
+          icon={Info}
+          description={t('settings.profile.sessionBody')}>
+          <View style={styles.sessionMeta}>
+            <Text style={styles.sessionMetaLabel}>
+              {t('settings.profile.versionLabel', { defaultValue: 'App version' })}
+            </Text>
+            <Text style={styles.sessionMetaValue}>0.0.1</Text>
+          </View>
+        </SettingsGroupCard>
 
-      <Button
-        label={t('settings.profile.logout')}
-        variant="ghost"
-        onPress={handleLogout}
-        loading={isLoggingOut}
-        disabled={isLoggingOut}
-        style={styles.logoutButton}
-      />
+        <Button
+          label={t('settings.profile.logout')}
+          variant="ghost"
+          icon={LogOut}
+          onPress={handleLogout}
+          loading={isLoggingOut}
+          disabled={isLoggingOut}
+          style={styles.logoutButton}
+        />
       </Screen>
 
       {consumerSpaceId && linkedMemberId ? (
@@ -370,61 +505,79 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingBottom: spacing.section,
+    gap: spacing.sm,
   },
-  eyebrow: {
-    ...typography.eyebrow,
-    marginBottom: spacing.sm,
+  quickActions: {
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
-  heading: {
-    ...typography.h1,
-    marginBottom: spacing.sm,
+  loadingWrap: {
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
-  subheading: {
-    ...typography.body,
-    marginBottom: spacing.xxl,
-  },
-  profileHeader: {
-    marginBottom: spacing.lg,
+  skeletonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xs,
   },
   correctionCard: {
-    marginBottom: spacing.md,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    backgroundColor: colors.warningTint,
+    borderRadius: radius.button,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    padding: spacing.md,
+  },
+  correctionIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FEF3C7',
+  },
+  correctionBody: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacing.xs,
   },
   correctionMessage: {
     ...typography.bodyStrong,
-    marginBottom: spacing.xs,
+    color: colors.textPrimary,
   },
   correctionMeta: {
     ...typography.caption,
     color: colors.muted,
-    marginBottom: spacing.md,
   },
   correctionAction: {
     alignSelf: 'flex-start',
-  },
-  emptyCard: {
-    marginBottom: spacing.lg,
-  },
-  emptyText: {
-    ...typography.body,
-    color: colors.muted,
-    marginBottom: spacing.md,
+    marginTop: spacing.xs,
   },
   documentsFallbackButton: {
     alignSelf: 'flex-start',
   },
-  sectionCard: {
-    marginBottom: spacing.lg,
+  sessionMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 40,
   },
-  sectionTitle: {
-    ...typography.h3,
-    marginBottom: spacing.sm,
+  sessionMetaLabel: {
+    ...typography.caption,
+    color: colors.muted,
+    fontWeight: '600',
   },
-  sectionBody: {
-    ...typography.body,
-    marginBottom: spacing.md,
+  sessionMetaValue: {
+    ...typography.bodyStrong,
+    color: colors.textPrimary,
   },
   logoutButton: {
+    borderWidth: 1,
     borderColor: '#FECACA',
     marginTop: spacing.sm,
+    backgroundColor: '#FEF2F2',
+    ...shadows.sm,
   },
 });

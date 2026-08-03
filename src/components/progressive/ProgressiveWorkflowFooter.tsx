@@ -194,7 +194,7 @@ export function ProgressiveWorkflowFooter({
 /** Amber highlight used when Continue scrolls to a section (Dashboard Design A). */
 export const progressiveSectionHighlightStyle = {
   borderColor: '#F59E0B',
-  backgroundColor: '#FFFBEB',
+  backgroundColor: colors.warningTint,
 } as const;
 
 const styles = StyleSheet.create({

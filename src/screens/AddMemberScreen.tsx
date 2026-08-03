@@ -19,6 +19,7 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { Phone, User, UserPlus } from 'lucide-react-native';
 import { enrollMemberInFullMeals } from '../api/mealsApi';
 import { mealBalanceApi } from '../api/mealBalanceApi';
 import { mealBillingApi } from '../api/mealBillingApi';
@@ -37,9 +38,10 @@ import {
 import { MemberSubscriptionSetupFields } from '../components/member/MemberSubscriptionSetupFields';
 import {
   ProgressiveWorkflowFooter,
+  StickyFormActions,
   progressiveSectionHighlightStyle,
 } from '../components/progressive';
-import { Button, FormInput, GenderPicker, HeaderBackButton, RolePicker } from '../components/ui';
+import { FormInput, GenderPicker, HeaderBackButton, RolePicker } from '../components/ui';
 import {
   MemberPickerStep,
   type MemberPickerMode,
@@ -53,7 +55,7 @@ import type { MainStackParamList } from '../navigation/types';
 import { useMemberStore } from '../store/memberStore';
 import { useSpaceStore } from '../store/spaceStore';
 import { useToastStore } from '../store/toastStore';
-import { colors, radius, spacing, typography } from '../theme';
+import { colors, radius, shadows, spacing, typography } from '../theme';
 import { invalidateDashboardQueries } from '../utils/dashboardQueryCache';
 import { defaultRoleForSpaceType } from '../utils/memberRoles';
 import { isMemberGenderRequired } from '../utils/memberGender';
@@ -367,13 +369,20 @@ export function AddMemberScreen() {
             scrollEventThrottle={16}
             onScrollBeginDrag={messProgressiveEnabled ? onMealsScrollBeginDrag : undefined}
             onScroll={messProgressiveEnabled ? handleScroll : undefined}>
-            <Text style={styles.eyebrow}>{t('membership.add.eyebrow')}</Text>
-            <Text style={styles.heading}>
-              {isMess ? t('membership.add.headingMess') : t('membership.add.heading')}
-            </Text>
-            <Text style={styles.subheading}>
-              {isMess ? t('membership.add.subheadingMess') : t('membership.add.subheading')}
-            </Text>
+            <View style={styles.hero}>
+              <View style={styles.decorBlob} pointerEvents="none" />
+              <View style={styles.decorRing} pointerEvents="none" />
+              <View style={styles.heroIconWrap} accessibilityElementsHidden>
+                <UserPlus size={18} color={colors.primaryDark} strokeWidth={2.2} />
+              </View>
+              <Text style={styles.eyebrow}>{t('membership.add.eyebrow')}</Text>
+              <Text style={styles.heading}>
+                {isMess ? t('membership.add.headingMess') : t('membership.add.heading')}
+              </Text>
+              <Text style={styles.subheading}>
+                {isMess ? t('membership.add.subheadingMess') : t('membership.add.subheading')}
+              </Text>
+            </View>
             <View style={styles.inviteInsteadRow}>
               <Text style={styles.inviteInsteadText}>
                 {t('membership.add.inviteInstead')}{' '}
@@ -458,7 +467,10 @@ export function AddMemberScreen() {
             ) : null}
 
             {showCreateForm && !showCustomerReuse ? (
-              <>
+              <View style={styles.formCard}>
+                <Text style={styles.formCardTitle}>
+                  {t('membership.add.detailsHeading', { defaultValue: 'Member details' })}
+                </Text>
                 <FormInput
                   label={t('membership.add.fullNameLabel')}
                   placeholder={t('membership.add.fullNamePlaceholder')}
@@ -472,6 +484,7 @@ export function AddMemberScreen() {
                   error={fieldErrors.fullName}
                   autoCapitalize="words"
                   returnKeyType="next"
+                  leadingIcon={User}
                 />
 
                 <FormInput
@@ -488,8 +501,21 @@ export function AddMemberScreen() {
                   keyboardType="phone-pad"
                   returnKeyType="done"
                   maxLength={15}
+                  leadingIcon={Phone}
                 />
-              </>
+
+                <GenderPicker
+                  value={gender}
+                  onChange={selected => {
+                    setGender(selected);
+                    if (fieldErrors.gender) {
+                      setFieldErrors(prev => ({ ...prev, gender: undefined }));
+                    }
+                  }}
+                  error={fieldErrors.gender}
+                  required={genderRequired}
+                />
+              </View>
             ) : null}
 
             {usingImport && selectedImport ? (
@@ -513,18 +539,23 @@ export function AddMemberScreen() {
               </View>
             ) : null}
 
-            {showCreateForm ? (
-              <GenderPicker
-                value={gender}
-                onChange={selected => {
-                  setGender(selected);
-                  if (fieldErrors.gender) {
-                    setFieldErrors(prev => ({ ...prev, gender: undefined }));
-                  }
-                }}
-                error={fieldErrors.gender}
-                required={genderRequired}
-              />
+            {showCreateForm && showCustomerReuse ? (
+              <View style={styles.formCard}>
+                <Text style={styles.formCardTitle}>
+                  {t('membership.add.detailsHeading', { defaultValue: 'Member details' })}
+                </Text>
+                <GenderPicker
+                  value={gender}
+                  onChange={selected => {
+                    setGender(selected);
+                    if (fieldErrors.gender) {
+                      setFieldErrors(prev => ({ ...prev, gender: undefined }));
+                    }
+                  }}
+                  error={fieldErrors.gender}
+                  required={genderRequired}
+                />
+              </View>
             ) : null}
 
             {messProgressiveEnabled ? (
@@ -599,24 +630,6 @@ export function AddMemberScreen() {
                 ) : null}
               </View>
             ) : null}
-
-            {!messProgressiveEnabled ? (
-              <View style={styles.footer}>
-                <Button
-                  label={saveLabel}
-                  onPress={handleSave}
-                  loading={busy}
-                  disabled={saveDisabled}
-                />
-                <Button
-                  label={t('common.cancel')}
-                  variant="ghost"
-                  onPress={() => navigation.goBack()}
-                  disabled={busy}
-                  style={styles.cancelButton}
-                />
-              </View>
-            ) : null}
           </ScrollView>
 
           {messProgressiveEnabled ? (
@@ -648,7 +661,21 @@ export function AddMemberScreen() {
                 disabled: busy,
               }}
             />
-          ) : null}
+          ) : (
+            <StickyFormActions
+              primary={{
+                label: saveLabel,
+                onPress: handleSave,
+                loading: busy,
+                disabled: saveDisabled,
+              }}
+              secondary={{
+                label: t('common.cancel'),
+                onPress: () => navigation.goBack(),
+                disabled: busy,
+              }}
+            />
+          )}
         </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
@@ -665,26 +692,77 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   content: {
-    padding: spacing.xxl,
-    paddingBottom: spacing.section,
+    padding: spacing.lg,
+    paddingBottom: spacing.xxl,
+  },
+  hero: {
+    marginBottom: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.section,
+    backgroundColor: colors.successTint,
+    borderWidth: 1,
+    borderColor: `${colors.primary}33`,
+    overflow: 'hidden',
+    position: 'relative',
+    ...shadows.sm,
+  },
+  decorBlob: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: `${colors.primary}1F`,
+    top: -48,
+    right: -28,
+  },
+  decorRing: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 8,
+    borderColor: `${colors.primary}14`,
+    bottom: -16,
+    right: 40,
+  },
+  heroIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.sm,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: `${colors.primary}33`,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+    zIndex: 1,
   },
   eyebrow: {
     ...typography.eyebrow,
-    marginBottom: spacing.sm,
+    marginBottom: 2,
+    zIndex: 1,
   },
   heading: {
-    ...typography.h1,
-    marginBottom: spacing.sm,
+    ...typography.h2,
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: '600',
+    color: colors.primaryDark,
+    marginBottom: 2,
+    zIndex: 1,
   },
   subheading: {
-    ...typography.body,
-    marginBottom: spacing.sm,
+    ...typography.caption,
+    fontSize: 12,
+    color: colors.muted,
+    zIndex: 1,
   },
   inviteInsteadRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
-    marginBottom: spacing.xxl,
+    marginBottom: spacing.lg,
   },
   inviteInsteadText: {
     ...typography.body,
@@ -698,22 +776,40 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FECACA',
-    borderRadius: 12,
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
+    borderRadius: radius.button,
+    padding: spacing.md,
+    marginBottom: spacing.md,
   },
   errorBannerText: {
     ...typography.body,
+    fontSize: 14,
     color: '#DC2626',
   },
   pickerWrap: {
     minHeight: 320,
     marginBottom: spacing.md,
   },
+  formCard: {
+    marginBottom: spacing.md,
+    padding: spacing.md,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+    gap: spacing.xs,
+    ...shadows.sm,
+  },
+  formCardTitle: {
+    ...typography.bodyStrong,
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
+  },
   selectedCard: {
     marginBottom: spacing.md,
     padding: spacing.md,
-    borderRadius: 12,
+    borderRadius: 18,
     borderWidth: 1.5,
     borderColor: colors.primary,
     backgroundColor: colors.lightGreen,
@@ -740,10 +836,11 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginTop: spacing.lg,
     padding: spacing.md,
-    borderRadius: 12,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.white,
+    ...shadows.sm,
   },
   mealAccessText: { flex: 1, gap: spacing.xs },
   mealAccessLabel: { ...typography.bodyStrong },

@@ -1,11 +1,11 @@
-import React, { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Card, SkeletonCard } from '../ui';
+import { History } from 'lucide-react-native';
+import { EmptyState, SkeletonCard, Timeline, type TimelineGroup } from '../ui';
 import { useMemberStore } from '../../store/memberStore';
-import { colors, spacing, typography } from '../../theme';
+import { spacing } from '../../theme';
 import { formatHistoryValue, HISTORY_ACTION_LABEL_KEYS } from '../../utils/memberHistory';
-import { MemberDetailRow, MemberSectionTitle } from './MemberDetailRow';
 
 type MemberHistoryTabProps = {
   memberId: string;
@@ -19,6 +19,17 @@ function formatDate(value: string): string {
   return date.toLocaleString();
 }
 
+function monthKey(value: string): { key: string; label: string } {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return { key: 'unknown', label: '—' };
+  }
+  return {
+    key: `${date.getFullYear()}-${date.getMonth()}`,
+    label: date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
+  };
+}
+
 export function MemberHistoryTab({ memberId }: MemberHistoryTabProps) {
   const { t } = useTranslation();
   const history = useMemberStore(state => state.history);
@@ -29,56 +40,60 @@ export function MemberHistoryTab({ memberId }: MemberHistoryTabProps) {
     void loadHistory(memberId);
   }, [loadHistory, memberId]);
 
+  const groups = useMemo<TimelineGroup[]>(() => {
+    const result: TimelineGroup[] = [];
+    history.forEach(entry => {
+      const { key, label } = monthKey(entry.changedAt);
+      let group = result.find(candidate => candidate.key === key);
+      if (!group) {
+        group = { key, label, items: [] };
+        result.push(group);
+      }
+      group.items.push({
+        id: entry.historyId,
+        title: t(HISTORY_ACTION_LABEL_KEYS[entry.action]),
+        meta: t('membership.history.meta', {
+          name: entry.changedByName,
+          date: formatDate(entry.changedAt),
+        }),
+        description: formatHistoryValue(entry),
+      });
+    });
+    return result;
+  }, [history, t]);
+
   if (historyLoading && history.length === 0) {
-    return <SkeletonCard />;
+    return (
+      <View style={styles.skeletonStack}>
+        <SkeletonCard />
+        <SkeletonCard />
+        <SkeletonCard />
+      </View>
+    );
   }
 
   if (history.length === 0) {
     return (
-      <Card>
-        <Text style={styles.emptyTitle}>{t('membership.history.emptyTitle')}</Text>
-        <Text style={styles.emptyText}>{t('membership.history.emptyDescription')}</Text>
-      </Card>
+      <EmptyState
+        title={t('membership.history.emptyTitle')}
+        description={t('membership.history.emptyDescription')}
+        Icon={History}
+      />
     );
   }
 
   return (
-    <View>
-      {history.map(entry => (
-        <Card key={entry.historyId} style={styles.card}>
-          <MemberDetailRow
-            label={t('membership.history.actionLabel')}
-            value={t(HISTORY_ACTION_LABEL_KEYS[entry.action])}
-          />
-          <MemberDetailRow
-            label={t('membership.history.changeLabel')}
-            value={formatHistoryValue(entry)}
-          />
-          <MemberDetailRow
-            label={t('membership.notes.authorLabel')}
-            value={entry.changedByName}
-          />
-          <MemberDetailRow
-            label={t('membership.notes.dateLabel')}
-            value={formatDate(entry.changedAt)}
-            isLast
-          />
-        </Card>
-      ))}
+    <View style={styles.wrap}>
+      <Timeline groups={groups} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    marginBottom: spacing.sm,
+  wrap: {
+    paddingBottom: spacing.md,
   },
-  emptyTitle: {
-    ...typography.bodyStrong,
-    marginBottom: spacing.xs,
-  },
-  emptyText: {
-    ...typography.body,
-    color: colors.muted,
+  skeletonStack: {
+    gap: spacing.md,
   },
 });

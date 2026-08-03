@@ -398,8 +398,8 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
   cardPast: {
-    backgroundColor: '#F8FAFC',
-    borderColor: '#E2E8F0',
+    backgroundColor: colors.surfaceSecondary,
+    borderColor: colors.border,
   },
   cardActive: {
     borderColor: `${colors.primary}55`,
@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
   },
   cardPartial: {
     borderColor: '#F59E0B66',
-    backgroundColor: '#FFFBEB',
+    backgroundColor: colors.warningTint,
   },
   cardComplete: {
     borderColor: `${colors.primary}44`,
@@ -603,7 +603,7 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   overflowBanner: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: colors.warningTint,
     borderRadius: radius.button,
     borderWidth: 1,
     borderColor: '#F59E0B55',

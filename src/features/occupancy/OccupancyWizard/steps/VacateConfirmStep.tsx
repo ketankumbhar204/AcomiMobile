@@ -61,7 +61,7 @@ export function VacateConfirmStep({
 
 const styles = StyleSheet.create({
   wrap: { gap: spacing.sm },
-  title: { ...typography.h3 },
+  title: { ...typography.h3, fontSize: 18, lineHeight: 22, fontWeight: '600' },
   hint: { ...typography.caption, color: colors.muted },
   member: { ...typography.bodyStrong },
   path: { ...typography.body, color: colors.textSecondary },

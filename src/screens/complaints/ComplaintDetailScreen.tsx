@@ -14,23 +14,48 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import {
+  BadgeCheck,
+  CalendarDays,
+  MessageCircle,
+  MessageSquareWarning,
+  TriangleAlert,
+  UserCheck,
+  UserRound,
+  UtensilsCrossed,
+} from 'lucide-react-native';
 import { complaintsApi } from '../../api/complaintsApi';
 import type { ComplaintStatus } from '../../api/types';
 import { ApiError } from '../../api/types';
-import { Button, FormInput, HeaderBackButton, SkeletonCard } from '../../components/ui';
 import {
   ComplaintCategoryBadge,
   ComplaintPriorityBadge,
   ComplaintStatusBadge,
 } from '../../components/complaints';
+import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
+import { DashboardAvatar } from '../../components/dashboard/shared/DashboardPersonCard';
+import { MealFormHero } from '../../components/meals/MealFormHero';
 import { StickyFormActions } from '../../components/progressive';
+import {
+  Button,
+  EmptyState,
+  FormInput,
+  HeaderBackButton,
+  SkeletonCard,
+  Timeline,
+  type TimelineGroup,
+} from '../../components/ui';
 import { useComplaintDetail } from '../../hooks/useComplaintDetail';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, shadows, spacing, typography } from '../../theme';
 import { canManageComplaints } from '../../utils/complaintPermissions';
 import { formatComplaintDateTime } from '../../utils/complaintStatus';
+import {
+  getComplaintTimelineAccent,
+  getComplaintTimelineIcon,
+} from '../../utils/complaintVisuals';
 import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
 import { pickPaymentProofImage } from '../../utils/pickPaymentProofImage';
 
@@ -56,13 +81,15 @@ export function ComplaintDetailScreen() {
   const [resolution, setResolution] = useState('');
   const [busy, setBusy] = useState(false);
 
+  const headerLeft = useCallback(() => <HeaderBackButton />, []);
+
   useLayoutEffect(() => {
     navigation.setOptions({
       title: t('complaints.detailTitle'),
       headerBackVisible: false,
-      headerLeft: () => <HeaderBackButton />,
+      headerLeft,
     });
-  }, [navigation, t]);
+  }, [headerLeft, navigation, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -116,9 +143,32 @@ export function ComplaintDetailScreen() {
     );
   }, [complaint, manage]);
 
+  const timelineGroups = useMemo((): TimelineGroup[] => {
+    const events = complaint?.timeline ?? [];
+    if (events.length === 0) {
+      return [];
+    }
+    return [
+      {
+        key: 'activity',
+        label: t('complaints.timeline'),
+        items: events.map(event => ({
+          id: event.eventId,
+          title: t(`complaints.timelineEvent.${event.eventType}`),
+          meta: formatComplaintDateTime(event.performedAt),
+          description: event.remarks ?? undefined,
+          accent: getComplaintTimelineAccent(event.eventType),
+          icon: getComplaintTimelineIcon(event.eventType),
+        })),
+      },
+    ];
+  }, [complaint?.timeline, t]);
+
   if (loading && !complaint) {
     return (
       <View style={styles.pad}>
+        <SkeletonCard />
+        <SkeletonCard />
         <SkeletonCard />
       </View>
     );
@@ -127,13 +177,20 @@ export function ComplaintDetailScreen() {
   if (!complaint) {
     return (
       <View style={styles.pad}>
-        <Text style={styles.error}>{error ?? t('complaints.errors.load')}</Text>
+        <EmptyState
+          Icon={TriangleAlert}
+          title={t('complaints.errors.load')}
+          description={error ?? undefined}
+        />
+        <Button label={t('common.retry', { defaultValue: 'Retry' })} onPress={reload} />
       </View>
     );
   }
 
   const showResolveStack =
     manage && (complaint.status === 'OPEN' || complaint.status === 'IN_PROGRESS');
+  const comments = complaint.comments ?? [];
+  const attachments = complaint.attachments ?? [];
 
   return (
     <View style={styles.flex}>
@@ -141,70 +198,178 @@ export function ComplaintDetailScreen() {
         style={styles.flex}
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
-        <Text style={styles.title}>{complaint.title}</Text>
-        <View style={styles.badgeRow}>
-          <ComplaintStatusBadge status={complaint.status} />
-          <ComplaintPriorityBadge priority={complaint.priority} />
-          <ComplaintCategoryBadge category={complaint.category} />
-        </View>
-        <Text style={styles.meta}>{formatComplaintDateTime(complaint.createdAt)}</Text>
-        <Text style={styles.body}>{complaint.description}</Text>
+        <MealFormHero
+          icon={MessageSquareWarning}
+          eyebrow={t(`complaints.category.${complaint.category}`)}
+          heading={complaint.title}
+          subheading={formatComplaintDateTime(complaint.createdAt)}
+          accent="#B45309"
+          soft={colors.warningTint}
+          border="#FDE68A"
+        />
 
-        {complaint.mealDate || complaint.mealType ? (
-          <Text style={styles.meta}>
-            {t('complaints.fields.meal')}: {complaint.mealDate ?? '—'}{' '}
-            {complaint.mealType ? t(`complaints.mealType.${complaint.mealType}`) : ''}
-          </Text>
-        ) : null}
+        <View style={styles.sectionCard}>
+          <View style={styles.badgeRow}>
+            <ComplaintStatusBadge status={complaint.status} />
+            <ComplaintPriorityBadge priority={complaint.priority} />
+            <ComplaintCategoryBadge category={complaint.category} />
+          </View>
+
+          <View style={styles.metaGrid}>
+            <View style={styles.metaItem}>
+              <UserRound size={14} color={colors.muted} strokeWidth={2.2} />
+              <View style={styles.metaTextWrap}>
+                <Text style={styles.metaLabel}>
+                  {t('complaints.fields.reporter', { defaultValue: 'Reporter' })}
+                </Text>
+                <Text style={styles.metaValue} numberOfLines={1}>
+                  {complaint.createdByMemberName ?? t('complaints.operator')}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.metaItem}>
+              <UserCheck size={14} color={colors.muted} strokeWidth={2.2} />
+              <View style={styles.metaTextWrap}>
+                <Text style={styles.metaLabel}>
+                  {t('complaints.fields.assigned', { defaultValue: 'Assigned' })}
+                </Text>
+                <Text style={styles.metaValue} numberOfLines={1}>
+                  {complaint.assignedToName?.trim() ||
+                    t('complaints.unassigned', { defaultValue: 'Unassigned' })}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.metaItem}>
+              <CalendarDays size={14} color={colors.muted} strokeWidth={2.2} />
+              <View style={styles.metaTextWrap}>
+                <Text style={styles.metaLabel}>
+                  {t('complaints.fields.updated', { defaultValue: 'Updated' })}
+                </Text>
+                <Text style={styles.metaValue} numberOfLines={1}>
+                  {formatComplaintDateTime(complaint.updatedAt)}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.sectionCard}>
+          <DashboardSectionTitle
+            title={t('complaints.fields.description')}
+          />
+          <Text style={styles.body}>{complaint.description}</Text>
+          {complaint.mealDate || complaint.mealType ? (
+            <View style={styles.mealChip}>
+              <UtensilsCrossed size={14} color="#B45309" strokeWidth={2.2} />
+              <Text style={styles.mealChipText}>
+                {t('complaints.fields.meal')}: {complaint.mealDate ?? '—'}
+                {complaint.mealType
+                  ? ` · ${t(`complaints.mealType.${complaint.mealType}`)}`
+                  : ''}
+              </Text>
+            </View>
+          ) : null}
+        </View>
 
         {complaint.resolutionSummary ? (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('complaints.fields.resolution')}</Text>
-            <Text style={styles.body}>{complaint.resolutionSummary}</Text>
+          <View style={[styles.sectionCard, styles.resolutionCard]}>
+            <DashboardSectionTitle title={t('complaints.fields.resolution')} />
+            <View style={styles.resolutionRow}>
+              <BadgeCheck size={16} color="#059669" strokeWidth={2.2} />
+              <Text style={[styles.body, styles.resolutionText]}>
+                {complaint.resolutionSummary}
+              </Text>
+            </View>
           </View>
         ) : null}
 
-        {complaint.attachments && complaint.attachments.length > 0 ? (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('complaints.fields.photos')}</Text>
+        <View style={styles.sectionCard}>
+          <DashboardSectionTitle title={t('complaints.fields.photos')} />
+          {attachments.length > 0 ? (
             <View style={styles.photoRow}>
-              {complaint.attachments.map(att => (
-                <Image key={att.attachmentId} source={{ uri: att.storageUrl }} style={styles.thumb} />
+              {attachments.map(att => (
+                <Image
+                  key={att.attachmentId}
+                  source={{ uri: att.storageUrl }}
+                  style={styles.thumb}
+                />
               ))}
             </View>
-          </View>
-        ) : null}
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('complaints.timeline')}</Text>
-          {(complaint.timeline ?? []).map(event => (
-            <View key={event.eventId} style={styles.timelineItem}>
-              <Text style={styles.timelineType}>
-                {t(`complaints.timelineEvent.${event.eventType}`)}
-              </Text>
-              {event.remarks ? <Text style={styles.meta}>{event.remarks}</Text> : null}
-              <Text style={styles.meta}>{formatComplaintDateTime(event.performedAt)}</Text>
-            </View>
-          ))}
+          ) : (
+            <Text style={styles.muted}>
+              {t('complaints.photos.empty', { defaultValue: 'No photos attached yet.' })}
+            </Text>
+          )}
+          <Button
+            label={t('complaints.actions.addPhoto')}
+            variant="secondary"
+            disabled={busy}
+            onPress={() =>
+              runAction(async () => {
+                const image = await pickPaymentProofImage();
+                if (!image) {
+                  return;
+                }
+                const updated = await complaintsApi.addAttachment(spaceId, complaintId, {
+                  imageBase64: image,
+                });
+                setComplaint(updated);
+              }, 'complaints.updated')
+            }
+          />
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('complaints.comments')}</Text>
-          {(complaint.comments ?? []).map(c => (
-            <View key={c.commentId} style={styles.comment}>
-              <Text style={styles.commentAuthor}>
-                {c.authorName ?? t('complaints.operator')}
-                {c.internal ? ` · ${t('complaints.internal')}` : ''}
+        <View style={styles.sectionCard}>
+          {timelineGroups.length > 0 ? (
+            <Timeline groups={timelineGroups} />
+          ) : (
+            <>
+              <DashboardSectionTitle title={t('complaints.timeline')} />
+              <Text style={styles.muted}>
+                {t('complaints.timelineEmpty', {
+                  defaultValue: 'Activity will appear here as the issue progresses.',
+                })}
               </Text>
-              <Text style={styles.body}>{c.body}</Text>
-              <Text style={styles.meta}>{formatComplaintDateTime(c.createdAt)}</Text>
-            </View>
-          ))}
+            </>
+          )}
+        </View>
+
+        <View style={styles.sectionCard}>
+          <DashboardSectionTitle title={t('complaints.comments')} />
+          {comments.length === 0 ? (
+            <Text style={styles.muted}>
+              {t('complaints.commentsEmpty', {
+                defaultValue: 'No comments yet. Add an update below.',
+              })}
+            </Text>
+          ) : (
+            comments.map(c => (
+              <View key={c.commentId} style={styles.commentCard}>
+                <DashboardAvatar label={c.authorName ?? t('complaints.operator')} />
+                <View style={styles.commentBody}>
+                  <View style={styles.commentHeader}>
+                    <Text style={styles.commentAuthor} numberOfLines={1}>
+                      {c.authorName ?? t('complaints.operator')}
+                    </Text>
+                    {c.internal ? (
+                      <View style={styles.internalChip}>
+                        <Text style={styles.internalChipText}>{t('complaints.internal')}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  <Text style={styles.body}>{c.body}</Text>
+                  <Text style={styles.muted}>{formatComplaintDateTime(c.createdAt)}</Text>
+                </View>
+              </View>
+            ))
+          )}
+
           <FormInput
             label={t('complaints.fields.comment')}
             value={comment}
             onChangeText={setComment}
             multiline
+            leadingIcon={MessageCircle}
           />
           {manage ? (
             <View style={styles.switchRow}>
@@ -240,24 +405,6 @@ export function ComplaintDetailScreen() {
             }
           />
         </View>
-
-        <Button
-          label={t('complaints.actions.addPhoto')}
-          variant="secondary"
-          disabled={busy}
-          onPress={() =>
-            runAction(async () => {
-              const image = await pickPaymentProofImage();
-              if (!image) {
-                return;
-              }
-              const updated = await complaintsApi.addAttachment(spaceId, complaintId, {
-                imageBase64: image,
-              });
-              setComplaint(updated);
-            }, 'complaints.updated')
-          }
-        />
       </ScrollView>
 
       {hasStickyActions ? (
@@ -277,6 +424,7 @@ export function ComplaintDetailScreen() {
                   value={resolution}
                   onChangeText={setResolution}
                   multiline
+                  leadingIcon={BadgeCheck}
                 />
                 <Button
                   label={t('complaints.actions.resolve')}
@@ -330,31 +478,146 @@ export function ComplaintDetailScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.lg, gap: spacing.sm, paddingBottom: spacing.xl },
-  pad: { flex: 1, padding: spacing.lg, backgroundColor: colors.background },
-  title: { ...typography.h2 },
+  content: {
+    padding: spacing.lg,
+    gap: spacing.md,
+    paddingBottom: spacing.xl,
+  },
+  pad: {
+    flex: 1,
+    padding: spacing.lg,
+    backgroundColor: colors.background,
+    gap: spacing.md,
+  },
+  sectionCard: {
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    gap: spacing.sm,
+    ...shadows.sm,
+  },
   badgeRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.xs,
-    marginTop: 2,
   },
-  meta: { ...typography.caption },
-  body: { ...typography.body },
-  section: {
-    marginTop: spacing.md,
+  metaGrid: {
     gap: spacing.sm,
-    backgroundColor: colors.white,
-    borderRadius: radius.card,
+    marginTop: spacing.xs,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  metaTextWrap: {
+    flex: 1,
+    minWidth: 0,
+    gap: 1,
+  },
+  metaLabel: {
+    ...typography.caption,
+    fontSize: 11,
+    color: colors.muted,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  metaValue: {
+    ...typography.body,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  body: {
+    ...typography.body,
+    color: colors.textPrimary,
+  },
+  muted: {
+    ...typography.caption,
+    color: colors.muted,
+  },
+  mealChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: 999,
+    backgroundColor: colors.warningTint,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  mealChipText: {
+    ...typography.caption,
+    color: '#B45309',
+    fontWeight: '600',
+  },
+  resolutionCard: {
+    borderColor: '#A7F3D0',
+    backgroundColor: colors.successTint,
+  },
+  resolutionRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  resolutionText: {
+    flex: 1,
+  },
+  photoRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  thumb: {
+    width: 88,
+    height: 88,
+    borderRadius: 14,
+    backgroundColor: colors.surface,
+  },
+  commentCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    padding: spacing.sm,
+    borderRadius: 14,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.md,
   },
-  sectionTitle: { ...typography.h3 },
-  timelineItem: { gap: 2, marginBottom: spacing.sm },
-  timelineType: { ...typography.body, fontWeight: '600' },
-  comment: { gap: 2, marginBottom: spacing.sm },
-  commentAuthor: { ...typography.caption, fontWeight: '600' },
+  commentBody: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
+  },
+  commentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  commentAuthor: {
+    ...typography.caption,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    flex: 1,
+  },
+  internalChip: {
+    borderRadius: 999,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    backgroundColor: '#F5F3FF',
+    borderWidth: 1,
+    borderColor: '#DDD6FE',
+  },
+  internalChipText: {
+    ...typography.caption,
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#6D28D9',
+  },
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -373,8 +636,5 @@ const styles = StyleSheet.create({
   switchHint: {
     ...typography.caption,
   },
-  photoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  thumb: { width: 88, height: 88, borderRadius: radius.sm },
   stickyStack: { gap: spacing.sm },
-  error: { ...typography.body, color: '#B91C1C' },
 });

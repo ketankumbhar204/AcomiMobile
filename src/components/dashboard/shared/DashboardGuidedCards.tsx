@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    backgroundColor: '#FFFBEB',
+    backgroundColor: colors.warningTint,
     borderWidth: 1,
     borderColor: '#FDE68A',
     borderRadius: radius.card,

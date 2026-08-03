@@ -15,15 +15,16 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { Hash, Tag, Type } from 'lucide-react-native';
 import { accommodationApi } from '../../api/accommodationApi';
 import type { PropertyLayoutMode, SpaceType } from '../../api/types';
-import { PropertyLayoutModePicker } from '../../components/accommodation';
+import { AccommodationFormHero, PropertyLayoutModePicker } from '../../components/accommodation';
 import { FormInput, HeaderBackButton } from '../../components/ui';
 import { StickyFormActions } from '../../components/progressive';
 import type { MainStackParamList } from '../../navigation/types';
 import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
-import { colors, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
 import { defaultLayoutModeForSpaceType } from '../../utils/accommodationProfile';
 import {
@@ -129,32 +130,60 @@ export function BuildingFormScreen() {
           <ScrollView
             style={styles.scroll}
             contentContainerStyle={styles.content}
-            keyboardShouldPersistTaps="handled">
-            <FormInput
-              label={t('accommodation.fields.name')}
-              value={name}
-              onChangeText={setName}
-              placeholder={t('accommodation.buildings.namePlaceholder')}
-              error={nameError}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}>
+            <AccommodationFormHero
+              level="building"
+              eyebrow={t('accommodation.buildings.formEyebrow')}
+              heading={
+                isEdit
+                  ? t('accommodation.buildings.editTitle')
+                  : t('accommodation.buildings.createTitle')
+              }
+              subheading={
+                isEdit
+                  ? t('accommodation.buildings.formSubheadingEdit')
+                  : t('accommodation.buildings.formSubheadingCreate')
+              }
             />
-            <FormInput
-              label={t('accommodation.fields.code')}
-              value={code}
-              onChangeText={setCode}
-              placeholder={t('accommodation.buildings.codePlaceholder')}
-            />
-            {spaceType && isLayoutModeSelectable(spaceType) ? (
-              <PropertyLayoutModePicker
-                value={layoutMode}
-                onChange={setLayoutMode}
-                options={layoutModeOptions}
-              />
-            ) : spaceType ? (
-              <Text style={styles.fixedLayout}>
-                {t('accommodation.layoutMode.label')}: {t(getLayoutModeLabelKey(layoutMode))}
-              </Text>
+
+            {submitError ? (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorBannerText}>{submitError}</Text>
+              </View>
             ) : null}
-            {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
+
+            <View style={styles.formCard}>
+              <FormInput
+                label={t('accommodation.fields.name')}
+                value={name}
+                onChangeText={setName}
+                placeholder={t('accommodation.buildings.namePlaceholder')}
+                error={nameError}
+                leadingIcon={Type}
+              />
+              <FormInput
+                label={t('accommodation.fields.code')}
+                value={code}
+                onChangeText={setCode}
+                placeholder={t('accommodation.buildings.codePlaceholder')}
+                leadingIcon={Tag}
+              />
+              {spaceType && isLayoutModeSelectable(spaceType) ? (
+                <PropertyLayoutModePicker
+                  value={layoutMode}
+                  onChange={setLayoutMode}
+                  options={layoutModeOptions}
+                />
+              ) : spaceType ? (
+                <View style={styles.fixedLayoutRow}>
+                  <Hash size={16} color={colors.muted} strokeWidth={2.2} />
+                  <Text style={styles.fixedLayout}>
+                    {t('accommodation.layoutMode.label')}: {t(getLayoutModeLabelKey(layoutMode))}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
           </ScrollView>
           <StickyFormActions
             primary={{
@@ -171,12 +200,39 @@ export function BuildingFormScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
-  scroll: { flex: 1 },
-  content: { padding: spacing.xxl, paddingBottom: spacing.xl },
+  scroll: { flex: 1, backgroundColor: colors.background },
+  content: { padding: spacing.lg, paddingBottom: spacing.xxl },
+  formCard: {
+    marginBottom: spacing.md,
+    padding: spacing.md,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+    gap: spacing.xs,
+    ...shadows.sm,
+  },
+  fixedLayoutRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
   fixedLayout: {
     ...typography.body,
     color: colors.textSecondary,
-    marginBottom: spacing.lg,
+    flex: 1,
   },
-  errorText: { ...typography.body, color: '#DC2626', marginBottom: spacing.md },
+  errorBanner: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: radius.button,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  errorBannerText: {
+    ...typography.body,
+    color: '#DC2626',
+  },
 });

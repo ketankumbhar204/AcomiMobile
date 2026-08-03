@@ -1,14 +1,16 @@
 import React, { useMemo } from 'react';
 import { Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Building2, ChevronRight } from 'lucide-react-native';
 import type { BuildingResponse, BuildingSummaryResponse, SpaceType } from '../../api/types';
 import { InlineEditableName } from '../ui/InlineEditableName';
-import { colors, fontSize, radius, shadows, spacing, typography } from '../../theme';
+import { colors, fontSize, shadows, spacing, typography } from '../../theme';
 import {
   getBuildingLayoutTypeLabelKey,
   resolveBuildingCardStats,
 } from '../../utils/buildingListCardContent';
 import { isAccommodationEntityActive } from '../../utils/accommodationEntityActive';
+import { getAccommodationHierarchyAccent } from '../../utils/accommodationHierarchy';
 import { AccommodationInactiveBadge, accommodationInactiveCardStyle } from './AccommodationInactiveBadge';
 
 type BuildingListCardProps = {
@@ -103,6 +105,7 @@ export function BuildingListCard({
   style,
 }: BuildingListCardProps) {
   const { t } = useTranslation();
+  const buildingAccent = getAccommodationHierarchyAccent('building');
 
   const layoutMode = summary?.layoutMode ?? building.layoutMode;
   const inactive = !isAccommodationEntityActive(building);
@@ -115,6 +118,9 @@ export function BuildingListCard({
   return (
     <Pressable
       onPress={onPress}
+      android_ripple={{ color: 'rgba(37, 99, 235, 0.08)' }}
+      accessibilityRole="button"
+      accessibilityLabel={building.name}
       style={({ pressed }) => [
         styles.card,
         style,
@@ -122,8 +128,19 @@ export function BuildingListCard({
         pressed && styles.pressed,
       ]}>
       <View style={styles.headerRow}>
-        <View style={[styles.icon, inactive && styles.iconInactive]}>
-          <Text style={styles.iconText}>{(building.name || '?').charAt(0).toUpperCase()}</Text>
+        <View
+          style={[
+            styles.icon,
+            {
+              backgroundColor: inactive ? '#F3F4F6' : buildingAccent.soft,
+              borderColor: inactive ? '#D1D5DB' : buildingAccent.border,
+            },
+          ]}>
+          <Building2
+            size={20}
+            color={inactive ? '#9CA3AF' : buildingAccent.accent}
+            strokeWidth={2.2}
+          />
         </View>
 
         <View style={styles.headerBody}>
@@ -145,7 +162,7 @@ export function BuildingListCard({
           </View>
         ) : null}
 
-        {onPress ? <Text style={styles.chevron}>›</Text> : null}
+        {onPress ? <ChevronRight size={18} color={colors.muted} strokeWidth={2.4} /> : null}
       </View>
 
       {stats ? (
@@ -172,10 +189,10 @@ export function BuildingListCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.white,
-    borderRadius: radius.card,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.lg,
+    padding: spacing.md,
     gap: spacing.md,
     minHeight: 88,
     ...shadows.sm,
@@ -190,21 +207,13 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   icon: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.button,
-    backgroundColor: colors.primary,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-  },
-  iconText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.white,
-  },
-  iconInactive: {
-    backgroundColor: '#9CA3AF',
   },
   inactiveBadgeWrap: {
     flexShrink: 0,
@@ -271,7 +280,7 @@ const styles = StyleSheet.create({
   detailChip: {
     flex: 1,
     minWidth: 0,
-    borderRadius: radius.full,
+    borderRadius: 9999,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
     alignItems: 'center',
@@ -286,11 +295,5 @@ const styles = StyleSheet.create({
   placeholderLine: {
     ...typography.caption,
     color: colors.muted,
-  },
-  chevron: {
-    fontSize: 24,
-    fontWeight: '300',
-    color: colors.muted,
-    flexShrink: 0,
   },
 });

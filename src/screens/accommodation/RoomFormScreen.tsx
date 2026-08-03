@@ -15,9 +15,11 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { CircleDollarSign, Hash, Type, Users } from 'lucide-react-native';
 import type { AccommodationStatus, RoomType } from '../../api/types';
 import { accommodationApi } from '../../api/accommodationApi';
 import {
+  AccommodationFormHero,
   AccommodationStatusPicker,
   PricingAfterCreateHint,
   RoomTypePicker,
@@ -26,7 +28,7 @@ import { FormInput, HeaderBackButton } from '../../components/ui';
 import { StickyFormActions } from '../../components/progressive';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
-import { colors, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'RoomForm'>;
@@ -140,41 +142,74 @@ export function RoomFormScreen() {
           <ScrollView
             style={styles.scroll}
             contentContainerStyle={styles.content}
-            keyboardShouldPersistTaps="handled">
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}>
+            <AccommodationFormHero
+              level="room"
+              eyebrow={t('accommodation.rooms.formEyebrow')}
+              heading={
+                isEdit
+                  ? t('accommodation.rooms.editTitle')
+                  : t('accommodation.rooms.createTitle')
+              }
+              subheading={
+                isEdit
+                  ? t('accommodation.rooms.formSubheadingEdit')
+                  : t('accommodation.rooms.formSubheadingCreate')
+              }
+            />
+
             {!isEdit ? <PricingAfterCreateHint entityKey="room" /> : null}
-            <FormInput label={t('accommodation.fields.name')} value={name} onChangeText={setName} />
-            <FormInput
-              label={t('accommodation.rooms.roomNumberLabel')}
-              value={roomNumber}
-              onChangeText={setRoomNumber}
-            />
-            <RoomTypePicker value={roomType} onChange={setRoomType} error={roomTypeError} />
-            <FormInput
-              label={t('accommodation.rooms.capacity')}
-              value={capacity}
-              onChangeText={setCapacity}
-              keyboardType="number-pad"
-            />
-            {isEdit ? (
-              <AccommodationStatusPicker value={status} onChange={setStatus} />
+
+            {submitError ? (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorBannerText}>{submitError}</Text>
+              </View>
             ) : null}
-            {isEdit ? (
-              <>
-                <FormInput
-                  label={t('accommodation.fields.defaultRent')}
-                  value={defaultRent}
-                  onChangeText={setDefaultRent}
-                  keyboardType="numeric"
-                />
-                <FormInput
-                  label={t('accommodation.fields.defaultDeposit')}
-                  value={defaultDeposit}
-                  onChangeText={setDefaultDeposit}
-                  keyboardType="numeric"
-                />
-              </>
-            ) : null}
-            {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
+
+            <View style={styles.formCard}>
+              <FormInput
+                label={t('accommodation.fields.name')}
+                value={name}
+                onChangeText={setName}
+                leadingIcon={Type}
+              />
+              <FormInput
+                label={t('accommodation.rooms.roomNumberLabel')}
+                value={roomNumber}
+                onChangeText={setRoomNumber}
+                leadingIcon={Hash}
+              />
+              <RoomTypePicker value={roomType} onChange={setRoomType} error={roomTypeError} />
+              <FormInput
+                label={t('accommodation.rooms.capacity')}
+                value={capacity}
+                onChangeText={setCapacity}
+                keyboardType="number-pad"
+                leadingIcon={Users}
+              />
+              {isEdit ? (
+                <AccommodationStatusPicker value={status} onChange={setStatus} />
+              ) : null}
+              {isEdit ? (
+                <>
+                  <FormInput
+                    label={t('accommodation.fields.defaultRent')}
+                    value={defaultRent}
+                    onChangeText={setDefaultRent}
+                    keyboardType="numeric"
+                    leadingIcon={CircleDollarSign}
+                  />
+                  <FormInput
+                    label={t('accommodation.fields.defaultDeposit')}
+                    value={defaultDeposit}
+                    onChangeText={setDefaultDeposit}
+                    keyboardType="numeric"
+                    leadingIcon={CircleDollarSign}
+                  />
+                </>
+              ) : null}
+            </View>
           </ScrollView>
           <StickyFormActions
             primary={{
@@ -191,7 +226,28 @@ export function RoomFormScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
-  scroll: { flex: 1 },
-  content: { padding: spacing.xxl, paddingBottom: spacing.xl },
-  errorText: { ...typography.body, color: '#DC2626', marginBottom: spacing.md },
+  scroll: { flex: 1, backgroundColor: colors.background },
+  content: { padding: spacing.lg, paddingBottom: spacing.xxl },
+  formCard: {
+    marginBottom: spacing.md,
+    padding: spacing.md,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+    gap: spacing.xs,
+    ...shadows.sm,
+  },
+  errorBanner: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: radius.button,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  errorBannerText: {
+    ...typography.body,
+    color: '#DC2626',
+  },
 });

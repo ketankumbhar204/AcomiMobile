@@ -12,6 +12,7 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { Copy, Grid2x2, Layers } from 'lucide-react-native';
 import type {
   FloorListItemResponse,
   SpaceType,
@@ -34,7 +35,9 @@ import {
   HeaderMenuSlot,
   UNIT_GRID_NUM_COLUMNS,
 } from '../../components/accommodation';
-import { Button, EmptyState, FAB, HeaderBackButton, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
+import { EmptyState, FAB, HeaderBackButton, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
+import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
+import { DashboardActionRow } from '../../components/dashboard/shared/DashboardActionRow';
 import { useHierarchyOccupancyPicker } from '../../hooks/useHierarchyOccupancyPicker';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useAccommodationUiProfile } from '../../hooks/useAccommodationUiProfile';
@@ -95,7 +98,7 @@ export function AccommodationBuilderScreen() {
   const hierarchyPicker = useHierarchyOccupancyPicker(spaceId, spaceType);
   const isRental = profile?.layoutMode === 'RENTAL';
 
-  const { isLayout, isList, setViewMode } = useAccommodationViewMode();
+  const { isLayout, setViewMode } = useAccommodationViewMode();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -272,11 +275,14 @@ export function AccommodationBuilderScreen() {
   const showListLoading = listLoading && !refreshing && items.length === 0;
   const error = summaryError ?? listError;
   const useUnitGrid = isLayout && profile?.showUnits;
-  const useFloorStack = isLayout && profile?.showFloors;
 
   const listHeader = (
     <View style={styles.header}>
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      {error ? (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorBannerText}>{error}</Text>
+        </View>
+      ) : null}
 
       <BuildingSummaryHeader
         summary={summary}
@@ -302,22 +308,39 @@ export function AccommodationBuilderScreen() {
       <AccommodationViewModeToggle value={isLayout ? 'layout' : 'list'} onChange={setViewMode} />
 
       {canManage && profile?.showUnits && (spaceType === 'CO_LIVING' || spaceType === 'RENTAL') ? (
-        <Button
-          label={t('accommodation.bulk.units.action')}
-          variant="secondary"
+        <DashboardActionRow
+          icon={Grid2x2}
+          accent="#EA580C"
+          title={t('accommodation.bulk.units.action')}
+          subtitle={t('accommodation.bulk.units.hint', {
+            defaultValue: 'Add multiple units at once',
+          })}
           onPress={() => setBulkUnitsVisible(true)}
-          style={styles.secondaryAction}
         />
       ) : null}
 
       {canManage && profile?.showFloors ? (
-        <Button
-          label={t('accommodation.duplicate.building.action')}
-          variant="secondary"
+        <DashboardActionRow
+          icon={Copy}
+          accent="#2563EB"
+          title={t('accommodation.duplicate.building.action')}
+          subtitle={t('accommodation.duplicate.building.hint', {
+            defaultValue: 'Copy this building structure',
+          })}
           onPress={() => setDuplicateBuildingVisible(true)}
-          style={styles.secondaryAction}
         />
       ) : null}
+
+      <DashboardSectionTitle
+        title={
+          profile?.showFloors
+            ? t('accommodation.floors.title')
+            : t('accommodation.units.title')
+        }
+        subtitle={t('accommodation.builder.listSubtitle', {
+          defaultValue: 'Tap to open · long-press for details',
+        })}
+      />
 
       <AccommodationSearchBar value={searchQuery} onChangeText={setSearchQuery} />
 
@@ -483,7 +506,7 @@ export function AccommodationBuilderScreen() {
             ? t('accommodation.floors.emptyDescription')
             : t('accommodation.units.emptyDescription')
         }
-        icon={profile?.showFloors ? '🏗️' : '🚪'}
+        Icon={profile?.showFloors ? Layers : Grid2x2}
       />
     ) : null;
 
@@ -497,7 +520,7 @@ export function AccommodationBuilderScreen() {
             roomCount: item.roomCount,
             bedCount: item.bedCount,
           })}
-          iconLabel={item.name.charAt(0).toUpperCase()}
+          hierarchyLevel="floor"
           editableName={showFab}
           onSaveName={async name => {
             await renameFloorName(spaceId, buildingId, item.floorId, name);
@@ -525,7 +548,7 @@ export function AccommodationBuilderScreen() {
                 bedCount: unit.bedCount,
               })
         }
-        iconLabel={unit.name.charAt(0).toUpperCase()}
+        hierarchyLevel="unit"
         badge={isRental && isAccommodationEntityActive(unit) ? <AccommodationStatusBadge status={unit.status} /> : undefined}
         editableName={showFab}
         onSaveName={async name => {
@@ -688,15 +711,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   content: {
-    padding: spacing.xl,
+    padding: spacing.lg,
     paddingBottom: 96,
     flexGrow: 1,
   },
   header: {
     marginBottom: spacing.md,
-  },
-  secondaryAction: {
-    marginBottom: spacing.md,
+    gap: spacing.sm,
   },
   buildingLayoutTitle: {
     ...typography.bodyStrong,
@@ -718,6 +739,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.xl,
+  },
+  errorBanner: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 14,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  errorBannerText: {
+    ...typography.body,
+    fontSize: 14,
+    color: '#DC2626',
   },
   errorText: {
     ...typography.body,

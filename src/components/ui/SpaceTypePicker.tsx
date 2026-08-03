@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.lightGreen,
   },
   cardPressed: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceSecondary,
   },
   iconWrap: {
     width: 44,

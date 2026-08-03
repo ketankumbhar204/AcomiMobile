@@ -88,22 +88,22 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   cardDisabled: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceSecondary,
     opacity: 0.85,
   },
   cardPressed: {
     borderColor: `${colors.primary}66`,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.hover,
   },
   cardHighlight: {
     borderColor: '#F59E0B',
-    backgroundColor: '#FFFBEB',
+    backgroundColor: colors.warningTint,
   },
   iconWrap: {
     width: 36,
     height: 36,
     borderRadius: radius.button,
-    backgroundColor: colors.lightGreen,
+    backgroundColor: colors.successTint,
     alignItems: 'center',
     justifyContent: 'center',
   },

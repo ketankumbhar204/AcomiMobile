@@ -3,8 +3,10 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { CalendarDays, IndianRupee, WalletCards } from 'lucide-react-native';
 import { mealsApi } from '../../api/mealsApi';
 import type { SpacePaymentResponse, SubmitPaymentProofRequest } from '../../api/types';
+import { MealFormHero } from '../../components/meals/MealFormHero';
 import {
   UniversalPaymentProofModal,
   type UniversalPaymentProofPayload,
@@ -12,7 +14,7 @@ import {
 import { Screen } from '../../components/ui';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { formatComboPrice } from '../../utils/comboPrice';
 import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
 import { invalidatePaymentsMonthCaches } from '../../utils/paymentsMonthCache';
@@ -129,19 +131,35 @@ export function DayMealBulkPayScreen() {
 
   return (
     <Screen scrollable contentStyle={styles.content}>
+      <MealFormHero
+        icon={WalletCards}
+        eyebrow={t('paymentCollection.dayMeals.bulk.eyebrow', { defaultValue: 'Pay' })}
+        heading={t('paymentCollection.dayMeals.bulk.submitTitle')}
+        subheading={t('paymentCollection.dayMeals.bulk.submitHint')}
+        compact
+      />
+
       <View style={styles.summaryCard}>
-        <Text style={styles.summaryLabel}>
-          {t('paymentCollection.dayMeals.bulk.selected', { count: sortedDates.length })}
-        </Text>
-        <Text style={styles.summaryAmount}>{amountLabel}</Text>
-        <Text style={styles.summaryHint}>{t('paymentCollection.dayMeals.bulk.submitHint')}</Text>
+        <View style={styles.summaryIcon}>
+          <IndianRupee size={20} color={colors.primaryDark} strokeWidth={2.2} />
+        </View>
+        <View style={styles.summaryText}>
+          <Text style={styles.summaryLabel}>
+            {t('paymentCollection.dayMeals.bulk.selected', { count: sortedDates.length })}
+          </Text>
+          <Text style={styles.summaryAmount}>{amountLabel}</Text>
+        </View>
       </View>
 
-      <View style={styles.datesBlock}>
+      <View style={styles.datesCard}>
+        <Text style={styles.datesTitle}>
+          {t('paymentCollection.dayMeals.bulk.datesTitle', { defaultValue: 'Selected days' })}
+        </Text>
         {sortedDates.map(date => (
-          <Text key={date} style={styles.dateRow}>
-            • {formatMenuDate(date, i18n.language)}
-          </Text>
+          <View key={date} style={styles.dateRow}>
+            <CalendarDays size={14} color={colors.primaryDark} strokeWidth={2.2} />
+            <Text style={styles.dateText}>{formatMenuDate(date, i18n.language)}</Text>
+          </View>
         ))}
       </View>
 
@@ -163,27 +181,60 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   summaryCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
     backgroundColor: colors.white,
-    borderRadius: radius.card,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.md,
-    gap: spacing.xs,
+    ...shadows.sm,
+  },
+  summaryIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.button,
+    backgroundColor: colors.lightGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  summaryText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
   summaryLabel: {
-    ...typography.bodyStrong,
+    ...typography.caption,
+    fontWeight: '600',
+    color: colors.muted,
   },
   summaryAmount: {
     ...typography.h2,
+    fontSize: 24,
+    lineHeight: 28,
+    color: colors.primaryDark,
   },
-  summaryHint: {
-    ...typography.caption,
-    color: colors.muted,
+  datesCard: {
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    gap: spacing.sm,
+    ...shadows.sm,
   },
-  datesBlock: {
-    gap: spacing.xxs,
+  datesTitle: {
+    ...typography.bodyStrong,
+    fontSize: 14,
+    color: colors.textPrimary,
   },
   dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  dateText: {
     ...typography.body,
     color: colors.textSecondary,
   },

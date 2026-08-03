@@ -1,18 +1,28 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ChevronRight } from 'lucide-react-native';
+import type { LucideIcon } from 'lucide-react-native';
 import { InlineEditableName } from '../ui/InlineEditableName';
-import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { colors, shadows, spacing, typography } from '../../theme';
 import {
   AccommodationInactiveBadge,
   accommodationInactiveCardStyle,
 } from './AccommodationInactiveBadge';
 import { isAccommodationEntityActive } from '../../utils/accommodationEntityActive';
+import {
+  getAccommodationHierarchyAccent,
+  getAccommodationHierarchyIcon,
+  type AccommodationHierarchyLevel,
+} from '../../utils/accommodationHierarchy';
 
 type AccommodationEntityRowProps = {
   title: string;
   subtitle?: string;
   meta?: React.ReactNode;
+  /** @deprecated Prefer hierarchyLevel + Lucide icons */
   iconLabel?: string;
+  hierarchyLevel?: AccommodationHierarchyLevel;
+  icon?: LucideIcon;
   onPress: () => void;
   onLongPress?: () => void;
   menu?: React.ReactNode;
@@ -29,6 +39,8 @@ export function AccommodationEntityRow({
   subtitle,
   meta,
   iconLabel,
+  hierarchyLevel,
+  icon,
   onPress,
   onLongPress,
   menu,
@@ -41,6 +53,12 @@ export function AccommodationEntityRow({
 }: AccommodationEntityRowProps) {
   const inactive = !isAccommodationEntityActive({ active });
   const showTrailingChevron = showChevron && !menu;
+  const palette = hierarchyLevel
+    ? getAccommodationHierarchyAccent(hierarchyLevel)
+    : null;
+  const HierarchyIcon =
+    icon ?? (hierarchyLevel ? getAccommodationHierarchyIcon(hierarchyLevel) : null);
+  const showIcon = Boolean(HierarchyIcon || iconLabel);
 
   return (
     <View style={styles.wrap}>
@@ -48,10 +66,37 @@ export function AccommodationEntityRow({
         <Pressable
           onPress={onPress}
           onLongPress={onLongPress}
-          style={({ pressed }) => [styles.main, pressed && styles.mainPressed]}>
-          {iconLabel ? (
-            <View style={[styles.icon, inactive && styles.iconInactive]}>
-              <Text style={styles.iconText}>{iconLabel}</Text>
+          android_ripple={{ color: 'rgba(18, 140, 126, 0.08)' }}
+          style={({ pressed }) => [styles.main, pressed && styles.mainPressed]}
+          accessibilityRole="button"
+          accessibilityLabel={title}>
+          {showIcon ? (
+            <View
+              style={[
+                styles.icon,
+                palette && {
+                  backgroundColor: palette.soft,
+                  borderColor: palette.border,
+                  borderWidth: 1,
+                },
+                inactive && styles.iconInactive,
+              ]}>
+              {HierarchyIcon && !inactive ? (
+                <HierarchyIcon
+                  size={20}
+                  color={palette?.accent ?? colors.primaryDark}
+                  strokeWidth={2.2}
+                />
+              ) : (
+                <Text
+                  style={[
+                    styles.iconText,
+                    palette && !inactive ? { color: palette.accent } : null,
+                    inactive && styles.iconTextInactive,
+                  ]}>
+                  {(iconLabel ?? title).charAt(0).toUpperCase()}
+                </Text>
+              )}
             </View>
           ) : null}
           <View style={styles.info}>
@@ -62,7 +107,9 @@ export function AccommodationEntityRow({
             />
             {meta ? <View style={styles.meta}>{meta}</View> : null}
             {subtitle ? (
-              <Text style={[styles.subtitle, inactive && styles.subtitleInactive]} numberOfLines={2}>
+              <Text
+                style={[styles.subtitle, inactive && styles.subtitleInactive]}
+                numberOfLines={2}>
                 {subtitle}
               </Text>
             ) : null}
@@ -74,7 +121,9 @@ export function AccommodationEntityRow({
               <View style={styles.badge}>{badge}</View>
             ) : null}
           </View>
-          {showTrailingChevron ? <Text style={styles.chevron}>›</Text> : null}
+          {showTrailingChevron ? (
+            <ChevronRight size={18} color={colors.muted} strokeWidth={2.4} />
+          ) : null}
         </Pressable>
         {menu ? (
           <>
@@ -96,7 +145,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'stretch',
     backgroundColor: colors.white,
-    borderRadius: radius.card,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.border,
     minHeight: 72,
@@ -107,41 +156,46 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.lg,
+    padding: spacing.md,
     gap: spacing.md,
   },
   mainPressed: {
     backgroundColor: colors.surface,
   },
   icon: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.button,
-    backgroundColor: colors.primary,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.lightGreen,
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
+    color: colors.primaryDark,
+  },
+  iconTextInactive: {
     color: colors.white,
   },
   iconInactive: {
     backgroundColor: '#9CA3AF',
+    borderColor: '#9CA3AF',
   },
   info: {
     flex: 1,
     minWidth: 0,
-    minHeight: 72,
+    minHeight: 48,
     justifyContent: 'center',
+    gap: 2,
   },
   meta: {
     minHeight: 18,
   },
   subtitle: {
     ...typography.caption,
+    fontSize: 12,
     color: colors.muted,
-    marginTop: 2,
   },
   subtitleInactive: {
     color: '#9CA3AF',
@@ -149,11 +203,6 @@ const styles = StyleSheet.create({
   badge: {
     marginTop: spacing.xs,
     alignSelf: 'flex-start',
-  },
-  chevron: {
-    fontSize: 24,
-    fontWeight: '300',
-    color: colors.muted,
   },
   divider: {
     width: StyleSheet.hairlineWidth,
@@ -167,7 +216,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   footer: {
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     paddingBottom: spacing.md,
     paddingTop: spacing.xs,
     borderTopWidth: StyleSheet.hairlineWidth,

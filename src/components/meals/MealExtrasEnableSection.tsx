@@ -78,6 +78,8 @@ export function MealExtrasEnableSection({
   const draftPricesRef = useRef(draftPrices);
   const enabledExtrasRef = useRef(enabledExtras);
   const priceSaveInFlight = useRef(new Set<string>());
+  const optedOutRef = useRef(new Set<string>());
+  const autoAttemptedRef = useRef(new Set<string>());
 
   draftPricesRef.current = draftPrices;
   enabledExtrasRef.current = enabledExtras;
@@ -111,6 +113,54 @@ export function MealExtrasEnableSection({
       ),
     [catalogItems, categorySeedItemIds, selectedMealItemIds],
   );
+
+  /** In-meal library extras are on by default (user can still turn off). */
+  useEffect(() => {
+    if (disabled) {
+      return;
+    }
+    const toEnable: FoodItemResponse[] = [];
+    for (const item of buckets.relevant) {
+      if (enabledIdSet.has(item.itemId)) {
+        autoAttemptedRef.current.add(item.itemId);
+        continue;
+      }
+      if (optedOutRef.current.has(item.itemId)) {
+        continue;
+      }
+      if (autoAttemptedRef.current.has(item.itemId)) {
+        continue;
+      }
+      autoAttemptedRef.current.add(item.itemId);
+      toEnable.push(item);
+    }
+    if (toEnable.length === 0) {
+      return;
+    }
+    const next = [...enabledExtrasRef.current];
+    const present = new Set(next.map(e => e.itemId));
+    for (const item of toEnable) {
+      if (present.has(item.itemId)) {
+        continue;
+      }
+      next.push(toExtraPackage(item));
+      present.add(item.itemId);
+    }
+    onChange(next);
+  }, [buckets.relevant, disabled, enabledIdSet, onChange]);
+
+  useEffect(() => {
+    for (const id of [...optedOutRef.current]) {
+      if (!selectedMealItemIds.has(id)) {
+        optedOutRef.current.delete(id);
+      }
+    }
+    for (const id of [...autoAttemptedRef.current]) {
+      if (!selectedMealItemIds.has(id)) {
+        autoAttemptedRef.current.delete(id);
+      }
+    }
+  }, [selectedMealItemIds]);
 
   const browseList = useMemo(() => {
     const query = browseQuery.trim().toLowerCase();
@@ -235,9 +285,11 @@ export function MealExtrasEnableSection({
       }
       onInteract?.();
       if (!enabled) {
+        optedOutRef.current.add(item.itemId);
         onChange(enabledExtras.filter(extra => extra.itemId !== item.itemId));
         return;
       }
+      optedOutRef.current.delete(item.itemId);
       if (enabledIdSet.has(item.itemId)) {
         return;
       }
@@ -674,7 +726,7 @@ const styles = StyleSheet.create({
   },
   wrapHighlighted: {
     borderColor: '#F59E0B',
-    backgroundColor: '#FFFBEB',
+    backgroundColor: colors.warningTint,
   },
   title: { ...typography.bodyStrong, marginBottom: spacing.xxs },
   hint: {

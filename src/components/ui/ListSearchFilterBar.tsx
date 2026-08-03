@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Funnel, Search } from 'lucide-react-native';
+import { Funnel, Search, X } from 'lucide-react-native';
 import { colors, radius, spacing, typography } from '../../theme';
 
 type ListSearchFilterBarProps = {
@@ -26,23 +26,40 @@ export function ListSearchFilterBar({
   showSearch = true,
 }: ListSearchFilterBarProps) {
   const { t } = useTranslation();
+  const [focused, setFocused] = useState(false);
   const hasFilters = activeFilterCount > 0;
 
   return (
     <View style={[styles.row, !showSearch && styles.rowFilterOnly]}>
       {showSearch ? (
-        <View style={styles.searchWrap}>
-          <Search size={16} color={colors.muted} strokeWidth={2.2} />
+        <View style={[styles.searchWrap, focused && styles.searchWrapFocused]}>
+          <Search
+            size={16}
+            color={focused ? colors.primaryDark : colors.muted}
+            strokeWidth={2.2}
+          />
           <TextInput
             style={styles.searchInput}
             value={searchValue}
             onChangeText={onSearchChange}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
             placeholder={searchPlaceholder ?? t('list.search.placeholder')}
             placeholderTextColor={colors.muted}
             autoCorrect={false}
-            clearButtonMode="while-editing"
+            returnKeyType="search"
             accessibilityLabel={searchPlaceholder ?? t('list.search.placeholder')}
           />
+          {searchValue.length > 0 ? (
+            <Pressable
+              onPress={() => onSearchChange('')}
+              hitSlop={12}
+              style={({ pressed }) => [styles.clearButton, pressed && styles.clearPressed]}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.clear', { defaultValue: 'Clear' })}>
+              <X size={12} color={colors.muted} strokeWidth={2.6} />
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
       {showFilterButton ? (
@@ -102,11 +119,26 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     paddingHorizontal: spacing.md,
   },
+  searchWrapFocused: {
+    borderColor: colors.primary,
+    backgroundColor: colors.white,
+  },
   searchInput: {
     flex: 1,
     paddingVertical: spacing.sm,
     ...typography.body,
     color: colors.textPrimary,
+  },
+  clearButton: {
+    width: 20,
+    height: 20,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceSecondary,
+  },
+  clearPressed: {
+    backgroundColor: colors.border,
   },
   filterButton: {
     flexDirection: 'row',
