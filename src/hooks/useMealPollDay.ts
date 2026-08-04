@@ -10,8 +10,10 @@ import type {
   MealType,
   SpaceType,
   SubmitMealPollSelection,
+  SubmitPaymentProofRequest,
   UUID,
 } from '../api/types';
+import type { UniversalPaymentProofPayload } from '../components/payments/UniversalPaymentProofModal';
 import { useToastStore } from '../store/toastStore';
 import { useNavigationFocusReload } from './useNavigationFocusReload';
 import { hasPrepaidOverflow } from '../utils/mealPollPayment';
@@ -367,7 +369,10 @@ export function useMealPollDay(
   );
 
   const submitWithPayment = useCallback(
-    async (paymentChoice?: MealPollPaymentChoice, proofImageBase64?: string) => {
+    async (
+      paymentChoice?: MealPollPaymentChoice,
+      proof?: string | UniversalPaymentProofPayload,
+    ) => {
       if (mealEditsLocked) {
         showToast(t('meals.poll.paymentUnderReviewLock'));
         return false;
@@ -378,6 +383,18 @@ export function useMealPollDay(
         return false;
       }
 
+      const proofBody: SubmitPaymentProofRequest | undefined =
+        typeof proof === 'string'
+          ? { proofImageBase64: proof }
+          : proof
+            ? {
+                proofImageBase64: proof.proofImageBase64,
+                referenceNumber: proof.referenceNumber,
+                remarks: proof.remarks,
+                paymentMethod: proof.paymentMethod,
+              }
+            : undefined;
+
       setSaving(true);
       try {
         const day = await mealsApi.submitMealPollResponses(
@@ -385,7 +402,7 @@ export function useMealPollDay(
           menuDate,
           payload,
           paymentChoice,
-          proofImageBase64,
+          paymentChoice === 'MARK_AS_PAID' ? proofBody : undefined,
         );
         setPolls(day.polls);
         setMyPaymentStatus(day.myPaymentStatus ?? null);
@@ -397,6 +414,7 @@ export function useMealPollDay(
         setDeliveryLocations(day.deliveryLocations ?? []);
         setLastDeliveryLocations({ ...(day.myLastDeliveryLocationIds ?? {}) });
         setEditing(false);
+
         if (
           hasPrepaidOverflow(day.myPrepaidOverflowPayment, day.myPrepaidOverflowAmount)
         ) {
@@ -437,10 +455,19 @@ export function useMealPollDay(
   );
 
   const submitPaymentProof = useCallback(
-    async (proofImageBase64: string) => {
+    async (proof: string | UniversalPaymentProofPayload) => {
+      const proofBody: SubmitPaymentProofRequest =
+        typeof proof === 'string'
+          ? { proofImageBase64: proof }
+          : {
+              proofImageBase64: proof.proofImageBase64,
+              referenceNumber: proof.referenceNumber,
+              remarks: proof.remarks,
+              paymentMethod: proof.paymentMethod,
+            };
       setSaving(true);
       try {
-        const day = await mealsApi.submitMealPollPaymentProof(spaceId, menuDate, proofImageBase64);
+        const day = await mealsApi.submitMealPollPaymentProof(spaceId, menuDate, proofBody);
         setPolls(day.polls);
         setMyPaymentStatus(day.myPaymentStatus ?? null);
         setMyRejectionReason(day.myRejectionReason ?? null);

@@ -11,14 +11,19 @@ import type {
 import { formatMenuDate, isPastMenuDate } from '../../utils/mealDates';
 import { buildMealSummaryFromDraftSelections } from '../../utils/mealSelectionSummary';
 import { MealPollDayContent } from './MealPollDayContent';
-import { MealPollPaymentProofModal } from './MealPollPaymentProofModal';
 import { MealSelectionSummary } from './MealSelectionSummary';
+import {
+  UniversalPaymentProofModal,
+  type UniversalPaymentProofPayload,
+} from '../payments/UniversalPaymentProofModal';
 import {
   MenuPlanningBottomSheet,
   SheetPrimaryButton,
   SheetSecondaryButton,
 } from './MenuPlanningBottomSheet';
 import { colors, spacing, typography } from '../../theme';
+import { validatePaymentProofSubmission } from '../../utils/paymentProofPolicy';
+import { useToastStore } from '../../store/toastStore';
 
 type MealPollResponseBottomSheetProps = {
   visible: boolean;
@@ -41,7 +46,7 @@ type MealPollResponseBottomSheetProps = {
   onSave: () => Promise<boolean>;
   onSubmitWithPayment: (
     paymentChoice: MealPollPaymentChoice,
-    proofImageBase64?: string,
+    proof?: string | UniversalPaymentProofPayload,
   ) => Promise<boolean>;
   onClose: () => void;
 };
@@ -69,6 +74,7 @@ export function MealPollResponseBottomSheet({
   onClose,
 }: MealPollResponseBottomSheetProps) {
   const { t, i18n } = useTranslation();
+  const showToast = useToastStore(state => state.showToast);
   const dateLabel = formatMenuDate(menuDate, i18n.language);
   const dateReadOnly = isPastMenuDate(menuDate);
   const [paymentStep, setPaymentStep] = useState(false);
@@ -108,8 +114,13 @@ export function MealPollResponseBottomSheet({
     }
   };
 
-  const handleProofSubmit = async (proofImageBase64: string) => {
-    const success = await onSubmitWithPayment('MARK_AS_PAID', proofImageBase64);
+  const handleProofSubmit = async (proofPayload: UniversalPaymentProofPayload) => {
+    const validationError = validatePaymentProofSubmission(proofPayload);
+    if (validationError) {
+      showToast(t(`paymentCollection.proof.${validationError}`));
+      return;
+    }
+    const success = await onSubmitWithPayment('MARK_AS_PAID', proofPayload);
     if (success) {
       setProofModalOpen(false);
       setPaymentStep(false);
@@ -196,11 +207,11 @@ export function MealPollResponseBottomSheet({
         )}
       </MenuPlanningBottomSheet>
 
-      <MealPollPaymentProofModal
+      <UniversalPaymentProofModal
         visible={proofModalOpen}
         submitting={saving}
         onClose={() => setProofModalOpen(false)}
-        onSubmit={proof => void handleProofSubmit(proof)}
+        onSubmit={payload => void handleProofSubmit(payload)}
       />
     </>
   );

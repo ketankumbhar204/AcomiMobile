@@ -132,6 +132,26 @@ export function MealSelectionSummary({
                 const hasPerLineAmounts = section.items.some(
                   item => item.lineAmount != null || item.unitPrice != null,
                 );
+                const mainItems = section.items.filter(item => item.isExtra !== true);
+                const extraItems = section.items.filter(item => item.isExtra === true);
+                const renderLine = (item: (typeof section.items)[number], itemIndex: number) => {
+                  const unitLabel = formatComboPrice(item.unitPrice, item.currencyCode);
+                  const lineLabel = formatComboPrice(item.lineAmount, item.currencyCode);
+                  const amountLabel =
+                    item.unitPrice != null && item.quantity > 1 && unitLabel
+                      ? `${unitLabel} × ${item.quantity}`
+                      : (lineLabel ?? unitLabel);
+                  return (
+                    <View key={`${item.label}-${itemIndex}`} style={styles.lineRow}>
+                      <Text style={styles.lineLabel} numberOfLines={2}>
+                        • {item.label} × {item.quantity}
+                      </Text>
+                      {amountLabel ? (
+                        <Text style={styles.lineAmount}>{amountLabel}</Text>
+                      ) : null}
+                    </View>
+                  );
+                };
                 return (
                   <View key={sectionKey(section, index)} style={styles.section}>
                     <Text style={styles.mealLabel}>{mealLabel}</Text>
@@ -139,24 +159,17 @@ export function MealSelectionSummary({
                       <Text style={styles.notSelected}>{notSelected}</Text>
                     ) : (
                       <>
-                        {section.items.map((item, itemIndex) => {
-                          const unitLabel = formatComboPrice(item.unitPrice, item.currencyCode);
-                          const lineLabel = formatComboPrice(item.lineAmount, item.currencyCode);
-                          const amountLabel =
-                            item.unitPrice != null && item.quantity > 1 && unitLabel
-                              ? `${unitLabel} × ${item.quantity}`
-                              : (lineLabel ?? unitLabel);
-                          return (
-                            <View key={`${item.label}-${itemIndex}`} style={styles.lineRow}>
-                              <Text style={styles.lineLabel} numberOfLines={2}>
-                                • {item.label} × {item.quantity}
-                              </Text>
-                              {amountLabel ? (
-                                <Text style={styles.lineAmount}>{amountLabel}</Text>
-                              ) : null}
-                            </View>
-                          );
-                        })}
+                        {mainItems.map(renderLine)}
+                        {extraItems.length > 0 ? (
+                          <>
+                            <Text style={styles.extrasHeading}>
+                              {t('meals.poll.extrasSection')}
+                            </Text>
+                            {extraItems.map((item, itemIndex) =>
+                              renderLine(item, mainItems.length + itemIndex),
+                            )}
+                          </>
+                        ) : null}
                         {!hasPerLineAmounts && subtotalLabel ? (
                           <View style={styles.lineRow}>
                             <Text style={styles.sectionSubtotalSpacer} />
@@ -299,6 +312,13 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 14,
     fontWeight: '600',
+  },
+  extrasHeading: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    fontWeight: '700',
+    marginTop: spacing.xs,
+    marginBottom: 2,
   },
   notSelected: {
     ...typography.caption,

@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { CheckCircle2, Sparkles } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import type { MealDeliveryLocation, MealPollSlot, MealType, UUID } from '../../api/types';
 import { Button } from '../ui';
 import { colors, spacing, typography } from '../../theme';
-import { formatComboNameWithPrice } from '../../utils/comboPrice';
+import { formatComboNameWithPrice, formatComboPrice } from '../../utils/comboPrice';
 import { formatMenuDate } from '../../utils/mealDates';
 import { MEAL_TYPES, mealTypeLabelKey } from '../../utils/mealLabels';
 import { MealDeliveryLocationCompact } from './MealDeliveryLocationCompact';
@@ -120,6 +121,19 @@ export function MealPollDayContent({
     const mainOptions = menuEntries.filter(option => option.isExtra !== true);
     const extraOptions = menuEntries.filter(option => option.isExtra === true);
     const showExtrasSection = multiQuantity && extraOptions.length > 0;
+    const mealPlates =
+      totalPlatesForMeal?.(poll.mealType) ??
+      Object.values(quantitySelections[poll.mealType] ?? {}).reduce((sum, qty) => sum + qty, 0);
+    const mealAmount = showMealPrices
+      ? menuEntries.reduce((sum, option) => {
+          const qty = quantitySelections[poll.mealType]?.[option.id] ?? 0;
+          const price = option.price != null ? Number(option.price) : 0;
+          if (qty <= 0 || Number.isNaN(price)) return sum;
+          return sum + price * qty;
+        }, 0)
+      : 0;
+    const mealCurrency =
+      menuEntries.find(option => option.currencyCode)?.currencyCode ?? 'INR';
 
     const renderQuantityRows = (
       options: typeof menuEntries,
@@ -157,22 +171,45 @@ export function MealPollDayContent({
 
         {multiQuantity ? (
           <>
-            {showExtrasSection ? (
-              <Text style={styles.optionGroupLabel}>{t('meals.poll.menuSection')}</Text>
-            ) : null}
+            <Text style={styles.mainItemsHeading}>{t('meals.poll.mainItemsSection')}</Text>
             {renderQuantityRows(mainOptions)}
             {showExtrasSection ? (
               <View style={styles.extrasPanel}>
                 <View style={styles.extrasPanelHeader}>
-                  <View style={styles.extrasPanelAccent} />
-                  <View style={styles.extrasPanelHeaderText}>
-                    <Text style={styles.extrasPanelTitle}>{t('meals.poll.extrasSection')}</Text>
-                    <Text style={styles.extrasPanelHint}>{t('meals.poll.extrasSectionHint')}</Text>
-                  </View>
+                  <Sparkles size={15} color={colors.primaryDark} />
+                  <Text style={styles.extrasPanelTitle}>
+                    {t('meals.poll.extrasSectionOptional')}
+                  </Text>
                 </View>
                 {renderQuantityRows(extraOptions, 'extra')}
               </View>
             ) : null}
+            <View style={[styles.mealSummaryStrip, mealPlates > 0 && styles.mealSummaryStripActive]}>
+              <View style={styles.mealSummaryLeft}>
+                {mealPlates > 0 ? (
+                  <CheckCircle2 size={15} color={colors.primaryDark} />
+                ) : null}
+                <Text
+                  style={[
+                    styles.mealSummaryPlates,
+                    mealPlates > 0 && styles.mealSummaryPlatesActive,
+                  ]}>
+                  {mealPlates > 0
+                    ? t('meals.poll.platesCount', { count: mealPlates })
+                    : t('meals.poll.skipMealHint', {
+                        defaultValue: 'No plates — this meal will be skipped',
+                      })}
+                </Text>
+              </View>
+              {showMealPrices && mealAmount > 0 ? (
+                <Text style={styles.mealSummaryTotal}>
+                  {t('meals.poll.mealTotal', {
+                    defaultValue: 'Total {{amount}}',
+                    amount: formatComboPrice(mealAmount, mealCurrency) ?? '',
+                  })}
+                </Text>
+              ) : null}
+            </View>
           </>
         ) : (
           poll.options.map(option => (
@@ -319,15 +356,6 @@ export function MealPollDayContent({
         </View>
       ) : null}
 
-      {!showSummary && multiQuantity && totalPlates > 0 ? (
-        <View style={styles.footerTotals}>
-          <View style={styles.divider} />
-          <Text style={styles.totalPlatesAll}>
-            {t('meals.poll.totalPlatesAll', { count: totalPlates })}
-          </Text>
-        </View>
-      ) : null}
-
       {!hideSubmitButton && !readOnly ? (
         <Button
           label={
@@ -355,6 +383,11 @@ const styles = StyleSheet.create({
   subtitle: { ...typography.body, color: colors.muted, marginBottom: spacing.lg },
   section: { marginBottom: spacing.lg },
   sectionTitle: { ...typography.bodyStrong, fontSize: 18, marginBottom: spacing.sm },
+  mainItemsHeading: {
+    ...typography.bodyStrong,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
   optionGroupLabel: {
     ...typography.caption,
     color: colors.muted,
@@ -364,41 +397,68 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   deliveryBelowTabs: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   extrasPanel: {
     marginTop: spacing.md,
+    marginBottom: spacing.sm,
     padding: spacing.md,
     borderRadius: 12,
     backgroundColor: '#EEF6F1',
     borderWidth: 1,
-    borderColor: colors.primaryDark,
+    borderColor: `${colors.primaryDark}44`,
+    borderStyle: 'dashed',
   },
   extrasPanelHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: spacing.sm,
     marginBottom: spacing.sm,
-  },
-  extrasPanelAccent: {
-    width: 3,
-    alignSelf: 'stretch',
-    minHeight: 28,
-    borderRadius: 2,
-    backgroundColor: colors.primaryDark,
-  },
-  extrasPanelHeaderText: {
-    flex: 1,
-    minWidth: 0,
-    gap: 2,
   },
   extrasPanelTitle: {
     ...typography.bodyStrong,
     color: colors.primaryDark,
   },
-  extrasPanelHint: {
-    ...typography.caption,
+  mealSummaryStrip: {
+    marginTop: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  mealSummaryStripActive: {
+    backgroundColor: colors.lightGreen,
+    borderColor: `${colors.primaryDark}33`,
+  },
+  mealSummaryLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    flex: 1,
+    minWidth: 0,
+  },
+  mealSummaryPlates: {
+    ...typography.body,
     color: colors.muted,
+    flexShrink: 1,
+  },
+  mealSummaryPlatesActive: {
+    ...typography.bodyStrong,
+    color: colors.primaryDark,
+  },
+  mealSummaryTotal: {
+    ...typography.bodyStrong,
+    color: colors.primaryDark,
+    flexShrink: 0,
+  },
+  extrasGroupLabel: {
+    marginTop: spacing.sm,
   },
   summaryChoice: { ...typography.bodyStrong, marginBottom: spacing.xxs },
   summaryMissing: { ...typography.body, color: colors.muted, marginBottom: spacing.xxs },
@@ -417,9 +477,6 @@ const styles = StyleSheet.create({
     ...typography.bodyStrong,
     fontSize: 18,
     color: colors.primaryDark,
-  },
-  footerTotals: {
-    marginBottom: spacing.md,
   },
   submit: { marginTop: spacing.sm },
 });

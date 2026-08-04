@@ -13,6 +13,7 @@ import type { MealPollPaymentStatus, MealPollSlot, MealType } from '../../api/ty
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { ChevronLeftIcon } from '../ui/icons/ChevronLeftIcon';
 import { ChevronRightIcon } from '../ui/icons/ChevronRightIcon';
+import { formatComboPrice } from '../../utils/comboPrice';
 import {
   formatMenuDate,
   pollCardTitleKey,
@@ -20,7 +21,10 @@ import {
 } from '../../utils/mealDates';
 import { hasPrepaidOverflow } from '../../utils/mealPollPayment';
 import { MEAL_TYPES, mealTypeLabelKey } from '../../utils/mealLabels';
-import { buildMealSummaryFromPolls } from '../../utils/mealSelectionSummary';
+import {
+  buildMealSummaryFromPolls,
+  type MealSummaryLineItem,
+} from '../../utils/mealSelectionSummary';
 import { countMenuItemsByMeal } from '../../utils/customerDashboardStats';
 import { MealSelectionSummary } from './MealSelectionSummary';
 import { MealTypeVisual } from './MealTypeVisual';
@@ -125,30 +129,82 @@ function actionLabel(
 type MealMiniCardProps = {
   mealType: MealType;
   itemCount: number;
+  selectedItems?: MealSummaryLineItem[];
+  showMealPrices?: boolean;
   onPress?: () => void;
   disabled?: boolean;
 };
 
-function MealMiniCard({ mealType, itemCount, onPress, disabled }: MealMiniCardProps) {
+function MealMiniCard({
+  mealType,
+  itemCount,
+  selectedItems = [],
+  showMealPrices = true,
+  onPress,
+  disabled,
+}: MealMiniCardProps) {
   const { t } = useTranslation();
   const label = t(mealTypeLabelKey(mealType));
+  const selected = selectedItems.length > 0;
+  const previewItems = selectedItems.slice(0, 2);
+  const moreCount = Math.max(0, selectedItems.length - previewItems.length);
+
+  const accessibilityDetail = selected
+    ? `${t('dashboard.pollCard.youHaveSelected')}, ${previewItems
+        .map(item => item.label)
+        .join(', ')}`
+    : t('dashboard.customer.mealItems', { count: itemCount });
 
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled || !onPress}
-      style={({ pressed }) => [styles.mealCard, pressed && onPress && !disabled && styles.mealCardPressed]}
+      style={({ pressed }) => [
+        styles.mealCard,
+        selected && styles.mealCardSelected,
+        pressed && onPress && !disabled && styles.mealCardPressed,
+      ]}
       accessibilityRole={onPress && !disabled ? 'button' : undefined}
-      accessibilityLabel={`${label}, ${t('dashboard.customer.mealItems', { count: itemCount })}`}>
+      accessibilityLabel={`${label}, ${accessibilityDetail}`}>
       {/* TODO: swap MealTypeVisual imageSource with real food photos when available */}
       <MealTypeVisual mealType={mealType} size={20} />
       <View style={styles.mealCardBody}>
         <Text style={styles.mealCardTitle} numberOfLines={1}>
           {label}
         </Text>
-        <Text style={styles.mealCardMeta} numberOfLines={1}>
-          {t('dashboard.customer.mealItems', { count: itemCount })}
-        </Text>
+        {selected ? (
+          <>
+            <Text style={styles.mealCardSelectedHint} numberOfLines={1}>
+              {t('dashboard.pollCard.youHaveSelected')}
+            </Text>
+            {previewItems.map(item => {
+              const qty = item.quantity > 1 ? ` ×${item.quantity}` : '';
+              const price =
+                showMealPrices && item.lineAmount != null
+                  ? ` (${formatComboPrice(item.lineAmount, item.currencyCode ?? 'INR') ?? ''})`
+                  : '';
+              return (
+                <Text
+                  key={`${item.label}-${item.quantity}`}
+                  style={styles.mealCardSelectionLine}
+                  numberOfLines={1}>
+                  {item.label}
+                  {qty}
+                  {price}
+                </Text>
+              );
+            })}
+            {moreCount > 0 ? (
+              <Text style={styles.mealCardMore} numberOfLines={1}>
+                {t('dashboard.pollCard.previewMore', { count: moreCount })}
+              </Text>
+            ) : null}
+          </>
+        ) : (
+          <Text style={styles.mealCardMeta} numberOfLines={1}>
+            {t('dashboard.customer.mealItems', { count: itemCount })}
+          </Text>
+        )}
       </View>
     </Pressable>
   );
@@ -213,15 +269,21 @@ export function DashboardCustomerPollCard({
     return () => clearTimeout(timer);
   }, [justSaved, onDismissSuccess]);
 
-  const mealCards = MEAL_TYPES.filter(mealType => itemCounts[mealType] != null).map(mealType => (
-    <MealMiniCard
-      key={mealType}
-      mealType={mealType}
-      itemCount={itemCounts[mealType] ?? 0}
-      onPress={isPressable ? onAction : undefined}
-      disabled={actionDisabled}
-    />
-  ));
+  const mealCards = MEAL_TYPES.filter(mealType => itemCounts[mealType] != null).map(mealType => {
+    const selectedItems =
+      selectionSummary.sections.find(section => section.mealType === mealType)?.items ?? [];
+    return (
+      <MealMiniCard
+        key={mealType}
+        mealType={mealType}
+        itemCount={itemCounts[mealType] ?? 0}
+        selectedItems={selectedItems}
+        showMealPrices={showMealPrices}
+        onPress={isPressable ? onAction : undefined}
+        disabled={actionDisabled}
+      />
+    );
+  });
 
   return (
     <View
@@ -489,7 +551,7 @@ const styles = StyleSheet.create({
   },
   mealCard: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: spacing.md,
     backgroundColor: colors.white,
     borderRadius: radius.button,
@@ -498,6 +560,10 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     minHeight: 56,
+  },
+  mealCardSelected: {
+    borderColor: `${colors.primary}55`,
+    backgroundColor: colors.lightGreen,
   },
   mealCardPressed: {
     opacity: 0.9,
@@ -515,6 +581,21 @@ const styles = StyleSheet.create({
   mealCardMeta: {
     ...typography.caption,
     color: colors.muted,
+  },
+  mealCardSelectedHint: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    fontWeight: '700',
+  },
+  mealCardSelectionLine: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+  mealCardMore: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    fontWeight: '700',
   },
   bodyText: {
     ...typography.bodyStrong,

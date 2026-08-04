@@ -44,10 +44,14 @@ type UniversalPaymentProofModalProps = {
   mode?: 'submit' | 'edit';
   /** modal = overlay (default); inline = embed form in a screen without Modal chrome */
   presentation?: 'modal' | 'inline';
+  /** Hide Cancel/Submit when parent owns the primary CTA (e.g. subscription progressive footer). */
+  hideActions?: boolean;
   proofRequirements?: PaymentProofRequirements;
   submitting?: boolean;
   onClose: () => void;
   onSubmit: (payload: UniversalPaymentProofPayload) => void;
+  /** Fired whenever fields change (useful with hideActions / inline). */
+  onPayloadChange?: (payload: UniversalPaymentProofPayload) => void;
 };
 
 export function UniversalPaymentProofModal({
@@ -55,10 +59,12 @@ export function UniversalPaymentProofModal({
   payment = null,
   mode = 'submit',
   presentation = 'modal',
+  hideActions = false,
   proofRequirements,
   submitting = false,
   onClose,
   onSubmit,
+  onPayloadChange,
 }: UniversalPaymentProofModalProps) {
   const { t, i18n } = useTranslation();
   const showToast = useToastStore(state => state.showToast);
@@ -162,17 +168,27 @@ export function UniversalPaymentProofModal({
     setRemarks(value);
   };
 
+  const buildPayload = (): UniversalPaymentProofPayload => ({
+    proofImageBase64: proofImageBase64?.trim() || undefined,
+    referenceNumber: referenceNumber.trim() || undefined,
+    remarks: remarks.trim() || undefined,
+    paymentMethod,
+  });
+
+  useEffect(() => {
+    if (!visible || !onPayloadChange) {
+      return;
+    }
+    onPayloadChange(buildPayload());
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- emit on field edits only
+  }, [visible, proofImageBase64, referenceNumber, remarks, paymentMethod]);
+
   const handleSubmit = () => {
     if (submitting) {
       return;
     }
 
-    const payload: UniversalPaymentProofPayload = {
-      proofImageBase64: proofImageBase64?.trim() || undefined,
-      referenceNumber: referenceNumber.trim() || undefined,
-      remarks: remarks.trim() || undefined,
-      paymentMethod,
-    };
+    const payload = buildPayload();
 
     const validationError = validatePaymentProofSubmission(payload, requirements);
     if (validationError) {
@@ -262,24 +278,26 @@ export function UniversalPaymentProofModal({
         />
       </View>
 
-      <View style={styles.actions}>
-        <Button
-          label={
-            isEditMode
-              ? t('paymentCollection.proof.saveChanges')
-              : t('paymentCollection.proof.submit')
-          }
-          onPress={handleSubmit}
-          loading={submitting}
-          disabled={submitting}
-        />
-        <Button
-          label={t('common.cancel')}
-          variant="ghost"
-          onPress={handleClose}
-          disabled={submitting}
-        />
-      </View>
+      {!hideActions ? (
+        <View style={styles.actions}>
+          <Button
+            label={
+              isEditMode
+                ? t('paymentCollection.proof.saveChanges')
+                : t('paymentCollection.proof.submit')
+            }
+            onPress={handleSubmit}
+            loading={submitting}
+            disabled={submitting}
+          />
+          <Button
+            label={t('common.cancel')}
+            variant="ghost"
+            onPress={handleClose}
+            disabled={submitting}
+          />
+        </View>
+      ) : null}
     </View>
   );
 

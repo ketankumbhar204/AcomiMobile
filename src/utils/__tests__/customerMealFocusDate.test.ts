@@ -1,3 +1,4 @@
+import { mealsApi } from '../../api/mealsApi';
 import {
   pollCardSelectPromptKey,
   pollCardTitleKey,
@@ -33,9 +34,23 @@ describe('customer meal date helpers', () => {
     jest.useRealTimers();
   });
 
-  it('always focuses customers on today', async () => {
+  it('skips empty today and focuses the next planned menu day', async () => {
     jest.useFakeTimers().setSystemTime(new Date(2026, 6, 12, 12, 0, 0));
-    await expect(resolveCustomerMealFocusDate('space-1', 'MESS')).resolves.toBe('2026-07-12');
+    const getMealPolls = jest
+      .spyOn(mealsApi, 'getMealPolls')
+      .mockImplementation(async (_spaceId, menuDate) => {
+        if (menuDate === '2026-07-12') {
+          return { polls: [] } as Awaited<ReturnType<typeof mealsApi.getMealPolls>>;
+        }
+        if (menuDate === '2026-07-13') {
+          return {
+            polls: [{ id: '1' }],
+          } as Awaited<ReturnType<typeof mealsApi.getMealPolls>>;
+        }
+        return { polls: [] } as Awaited<ReturnType<typeof mealsApi.getMealPolls>>;
+      });
+    await expect(resolveCustomerMealFocusDate('space-1', 'MESS')).resolves.toBe('2026-07-13');
+    getMealPolls.mockRestore();
     jest.useRealTimers();
   });
 

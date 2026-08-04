@@ -10,18 +10,21 @@ import {
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { ClipboardList, Clock3, Hash, Package, StickyNote } from 'lucide-react-native';
+import { ClipboardList, Clock3, Package } from 'lucide-react-native';
 import { subscriptionPlansApi } from '../../api/subscriptionPlansApi';
 import type { SubscriptionPlanResponse, UUID } from '../../api/types';
 import { MealFormHero } from '../../components/meals/MealFormHero';
-import { PaymentProofUploadField } from '../../components/meals/PaymentProofUploadField';
 import { SubscriptionPlanCard } from '../../components/meals/SubscriptionPlanCard';
 import { SubscriptionPlanDetailsPanel } from '../../components/meals/SubscriptionPlanDetailsPanel';
+import {
+  UniversalPaymentProofModal,
+  type UniversalPaymentProofPayload,
+} from '../../components/payments/UniversalPaymentProofModal';
 import {
   ProgressiveWorkflowFooter,
   progressiveSectionHighlightStyle,
 } from '../../components/progressive';
-import { EmptyState, FormInput, Skeleton } from '../../components/ui';
+import { EmptyState, Skeleton } from '../../components/ui';
 import { useCustomerSubscriptionStatus } from '../../hooks/useCustomerSubscriptionStatus';
 import { useProgressiveSectionReview } from '../../hooks/useProgressiveSectionReview';
 import { useToastStore } from '../../store/toastStore';
@@ -51,9 +54,9 @@ export function CustomerSubscriptionPlansScreen({
   const [plans, setPlans] = useState<SubscriptionPlanResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPlanId, setSelectedPlanId] = useState<UUID | null>(null);
-  const [paymentReference, setPaymentReference] = useState('');
-  const [customerNotes, setCustomerNotes] = useState('');
-  const [proofImageBase64, setProofImageBase64] = useState<string | null>(null);
+  const [proofPayload, setProofPayload] = useState<UniversalPaymentProofPayload>({
+    paymentMethod: 'UPI',
+  });
   const [submitting, setSubmitting] = useState(false);
 
   const reloadPlans = useCallback(async () => {
@@ -120,9 +123,7 @@ export function CustomerSubscriptionPlansScreen({
   useEffect(() => {
     if (hasPendingRequest) {
       setSelectedPlanId(null);
-      setPaymentReference('');
-      setCustomerNotes('');
-      setProofImageBase64(null);
+      setProofPayload({ paymentMethod: 'UPI' });
     }
   }, [hasPendingRequest]);
 
@@ -135,35 +136,52 @@ export function CustomerSubscriptionPlansScreen({
   const handleSelectPlan = useCallback(
     (planId: UUID) => {
       setSelectedPlanId(planId);
-      setPaymentReference('');
-      setCustomerNotes('');
-      setProofImageBase64(null);
+      setProofPayload({ paymentMethod: 'UPI' });
       clearPaymentReviewed();
     },
     [clearPaymentReviewed],
+  );
+
+  const handleProofPayloadChange = useCallback(
+    (payload: UniversalPaymentProofPayload) => {
+      setProofPayload(payload);
+      if (
+        payload.proofImageBase64?.trim() ||
+        payload.referenceNumber?.trim() ||
+        payload.remarks?.trim()
+      ) {
+        markPaymentReviewed();
+      }
+    },
+    [markPaymentReviewed],
   );
 
   const handleSubmitRequest = useCallback(async () => {
     if (!selectedPlan || !canSubmitRequest) {
       return;
     }
-    const reference = paymentReference.trim();
-    if (!reference && !proofImageBase64) {
+    const reference = proofPayload.referenceNumber?.trim() ?? '';
+    if (!reference && !proofPayload.proofImageBase64?.trim()) {
       showToast(t('meals.subscription.customer.proofOrReferenceRequired'));
       return;
     }
+    const methodLabel = t(
+      `paymentCollection.method.${proofPayload.paymentMethod ?? 'UPI'}`,
+    );
+    const noteParts = [
+      `${t('paymentCollection.proof.paymentMethod')}: ${methodLabel}`,
+      proofPayload.remarks?.trim() || null,
+    ].filter(Boolean);
     setSubmitting(true);
     try {
       await subscriptionPlansApi.createActivationRequest(spaceId, memberId, {
         planId: selectedPlan.planId,
         paymentReference: reference || undefined,
-        proofImageBase64: proofImageBase64 ?? undefined,
-        customerNotes: customerNotes.trim() || undefined,
+        proofImageBase64: proofPayload.proofImageBase64 ?? undefined,
+        customerNotes: noteParts.join('\n') || undefined,
       });
       showToast(t('meals.subscription.customer.requestSubmitted'));
-      setPaymentReference('');
-      setCustomerNotes('');
-      setProofImageBase64(null);
+      setProofPayload({ paymentMethod: 'UPI' });
       setSelectedPlanId(null);
       await reloadStatus();
     } catch {
@@ -173,10 +191,8 @@ export function CustomerSubscriptionPlansScreen({
     }
   }, [
     canSubmitRequest,
-    customerNotes,
     memberId,
-    paymentReference,
-    proofImageBase64,
+    proofPayload,
     reloadStatus,
     selectedPlan,
     showToast,
@@ -284,36 +300,15 @@ export function CustomerSubscriptionPlansScreen({
             <SubscriptionPlanDetailsPanel plan={selectedPlan} />
             <Text style={styles.requestHint}>{t('meals.subscription.customer.requestHint')}</Text>
 
-            <FormInput
-              label={t('meals.subscription.customer.paymentReferenceLabel')}
-              value={paymentReference}
-              onChangeText={value => {
-                markPaymentReviewed();
-                setPaymentReference(value);
-              }}
-              placeholder={t('meals.subscription.customer.paymentReferencePlaceholder')}
-              leadingIcon={Hash}
-            />
-
-            <PaymentProofUploadField
-              value={proofImageBase64}
-              onChange={value => {
-                markPaymentReviewed();
-                setProofImageBase64(value);
-              }}
-              disabled={submitting}
-            />
-
-            <FormInput
-              label={t('meals.subscription.customer.notesLabel')}
-              value={customerNotes}
-              onChangeText={value => {
-                markPaymentReviewed();
-                setCustomerNotes(value);
-              }}
-              placeholder={t('meals.subscription.customer.notesPlaceholder')}
-              multiline
-              leadingIcon={StickyNote}
+            <UniversalPaymentProofModal
+              key={selectedPlan.planId}
+              visible
+              presentation="inline"
+              hideActions
+              submitting={submitting}
+              onClose={() => undefined}
+              onSubmit={() => undefined}
+              onPayloadChange={handleProofPayloadChange}
             />
           </View>
         ) : null}

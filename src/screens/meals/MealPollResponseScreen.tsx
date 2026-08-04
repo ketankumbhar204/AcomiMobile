@@ -16,19 +16,24 @@ import { useTranslation } from 'react-i18next';
 import type { MealPollPaymentStatus, UUID } from '../../api/types';
 import { MealPollDayContent } from '../../components/meals/MealPollDayContent';
 import { MealFormHero } from '../../components/meals';
-import { MealPollPaymentProofModal } from '../../components/meals/MealPollPaymentProofModal';
 import { MealSelectionSummary } from '../../components/meals/MealSelectionSummary';
+import {
+  UniversalPaymentProofModal,
+  type UniversalPaymentProofPayload,
+} from '../../components/payments/UniversalPaymentProofModal';
 import { Button, EmptyState } from '../../components/ui';
 import { useMealPollDay } from '../../hooks/useMealPollDay';
 import { useMealPricingPolicy } from '../../hooks/useMealPricingPolicy';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useScreenBackButton } from '../../hooks/useScreenBackButton';
+import { useToastStore } from '../../store/toastStore';
 import type { MainStackParamList } from '../../navigation/types';
 import { colors, radius, spacing, typography } from '../../theme';
 import { formatMenuDate, isPastMenuDate } from '../../utils/mealDates';
 import { formatComboPrice } from '../../utils/comboPrice';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
 import { buildMealSummaryFromDraftSelections } from '../../utils/mealSelectionSummary';
+import { validatePaymentProofSubmission } from '../../utils/paymentProofPolicy';
 
 type MealPollResponseScreenProps = {
   spaceId: UUID;
@@ -70,6 +75,7 @@ export function MealPollResponseScreen({ spaceId, menuDate }: MealPollResponseSc
   const viewOnly = dateReadOnly || mealEditsLocked || pollsClosedOnly;
   const [paymentStep, setPaymentStep] = useState(false);
   const [proofModalOpen, setProofModalOpen] = useState(false);
+  const showToast = useToastStore(state => state.showToast);
   const visiblePolls = poll.displayPolls;
 
   const paymentSummary = useMemo(
@@ -99,11 +105,43 @@ export function MealPollResponseScreen({ spaceId, menuDate }: MealPollResponseSc
     return visiblePolls.map(slot => {
       const plates = poll.totalPlatesForMeal(slot.mealType);
       const locationId = poll.deliverySelections[slot.mealType];
+      const qtyMap = poll.quantitySelections[slot.mealType] ?? {};
+      const items = poll.multiQuantity
+        ? slot.options
+            .filter(option => (qtyMap[option.id] ?? 0) > 0)
+            .sort((a, b) => {
+              const aExtra = a.isExtra === true ? 1 : 0;
+              const bExtra = b.isExtra === true ? 1 : 0;
+              return aExtra - bExtra || a.sortOrder - b.sortOrder;
+            })
+            .map(option => ({
+              optionId: option.id,
+              label: option.label,
+              quantity: qtyMap[option.id] ?? 0,
+              isExtra: option.isExtra === true,
+            }))
+        : (() => {
+            const selectedId = poll.selections[slot.mealType];
+            const option = selectedId
+              ? slot.options.find(row => row.id === selectedId)
+              : undefined;
+            return option
+              ? [
+                  {
+                    optionId: option.id,
+                    label: option.label,
+                    quantity: 1,
+                    isExtra: option.isExtra === true,
+                  },
+                ]
+              : [];
+          })();
       return {
         mealType: slot.mealType,
         plates,
-        selected: plates > 0,
+        selected: plates > 0 || items.length > 0,
         locationName: locationId ? locationById.get(locationId) ?? null : null,
+        items,
       };
     });
   }, [poll, visiblePolls]);
@@ -176,8 +214,13 @@ export function MealPollResponseScreen({ spaceId, menuDate }: MealPollResponseSc
     }
   };
 
-  const handleProofSubmit = async (proofImageBase64: string) => {
-    const success = await poll.submitWithPayment('MARK_AS_PAID', proofImageBase64);
+  const handleProofSubmit = async (proofPayload: UniversalPaymentProofPayload) => {
+    const validationError = validatePaymentProofSubmission(proofPayload);
+    if (validationError) {
+      showToast(t(`paymentCollection.proof.${validationError}`));
+      return;
+    }
+    const success = await poll.submitWithPayment('MARK_AS_PAID', proofPayload);
     if (success) {
       setProofModalOpen(false);
       setPaymentStep(false);
@@ -353,35 +396,33 @@ export function MealPollResponseScreen({ spaceId, menuDate }: MealPollResponseSc
             ]}>
             {!poll.showSummary && mealProgress.length > 0 ? (
               <View style={styles.progressBlock}>
-                {mealProgress.map(row => (
-                  <View key={row.mealType} style={styles.progressRow}>
-                    <Text
-                      style={[
-                        styles.progressMeal,
-                        row.selected ? styles.progressOk : styles.progressWarn,
-                      ]}
-                      numberOfLines={1}>
-                      {row.selected
-                        ? t('meals.poll.progressSelected', {
-                            meal: t(mealTypeLabelKey(row.mealType)),
-                            count: row.plates,
-                          })
-                        : t('meals.poll.progressMissing', {
-                            meal: t(mealTypeLabelKey(row.mealType)),
-                          })}
-                    </Text>
-                    {row.locationName ? (
-                      <Text
-                        style={[
-                          styles.progressLocation,
-                          row.selected ? styles.progressOk : styles.progressWarn,
-                        ]}
-                        numberOfLines={1}>
-                        {row.locationName}
+                <Text style={styles.stickyLabel}>
+                  {t('meals.poll.yourCurrentSelection', {
+                    defaultValue: 'Your current selection',
+                  })}
+                </Text>
+                <View style={styles.progressCards}>
+                  {mealProgress.map(row => (
+                    <View key={row.mealType} style={styles.progressCard}>
+                      <Text style={styles.progressMealTitle}>
+                        {t(mealTypeLabelKey(row.mealType))}
                       </Text>
-                    ) : null}
-                  </View>
-                ))}
+                      {row.items.length > 0 ? (
+                        row.items.map(item => (
+                          <Text key={item.optionId} style={styles.progressItem} numberOfLines={1}>
+                            {item.quantity > 1
+                              ? `${item.label} ×${item.quantity}`
+                              : item.label}
+                          </Text>
+                        ))
+                      ) : (
+                        <Text style={styles.progressEmpty}>
+                          {t('meals.poll.notSelected')}
+                        </Text>
+                      )}
+                    </View>
+                  ))}
+                </View>
               </View>
             ) : null}
             {stickySummaryLine ? (
@@ -402,11 +443,11 @@ export function MealPollResponseScreen({ spaceId, menuDate }: MealPollResponseSc
         ) : null}
       </KeyboardAvoidingView>
 
-      <MealPollPaymentProofModal
+      <UniversalPaymentProofModal
         visible={proofModalOpen}
         submitting={poll.saving}
         onClose={() => setProofModalOpen(false)}
-        onSubmit={proof => void handleProofSubmit(proof)}
+        onSubmit={payload => void handleProofSubmit(payload)}
       />
     </>
   );
@@ -427,37 +468,51 @@ const styles = StyleSheet.create({
   stickyBar: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
-    backgroundColor: colors.white,
+    backgroundColor: colors.lightGreen,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     gap: spacing.sm,
   },
-  progressBlock: {
-    gap: 4,
-  },
-  progressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  progressMeal: {
+  stickyLabel: {
     ...typography.caption,
-    fontWeight: '600',
-    flexShrink: 1,
+    color: colors.muted,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+    marginBottom: 2,
   },
-  progressLocation: {
+  progressBlock: {
+    gap: spacing.xs,
+  },
+  progressCards: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  progressCard: {
+    minWidth: 96,
+    maxWidth: 140,
+    flexGrow: 1,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: radius.button,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+    gap: 2,
+  },
+  progressMealTitle: {
     ...typography.caption,
     fontWeight: '700',
-    flexShrink: 0,
-    maxWidth: '42%',
-    textAlign: 'right',
+    color: colors.textSecondary,
   },
-  progressOk: {
-    color: colors.primaryDark,
+  progressItem: {
+    ...typography.caption,
+    color: colors.textPrimary,
   },
-  progressWarn: {
-    color: '#B45309',
+  progressEmpty: {
+    ...typography.caption,
+    color: colors.muted,
   },
   stickySummary: {
     ...typography.bodyStrong,

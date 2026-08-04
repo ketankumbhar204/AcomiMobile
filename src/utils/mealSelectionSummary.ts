@@ -19,6 +19,8 @@ export type MealSummaryLineItem = {
   /** line total = unit × quantity (when known). */
   lineAmount?: number | null;
   currencyCode?: string | null;
+  /** Mess add-on from daily menu extras. */
+  isExtra?: boolean;
 };
 
 export type MealSummarySection = {
@@ -163,7 +165,12 @@ export function buildMealSummaryFromDraftSelections(
     const items: MealSummaryLineItem[] = [];
     if (multiQuantity) {
       const qtyMap = quantitySelections[mealType] ?? {};
-      for (const option of poll.options) {
+      const sortedOptions = [...poll.options].sort((a, b) => {
+        const aExtra = a.isExtra === true ? 1 : 0;
+        const bExtra = b.isExtra === true ? 1 : 0;
+        return aExtra - bExtra || a.sortOrder - b.sortOrder;
+      });
+      for (const option of sortedOptions) {
         if (option.optionType !== 'MENU_ENTRY') {
           continue;
         }
@@ -178,6 +185,7 @@ export function buildMealSummaryFromDraftSelections(
           unitPrice: option.price != null ? Number(option.price) : null,
           lineAmount: unit * quantity,
           currencyCode: option.currencyCode ?? 'INR',
+          isExtra: option.isExtra === true,
         });
         if (option.currencyCode) {
           currencyCode = option.currencyCode;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, type ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { MealDeliveryLocation, UUID } from '../../api/types';
@@ -10,8 +10,10 @@ type MealDeliveryLocationPickerProps = {
   lastUsedLocationId?: UUID | null;
   onSelect: (locationId: UUID) => void;
   readOnly?: boolean;
-  /** When editable, show ✏ instead of ▾. */
+  /** When editable, show ✏ instead of ▾ on the default trigger. */
   showEditAffordance?: boolean;
+  /** Optional custom trigger that opens the same picker modal. */
+  trigger?: ReactNode;
 };
 
 export function MealDeliveryLocationPicker({
@@ -21,6 +23,7 @@ export function MealDeliveryLocationPicker({
   onSelect,
   readOnly = false,
   showEditAffordance = false,
+  trigger,
 }: MealDeliveryLocationPickerProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -39,42 +42,53 @@ export function MealDeliveryLocationPicker({
 
   return (
     <>
-      <Pressable
-        style={({ pressed }) => [
-          styles.trigger,
-          !readOnly && pressed && styles.triggerPressed,
-          readOnly && styles.triggerReadOnly,
-        ]}
-        onPress={readOnly ? undefined : () => setOpen(true)}
-        disabled={readOnly}
-        accessibilityRole="button"
-        accessibilityLabel={t('meals.poll.deliverTo')}
-        accessibilityState={{ expanded: open }}>
-        <View style={styles.triggerContent}>
-          {selectedLocation ? (
-            <>
-              <View style={styles.nameRow}>
-                <Text style={styles.triggerValue} numberOfLines={1}>
-                  {selectedLocation.name}
-                </Text>
-                {isLastUsed ? (
-                  <Text style={styles.lastUsedBadge}>{t('meals.poll.lastUsedDelivery')}</Text>
+      {trigger ? (
+        <Pressable
+          onPress={readOnly ? undefined : () => setOpen(true)}
+          disabled={readOnly}
+          accessibilityRole="button"
+          accessibilityLabel={t('meals.poll.changeDelivery')}
+          accessibilityState={{ expanded: open }}>
+          {trigger}
+        </Pressable>
+      ) : (
+        <Pressable
+          style={({ pressed }) => [
+            styles.trigger,
+            !readOnly && pressed && styles.triggerPressed,
+            readOnly && styles.triggerReadOnly,
+          ]}
+          onPress={readOnly ? undefined : () => setOpen(true)}
+          disabled={readOnly}
+          accessibilityRole="button"
+          accessibilityLabel={t('meals.poll.deliveryLocation')}
+          accessibilityState={{ expanded: open }}>
+          <View style={styles.triggerContent}>
+            {selectedLocation ? (
+              <>
+                <View style={styles.nameRow}>
+                  <Text style={styles.triggerValue} numberOfLines={1}>
+                    {selectedLocation.name}
+                  </Text>
+                  {isLastUsed ? (
+                    <Text style={styles.lastUsedBadge}>{t('meals.poll.lastUsedDelivery')}</Text>
+                  ) : null}
+                </View>
+                {selectedLocation.description ? (
+                  <Text style={styles.triggerHint} numberOfLines={1}>
+                    {selectedLocation.description}
+                  </Text>
                 ) : null}
-              </View>
-              {selectedLocation.description ? (
-                <Text style={styles.triggerHint} numberOfLines={1}>
-                  {selectedLocation.description}
-                </Text>
-              ) : null}
-            </>
-          ) : (
-            <Text style={styles.placeholder}>{t('meals.poll.selectDeliveryLocation')}</Text>
-          )}
-        </View>
-        {!readOnly ? (
-          <Text style={styles.chevron}>{showEditAffordance ? '✏' : '▾'}</Text>
-        ) : null}
-      </Pressable>
+              </>
+            ) : (
+              <Text style={styles.placeholder}>{t('meals.poll.selectDeliveryLocation')}</Text>
+            )}
+          </View>
+          {!readOnly ? (
+            <Text style={styles.chevron}>{showEditAffordance ? '✏' : '▾'}</Text>
+          ) : null}
+        </Pressable>
+      )}
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>

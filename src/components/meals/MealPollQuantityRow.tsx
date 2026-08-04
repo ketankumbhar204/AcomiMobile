@@ -32,7 +32,7 @@ export function MealPollQuantityRow({
       ? formatComboPrice(unitPrice, option.currencyCode)
       : null;
   const lineTotal =
-    showPrice && selected && unitPrice != null && quantity > 1
+    showPrice && selected && unitPrice != null && quantity > 0
       ? formatComboPrice(unitPrice * quantity, option.currencyCode)
       : null;
 
@@ -61,12 +61,12 @@ export function MealPollQuantityRow({
     if (!unitLabel) {
       return null;
     }
-    if (lineTotal) {
-      return (
-        <View style={styles.priceBlock}>
-          <Text style={[styles.priceUnit, readOnly && styles.priceReadOnly]}>
-            {t('meals.poll.priceEach', { price: unitLabel })}
-          </Text>
+    return (
+      <View style={styles.priceBlock}>
+        <Text style={[styles.priceUnit, readOnly && styles.priceReadOnly]}>
+          {t('meals.poll.priceEach', { price: unitLabel })}
+        </Text>
+        {lineTotal ? (
           <Text style={[styles.priceLine, readOnly && styles.priceReadOnly]}>
             {t('meals.poll.priceTimesQty', {
               unit: unitLabel,
@@ -74,15 +74,10 @@ export function MealPollQuantityRow({
               total: lineTotal,
             })}
           </Text>
-        </View>
-      );
-    }
-    return (
-      <Text style={[styles.price, readOnly && styles.priceReadOnly]}>
-        {selected ? t('meals.poll.priceEach', { price: unitLabel }) : unitLabel}
-      </Text>
+        ) : null}
+      </View>
     );
-  }, [lineTotal, quantity, readOnly, selected, t, unitLabel]);
+  }, [lineTotal, quantity, readOnly, t, unitLabel]);
 
   const isExtra = variant === 'extra';
 
@@ -118,7 +113,7 @@ export function MealPollQuantityRow({
       </View>
 
       <View style={styles.body}>
-        <View style={styles.mainLine}>
+        <View style={styles.nameRow}>
           {option.optionType === 'MENU_ENTRY' && option.foodType ? (
             <FoodTypeIcon
               foodType={option.foodType}
@@ -133,36 +128,9 @@ export function MealPollQuantityRow({
               selected && !readOnly && styles.labelSelected,
               readOnly && styles.labelReadOnly,
             ]}
-            numberOfLines={1}>
+            numberOfLines={2}>
             {option.label}
           </Text>
-
-          <View style={styles.trailing}>
-            {priceBlock}
-
-            {selected && !readOnly ? (
-              <Pressable style={styles.controls} onPress={event => event.stopPropagation()}>
-                <Pressable
-                  style={[styles.button, quantity <= 1 && styles.buttonDisabled]}
-                  onPress={decrement}
-                  disabled={quantity <= 1}
-                  accessibilityLabel="Decrease quantity">
-                  <Text style={styles.buttonLabel}>−</Text>
-                </Pressable>
-                <Text style={styles.quantity}>{quantity}</Text>
-                <Pressable
-                  style={styles.button}
-                  onPress={increment}
-                  accessibilityLabel="Increase quantity">
-                  <Text style={styles.buttonLabel}>+</Text>
-                </Pressable>
-              </Pressable>
-            ) : null}
-
-            {selected && readOnly ? (
-              <Text style={styles.quantityReadOnly}>× {quantity}</Text>
-            ) : null}
-          </View>
         </View>
 
         {option.detail ? (
@@ -170,6 +138,31 @@ export function MealPollQuantityRow({
             {option.detail}
           </Text>
         ) : null}
+
+        <View style={styles.bottomRow}>
+          {priceBlock}
+          {selected && !readOnly ? (
+            <Pressable style={styles.controls} onPress={event => event.stopPropagation()}>
+              <Pressable
+                style={[styles.button, quantity <= 1 && styles.buttonDisabled]}
+                onPress={decrement}
+                disabled={quantity <= 1}
+                accessibilityLabel="Decrease quantity">
+                <Text style={styles.buttonLabel}>−</Text>
+              </Pressable>
+              <Text style={styles.quantity}>{quantity}</Text>
+              <Pressable
+                style={styles.button}
+                onPress={increment}
+                accessibilityLabel="Increase quantity">
+                <Text style={styles.buttonLabel}>+</Text>
+              </Pressable>
+            </Pressable>
+          ) : null}
+          {selected && readOnly ? (
+            <Text style={styles.quantityReadOnly}>× {quantity}</Text>
+          ) : null}
+        </View>
       </View>
     </Pressable>
   );
@@ -181,23 +174,27 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: spacing.sm,
     backgroundColor: colors.white,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.border,
     borderRadius: radius.card,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
     marginBottom: spacing.sm,
   },
   rowExtra: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderStyle: 'dashed',
-    paddingVertical: spacing.xs + 2,
   },
   rowSelected: {
     borderColor: colors.primary,
     borderStyle: 'solid',
     backgroundColor: colors.lightGreen,
+    shadowColor: colors.primaryDark,
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   rowSelectedReadOnly: {
     borderColor: colors.border,
@@ -249,13 +246,13 @@ const styles = StyleSheet.create({
   body: {
     flex: 1,
     minWidth: 0,
-    gap: spacing.xxs,
+    gap: spacing.xs,
   },
-  mainLine: {
+  nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    minHeight: 24,
+    minHeight: 22,
   },
   foodTypeIcon: {
     flexShrink: 0,
@@ -275,21 +272,17 @@ const styles = StyleSheet.create({
   labelReadOnly: {
     color: colors.textSecondary,
   },
-  trailing: {
+  bottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: spacing.sm,
-    flexShrink: 0,
+    minHeight: 32,
   },
   priceBlock: {
-    alignItems: 'flex-end',
-    flexShrink: 0,
-  },
-  price: {
-    ...typography.bodyStrong,
-    fontSize: 14,
-    color: colors.textSecondary,
-    flexShrink: 0,
+    alignItems: 'flex-start',
+    flexShrink: 1,
+    minWidth: 0,
   },
   priceUnit: {
     ...typography.caption,
@@ -315,6 +308,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
+    flexShrink: 0,
   },
   button: {
     width: 30,

@@ -554,19 +554,29 @@ export const mealsApi = {
     menuDate: string,
     selections: SubmitMealPollSelection[],
     paymentChoice?: MealPollPaymentChoice,
-    proofImageBase64?: string,
+    proof?: string | SubmitPaymentProofRequest,
   ): Promise<MealPollDayResponse> => {
     const path = `/spaces/${spaceId}/meal-polls/${menuDate}/responses`;
+    const proofBody: SubmitPaymentProofRequest | undefined =
+      typeof proof === 'string'
+        ? { proofImageBase64: proof }
+        : proof ?? undefined;
     console.log(`${LOG_TAG} POST ${path}`, selections, paymentChoice);
     return unwrapApiResponse(
       apiClient.post<ApiResponse<MealPollDayResponse>>(path, {
         selections,
         ...(paymentChoice ? { paymentChoice } : {}),
-        ...(proofImageBase64 ? { proofImageBase64 } : {}),
+        ...(proofBody?.proofImageBase64
+          ? { proofImageBase64: proofBody.proofImageBase64 }
+          : {}),
+        ...(proofBody?.referenceNumber
+          ? { referenceNumber: proofBody.referenceNumber }
+          : {}),
+        ...(proofBody?.remarks ? { remarks: proofBody.remarks } : {}),
+        ...(proofBody?.paymentMethod ? { paymentMethod: proofBody.paymentMethod } : {}),
       }),
     );
   },
-
   submitMealPollPaymentProof: async (
     spaceId: UUID,
     menuDate: string,
