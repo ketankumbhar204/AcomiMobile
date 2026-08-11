@@ -1,36 +1,36 @@
-type MemberCountInFields = {
+type MemberAmicoFields = {
   membershipId?: string | null;
   linkedUser?: boolean;
 };
 
-export function isMemberOnCountIn(member: MemberCountInFields): boolean {
+export function isMemberOnAmico(member: MemberAmicoFields): boolean {
   return member.membershipId != null;
 }
 
-export type MemberCountInBadgeKey = 'onCountIn' | 'notOnCountInYet';
+export type MemberAmicoBadgeKey = 'onAmico' | 'notOnAmicoYet';
 
-export function getMemberCountInBadgeKey(member: MemberCountInFields): MemberCountInBadgeKey {
-  return isMemberOnCountIn(member) ? 'onCountIn' : 'notOnCountInYet';
+export function getMemberAmicoBadgeKey(member: MemberAmicoFields): MemberAmicoBadgeKey {
+  return isMemberOnAmico(member) ? 'onAmico' : 'notOnAmicoYet';
 }
 
-export type MemberInviteHintKey = 'hintNewToCountIn' | 'hintAlreadyOnCountIn';
+export type MemberInviteHintKey = 'hintNewToAmico' | 'hintAlreadyOnAmico';
 
 export function getMemberInviteHintKey(
-  member: Pick<MemberCountInFields, 'linkedUser'>,
+  member: Pick<MemberAmicoFields, 'linkedUser'>,
 ): MemberInviteHintKey {
-  return member.linkedUser ? 'hintAlreadyOnCountIn' : 'hintNewToCountIn';
+  return member.linkedUser ? 'hintAlreadyOnAmico' : 'hintNewToAmico';
 }
 
-export function memberCountInBadgeLabel(
-  member: MemberCountInFields,
+export function memberAmicoBadgeLabel(
+  member: MemberAmicoFields,
   t: (key: string) => string,
 ): string {
-  const key = getMemberCountInBadgeKey(member);
+  const key = getMemberAmicoBadgeKey(member);
   return t(`membership.members.${key}`);
 }
 
 export function memberInviteHint(
-  member: Pick<MemberCountInFields, 'linkedUser'> & { mobileNumber: string },
+  member: Pick<MemberAmicoFields, 'linkedUser'> & { mobileNumber: string },
   t: (key: string, options?: Record<string, string>) => string,
 ): string {
   const hintKey = getMemberInviteHintKey(member);

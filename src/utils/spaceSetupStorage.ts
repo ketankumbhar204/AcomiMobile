@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { UUID } from '../api/types';
 
 const autoOpenKey = (spaceId: UUID) =>
-  `@countin/setup/auto_accommodation/${spaceId}`;
+  `@amico/setup/auto_accommodation/${spaceId}`;
 
 /** Whether we already auto-switched this space to Accommodation once. */
 export async function hasAutoOpenedAccommodation(spaceId: UUID): Promise<boolean> {

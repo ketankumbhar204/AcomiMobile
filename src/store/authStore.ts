@@ -5,8 +5,8 @@ import { setAuthToken } from '../api/client';
 import type { UserResponse, UUID } from '../api/types';
 import { isUserProfileComplete } from '../utils/profileCompletion';
 
-const TOKEN_KEY = '@countin/access_token';
-const USER_KEY = '@countin/user';
+const TOKEN_KEY = '@amico/access_token';
+const USER_KEY = '@amico/user';
 
 const LOG_TAG = '[AuthStore]';
 

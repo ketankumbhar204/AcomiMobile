@@ -1,6 +1,6 @@
 # Navigation Mapping — Mobile → Web
 
-Convert CountIn React Navigation into desktop information architecture.
+Convert Amico React Navigation into desktop information architecture.
 
 ---
 

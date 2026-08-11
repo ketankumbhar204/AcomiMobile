@@ -29,8 +29,8 @@ const API_HOSTS: Record<Environment, string> = {
     ios: 'http://localhost:8080',
     default: 'http://localhost:8080',
   })!,
-  staging: 'https://staging-api.countin.app',
-  production: 'https://api.countin.app',
+  staging: 'https://staging-api.amico.app',
+  production: 'https://api.amico.app',
 };
 
 export const env = {

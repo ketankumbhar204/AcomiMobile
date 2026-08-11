@@ -83,7 +83,7 @@
     }
   },
   "common": {
-    "appName": "CountIn",
+    "appName": "Amico",
     "ok": "సరే",
     "cancel": "రద్దు చేయి",
     "user": "వినియోగదారు",
@@ -117,7 +117,7 @@
       "subheading": "ఒకసారి పాస్‌వర్డ్ పొందడానికి మీ మొబైల్ నంబర్ నమోదు చేయండి.",
       "mobilePlaceholder": "9876543210",
       "sendOtp": "OTP పంపు",
-      "disclaimer": "CountIn కు కొత్తవారా? మీ ఖాతా స్వయంచాలకంగా సృష్టించబడుతుంది.",
+      "disclaimer": "Amico కు కొత్తవారా? మీ ఖాతా స్వయంచాలకంగా సృష్టించబడుతుంది.",
       "mobileRequired": "మొబైల్ నంబర్ అవసరం.",
       "mobileInvalid": "చెల్లుబాటు అయ్యే 10-అంకెల భారతీయ మొబైల్ నంబర్ నమోదు చేయండి."
     },
@@ -283,7 +283,7 @@
       "sessionBody": "లాగ్ అవుట్ చేయడం వల్ల ఈ పరికరంలో మీ సెషన్ క్లియర్ అవుతుంది. మీరు మళ్లీ మొబైల్ నంబర్‌తో సైన్ ఇన్ చేయవచ్చు.",
       "logout": "లాగ్ అవుట్",
       "logoutTitle": "లాగ్ అవుట్",
-      "logoutMessage": "CountIn నుండి లాగ్ అవుట్ చేయాలని మీరు ఖచ్చితంగా అనుకుంటున్నారా?",
+      "logoutMessage": "Amico నుండి లాగ్ అవుట్ చేయాలని మీరు ఖచ్చితంగా అనుకుంటున్నారా?",
       "logoutConfirm": "లాగ్ అవుట్"
     },
     "language": {
@@ -297,6 +297,16 @@
         "te": "తెలుగు",
         "ta": "தமிழ்"
       }
+    }
+  },
+  "membership": {
+    "members": {
+      "onAmico": "On Amico",
+      "notOnAmicoYet": "Not on Amico yet"
+    },
+    "invite": {
+      "hintNewToAmico": "Ask them to install Amico and sign in with {{mobile}}. The invitation will appear after they log in.",
+      "hintAlreadyOnAmico": "They already use Amico. The invitation will appear in their app — they just need to accept it."
     }
   }
 }

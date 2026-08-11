@@ -166,7 +166,7 @@ Payment types exercised:
 - [ ] Notifications still fire
 - [ ] Pending Actions counts still move
 - [ ] Permissions unchanged
-- [ ] Accounting / expected formulas unchanged (`buildLedger` still SoT for snapshot rebuild)
+- [ ] AcAmicog / expected formulas unchanged (`buildLedger` still SoT for snapshot rebuild)
 - [ ] Legacy `/owner-month` still works for old clients (`sync=false` by default)
 - [ ] No infinite reload / duplicate in-flight storms on open
 - [ ] Network error does not trigger legacy sync cascading fallbacks (404-only legacy)

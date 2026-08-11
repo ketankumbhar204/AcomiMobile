@@ -57,7 +57,7 @@ This is **not** “Payments UI copy is wrong”; it is **overload from write-hea
 
 ### C. Error UX note
 
-“Payments unavailable / Could not reach CountIn” maps to `payments.errors.network` — correct for transport failure caused by the overload above, not a 404 service-missing case.
+“Payments unavailable / Could not reach Amico” maps to `payments.errors.network` — correct for transport failure caused by the overload above, not a 404 service-missing case.
 
 ---
 

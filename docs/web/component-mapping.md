@@ -1,6 +1,6 @@
 # Component Mapping — Mobile → Web
 
-Reusable CountIn mobile components: purpose, props pattern, reuse guidance.
+Reusable Amico mobile components: purpose, props pattern, reuse guidance.
 
 **Legend**
 

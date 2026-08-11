@@ -11,8 +11,8 @@ type MemberListCardProps = {
   roleChip?: React.ReactNode;
   statusChip?: React.ReactNode;
   statusLabel?: string;
-  countInLabel?: string;
-  countInActive?: boolean;
+  amicoLabel?: string;
+  amicoActive?: boolean;
   footerLine?: string;
   foodLine?: {
     label: string;
@@ -27,12 +27,12 @@ export function MemberListCard({
   roleChip,
   statusChip,
   statusLabel,
-  countInLabel,
-  countInActive = false,
+  amicoLabel,
+  amicoActive = false,
   footerLine,
   foodLine,
 }: MemberListCardProps) {
-  const hasStatusLine = Boolean(statusLabel || countInLabel);
+  const hasStatusLine = Boolean(statusLabel || amicoLabel);
 
   return (
     <Pressable
@@ -64,16 +64,16 @@ export function MemberListCard({
                   {statusLabel}
                 </Text>
               ) : null}
-              {countInLabel ? (
+              {amicoLabel ? (
                 <>
                   <View
                     style={[
                       styles.separatorDot,
-                      countInActive && styles.separatorDotActive,
+                      amicoActive && styles.separatorDotActive,
                     ]}
                   />
-                  <Text style={styles.countInLabel} numberOfLines={1}>
-                    {countInLabel}
+                  <Text style={styles.amicoLabel} numberOfLines={1}>
+                    {amicoLabel}
                   </Text>
                 </>
               ) : null}
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   separatorDotActive: {
     backgroundColor: colors.primary,
   },
-  countInLabel: {
+  amicoLabel: {
     ...typography.caption,
     fontSize: 12,
     color: colors.muted,

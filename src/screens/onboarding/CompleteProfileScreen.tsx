@@ -370,7 +370,7 @@ export function CompleteProfileScreen() {
             eyebrow={stepLabel}
             heading={t(`profileCompletion.wizard.sections.${step}`)}
             subheading={t('profileCompletion.wizard.helper', {
-              defaultValue: 'A few details help us personalize CountIn for you.',
+              defaultValue: 'A few details help us personalize Amico for you.',
             })}
           />
 

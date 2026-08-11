@@ -19,7 +19,7 @@ import type { MainStackParamList } from '../../navigation/types';
 import { useMemberStore } from '../../store/memberStore';
 import { useToastStore } from '../../store/toastStore';
 import { colors, shadows, spacing, typography } from '../../theme';
-import { memberCountInBadgeLabel, memberInviteHint } from '../../utils/memberAppStatus';
+import { memberAmicoBadgeLabel, memberInviteHint } from '../../utils/memberAppStatus';
 import { isSelectableMemberGender, memberGenderLabelKey } from '../../utils/memberGender';
 import { MemberDocumentsSection } from './MemberDocumentsSection';
 import { MemberProfileCorrectionSection } from '../profile/MemberProfileCorrectionSection';
@@ -84,7 +84,7 @@ export function MemberProfileTab({
   const [statusError, setStatusError] = useState<string | null>(null);
   const [emergencyError, setEmergencyError] = useState<string | null>(null);
 
-  const appStatusLabel = memberCountInBadgeLabel(member, t);
+  const appStatusLabel = memberAmicoBadgeLabel(member, t);
 
   const genderLabel = isSelectableMemberGender(member.gender)
     ? t(memberGenderLabelKey(member.gender))

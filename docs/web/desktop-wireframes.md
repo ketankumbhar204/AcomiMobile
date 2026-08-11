@@ -1,6 +1,6 @@
 # Desktop Wireframes
 
-Architectural wireframe targets for CountIn Web — one section per module.  
+Architectural wireframe targets for Amico Web — one section per module.  
 No React code; use these as the visual/IA contract before implementation.
 
 **Legend (ASCII)**
@@ -21,7 +21,7 @@ Bottom tabs + stack headers + profile/bell.
 ### Proposed desktop layout
 ```
 ┌──────────┬─────────────────────────────────────────────────────┐
-│ CountIn  │  {Space name} ▼     🔍?     🔔     👤               │
+│ Amico  │  {Space name} ▼     🔍?     🔔     👤               │
 │──────────┤─────────────────────────────────────────────────────│
 │ Dashboard│  Breadcrumbs                                         │
 │ Members  │  Page title                          [Primary CTA]  │

@@ -11,7 +11,7 @@ import type {
   VerifyOtpRequest,
 } from './types';
 
-const LOG_TAG = '[CountIn Auth]';
+const LOG_TAG = '[Amico Auth]';
 
 export const authApi = {
   sendOtp: async (payload: SendOtpRequest): Promise<SendOtpResponse> => {

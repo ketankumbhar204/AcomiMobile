@@ -29,7 +29,7 @@ const HomeScreen = () => {
     <Screen scrollable contentStyle={styles.content}>
       <MealFormHero
         icon={LayoutDashboard}
-        eyebrow={t('home.eyebrow', { defaultValue: 'CountIn' })}
+        eyebrow={t('home.eyebrow', { defaultValue: 'Amico' })}
         heading={t('home.heading', {
           defaultValue: 'Smart PG & hostel operations',
         })}
@@ -143,7 +143,7 @@ const HomeScreen = () => {
           <Text style={styles.aboutBodyText}>
             {t('home.aboutBody', {
               defaultValue:
-                'CountIn brings accommodation, meals, payments, and complaints into one Material Design workspace.',
+                'Amico brings accommodation, meals, payments, and complaints into one Material Design workspace.',
             })}
           </Text>
         </View>

@@ -1,5 +1,5 @@
 /**
- * CountIn surface + brand color system.
+ * Amico surface + brand color system.
  * Page uses a subtle light-green canvas; cards stay pure white.
  */
 export const colors = {

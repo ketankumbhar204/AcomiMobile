@@ -1,6 +1,6 @@
 # Screen Inventory
 
-Complete inventory of CountIn mobile screens for web planning.
+Complete inventory of Amico mobile screens for web planning.
 
 **Columns**
 

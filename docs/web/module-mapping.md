@@ -1,6 +1,6 @@
 # Module Mapping — Mobile → Web
 
-For every CountIn product module: mobile screens → web pages → shared APIs → shared components → new desktop components.
+For every Amico product module: mobile screens → web pages → shared APIs → shared components → new desktop components.
 
 ---
 

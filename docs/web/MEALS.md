@@ -1,6 +1,6 @@
 # Meals — Web (Phase 5)
 
-Desktop Meals Management module for CountIn Web. Mobile remains the business source of truth for APIs, DTOs, permissions, validation, poll/menu lifecycle, and terminology. Presentation uses a **planner workspace** (today + tomorrow, Breakfast/Lunch/Dinner together) instead of stacked mobile screens.
+Desktop Meals Management module for Amico Web. Mobile remains the business source of truth for APIs, DTOs, permissions, validation, poll/menu lifecycle, and terminology. Presentation uses a **planner workspace** (today + tomorrow, Breakfast/Lunch/Dinner together) instead of stacked mobile screens.
 
 ---
 

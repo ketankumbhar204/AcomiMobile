@@ -1,6 +1,6 @@
 # Payments — Web (Phase 6)
 
-Desktop Payments & Billing module for CountIn Web. Mobile remains the business source of truth for APIs, DTOs, permissions, validation, payment lifecycle, and terminology. Presentation uses a **KPI + table + inspector workspace** instead of stacked mobile screens.
+Desktop Payments & Billing module for Amico Web. Mobile remains the business source of truth for APIs, DTOs, permissions, validation, payment lifecycle, and terminology. Presentation uses a **KPI + table + inspector workspace** instead of stacked mobile screens.
 
 This workspace is the **reference pattern** for later Complaints, Inventory, and Reports.
 

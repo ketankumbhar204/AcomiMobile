@@ -3,7 +3,7 @@ import type { UUID } from '../api/types';
 import type { MilestoneId } from '../spaceLifecycle/types';
 
 function storageKey(spaceId: UUID): string {
-  return `countin:setupDismissedOptional:${spaceId}`;
+  return `Amico:setupDismissedOptional:${spaceId}`;
 }
 
 export async function loadDismissedOptionalMilestones(

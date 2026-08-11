@@ -46,7 +46,7 @@ import type { MainStackParamList, SpaceTabParamList } from '../navigation/types'
 import { useAccommodationActionSheetStore } from '../store/accommodationActionSheetStore';
 import { useMemberStore } from '../store/memberStore';
 import { colors, radius, shadows, spacing, typography } from '../theme';
-import { memberCountInBadgeLabel } from '../utils/memberAppStatus';
+import { memberAmicoBadgeLabel } from '../utils/memberAppStatus';
 import { getMemberListFoodLabel, isReceivingMealsForMember } from '../utils/mealAccess';
 import { getMemberStatusLabelKey } from '../utils/memberStatus';
 import {
@@ -359,8 +359,8 @@ export function MembersScreen() {
                     }
                     statusChip={buildMemberStatusChip(member, showTenantOccupancyStatus)}
                     statusLabel={t(getMemberStatusLabelKey(member.status ?? 'ACTIVE'))}
-                    countInLabel={memberCountInBadgeLabel(member, t)}
-                    countInActive={member.membershipId != null}
+                    amicoLabel={memberAmicoBadgeLabel(member, t)}
+                    amicoActive={member.membershipId != null}
                     footerLine={t('membership.members.created', {
                       date: formatDate(member.createdAt),
                     })}

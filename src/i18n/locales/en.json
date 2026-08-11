@@ -83,7 +83,7 @@
     }
   },
   "common": {
-    "appName": "CountIn",
+    "appName": "Amico",
     "ok": "OK",
     "yes": "Yes",
     "no": "No",
@@ -177,8 +177,8 @@
   "onboarding": {
     "choice": {
       "title": "Welcome",
-      "eyebrow": "Welcome to CountIn",
-      "heading": "How will you use CountIn?",
+      "eyebrow": "Welcome to Amico",
+      "heading": "How will you use Amico?",
       "subheading": "Choose whether you are an owner or joining as a member.",
       "manageTitle": "I Am an Owner",
       "manageSubtitle": "PG · Mess · Hostel · Co-living · Rental",
@@ -207,7 +207,7 @@
       "subheading": "Enter your mobile number to receive a one-time password.",
       "mobilePlaceholder": "9876543210",
       "sendOtp": "Send OTP",
-      "disclaimer": "New to CountIn? Your account will be created automatically.",
+      "disclaimer": "New to Amico? Your account will be created automatically.",
       "mobileRequired": "Mobile number is required.",
       "mobileInvalid": "Enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9."
     },
@@ -440,8 +440,8 @@
       "emptyTitle": "No members yet",
       "emptyDescription": "Add your first tenant, customer, or staff member to this space.",
       "listSubtitle": "People in this space",
-      "onCountIn": "On CountIn",
-      "notOnCountInYet": "Not on CountIn yet",
+      "onAmico": "On Amico",
+      "notOnAmicoYet": "Not on Amico yet",
       "mobile": "Mobile: {{value}}",
       "created": "Added: {{date}}",
       "remove": "Remove Member"
@@ -451,12 +451,12 @@
       "fabMenuTitle": "Add or invite",
       "fabAddRecord": "Add member",
       "fabInviteApp": "Send invitation",
-      "inviteInstead": "Want them on CountIn?",
+      "inviteInstead": "Want them on Amico?",
       "inviteInsteadAction": "Send invitation",
       "eyebrow": "Members",
       "heading": "Add a Member",
       "headingMess": "Add a Customer",
-      "subheading": "Create a business record directly. They do not need the CountIn app.",
+      "subheading": "Create a business record directly. They do not need the Amico app.",
       "subheadingMess": "Choose people you've already added to another space. We'll add them to this mess without asking for their details again.",
       "fullNameLabel": "Full Name",
       "fullNamePlaceholder": "e.g. Rahul Sharma",
@@ -551,7 +551,7 @@
       "mobile": "Mobile Number",
       "gender": "Gender",
       "role": "Role",
-      "appStatus": "CountIn",
+      "appStatus": "Amico",
       "created": "Created",
       "updated": "Updated",
       "edit": "Edit Member",
@@ -601,7 +601,7 @@
       "headerAction": "Send invitation",
       "eyebrow": "Members",
       "heading": "Send invitation",
-      "subheading": "They will receive an invitation to connect with this space on CountIn.",
+      "subheading": "They will receive an invitation to connect with this space on Amico.",
       "mobileLabel": "Mobile Number",
       "mobilePlaceholder": "e.g. 9876543210",
       "mobileRequired": "Mobile number is required.",
@@ -609,8 +609,8 @@
       "roleRequired": "Please select a role for this member.",
       "roleNotAllowed": "This role is not available for this space type.",
       "send": "Send invitation",
-      "hintNewToCountIn": "Ask them to install CountIn and sign in with {{mobile}}. The invitation will appear after they log in.",
-      "hintAlreadyOnCountIn": "They already use CountIn. The invitation will appear in their app — they just need to accept it.",
+      "hintNewToAmico": "Ask them to install Amico and sign in with {{mobile}}. The invitation will appear after they log in.",
+      "hintAlreadyOnAmico": "They already use Amico. The invitation will appear in their app — they just need to accept it.",
       "pending": "Invitation sent",
       "prefillHeading": "Send invitation to {{name}}",
       "successToast": "Invitation sent."
@@ -2479,7 +2479,7 @@
     "errors": {
       "title": "Payments unavailable",
       "loadLedger": "Failed to load payments for this month.",
-      "network": "Could not reach CountIn. Check your connection and try again.",
+      "network": "Could not reach Amico. Check your connection and try again.",
       "forbidden": "You do not have permission to view payments."
     },
     "filterDrawer": {
@@ -3835,7 +3835,7 @@
       "sessionBody": "Logging out clears your session on this device. You can sign in again with your mobile number.",
       "logout": "Log out",
       "logoutTitle": "Log out",
-      "logoutMessage": "Are you sure you want to log out of CountIn?",
+      "logoutMessage": "Are you sure you want to log out of Amico?",
       "logoutConfirm": "Log out"
     },
     "language": {

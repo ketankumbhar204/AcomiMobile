@@ -96,7 +96,7 @@ Use existing bulk endpoints where mobile already has them (`bulkCreateBeds/Rooms
 |-------------|---------|
 | Proof image **side-by-side with metadata** | Faster review |
 | Month KPI strip + table | No scroll hunting |
-| Export CSV for month ledger | Accounting handoff (read-only export of existing data) |
+| Export CSV for month ledger | AcAmicog handoff (read-only export of existing data) |
 | Multi-select review | Same per-payment decisions |
 
 ---
@@ -137,7 +137,7 @@ Use existing bulk endpoints where mobile already has them (`bulkCreateBeds/Rooms
 - Alternate occupancy flows that skip review/contract validation  
 - Softening permission checks for “power users”  
 - Web-only payment states or complaint statuses  
-- Redesigning CountIn visual identity  
+- Redesigning Amico visual identity  
 - Replacing OTP auth with a different auth product without backend support  
 
 ---

@@ -1,6 +1,6 @@
-# CountIn Web Blueprint
+# Amico Web Blueprint
 
-Documentation set for building the CountIn **web application** from the React Native **mobile reference implementation**.
+Documentation set for building the Amico **web application** from the React Native **mobile reference implementation**.
 
 **Rule:** same backend, APIs, business logic, permissions, workflows, validation, and terminology. Presentation layer differs for desktop.
 
