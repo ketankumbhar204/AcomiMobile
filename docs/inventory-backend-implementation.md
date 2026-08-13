@@ -198,7 +198,7 @@ Base: `/api/v1/spaces/{spaceId}/inventory` — `ApiResponse<T>` envelope. Auth: 
 
 ```
 
-com.amico.amico_backend.inventory
+com.acomi.acomi_backend.inventory
 
   api.controller.InventoryController
 
@@ -230,5 +230,5 @@ com.amico.amico_backend.inventory
 
 
 
-Offline: AsyncStorage cache key `@amico/inventory/cache/v2/{spaceId}` — populated after successful GETs; used only when the network fails.
+Offline: AsyncStorage cache key `@acomi/inventory/cache/v2/{spaceId}` — populated after successful GETs; used only when the network fails.
 

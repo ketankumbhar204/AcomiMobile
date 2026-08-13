@@ -1,7 +1,7 @@
-# Design System — Amico Web
+# Design System — Acomi Web
 
 Adapt the existing mobile Material 3–inspired system for desktop.  
-**Do not redesign the brand.** Desktop should feel like Amico.
+**Do not redesign the brand.** Desktop should feel like Acomi.
 
 Source tokens: `src/theme/*` (colors, typography, spacing, radius, shadows, navigation).
 
@@ -34,7 +34,7 @@ Source tokens: `src/theme/*` (colors, typography, spacing, radius, shadows, navi
 | `danger` | Align with mobile destructive (use existing complaint/payment error reds from visuals utils) | Errors |
 | `warning` | From payment/inventory visual tokens | Warnings |
 
-Avoid purple gradients, cream/serif “AI default” looks, or dark-mode-first. Stay WhatsApp-green Amico.
+Avoid purple gradients, cream/serif “AI default” looks, or dark-mode-first. Stay WhatsApp-green Acomi.
 
 ---
 
@@ -251,7 +251,7 @@ No decorative parallax. Optional: reuse progressive reveal for setup — not req
 
 ## 17. Implementation note (library)
 
-Recommended: **MUI** with a Amico theme mapping tokens above → `palette`, `typography`, `shape`, `components` overrides.  
+Recommended: **MUI** with a Acomi theme mapping tokens above → `palette`, `typography`, `shape`, `components` overrides.  
 Alternatively: Radix + CSS variables using the same tokens.
 
 Either way, **token values and component names** from this doc and mobile should stay the source of truth.

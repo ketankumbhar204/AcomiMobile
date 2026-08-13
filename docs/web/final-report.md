@@ -1,4 +1,4 @@
-# Amico Web — Final Report
+# Acomi Web — Final Report
 
 Blueprint summary from analyzing the React Native mobile app as the source of truth.  
 Documentation only — no web application code was generated.
@@ -7,7 +7,7 @@ Documentation only — no web application code was generated.
 
 ## Executive verdict
 
-Amico Web should be a **desktop-dense presentation layer** over the **same backend, APIs, permissions, validation, workflows, and terminology** as mobile. Rebuild UI/navigation for mouse, keyboard, and multi-panel layouts; **port** `src/api`, permission/validation utils, Zustand stores, i18n, and theme tokens.
+Acomi Web should be a **desktop-dense presentation layer** over the **same backend, APIs, permissions, validation, workflows, and terminology** as mobile. Rebuild UI/navigation for mouse, keyboard, and multi-panel layouts; **port** `src/api`, permission/validation utils, Zustand stores, i18n, and theme tokens.
 
 ---
 
@@ -100,7 +100,7 @@ See [web-architecture.md](./web-architecture.md).
 
 | Concern | Choice |
 |---------|--------|
-| **UI library** | **MUI (Material UI)** themed to Amico tokens (Material 3 affinity) |
+| **UI library** | **MUI (Material UI)** themed to Acomi tokens (Material 3 affinity) |
 | **Icons** | Lucide React |
 | **State management** | **Zustand** (parity with mobile) + **TanStack Query** for server cache |
 | **Routing** | **React Router v7** nested routes (or Next.js if SSR needed later) |

@@ -1,6 +1,6 @@
 # Responsive Strategy — Mobile Screens → Desktop
 
-How every Amico mobile screen should adapt to desktop density **without changing business workflows**.
+How every Acomi mobile screen should adapt to desktop density **without changing business workflows**.
 
 ---
 
@@ -14,7 +14,7 @@ How every Amico mobile screen should adapt to desktop density **without changing
 | `lg` | 1280–1535px | 2–3 column; persistent filters |
 | `xl` | ≥ 1536px | Master-detail + inspector; max content ~1440–1600px |
 
-Amico Web primary target: **md+** (operator desktop). `xs/sm` remain usable for tablet.
+Acomi Web primary target: **md+** (operator desktop). `xs/sm` remain usable for tablet.
 
 ---
 

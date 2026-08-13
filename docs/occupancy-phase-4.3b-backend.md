@@ -1,6 +1,6 @@
 # Occupancy Phase 4.3b — Contract Snapshots (Backend)
 
-Phase 4.3b captures **occupancy contract snapshots** when an occupancy becomes **ACTIVE**. This is not billing, payments, or acAmicog — only immutable agreed terms for future modules.
+Phase 4.3b captures **occupancy contract snapshots** when an occupancy becomes **ACTIVE**. This is not billing, payments, or acAcomig — only immutable agreed terms for future modules.
 
 ## Principles
 

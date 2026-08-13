@@ -1,4 +1,4 @@
-package com.amico
+package com.acomi
 
 import android.app.Application
 import com.facebook.react.PackageList

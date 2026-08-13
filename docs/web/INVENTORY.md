@@ -1,6 +1,6 @@
 # Inventory — Web (Phase 8)
 
-Desktop Inventory module for Amico Web. Mobile remains the business source of truth for APIs, DTOs, permissions, stock-status derivation, and terminology. Presentation uses a **catalog-first workspace** (KPI + table + inspector), matching the Payments/Complaints pattern — deliberately simple (not ERP / WMS).
+Desktop Inventory module for Acomi Web. Mobile remains the business source of truth for APIs, DTOs, permissions, stock-status derivation, and terminology. Presentation uses a **catalog-first workspace** (KPI + table + inspector), matching the Payments/Complaints pattern — deliberately simple (not ERP / WMS).
 
 ---
 
@@ -21,7 +21,7 @@ Desktop Inventory module for Amico Web. Mobile remains the business source of tr
 
 **Out of scope**
 
-- Purchase orders, multi-warehouse, barcodes, batch/SKU systems, acAmicog
+- Purchase orders, multi-warehouse, barcodes, batch/SKU systems, acAcomig
 - Reports, Settings, Notifications, Profile, Analytics
 - Backend contract changes
 - Offline AsyncStorage cache (mobile-only)

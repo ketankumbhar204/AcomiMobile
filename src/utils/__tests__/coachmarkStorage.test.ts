@@ -24,7 +24,7 @@ describe('coachmarkStorage', () => {
 
   it('builds the recommended storage key', () => {
     expect(coachmarkStorageKey(spaceId, tourId)).toBe(
-      `@amico/coachmarks/${spaceId}/${tourId}`,
+      `@acomi/coachmarks/${spaceId}/${tourId}`,
     );
   });
 
@@ -39,7 +39,7 @@ describe('coachmarkStorage', () => {
     const record = await saveCoachmarkRecord(spaceId, tourId, 'completed');
     expect(record.status).toBe('completed');
     expect(storage.setItem).toHaveBeenCalledWith(
-      `@amico/coachmarks/${spaceId}/${tourId}`,
+      `@acomi/coachmarks/${spaceId}/${tourId}`,
       expect.stringContaining('"status":"completed"'),
     );
   });
@@ -85,7 +85,7 @@ describe('coachmarkStorage', () => {
     storage.removeItem.mockResolvedValueOnce(undefined);
     await clearCoachmarkRecord(spaceId, tourId);
     expect(storage.removeItem).toHaveBeenCalledWith(
-      `@amico/coachmarks/${spaceId}/${tourId}`,
+      `@acomi/coachmarks/${spaceId}/${tourId}`,
     );
   });
 });

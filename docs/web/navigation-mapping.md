@@ -1,6 +1,6 @@
 # Navigation Mapping — Mobile → Web
 
-Convert Amico React Navigation into desktop information architecture.
+Convert Acomi React Navigation into desktop information architecture.
 
 ---
 

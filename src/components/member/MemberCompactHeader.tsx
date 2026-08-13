@@ -11,7 +11,7 @@ import {
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { isReceivingMeals } from '../../utils/mealAccess';
-import { memberAmicoBadgeLabel } from '../../utils/memberAppStatus';
+import { memberAcomiBadgeLabel } from '../../utils/memberAppStatus';
 import { getMemberStatusColor, getMemberStatusLabelKey } from '../../utils/memberStatus';
 
 type MemberCompactHeaderProps = {
@@ -53,7 +53,7 @@ export function MemberCompactHeader({
   const statusColor = getMemberStatusColor(member.status);
   const statusLabel = t(getMemberStatusLabelKey(member.status));
   const roleLabel = t(`spaces.roles.${member.role}`);
-  const amicoLabel = memberAmicoBadgeLabel(member, t);
+  const acomiLabel = memberAcomiBadgeLabel(member, t);
   const initial = member.fullName?.trim()?.charAt(0)?.toUpperCase();
 
   const onToggleMeals = useCallback(
@@ -116,7 +116,7 @@ export function MemberCompactHeader({
         </View>
         <View style={styles.factDivider} />
         <Text style={styles.factText} numberOfLines={1}>
-          {amicoLabel}
+          {acomiLabel}
         </Text>
       </View>
 

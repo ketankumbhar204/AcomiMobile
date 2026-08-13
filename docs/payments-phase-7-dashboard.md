@@ -60,7 +60,7 @@ Never derive expected charges from **published menus alone** — only from confi
 
 
 
-**Amico billing standard:** two concepts only — pay when you eat, or eat from prepaid balance. Hybrid behaviour is automatic fallback when balance is zero, not a third billing type.
+**Acomi billing standard:** two concepts only — pay when you eat, or eat from prepaid balance. Hybrid behaviour is automatic fallback when balance is zero, not a third billing type.
 
 
 
@@ -96,7 +96,7 @@ Never derive expected charges from **published menus alone** — only from confi
 
 
 
-## 3. Amico billing standard (two types)
+## 3. Acomi billing standard (two types)
 
 
 
@@ -224,7 +224,7 @@ Each member can override the space default:
 
 
 
-Package: `com.amico.amico_backend.dashboard` + `meal` (settings API)
+Package: `com.acomi.acomi_backend.dashboard` + `meal` (settings API)
 
 
 

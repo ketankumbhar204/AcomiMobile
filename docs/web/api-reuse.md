@@ -2,7 +2,7 @@
 
 
 
-The Amico backend must remain **shared**. Web should consume the same REST contracts as the React Native app.
+The Acomi backend must remain **shared**. Web should consume the same REST contracts as the React Native app.
 
 
 
@@ -196,7 +196,7 @@ Port these clients as shared packages or copied modules (prefer a future `packag
 
 | Base URL | `config/env.ts`, emulator host | Vite `import.meta.env` |
 
-| Inventory offline cache | AsyncStorage `@amico/inventory/cache/...` | Optional IndexedDB; or omit offline-first on web v1 |
+| Inventory offline cache | AsyncStorage `@acomi/inventory/cache/...` | Optional IndexedDB; or omit offline-first on web v1 |
 
 | Image upload | `react-native-image-picker` | `FormData` from `<input type="file">` — **same multipart endpoints** |
 

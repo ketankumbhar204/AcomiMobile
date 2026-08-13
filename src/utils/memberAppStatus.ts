@@ -1,36 +1,36 @@
-type MemberAmicoFields = {
+type MemberAcomiFields = {
   membershipId?: string | null;
   linkedUser?: boolean;
 };
 
-export function isMemberOnAmico(member: MemberAmicoFields): boolean {
+export function isMemberOnAcomi(member: MemberAcomiFields): boolean {
   return member.membershipId != null;
 }
 
-export type MemberAmicoBadgeKey = 'onAmico' | 'notOnAmicoYet';
+export type MemberAcomiBadgeKey = 'onAcomi' | 'notOnAcomiYet';
 
-export function getMemberAmicoBadgeKey(member: MemberAmicoFields): MemberAmicoBadgeKey {
-  return isMemberOnAmico(member) ? 'onAmico' : 'notOnAmicoYet';
+export function getMemberAcomiBadgeKey(member: MemberAcomiFields): MemberAcomiBadgeKey {
+  return isMemberOnAcomi(member) ? 'onAcomi' : 'notOnAcomiYet';
 }
 
-export type MemberInviteHintKey = 'hintNewToAmico' | 'hintAlreadyOnAmico';
+export type MemberInviteHintKey = 'hintNewToAcomi' | 'hintAlreadyOnAcomi';
 
 export function getMemberInviteHintKey(
-  member: Pick<MemberAmicoFields, 'linkedUser'>,
+  member: Pick<MemberAcomiFields, 'linkedUser'>,
 ): MemberInviteHintKey {
-  return member.linkedUser ? 'hintAlreadyOnAmico' : 'hintNewToAmico';
+  return member.linkedUser ? 'hintAlreadyOnAcomi' : 'hintNewToAcomi';
 }
 
-export function memberAmicoBadgeLabel(
-  member: MemberAmicoFields,
+export function memberAcomiBadgeLabel(
+  member: MemberAcomiFields,
   t: (key: string) => string,
 ): string {
-  const key = getMemberAmicoBadgeKey(member);
+  const key = getMemberAcomiBadgeKey(member);
   return t(`membership.members.${key}`);
 }
 
 export function memberInviteHint(
-  member: Pick<MemberAmicoFields, 'linkedUser'> & { mobileNumber: string },
+  member: Pick<MemberAcomiFields, 'linkedUser'> & { mobileNumber: string },
   t: (key: string, options?: Record<string, string>) => string,
 ): string {
   const hintKey = getMemberInviteHintKey(member);

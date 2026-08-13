@@ -4,7 +4,7 @@
 
 **Date:** 2026-07-28  
 
-**Apps:** Amico React Native (`K:\Amico`) ↔ Amico Web (`K:\AmicoWeb`)  
+**Apps:** Acomi React Native (`K:\AmicoMobile`) ↔ Acomi Web (`K:\AmicoWeb`)  
 
 **Backend:** Shared, unmodified  
 
@@ -206,7 +206,7 @@ Weighted against **mobile-wired product surfaces only** (excludes orphan HomeScr
 
 
 
-- Dual docs trees (`docs/web` vs `AmicoWeb/docs`) — keep primary in `K:\Amico\docs\web`  
+- Dual docs trees (`docs/web` vs `AcomiWeb/docs`) — keep primary in `K:\AmicoMobile\docs\web`  
 
 - Large `en.json` — consider namespaces later  
 

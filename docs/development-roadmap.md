@@ -1,4 +1,4 @@
-# Amico Development Roadmap
+# Acomi Development Roadmap
 
 
 
@@ -34,9 +34,9 @@
 
 |-------|------|---------------------|
 
-| Frontend | `K:/Amico` (React Native / Expo) | High for ops modules; Complaints MVP UI shipped (assign/staff queue next) |
+| Frontend | `K:/Acomi` (React Native / Expo) | High for ops modules; Complaints MVP UI shipped (assign/staff queue next) |
 
-| Backend | `K:/Projects/Amico/Backend/Amico-backend` | High for core domains; Complaints MVP API shipped; empty `report` / `whatsapp` packages |
+| Backend | `K:/Projects/Acomi/Backend/Acomi-backend` | High for core domains; Complaints MVP API shipped; empty `report` / `whatsapp` packages |
 
 
 
@@ -1092,7 +1092,7 @@ This section preserves the historical phase order while updating statuses to mat
 
 
 
-**Backend:** `com.amico.amico_backend.complaint` + Flyway `V76__create_space_complaints.sql`.  
+**Backend:** `com.acomi.acomi_backend.complaint` + Flyway `V76__create_space_complaints.sql`.  
 
 **Frontend:** Complaints tab list + `RaiseComplaint` / `ComplaintDetail` stack screens + `complaintsApi.ts`.  
 

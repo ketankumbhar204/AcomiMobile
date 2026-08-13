@@ -1,8 +1,8 @@
-# Amico Web Architecture
+# Acomi Web Architecture
 
 
 
-> Source of truth: React Native mobile app (`K:/Amico`).  
+> Source of truth: React Native mobile app (`K:/Acomi`).  
 
 > Goal: same backend, APIs, business logic, permissions, workflows, validation, and terminology — different presentation layer only.
 
@@ -18,7 +18,7 @@
 
 ```
 
-Amico-web/
+Acomi-web/
 
 ├── src/
 
@@ -82,7 +82,7 @@ Amico-web/
 
 | `shared/contexts/` | Imperative UI hosts (confirm, action menus) | ConfirmDialog, QuickActionSheet, OverflowMenu |
 
-| `shared/theme/` | Amico Material 3–inspired tokens | `src/theme/` |
+| `shared/theme/` | Acomi Material 3–inspired tokens | `src/theme/` |
 
 | `shared/types/` | DTOs shared with backend contract | `src/api/types.ts`, `inventoryTypes.ts` |
 
@@ -188,7 +188,7 @@ API clients (Axios)
 
       ↓
 
-Shared Amico backend
+Shared Acomi backend
 
 ```
 
@@ -214,7 +214,7 @@ Shared Amico backend
 
 | Framework | **React 19 + Vite** (or Next.js App Router if SSR/SEO needed later) | Closest mental model to RN React; SPA is enough for authenticated ops tool |
 
-| UI library | **MUI (Material UI) v6** with custom Amico theme | Mobile already follows Material 3 patterns; MUI tables, drawers, dialogs map cleanly |
+| UI library | **MUI (Material UI) v6** with custom Acomi theme | Mobile already follows Material 3 patterns; MUI tables, drawers, dialogs map cleanly |
 
 | Icons | **Lucide React** | Mobile uses `lucide-react-native` |
 
@@ -418,7 +418,7 @@ Sidebar, routes, and action buttons must call the same flags (`canManageMembers`
 
 
 
-## 10. Architecture principles for Amico Web
+## 10. Architecture principles for Acomi Web
 
 
 

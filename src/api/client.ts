@@ -6,7 +6,7 @@ import axios, {
 import { env } from '../config/env';
 import { ApiError, ApiErrorBody } from './types';
 
-const LOG_TAG = '[Amico API]';
+const LOG_TAG = '[Acomi API]';
 
 let authToken: string | null = null;
 

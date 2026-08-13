@@ -15,7 +15,7 @@ export function coachmarkStorageKey(
   spaceId: UUID,
   tourId: CoachmarkTourId,
 ): string {
-  return `@amico/coachmarks/${spaceId}/${tourId}`;
+  return `@acomi/coachmarks/${spaceId}/${tourId}`;
 }
 
 export async function loadCoachmarkRecord(

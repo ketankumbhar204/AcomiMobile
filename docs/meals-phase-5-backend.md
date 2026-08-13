@@ -1,4 +1,4 @@
-# Amico — Meal Management Phase 5 (Backend Specification)
+# Acomi — Meal Management Phase 5 (Backend Specification)
 
 
 
@@ -34,7 +34,7 @@
 
 
 
-Amico serves **PG, Hostel, Co-Living, Mess, and Rental** operators. The Meal module must work for:
+Acomi serves **PG, Hostel, Co-Living, Mess, and Rental** operators. The Meal module must work for:
 
 
 
@@ -50,7 +50,7 @@ Amico serves **PG, Hostel, Co-Living, Mess, and Rental** operators. The Meal mod
 
 
 
-**Core product insight:** Amico’s meal USP is **availability-driven headcount** (menu → response → expected count → kitchen prep), not subscription-assumed eating. This works identically for PG and Mess via WhatsApp / app / link.
+**Core product insight:** Acomi’s meal USP is **availability-driven headcount** (menu → response → expected count → kitchen prep), not subscription-assumed eating. This works identically for PG and Mess via WhatsApp / app / link.
 
 
 
@@ -1554,7 +1554,7 @@ Also copy these spec files from the frontend repo into backend `docs/`:
 
 ```markdown
 
-# Task: Implement Amico Phase 5 — Meal Management (Backend)
+# Task: Implement Acomi Phase 5 — Meal Management (Backend)
 
 
 
@@ -1562,7 +1562,7 @@ Also copy these spec files from the frontend repo into backend `docs/`:
 
 
 
-Amico is a **Spring Boot 3 / Java 17 modular monolith** (PostgreSQL, Flyway, JPA, JWT) for PG, Hostel, Co-Living, Mess, and Rental operators. Phases 1–4 are complete: auth, spaces, members, accommodation, occupancy, permissions.
+Acomi is a **Spring Boot 3 / Java 17 modular monolith** (PostgreSQL, Flyway, JPA, JWT) for PG, Hostel, Co-Living, Mess, and Rental operators. Phases 1–4 are complete: auth, spaces, members, accommodation, occupancy, permissions.
 
 
 
@@ -2130,7 +2130,7 @@ Nullable `entitlement_id` on `meal_participation` for Phase 7.
 
 ```
 
-com.amico.meal
+com.acomi.meal
 
   domain/ · repository/ · service/ · web/ · config/
 

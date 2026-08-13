@@ -194,7 +194,7 @@
 
 - Reusable coachmark framework: `CoachmarkProvider`, `CoachmarkOverlay`, `CoachmarkCard`, `CoachmarkAnchor`, `CoachmarkSequence`, `useCoachmarks`
 
-- Local persistence `@amico/coachmarks/{spaceId}/{tourId}` (`completed` | `skipped`) via `coachmarkStorage`
+- Local persistence `@acomi/coachmarks/{spaceId}/{tourId}` (`completed` | `skipped`) via `coachmarkStorage`
 
 - Lifecycle gate: `NEW` | `SETUP_IN_PROGRESS` only; never auto-show for READY / ACTIVE / NEEDS_ATTENTION
 
@@ -272,7 +272,7 @@
 
 
 
-Amico already has the building blocks of onboarding and attention:
+Acomi already has the building blocks of onboarding and attention:
 
 
 
@@ -1108,7 +1108,7 @@ Reuse `EmptyState` + nearby `Button` pattern from Accommodation home; extend cop
 
 1. **Setup readiness ≠ operational health.** A space can be 100% set up and still have 12 payments needing review.
 
-2. Amico already has a strong operational signal: **Pending Actions / Global Attention**.
+2. Acomi already has a strong operational signal: **Pending Actions / Global Attention**.
 
 3. Blending setup + attention into one % creates misleading “82% Healthy” while critical reviews wait.
 
@@ -1236,7 +1236,7 @@ Lightweight, local, minimal—not React Joyride everywhere.
 
 | **Disappear** | After last step, Skip, or Outside dismiss |
 
-| **Persistence** | AsyncStorage `@amico/coachmarks/{spaceId}/{tourId}` |
+| **Persistence** | AsyncStorage `@acomi/coachmarks/{spaceId}/{tourId}` |
 
 | **Never again** | Unless “Replay tips” in space settings (future) |
 
@@ -1952,7 +1952,7 @@ Implement a **profile-driven Space Lifecycle Engine** with:
 
 
 
-This yields a production-ready architecture that stays space-oriented, reuses Amico’s modules and gates, and extends to future space types without rewriting onboarding.
+This yields a production-ready architecture that stays space-oriented, reuses Acomi’s modules and gates, and extends to future space types without rewriting onboarding.
 
 
 

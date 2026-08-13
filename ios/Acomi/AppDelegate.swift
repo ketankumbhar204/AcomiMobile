@@ -24,7 +24,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     window = UIWindow(frame: UIScreen.main.bounds)
 
     factory.startReactNative(
-      withModuleName: "Amico",
+      withModuleName: "Acomi",
       in: window,
       launchOptions: launchOptions
     )

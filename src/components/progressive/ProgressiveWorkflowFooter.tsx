@@ -21,7 +21,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-/** Shared progressive footer phases across Amico workflows. */
+/** Shared progressive footer phases across Acomi workflows. */
 export type ProgressiveWorkflowPhase = 'start' | 'continue' | 'ready';
 
 export type ProgressiveWorkflowAction = {

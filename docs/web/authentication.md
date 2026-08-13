@@ -1,12 +1,12 @@
-# Authentication Architecture (Amico Web)
+# Authentication Architecture (Acomi Web)
 
 
 
 > Phase: Authentication foundation  
 
-> Mobile source of truth: `K:\Amico`  
+> Mobile source of truth: `K:\AmicoMobile`  
 
-> Backend: `K:\Projects\Amico\Backend\amico-backend` (unchanged)
+> Backend: `K:\Projects\Acomi\Backend\acomi-backend` (unchanged)
 
 
 
@@ -138,7 +138,7 @@ src/store/authStore.ts   bootstrap, setSession, refreshUser, clearSession
 
 1. Vite proxy `/api` → `localhost:8080` so browser auth works without backend CORS changes.  
 
-2. Dev OTP hint shows **111111** (backend `Amico.otp.mvp-code`).  
+2. Dev OTP hint shows **111111** (backend `acomi.otp.mvp-code`).  
 
 3. Authenticated `/` is a **shell with logout only** — Dashboard is explicitly out of scope.  
 

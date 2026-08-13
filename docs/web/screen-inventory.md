@@ -1,6 +1,6 @@
 # Screen Inventory
 
-Complete inventory of Amico mobile screens for web planning.
+Complete inventory of Acomi mobile screens for web planning.
 
 **Columns**
 

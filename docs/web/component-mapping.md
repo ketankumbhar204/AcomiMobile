@@ -1,6 +1,6 @@
 # Component Mapping — Mobile → Web
 
-Reusable Amico mobile components: purpose, props pattern, reuse guidance.
+Reusable Acomi mobile components: purpose, props pattern, reuse guidance.
 
 **Legend**
 

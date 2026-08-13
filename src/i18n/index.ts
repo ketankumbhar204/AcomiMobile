@@ -10,7 +10,7 @@ import mr from './locales/mr.json';
 import ta from './locales/ta.json';
 import te from './locales/te.json';
 
-export const LANGUAGE_STORAGE_KEY = '@amico/language';
+export const LANGUAGE_STORAGE_KEY = '@acomi/language';
 
 export const SUPPORTED_LANGUAGES = [
   'en',

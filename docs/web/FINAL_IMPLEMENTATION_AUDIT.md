@@ -6,11 +6,11 @@
 
 **Auditor method:** Independent source comparison (React Native ↔ React Web ↔ Spring Boot contracts)  
 
-**Mobile SoT:** `K:\Amico`  
+**Mobile SoT:** `K:\AmicoMobile`  
 
 **Web app:** `K:\AmicoWeb`  
 
-**Backend SoT:** `K:\Projects\Amico\Backend\amico-backend` (contracts unchanged)
+**Backend SoT:** `K:\Projects\Acomi\Backend\acomi-backend` (contracts unchanged)
 
 
 

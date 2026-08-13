@@ -1,7 +1,7 @@
 # MEAL_SUBSCRIPTION_BILLING.md — Phase 10
 
 **Status:** Complete (web)  
-**Mobile source of truth:** `K:\Amico`  
+**Mobile source of truth:** `K:\AmicoMobile`  
 **Web:** `K:\AmicoWeb\src\modules\meals` (+ payments/members integrations)  
 **Backend:** unchanged  
 

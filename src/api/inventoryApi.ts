@@ -34,9 +34,9 @@ import type {
 
 
 
-const LOG_TAG = '[Amico Inventory API]';
+const LOG_TAG = '[Acomi Inventory API]';
 
-const cacheKey = (spaceId: UUID) => `@amico/inventory/cache/v2/${spaceId}`;
+const cacheKey = (spaceId: UUID) => `@acomi/inventory/cache/v2/${spaceId}`;
 
 
 
@@ -934,7 +934,7 @@ export const inventoryApi = {
 
     await AsyncStorage.removeItem(cacheKey(spaceId));
 
-    await AsyncStorage.removeItem(`@amico/inventory/v1/${spaceId}`);
+    await AsyncStorage.removeItem(`@acomi/inventory/v1/${spaceId}`);
 
   },
 

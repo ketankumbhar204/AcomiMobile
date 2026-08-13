@@ -1,4 +1,4 @@
-# Amico Progressive Guided Workflow — UX Audit
+# Acomi Progressive Guided Workflow — UX Audit
 
 
 
@@ -128,7 +128,7 @@
 
 
 
-Amico has many **long, multi-section screens** where the final action (Save, Share, Create, Submit, Continue) appears before the owner has naturally reviewed later sections. Menu Planning exposed this clearly: owners selected meals and tapped Share before noticing Extras.
+Acomi has many **long, multi-section screens** where the final action (Save, Share, Create, Submit, Continue) appears before the owner has naturally reviewed later sections. Menu Planning exposed this clearly: owners selected meals and tapped Share before noticing Extras.
 
 
 
@@ -1140,7 +1140,7 @@ The UI teaches the workflow. Optional sections remain optional—**seeing** them
 
 
 
-## Amico Progressive Guided Workflow (shared UX pattern)
+## Acomi Progressive Guided Workflow (shared UX pattern)
 
 
 
@@ -1370,7 +1370,7 @@ Optional events: `progressive_continue`, `section_reviewed`, `section_skipped`, 
 
 
 
-1. **Adopt Progressive Guided Workflow as a Amico-wide UX pattern**, documented above, with meals as the reference implementation.  
+1. **Adopt Progressive Guided Workflow as a Acomi-wide UX pattern**, documented above, with meals as the reference implementation.  
 
 2. **Do not** apply it to every form—use the When / When not rules.  
 
@@ -1424,7 +1424,7 @@ Shipped 2026-07-25. Full detail: `Space-Onboarding-And-Lifecycle-Design.md` § C
 
 
 
-Storage: `@amico/coachmarks/{spaceId}/{tourId}`. Gate: NEW / SETUP_IN_PROGRESS only.
+Storage: `@acomi/coachmarks/{spaceId}/{tourId}`. Gate: NEW / SETUP_IN_PROGRESS only.
 
 
 

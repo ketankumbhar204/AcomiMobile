@@ -1,7 +1,7 @@
 # NOTIFICATIONS_GLOBAL_WORKSPACE.md — Phase 11
 
 **Status:** Complete (web)  
-**Mobile source of truth:** `K:\Amico`  
+**Mobile source of truth:** `K:\AmicoMobile`  
 **Web:** `K:\AmicoWeb`  
 **Backend:** unchanged  
 

@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { UUID } from '../api/types';
 
-const storageKey = (spaceId: UUID) => `@amico/serving-location/${spaceId}`;
+const storageKey = (spaceId: UUID) => `@acomi/serving-location/${spaceId}`;
 
 export async function loadCustomServingLocationName(spaceId: UUID): Promise<string | null> {
   try {

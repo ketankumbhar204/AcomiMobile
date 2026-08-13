@@ -1,4 +1,4 @@
-# Amico Modern UI Migration Tracker
+# Acomi Modern UI Migration Tracker
 
 
 
@@ -1072,7 +1072,7 @@ Latest Migration
 
 
 
-**Backend (`Amico-backend`):**
+**Backend (`Acomi-backend`):**
 
 
 
@@ -1446,7 +1446,7 @@ Previous Migration — Authentication & Onboarding
 
 
 
-- Soft Amico green for trust on first-run surfaces; Join uses blue accent to distinguish “member” path
+- Soft Acomi green for trust on first-run surfaces; Join uses blue accent to distinguish “member” path
 
 - JoinSpace remains invitation-refresh only — no fake join-code/QR flows invented (API does not support them)
 

@@ -1,6 +1,6 @@
 # Notification & Pending Action Event Catalog
 
-**Status:** Canonical reference for Amico Action Center  
+**Status:** Canonical reference for Acomi Action Center  
 **Last updated:** 11 July 2026  
 **Source of truth:** `space_notifications` → `PendingActionService` / notification inbox APIs
 

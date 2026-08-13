@@ -1,7 +1,7 @@
 # ACCOUNT_ONBOARDING.md — Phase 9
 
 **Status:** Complete (web)  
-**Mobile source of truth:** `K:\Amico`  
+**Mobile source of truth:** `K:\AmicoMobile`  
 **Web module:** `K:\AmicoWeb\src\modules\onboarding`  
 **Backend:** unchanged — reuse existing auth, spaces, invitations, meal settings APIs  
 

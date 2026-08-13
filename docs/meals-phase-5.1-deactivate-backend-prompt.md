@@ -2,7 +2,7 @@
 
 
 
-Copy this into the **Amico-backend** Cursor chat after Phase 5.1 list/create APIs are working.
+Copy this into the **Acomi-backend** Cursor chat after Phase 5.1 list/create APIs are working.
 
 
 

@@ -11,7 +11,7 @@ import type {
   VerifyOtpRequest,
 } from './types';
 
-const LOG_TAG = '[Amico Auth]';
+const LOG_TAG = '[Acomi Auth]';
 
 export const authApi = {
   sendOtp: async (payload: SendOtpRequest): Promise<SendOtpResponse> => {

@@ -2,7 +2,7 @@
 
 
 
-Recommended build order for Amico Web. Preserves mobile business logic; ships **reusable desktop patterns** before business modules.
+Recommended build order for Acomi Web. Preserves mobile business logic; ships **reusable desktop patterns** before business modules.
 
 
 

@@ -11,8 +11,8 @@ type MemberListCardProps = {
   roleChip?: React.ReactNode;
   statusChip?: React.ReactNode;
   statusLabel?: string;
-  amicoLabel?: string;
-  amicoActive?: boolean;
+  acomiLabel?: string;
+  acomiActive?: boolean;
   footerLine?: string;
   foodLine?: {
     label: string;
@@ -27,12 +27,12 @@ export function MemberListCard({
   roleChip,
   statusChip,
   statusLabel,
-  amicoLabel,
-  amicoActive = false,
+  acomiLabel,
+  acomiActive = false,
   footerLine,
   foodLine,
 }: MemberListCardProps) {
-  const hasStatusLine = Boolean(statusLabel || amicoLabel);
+  const hasStatusLine = Boolean(statusLabel || acomiLabel);
 
   return (
     <Pressable
@@ -64,16 +64,16 @@ export function MemberListCard({
                   {statusLabel}
                 </Text>
               ) : null}
-              {amicoLabel ? (
+              {acomiLabel ? (
                 <>
                   <View
                     style={[
                       styles.separatorDot,
-                      amicoActive && styles.separatorDotActive,
+                      acomiActive && styles.separatorDotActive,
                     ]}
                   />
-                  <Text style={styles.amicoLabel} numberOfLines={1}>
-                    {amicoLabel}
+                  <Text style={styles.acomiLabel} numberOfLines={1}>
+                    {acomiLabel}
                   </Text>
                 </>
               ) : null}
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   separatorDotActive: {
     backgroundColor: colors.primary,
   },
-  amicoLabel: {
+  acomiLabel: {
     ...typography.caption,
     fontSize: 12,
     color: colors.muted,

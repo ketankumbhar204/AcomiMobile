@@ -1,4 +1,4 @@
-# Amico — Accommodation & Occupancy Phase 4.3a Architecture
+# Acomi — Accommodation & Occupancy Phase 4.3a Architecture
 
 
 
@@ -94,7 +94,7 @@
 
 
 
-Amico has correctly separated **accommodation inventory** from **member occupancy**. Phase 4.3 delivered walk-in allocation (Allocate → Transfer → Vacate). Before Availability, Meals, and Billing, the platform must extend occupancy with:
+Acomi has correctly separated **accommodation inventory** from **member occupancy**. Phase 4.3 delivered walk-in allocation (Allocate → Transfer → Vacate). Before Availability, Meals, and Billing, the platform must extend occupancy with:
 
 
 
@@ -150,7 +150,7 @@ Full invoicing, meal forecasting, payment collection, or vacancy ML. **Do** add 
 
 
 
-### 2.1 Backend (`Amico-backend`)
+### 2.1 Backend (`Acomi-backend`)
 
 
 
@@ -194,7 +194,7 @@ Full invoicing, meal forecasting, payment collection, or vacancy ML. **Do** add 
 
 
 
-### 2.2 Frontend (`Amico` React Native)
+### 2.2 Frontend (`Acomi` React Native)
 
 
 
@@ -1344,7 +1344,7 @@ Consume occupancy snapshots; no redesign of occupancy core.
 
 
 
-Copy everything inside the block below into Cursor (or your AI agent) when working in the **backend repository** (`Amico-backend`).
+Copy everything inside the block below into Cursor (or your AI agent) when working in the **backend repository** (`Acomi-backend`).
 
 
 
@@ -1358,15 +1358,15 @@ Copy everything inside the block below into Cursor (or your AI agent) when worki
 
 ```markdown
 
-# Amico Backend — Phase 4.3a/4.3b Occupancy Enhancements
+# Acomi Backend — Phase 4.3a/4.3b Occupancy Enhancements
 
 
 
-You are a Senior Backend Architect implementing approved architecture in the Amico Spring Boot backend.
+You are a Senior Backend Architect implementing approved architecture in the Acomi Spring Boot backend.
 
 
 
-**Repository:** `Amico-backend` (Java / Spring Boot)
+**Repository:** `Acomi-backend` (Java / Spring Boot)
 
 **Architecture source of truth:** Frontend repo doc `docs/accommodation-occupancy-phase-4.3a-architecture.md` and `docs/accommodation-domain-model.md`
 
@@ -1376,7 +1376,7 @@ You are a Senior Backend Architect implementing approved architecture in the Ami
 
 
 
-- Occupancy module exists under `com.amico.amico_backend.occupancy`
+- Occupancy module exists under `com.acomi.acomi_backend.occupancy`
 
 - `OccupancyStatus`: ACTIVE, VACATED
 

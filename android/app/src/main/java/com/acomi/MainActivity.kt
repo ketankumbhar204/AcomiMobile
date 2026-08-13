@@ -1,4 +1,4 @@
-package com.amico
+package com.acomi
 
 
 
@@ -30,7 +30,7 @@ class MainActivity : ReactActivity() {
 
    */
 
-  override fun getMainComponentName(): String = "Amico"
+  override fun getMainComponentName(): String = "Acomi"
 
 
 

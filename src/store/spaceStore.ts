@@ -19,7 +19,7 @@ import { resolveStartupSpace, type StartupSpaceResolution } from '../utils/resol
 import { navigateBootstrapResult } from '../navigation/navigationRef';
 
 const LOG_TAG = '[SpaceStore]';
-const CURRENT_SPACE_KEY = '@amico/current_space';
+const CURRENT_SPACE_KEY = '@acomi/current_space';
 
 export type SpaceBootstrapRoute =
   | 'SpaceTabs'

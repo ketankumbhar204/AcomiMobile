@@ -32,11 +32,11 @@
 
                BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
 
-               BuildableName = "Amico.app"
+               BuildableName = "Acomi.app"
 
-               BlueprintName = "Amico"
+               BlueprintName = "Acomi"
 
-               ReferencedContainer = "container:Amico.xcodeproj">
+               ReferencedContainer = "container:Acomi.xcodeproj">
 
             </BuildableReference>
 
@@ -68,11 +68,11 @@
 
                BlueprintIdentifier = "00E356ED1AD99517003FC87E"
 
-               BuildableName = "AmicoTests.xctest"
+               BuildableName = "AcomiTests.xctest"
 
-               BlueprintName = "AmicoTests"
+               BlueprintName = "AcomiTests"
 
-               ReferencedContainer = "container:Amico.xcodeproj">
+               ReferencedContainer = "container:Acomi.xcodeproj">
 
             </BuildableReference>
 
@@ -112,11 +112,11 @@
 
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
 
-            BuildableName = "Amico.app"
+            BuildableName = "Acomi.app"
 
-            BlueprintName = "Amico"
+            BlueprintName = "Acomi"
 
-            ReferencedContainer = "container:Amico.xcodeproj">
+            ReferencedContainer = "container:Acomi.xcodeproj">
 
          </BuildableReference>
 
@@ -146,11 +146,11 @@
 
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
 
-            BuildableName = "Amico.app"
+            BuildableName = "Acomi.app"
 
-            BlueprintName = "Amico"
+            BlueprintName = "Acomi"
 
-            ReferencedContainer = "container:Amico.xcodeproj">
+            ReferencedContainer = "container:Acomi.xcodeproj">
 
          </BuildableReference>
 

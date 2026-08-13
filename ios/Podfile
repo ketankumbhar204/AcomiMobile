@@ -30,7 +30,7 @@ end
 
 
 
-target 'Amico' do
+target 'Acomi' do
 
   config = use_native_modules!
 

@@ -1,4 +1,4 @@
-# Amico — Post-Lifecycle Stabilization & Next Steps
+# Acomi — Post-Lifecycle Stabilization & Next Steps
 
 
 
@@ -372,7 +372,7 @@ Walk each area on device or emulator. Mark pass/fail. Failures need a bug note b
 
 | `ENABLE_SETUP_COACHMARKS = false` | No coachmarks; Next Step still works | ⬜ |
 
-| Storage key | `@amico/coachmarks/{spaceId}/{tourId}` written | ⬜ |
+| Storage key | `@acomi/coachmarks/{spaceId}/{tourId}` written | ⬜ |
 
 
 
@@ -864,7 +864,7 @@ See `Space-Onboarding-And-Lifecycle-Design.md` § Phase 3 — Contextual empty s
 
 
 
-Create: **`docs/Amico-v1-Architecture-Freeze.md`**
+Create: **`docs/Acomi-v1-Architecture-Freeze.md`**
 
 
 

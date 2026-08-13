@@ -1,4 +1,4 @@
-# Amico Accommodation Asset Library — Style Guide
+# ACOMI Accommodation Asset Library — Style Guide
 
 Reference: soft modern illustration design system (isometric buildings, top-down floor plans).
 

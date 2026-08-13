@@ -16,7 +16,7 @@
 
 /* Begin PBXBuildFile section */
 
-		0C80B921A6F3F58F76C31292 /* libPods-Amico.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5DCACB8F33CDC322A6C60F78 /* libPods-Amico.a */; };
+		0C80B921A6F3F58F76C31292 /* libPods-Acomi.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5DCACB8F33CDC322A6C60F78 /* libPods-Acomi.a */; };
 
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 
@@ -30,23 +30,23 @@
 
 /* Begin PBXFileReference section */
 
-		13B07F961A680F5B00A75B9A /* Amico.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Amico.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		13B07F961A680F5B00A75B9A /* Acomi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Acomi.app; sourceTree = BUILT_PRODUCTS_DIR; };
 
-		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = Amico/Images.xcassets; sourceTree = "<group>"; };
+		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = Acomi/Images.xcassets; sourceTree = "<group>"; };
 
-		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Amico/Info.plist; sourceTree = "<group>"; };
+		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Acomi/Info.plist; sourceTree = "<group>"; };
 
-		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = Amico/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = Acomi/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 
-		3B4392A12AC88292D35C810B /* Pods-Amico.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Amico.debug.xcconfig"; path = "Target Support Files/Pods-Amico/Pods-Amico.debug.xcconfig"; sourceTree = "<group>"; };
+		3B4392A12AC88292D35C810B /* Pods-Acomi.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Acomi.debug.xcconfig"; path = "Target Support Files/Pods-Acomi/Pods-Acomi.debug.xcconfig"; sourceTree = "<group>"; };
 
-		5709B34CF0A7D63546082F79 /* Pods-Amico.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Amico.release.xcconfig"; path = "Target Support Files/Pods-Amico/Pods-Amico.release.xcconfig"; sourceTree = "<group>"; };
+		5709B34CF0A7D63546082F79 /* Pods-Acomi.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Acomi.release.xcconfig"; path = "Target Support Files/Pods-Acomi/Pods-Acomi.release.xcconfig"; sourceTree = "<group>"; };
 
-		5DCACB8F33CDC322A6C60F78 /* libPods-Amico.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Amico.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		5DCACB8F33CDC322A6C60F78 /* libPods-Acomi.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Acomi.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 
-		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Amico/AppDelegate.swift; sourceTree = "<group>"; };
+		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Acomi/AppDelegate.swift; sourceTree = "<group>"; };
 
-		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = Amico/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = Acomi/LaunchScreen.storyboard; sourceTree = "<group>"; };
 
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 
@@ -64,7 +64,7 @@
 
 			files = (
 
-				0C80B921A6F3F58F76C31292 /* libPods-Amico.a in Frameworks */,
+				0C80B921A6F3F58F76C31292 /* libPods-Acomi.a in Frameworks */,
 
 			);
 
@@ -78,7 +78,7 @@
 
 /* Begin PBXGroup section */
 
-		13B07FAE1A68108700A75B9A /* Amico */ = {
+		13B07FAE1A68108700A75B9A /* Acomi */ = {
 
 			isa = PBXGroup;
 
@@ -96,7 +96,7 @@
 
 			);
 
-			name = Amico;
+			name = Acomi;
 
 			sourceTree = "<group>";
 
@@ -110,7 +110,7 @@
 
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
 
-				5DCACB8F33CDC322A6C60F78 /* libPods-Amico.a */,
+				5DCACB8F33CDC322A6C60F78 /* libPods-Acomi.a */,
 
 			);
 
@@ -140,7 +140,7 @@
 
 			children = (
 
-				13B07FAE1A68108700A75B9A /* Amico */,
+				13B07FAE1A68108700A75B9A /* Acomi */,
 
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 
@@ -168,7 +168,7 @@
 
 			children = (
 
-				13B07F961A680F5B00A75B9A /* Amico.app */,
+				13B07F961A680F5B00A75B9A /* Acomi.app */,
 
 			);
 
@@ -184,9 +184,9 @@
 
 			children = (
 
-				3B4392A12AC88292D35C810B /* Pods-Amico.debug.xcconfig */,
+				3B4392A12AC88292D35C810B /* Pods-Acomi.debug.xcconfig */,
 
-				5709B34CF0A7D63546082F79 /* Pods-Amico.release.xcconfig */,
+				5709B34CF0A7D63546082F79 /* Pods-Acomi.release.xcconfig */,
 
 			);
 
@@ -202,11 +202,11 @@
 
 /* Begin PBXNativeTarget section */
 
-		13B07F861A680F5B00A75B9A /* Amico */ = {
+		13B07F861A680F5B00A75B9A /* Acomi */ = {
 
 			isa = PBXNativeTarget;
 
-			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "Amico" */;
+			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "Acomi" */;
 
 			buildPhases = (
 
@@ -234,11 +234,11 @@
 
 			);
 
-			name = Amico;
+			name = Acomi;
 
-			productName = Amico;
+			productName = Acomi;
 
-			productReference = 13B07F961A680F5B00A75B9A /* Amico.app */;
+			productReference = 13B07F961A680F5B00A75B9A /* Acomi.app */;
 
 			productType = "com.apple.product-type.application";
 
@@ -270,7 +270,7 @@
 
 			};
 
-			buildConfigurationList = 83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "Amico" */;
+			buildConfigurationList = 83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "Acomi" */;
 
 			compatibilityVersion = "Xcode 12.0";
 
@@ -296,7 +296,7 @@
 
 			targets = (
 
-				13B07F861A680F5B00A75B9A /* Amico */,
+				13B07F861A680F5B00A75B9A /* Acomi */,
 
 			);
 
@@ -376,7 +376,7 @@
 
 			inputFileListPaths = (
 
-				"${PODS_ROOT}/Target Support Files/Pods-Amico/Pods-Amico-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+				"${PODS_ROOT}/Target Support Files/Pods-Acomi/Pods-Acomi-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 
 			);
 
@@ -384,7 +384,7 @@
 
 			outputFileListPaths = (
 
-				"${PODS_ROOT}/Target Support Files/Pods-Amico/Pods-Amico-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+				"${PODS_ROOT}/Target Support Files/Pods-Acomi/Pods-Acomi-frameworks-${CONFIGURATION}-output-files.xcfilelist",
 
 			);
 
@@ -392,7 +392,7 @@
 
 			shellPath = /bin/sh;
 
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Amico/Pods-Amico-frameworks.sh\"\n";
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Acomi/Pods-Acomi-frameworks.sh\"\n";
 
 			showEnvVarsInLog = 0;
 
@@ -428,7 +428,7 @@
 
 			outputPaths = (
 
-				"$(DERIVED_FILE_DIR)/Pods-Amico-checkManifestLockResult.txt",
+				"$(DERIVED_FILE_DIR)/Pods-Acomi-checkManifestLockResult.txt",
 
 			);
 
@@ -454,7 +454,7 @@
 
 			inputFileListPaths = (
 
-				"${PODS_ROOT}/Target Support Files/Pods-Amico/Pods-Amico-resources-${CONFIGURATION}-input-files.xcfilelist",
+				"${PODS_ROOT}/Target Support Files/Pods-Acomi/Pods-Acomi-resources-${CONFIGURATION}-input-files.xcfilelist",
 
 			);
 
@@ -462,7 +462,7 @@
 
 			outputFileListPaths = (
 
-				"${PODS_ROOT}/Target Support Files/Pods-Amico/Pods-Amico-resources-${CONFIGURATION}-output-files.xcfilelist",
+				"${PODS_ROOT}/Target Support Files/Pods-Acomi/Pods-Acomi-resources-${CONFIGURATION}-output-files.xcfilelist",
 
 			);
 
@@ -470,7 +470,7 @@
 
 			shellPath = /bin/sh;
 
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Amico/Pods-Amico-resources.sh\"\n";
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Acomi/Pods-Acomi-resources.sh\"\n";
 
 			showEnvVarsInLog = 0;
 
@@ -508,7 +508,7 @@
 
 			isa = XCBuildConfiguration;
 
-			baseConfigurationReference = 3B4392A12AC88292D35C810B /* Pods-Amico.debug.xcconfig */;
+			baseConfigurationReference = 3B4392A12AC88292D35C810B /* Pods-Acomi.debug.xcconfig */;
 
 			buildSettings = {
 
@@ -520,7 +520,7 @@
 
 				ENABLE_BITCODE = NO;
 
-				INFOPLIST_FILE = Amico/Info.plist;
+				INFOPLIST_FILE = Acomi/Info.plist;
 
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 
@@ -544,9 +544,9 @@
 
 				);
 
-				PRODUCT_BUNDLE_IDENTIFIER = "com.amico";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.acomi";
 
-				PRODUCT_NAME = Amico;
+				PRODUCT_NAME = Acomi;
 
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 
@@ -568,7 +568,7 @@
 
 			isa = XCBuildConfiguration;
 
-			baseConfigurationReference = 5709B34CF0A7D63546082F79 /* Pods-Amico.release.xcconfig */;
+			baseConfigurationReference = 5709B34CF0A7D63546082F79 /* Pods-Acomi.release.xcconfig */;
 
 			buildSettings = {
 
@@ -578,7 +578,7 @@
 
 				CURRENT_PROJECT_VERSION = 1;
 
-				INFOPLIST_FILE = Amico/Info.plist;
+				INFOPLIST_FILE = Acomi/Info.plist;
 
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 
@@ -602,9 +602,9 @@
 
 				);
 
-				PRODUCT_BUNDLE_IDENTIFIER = "com.amico";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.acomi";
 
-				PRODUCT_NAME = Amico;
+				PRODUCT_NAME = Acomi;
 
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 
@@ -904,7 +904,7 @@
 
 /* Begin XCConfigurationList section */
 
-		13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "Amico" */ = {
+		13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "Acomi" */ = {
 
 			isa = XCConfigurationList;
 
@@ -922,7 +922,7 @@
 
 		};
 
-		83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "Amico" */ = {
+		83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "Acomi" */ = {
 
 			isa = XCConfigurationList;
 

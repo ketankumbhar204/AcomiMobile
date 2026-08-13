@@ -1,11 +1,12 @@
-﻿# Manual Windows folder rename helper for Amico final layout.
+# Optional Windows folder rename helper for Acomi final disk layout.
 # CLOSE Cursor/IDEs and stop terminals using these folders before running.
+# Do NOT run unless explicitly approved — workspace folders intentionally remain Amico* until then.
 $ErrorActionPreference = "Stop"
 $pairs = @(
-  @{ From = "K:\ResidineWeb"; To = "K:\AmicoWeb" },
-  @{ From = "K:\Residine"; To = "K:\Amico" },
-  @{ From = "K:\Projects\Residine\Backend\residine-backend"; To = "K:\Projects\Residine\Backend\amico-backend" },
-  @{ From = "K:\Projects\Residine"; To = "K:\Projects\Amico" }
+  @{ From = "K:\AmicoWeb"; To = "K:\AcomiWeb" },
+  @{ From = "K:\AmicoMobile"; To = "K:\AcomiMobile" },
+  @{ From = "K:\Projects\Amico\Backend\amico-backend"; To = "K:\Projects\Amico\Backend\acomi-backend" },
+  @{ From = "K:\Projects\Amico"; To = "K:\Projects\Acomi" }
 )
 foreach ($p in $pairs) {
   if (-not (Test-Path -LiteralPath $p.From)) { Write-Host "SKIP missing: $($p.From)"; continue }
@@ -16,4 +17,4 @@ foreach ($p in $pairs) {
   Write-Host "Rename: $($p.From) -> $($p.To)"
   Rename-Item -LiteralPath $p.From -NewName $leaf
 }
-Write-Host "Done. Re-open workspace from K:\Amico (and K:\AmicoWeb)."
+Write-Host "Done. Re-open workspace from the new Acomi paths."

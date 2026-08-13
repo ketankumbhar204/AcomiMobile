@@ -84,7 +84,7 @@ Earlier note (superseded): READY FOR MANUAL CERTIFICATION is **withdrawn** until
 
 
 
-**File:** `Amico-backend/.../SpacePaymentService.java`
+**File:** `Acomi-backend/.../SpacePaymentService.java`
 
 
 
@@ -228,7 +228,7 @@ Do **not** optimize until you record a fail against targets.
 
 |-------|-------|-------|
 
-| AcAmicog SoT still `buildLedger` on snapshot rebuild | **PASS** | Snapshot rebuild path |
+| AcAcomig SoT still `buildLedger` on snapshot rebuild | **PASS** | Snapshot rebuild path |
 
 | Legacy owner-month `sync=false`, 404-only fallback | **PASS** | FE + BE |
 

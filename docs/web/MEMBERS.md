@@ -1,6 +1,6 @@
 # Members — Web (Phase 3)
 
-Desktop Members module for Amico Web. Mobile remains the business source of truth for APIs, DTOs, permissions, validation, and terminology. Presentation uses a **master-detail workspace** instead of stacked mobile screens.
+Desktop Members module for Acomi Web. Mobile remains the business source of truth for APIs, DTOs, permissions, validation, and terminology. Presentation uses a **master-detail workspace** instead of stacked mobile screens.
 
 ---
 

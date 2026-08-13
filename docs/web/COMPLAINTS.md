@@ -1,6 +1,6 @@
 # Complaints — Web (Phase 7)
 
-Desktop Complaints & Service Requests module for Amico Web. Mobile remains the business source of truth for APIs, DTOs, permissions, status transitions, validation, and terminology. Presentation uses the **Payments reference pattern**: KPI strip + DataTable + inspector.
+Desktop Complaints & Service Requests module for Acomi Web. Mobile remains the business source of truth for APIs, DTOs, permissions, status transitions, validation, and terminology. Presentation uses the **Payments reference pattern**: KPI strip + DataTable + inspector.
 
 ---
 

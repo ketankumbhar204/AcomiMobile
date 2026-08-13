@@ -2,7 +2,7 @@
 
 
 
-Desktop Accommodation & Occupancy module for Amico Web. Mobile remains the business source of truth for APIs, DTOs, permissions, validation, hierarchy rules, and occupancy workflows. Presentation uses a **three-panel operational workspace** instead of stacked mobile screens.
+Desktop Accommodation & Occupancy module for Acomi Web. Mobile remains the business source of truth for APIs, DTOs, permissions, validation, hierarchy rules, and occupancy workflows. Presentation uses a **three-panel operational workspace** instead of stacked mobile screens.
 
 
 
@@ -298,7 +298,7 @@ No horizontal scroll; inspector becomes drawer on smaller screens.
 
 - Broad invalidation after mutations refreshes buildings/floors/rooms/beds/occupancy keys
 
-- View mode persisted in `localStorage` (`Amico.accommodation.viewMode`)
+- View mode persisted in `localStorage` (`acomi.accommodation.viewMode`)
 
 
 

@@ -16,16 +16,16 @@ $sdk = $env:ANDROID_HOME
 if (-not $sdk) { $sdk = "$env:LOCALAPPDATA\Android\Sdk" }
 $adb = Join-Path $sdk 'platform-tools\adb.exe'
 
-$remote = '/data/local/tmp/Amico-debug.apk'
+$remote = '/data/local/tmp/Acomi-debug.apk'
 & $adb push $apk $remote
 $result = (& $adb shell pm install -r $remote 2>&1) -join ' '
 if ($result -notmatch 'Success') {
   throw "Install failed: $result"
 }
 
-Write-Host 'Installed com.amico successfully.'
+Write-Host 'Installed com.acomi successfully.'
 
 if ($Launch) {
-  & $adb shell am start -n com.amico/.MainActivity | Out-Null
-  Write-Host 'Launched com.amico/.MainActivity'
+  & $adb shell am start -n com.acomi/.MainActivity | Out-Null
+  Write-Host 'Launched com.acomi/.MainActivity'
 }
