@@ -8,11 +8,11 @@ const CURRENT_ENV: Environment =
   (__DEV__ ? 'development' : 'production') as Environment;
 
 /**
- * Develop branch / `__DEV__` builds talk to the Backend on this machine (:8080).
- * Set to `false` only when you intentionally want the Render develop host.
- * Release builds never use this flag — they always use the production host map.
+ * Production branch: `__DEV__` Metro sessions use the Render develop host, not
+ * this machine. Release builds never use this flag — they always use the
+ * production host map (`https://api.acomi.in`).
  */
-const USE_LOCAL_DEV_BACKEND = true;
+const USE_LOCAL_DEV_BACKEND = false;
 
 /** Render develop Backend host (no `/api/v1` — appended once in `env.apiBaseUrl`). */
 const RENDER_DEV_API_HOST = 'https://acomibackend.onrender.com';
