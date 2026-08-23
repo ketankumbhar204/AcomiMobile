@@ -16,6 +16,7 @@ import {
   accommodationInactiveScopeKey,
   mergeInactiveListItems,
 } from '../utils/accommodationInactiveRegistry';
+import { devLog } from '../utils/devLog';
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -78,7 +79,7 @@ export function useBeds(
 
       const { spaceId, roomId, buildingId, floorId, unitId } = context;
       const seq = ++requestSeq.current;
-      console.log('[useBeds] queryKey', queryKeyLabel(queryKey), { page });
+      devLog('[useBeds] queryKey', queryKeyLabel(queryKey), { page });
 
       if (append) {
         setLoadingMore(true);
@@ -90,7 +91,7 @@ export function useBeds(
 
       try {
         if (!append) {
-          console.log('[useBeds] preflight GET /spaces/' + spaceId + '/rooms/' + roomId);
+          devLog('[useBeds] preflight GET /spaces/' + spaceId + '/rooms/' + roomId);
           const room = await accommodationApi.getRoom(spaceId, roomId);
 
           if (seq !== requestSeq.current) {

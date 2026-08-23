@@ -25,6 +25,7 @@ import {
   UpdateMemberStatusRequest,
   UUID,
 } from './types';
+import { devLog } from '../utils/devLog';
 
 const LOG_TAG = '[MemberApi]';
 
@@ -35,7 +36,7 @@ export const memberApi = {
     spaceId: UUID,
     body: CreateMemberRequest,
   ): Promise<MemberResponse> => {
-    console.log(`${LOG_TAG} POST /spaces/${spaceId}/members`, body);
+    devLog(`${LOG_TAG} POST /spaces/${spaceId}/members`, body);
 
     const response = await unwrapApiResponse(
       apiClient.post<ApiResponse<MemberResponse>>(
@@ -44,7 +45,7 @@ export const memberApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} createMember response`, response.memberId);
+    devLog(`${LOG_TAG} createMember response`, response.memberId);
     return response;
   },
 
@@ -61,13 +62,13 @@ export const memberApi = {
     }
     const query = q.toString();
     const path = `/spaces/${spaceId}/members${query ? `?${query}` : ''}`;
-    console.log(`${LOG_TAG} GET ${path}`);
+    devLog(`${LOG_TAG} GET ${path}`);
 
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<MemberResponse[]>>(path),
     );
 
-    console.log(`${LOG_TAG} getMembers response`, response.length);
+    devLog(`${LOG_TAG} getMembers response`, response.length);
     return response;
   },
 
@@ -81,13 +82,13 @@ export const memberApi = {
     }
     const query = q.toString();
     const path = `/spaces/${spaceId}/members/import-candidates${query ? `?${query}` : ''}`;
-    console.log(`${LOG_TAG} GET ${path}`);
+    devLog(`${LOG_TAG} GET ${path}`);
 
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<MemberImportCandidateResponse[]>>(path),
     );
 
-    console.log(`${LOG_TAG} searchImportCandidates response`, response.length);
+    devLog(`${LOG_TAG} searchImportCandidates response`, response.length);
     return response;
   },
 
@@ -95,7 +96,7 @@ export const memberApi = {
     spaceId: UUID,
     body: ImportMemberRequest,
   ): Promise<MemberResponse> => {
-    console.log(`${LOG_TAG} POST /spaces/${spaceId}/members/import`, body);
+    devLog(`${LOG_TAG} POST /spaces/${spaceId}/members/import`, body);
 
     const response = await unwrapApiResponse(
       apiClient.post<ApiResponse<MemberResponse>>(
@@ -104,13 +105,13 @@ export const memberApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} importMember response`, response.memberId);
+    devLog(`${LOG_TAG} importMember response`, response.memberId);
     return response;
   },
 
   getMyLinkedMember: async (spaceId: UUID): Promise<MemberResponse> => {
     const path = `/spaces/${spaceId}/members/me`;
-    console.log(`${LOG_TAG} GET ${path}`);
+    devLog(`${LOG_TAG} GET ${path}`);
 
     return unwrapApiResponse(apiClient.get<ApiResponse<MemberResponse>>(path));
   },
@@ -119,7 +120,7 @@ export const memberApi = {
     spaceId: UUID,
     memberId: UUID,
   ): Promise<MemberDetailsResponse> => {
-    console.log(`${LOG_TAG} GET /spaces/${spaceId}/members/${memberId}`);
+    devLog(`${LOG_TAG} GET /spaces/${spaceId}/members/${memberId}`);
 
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<MemberDetailsResponse>>(
@@ -127,7 +128,7 @@ export const memberApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} getMember response`, response.memberId);
+    devLog(`${LOG_TAG} getMember response`, response.memberId);
     return response;
   },
 
@@ -136,7 +137,7 @@ export const memberApi = {
     memberId: UUID,
     body: UpdateMemberRequest,
   ): Promise<MemberDetailsResponse> => {
-    console.log(`${LOG_TAG} PUT /spaces/${spaceId}/members/${memberId}`, body);
+    devLog(`${LOG_TAG} PUT /spaces/${spaceId}/members/${memberId}`, body);
 
     const response = await unwrapApiResponse(
       apiClient.put<ApiResponse<MemberDetailsResponse>>(
@@ -145,18 +146,18 @@ export const memberApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} updateMember response`, response.memberId);
+    devLog(`${LOG_TAG} updateMember response`, response.memberId);
     return response;
   },
 
   removeMember: async (spaceId: UUID, memberId: UUID): Promise<void> => {
-    console.log(`${LOG_TAG} DELETE /spaces/${spaceId}/members/${memberId}`);
+    devLog(`${LOG_TAG} DELETE /spaces/${spaceId}/members/${memberId}`);
 
     await unwrapVoidResponse(
       apiClient.delete(`/spaces/${spaceId}/members/${memberId}`),
     );
 
-    console.log(`${LOG_TAG} removeMember success`);
+    devLog(`${LOG_TAG} removeMember success`);
   },
 
   updateMemberStatus: async (
@@ -164,7 +165,7 @@ export const memberApi = {
     memberId: UUID,
     body: UpdateMemberStatusRequest,
   ): Promise<MemberDetailsResponse> => {
-    console.log(`${LOG_TAG} PUT /spaces/${spaceId}/members/${memberId}/status`, body);
+    devLog(`${LOG_TAG} PUT /spaces/${spaceId}/members/${memberId}/status`, body);
 
     const response = await unwrapApiResponse(
       apiClient.put<ApiResponse<MemberDetailsResponse>>(
@@ -173,7 +174,7 @@ export const memberApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} updateMemberStatus response`, response.status);
+    devLog(`${LOG_TAG} updateMemberStatus response`, response.status);
     return response;
   },
 
@@ -182,7 +183,7 @@ export const memberApi = {
     memberId: UUID,
     body: UpdateEmergencyContactRequest,
   ): Promise<MemberDetailsResponse> => {
-    console.log(`${LOG_TAG} PUT /spaces/${spaceId}/members/${memberId}/emergency-contact`, body);
+    devLog(`${LOG_TAG} PUT /spaces/${spaceId}/members/${memberId}/emergency-contact`, body);
 
     const response = await unwrapApiResponse(
       apiClient.put<ApiResponse<MemberDetailsResponse>>(
@@ -191,7 +192,7 @@ export const memberApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} updateEmergencyContact response`, response.memberId);
+    devLog(`${LOG_TAG} updateEmergencyContact response`, response.memberId);
     return response;
   },
 
@@ -200,7 +201,7 @@ export const memberApi = {
     memberId: UUID,
     body: UpdateDepositRequest,
   ): Promise<MemberDetailsResponse> => {
-    console.log(`${LOG_TAG} PUT /spaces/${spaceId}/members/${memberId}/deposit`, body);
+    devLog(`${LOG_TAG} PUT /spaces/${spaceId}/members/${memberId}/deposit`, body);
 
     const response = await unwrapApiResponse(
       apiClient.put<ApiResponse<MemberDetailsResponse>>(
@@ -209,7 +210,7 @@ export const memberApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} updateDeposit response`, response.depositBalance);
+    devLog(`${LOG_TAG} updateDeposit response`, response.depositBalance);
     return response;
   },
 
@@ -218,7 +219,7 @@ export const memberApi = {
     memberId: UUID,
     body: CreateMemberDocumentRequest,
   ): Promise<MemberDocumentResponse> => {
-    console.log(`${LOG_TAG} POST /spaces/${spaceId}/members/${memberId}/documents`, body);
+    devLog(`${LOG_TAG} POST /spaces/${spaceId}/members/${memberId}/documents`, body);
 
     const response = await unwrapApiResponse(
       apiClient.post<ApiResponse<MemberDocumentResponse>>(
@@ -227,7 +228,7 @@ export const memberApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} addMemberDocument response`, response.documentId);
+    devLog(`${LOG_TAG} addMemberDocument response`, response.documentId);
     return response;
   },
 
@@ -235,7 +236,7 @@ export const memberApi = {
     spaceId: UUID,
     memberId: UUID,
   ): Promise<MemberDocumentResponse[]> => {
-    console.log(`${LOG_TAG} GET /spaces/${spaceId}/members/${memberId}/documents`);
+    devLog(`${LOG_TAG} GET /spaces/${spaceId}/members/${memberId}/documents`);
 
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<MemberDocumentResponse[]>>(
@@ -243,7 +244,7 @@ export const memberApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} getMemberDocuments response`, response.length);
+    devLog(`${LOG_TAG} getMemberDocuments response`, response.length);
     return response;
   },
 
@@ -252,7 +253,7 @@ export const memberApi = {
     memberId: UUID,
     documentId: UUID,
   ): Promise<void> => {
-    console.log(`${LOG_TAG} DELETE /spaces/${spaceId}/members/${memberId}/documents/${documentId}`);
+    devLog(`${LOG_TAG} DELETE /spaces/${spaceId}/members/${memberId}/documents/${documentId}`);
 
     await unwrapVoidResponse(
       apiClient.delete(
@@ -260,7 +261,7 @@ export const memberApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} deleteMemberDocument success`);
+    devLog(`${LOG_TAG} deleteMemberDocument success`);
   },
 
   addMemberNote: async (
@@ -268,7 +269,7 @@ export const memberApi = {
     memberId: UUID,
     body: CreateMemberNoteRequest,
   ): Promise<MemberNoteResponse> => {
-    console.log(`${LOG_TAG} POST /spaces/${spaceId}/members/${memberId}/notes`, body);
+    devLog(`${LOG_TAG} POST /spaces/${spaceId}/members/${memberId}/notes`, body);
 
     const response = await unwrapApiResponse(
       apiClient.post<ApiResponse<MemberNoteResponse>>(
@@ -277,7 +278,7 @@ export const memberApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} addMemberNote response`, response.noteId);
+    devLog(`${LOG_TAG} addMemberNote response`, response.noteId);
     return response;
   },
 
@@ -285,7 +286,7 @@ export const memberApi = {
     spaceId: UUID,
     memberId: UUID,
   ): Promise<MemberNoteResponse[]> => {
-    console.log(`${LOG_TAG} GET /spaces/${spaceId}/members/${memberId}/notes`);
+    devLog(`${LOG_TAG} GET /spaces/${spaceId}/members/${memberId}/notes`);
 
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<MemberNoteResponse[]>>(
@@ -293,7 +294,7 @@ export const memberApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} getMemberNotes response`, response.length);
+    devLog(`${LOG_TAG} getMemberNotes response`, response.length);
     return response;
   },
 
@@ -301,7 +302,7 @@ export const memberApi = {
     spaceId: UUID,
     memberId: UUID,
   ): Promise<MemberHistoryResponse[]> => {
-    console.log(`${LOG_TAG} GET /spaces/${spaceId}/members/${memberId}/history`);
+    devLog(`${LOG_TAG} GET /spaces/${spaceId}/members/${memberId}/history`);
 
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<MemberHistoryResponse[]>>(
@@ -309,20 +310,20 @@ export const memberApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} getMemberHistory response`, response.length);
+    devLog(`${LOG_TAG} getMemberHistory response`, response.length);
     return response;
   },
 
   createInvitation: async (
     body: CreateInvitationRequest,
   ): Promise<InvitationResponse> => {
-    console.log(`${LOG_TAG} POST /invitations`, body.spaceId);
+    devLog(`${LOG_TAG} POST /invitations`, body.spaceId);
 
     const response = await unwrapApiResponse(
       apiClient.post<ApiResponse<InvitationResponse>>('/invitations', body),
     );
 
-    console.log(`${LOG_TAG} createInvitation response`, response.id);
+    devLog(`${LOG_TAG} createInvitation response`, response.id);
     return response;
   },
 
@@ -330,7 +331,7 @@ export const memberApi = {
     invitationId: UUID,
     body: AcceptInvitationRequest,
   ): Promise<SpaceMembershipResponse> => {
-    console.log(`${LOG_TAG} POST /invitations/${invitationId}/accept`);
+    devLog(`${LOG_TAG} POST /invitations/${invitationId}/accept`);
 
     const response = await unwrapApiResponse(
       apiClient.post<ApiResponse<SpaceMembershipResponse>>(
@@ -339,24 +340,24 @@ export const memberApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} acceptInvitation response`, response.spaceId);
+    devLog(`${LOG_TAG} acceptInvitation response`, response.spaceId);
     return response;
   },
 
   cancelInvitation: async (invitationId: UUID): Promise<void> => {
-    console.log(`${LOG_TAG} DELETE /invitations/${invitationId}`);
+    devLog(`${LOG_TAG} DELETE /invitations/${invitationId}`);
 
     await unwrapVoidResponse(
       apiClient.delete(`/invitations/${invitationId}`),
     );
 
-    console.log(`${LOG_TAG} cancelInvitation success`);
+    devLog(`${LOG_TAG} cancelInvitation success`);
   },
 
   getPendingInvitations: async (
     spaceId: UUID,
   ): Promise<PendingInvitationResponse[]> => {
-    console.log(`${LOG_TAG} GET /spaces/${spaceId}/invitations`);
+    devLog(`${LOG_TAG} GET /spaces/${spaceId}/invitations`);
 
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<PendingInvitationResponse[]>>(
@@ -364,16 +365,16 @@ export const memberApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} getPendingInvitations response`, response.length);
+    devLog(`${LOG_TAG} getPendingInvitations response`, response.length);
     return response;
   },
 
   getMyInvitations: async (): Promise<MyInvitationResponse[]> => {
-    console.log(`${LOG_TAG} GET /invitations/my`);
+    devLog(`${LOG_TAG} GET /invitations/my`);
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<MyInvitationResponse[]>>('/invitations/my'),
     );
-    console.log(`${LOG_TAG} getMyInvitations response`, response.length);
+    devLog(`${LOG_TAG} getMyInvitations response`, response.length);
     return response;
   },
 };

@@ -1,37 +1,77 @@
-import { unwrapApiResponse } from './apiRequest';
+import { unwrapApiResponse, unwrapVoidResponse } from './apiRequest';
 import apiClient from './client';
 import type {
   ApiResponse,
   AuthTokenResponse,
   CompleteUserProfileRequest,
+  LoginRequest,
+  RegisterRequest,
   SendOtpRequest,
   SendOtpResponse,
   UpdateUserRequest,
   UserResponse,
   VerifyOtpRequest,
+  VerifyOtpResponse,
 } from './types';
 
 const LOG_TAG = '[Acomi Auth]';
 
 export const authApi = {
+  login: async (payload: LoginRequest): Promise<AuthTokenResponse> => {
+    if (__DEV__) {
+      console.log(`${LOG_TAG} login → mobile:`, payload.mobileNumber);
+    }
+    const result = await unwrapApiResponse(
+      apiClient.post<ApiResponse<AuthTokenResponse>>('/auth/login', {
+        mobileNumber: payload.mobileNumber,
+        password: payload.password,
+      }),
+    );
+    if (__DEV__) {
+      console.log(`${LOG_TAG} login ← userId:`, result.user.id, 'name:', result.user.fullName);
+    }
+    return result;
+  },
+
+  register: async (payload: RegisterRequest): Promise<AuthTokenResponse> => {
+    if (__DEV__) {
+      console.log(`${LOG_TAG} register → mobile:`, payload.mobileNumber);
+    }
+    const result = await unwrapApiResponse(
+      apiClient.post<ApiResponse<AuthTokenResponse>>('/auth/register', {
+        fullName: payload.fullName,
+        mobileNumber: payload.mobileNumber,
+        password: payload.password,
+        confirmPassword: payload.confirmPassword,
+        ...(payload.verificationToken
+          ? { verificationToken: payload.verificationToken }
+          : {}),
+      }),
+    );
+    if (__DEV__) {
+      console.log(`${LOG_TAG} register ← userId:`, result.user.id, 'name:', result.user.fullName);
+    }
+    return result;
+  },
+
   sendOtp: async (payload: SendOtpRequest): Promise<SendOtpResponse> => {
     if (__DEV__) {
-      console.log(`${LOG_TAG} sendOtp →`, payload.mobileNumber);
+      console.log(`${LOG_TAG} sendOtp →`, payload.mobileNumber, payload.purpose);
     }
     return unwrapApiResponse(
       apiClient.post<ApiResponse<SendOtpResponse>>('/auth/send-otp', payload),
     );
   },
 
-  verifyOtp: async (payload: VerifyOtpRequest): Promise<AuthTokenResponse> => {
+  verifyOtp: async (payload: VerifyOtpRequest): Promise<VerifyOtpResponse> => {
     if (__DEV__) {
-      console.log(`${LOG_TAG} verifyOtp → mobile:`, payload.mobileNumber);
+      console.log(`${LOG_TAG} verifyOtp → mobile:`, payload.mobileNumber, payload.purpose);
     }
     const result = await unwrapApiResponse(
-      apiClient.post<ApiResponse<AuthTokenResponse>>('/auth/verify-otp', payload),
+      apiClient.post<ApiResponse<VerifyOtpResponse>>('/auth/verify-otp', payload),
     );
     if (__DEV__) {
-      console.log(`${LOG_TAG} verifyOtp ← userId:`, result.user.id, 'name:', result.user.fullName);
+      console.log(`${LOG_TAG} verifyOtp ← verified:`, result.verified);
     }
     return result;
   },
@@ -71,5 +111,12 @@ export const authApi = {
         profileStatus: 'COMPLETED',
       }),
     );
+  },
+
+  deleteAccount: async (): Promise<void> => {
+    if (__DEV__) {
+      console.log(`${LOG_TAG} deleteAccount →`);
+    }
+    await unwrapVoidResponse(apiClient.delete('/auth/me'));
   },
 };

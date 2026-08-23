@@ -28,6 +28,7 @@ import type { MainStackParamList } from '../../navigation/types';
 import { colors, radius, spacing, typography } from '../../theme';
 import { renameFloorName } from '../../utils/accommodationInlineRename';
 import { useToastStore } from '../../store/toastStore';
+import { devLog } from '../../utils/devLog';
 
 type FloorsNav = NativeStackNavigationProp<MainStackParamList, 'Floors'>;
 type FloorsRoute = NativeStackScreenProps<MainStackParamList, 'Floors'>['route'];
@@ -63,20 +64,20 @@ export function FloorsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      console.log('[FloorsScreen] focused', { spaceId, buildingId });
+      devLog('[FloorsScreen] focused', { spaceId, buildingId });
       void refresh();
     }, [buildingId, refresh, spaceId]),
   );
 
   const onRefresh = useCallback(async () => {
-    console.log('[FloorsScreen] pull to refresh');
+    devLog('[FloorsScreen] pull to refresh');
     setRefreshing(true);
     await refresh();
     setRefreshing(false);
   }, [refresh]);
 
   const openRooms = (floor: FloorListItemResponse) => {
-    console.log('[FloorsScreen] open floor rooms', floor.floorId);
+    devLog('[FloorsScreen] open floor rooms', floor.floorId);
     navigation.navigate('AccommodationRooms', {
       spaceId,
       buildingId,

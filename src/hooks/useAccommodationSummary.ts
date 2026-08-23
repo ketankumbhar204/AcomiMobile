@@ -8,6 +8,7 @@ import {
   subscribeAccommodationInvalidation,
 } from '../utils/accommodationQueryCache';
 import { getAccommodationErrorMessage } from '../utils/accommodationErrors';
+import { devLog } from '../utils/devLog';
 
 export function useAccommodationSummary(spaceId: UUID | null, buildingId: UUID | null) {
   const [summary, setSummary] = useState<BuildingSummaryResponse | null>(null);
@@ -31,7 +32,7 @@ export function useAccommodationSummary(spaceId: UUID | null, buildingId: UUID |
 
     const seq = ++requestSeq.current;
     const queryKey = accommodationQueryKeys.buildingSummary(spaceId, buildingId);
-    console.log('[useAccommodationSummary] queryKey', queryKeyLabel(queryKey));
+    devLog('[useAccommodationSummary] queryKey', queryKeyLabel(queryKey));
 
     setLoading(true);
     setError(null);

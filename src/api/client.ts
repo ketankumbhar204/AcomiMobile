@@ -18,6 +18,24 @@ export function getAuthToken(): string | null {
   return authToken;
 }
 
+function redactSensitive(data: unknown): unknown {
+  if (data == null || typeof data !== 'object') {
+    return data;
+  }
+  if (Array.isArray(data)) {
+    return data.map(redactSensitive);
+  }
+  const clone: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
+    if (/password|confirmPassword|^otp$|verificationToken|accessToken/i.test(key)) {
+      clone[key] = '[redacted]';
+    } else {
+      clone[key] = redactSensitive(value);
+    }
+  }
+  return clone;
+}
+
 function logRequest(config: InternalAxiosRequestConfig): void {
   if (!__DEV__) {
     return;
@@ -33,7 +51,7 @@ function logRequest(config: InternalAxiosRequestConfig): void {
   }
 
   if (config.data) {
-    console.log(`${LOG_TAG}   Request body:`, JSON.stringify(config.data, null, 2));
+    console.log(`${LOG_TAG}   Request body:`, JSON.stringify(redactSensitive(config.data), null, 2));
   }
 }
 
@@ -51,7 +69,7 @@ function logResponse(
     `${LOG_TAG} ← ${status} ${method?.toUpperCase() ?? 'GET'} ${url ?? ''}`,
   );
   try {
-    const serialized = JSON.stringify(data);
+    const serialized = JSON.stringify(redactSensitive(data));
     const maxLen = 2500;
     console.log(
       `${LOG_TAG}   Response:`,

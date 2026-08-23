@@ -22,6 +22,7 @@ import type {
 import { getMembershipErrorMessage } from '../utils/membershipErrors';
 import { useAuthStore } from './authStore';
 import { useSpaceStore } from './spaceStore';
+import { devLog } from '../utils/devLog';
 
 const LOG_TAG = '[MemberStore]';
 
@@ -158,12 +159,12 @@ export const useMemberStore = create<MemberState>((set, get) => ({
       return;
     }
 
-    console.log(`${LOG_TAG} loadMembers`, spaceId);
+    devLog(`${LOG_TAG} loadMembers`, spaceId);
     set({ loading: true, error: null });
 
     try {
       const members = await memberApi.getMembers(spaceId);
-      console.log(`${LOG_TAG} loadMembers success`, members.length);
+      devLog(`${LOG_TAG} loadMembers success`, members.length);
       set({ members, loading: false });
     } catch (err) {
       const message = getMembershipErrorMessage(err, 'membership.errors.loadMembers');
@@ -178,7 +179,7 @@ export const useMemberStore = create<MemberState>((set, get) => ({
       return null;
     }
 
-    console.log(`${LOG_TAG} loadMemberDetails`, { spaceId, memberId });
+    devLog(`${LOG_TAG} loadMemberDetails`, { spaceId, memberId });
 
     const previousMemberId = get().selectedMember?.memberId ?? null;
     const isNewMember = previousMemberId !== memberId;
@@ -191,7 +192,7 @@ export const useMemberStore = create<MemberState>((set, get) => ({
 
     try {
       const selectedMember = await memberApi.getMember(spaceId, memberId);
-      console.log(`${LOG_TAG} loadMemberDetails success`, selectedMember.memberId);
+      devLog(`${LOG_TAG} loadMemberDetails success`, selectedMember.memberId);
       set({ selectedMember, memberLoading: false });
       return selectedMember;
     } catch (err) {
@@ -208,7 +209,7 @@ export const useMemberStore = create<MemberState>((set, get) => ({
       return null;
     }
 
-    console.log(`${LOG_TAG} refreshMember`, memberId);
+    devLog(`${LOG_TAG} refreshMember`, memberId);
 
     try {
       const selectedMember = await memberApi.getMember(spaceId, memberId);
@@ -231,12 +232,12 @@ export const useMemberStore = create<MemberState>((set, get) => ({
       return null;
     }
 
-    console.log(`${LOG_TAG} addMember`, spaceId);
+    devLog(`${LOG_TAG} addMember`, spaceId);
     set({ loading: true, error: null });
 
     try {
       const member = await memberApi.createMember(spaceId, payload);
-      console.log(`${LOG_TAG} addMember success`, member.memberId);
+      devLog(`${LOG_TAG} addMember success`, member.memberId);
       set({ loading: false });
       await get().loadMembers();
       return member;
@@ -254,12 +255,12 @@ export const useMemberStore = create<MemberState>((set, get) => ({
       return null;
     }
 
-    console.log(`${LOG_TAG} updateMember`, { memberId, payload });
+    devLog(`${LOG_TAG} updateMember`, { memberId, payload });
     set({ loading: true, error: null });
 
     try {
       const selectedMember = await memberApi.updateMember(spaceId, memberId, payload);
-      console.log(`${LOG_TAG} updateMember success`, selectedMember.memberId);
+      devLog(`${LOG_TAG} updateMember success`, selectedMember.memberId);
       set(state => ({
         selectedMember:
           state.selectedMember?.memberId === memberId
@@ -300,12 +301,12 @@ export const useMemberStore = create<MemberState>((set, get) => ({
       return null;
     }
 
-    console.log(`${LOG_TAG} updateStatus`, { memberId, payload });
+    devLog(`${LOG_TAG} updateStatus`, { memberId, payload });
     set({ loading: true, error: null });
 
     try {
       const selectedMember = await memberApi.updateMemberStatus(spaceId, memberId, payload);
-      console.log(`${LOG_TAG} updateStatus success`, selectedMember.status);
+      devLog(`${LOG_TAG} updateStatus success`, selectedMember.status);
       set(state => ({
         selectedMember:
           state.selectedMember?.memberId === memberId
@@ -332,7 +333,7 @@ export const useMemberStore = create<MemberState>((set, get) => ({
       return null;
     }
 
-    console.log(`${LOG_TAG} updateEmergencyContact`, { memberId });
+    devLog(`${LOG_TAG} updateEmergencyContact`, { memberId });
     set({ loading: true, error: null });
 
     try {
@@ -341,7 +342,7 @@ export const useMemberStore = create<MemberState>((set, get) => ({
         memberId,
         payload,
       );
-      console.log(`${LOG_TAG} updateEmergencyContact success`, selectedMember.memberId);
+      devLog(`${LOG_TAG} updateEmergencyContact success`, selectedMember.memberId);
       set(state => ({
         selectedMember:
           state.selectedMember?.memberId === memberId
@@ -368,12 +369,12 @@ export const useMemberStore = create<MemberState>((set, get) => ({
       return null;
     }
 
-    console.log(`${LOG_TAG} updateDeposit`, { memberId, payload });
+    devLog(`${LOG_TAG} updateDeposit`, { memberId, payload });
     set({ loading: true, error: null });
 
     try {
       const selectedMember = await memberApi.updateDeposit(spaceId, memberId, payload);
-      console.log(`${LOG_TAG} updateDeposit success`, selectedMember.depositBalance);
+      devLog(`${LOG_TAG} updateDeposit success`, selectedMember.depositBalance);
       set(state => ({
         selectedMember:
           state.selectedMember?.memberId === memberId
@@ -397,12 +398,12 @@ export const useMemberStore = create<MemberState>((set, get) => ({
       return false;
     }
 
-    console.log(`${LOG_TAG} removeMember`, memberId);
+    devLog(`${LOG_TAG} removeMember`, memberId);
     set({ loading: true, error: null });
 
     try {
       await memberApi.removeMember(spaceId, memberId);
-      console.log(`${LOG_TAG} removeMember success`);
+      devLog(`${LOG_TAG} removeMember success`);
       set(state => ({
         members: state.members.filter(item => item.memberId !== memberId),
         selectedMember:
@@ -427,16 +428,16 @@ export const useMemberStore = create<MemberState>((set, get) => ({
 
     const { documentsLoadedForMemberId } = get();
     if (!force && documentsLoadedForMemberId === memberId) {
-      console.log(`${LOG_TAG} loadDocuments skipped (cached)`, memberId);
+      devLog(`${LOG_TAG} loadDocuments skipped (cached)`, memberId);
       return;
     }
 
-    console.log(`${LOG_TAG} loadDocuments`, memberId);
+    devLog(`${LOG_TAG} loadDocuments`, memberId);
     set({ documentsLoading: true, error: null });
 
     try {
       const documents = await memberApi.getMemberDocuments(spaceId, memberId);
-      console.log(`${LOG_TAG} loadDocuments success`, documents.length);
+      devLog(`${LOG_TAG} loadDocuments success`, documents.length);
       set({
         documents,
         documentsLoadedForMemberId: memberId,
@@ -455,7 +456,7 @@ export const useMemberStore = create<MemberState>((set, get) => ({
       return null;
     }
 
-    console.log(`${LOG_TAG} addDocument`, memberId);
+    devLog(`${LOG_TAG} addDocument`, memberId);
     set({ loading: true, error: null });
 
     try {
@@ -464,7 +465,7 @@ export const useMemberStore = create<MemberState>((set, get) => ({
         documentNumber: payload.documentNumber,
         fileUrl: payload.fileUrl ?? PENDING_UPLOAD_FILE_URL,
       });
-      console.log(`${LOG_TAG} addDocument success`, document.documentId);
+      devLog(`${LOG_TAG} addDocument success`, document.documentId);
       set({ loading: false });
       await get().loadDocuments(memberId, true);
       return document;
@@ -482,12 +483,12 @@ export const useMemberStore = create<MemberState>((set, get) => ({
       return false;
     }
 
-    console.log(`${LOG_TAG} deleteDocument`, { memberId, documentId });
+    devLog(`${LOG_TAG} deleteDocument`, { memberId, documentId });
     set({ loading: true, error: null });
 
     try {
       await memberApi.deleteMemberDocument(spaceId, memberId, documentId);
-      console.log(`${LOG_TAG} deleteDocument success`);
+      devLog(`${LOG_TAG} deleteDocument success`);
       set({ loading: false });
       await get().loadDocuments(memberId, true);
       return true;
@@ -507,16 +508,16 @@ export const useMemberStore = create<MemberState>((set, get) => ({
 
     const { notesLoadedForMemberId } = get();
     if (!force && notesLoadedForMemberId === memberId) {
-      console.log(`${LOG_TAG} loadNotes skipped (cached)`, memberId);
+      devLog(`${LOG_TAG} loadNotes skipped (cached)`, memberId);
       return;
     }
 
-    console.log(`${LOG_TAG} loadNotes`, memberId);
+    devLog(`${LOG_TAG} loadNotes`, memberId);
     set({ notesLoading: true, error: null });
 
     try {
       const notes = await memberApi.getMemberNotes(spaceId, memberId);
-      console.log(`${LOG_TAG} loadNotes success`, notes.length);
+      devLog(`${LOG_TAG} loadNotes success`, notes.length);
       set({
         notes,
         notesLoadedForMemberId: memberId,
@@ -535,12 +536,12 @@ export const useMemberStore = create<MemberState>((set, get) => ({
       return null;
     }
 
-    console.log(`${LOG_TAG} addNote`, memberId);
+    devLog(`${LOG_TAG} addNote`, memberId);
     set({ loading: true, error: null });
 
     try {
       const note = await memberApi.addMemberNote(spaceId, memberId, payload);
-      console.log(`${LOG_TAG} addNote success`, note.noteId);
+      devLog(`${LOG_TAG} addNote success`, note.noteId);
       set({ loading: false });
       await get().loadNotes(memberId, true);
       return note;
@@ -560,16 +561,16 @@ export const useMemberStore = create<MemberState>((set, get) => ({
 
     const { historyLoadedForMemberId, historyNeedsReload } = get();
     if (!force && historyLoadedForMemberId === memberId && !historyNeedsReload) {
-      console.log(`${LOG_TAG} loadHistory skipped (cached)`, memberId);
+      devLog(`${LOG_TAG} loadHistory skipped (cached)`, memberId);
       return;
     }
 
-    console.log(`${LOG_TAG} loadHistory`, { memberId, force });
+    devLog(`${LOG_TAG} loadHistory`, { memberId, force });
     set({ historyLoading: true, error: null });
 
     try {
       const history = await memberApi.getMemberHistory(spaceId, memberId);
-      console.log(`${LOG_TAG} loadHistory success`, history.length);
+      devLog(`${LOG_TAG} loadHistory success`, history.length);
       set({
         history,
         historyLoadedForMemberId: memberId,
@@ -589,12 +590,12 @@ export const useMemberStore = create<MemberState>((set, get) => ({
       return;
     }
 
-    console.log(`${LOG_TAG} loadPendingInvitations`, spaceId);
+    devLog(`${LOG_TAG} loadPendingInvitations`, spaceId);
     set({ loading: true, error: null });
 
     try {
       const pendingInvitations = await memberApi.getPendingInvitations(spaceId);
-      console.log(`${LOG_TAG} loadPendingInvitations success`, pendingInvitations.length);
+      devLog(`${LOG_TAG} loadPendingInvitations success`, pendingInvitations.length);
       set({ pendingInvitations, loading: false });
     } catch (err) {
       const message = getMembershipErrorMessage(
@@ -615,7 +616,7 @@ export const useMemberStore = create<MemberState>((set, get) => ({
       return null;
     }
 
-    console.log(`${LOG_TAG} inviteMember`, spaceId);
+    devLog(`${LOG_TAG} inviteMember`, spaceId);
     set({ loading: true, error: null });
 
     try {
@@ -624,7 +625,7 @@ export const useMemberStore = create<MemberState>((set, get) => ({
         spaceId,
         invitedByUserId,
       });
-      console.log(`${LOG_TAG} inviteMember success`, invitation.id);
+      devLog(`${LOG_TAG} inviteMember success`, invitation.id);
       set({ loading: false });
       await get().loadPendingInvitations();
       return invitation;
@@ -637,12 +638,12 @@ export const useMemberStore = create<MemberState>((set, get) => ({
   },
 
   cancelInvitation: async invitationId => {
-    console.log(`${LOG_TAG} cancelInvitation`, invitationId);
+    devLog(`${LOG_TAG} cancelInvitation`, invitationId);
     set({ loading: true, error: null });
 
     try {
       await memberApi.cancelInvitation(invitationId);
-      console.log(`${LOG_TAG} cancelInvitation success`);
+      devLog(`${LOG_TAG} cancelInvitation success`);
       set({ loading: false });
       await get().loadPendingInvitations();
       return true;
@@ -656,7 +657,7 @@ export const useMemberStore = create<MemberState>((set, get) => ({
 
   refresh: async () => {
     const spaceId = getCurrentSpaceId();
-    console.log(`${LOG_TAG} refresh`, spaceId);
+    devLog(`${LOG_TAG} refresh`, spaceId);
     set({ refreshing: true, error: null });
 
     if (!spaceId) {
@@ -678,7 +679,7 @@ export const useMemberStore = create<MemberState>((set, get) => ({
   },
 
   reset: () => {
-    console.log(`${LOG_TAG} reset`);
+    devLog(`${LOG_TAG} reset`);
     set({
       members: [],
       selectedMember: null,

@@ -1,0 +1,154 @@
+import fs from 'fs';
+import path from 'path';
+import { ApiError } from '../../api/types';
+import en from '../../i18n/locales/en.json';
+import {
+  isRegistrationTokenValid,
+  useRegistrationDraftStore,
+} from '../../store/registrationDraftStore';
+import {
+  formatCountdown,
+  mapOtpRequestError,
+  mapOtpVerifyError,
+  mapRegistrationTokenError,
+} from '../otpAuthErrors';
+
+jest.mock('../../i18n', () => {
+  const locale = require('../../i18n/locales/en.json');
+  const valueAt = (tree: Record<string, unknown>, keyPath: string) =>
+    keyPath.split('.').reduce<unknown>((current, segment) => {
+      if (current == null || typeof current !== 'object') {
+        return undefined;
+      }
+      return (current as Record<string, unknown>)[segment];
+    }, tree);
+
+  return {
+    i18n: {
+      t: (key: string) => valueAt(locale, key) ?? key,
+    },
+  };
+});
+
+const AUTH_API = fs.readFileSync(path.join(__dirname, '../../api/authApi.ts'), 'utf8');
+const USE_AUTH = fs.readFileSync(path.join(__dirname, '../../hooks/useAuth.ts'), 'utf8');
+const OTP_SCREEN = fs.readFileSync(
+  path.join(__dirname, '../../screens/auth/OtpScreen.tsx'),
+  'utf8',
+);
+const REGISTER_SCREEN = fs.readFileSync(
+  path.join(__dirname, '../../screens/auth/RegisterScreen.tsx'),
+  'utf8',
+);
+const PASSWORD_SCREEN = fs.readFileSync(
+  path.join(__dirname, '../../screens/auth/RegisterPasswordScreen.tsx'),
+  'utf8',
+);
+const LOGIN_SCREEN = fs.readFileSync(
+  path.join(__dirname, '../../screens/auth/LoginScreen.tsx'),
+  'utf8',
+);
+
+describe('OTP registration contract', () => {
+  beforeEach(() => {
+    useRegistrationDraftStore.getState().clear();
+  });
+
+  it('sends purpose REGISTER and does not treat verify-otp as a JWT session', () => {
+    expect(AUTH_API).toContain('payload.purpose');
+    expect(AUTH_API).toMatch(/post<ApiResponse<SendOtpResponse>>\('\/auth\/send-otp'/);
+    expect(AUTH_API).toMatch(/post<ApiResponse<VerifyOtpResponse>>\('\/auth\/verify-otp'/);
+    expect(AUTH_API).toContain('payload.verificationToken');
+    expect(USE_AUTH).toContain("purpose: 'REGISTER'");
+    const verifyHook = USE_AUTH.slice(
+      USE_AUTH.indexOf('export function useVerifyOtp'),
+      USE_AUTH.indexOf('export function useLogin'),
+    );
+    expect(verifyHook).toContain('setVerified(result.verificationToken, result.expiresIn)');
+    expect(verifyHook).not.toContain('setSession');
+    const registerHook = USE_AUTH.slice(USE_AUTH.indexOf('export function useRegister'));
+    expect(registerHook).toContain('setSession(result.user, result.accessToken)');
+  });
+
+  it('never hardcodes a client OTP bypass', () => {
+    const sources = [OTP_SCREEN, REGISTER_SCREEN, PASSWORD_SCREEN, LOGIN_SCREEN, USE_AUTH, AUTH_API];
+    for (const source of sources) {
+      expect(source).not.toMatch(/\b111111\b/);
+      expect(source).not.toMatch(/\b123456\b/);
+    }
+    expect(en.auth.otp.devHint.toLowerCase()).not.toContain('111111');
+    expect(en.auth.otp.devHint.toLowerCase()).not.toContain('123456');
+    expect(en.auth.otp.devHint.toLowerCase()).toContain('development log');
+  });
+
+  it('does not put verification tokens in navigation params', () => {
+    expect(OTP_SCREEN).not.toContain('verificationToken');
+    expect(REGISTER_SCREEN).not.toContain('verificationToken');
+    expect(PASSWORD_SCREEN).toContain('useRegistrationDraftStore');
+    const navTypes = fs.readFileSync(
+      path.join(__dirname, '../../navigation/types.ts'),
+      'utf8',
+    );
+    expect(navTypes).not.toMatch(/OtpVerification:[\s\S]{0,120}verificationToken/);
+    expect(navTypes).not.toMatch(/RegisterPassword:[\s\S]{0,120}verificationToken/);
+  });
+
+  it('stores a short-lived verification token only in memory', () => {
+    const store = useRegistrationDraftStore.getState();
+    store.beginOtp('9876543210', 300, 60);
+    expect(useRegistrationDraftStore.getState().mobileNumber).toBe('9876543210');
+    expect(useRegistrationDraftStore.getState().verificationToken).toBeNull();
+
+    store.setVerified('token-abc', 600);
+    expect(useRegistrationDraftStore.getState().verificationToken).toBe('token-abc');
+    expect(
+      isRegistrationTokenValid(
+        useRegistrationDraftStore.getState().verificationToken,
+        useRegistrationDraftStore.getState().verificationTokenExpiresAt,
+      ),
+    ).toBe(true);
+
+    store.markResent(300, 60);
+    expect(useRegistrationDraftStore.getState().verificationToken).toBeNull();
+    expect(
+      isRegistrationTokenValid('stale', Date.now() - 1000),
+    ).toBe(false);
+  });
+
+  it('maps OTP and registration token failures to user-facing copy', () => {
+    expect(mapOtpVerifyError(new ApiError('Invalid OTP', 400))).toBe(
+      en.common.errors.incorrectOtp,
+    );
+    expect(mapOtpVerifyError(new ApiError('OTP has expired. Request a new one.', 400))).toBe(
+      en.common.errors.otpExpired,
+    );
+    expect(
+      mapOtpVerifyError(new ApiError('Too many incorrect attempts. Request a new OTP.', 400)),
+    ).toBe(en.common.errors.otpMaxAttempts);
+    expect(mapOtpRequestError(new ApiError('Please wait before requesting another OTP.', 429))).toBe(
+      en.common.errors.otpCooldown,
+    );
+    expect(mapOtpRequestError(new ApiError('Too many OTP requests. Please try again later.', 429))).toBe(
+      en.common.errors.otpRateLimited,
+    );
+    expect(
+      mapRegistrationTokenError(new ApiError('Verification token has expired', 400)),
+    ).toBe(en.common.errors.registrationTokenExpired);
+    expect(mapOtpRequestError(new ApiError('Network error', 0, undefined, true))).toBe(
+      en.common.errors.network,
+    );
+  });
+
+  it('formats countdown using backend-provided remaining seconds', () => {
+    expect(formatCountdown(65)).toBe('1:05');
+    expect(formatCountdown(0)).toBe('0:00');
+  });
+
+  it('keeps login and production register on password auth without send-otp', () => {
+    expect(LOGIN_SCREEN).toMatch(/useLogin/);
+    expect(LOGIN_SCREEN).not.toMatch(/sendOtp|useSendOtp|useVerifyOtp/);
+    expect(REGISTER_SCREEN).toMatch(/useRegister/);
+    expect(REGISTER_SCREEN).not.toMatch(/sendOtp|useSendOtp|useVerifyOtp|OtpVerification/);
+    expect(USE_AUTH).toMatch(/authApi\.login\(\{ mobileNumber, password \}\)/);
+  });
+});

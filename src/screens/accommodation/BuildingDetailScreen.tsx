@@ -41,6 +41,7 @@ import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, spacing, typography } from '../../theme';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
+import { devLog } from '../../utils/devLog';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'BuildingDetail'>;
 type Route = NativeStackScreenProps<
@@ -78,7 +79,7 @@ export function BuildingDetailScreen() {
   }, [navigation, t, i18n.language]);
 
   const loadBuilding = useCallback(async () => {
-    console.log('[BuildingDetail] load', buildingId);
+    devLog('[BuildingDetail] load', buildingId);
     setLoading(true);
     setError(null);
     try {

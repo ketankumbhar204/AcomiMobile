@@ -9,29 +9,30 @@ import {
   UserSpaceResponse,
   UUID,
 } from './types';
+import { devLog } from '../utils/devLog';
 
 const LOG_TAG = '[SpaceApi]';
 
 export const spaceApi = {
   createSpace: async (payload: CreateSpaceRequest): Promise<SpaceResponse> => {
-    console.log(`${LOG_TAG} POST /spaces`, payload);
+    devLog(`${LOG_TAG} POST /spaces`, payload);
 
     const response = await unwrapApiResponse(
       apiClient.post<ApiResponse<SpaceResponse>>('/spaces', payload),
     );
 
-    console.log(`${LOG_TAG} createSpace response`, response);
+    devLog(`${LOG_TAG} createSpace response`, response);
     return response;
   },
 
   getSpaceById: async (spaceId: UUID): Promise<SpaceDetailsResponse> => {
-    console.log(`${LOG_TAG} GET /spaces/${spaceId}`);
+    devLog(`${LOG_TAG} GET /spaces/${spaceId}`);
 
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<SpaceDetailsResponse>>(`/spaces/${spaceId}`),
     );
 
-    console.log(`${LOG_TAG} getSpaceById response`, response);
+    devLog(`${LOG_TAG} getSpaceById response`, response);
     return response;
   },
 
@@ -39,7 +40,7 @@ export const spaceApi = {
     spaceId: UUID,
     payload: UpdateSpaceRequest,
   ): Promise<SpaceDetailsResponse> => {
-    console.log(`${LOG_TAG} PUT /spaces/${spaceId}`, payload);
+    devLog(`${LOG_TAG} PUT /spaces/${spaceId}`, payload);
 
     const response = await unwrapApiResponse(
       apiClient.put<ApiResponse<SpaceDetailsResponse>>(
@@ -48,12 +49,12 @@ export const spaceApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} updateSpace response`, response);
+    devLog(`${LOG_TAG} updateSpace response`, response);
     return response;
   },
 
   getUserSpaces: async (userId: UUID): Promise<UserSpaceResponse[]> => {
-    console.log(`${LOG_TAG} GET /spaces/user/${userId}`);
+    devLog(`${LOG_TAG} GET /spaces/user/${userId}`);
 
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<UserSpaceResponse[]>>(
@@ -61,17 +62,17 @@ export const spaceApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} getUserSpaces response`, response);
+    devLog(`${LOG_TAG} getUserSpaces response`, response);
     return response;
   },
 
   deactivateSpace: async (spaceId: UUID): Promise<void> => {
-    console.log(`${LOG_TAG} DELETE /spaces/${spaceId}`);
+    devLog(`${LOG_TAG} DELETE /spaces/${spaceId}`);
 
     const response = await apiClient.delete(`/spaces/${spaceId}`);
 
     if (response.status === 204) {
-      console.log(`${LOG_TAG} deactivateSpace success (204)`);
+      devLog(`${LOG_TAG} deactivateSpace success (204)`);
       return;
     }
 
@@ -80,7 +81,7 @@ export const spaceApi = {
       throw new Error(envelope.message ?? 'Failed to deactivate space');
     }
 
-    console.log(`${LOG_TAG} deactivateSpace completed`, response.status);
+    devLog(`${LOG_TAG} deactivateSpace completed`, response.status);
   },
 
   /** @deprecated Use createSpace */

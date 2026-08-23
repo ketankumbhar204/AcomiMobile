@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { accommodationApi } from '../api/accommodationApi';
 import type { DuplicateRoomRequest, DuplicateRoomResponse, UUID } from '../api/types';
 import { getAccommodationErrorMessage } from '../utils/accommodationErrors';
+import { devLog } from '../utils/devLog';
 
 export function useDuplicateRoom() {
   const [loading, setLoading] = useState(false);
@@ -13,7 +14,7 @@ export function useDuplicateRoom() {
       roomId: UUID,
       body: DuplicateRoomRequest,
     ): Promise<DuplicateRoomResponse | null> => {
-      console.log('[useDuplicateRoom]', roomId);
+      devLog('[useDuplicateRoom]', roomId);
       setLoading(true);
       setError(null);
 

@@ -12,6 +12,7 @@ import {
   accommodationInactiveScopeKey,
   mergeInactiveListItems,
 } from '../utils/accommodationInactiveRegistry';
+import { devLog } from '../utils/devLog';
 
 export function useBuildings(spaceId: UUID | null, options?: { enabled?: boolean }) {
   const enabled = options?.enabled ?? true;
@@ -37,7 +38,7 @@ export function useBuildings(spaceId: UUID | null, options?: { enabled?: boolean
 
     const seq = ++requestSeq.current;
     const queryKey = accommodationQueryKeys.buildings(spaceId);
-    console.log('[useBuildings] queryKey', queryKeyLabel(queryKey));
+    devLog('[useBuildings] queryKey', queryKeyLabel(queryKey));
 
     setLoading(true);
     setError(null);
@@ -45,7 +46,7 @@ export function useBuildings(spaceId: UUID | null, options?: { enabled?: boolean
     try {
       const data = await accommodationApi.getBuildings(spaceId);
       if (seq !== requestSeq.current) {
-        console.log('[useBuildings] stale response ignored', { spaceId });
+        devLog('[useBuildings] stale response ignored', { spaceId });
         return;
       }
       const scopeKey = accommodationInactiveScopeKey('building', { spaceId });
@@ -55,7 +56,7 @@ export function useBuildings(spaceId: UUID | null, options?: { enabled?: boolean
         building => building.buildingId,
       );
       setBuildings(merged);
-      console.log('[useBuildings] loaded', merged.length);
+      devLog('[useBuildings] loaded', merged.length);
     } catch (err) {
       if (seq !== requestSeq.current) {
         return;

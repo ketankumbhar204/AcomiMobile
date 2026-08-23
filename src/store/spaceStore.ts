@@ -17,6 +17,7 @@ import type {
 import { getSpaceErrorMessage } from '../utils/spaceErrors';
 import { resolveStartupSpace, type StartupSpaceResolution } from '../utils/resolveStartupSpace';
 import { navigateBootstrapResult } from '../navigation/navigationRef';
+import { devLog } from '../utils/devLog';
 
 const LOG_TAG = '[SpaceStore]';
 const CURRENT_SPACE_KEY = '@acomi/current_space';
@@ -177,7 +178,7 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
       }
 
       const parsed = JSON.parse(stored) as DefaultSpaceResponse;
-      console.log(`${LOG_TAG} hydrateCurrentSpace`, parsed.spaceId);
+      devLog(`${LOG_TAG} hydrateCurrentSpace`, parsed.spaceId);
       set(applyCurrentSpace(parsed));
     } catch (err) {
       console.error(`${LOG_TAG} hydrateCurrentSpace failed`, err);
@@ -186,7 +187,7 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
 
   bootstrapSpaces: async () => {
     if (get().isSpaceBootstrapping) {
-      console.log(`${LOG_TAG} bootstrapSpaces skipped — already in flight`);
+      devLog(`${LOG_TAG} bootstrapSpaces skipped — already in flight`);
       return {
         route: get().startupRoute ?? 'MySpaces',
         spaceId: get().selectedSpaceId ?? undefined,
@@ -194,19 +195,19 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
     }
 
     if (get().hasSpaceBootstrapped && get().startupRoute) {
-      console.log(`${LOG_TAG} bootstrapSpaces skipped — already resolved`);
+      devLog(`${LOG_TAG} bootstrapSpaces skipped — already resolved`);
       return {
         route: get().startupRoute,
         spaceId: get().selectedSpaceId ?? undefined,
       };
     }
 
-    console.log(`${LOG_TAG} bootstrapSpaces started`);
+    devLog(`${LOG_TAG} bootstrapSpaces started`);
     set({ isSpaceBootstrapping: true, loading: true, error: null, startupRoute: null });
 
     try {
       const resolved = await resolveStartupSpace();
-      console.log(`${LOG_TAG} bootstrapSpaces resolved`, resolved.kind);
+      devLog(`${LOG_TAG} bootstrapSpaces resolved`, resolved.kind);
 
       if (resolved.kind === 'dashboard') {
         await persistCurrentSpace(resolved.space);
@@ -238,12 +239,12 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
   },
 
   refreshStartupNavigation: async () => {
-    console.log(`${LOG_TAG} refreshStartupNavigation`);
+    devLog(`${LOG_TAG} refreshStartupNavigation`);
     set({ loading: true, error: null });
 
     try {
       const resolved = await resolveStartupSpace();
-      console.log(`${LOG_TAG} refreshStartupNavigation resolved`, resolved.kind);
+      devLog(`${LOG_TAG} refreshStartupNavigation resolved`, resolved.kind);
 
       if (resolved.kind === 'dashboard') {
         await persistCurrentSpace(resolved.space);
@@ -272,12 +273,12 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
   },
 
   loadMySpaces: async () => {
-    console.log(`${LOG_TAG} loadMySpaces started`);
+    devLog(`${LOG_TAG} loadMySpaces started`);
     set({ loading: true, error: null });
 
     try {
       const spaces = await mySpacesApi.getMySpaces();
-      console.log(`${LOG_TAG} loadMySpaces success`, spaces.length);
+      devLog(`${LOG_TAG} loadMySpaces success`, spaces.length);
       set({ mySpaces: spaces, loading: false });
     } catch (err) {
       const message = getSpaceErrorMessage(err, 'common.errors.loadSpaces');
@@ -287,12 +288,12 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
   },
 
   loadDefaultSpace: async () => {
-    console.log(`${LOG_TAG} loadDefaultSpace started`);
+    devLog(`${LOG_TAG} loadDefaultSpace started`);
     set({ loading: true, error: null });
 
     try {
       const defaultSpace = await mySpacesApi.getDefaultSpace();
-      console.log(`${LOG_TAG} loadDefaultSpace`, defaultSpace?.spaceId);
+      devLog(`${LOG_TAG} loadDefaultSpace`, defaultSpace?.spaceId);
 
       if (defaultSpace) {
         await persistCurrentSpace(defaultSpace);
@@ -316,14 +317,14 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
 
   searchSpaces: async (query: string) => {
     const trimmed = query.trim();
-    console.log(`${LOG_TAG} searchSpaces`, trimmed || '(full list)');
+    devLog(`${LOG_TAG} searchSpaces`, trimmed || '(full list)');
     set({ searching: true, error: null });
 
     try {
       const spaces = trimmed
         ? await mySpacesApi.searchMySpaces(trimmed)
         : await mySpacesApi.getMySpaces();
-      console.log(`${LOG_TAG} searchSpaces results`, spaces.length);
+      devLog(`${LOG_TAG} searchSpaces results`, spaces.length);
       set({ mySpaces: spaces, searching: false });
     } catch (err) {
       const message = getSpaceErrorMessage(err, 'common.errors.loadSpaces');
@@ -333,7 +334,7 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
   },
 
   switchSpace: async (spaceId: UUID) => {
-    console.log(`${LOG_TAG} switchSpace`, spaceId);
+    devLog(`${LOG_TAG} switchSpace`, spaceId);
     set({ loading: true, error: null });
 
     try {
@@ -357,7 +358,7 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
 
       await get().loadSpaceDetails(spaceId);
       await get().loadMySpaces();
-      console.log(`${LOG_TAG} switchSpace success`, spaceId);
+      devLog(`${LOG_TAG} switchSpace success`, spaceId);
       return true;
     } catch (err) {
       const message = getSpaceErrorMessage(err, 'common.errors.loadSpaces');
@@ -368,7 +369,7 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
   },
 
   loadSpaceDetails: async (spaceId: UUID) => {
-    console.log(`${LOG_TAG} loadSpaceDetails`, spaceId);
+    devLog(`${LOG_TAG} loadSpaceDetails`, spaceId);
     set({ loading: true, error: null });
 
     try {
@@ -389,7 +390,7 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
   },
 
   setSelectedSpace: async (space: Space) => {
-    console.log(`${LOG_TAG} setSelectedSpace`, space.id);
+    devLog(`${LOG_TAG} setSelectedSpace`, space.id);
     const currentSpace: DefaultSpaceResponse = {
       spaceId: space.id,
       spaceName: space.name,
@@ -404,7 +405,7 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
   },
 
   updateSpace: async (spaceId: UUID, payload: UpdateSpaceRequest) => {
-    console.log(`${LOG_TAG} updateSpace`, { spaceId, payload });
+    devLog(`${LOG_TAG} updateSpace`, { spaceId, payload });
     set({ loading: true, error: null });
 
     try {
@@ -444,7 +445,7 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
   },
 
   deactivateSpace: async (spaceId: UUID) => {
-    console.log(`${LOG_TAG} deactivateSpace`, spaceId);
+    devLog(`${LOG_TAG} deactivateSpace`, spaceId);
     set({ loading: true, error: null });
 
     try {
@@ -478,7 +479,7 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
   },
 
   refresh: async () => {
-    console.log(`${LOG_TAG} refresh`);
+    devLog(`${LOG_TAG} refresh`);
     const { searchQuery } = get();
     if (searchQuery.trim()) {
       await get().searchSpaces(searchQuery);
@@ -489,13 +490,13 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
   },
 
   clearSelectedSpace: async () => {
-    console.log(`${LOG_TAG} clearSelectedSpace`);
+    devLog(`${LOG_TAG} clearSelectedSpace`);
     set(applyCurrentSpace(null));
     await persistCurrentSpace(null);
   },
 
   resetSpaceSession: async () => {
-    console.log(`${LOG_TAG} resetSpaceSession`);
+    devLog(`${LOG_TAG} resetSpaceSession`);
     set({
       currentSpace: null,
       selectedSpaceId: null,

@@ -172,6 +172,34 @@ Inspected on **2026-08-12** from local clones.
 
 This is the most important operational rule set.
 
+### 4.0 Branch and data isolation (updated 2026-08-14)
+
+**Git (all three apps):**
+
+| Branch | Role |
+|--------|------|
+| `develop` | Development only. Feeds Render DEV. |
+| `production` | Permanent production release branch. Will feed Render PROD (later AWS PROD). |
+| `main` | Historical default; **not** the production release branch. |
+
+As of 2026-08-14, `production` was fast-forwarded to the ACOMI `develop` HEAD in Backend, Web, and Mobile. `develop` remains the day-to-day branch. Do not merge `production` back into `develop` automatically. Do not delete `develop`.
+
+**Databases:**
+
+| Environment | Data |
+|-------------|------|
+| Supabase DEV | Development data only |
+| Supabase PROD | Production data only — **independent project/database**, never a copy-in-place of DEV |
+
+**Portability:** application compute (Render today, AWS later) is replaceable. Supabase PROD stays the same production database:
+
+```
+Git production → Render PROD → Supabase PROD
+Git production → AWS PROD    → SAME Supabase PROD
+```
+
+DEV Render/Supabase must not be deleted until production is fully validated.
+
 ### 4.1 Comparison table
 
 | Area | Develop | Production |
@@ -273,7 +301,7 @@ Do **not** commit values. Do **not** put them in the Dockerfile.
 
 | Property | Notes |
 |----------|-------|
-| `acomi.otp.mvp-code` | MVP fixed OTP code lives in `application.yml`. Treat as non-production auth shortcut. Do not log it. Replace with a real OTP provider before hardening production auth. |
+| `OTP_HASH_SECRET` | HMAC secret for hashing OTPs (≥ 32 characters). Required at backend startup even though OTP is not used in the current production UI. Production sender is `none`. There is no `mvp-code` / hardcoded OTP. |
 
 **Local-only defaults warning:** `application-local.yml` contains local developer defaults for DB password and JWT secret so laptops can boot without exporting env vars. Those defaults must **never** be copied into Render or Supabase production/develop dashboards as “the” secret.
 

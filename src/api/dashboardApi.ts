@@ -15,6 +15,7 @@ import {
   normalizeDashboardSummary,
   normalizePaymentLedger,
 } from '../utils/normalizeDashboardSummary';
+import { devLog } from '../utils/devLog';
 
 const LOG_TAG = '[DashboardApi]';
 
@@ -39,7 +40,7 @@ export const dashboardApi = {
     month = currentMonthKey(),
   ): Promise<DashboardSummaryResponse> => {
     const path = `/spaces/${spaceId}/dashboard-summary?month=${month}`;
-    console.log(`${LOG_TAG} GET ${path}`);
+    devLog(`${LOG_TAG} GET ${path}`);
     // Pending Actions is the Action Center SoT — no client-side attention fallback.
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<DashboardSummaryResponse>>(path, {
@@ -55,7 +56,7 @@ export const dashboardApi = {
     month = currentMonthKey(),
   ): Promise<MemberPaymentLedgerResponse> => {
     const path = `/spaces/${spaceId}/payments/ledger?month=${month}`;
-    console.log(`${LOG_TAG} GET ${path}`);
+    devLog(`${LOG_TAG} GET ${path}`);
 
     try {
       const response = await unwrapApiResponse(
@@ -66,7 +67,7 @@ export const dashboardApi = {
       if (!shouldUseLedgerFallback(error)) {
         throw error;
       }
-      console.log(`${LOG_TAG} payments ledger unavailable, using client fallback`, error);
+      devLog(`${LOG_TAG} payments ledger unavailable, using client fallback`, error);
       return buildMemberPaymentLedgerFallback(spaceId, spaceType, month);
     }
   },
@@ -76,7 +77,7 @@ export const dashboardApi = {
     sync = true,
   ): Promise<GlobalDashboardResponse> => {
     const path = `/dashboard/global?month=${encodeURIComponent(month)}&sync=${sync}`;
-    console.log(`${LOG_TAG} GET ${path}`);
+    devLog(`${LOG_TAG} GET ${path}`);
     return unwrapApiResponse(
       apiClient.get<ApiResponse<GlobalDashboardResponse>>(path, {
         timeout: GLOBAL_DASHBOARD_TIMEOUT_MS,

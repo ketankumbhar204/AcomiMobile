@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import {
   Keyboard,
   Pressable,
@@ -17,9 +17,12 @@ import { Pencil, ShieldCheck, TriangleAlert } from 'lucide-react-native';
 import { AuthHero } from '../../components/auth';
 import { StickyFormActions } from '../../components/progressive';
 import { HeaderBackButton, OtpInput } from '../../components/ui';
-import { useVerifyOtp } from '../../hooks/useAuth';
+import { useCountdown } from '../../hooks/useCountdown';
+import { useSendOtp, useVerifyOtp } from '../../hooks/useAuth';
 import type { AuthStackParamList } from '../../navigation/types';
+import { useRegistrationDraftStore } from '../../store/registrationDraftStore';
 import { colors, shadows, spacing, typography } from '../../theme';
+import { formatCountdown } from '../../utils/otpAuthErrors';
 
 type OtpNav = NativeStackNavigationProp<AuthStackParamList, 'OtpVerification'>;
 type OtpRoute = NativeStackScreenProps<AuthStackParamList, 'OtpVerification'>['route'];
@@ -31,9 +34,26 @@ export function OtpScreen() {
   const { mobileNumber } = route.params;
 
   const { verifyOtp, isLoading, error, clearError } = useVerifyOtp();
-  const [otp, setOtp] = useState('');
+  const { sendOtp, isLoading: isResending } = useSendOtp();
+  const otpSentAt = useRegistrationDraftStore(state => state.otpSentAt);
+  const expiresIn = useRegistrationDraftStore(state => state.expiresIn);
+  const resendAfter = useRegistrationDraftStore(state => state.resendAfter);
+  const clearDraft = useRegistrationDraftStore(state => state.clear);
 
+  const [otp, setOtp] = useState('');
   const isComplete = otp.length === 6;
+  const busy = isLoading || isResending;
+
+  const otpDeadline = useMemo(
+    () => (otpSentAt != null && expiresIn != null ? otpSentAt + expiresIn * 1000 : null),
+    [expiresIn, otpSentAt],
+  );
+  const resendDeadline = useMemo(
+    () => (otpSentAt != null && resendAfter != null ? otpSentAt + resendAfter * 1000 : null),
+    [otpSentAt, resendAfter],
+  );
+  const otpRemaining = useCountdown(otpDeadline);
+  const resendRemaining = useCountdown(resendDeadline);
 
   const headerLeft = useCallback(() => <HeaderBackButton />, []);
 
@@ -48,13 +68,36 @@ export function OtpScreen() {
   async function handleVerify() {
     Keyboard.dismiss();
     clearError();
-
     if (!isComplete) {
       return;
     }
-
-    await verifyOtp(mobileNumber, otp);
+    const result = await verifyOtp(mobileNumber, otp);
+    if (result?.verified) {
+      navigation.navigate('RegisterPassword', { mobileNumber });
+    }
   }
+
+  async function handleResend() {
+    clearError();
+    setOtp('');
+    const result = await sendOtp(mobileNumber);
+    if (result) {
+      Keyboard.dismiss();
+    }
+  }
+
+  function handleChangeNumber() {
+    if (busy) {
+      return;
+    }
+    clearDraft();
+    navigation.navigate('Register');
+  }
+
+  const resendLabel =
+    resendRemaining > 0
+      ? t('auth.otp.resendIn', { time: formatCountdown(resendRemaining) })
+      : t('auth.otp.resend');
 
   return (
     <View style={styles.flex}>
@@ -79,9 +122,7 @@ export function OtpScreen() {
         ) : null}
 
         <View style={styles.otpCard}>
-          <Text style={styles.otpLabel}>
-            {t('auth.otp.codeLabel', { defaultValue: '6-digit code' })}
-          </Text>
+          <Text style={styles.otpLabel}>{t('auth.otp.codeLabel')}</Text>
           <OtpInput
             value={otp}
             onChange={value => {
@@ -90,8 +131,15 @@ export function OtpScreen() {
                 clearError();
               }
             }}
-            disabled={isLoading}
+            disabled={busy}
           />
+          {otpDeadline != null ? (
+            <Text style={styles.timerText}>
+              {otpRemaining > 0
+                ? t('auth.otp.expiresIn', { time: formatCountdown(otpRemaining) })
+                : t('auth.otp.expiredHint')}
+            </Text>
+          ) : null}
           {__DEV__ ? (
             <View style={styles.devHint}>
               <Text style={styles.devHintText}>{t('auth.otp.devHint')}</Text>
@@ -101,8 +149,8 @@ export function OtpScreen() {
 
         <Pressable
           style={({ pressed }) => [styles.changeRow, pressed && styles.changeRowPressed]}
-          onPress={() => !isLoading && navigation.goBack()}
-          disabled={isLoading}
+          onPress={handleChangeNumber}
+          disabled={busy}
           accessibilityRole="button"
           accessibilityLabel={t('auth.otp.changeIt')}>
           <Pencil size={14} color={colors.primaryDark} strokeWidth={2.2} />
@@ -116,9 +164,19 @@ export function OtpScreen() {
       <StickyFormActions
         primary={{
           label: t('auth.otp.verifyContinue'),
-          onPress: () => void handleVerify(),
+          onPress: () => {
+            handleVerify();
+          },
           loading: isLoading,
-          disabled: isLoading || !isComplete,
+          disabled: busy || !isComplete,
+        }}
+        secondary={{
+          label: resendLabel,
+          onPress: () => {
+            handleResend();
+          },
+          loading: isResending,
+          disabled: busy || resendRemaining > 0,
         }}
       />
     </View>
@@ -171,6 +229,11 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.4,
   },
+  timerText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
   devHint: {
     padding: spacing.sm,
     backgroundColor: '#FFF7ED',
@@ -183,6 +246,7 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: '#C2410C',
     fontWeight: '600',
+    textAlign: 'center',
   },
   changeRow: {
     marginTop: spacing.lg,

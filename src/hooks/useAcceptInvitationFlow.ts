@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/authStore';
 import { useSpaceStore } from '../store/spaceStore';
 import { getMembershipErrorMessage } from '../utils/membershipErrors';
 import { requiresProfileCompletion } from '../utils/profileCompletion';
+import { devLog } from '../utils/devLog';
 
 const LOG_TAG = '[AcceptInvitation]';
 
@@ -32,7 +33,7 @@ export function useAcceptInvitationFlow(): UseAcceptInvitationFlowResult {
         return null;
       }
 
-      console.log(`${LOG_TAG} started`, invitationId);
+      devLog(`${LOG_TAG} started`, invitationId);
       setIsSubmitting(true);
       setError(null);
 
@@ -40,7 +41,7 @@ export function useAcceptInvitationFlow(): UseAcceptInvitationFlowResult {
         const membership = await memberApi.acceptInvitation(invitationId, {
           userId,
         });
-        console.log(`${LOG_TAG} success`, membership.spaceId);
+        devLog(`${LOG_TAG} success`, membership.spaceId);
 
         await loadMySpaces();
         const refreshedUser = (await refreshUser()) ?? user;

@@ -35,6 +35,7 @@ import { buildUnitOccupancyTarget, isOccupancyTargetSupported } from '../../util
 import { renameUnitName } from '../../utils/accommodationInlineRename';
 import { useToastStore } from '../../store/toastStore';
 import { useAccommodationUiProfile } from '../../hooks/useAccommodationUiProfile';
+import { devLog } from '../../utils/devLog';
 
 type UnitsNav = NativeStackNavigationProp<MainStackParamList, 'Units'>;
 type UnitsRoute = NativeStackScreenProps<MainStackParamList, 'Units'>['route'];
@@ -100,20 +101,20 @@ export function UnitsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      console.log('[UnitsScreen] focused', { spaceId, buildingId });
+      devLog('[UnitsScreen] focused', { spaceId, buildingId });
       void refresh();
     }, [buildingId, refresh, spaceId]),
   );
 
   const onRefresh = useCallback(async () => {
-    console.log('[UnitsScreen] pull to refresh');
+    devLog('[UnitsScreen] pull to refresh');
     setRefreshing(true);
     await refresh();
     setRefreshing(false);
   }, [refresh]);
 
   const openUnit = (unit: UnitListItemResponse) => {
-    console.log('[UnitsScreen] open unit', unit.unitId);
+    devLog('[UnitsScreen] open unit', unit.unitId);
 
     if (isRental || !profile?.showRoomsUnderUnit) {
       navigation.navigate('UnitDetail', {

@@ -1,5 +1,5 @@
 import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Linking, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +10,7 @@ import {
   Languages,
   LogOut,
   SquarePen,
+  Trash2,
   TriangleAlert,
   UserRound,
 } from 'lucide-react-native';
@@ -33,6 +34,7 @@ import {
   useConfirmDialog,
 } from '../components/ui';
 import { useAuthenticatedUser } from '../hooks/useAuth';
+import { useDeleteAccount } from '../hooks/useDeleteAccount';
 import { useLogout } from '../hooks/useLogout';
 import type { AppLanguage } from '../i18n';
 import type { MainStackParamList } from '../navigation/types';
@@ -40,6 +42,7 @@ import { useAuthStore } from '../store/authStore';
 import { useMemberStore } from '../store/memberStore';
 import { useSpaceStore } from '../store/spaceStore';
 import { useToastStore } from '../store/toastStore';
+import { env } from '../config/env';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 import { buildCompleteProfilePayloadFromUser } from '../utils/buildCompleteProfilePayload';
 import { invalidateDashboardQueries } from '../utils/dashboardQueryCache';
@@ -77,6 +80,7 @@ export function ProfileScreen() {
   const refreshUser = useAuthStore(state => state.refreshUser);
   const updateUser = useAuthStore(state => state.updateUser);
   const logout = useLogout();
+  const { deleteAccount, isDeleting } = useDeleteAccount();
   const { showConfirm } = useConfirmDialog();
   const showToast = useToastStore(state => state.showToast);
   const selectedSpaceId = useSpaceStore(state => state.selectedSpaceId);
@@ -288,6 +292,26 @@ export function ProfileScreen() {
     });
   };
 
+  const handleDeleteAccount = () => {
+    showConfirm({
+      title: t('settings.profile.deleteAccountTitle'),
+      message: t('settings.profile.deleteAccountMessage'),
+      confirmLabel: t('settings.profile.deleteAccountConfirm'),
+      destructive: true,
+      onConfirm: async () => {
+        await deleteAccount();
+      },
+    });
+  };
+
+  const handleOpenPrivacyPolicy = async () => {
+    try {
+      await Linking.openURL(env.privacyPolicyUrl);
+    } catch {
+      showToast(t('common.errors.generic'));
+    }
+  };
+
   const completionPercent = profileCompletionPercentage(user);
   const profileStatusLabel = user?.profileStatus
     ? t(`settings.profile.profileStatus.${user.profileStatus}`)
@@ -476,12 +500,32 @@ export function ProfileScreen() {
         </SettingsGroupCard>
 
         <Button
+          label={t('settings.profile.privacyPolicy')}
+          variant="ghost"
+          icon={FileText}
+          onPress={() => {
+            void handleOpenPrivacyPolicy();
+          }}
+          disabled={isDeleting || isLoggingOut}
+        />
+
+        <Button
+          label={t('settings.profile.deleteAccount')}
+          variant="ghost"
+          icon={Trash2}
+          onPress={handleDeleteAccount}
+          loading={isDeleting}
+          disabled={isDeleting || isLoggingOut}
+          style={styles.deleteAccountButton}
+        />
+
+        <Button
           label={t('settings.profile.logout')}
           variant="ghost"
           icon={LogOut}
           onPress={handleLogout}
           loading={isLoggingOut}
-          disabled={isLoggingOut}
+          disabled={isLoggingOut || isDeleting}
           style={styles.logoutButton}
         />
       </Screen>
@@ -574,6 +618,13 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   logoutButton: {
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    marginTop: spacing.sm,
+    backgroundColor: '#FEF2F2',
+    ...shadows.sm,
+  },
+  deleteAccountButton: {
     borderWidth: 1,
     borderColor: '#FECACA',
     marginTop: spacing.sm,

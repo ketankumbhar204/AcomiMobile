@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useConfirmDialog } from '../components/ui/ConfirmDialog';
 import type { MainStackParamList } from '../navigation/types';
 import { useSpaceStore } from '../store/spaceStore';
+import { devLog } from '../utils/devLog';
 
 type MainNav = NativeStackNavigationProp<MainStackParamList>;
 
@@ -23,7 +24,7 @@ export function useDeactivateSpace() {
         confirmLabel: t('spaces.details.deactivateConfirm'),
         destructive: true,
         onConfirm: async () => {
-          console.log('[DeactivateSpace] confirmed', spaceId);
+          devLog('[DeactivateSpace] confirmed', spaceId);
           const success = await deactivateSpace(spaceId);
           if (success) {
             navigation.navigate('MySpaces');

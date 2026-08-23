@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { accommodationApi } from '../api/accommodationApi';
 import type { BulkCreateUnitsRequest, BulkCreateUnitsResponse, UUID } from '../api/types';
 import { getAccommodationErrorMessage } from '../utils/accommodationErrors';
+import { devLog } from '../utils/devLog';
 
 export function useBulkUnits() {
   const [loading, setLoading] = useState(false);
@@ -13,7 +14,7 @@ export function useBulkUnits() {
       buildingId: UUID,
       body: BulkCreateUnitsRequest,
     ): Promise<BulkCreateUnitsResponse | null> => {
-      console.log('[useBulkUnits]', buildingId, body);
+      devLog('[useBulkUnits]', buildingId, body);
       setLoading(true);
       setError(null);
 

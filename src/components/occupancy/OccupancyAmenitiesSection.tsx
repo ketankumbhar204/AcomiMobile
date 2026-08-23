@@ -5,7 +5,8 @@ import type { AmenityAssignment } from '../../api/types';
 import {
   amenityKey,
   isAmenitySelected,
-  presetAmenityLabelKey,
+  PRESET_AMENITY_LABELS,
+  resolvePresetAmenityLabel,
   toggleAssignedAmenity,
   type AmenityCode,
 } from '../../utils/amenities';
@@ -67,7 +68,10 @@ export function OccupancyAmenitiesSection({
     if (amenity.code === 'CUSTOM') {
       return amenity.label;
     }
-    return t(presetAmenityLabelKey(amenity.code as AmenityCode));
+    if (amenity.code in PRESET_AMENITY_LABELS) {
+      return resolvePresetAmenityLabel(amenity.code as Exclude<AmenityCode, 'CUSTOM'>, t);
+    }
+    return amenity.label;
   }
 
   return (

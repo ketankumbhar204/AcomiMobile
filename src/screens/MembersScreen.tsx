@@ -59,6 +59,7 @@ import {
 } from '../utils/memberListQuery';
 import { shouldUseFilterDrawer } from '../utils/filterUx';
 import { isAccommodationApplicable } from '../utils/accommodationProfile';
+import { devLog } from '../utils/devLog';
 
 type MembersNavigation = CompositeNavigationProp<
   BottomTabNavigationProp<SpaceTabParamList, 'Members'>,
@@ -215,7 +216,7 @@ export function MembersScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      console.log('[MembersScreen] focused', spaceId);
+      devLog('[MembersScreen] focused', spaceId);
       loadMembers();
       loadPendingInvitations();
       void reloadParticipations();
@@ -223,13 +224,13 @@ export function MembersScreen() {
   );
 
   const onRefresh = useCallback(async () => {
-    console.log('[MembersScreen] pull to refresh');
+    devLog('[MembersScreen] pull to refresh');
     await refresh();
     await reloadParticipations();
   }, [refresh, reloadParticipations]);
 
   const openMemberDetails = (member: MemberResponse) => {
-    console.log('[MembersScreen] open member details', member.memberId);
+    devLog('[MembersScreen] open member details', member.memberId);
     navigation.navigate('MemberDetails', {
       spaceId,
       memberId: member.memberId,
@@ -243,7 +244,7 @@ export function MembersScreen() {
       confirmLabel: t('membership.cancel.confirm'),
       destructive: true,
       onConfirm: async () => {
-        console.log('[MembersScreen] cancel invitation', invitation.invitationId);
+        devLog('[MembersScreen] cancel invitation', invitation.invitationId);
         await cancelInvitation(invitation.invitationId);
       },
     });

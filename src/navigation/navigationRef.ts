@@ -6,6 +6,7 @@ import { useSpaceStore } from '../store/spaceStore';
 import { findMySpaceEntry, resolveSpacePermissions } from '../utils/spacePermissions';
 import type { RootStackParamList, SpaceTabParamList } from './types';
 import type { SpaceBootstrapResult } from '../store/spaceStore';
+import { devLog } from '../utils/devLog';
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
@@ -128,7 +129,7 @@ export function navigateToPaymentsTab(
 
 /** Clears accommodation drill-down stack and lands on the Accommodation tab. */
 export function resetToAccommodationHome(spaceId: string): void {
-  console.log('[navigation] resetToAccommodationHome', spaceId);
+  devLog('[navigation] resetToAccommodationHome', spaceId);
   navigateToSpaceTabs(spaceId, {
     screen: 'Accommodation',
     params: { spaceId },

@@ -10,6 +10,7 @@ import { resetToMySpaces } from '../../navigation/navigationRef';
 import type { MainStackParamList } from '../../navigation/types';
 import { spacing } from '../../theme';
 import { ChevronLeftIcon } from './icons/ChevronLeftIcon';
+import { devLog } from '../../utils/devLog';
 
 type MainNav = NativeStackNavigationProp<MainStackParamList>;
 
@@ -43,12 +44,12 @@ export function SpaceTabBackButton() {
       navigation.getParent<MainNav>() ?? (navigation as MainNav);
 
     if (stackNavigation?.navigate) {
-      console.log('[SpaceTabBackButton] navigate MySpaces');
+      devLog('[SpaceTabBackButton] navigate MySpaces');
       stackNavigation.navigate('MySpaces');
       return;
     }
 
-    console.log('[SpaceTabBackButton] reset MySpaces');
+    devLog('[SpaceTabBackButton] reset MySpaces');
     resetToMySpaces();
   };
 

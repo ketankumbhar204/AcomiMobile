@@ -1,17 +1,18 @@
 import apiClient from './client';
 import { unwrapVoidResponse } from './apiRequest';
 import type { UUID } from './types';
+import { devLog } from '../utils/devLog';
 
 const LOG_TAG = '[AccommodationLifecycleAPI]';
 
 async function postLifecycle(path: string): Promise<void> {
-  console.log(`${LOG_TAG} POST ${path}`);
+  devLog(`${LOG_TAG} POST ${path}`);
 
   await unwrapVoidResponse(
     apiClient.post(path),
   );
 
-  console.log(`${LOG_TAG} success ${path}`);
+  devLog(`${LOG_TAG} success ${path}`);
 }
 
 export const accommodationLifecycleApi = {

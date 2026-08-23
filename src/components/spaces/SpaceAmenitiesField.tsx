@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState, type ComponentType } from 
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import {
+  BedDouble,
   BatteryCharging,
   BrushCleaning,
   Camera,
@@ -11,6 +12,7 @@ import {
   GlassWater,
   Plus,
   Refrigerator,
+  Shirt,
   SquareCheck,
   UtensilsCrossed,
   WashingMachine,
@@ -24,7 +26,7 @@ import {
   amenityKey,
   buildAllPresetAmenities,
   normalizeAmenityAssignments,
-  presetAmenityLabelKey,
+  resolvePresetAmenityLabel,
   type AmenityCode,
 } from '../../utils/amenities';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
@@ -54,6 +56,8 @@ const AMENITY_ICON: Record<AmenityCode, ComponentType<IconProps>> = {
   CCTV: Camera,
   POWER_BACKUP: BatteryCharging,
   RO_WATER: GlassWater,
+  BEDS: BedDouble,
+  WARDROBE: Shirt,
   CUSTOM: Plus,
 };
 
@@ -127,7 +131,7 @@ export function SpaceAmenitiesField({
   const allToggleable = useMemo(
     () =>
       normalizeAmenityAssignments([
-        ...buildAllPresetAmenities(code => t(presetAmenityLabelKey(code))),
+        ...buildAllPresetAmenities(code => resolvePresetAmenityLabel(code, t)),
         ...customAmenities,
       ]),
     [customAmenities, t],
@@ -154,7 +158,7 @@ export function SpaceAmenitiesField({
       return;
     }
     hasAppliedDefaultRef.current = true;
-    onChange(buildAllPresetAmenities(code => t(presetAmenityLabelKey(code))));
+    onChange(buildAllPresetAmenities(code => resolvePresetAmenityLabel(code, t)));
   }, [disabled, onChange, selectAllByDefault, t, value.length]);
 
   function toggleAll() {
@@ -168,7 +172,7 @@ export function SpaceAmenitiesField({
     onChange(allToggleable);
   }
 
-  function togglePreset(code: AmenityCode) {
+  function togglePreset(code: Exclude<AmenityCode, 'CUSTOM'>) {
     if (disabled) {
       return;
     }
@@ -182,7 +186,7 @@ export function SpaceAmenitiesField({
     onChange(
       normalizeAmenityAssignments([
         ...value,
-        { code, label: t(presetAmenityLabelKey(code)) },
+        { code, label: resolvePresetAmenityLabel(code, t) },
       ]),
     );
   }
@@ -247,7 +251,7 @@ export function SpaceAmenitiesField({
         {PRESET_AMENITY_CODES.map(code => (
           <AmenityTile
             key={code}
-            label={t(presetAmenityLabelKey(code))}
+            label={resolvePresetAmenityLabel(code, t)}
             checked={selectedKeys.has(code)}
             disabled={disabled}
             onToggle={() => togglePreset(code)}

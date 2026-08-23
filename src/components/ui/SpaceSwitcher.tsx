@@ -12,6 +12,7 @@ import { useSpaceStore } from '../../store/spaceStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { invalidateAccommodationQueries } from '../../utils/accommodationQueryCache';
 import { formatSpaceDisplayName } from '../../utils/spaceLabels';
+import { devLog } from '../../utils/devLog';
 
 type SpaceSwitcherProps = {
   spaceId: string;
@@ -47,18 +48,18 @@ export function SpaceSwitcher({ spaceId }: SpaceSwitcherProps) {
 
   const toggleSwitcher = async () => {
     if (isOpen) {
-      console.log('[SpaceSwitcher] close');
+      devLog('[SpaceSwitcher] close');
       setIsOpen(false);
       return;
     }
 
-    console.log('[SpaceSwitcher] open');
+    devLog('[SpaceSwitcher] open');
     await loadMySpaces();
     setIsOpen(true);
   };
 
   const handleSelect = async (selectedSpaceId: string) => {
-    console.log('[SpaceSwitcher] select', selectedSpaceId);
+    devLog('[SpaceSwitcher] select', selectedSpaceId);
     setIsOpen(false);
 
     if (selectedSpaceId === currentSpace?.spaceId) {

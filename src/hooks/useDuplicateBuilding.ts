@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { accommodationApi } from '../api/accommodationApi';
 import type { DuplicateBuildingRequest, DuplicateBuildingResponse, UUID } from '../api/types';
 import { getAccommodationErrorMessage } from '../utils/accommodationErrors';
+import { devLog } from '../utils/devLog';
 
 export function useDuplicateBuilding() {
   const [loading, setLoading] = useState(false);
@@ -13,7 +14,7 @@ export function useDuplicateBuilding() {
       buildingId: UUID,
       body: DuplicateBuildingRequest,
     ): Promise<DuplicateBuildingResponse | null> => {
-      console.log('[useDuplicateBuilding]', buildingId);
+      devLog('[useDuplicateBuilding]', buildingId);
       setLoading(true);
       setError(null);
 

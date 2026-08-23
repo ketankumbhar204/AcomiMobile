@@ -20,6 +20,7 @@ import { ApiError } from './types';
 import { dashboardApi } from './dashboardApi';
 import { computeOwnerPaymentCounts } from '../utils/ownerPaymentFilters';
 import { normalizePaymentLedger } from '../utils/normalizeDashboardSummary';
+import { devLog } from '../utils/devLog';
 
 const LOG_TAG = '[PaymentsApi]';
 
@@ -86,7 +87,7 @@ export const paymentsApi = {
   ): Promise<SpacePaymentListResponse> => {
     const query = buildQuery(params);
     const path = `/spaces/${spaceId}/payments${query}`;
-    console.log(`${LOG_TAG} GET ${path}`);
+    devLog(`${LOG_TAG} GET ${path}`);
 
     try {
       return await unwrapApiResponse(
@@ -99,7 +100,7 @@ export const paymentsApi = {
 
   getPayment: async (spaceId: UUID, paymentId: UUID): Promise<SpacePaymentResponse> => {
     const path = `/spaces/${spaceId}/payments/${paymentId}`;
-    console.log(`${LOG_TAG} GET ${path}`);
+    devLog(`${LOG_TAG} GET ${path}`);
 
     try {
       return await unwrapApiResponse(
@@ -116,7 +117,7 @@ export const paymentsApi = {
     body: SubmitPaymentProofRequest,
   ): Promise<SpacePaymentResponse> => {
     const path = `/spaces/${spaceId}/payments/${paymentId}/proof`;
-    console.log(`${LOG_TAG} POST ${path}`);
+    devLog(`${LOG_TAG} POST ${path}`);
 
     try {
       return await unwrapApiResponse(
@@ -133,7 +134,7 @@ export const paymentsApi = {
     body: ReviewPaymentRequest,
   ): Promise<SpacePaymentResponse> => {
     const path = `/spaces/${spaceId}/payments/${paymentId}/review`;
-    console.log(`${LOG_TAG} POST ${path}`, body);
+    devLog(`${LOG_TAG} POST ${path}`, body);
 
     try {
       return await unwrapApiResponse(
@@ -149,7 +150,7 @@ export const paymentsApi = {
     paymentId: UUID,
   ): Promise<PaymentTimelineResponse> => {
     const path = `/spaces/${spaceId}/payments/${paymentId}/timeline`;
-    console.log(`${LOG_TAG} GET ${path}`);
+    devLog(`${LOG_TAG} GET ${path}`);
 
     try {
       return await unwrapApiResponse(
@@ -165,7 +166,7 @@ export const paymentsApi = {
     month: string,
   ): Promise<PaymentsSummaryResponse> => {
     const path = `/spaces/${spaceId}/payments/summary?month=${encodeURIComponent(month)}`;
-    console.log(`${LOG_TAG} GET ${path}`);
+    devLog(`${LOG_TAG} GET ${path}`);
     try {
       const response = await unwrapApiResponse(
         apiClient.get<ApiResponse<PaymentsSummaryResponse>>(path, {
@@ -223,7 +224,7 @@ export const paymentsApi = {
       parts.push(`sort=${encodeURIComponent(params.sort)}`);
     }
     const path = `/spaces/${spaceId}/payments/members?${parts.join('&')}`;
-    console.log(`${LOG_TAG} GET ${path}`);
+    devLog(`${LOG_TAG} GET ${path}`);
     try {
       return await unwrapApiResponse(
         apiClient.get<ApiResponse<PaymentsMembersPageResponse>>(path, {
@@ -255,7 +256,7 @@ export const paymentsApi = {
       parts.push(`size=${params.size}`);
     }
     const path = `/spaces/${spaceId}/payments/review?${parts.join('&')}`;
-    console.log(`${LOG_TAG} GET ${path}`);
+    devLog(`${LOG_TAG} GET ${path}`);
     try {
       return await unwrapApiResponse(
         apiClient.get<ApiResponse<PaymentsCardsPageResponse>>(path),
@@ -285,7 +286,7 @@ export const paymentsApi = {
       parts.push(`size=${params.size}`);
     }
     const path = `/spaces/${spaceId}/payments/history?${parts.join('&')}`;
-    console.log(`${LOG_TAG} GET ${path}`);
+    devLog(`${LOG_TAG} GET ${path}`);
     try {
       return await unwrapApiResponse(
         apiClient.get<ApiResponse<PaymentsCardsPageResponse>>(path),
@@ -298,7 +299,7 @@ export const paymentsApi = {
   /** Explicit write command — not used on default screen open. */
   syncPaymentsMonth: async (spaceId: UUID, month: string): Promise<void> => {
     const path = `/spaces/${spaceId}/payments/sync?month=${encodeURIComponent(month)}`;
-    console.log(`${LOG_TAG} POST ${path}`);
+    devLog(`${LOG_TAG} POST ${path}`);
     try {
       await unwrapApiResponse(apiClient.post<ApiResponse<Record<string, string>>>(path, {}));
     } catch (error) {
@@ -319,13 +320,13 @@ export const paymentsApi = {
     const inflightKey = `${spaceId}|${month}|${sync ? '1' : '0'}`;
     const existing = ownerMonthInflight.get(inflightKey);
     if (existing) {
-      console.log(`${LOG_TAG} owner-month join-in-flight ${inflightKey}`);
+      devLog(`${LOG_TAG} owner-month join-in-flight ${inflightKey}`);
       return existing;
     }
 
     const syncQuery = sync ? '' : '&sync=false';
     const path = `/spaces/${spaceId}/payments/owner-month?month=${encodeURIComponent(month)}${syncQuery}`;
-    console.log(`${LOG_TAG} GET ${path}`);
+    devLog(`${LOG_TAG} GET ${path}`);
 
     const promise = (async (): Promise<OwnerPaymentsMonthResponse> => {
       try {
@@ -351,7 +352,7 @@ export const paymentsApi = {
       } catch (error) {
         // Only legacy-fallback when the new route literally does not exist.
         if (isEndpointMissing(error)) {
-          console.log(`${LOG_TAG} owner-month 404 — coordinating ledger + list`);
+          devLog(`${LOG_TAG} owner-month 404 — coordinating ledger + list`);
           return paymentsApi.getOwnerPaymentsMonthLegacy(spaceId, spaceType, month, sync);
         }
         rethrowUnlessUnavailable(error);

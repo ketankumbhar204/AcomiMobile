@@ -10,6 +10,7 @@ import {
   HeaderOverflowMenu,
   type HeaderOverflowMenuItem,
 } from './HeaderOverflowMenu';
+import { devLog } from '../../utils/devLog';
 
 type MainNav = NativeStackNavigationProp<MainStackParamList>;
 
@@ -34,7 +35,7 @@ export function SpaceHeaderMenu({ spaceId }: SpaceHeaderMenuProps) {
         id: 'space-details',
         label: t('navigation.spaceDetails'),
         onPress: () => {
-          console.log('[SpaceHeaderMenu] navigate SpaceDetails', spaceId);
+          devLog('[SpaceHeaderMenu] navigate SpaceDetails', spaceId);
           stackNavigation.navigate('SpaceDetails', { spaceId });
         },
       },
@@ -43,7 +44,7 @@ export function SpaceHeaderMenu({ spaceId }: SpaceHeaderMenuProps) {
         label: t('navigation.editSpace'),
         visible: owner,
         onPress: () => {
-          console.log('[SpaceHeaderMenu] navigate EditSpace', spaceId);
+          devLog('[SpaceHeaderMenu] navigate EditSpace', spaceId);
           stackNavigation.navigate('EditSpace', { spaceId });
         },
       },

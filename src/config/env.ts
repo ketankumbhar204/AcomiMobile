@@ -8,11 +8,11 @@ const CURRENT_ENV: Environment =
   (__DEV__ ? 'development' : 'production') as Environment;
 
 /**
- * Develop builds (`__DEV__`) talk to the Render develop Backend by default.
- * Set to `true` only when debugging against a Backend on this machine (:8080).
+ * Develop branch / `__DEV__` builds talk to the Backend on this machine (:8080).
+ * Set to `false` only when you intentionally want the Render develop host.
  * Release builds never use this flag — they always use the production host map.
  */
-const USE_LOCAL_DEV_BACKEND = false;
+const USE_LOCAL_DEV_BACKEND = true;
 
 /** Render develop Backend host (no `/api/v1` — appended once in `env.apiBaseUrl`). */
 const RENDER_DEV_API_HOST = 'https://acomibackend.onrender.com';
@@ -48,11 +48,13 @@ function developmentApiHost(): string {
 const API_HOSTS: Record<Environment, string> = {
   development: developmentApiHost(),
   staging: 'https://staging-api.acomi.app',
-  production: 'https://api.acomi.app',
+  production: 'https://api.acomi.in',
 };
 
 export const env = {
   environment: CURRENT_ENV,
   apiBaseUrl: `${API_HOSTS[CURRENT_ENV]}/api/v1`,
   apiTimeoutMs: 30_000,
+  privacyPolicyUrl: 'https://app.acomi.in/privacy',
+  accountDeletionUrl: 'https://app.acomi.in/delete-account',
 } as const;

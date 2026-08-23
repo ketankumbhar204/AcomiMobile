@@ -1056,18 +1056,50 @@ export interface AcceptInvitationRequest {
 
 // ─── Auth types ────────────────────────────────────────────────────────────
 
+export type OtpPurpose = 'REGISTER' | 'ACCOUNT_DELETION';
+
 export interface SendOtpRequest {
   mobileNumber: string;
+  purpose: OtpPurpose;
 }
 
 export interface SendOtpResponse {
   mobileNumber: string;
+  purpose: OtpPurpose;
+  expiresIn: number;
+  resendAfter: number;
   message: string;
 }
 
 export interface VerifyOtpRequest {
   mobileNumber: string;
   otp: string;
+  purpose: OtpPurpose;
+}
+
+export interface VerifyOtpResponse {
+  verified: boolean;
+  verificationToken: string;
+  expiresIn: number;
+}
+
+export interface LoginRequest {
+  mobileNumber: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  fullName: string;
+  mobileNumber: string;
+  password: string;
+  confirmPassword: string;
+  /** Optional. Reserved for future OTP-verified registration. */
+  verificationToken?: string;
+}
+
+export interface PasswordAccountDeletionRequest {
+  mobileNumber: string;
+  password: string;
 }
 
 export interface UserResponse {

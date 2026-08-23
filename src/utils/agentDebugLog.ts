@@ -25,6 +25,10 @@ export function agentDebugLog({
   data = {},
   runId = 'post-fix',
 }: AgentDebugPayload): void {
+  if (!__DEV__) {
+    return;
+  }
+
   const payload = {
     sessionId: '1a4af9',
     hypothesisId,

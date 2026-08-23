@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import { useMemberStore } from '../store/memberStore';
 import { useSpaceStore } from '../store/spaceStore';
 import { invalidateDashboardQueries } from '../utils/dashboardQueryCache';
+import { devLog } from '../utils/devLog';
 
 const LOG_TAG = '[Logout]';
 
@@ -13,7 +14,7 @@ export function useLogout(): () => Promise<void> {
   const resetMembership = useMemberStore(state => state.reset);
 
   return useCallback(async () => {
-    console.log(`${LOG_TAG} Started`);
+    devLog(`${LOG_TAG} Started`);
 
     try {
       // Drop owner-scoped Action Center caches before switching accounts on this device.
@@ -21,7 +22,7 @@ export function useLogout(): () => Promise<void> {
       await clearSession();
       resetMembership();
       await resetSpaceSession();
-      console.log(`${LOG_TAG} Completed`);
+      devLog(`${LOG_TAG} Completed`);
     } catch (err) {
       console.error(`${LOG_TAG} Error during logout`, err);
       invalidateDashboardQueries();

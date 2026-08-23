@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -30,7 +30,7 @@ import { useProgressiveSectionReview } from '../hooks/useProgressiveSectionRevie
 import {
   buildAllPresetAmenities,
   normalizeAmenityAssignments,
-  presetAmenityLabelKey,
+  resolvePresetAmenityLabel,
   supportsSpaceAmenities,
 } from '../utils/amenities';
 import { supportsSpacePropertyCategory } from '../utils/spacePropertyCategory';
@@ -42,8 +42,10 @@ import {
   resetToAccommodationHome,
   resetToDashboard,
 } from '../navigation/navigationRef';
+import { useAuthStore } from '../store/authStore';
 import { useSpaceStore } from '../store/spaceStore';
 import { useToastStore } from '../store/toastStore';
+import { resolveDefaultSpaceContact } from '../utils/defaultSpaceContact';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 
 type CreateSpaceNav = NativeStackNavigationProp<MainStackParamList, 'CreateSpace'>;
@@ -61,18 +63,39 @@ export function CreateSpaceScreen() {
   const { createSpace, isSubmitting, error, clearError } = useCreateSpace();
   const refresh = useSpaceStore(state => state.refresh);
   const switchSpace = useSpaceStore(state => state.switchSpace);
+  const ownerSpaceContact = useSpaceStore(state => state.selectedSpace?.contactNumber);
+  const userMobile = useAuthStore(state => state.user?.mobileNumber);
+  const accessToken = useAuthStore(state => state.accessToken);
   const showToast = useToastStore(state => state.showToast);
 
   const [name, setName] = useState('');
   const [type, setType] = useState<SpaceType | null>(null);
   const [address, setAddress] = useState('');
-  const [contactNumber, setContactNumber] = useState('');
+  const [contactNumber, setContactNumber] = useState(() =>
+    resolveDefaultSpaceContact({
+      userMobile,
+      accessToken,
+      ownerMobile: ownerSpaceContact,
+    }),
+  );
   const [amenities, setAmenities] = useState<AmenityAssignment[]>([]);
   const [genderPolicy, setGenderPolicy] = useState<GenderPolicy | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isFinishing, setIsFinishing] = useState(false);
   const submitLockRef = useRef(false);
   const scrollRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    const next = resolveDefaultSpaceContact({
+      userMobile,
+      accessToken,
+      ownerMobile: ownerSpaceContact,
+    });
+    if (!next) {
+      return;
+    }
+    setContactNumber(current => (current.trim() ? current : next));
+  }, [accessToken, ownerSpaceContact, userMobile]);
 
   const isBusy = isSubmitting || isFinishing;
   const showAmenities = supportsSpaceAmenities(type);
@@ -250,7 +273,7 @@ export function CreateSpaceScreen() {
                   setAmenities([]);
                 } else if (amenities.length === 0) {
                   setAmenities(
-                    buildAllPresetAmenities(code => t(presetAmenityLabelKey(code))),
+                    buildAllPresetAmenities(code => resolvePresetAmenityLabel(code, t)),
                   );
                 }
                 if (!supportsSpacePropertyCategory(selected)) {
@@ -306,12 +329,20 @@ export function CreateSpaceScreen() {
               label={t('spaces.createSpace.contactLabel')}
               placeholder={t('spaces.createSpace.contactPlaceholder')}
               value={contactNumber}
-              onChangeText={setContactNumber}
+              onChangeText={text => {
+                const digits = text.replace(/\D/g, '');
+                const local =
+                  digits.startsWith('91') && digits.length >= 11
+                    ? digits.slice(-10)
+                    : digits.slice(0, 10);
+                setContactNumber(local);
+              }}
               error={fieldErrors.contactNumber}
               keyboardType="phone-pad"
               returnKeyType="done"
-              maxLength={15}
+              maxLength={10}
               leadingIcon={Phone}
+              prefix="+91"
             />
 
             {showAmenities ? (

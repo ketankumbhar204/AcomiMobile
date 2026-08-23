@@ -46,6 +46,7 @@ import {
   UpdateUnitRequest,
   UUID,
 } from './types';
+import { devLog } from '../utils/devLog';
 
 const LOG_TAG = '[AccommodationApi]';
 
@@ -54,7 +55,7 @@ export const accommodationApi = {
     spaceId: UUID,
     body: CreateBuildingRequest,
   ): Promise<BuildingResponse> => {
-    console.log(`${LOG_TAG} POST /spaces/${spaceId}/buildings`, body);
+    devLog(`${LOG_TAG} POST /spaces/${spaceId}/buildings`, body);
 
     const response = await unwrapApiResponse(
       apiClient.post<ApiResponse<BuildingResponse>>(
@@ -63,12 +64,12 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} createBuilding response`, response.buildingId);
+    devLog(`${LOG_TAG} createBuilding response`, response.buildingId);
     return response;
   },
 
   getBuildings: async (spaceId: UUID): Promise<BuildingResponse[]> => {
-    console.log(`${LOG_TAG} GET /spaces/${spaceId}/buildings`);
+    devLog(`${LOG_TAG} GET /spaces/${spaceId}/buildings`);
 
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<BuildingResponse[]>>(
@@ -76,7 +77,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} getBuildings response`, response.length);
+    devLog(`${LOG_TAG} getBuildings response`, response.length);
     return response;
   },
 
@@ -84,7 +85,7 @@ export const accommodationApi = {
     spaceId: UUID,
     buildingId: UUID,
   ): Promise<BuildingResponse> => {
-    console.log(`${LOG_TAG} GET /spaces/${spaceId}/buildings/${buildingId}`);
+    devLog(`${LOG_TAG} GET /spaces/${spaceId}/buildings/${buildingId}`);
 
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<BuildingResponse>>(
@@ -92,7 +93,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} getBuilding response`, response.buildingId);
+    devLog(`${LOG_TAG} getBuilding response`, response.buildingId);
     return response;
   },
 
@@ -101,7 +102,7 @@ export const accommodationApi = {
     buildingId: UUID,
     body: UpdateBuildingRequest,
   ): Promise<BuildingResponse> => {
-    console.log(`${LOG_TAG} PUT /spaces/${spaceId}/buildings/${buildingId}`, body);
+    devLog(`${LOG_TAG} PUT /spaces/${spaceId}/buildings/${buildingId}`, body);
 
     const response = await unwrapApiResponse(
       apiClient.put<ApiResponse<BuildingResponse>>(
@@ -110,12 +111,12 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} updateBuilding response`, response.buildingId);
+    devLog(`${LOG_TAG} updateBuilding response`, response.buildingId);
     return response;
   },
 
   getFloorById: async (spaceId: UUID, floorId: UUID): Promise<FloorResponse> => {
-    console.log(`${LOG_TAG} GET /spaces/${spaceId}/floors/${floorId}`);
+    devLog(`${LOG_TAG} GET /spaces/${spaceId}/floors/${floorId}`);
 
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<FloorResponse>>(
@@ -123,7 +124,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} getFloorById response`, response.floorId);
+    devLog(`${LOG_TAG} getFloorById response`, response.floorId);
     return response;
   },
 
@@ -132,7 +133,7 @@ export const accommodationApi = {
     buildingId: UUID,
     body: CreateFloorRequest,
   ): Promise<FloorResponse> => {
-    console.log(
+    devLog(
       `${LOG_TAG} POST /spaces/${spaceId}/buildings/${buildingId}/floors`,
       body,
     );
@@ -144,7 +145,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} createFloor response`, response.floorId);
+    devLog(`${LOG_TAG} createFloor response`, response.floorId);
     return response;
   },
 
@@ -154,7 +155,7 @@ export const accommodationApi = {
     params?: ListQueryParams,
   ): Promise<PagedResponse<FloorListItemResponse>> => {
     const query = buildListQuery({ view: 'summary', ...params });
-    console.log(
+    devLog(
       `${LOG_TAG} GET /spaces/${spaceId}/buildings/${buildingId}/floors${query}`,
     );
 
@@ -164,7 +165,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} listFloors response`, response.content.length);
+    devLog(`${LOG_TAG} listFloors response`, response.content.length);
     return response;
   },
 
@@ -174,7 +175,7 @@ export const accommodationApi = {
     buildingId: UUID,
   ): Promise<FloorResponse[]> => {
     const query = buildListQuery({ view: 'full' });
-    console.log(
+    devLog(
       `${LOG_TAG} GET /spaces/${spaceId}/buildings/${buildingId}/floors${query}`,
     );
 
@@ -184,7 +185,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} getFloors response`, response.length);
+    devLog(`${LOG_TAG} getFloors response`, response.length);
     return response;
   },
 
@@ -193,7 +194,7 @@ export const accommodationApi = {
     buildingId: UUID,
     floorId: UUID,
   ): Promise<FloorResponse> => {
-    console.log(
+    devLog(
       `${LOG_TAG} GET /spaces/${spaceId}/buildings/${buildingId}/floors/${floorId}`,
     );
 
@@ -203,7 +204,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} getFloor response`, response.floorId);
+    devLog(`${LOG_TAG} getFloor response`, response.floorId);
     return response;
   },
 
@@ -213,7 +214,7 @@ export const accommodationApi = {
     floorId: UUID,
     body: UpdateFloorRequest,
   ): Promise<FloorResponse> => {
-    console.log(
+    devLog(
       `${LOG_TAG} PUT /spaces/${spaceId}/buildings/${buildingId}/floors/${floorId}`,
       body,
     );
@@ -225,12 +226,12 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} updateFloor response`, response.floorId);
+    devLog(`${LOG_TAG} updateFloor response`, response.floorId);
     return response;
   },
 
   getUnitById: async (spaceId: UUID, unitId: UUID): Promise<UnitResponse> => {
-    console.log(`${LOG_TAG} GET /spaces/${spaceId}/units/${unitId}`);
+    devLog(`${LOG_TAG} GET /spaces/${spaceId}/units/${unitId}`);
 
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<UnitResponse>>(
@@ -238,7 +239,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} getUnitById response`, response.unitId);
+    devLog(`${LOG_TAG} getUnitById response`, response.unitId);
     return response;
   },
 
@@ -247,7 +248,7 @@ export const accommodationApi = {
     buildingId: UUID,
     body: CreateUnitRequest,
   ): Promise<UnitResponse> => {
-    console.log(
+    devLog(
       `${LOG_TAG} POST /spaces/${spaceId}/buildings/${buildingId}/units`,
       body,
     );
@@ -259,7 +260,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} createUnit response`, response.unitId);
+    devLog(`${LOG_TAG} createUnit response`, response.unitId);
     return response;
   },
 
@@ -273,7 +274,7 @@ export const accommodationApi = {
       includeSynthetic: false,
       ...params,
     });
-    console.log(
+    devLog(
       `${LOG_TAG} GET /spaces/${spaceId}/buildings/${buildingId}/units${query}`,
     );
 
@@ -283,7 +284,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} listUnits response`, response.content.length);
+    devLog(`${LOG_TAG} listUnits response`, response.content.length);
     return response;
   },
 
@@ -293,7 +294,7 @@ export const accommodationApi = {
     buildingId: UUID,
   ): Promise<UnitResponse[]> => {
     const query = buildListQuery({ view: 'full' });
-    console.log(
+    devLog(
       `${LOG_TAG} GET /spaces/${spaceId}/buildings/${buildingId}/units${query}`,
     );
 
@@ -303,7 +304,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} getUnits response`, response.length);
+    devLog(`${LOG_TAG} getUnits response`, response.length);
     return response;
   },
 
@@ -318,7 +319,7 @@ export const accommodationApi = {
       includeSynthetic: false,
       ...params,
     });
-    console.log(
+    devLog(
       `${LOG_TAG} GET /spaces/${spaceId}/buildings/${buildingId}/floors/${floorId}/units${query}`,
     );
 
@@ -328,7 +329,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} listUnitsByFloor response`, response.content.length);
+    devLog(`${LOG_TAG} listUnitsByFloor response`, response.content.length);
     return response;
   },
 
@@ -338,7 +339,7 @@ export const accommodationApi = {
     floorId: UUID,
     body: CreateUnitRequest,
   ): Promise<UnitResponse> => {
-    console.log(
+    devLog(
       `${LOG_TAG} POST /spaces/${spaceId}/buildings/${buildingId}/floors/${floorId}/units`,
       body,
     );
@@ -350,7 +351,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} createUnitOnFloor response`, response.unitId);
+    devLog(`${LOG_TAG} createUnitOnFloor response`, response.unitId);
     return response;
   },
 
@@ -359,7 +360,7 @@ export const accommodationApi = {
     unitId: UUID,
     body: UpdateUnitRequest,
   ): Promise<UnitResponse> => {
-    console.log(`${LOG_TAG} PUT /spaces/${spaceId}/units/${unitId}`, body);
+    devLog(`${LOG_TAG} PUT /spaces/${spaceId}/units/${unitId}`, body);
 
     const response = await unwrapApiResponse(
       apiClient.put<ApiResponse<UnitResponse>>(
@@ -368,7 +369,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} updateUnitById response`, response.unitId);
+    devLog(`${LOG_TAG} updateUnitById response`, response.unitId);
     return response;
   },
 
@@ -377,7 +378,7 @@ export const accommodationApi = {
     buildingId: UUID,
     unitId: UUID,
   ): Promise<UnitResponse> => {
-    console.log(
+    devLog(
       `${LOG_TAG} GET /spaces/${spaceId}/buildings/${buildingId}/units/${unitId}`,
     );
 
@@ -387,7 +388,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} getUnit response`, response.unitId);
+    devLog(`${LOG_TAG} getUnit response`, response.unitId);
     return response;
   },
 
@@ -397,7 +398,7 @@ export const accommodationApi = {
     unitId: UUID,
     body: UpdateUnitRequest,
   ): Promise<UnitResponse> => {
-    console.log(
+    devLog(
       `${LOG_TAG} PUT /spaces/${spaceId}/buildings/${buildingId}/units/${unitId}`,
       body,
     );
@@ -409,7 +410,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} updateUnit response`, response.unitId);
+    devLog(`${LOG_TAG} updateUnit response`, response.unitId);
     return response;
   },
 
@@ -418,7 +419,7 @@ export const accommodationApi = {
     floorId: UUID,
     body: CreateRoomRequest,
   ): Promise<RoomResponse> => {
-    console.log(`${LOG_TAG} POST /spaces/${spaceId}/floors/${floorId}/rooms`, body);
+    devLog(`${LOG_TAG} POST /spaces/${spaceId}/floors/${floorId}/rooms`, body);
 
     const response = await unwrapApiResponse(
       apiClient.post<ApiResponse<RoomResponse>>(
@@ -427,7 +428,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} createRoomUnderFloor response`, response.roomId);
+    devLog(`${LOG_TAG} createRoomUnderFloor response`, response.roomId);
     return response;
   },
 
@@ -436,7 +437,7 @@ export const accommodationApi = {
     unitId: UUID,
     body: CreateRoomRequest,
   ): Promise<RoomResponse> => {
-    console.log(`${LOG_TAG} POST /spaces/${spaceId}/units/${unitId}/rooms`, body);
+    devLog(`${LOG_TAG} POST /spaces/${spaceId}/units/${unitId}/rooms`, body);
 
     const response = await unwrapApiResponse(
       apiClient.post<ApiResponse<RoomResponse>>(
@@ -445,7 +446,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} createRoomUnderUnit response`, response.roomId);
+    devLog(`${LOG_TAG} createRoomUnderUnit response`, response.roomId);
     return response;
   },
 
@@ -455,7 +456,7 @@ export const accommodationApi = {
     params?: ListQueryParams,
   ): Promise<PagedResponse<RoomListItemResponse>> => {
     const query = buildListQuery({ view: 'summary', ...params });
-    console.log(`${LOG_TAG} GET /spaces/${spaceId}/floors/${floorId}/rooms${query}`);
+    devLog(`${LOG_TAG} GET /spaces/${spaceId}/floors/${floorId}/rooms${query}`);
 
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<PagedResponse<RoomListItemResponse>>>(
@@ -463,7 +464,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} listRoomsByFloor response`, response.content.length);
+    devLog(`${LOG_TAG} listRoomsByFloor response`, response.content.length);
     return response;
   },
 
@@ -473,7 +474,7 @@ export const accommodationApi = {
     params?: ListQueryParams,
   ): Promise<PagedResponse<RoomListItemResponse>> => {
     const query = buildListQuery({ view: 'summary', ...params });
-    console.log(`${LOG_TAG} GET /spaces/${spaceId}/units/${unitId}/rooms${query}`);
+    devLog(`${LOG_TAG} GET /spaces/${spaceId}/units/${unitId}/rooms${query}`);
 
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<PagedResponse<RoomListItemResponse>>>(
@@ -481,7 +482,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} listRoomsByUnit response`, response.content.length);
+    devLog(`${LOG_TAG} listRoomsByUnit response`, response.content.length);
     return response;
   },
 
@@ -491,7 +492,7 @@ export const accommodationApi = {
     floorId: UUID,
   ): Promise<RoomResponse[]> => {
     const query = buildListQuery({ view: 'full' });
-    console.log(`${LOG_TAG} GET /spaces/${spaceId}/floors/${floorId}/rooms${query}`);
+    devLog(`${LOG_TAG} GET /spaces/${spaceId}/floors/${floorId}/rooms${query}`);
 
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<RoomResponse[]>>(
@@ -499,7 +500,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} getRoomsByFloor response`, response.length);
+    devLog(`${LOG_TAG} getRoomsByFloor response`, response.length);
     return response;
   },
 
@@ -509,7 +510,7 @@ export const accommodationApi = {
     unitId: UUID,
   ): Promise<RoomResponse[]> => {
     const query = buildListQuery({ view: 'full' });
-    console.log(`${LOG_TAG} GET /spaces/${spaceId}/units/${unitId}/rooms${query}`);
+    devLog(`${LOG_TAG} GET /spaces/${spaceId}/units/${unitId}/rooms${query}`);
 
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<RoomResponse[]>>(
@@ -517,12 +518,12 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} getRoomsByUnit response`, response.length);
+    devLog(`${LOG_TAG} getRoomsByUnit response`, response.length);
     return response;
   },
 
   getRoom: async (spaceId: UUID, roomId: UUID): Promise<RoomResponse> => {
-    console.log(`${LOG_TAG} GET /spaces/${spaceId}/rooms/${roomId}`);
+    devLog(`${LOG_TAG} GET /spaces/${spaceId}/rooms/${roomId}`);
 
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<RoomResponse>>(
@@ -530,7 +531,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} getRoom response`, response.roomId);
+    devLog(`${LOG_TAG} getRoom response`, response.roomId);
     return response;
   },
 
@@ -539,7 +540,7 @@ export const accommodationApi = {
     roomId: UUID,
     body: UpdateRoomRequest,
   ): Promise<RoomResponse> => {
-    console.log(`${LOG_TAG} PUT /spaces/${spaceId}/rooms/${roomId}`, body);
+    devLog(`${LOG_TAG} PUT /spaces/${spaceId}/rooms/${roomId}`, body);
 
     const response = await unwrapApiResponse(
       apiClient.put<ApiResponse<RoomResponse>>(
@@ -548,7 +549,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} updateRoom response`, response.roomId);
+    devLog(`${LOG_TAG} updateRoom response`, response.roomId);
     return response;
   },
 
@@ -557,7 +558,7 @@ export const accommodationApi = {
     roomId: UUID,
     body: CreateBedRequest,
   ): Promise<BedResponse> => {
-    console.log(`${LOG_TAG} POST /spaces/${spaceId}/rooms/${roomId}/beds`, body);
+    devLog(`${LOG_TAG} POST /spaces/${spaceId}/rooms/${roomId}/beds`, body);
 
     const response = await unwrapApiResponse(
       apiClient.post<ApiResponse<BedResponse>>(
@@ -566,7 +567,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} createBed response`, response.bedId);
+    devLog(`${LOG_TAG} createBed response`, response.bedId);
     return response;
   },
 
@@ -576,7 +577,7 @@ export const accommodationApi = {
     params?: ListQueryParams,
   ): Promise<PagedResponse<BedListItemResponse>> => {
     const query = buildListQuery({ view: 'summary', ...params });
-    console.log(`${LOG_TAG} GET /spaces/${spaceId}/rooms/${roomId}/beds${query}`);
+    devLog(`${LOG_TAG} GET /spaces/${spaceId}/rooms/${roomId}/beds${query}`);
 
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<PagedResponse<BedListItemResponse>>>(
@@ -584,14 +585,14 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} listBeds response`, response.content.length);
+    devLog(`${LOG_TAG} listBeds response`, response.content.length);
     return response;
   },
 
   /** @deprecated Prefer listBeds with view=summary */
   getBeds: async (spaceId: UUID, roomId: UUID): Promise<BedResponse[]> => {
     const query = buildListQuery({ view: 'full' });
-    console.log(`${LOG_TAG} GET /spaces/${spaceId}/rooms/${roomId}/beds${query}`);
+    devLog(`${LOG_TAG} GET /spaces/${spaceId}/rooms/${roomId}/beds${query}`);
 
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<BedResponse[]>>(
@@ -599,7 +600,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} getBeds response`, response.length);
+    devLog(`${LOG_TAG} getBeds response`, response.length);
     return response;
   },
 
@@ -614,7 +615,7 @@ export const accommodationApi = {
       size: DEFAULT_LIST_PAGE_SIZE,
       ...params,
     });
-    console.log(`${LOG_TAG} GET /spaces/${spaceId}/floors${qs}`);
+    devLog(`${LOG_TAG} GET /spaces/${spaceId}/floors${qs}`);
 
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<PagedResponse<FloorListItemResponse>>>(
@@ -636,7 +637,7 @@ export const accommodationApi = {
       size: DEFAULT_LIST_PAGE_SIZE,
       ...params,
     });
-    console.log(`${LOG_TAG} GET /spaces/${spaceId}/units${qs}`);
+    devLog(`${LOG_TAG} GET /spaces/${spaceId}/units${qs}`);
 
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<PagedResponse<UnitListItemResponse>>>(
@@ -658,7 +659,7 @@ export const accommodationApi = {
       size: DEFAULT_LIST_PAGE_SIZE,
       ...params,
     });
-    console.log(`${LOG_TAG} GET /spaces/${spaceId}/rooms${qs}`);
+    devLog(`${LOG_TAG} GET /spaces/${spaceId}/rooms${qs}`);
 
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<PagedResponse<RoomListItemResponse>>>(
@@ -678,7 +679,7 @@ export const accommodationApi = {
       size: DEFAULT_LIST_PAGE_SIZE,
       ...params,
     });
-    console.log(`${LOG_TAG} GET /spaces/${spaceId}/beds${qs}`);
+    devLog(`${LOG_TAG} GET /spaces/${spaceId}/beds${qs}`);
 
     return unwrapApiResponse(
       apiClient.get<ApiResponse<PagedResponse<BedSpaceListItemResponse>>>(
@@ -692,7 +693,7 @@ export const accommodationApi = {
     roomId: UUID,
     bedId: UUID,
   ): Promise<BedResponse> => {
-    console.log(`${LOG_TAG} GET /spaces/${spaceId}/rooms/${roomId}/beds/${bedId}`);
+    devLog(`${LOG_TAG} GET /spaces/${spaceId}/rooms/${roomId}/beds/${bedId}`);
 
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<BedResponse>>(
@@ -700,7 +701,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} getBed response`, response.bedId);
+    devLog(`${LOG_TAG} getBed response`, response.bedId);
     return response;
   },
 
@@ -710,7 +711,7 @@ export const accommodationApi = {
     bedId: UUID,
     body: UpdateBedRequest,
   ): Promise<BedResponse> => {
-    console.log(
+    devLog(
       `${LOG_TAG} PUT /spaces/${spaceId}/rooms/${roomId}/beds/${bedId}`,
       body,
     );
@@ -722,12 +723,12 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} updateBed response`, response.bedId);
+    devLog(`${LOG_TAG} updateBed response`, response.bedId);
     return response;
   },
 
   getBedById: async (spaceId: UUID, bedId: UUID): Promise<BedResponse> => {
-    console.log(`${LOG_TAG} GET /spaces/${spaceId}/beds/${bedId}`);
+    devLog(`${LOG_TAG} GET /spaces/${spaceId}/beds/${bedId}`);
 
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<BedResponse>>(
@@ -735,7 +736,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} getBedById response`, response.bedId);
+    devLog(`${LOG_TAG} getBedById response`, response.bedId);
     return response;
   },
 
@@ -743,7 +744,7 @@ export const accommodationApi = {
     spaceId: UUID,
     body: AccommodationSetupRequest,
   ): Promise<AccommodationSetupPreviewResponse> => {
-    console.log(`${LOG_TAG} POST /spaces/${spaceId}/accommodation/setup/preview`, body);
+    devLog(`${LOG_TAG} POST /spaces/${spaceId}/accommodation/setup/preview`, body);
 
     const response = await unwrapApiResponse(
       apiClient.post<ApiResponse<AccommodationSetupPreviewResponse>>(
@@ -752,7 +753,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} previewSetup response`, response.totals);
+    devLog(`${LOG_TAG} previewSetup response`, response.totals);
     return response;
   },
 
@@ -761,7 +762,7 @@ export const accommodationApi = {
     body: AccommodationSetupRequest,
     idempotencyKey: string,
   ): Promise<AccommodationSetupResultResponse> => {
-    console.log(`${LOG_TAG} POST /spaces/${spaceId}/accommodation/setup`, {
+    devLog(`${LOG_TAG} POST /spaces/${spaceId}/accommodation/setup`, {
       idempotencyKey,
       body,
     });
@@ -774,7 +775,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} executeSetup response`, response.buildingId);
+    devLog(`${LOG_TAG} executeSetup response`, response.buildingId);
     return response;
   },
 
@@ -782,7 +783,7 @@ export const accommodationApi = {
     spaceId: UUID,
     buildingId: UUID,
   ): Promise<BuildingSummaryResponse> => {
-    console.log(`${LOG_TAG} GET /spaces/${spaceId}/buildings/${buildingId}/summary`);
+    devLog(`${LOG_TAG} GET /spaces/${spaceId}/buildings/${buildingId}/summary`);
 
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<BuildingSummaryResponse>>(
@@ -790,7 +791,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} getBuildingSummary response`, response.buildingId);
+    devLog(`${LOG_TAG} getBuildingSummary response`, response.buildingId);
     return response;
   },
 
@@ -799,7 +800,7 @@ export const accommodationApi = {
     buildingId: UUID,
     body: DuplicateBuildingRequest,
   ): Promise<DuplicateBuildingResponse> => {
-    console.log(`${LOG_TAG} POST /spaces/${spaceId}/buildings/${buildingId}/duplicate`, body);
+    devLog(`${LOG_TAG} POST /spaces/${spaceId}/buildings/${buildingId}/duplicate`, body);
 
     const response = await unwrapApiResponse(
       apiClient.post<ApiResponse<DuplicateBuildingResponse>>(
@@ -808,7 +809,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} duplicateBuilding response`, response.buildingId);
+    devLog(`${LOG_TAG} duplicateBuilding response`, response.buildingId);
     return response;
   },
 
@@ -818,7 +819,7 @@ export const accommodationApi = {
     floorId: UUID,
     body: DuplicateFloorRequest,
   ): Promise<DuplicateFloorResponse> => {
-    console.log(
+    devLog(
       `${LOG_TAG} POST /spaces/${spaceId}/buildings/${buildingId}/floors/${floorId}/duplicate`,
       body,
     );
@@ -830,7 +831,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} duplicateFloor response`, response.floorId);
+    devLog(`${LOG_TAG} duplicateFloor response`, response.floorId);
     return response;
   },
 
@@ -839,7 +840,7 @@ export const accommodationApi = {
     roomId: UUID,
     body: DuplicateRoomRequest,
   ): Promise<DuplicateRoomResponse> => {
-    console.log(`${LOG_TAG} POST /spaces/${spaceId}/rooms/${roomId}/duplicate`, body);
+    devLog(`${LOG_TAG} POST /spaces/${spaceId}/rooms/${roomId}/duplicate`, body);
 
     const response = await unwrapApiResponse(
       apiClient.post<ApiResponse<DuplicateRoomResponse>>(
@@ -848,7 +849,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} duplicateRoom response`, response.roomId);
+    devLog(`${LOG_TAG} duplicateRoom response`, response.roomId);
     return response;
   },
 
@@ -857,7 +858,7 @@ export const accommodationApi = {
     buildingId: UUID,
     body: BulkCreateUnitsRequest,
   ): Promise<BulkCreateUnitsResponse> => {
-    console.log(`${LOG_TAG} POST /spaces/${spaceId}/buildings/${buildingId}/units/bulk`, body);
+    devLog(`${LOG_TAG} POST /spaces/${spaceId}/buildings/${buildingId}/units/bulk`, body);
 
     const response = await unwrapApiResponse(
       apiClient.post<ApiResponse<BulkCreateUnitsResponse>>(
@@ -866,7 +867,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} bulkCreateUnits response`, response.unitsCreated);
+    devLog(`${LOG_TAG} bulkCreateUnits response`, response.unitsCreated);
     return response;
   },
 
@@ -875,7 +876,7 @@ export const accommodationApi = {
     floorId: UUID,
     body: BulkCreateRoomsRequest,
   ): Promise<BulkCreateRoomsResponse> => {
-    console.log(`${LOG_TAG} POST /spaces/${spaceId}/floors/${floorId}/rooms/bulk`, body);
+    devLog(`${LOG_TAG} POST /spaces/${spaceId}/floors/${floorId}/rooms/bulk`, body);
 
     const response = await unwrapApiResponse(
       apiClient.post<ApiResponse<BulkCreateRoomsResponse>>(
@@ -884,7 +885,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} bulkCreateRoomsUnderFloor response`, response.roomsCreated);
+    devLog(`${LOG_TAG} bulkCreateRoomsUnderFloor response`, response.roomsCreated);
     return response;
   },
 
@@ -893,7 +894,7 @@ export const accommodationApi = {
     unitId: UUID,
     body: BulkCreateRoomsRequest,
   ): Promise<BulkCreateRoomsResponse> => {
-    console.log(`${LOG_TAG} POST /spaces/${spaceId}/units/${unitId}/rooms/bulk`, body);
+    devLog(`${LOG_TAG} POST /spaces/${spaceId}/units/${unitId}/rooms/bulk`, body);
 
     const response = await unwrapApiResponse(
       apiClient.post<ApiResponse<BulkCreateRoomsResponse>>(
@@ -902,7 +903,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} bulkCreateRoomsUnderUnit response`, response.roomsCreated);
+    devLog(`${LOG_TAG} bulkCreateRoomsUnderUnit response`, response.roomsCreated);
     return response;
   },
 
@@ -911,7 +912,7 @@ export const accommodationApi = {
     roomId: UUID,
     body: BulkCreateBedsRequest,
   ): Promise<BulkCreateBedsResponse> => {
-    console.log(`${LOG_TAG} POST /spaces/${spaceId}/rooms/${roomId}/beds/bulk`, body);
+    devLog(`${LOG_TAG} POST /spaces/${spaceId}/rooms/${roomId}/beds/bulk`, body);
 
     const response = await unwrapApiResponse(
       apiClient.post<ApiResponse<BulkCreateBedsResponse>>(
@@ -920,7 +921,7 @@ export const accommodationApi = {
       ),
     );
 
-    console.log(`${LOG_TAG} bulkCreateBeds response`, response.bedsCreated);
+    devLog(`${LOG_TAG} bulkCreateBeds response`, response.bedsCreated);
     return response;
   },
 
@@ -958,13 +959,13 @@ export const accommodationApi = {
     }
     const query = q.toString();
     const path = `/spaces/${spaceId}/accommodation/allocation-targets${query ? `?${query}` : ''}`;
-    console.log(`${LOG_TAG} GET ${path}`);
+    devLog(`${LOG_TAG} GET ${path}`);
 
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<PagedResponse<AllocationTargetSearchResponse>>>(path),
     );
 
-    console.log(`${LOG_TAG} searchAllocationTargets response`, response.content.length);
+    devLog(`${LOG_TAG} searchAllocationTargets response`, response.content.length);
     return response;
   },
 };

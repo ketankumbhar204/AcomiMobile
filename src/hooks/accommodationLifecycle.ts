@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { accommodationLifecycleApi } from '../api/accommodationLifecycleApi';
 import type { UUID } from '../api/types';
 import { invalidateAccommodationQueries } from '../utils/accommodationQueryCache';
+import { devLog } from '../utils/devLog';
 
 type LifecycleMutate = (...args: UUID[]) => Promise<void>;
 
@@ -14,7 +15,7 @@ function createLifecycleHook(
 
     const mutate = useCallback<LifecycleMutate>(
       async (...args) => {
-        console.log(`[${label}]`, args);
+        devLog(`[${label}]`, args);
         setLoading(true);
         try {
           await mutateFn(...args);

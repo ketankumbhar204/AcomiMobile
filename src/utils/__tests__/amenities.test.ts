@@ -29,11 +29,24 @@ describe('amenities utils', () => {
     ]);
   });
 
+  it('normalizeAmenityAssignments replaces unresolved i18n keys with fallback labels', () => {
+    const normalized = normalizeAmenityAssignments([
+      { code: 'BEDS', label: 'spaces.amenities.codes.BEDS' },
+      { code: 'WARDROBE', label: 'spaces.amenities.codes.WARDROBE' },
+    ]);
+
+    expect(normalized).toEqual([
+      { code: 'BEDS', label: 'Beds' },
+      { code: 'WARDROBE', label: 'Wardrobe / Cupboard' },
+    ]);
+  });
+
   it('buildAllPresetAmenities returns every preset code', () => {
     const all = buildAllPresetAmenities(code => code);
-    expect(all).toHaveLength(10);
+    expect(all).toHaveLength(12);
     expect(all.map(item => item.code)).toContain('WIFI');
-    expect(all.map(item => item.code)).toContain('RO_WATER');
+    expect(all.map(item => item.code)).toContain('BEDS');
+    expect(all.map(item => item.code)).toContain('WARDROBE');
   });
 
   it('toggleAssignedAmenity adds and removes assignments', () => {

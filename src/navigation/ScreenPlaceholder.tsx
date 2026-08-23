@@ -12,6 +12,7 @@ import {
 import { Screen } from '../components/ui/Screen';
 import { useSpaceStore } from '../store/spaceStore';
 import { colors, spacing, typography } from '../theme';
+import { devLog } from '../utils/devLog';
 
 type ScreenPlaceholderProps = {
   title: string;
@@ -26,7 +27,7 @@ export function ScreenPlaceholder({ title }: ScreenPlaceholderProps) {
 
   useEffect(() => {
     if (isDashboard) {
-      console.log('[Dashboard] loaded', currentSpace?.spaceId, currentSpace?.spaceName);
+      devLog('[Dashboard] loaded', currentSpace?.spaceId, currentSpace?.spaceName);
     }
   }, [currentSpace?.spaceId, currentSpace?.spaceName, isDashboard]);
 

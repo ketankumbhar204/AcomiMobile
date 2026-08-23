@@ -27,8 +27,9 @@ import { AccommodationHomeSpeedDial } from '../../components/accommodation/Accom
 import { DashboardAccommodationOperations } from '../../components/dashboard/DashboardAccommodationOperations';
 import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
 import { DashboardActionRow } from '../../components/dashboard/shared/DashboardActionRow';
+import { SetupActionCard } from '../../components/accommodation/SetupActionCard';
 import { CoachmarkAnchor, CoachmarkSequence } from '../../components/coachmarks';
-import { EmptyState, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
+import { RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
 import { ENABLE_SETUP_COACHMARKS } from '../../coachmarks';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useBuildings } from '../../hooks/useBuildings';
@@ -49,6 +50,7 @@ import { peekDashboardSummary } from '../../utils/dashboardQueryCache';
 import { peekPendingActions } from '../../utils/pendingActionsQueryCache';
 import { canManageNotifications } from '../../utils/spaceOperator';
 import { isAccommodationApplicable } from '../../utils/accommodationProfile';
+import { devLog } from '../../utils/devLog';
 
 type AccommodationNav = CompositeNavigationProp<
   BottomTabNavigationProp<SpaceTabParamList, 'Accommodation'>,
@@ -120,7 +122,9 @@ export function AccommodationHomeScreen() {
   useEffect(() => {
     if (!accommodationOperations) return;
     // #region agent log
-    fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'AccommodationHomeScreen.tsx:accommodationOperations',message:'operations cards rendered',data:{occupied:accommodationOperations.occupiedBeds,vacant:accommodationOperations.vacantBeds,moveIns:accommodationOperations.moveInsThisMonth,canViewOccupancyDrilldown},timestamp:Date.now(),hypothesisId:'H3',runId:'accom-ui'})}).catch(()=>{});
+    if (__DEV__) {
+      fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'AccommodationHomeScreen.tsx:accommodationOperations',message:'operations cards rendered',data:{occupied:accommodationOperations.occupiedBeds,vacant:accommodationOperations.vacantBeds,moveIns:accommodationOperations.moveInsThisMonth,canViewOccupancyDrilldown},timestamp:Date.now(),hypothesisId:'H3',runId:'accom-ui'})}).catch(()=>{});
+    }
     // #endregion
   }, [accommodationOperations, canViewOccupancyDrilldown]);
 
@@ -150,7 +154,7 @@ export function AccommodationHomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      console.log('[AccommodationHomeScreen] focused', spaceId);
+      devLog('[AccommodationHomeScreen] focused', spaceId);
       setIsFocused(true);
       void refresh();
       return () => {
@@ -209,7 +213,7 @@ export function AccommodationHomeScreen() {
   );
 
   const onRefresh = useCallback(async () => {
-    console.log('[AccommodationHomeScreen] pull to refresh');
+    devLog('[AccommodationHomeScreen] pull to refresh');
     setRefreshing(true);
     await Promise.all([refresh(), quickAccommodation.reload()]);
     setSummaryGeneration(getAccommodationInvalidationGeneration());
@@ -218,27 +222,33 @@ export function AccommodationHomeScreen() {
 
   const handleOccupiedBedsPress = useCallback(() => {
     // #region agent log
-    fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'AccommodationHomeScreen.tsx:handleOccupiedBedsPress',message:'occupancy card nav',data:{target:'DashboardOccupancyList',mode:'active',spaceId},timestamp:Date.now(),hypothesisId:'H1',runId:'accom-ui'})}).catch(()=>{});
+    if (__DEV__) {
+      fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'AccommodationHomeScreen.tsx:handleOccupiedBedsPress',message:'occupancy card nav',data:{target:'DashboardOccupancyList',mode:'active',spaceId},timestamp:Date.now(),hypothesisId:'H1',runId:'accom-ui'})}).catch(()=>{});
+    }
     // #endregion
     navigateFromTab('DashboardOccupancyList', { spaceId, mode: 'active' });
   }, [navigateFromTab, spaceId]);
 
   const handleVacantBedsPress = useCallback(() => {
     // #region agent log
-    fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'AccommodationHomeScreen.tsx:handleVacantBedsPress',message:'vacant card nav',data:{target:'DashboardBedInventory',status:'AVAILABLE',spaceId},timestamp:Date.now(),hypothesisId:'H1',runId:'accom-ui'})}).catch(()=>{});
+    if (__DEV__) {
+      fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'AccommodationHomeScreen.tsx:handleVacantBedsPress',message:'vacant card nav',data:{target:'DashboardBedInventory',status:'AVAILABLE',spaceId},timestamp:Date.now(),hypothesisId:'H1',runId:'accom-ui'})}).catch(()=>{});
+    }
     // #endregion
     navigateFromTab('DashboardBedInventory', { spaceId, status: 'AVAILABLE' });
   }, [navigateFromTab, spaceId]);
 
   const handleMoveInsPress = useCallback(() => {
     // #region agent log
-    fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'AccommodationHomeScreen.tsx:handleMoveInsPress',message:'move-ins card nav',data:{target:'DashboardOccupancyList',mode:'moveInsThisMonth',spaceId},timestamp:Date.now(),hypothesisId:'H1',runId:'accom-ui'})}).catch(()=>{});
+    if (__DEV__) {
+      fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'AccommodationHomeScreen.tsx:handleMoveInsPress',message:'move-ins card nav',data:{target:'DashboardOccupancyList',mode:'moveInsThisMonth',spaceId},timestamp:Date.now(),hypothesisId:'H1',runId:'accom-ui'})}).catch(()=>{});
+    }
     // #endregion
     navigateFromTab('DashboardOccupancyList', { spaceId, mode: 'moveInsThisMonth' });
   }, [navigateFromTab, spaceId]);
 
   const openBuilder = (building: BuildingResponse) => {
-    console.log('[AccommodationHomeScreen] open builder', building.buildingId);
+    devLog('[AccommodationHomeScreen] open builder', building.buildingId);
     navigation.navigate('AccommodationBuilder', {
       spaceId,
       buildingId: building.buildingId,
@@ -247,14 +257,18 @@ export function AccommodationHomeScreen() {
 
   const openQuickSetup = () => {
     // #region agent log
-    fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'AccommodationHomeScreen.tsx:openQuickSetup',message:'floating quick setup',data:{spaceId},timestamp:Date.now(),hypothesisId:'H2',runId:'accom-ui'})}).catch(()=>{});
+    if (__DEV__) {
+      fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'AccommodationHomeScreen.tsx:openQuickSetup',message:'floating quick setup',data:{spaceId},timestamp:Date.now(),hypothesisId:'H2',runId:'accom-ui'})}).catch(()=>{});
+    }
     // #endregion
     navigation.navigate('QuickSetupWizard', { spaceId });
   };
 
   const openManualBuilding = () => {
     // #region agent log
-    fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'AccommodationHomeScreen.tsx:openManualBuilding',message:'add manually',data:{spaceId},timestamp:Date.now(),hypothesisId:'H2',runId:'accom-ui'})}).catch(()=>{});
+    if (__DEV__) {
+      fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'AccommodationHomeScreen.tsx:openManualBuilding',message:'add manually',data:{spaceId},timestamp:Date.now(),hypothesisId:'H2',runId:'accom-ui'})}).catch(()=>{});
+    }
     // #endregion
     navigation.navigate('BuildingForm', { spaceId, mode: 'create' });
   };
@@ -296,23 +310,36 @@ export function AccommodationHomeScreen() {
               </View>
             ) : null}
 
-            <View style={styles.hero}>
-              <View style={styles.decorBlob} pointerEvents="none" />
-              <View style={styles.heroIconWrap} accessibilityElementsHidden>
-                <Building2 size={18} color="#2563EB" strokeWidth={2.2} />
+            {isEmpty ? (
+              <View style={styles.pageIntro}>
+                <Text style={styles.pageTitle}>
+                  {t('accommodation.home.title', { defaultValue: 'Accommodation' })}
+                </Text>
+                <Text style={styles.pageSubtitle}>
+                  {t('accommodation.home.pageSubtitle', {
+                    defaultValue: 'Buildings, floors, rooms, and beds in one place',
+                  })}
+                </Text>
               </View>
-              <Text style={styles.eyebrow}>
-                {t('accommodation.home.eyebrow', { defaultValue: 'Property' })}
-              </Text>
-              <Text style={styles.heading}>
-                {t('accommodation.home.title', { defaultValue: 'Accommodation' })}
-              </Text>
-              <Text style={styles.subheading}>
-                {t('accommodation.home.subtitle', {
-                  defaultValue: 'Buildings, floors, rooms, and beds in one place',
-                })}
-              </Text>
-            </View>
+            ) : (
+              <View style={styles.hero}>
+                <View style={styles.decorBlob} pointerEvents="none" />
+                <View style={styles.heroIconWrap} accessibilityElementsHidden>
+                  <Building2 size={18} color="#2563EB" strokeWidth={2.2} />
+                </View>
+                <Text style={styles.eyebrow}>
+                  {t('accommodation.home.eyebrow', { defaultValue: 'Property' })}
+                </Text>
+                <Text style={styles.heading}>
+                  {t('accommodation.home.title', { defaultValue: 'Accommodation' })}
+                </Text>
+                <Text style={styles.subheading}>
+                  {t('accommodation.home.subtitle', {
+                    defaultValue: 'Buildings, floors, rooms, and beds in one place',
+                  })}
+                </Text>
+              </View>
+            )}
 
             {accommodationOperations ? (
               <>
@@ -400,33 +427,41 @@ export function AccommodationHomeScreen() {
               <CoachmarkAnchor id="propertyLayout" active={coachmarksEnabled}>
                 <View style={styles.emptyWrap}>
                   <CoachmarkAnchor id="nextGuidance" active={coachmarksEnabled}>
-                    <EmptyState
-                      title={t('accommodation.home.emptyTitle')}
-                      description={t('accommodation.home.emptyDescription')}
-                      Icon={Building2}
-                    />
+                    <View style={styles.welcomeCard}>
+                      <View style={styles.welcomeIcon}>
+                        <Building2 size={18} color="#0F766E" strokeWidth={2.2} />
+                      </View>
+                      <View style={styles.welcomeCopy}>
+                        <Text style={styles.welcomeTitle}>
+                          {t('accommodation.home.welcomeTitle')}
+                        </Text>
+                        <Text style={styles.welcomeSubtitle}>
+                          {t('accommodation.home.welcomeSubtitle')}
+                        </Text>
+                      </View>
+                    </View>
                   </CoachmarkAnchor>
                   {canManage ? (
                     <CoachmarkAnchor
                       id="continueSetup"
                       active={coachmarksEnabled}
                       style={styles.emptyActions}>
-                      <DashboardActionRow
+                      <SetupActionCard
                         icon={Sparkles}
                         accent="#7C3AED"
+                        well="#F3E8FF"
                         title={t('accommodation.home.quickSetup')}
-                        subtitle={t('accommodation.home.quickSetupHint', {
-                          defaultValue: 'Guided building structure setup',
-                        })}
+                        subtitle={t('accommodation.home.quickSetupSubtitle')}
+                        description={t('accommodation.home.quickSetupDescription')}
                         onPress={openQuickSetup}
                       />
-                      <DashboardActionRow
-                        icon={Wrench}
+                      <SetupActionCard
+                        icon={Building2}
                         accent="#2563EB"
+                        well="#EFF6FF"
                         title={t('accommodation.home.addBuildingManually')}
-                        subtitle={t('accommodation.home.addBuildingHint', {
-                          defaultValue: 'Create a building step by step',
-                        })}
+                        subtitle={t('accommodation.home.addBuildingSubtitle')}
+                        description={t('accommodation.home.addBuildingDescription')}
                         onPress={openManualBuilding}
                       />
                     </CoachmarkAnchor>
@@ -572,12 +607,64 @@ const styles = StyleSheet.create({
     height: spacing.md,
   },
   emptyWrap: {
-    flex: 1,
-    justifyContent: 'center',
-    minHeight: 360,
+    gap: spacing.md,
+    marginTop: spacing.sm,
   },
   emptyActions: {
-    marginTop: spacing.xl,
+    marginTop: spacing.xs,
     gap: spacing.sm,
+  },
+  pageIntro: {
+    marginBottom: spacing.md,
+  },
+  pageTitle: {
+    ...typography.h2,
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  pageSubtitle: {
+    ...typography.caption,
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textSecondary,
+    marginTop: 4,
+  },
+  welcomeCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    ...shadows.sm,
+  },
+  welcomeIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#CCFBF1',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  welcomeCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
+  },
+  welcomeTitle: {
+    ...typography.bodyStrong,
+    fontSize: 16,
+    lineHeight: 20,
+    color: colors.textPrimary,
+  },
+  welcomeSubtitle: {
+    ...typography.caption,
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textSecondary,
   },
 });

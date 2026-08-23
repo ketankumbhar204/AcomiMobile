@@ -21,6 +21,7 @@ import type {
   NotificationType,
   SpaceType,
 } from '../api/types';
+import { colors } from '../theme';
 
 /** Lucide icon for each space type (bottom-nav / hero parity). */
 export function getSpaceTypeIcon(type: SpaceType): LucideIcon {
@@ -50,10 +51,10 @@ export function getSpaceTypeAccent(type: SpaceType): string {
     case 'CO_LIVING':
       return '#2563EB';
     case 'RENTAL':
-      return '#0F766E';
+      return '#0284C7';
     case 'PG':
     default:
-      return '#128C7E';
+      return colors.teal;
   }
 }
 

@@ -1,4 +1,5 @@
 import type { ListQueryParams, UUID } from '../api/types';
+import { devLog } from './devLog';
 
 /** Query-key helpers (React Query–style) for accommodation list caches. */
 export const accommodationQueryKeys = {
@@ -64,7 +65,7 @@ export function getAccommodationInvalidationGeneration(): number {
 
 export function invalidateAccommodationQueries(): void {
   invalidationGeneration += 1;
-  console.log('[accommodationQueryCache] invalidate all', invalidationGeneration);
+  devLog('[accommodationQueryCache] invalidate all', invalidationGeneration);
   listeners.forEach(listener => listener());
 }
 

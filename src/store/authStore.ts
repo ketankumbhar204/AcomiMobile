@@ -208,7 +208,8 @@ export const useAuthStore = create<AuthState>(set => ({
     setAuthToken(null);
 
     try {
-      await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
+      await AsyncStorage.removeItem(TOKEN_KEY);
+      await AsyncStorage.removeItem(USER_KEY);
     } catch (err) {
       console.error(`${LOG_TAG} clearSession AsyncStorage error`, err);
     }

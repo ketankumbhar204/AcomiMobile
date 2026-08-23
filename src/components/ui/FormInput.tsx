@@ -21,6 +21,7 @@ type FormInputProps = TextInputProps & {
   size?: 'default' | 'compact';
   /** Optional Lucide (or compatible) leading icon. */
   leadingIcon?: ComponentType<IconProps>;
+  prefix?: string;
 };
 
 export function FormInput({
@@ -29,6 +30,7 @@ export function FormInput({
   hint,
   size = 'default',
   leadingIcon: LeadingIcon,
+  prefix,
   style,
   ...inputProps
 }: FormInputProps) {
@@ -54,6 +56,7 @@ export function FormInput({
             />
           </View>
         ) : null}
+        {prefix ? <Text style={styles.prefix}>{prefix}</Text> : null}
         <TextInput
           style={[styles.input, compact && styles.inputCompact, style]}
           placeholderTextColor={colors.muted}
@@ -109,6 +112,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.lightGreen,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  prefix: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.textPrimary,
   },
   input: {
     flex: 1,

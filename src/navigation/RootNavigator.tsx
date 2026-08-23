@@ -17,6 +17,7 @@ import {
 } from './navigationRef';
 import type { RootStackParamList } from './types';
 import type { SpaceBootstrapResult } from '../store/spaceStore';
+import { devLog } from '../utils/devLog';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -38,7 +39,7 @@ function applyStartupNavigation(result: SpaceBootstrapResult) {
     return false;
   }
 
-  console.log('[Dashboard] bootstrap navigation', result);
+  devLog('[Dashboard] bootstrap navigation', result);
   navigateBootstrapResult(result);
   return true;
 }

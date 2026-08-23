@@ -4,11 +4,18 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { Building2, Sparkles, UsersRound } from 'lucide-react-native';
-import { AuthHero, OnboardingChoiceCard } from '../components/auth';
+import {
+  AuthHero,
+  OnboardingChoiceCard,
+  OnboardingTrustBanner,
+} from '../components/auth';
+import { OnboardingBrandHeader } from '../components/ui/OnboardingBrandHeader';
 import { ProfileHeaderButton } from '../components/ui/ProfileHeaderButton';
 import { Screen } from '../components/ui/Screen';
 import type { MainStackParamList } from '../navigation/types';
 import { spacing } from '../theme';
+
+const heroBuilding = require('../assets/onboarding/hero-building.png');
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'OnboardingChoice'>;
 
@@ -16,23 +23,27 @@ export function OnboardingChoiceScreen() {
   const { t, i18n } = useTranslation();
   const navigation = useNavigation<Nav>();
 
+  const headerTitle = useCallback(() => <OnboardingBrandHeader />, []);
   const headerRight = useCallback(() => <ProfileHeaderButton />, []);
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: t('onboarding.choice.title'),
+      headerTitle,
+      headerTitleAlign: 'left',
       headerBackVisible: false,
+      headerLeft: () => null,
       headerRight,
     });
-  }, [headerRight, navigation, t, i18n.language]);
+  }, [headerRight, headerTitle, navigation, t, i18n.language]);
 
   return (
     <Screen scrollable contentStyle={styles.content}>
       <AuthHero
         icon={Sparkles}
         eyebrow={t('onboarding.choice.eyebrow')}
-        heading={t('onboarding.choice.heading')}
-        subheading={t('onboarding.choice.subheading')}
+        heading={t('onboarding.choice.headingLead')}
+        headingHighlight={t('onboarding.choice.headingHighlight')}
+        illustration={heroBuilding}
       />
 
       <OnboardingChoiceCard
@@ -40,16 +51,11 @@ export function OnboardingChoiceScreen() {
         title={t('onboarding.choice.manageTitle')}
         description={t('onboarding.choice.manageSubtitle')}
         benefits={[
-          t('onboarding.choice.manageBenefit1', {
-            defaultValue: 'Set up your PG, hostel, or mess',
-          }),
-          t('onboarding.choice.manageBenefit2', {
-            defaultValue: 'Invite members and staff',
-          }),
-          t('onboarding.choice.manageBenefit3', {
-            defaultValue: 'Run meals, payments, and occupancy',
-          }),
+          t('onboarding.choice.manageBenefit1'),
+          t('onboarding.choice.manageBenefit2'),
+          t('onboarding.choice.manageBenefit3'),
         ]}
+        illustration="owner"
         onPress={() => navigation.navigate('CreateSpace')}
       />
 
@@ -58,19 +64,19 @@ export function OnboardingChoiceScreen() {
         title={t('onboarding.choice.memberTitle')}
         description={t('onboarding.choice.memberSubtitle')}
         benefits={[
-          t('onboarding.choice.joinBenefit1', {
-            defaultValue: 'Accept a pending invitation',
-          }),
-          t('onboarding.choice.joinBenefit2', {
-            defaultValue: 'Join as resident or customer',
-          }),
-          t('onboarding.choice.joinBenefit3', {
-            defaultValue: 'Access meals and payments quickly',
-          }),
+          t('onboarding.choice.joinBenefit1'),
+          t('onboarding.choice.joinBenefit2'),
+          t('onboarding.choice.joinBenefit3'),
         ]}
         accent="#1D4ED8"
         soft="#EFF6FF"
+        illustration="member"
         onPress={() => navigation.navigate('JoinSpace')}
+      />
+
+      <OnboardingTrustBanner
+        title={t('onboarding.choice.trustTitle')}
+        body={t('onboarding.choice.trustBody')}
       />
     </Screen>
   );
@@ -78,7 +84,7 @@ export function OnboardingChoiceScreen() {
 
 const styles = StyleSheet.create({
   content: {
-    paddingBottom: spacing.section,
-    gap: spacing.md,
+    paddingBottom: spacing.xl,
+    gap: spacing.sm,
   },
 });

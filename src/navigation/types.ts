@@ -3,7 +3,11 @@ import type { MembershipRole, UUID } from '../api/types';
 
 export type AuthStackParamList = {
   Login: undefined;
+  Register: undefined;
   OtpVerification: {
+    mobileNumber: string;
+  };
+  RegisterPassword: {
     mobileNumber: string;
   };
 };

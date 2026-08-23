@@ -14,6 +14,7 @@ import type {
   UUID,
   VacateOccupancyRequest,
 } from './types';
+import { devLog } from '../utils/devLog';
 
 const LOG_TAG = '[OccupancyApi]';
 
@@ -61,7 +62,7 @@ export const occupancyApi = {
     spaceId: UUID,
     body: AllocateOccupancyRequest,
   ): Promise<OccupancyResponse> => {
-    console.log(`${LOG_TAG} POST /spaces/${spaceId}/occupancies`, body);
+    devLog(`${LOG_TAG} POST /spaces/${spaceId}/occupancies`, body);
     return unwrapApiResponse(
       apiClient.post<ApiResponse<OccupancyResponse>>(
         `/spaces/${spaceId}/occupancies`,
@@ -74,7 +75,7 @@ export const occupancyApi = {
     spaceId: UUID,
     body: ReserveOccupancyRequest,
   ): Promise<OccupancyResponse> => {
-    console.log(`${LOG_TAG} POST /spaces/${spaceId}/occupancies/reserve`, body);
+    devLog(`${LOG_TAG} POST /spaces/${spaceId}/occupancies/reserve`, body);
     return unwrapApiResponse(
       apiClient.post<ApiResponse<OccupancyResponse>>(
         `/spaces/${spaceId}/occupancies/reserve`,
@@ -88,7 +89,7 @@ export const occupancyApi = {
     occupancyId: UUID,
     body?: MoveInOccupancyRequest,
   ): Promise<OccupancyResponse> => {
-    console.log(`${LOG_TAG} POST /spaces/${spaceId}/occupancies/${occupancyId}/move-in`, body);
+    devLog(`${LOG_TAG} POST /spaces/${spaceId}/occupancies/${occupancyId}/move-in`, body);
     return unwrapApiResponse(
       apiClient.post<ApiResponse<OccupancyResponse>>(
         `/spaces/${spaceId}/occupancies/${occupancyId}/move-in`,
@@ -102,7 +103,7 @@ export const occupancyApi = {
     occupancyId: UUID,
     body?: CancelReservationRequest,
   ): Promise<OccupancyResponse> => {
-    console.log(
+    devLog(
       `${LOG_TAG} POST /spaces/${spaceId}/occupancies/${occupancyId}/cancel-reservation`,
       body,
     );
@@ -119,7 +120,7 @@ export const occupancyApi = {
     occupancyId: UUID,
     body: TransferOccupancyRequest,
   ): Promise<OccupancyResponse> => {
-    console.log(`${LOG_TAG} POST /spaces/${spaceId}/occupancies/${occupancyId}/transfer`, body);
+    devLog(`${LOG_TAG} POST /spaces/${spaceId}/occupancies/${occupancyId}/transfer`, body);
     return unwrapApiResponse(
       apiClient.post<ApiResponse<OccupancyResponse>>(
         `/spaces/${spaceId}/occupancies/${occupancyId}/transfer`,
@@ -133,7 +134,7 @@ export const occupancyApi = {
     occupancyId: UUID,
     body?: VacateOccupancyRequest,
   ): Promise<OccupancyResponse> => {
-    console.log(`${LOG_TAG} POST /spaces/${spaceId}/occupancies/${occupancyId}/vacate`, body);
+    devLog(`${LOG_TAG} POST /spaces/${spaceId}/occupancies/${occupancyId}/vacate`, body);
     return unwrapApiResponse(
       apiClient.post<ApiResponse<OccupancyResponse>>(
         `/spaces/${spaceId}/occupancies/${occupancyId}/vacate`,
@@ -143,7 +144,7 @@ export const occupancyApi = {
   },
 
   getOccupancy: async (spaceId: UUID, occupancyId: UUID): Promise<OccupancyResponse> => {
-    console.log(`${LOG_TAG} GET /spaces/${spaceId}/occupancies/${occupancyId}`);
+    devLog(`${LOG_TAG} GET /spaces/${spaceId}/occupancies/${occupancyId}`);
     return unwrapApiResponse(
       apiClient.get<ApiResponse<OccupancyResponse>>(
         `/spaces/${spaceId}/occupancies/${occupancyId}`,
@@ -156,7 +157,7 @@ export const occupancyApi = {
     filters?: OccupancyListFilters,
   ): Promise<PagedResponse<OccupancyResponse>> => {
     const query = buildOccupancyListQuery(filters);
-    console.log(`${LOG_TAG} GET /spaces/${spaceId}/occupancies${query}`);
+    devLog(`${LOG_TAG} GET /spaces/${spaceId}/occupancies${query}`);
     return unwrapApiResponse(
       apiClient.get<ApiResponse<PagedResponse<OccupancyResponse>>>(
         `/spaces/${spaceId}/occupancies${query}`,
@@ -168,7 +169,7 @@ export const occupancyApi = {
     spaceId: UUID,
     memberId: UUID,
   ): Promise<MemberOccupancyListResponse> => {
-    console.log(`${LOG_TAG} GET /spaces/${spaceId}/members/${memberId}/occupancies`);
+    devLog(`${LOG_TAG} GET /spaces/${spaceId}/members/${memberId}/occupancies`);
     return unwrapApiResponse(
       apiClient.get<ApiResponse<MemberOccupancyListResponse>>(
         `/spaces/${spaceId}/members/${memberId}/occupancies`,

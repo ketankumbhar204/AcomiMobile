@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { devLog } from '../utils/devLog';
 
 import apiClient from './client';
 
@@ -372,7 +373,7 @@ export const inventoryApi = {
 
     try {
 
-      console.log(`${LOG_TAG} GET /spaces/${spaceId}/inventory/dashboard`);
+      devLog(`${LOG_TAG} GET /spaces/${spaceId}/inventory/dashboard`);
 
       const raw = await unwrapApiResponse(
 
@@ -412,7 +413,7 @@ export const inventoryApi = {
 
     try {
 
-      console.log(`${LOG_TAG} GET /spaces/${spaceId}/inventory/items`);
+      devLog(`${LOG_TAG} GET /spaces/${spaceId}/inventory/items`);
 
       const raw = await unwrapApiResponse(
 
@@ -456,7 +457,7 @@ export const inventoryApi = {
 
     try {
 
-      console.log(`${LOG_TAG} GET /spaces/${spaceId}/inventory/items/${itemId}`);
+      devLog(`${LOG_TAG} GET /spaces/${spaceId}/inventory/items/${itemId}`);
 
       const raw = await unwrapApiResponse(
 
@@ -500,7 +501,7 @@ export const inventoryApi = {
 
   ): Promise<InventoryItem> => {
 
-    console.log(`${LOG_TAG} POST /spaces/${spaceId}/inventory/items`, input);
+    devLog(`${LOG_TAG} POST /spaces/${spaceId}/inventory/items`, input);
 
     const raw = await unwrapApiResponse(
 
@@ -538,7 +539,7 @@ export const inventoryApi = {
 
   ): Promise<InventoryItem> => {
 
-    console.log(`${LOG_TAG} PUT /spaces/${spaceId}/inventory/items/${itemId}`, input);
+    devLog(`${LOG_TAG} PUT /spaces/${spaceId}/inventory/items/${itemId}`, input);
 
     const raw = await unwrapApiResponse(
 
@@ -580,7 +581,7 @@ export const inventoryApi = {
 
   ): Promise<void> => {
 
-    console.log(`${LOG_TAG} DELETE /spaces/${spaceId}/inventory/items/${itemId}`);
+    devLog(`${LOG_TAG} DELETE /spaces/${spaceId}/inventory/items/${itemId}`);
 
     await unwrapVoidResponse(
 
@@ -614,7 +615,7 @@ export const inventoryApi = {
 
   ): Promise<InventoryItem> => {
 
-    console.log(
+    devLog(
 
       `${LOG_TAG} POST /spaces/${spaceId}/inventory/items/${itemId}/stock-moves`,
 
@@ -668,7 +669,7 @@ export const inventoryApi = {
 
     try {
 
-      console.log(`${LOG_TAG} GET /spaces/${spaceId}/inventory/transactions${q}`);
+      devLog(`${LOG_TAG} GET /spaces/${spaceId}/inventory/transactions${q}`);
 
       const raw = await unwrapApiResponse(
 
@@ -726,7 +727,7 @@ export const inventoryApi = {
 
     try {
 
-      console.log(`${LOG_TAG} GET /spaces/${spaceId}/inventory/categories`);
+      devLog(`${LOG_TAG} GET /spaces/${spaceId}/inventory/categories`);
 
       const raw = await unwrapApiResponse(
 
@@ -776,7 +777,7 @@ export const inventoryApi = {
 
   ): Promise<InventoryCategory> => {
 
-    console.log(`${LOG_TAG} POST /spaces/${spaceId}/inventory/categories`, input);
+    devLog(`${LOG_TAG} POST /spaces/${spaceId}/inventory/categories`, input);
 
     const raw = await unwrapApiResponse(
 
@@ -816,7 +817,7 @@ export const inventoryApi = {
 
   ): Promise<void> => {
 
-    console.log(`${LOG_TAG} DELETE /spaces/${spaceId}/inventory/categories/${categoryId}`);
+    devLog(`${LOG_TAG} DELETE /spaces/${spaceId}/inventory/categories/${categoryId}`);
 
     await unwrapVoidResponse(
 
@@ -846,7 +847,7 @@ export const inventoryApi = {
 
     try {
 
-      console.log(`${LOG_TAG} GET /spaces/${spaceId}/inventory/suppliers`);
+      devLog(`${LOG_TAG} GET /spaces/${spaceId}/inventory/suppliers`);
 
       const raw = await unwrapApiResponse(
 
@@ -896,7 +897,7 @@ export const inventoryApi = {
 
   ): Promise<InventorySupplier> => {
 
-    console.log(`${LOG_TAG} POST /spaces/${spaceId}/inventory/suppliers`, input);
+    devLog(`${LOG_TAG} POST /spaces/${spaceId}/inventory/suppliers`, input);
 
     const raw = await unwrapApiResponse(
 

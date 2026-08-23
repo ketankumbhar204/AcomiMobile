@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import {
   Keyboard,
+  Linking,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,13 +14,15 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { LogIn, Smartphone, TriangleAlert } from 'lucide-react-native';
+import { Lock, LogIn, Smartphone, TriangleAlert } from 'lucide-react-native';
 import { AuthHero } from '../../components/auth';
 import { StickyFormActions } from '../../components/progressive';
+import { env } from '../../config/env';
+import { useLogin } from '../../hooks/useAuth';
 import type { AuthStackParamList } from '../../navigation/types';
-import { useSendOtp } from '../../hooks/useAuth';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { isValidIndianMobile, normalizeIndianMobileDigits } from '../../utils/indianMobile';
+import { validatePassword } from '../../utils/passwordRules';
 
 type LoginNav = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 
@@ -26,15 +30,19 @@ export function LoginScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<LoginNav>();
-  const { sendOtp, isLoading, error, clearError } = useSendOtp();
+  const { submit, isLoading, error, clearError } = useLogin();
 
   const [mobileNumber, setMobileNumber] = useState('');
+  const [password, setPassword] = useState('');
   const [mobileError, setMobileError] = useState<string | null>(null);
-  const [focused, setFocused] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [focusedField, setFocusedField] = useState<'mobile' | 'password' | null>(null);
 
-  const isValid = isValidIndianMobile(mobileNumber);
+  const isValid = isValidIndianMobile(mobileNumber) && validatePassword(password) == null;
   const formatError =
-    mobileNumber.length === 10 && !isValid ? t('auth.login.mobileInvalid') : null;
+    mobileNumber.length === 10 && !isValidIndianMobile(mobileNumber)
+      ? t('auth.login.mobileInvalid')
+      : null;
 
   function validateMobile(value: string): string | null {
     if (!value.trim()) {
@@ -46,22 +54,34 @@ export function LoginScreen() {
     return null;
   }
 
+  function passwordMessage(code: ReturnType<typeof validatePassword>): string | null {
+    if (code === 'required') {
+      return t('auth.login.passwordRequired');
+    }
+    if (code === 'tooShort') {
+      return t('auth.login.passwordTooShort');
+    }
+    if (code === 'tooLong') {
+      return t('auth.login.passwordTooLong');
+    }
+    return null;
+  }
+
   const fieldError = mobileError ?? formatError;
 
-  async function handleSendOtp() {
+  async function handleSignIn() {
     Keyboard.dismiss();
     clearError();
 
-    const validationError = validateMobile(mobileNumber);
-    if (validationError) {
-      setMobileError(validationError);
+    const nextMobileError = validateMobile(mobileNumber);
+    const nextPasswordError = passwordMessage(validatePassword(password));
+    setMobileError(nextMobileError);
+    setPasswordError(nextPasswordError);
+    if (nextMobileError || nextPasswordError) {
       return;
     }
 
-    const success = await sendOtp(mobileNumber);
-    if (success) {
-      navigation.navigate('OtpVerification', { mobileNumber });
-    }
+    await submit(mobileNumber, password);
   }
 
   return (
@@ -115,14 +135,14 @@ export function LoginScreen() {
             <TextInput
               style={[
                 styles.phoneInput,
-                focused && styles.phoneInputFocused,
+                focusedField === 'mobile' && styles.phoneInputFocused,
                 fieldError ? styles.phoneInputError : null,
               ]}
               placeholder={t('auth.login.mobilePlaceholder')}
               placeholderTextColor={colors.muted}
               value={mobileNumber}
-              onFocus={() => setFocused(true)}
-              onBlur={() => setFocused(false)}
+              onFocus={() => setFocusedField('mobile')}
+              onBlur={() => setFocusedField(null)}
               onChangeText={text => {
                 const digits = normalizeIndianMobileDigits(text);
                 setMobileNumber(digits);
@@ -134,9 +154,8 @@ export function LoginScreen() {
                 }
               }}
               keyboardType="phone-pad"
-              returnKeyType="done"
+              returnKeyType="next"
               maxLength={10}
-              onSubmitEditing={handleSendOtp}
               autoCorrect={false}
               accessibilityLabel={t('auth.login.mobileLabel', {
                 defaultValue: 'Mobile number',
@@ -144,20 +163,72 @@ export function LoginScreen() {
             />
           </View>
           {fieldError ? <Text style={styles.fieldError}>{fieldError}</Text> : null}
-          <Text style={styles.helper}>
-            {t('auth.login.mobileHelper', {
-              defaultValue: 'We will text a 6-digit code. Standard SMS rates may apply.',
-            })}
-          </Text>
+
+          <View style={styles.fieldLabelRow}>
+            <Lock size={14} color={colors.primaryDark} strokeWidth={2.2} />
+            <Text style={styles.fieldLabel}>{t('auth.login.passwordLabel')}</Text>
+          </View>
+          <TextInput
+            style={[
+              styles.phoneInput,
+              focusedField === 'password' && styles.phoneInputFocused,
+              passwordError ? styles.phoneInputError : null,
+            ]}
+            placeholder={t('auth.login.passwordPlaceholder')}
+            placeholderTextColor={colors.muted}
+            value={password}
+            onFocus={() => setFocusedField('password')}
+            onBlur={() => setFocusedField(null)}
+            onChangeText={text => {
+              setPassword(text);
+              if (passwordError) {
+                setPasswordError(null);
+              }
+              if (error) {
+                clearError();
+              }
+            }}
+            secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
+            textContentType="password"
+            returnKeyType="done"
+            onSubmitEditing={() => {
+              handleSignIn();
+            }}
+            accessibilityLabel={t('auth.login.passwordLabel')}
+          />
+          {passwordError ? <Text style={styles.fieldError}>{passwordError}</Text> : null}
         </View>
 
-        <Text style={styles.disclaimer}>{t('auth.login.disclaimer')}</Text>
+        <Pressable
+          style={({ pressed }) => [styles.linkRow, pressed && styles.linkPressed]}
+          onPress={() => navigation.navigate('Register')}
+          accessibilityRole="button"
+          accessibilityLabel={t('auth.login.registerLink')}>
+          <Text style={styles.helper}>
+            {t('auth.login.registerPrompt')}{' '}
+            <Text style={styles.linkText}>{t('auth.login.registerLink')}</Text>
+          </Text>
+        </Pressable>
+
+        <Pressable
+          style={({ pressed }) => [styles.linkRow, pressed && styles.linkPressed]}
+          onPress={() => {
+            Linking.openURL(env.privacyPolicyUrl);
+          }}
+          accessibilityRole="link"
+          accessibilityLabel={t('settings.profile.privacyPolicy')}>
+          <Text style={styles.linkText}>{t('settings.profile.privacyPolicy')}</Text>
+        </Pressable>
       </ScrollView>
 
       <StickyFormActions
         primary={{
-          label: t('auth.login.sendOtp'),
-          onPress: () => void handleSendOtp(),
+          label: t('auth.login.submit'),
+          onPress: () => {
+            handleSignIn();
+          },
           loading: isLoading,
           disabled: isLoading || !isValid,
         }}
@@ -290,12 +361,21 @@ const styles = StyleSheet.create({
   helper: {
     ...typography.caption,
     color: colors.muted,
-  },
-  disclaimer: {
-    ...typography.caption,
     textAlign: 'center',
-    marginTop: spacing.lg,
-    color: colors.textSecondary,
-    lineHeight: 18,
+  },
+  linkRow: {
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.md,
+  },
+  linkPressed: {
+    opacity: 0.8,
+  },
+  linkText: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    fontWeight: '700',
+    textAlign: 'center',
   },
 });

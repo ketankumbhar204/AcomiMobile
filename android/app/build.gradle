@@ -72,6 +72,14 @@ def enableProguardInReleaseBuilds = false
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+// Release signing: load from untracked android/keystore.properties (never commit secrets).
+// See android/keystore.properties.example. Do not fall back to the debug keystore for release.
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -92,18 +100,72 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            if (keystorePropertiesFile.exists()) {
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+                storeFile rootProject.file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
+            debuggable true
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // Play / production artifacts must use the release keystore only.
+            // Missing keystore.properties -> assembleRelease/bundleRelease fail (no debug fallback).
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            }
+            debuggable false
+            // minifyEnabled stays behind enableProguardInReleaseBuilds (currently false).
+            // Do not enable R8 until a signed release AAB can be used to validate native modules.
             minifyEnabled enableProguardInReleaseBuilds
+            shrinkResources enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
+    }
+}
+
+// Fail fast before native compile when release packaging is requested without signing.
+def assertReleaseSigningConfigured = {
+    if (!keystorePropertiesFile.exists()) {
+        throw new GradleException(
+            "Release signing is not configured. Create an approved release keystore, " +
+            "add android/keystore.properties (see android/keystore.properties.example), " +
+            "and ensure the keystore file is not committed to Git. " +
+            "Release keystore creation requires explicit user approval."
+        )
+    }
+    def required = ['storeFile', 'storePassword', 'keyAlias', 'keyPassword']
+    def missing = required.findAll { !keystoreProperties.getProperty(it) }
+    if (!missing.isEmpty()) {
+        throw new GradleException(
+            "android/keystore.properties is missing required keys: ${missing.join(', ')}"
+        )
+    }
+    def store = rootProject.file(keystoreProperties['storeFile'])
+    if (!store.exists()) {
+        throw new GradleException(
+            "Release keystore file not found: ${store}. " +
+            "Release keystore creation requires explicit user approval."
+        )
+    }
+}
+
+tasks.register("verifyReleaseSigningConfigured") {
+    doLast { assertReleaseSigningConfigured() }
+}
+
+gradle.taskGraph.whenReady { graph ->
+    def releasePackageRequested = graph.allTasks.any { t ->
+        t.name == "assembleRelease" || t.name == "bundleRelease"
+    }
+    if (releasePackageRequested) {
+        assertReleaseSigningConfigured()
     }
 }
 

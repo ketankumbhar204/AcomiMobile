@@ -1,16 +1,25 @@
 /**
  * Acomi surface + brand color system.
  * Page uses a subtle light-green canvas; cards stay pure white.
+ *
+ * Hierarchy (shared with Web):
+ *   primary  #25D366  — CTAs, selected chrome
+ *   teal     #128C7E  — brand chrome / secondary
+ *   tealDark #075E54  — header / mark accents
  */
 export const colors = {
   // Brand
   primary: '#25D366',
   primaryHover: '#20BD5A',
+  primaryActive: '#1AAE50',
+  teal: '#128C7E',
+  tealDark: '#075E54',
   primaryDark: '#128C7E',
 
   // Surfaces
   /** App / page background */
   background: '#F3FAF6',
+  mintSubtle: '#EAF8F2',
   /** Secondary surface (wells, chips behind content) */
   surfaceSecondary: '#EDF8F2',
   /** Section background */
@@ -40,4 +49,5 @@ export const colors = {
   success: '#059669',
   danger: '#DC2626',
   warning: '#D97706',
+  info: '#2563EB',
 } as const;

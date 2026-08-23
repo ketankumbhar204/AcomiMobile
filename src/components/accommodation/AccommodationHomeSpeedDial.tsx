@@ -39,7 +39,9 @@ export function AccommodationHomeSpeedDial({
   const closeMenu = useCallback(() => {
     setOpen(false);
     // #region agent log
-    fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'AccommodationHomeSpeedDial.tsx:closeMenu',message:'fab menu closed',data:{},timestamp:Date.now(),hypothesisId:'H1',runId:'fab-speed-dial'})}).catch(()=>{});
+    if (__DEV__) {
+      fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'AccommodationHomeSpeedDial.tsx:closeMenu',message:'fab menu closed',data:{},timestamp:Date.now(),hypothesisId:'H1',runId:'fab-speed-dial'})}).catch(()=>{});
+    }
     // #endregion
   }, []);
 
@@ -47,7 +49,9 @@ export function AccommodationHomeSpeedDial({
     setOpen(current => {
       const next = !current;
       // #region agent log
-      fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'AccommodationHomeSpeedDial.tsx:toggleMenu',message:'fab menu toggled',data:{open:next},timestamp:Date.now(),hypothesisId:'H1',runId:'fab-speed-dial'})}).catch(()=>{});
+      if (__DEV__) {
+        fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'AccommodationHomeSpeedDial.tsx:toggleMenu',message:'fab menu toggled',data:{open:next},timestamp:Date.now(),hypothesisId:'H1',runId:'fab-speed-dial'})}).catch(()=>{});
+      }
       // #endregion
       return next;
     });

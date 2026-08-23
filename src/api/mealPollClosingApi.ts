@@ -6,13 +6,14 @@ import type {
   UpdateMealPollClosingSettingsRequest,
   UUID,
 } from './types';
+import { devLog } from '../utils/devLog';
 
 const LOG_TAG = '[MealPollClosingApi]';
 
 export const mealPollClosingApi = {
   getSettings: async (spaceId: UUID): Promise<MealPollClosingSettings> => {
     const path = `/spaces/${spaceId}/meal-poll-closing-settings`;
-    console.log(`${LOG_TAG} GET ${path}`);
+    devLog(`${LOG_TAG} GET ${path}`);
     return unwrapApiResponse(apiClient.get<ApiResponse<MealPollClosingSettings>>(path));
   },
 
@@ -21,7 +22,7 @@ export const mealPollClosingApi = {
     payload: UpdateMealPollClosingSettingsRequest,
   ): Promise<MealPollClosingSettings> => {
     const path = `/spaces/${spaceId}/meal-poll-closing-settings`;
-    console.log(`${LOG_TAG} PUT ${path}`, payload);
+    devLog(`${LOG_TAG} PUT ${path}`, payload);
     return unwrapApiResponse(
       apiClient.put<ApiResponse<MealPollClosingSettings>>(path, payload),
     );

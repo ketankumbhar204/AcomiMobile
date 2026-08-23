@@ -8,6 +8,7 @@ import {
 } from '../utils/accommodationQueryCache';
 import { getAccommodationErrorMessage } from '../utils/accommodationErrors';
 import { mergeInactiveListItems } from '../utils/accommodationInactiveRegistry';
+import { devLog } from '../utils/devLog';
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -66,7 +67,7 @@ export function useAccommodationPagedList<T extends { active?: boolean }>(
   const loadPage = useCallback(
     async (page: number, append: boolean) => {
       const seq = ++requestSeq.current;
-      console.log(`[${logTag}] queryKey`, queryKeyLabel(queryKey), { page, query: debouncedQuery });
+      devLog(`[${logTag}] queryKey`, queryKeyLabel(queryKey), { page, query: debouncedQuery });
 
       if (append) {
         setLoadingMore(true);
@@ -89,7 +90,7 @@ export function useAccommodationPagedList<T extends { active?: boolean }>(
         const data = await fetchPage(params);
 
         if (seq !== requestSeq.current) {
-          console.log(`[${logTag}] stale response ignored`);
+          devLog(`[${logTag}] stale response ignored`);
           return;
         }
 
@@ -104,7 +105,7 @@ export function useAccommodationPagedList<T extends { active?: boolean }>(
           }
           return merged;
         });
-        console.log(`[${logTag}] loaded page`, data.page, 'items', data.content.length);
+        devLog(`[${logTag}] loaded page`, data.page, 'items', data.content.length);
       } catch (err) {
         if (seq !== requestSeq.current) {
           return;

@@ -17,10 +17,12 @@ export function useActiveSpaceId(fallbackSpaceId?: UUID | null): UUID {
   return useMemo(() => {
     if (currentSpaceId) {
       if (routeSpaceId && routeSpaceId !== currentSpaceId) {
-        console.warn('[useActiveSpaceId] stale route spaceId — using currentSpace', {
-          routeSpaceId,
-          currentSpaceId,
-        });
+        if (__DEV__) {
+          console.warn('[useActiveSpaceId] stale route spaceId — using currentSpace', {
+            routeSpaceId,
+            currentSpaceId,
+          });
+        }
       }
       return currentSpaceId;
     }

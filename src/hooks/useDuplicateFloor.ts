@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { accommodationApi } from '../api/accommodationApi';
 import type { DuplicateFloorRequest, DuplicateFloorResponse, UUID } from '../api/types';
 import { getAccommodationErrorMessage } from '../utils/accommodationErrors';
+import { devLog } from '../utils/devLog';
 
 export function useDuplicateFloor() {
   const [loading, setLoading] = useState(false);
@@ -14,7 +15,7 @@ export function useDuplicateFloor() {
       floorId: UUID,
       body: DuplicateFloorRequest,
     ): Promise<DuplicateFloorResponse | null> => {
-      console.log('[useDuplicateFloor]', floorId);
+      devLog('[useDuplicateFloor]', floorId);
       setLoading(true);
       setError(null);
 

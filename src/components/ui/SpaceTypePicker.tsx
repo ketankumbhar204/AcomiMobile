@@ -27,13 +27,38 @@ type SpaceTypePickerProps = {
 
 const TYPE_VISUAL: Record<
   SpaceType,
-  { icon: ComponentType<IconProps>; accent: string }
+  { icon: ComponentType<IconProps>; accent: string; tint: string; selectedTint: string }
 > = {
-  PG: { icon: House, accent: colors.primaryDark },
-  MESS: { icon: UtensilsCrossed, accent: '#D97706' },
-  HOSTEL: { icon: Building2, accent: '#7C3AED' },
-  CO_LIVING: { icon: Users, accent: '#2563EB' },
-  RENTAL: { icon: KeyRound, accent: '#CA8A04' },
+  PG: {
+    icon: House,
+    accent: colors.teal,
+    tint: '#E7F7F1',
+    selectedTint: '#D4F0E6',
+  },
+  MESS: {
+    icon: UtensilsCrossed,
+    accent: '#C2410C',
+    tint: '#FFF4E5',
+    selectedTint: '#FFE8C8',
+  },
+  HOSTEL: {
+    icon: Building2,
+    accent: '#7C3AED',
+    tint: '#F3E8FF',
+    selectedTint: '#E9D5FF',
+  },
+  CO_LIVING: {
+    icon: Users,
+    accent: '#4F46E5',
+    tint: '#EEF2FF',
+    selectedTint: '#E0E7FF',
+  },
+  RENTAL: {
+    icon: KeyRound,
+    accent: '#0284C7',
+    tint: '#E8F4FF',
+    selectedTint: '#D6ECFC',
+  },
 };
 
 /** Design A selectable space-type cards — icon + copy row, equal height, compact. */
@@ -46,35 +71,37 @@ export function SpaceTypePicker({ value, onChange, error }: SpaceTypePickerProps
       <View style={styles.grid}>
         {SPACE_TYPE_VALUES.map(type => {
           const isSelected = value === type;
-          const { icon: Icon, accent } = TYPE_VISUAL[type];
+          const { icon: Icon, accent, tint, selectedTint } = TYPE_VISUAL[type];
           return (
             <Pressable
               key={type}
               style={({ pressed }) => [
                 styles.card,
-                isSelected && styles.cardSelected,
-                pressed && !isSelected && styles.cardPressed,
+                {
+                  backgroundColor: isSelected || pressed ? selectedTint : tint,
+                  borderColor: isSelected ? colors.primary : `${accent}33`,
+                },
               ]}
               onPress={() => onChange(type)}
               accessibilityRole="button"
               accessibilityState={{ selected: isSelected }}>
-              <View style={[styles.iconWrap, { backgroundColor: `${accent}1F` }]}>
+              <View style={[styles.iconWrap, { backgroundColor: `${accent}22` }]}>
                 <Icon size={22} color={accent} strokeWidth={2.2} />
               </View>
               <View style={styles.copy}>
                 <Text
-                  style={[styles.cardLabel, isSelected && styles.cardLabelSelected]}
+                  style={[styles.cardLabel, isSelected && { color: accent }]}
                   numberOfLines={1}>
                   {getSpaceTypeLabel(type)}
                 </Text>
-                <Text
-                  style={[styles.cardDesc, isSelected && styles.cardDescSelected]}
-                  numberOfLines={2}>
+                <Text style={styles.cardDesc} numberOfLines={2}>
                   {getSpaceTypeDescription(type)}
                 </Text>
               </View>
               {isSelected ? (
-                <View style={styles.checkBadge} accessibilityElementsHidden>
+                <View
+                  style={[styles.checkBadge, { backgroundColor: colors.primary }]}
+                  accessibilityElementsHidden>
                   <Check size={11} color={colors.white} strokeWidth={3} />
                 </View>
               ) : null}
@@ -114,18 +141,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: radius.card,
     borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.white,
     position: 'relative',
     overflow: 'hidden',
     ...shadows.sm,
-  },
-  cardSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.lightGreen,
-  },
-  cardPressed: {
-    backgroundColor: colors.surfaceSecondary,
   },
   iconWrap: {
     width: 44,
@@ -146,17 +164,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.textPrimary,
   },
-  cardLabelSelected: {
-    color: colors.primaryDark,
-  },
   cardDesc: {
     ...typography.caption,
     color: colors.muted,
     lineHeight: 15,
     fontSize: 11,
-  },
-  cardDescSelected: {
-    color: colors.primaryDark,
   },
   checkBadge: {
     position: 'absolute',
@@ -165,7 +177,6 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -36,7 +36,7 @@ export function UnitLayoutCard({
   const illustration = getUnitIllustration(unit.roomCount, unit.bedCount);
 
   // #region agent log
-  if (!inactive && unit.bedCount > 0) {
+  if (__DEV__ && !inactive && unit.bedCount > 0) {
     fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'UnitLayoutCard.tsx:render',message:'unit occupancy display',data:{unitId:unit.unitId,unitName:unit.name,apiStatus:unit.status,displayStatus:status,percent,occupiedBeds:unit.occupiedBeds??0,availableBeds:unit.availableBeds,bedCount:unit.bedCount},timestamp:Date.now(),hypothesisId:'H1',runId:'unit-occupancy'})}).catch(()=>{});
   }
   // #endregion

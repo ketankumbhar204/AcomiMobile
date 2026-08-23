@@ -21,6 +21,7 @@ import type { MainStackParamList } from '../navigation/types';
 import { useMemberStore } from '../store/memberStore';
 import { useMemberMealActivityDaySheetStore } from '../store/memberMealActivityDaySheetStore';
 import { spacing, typography } from '../theme';
+import { devLog } from '../utils/devLog';
 
 type MemberDetailsNav = NativeStackNavigationProp<
   MainStackParamList,
@@ -75,7 +76,7 @@ export function MemberDetailsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      console.log('[MemberDetails] screen focused', { spaceId, memberId });
+      devLog('[MemberDetails] screen focused', { spaceId, memberId });
       void loadMemberDetails(memberId);
       void loadPendingInvitations();
       return () => {

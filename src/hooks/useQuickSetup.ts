@@ -7,6 +7,7 @@ import type {
   UUID,
 } from '../api/types';
 import { getAccommodationErrorMessage } from '../utils/accommodationErrors';
+import { devLog } from '../utils/devLog';
 
 export function useQuickSetup(spaceId: UUID | null) {
   const [loading, setLoading] = useState(false);
@@ -18,7 +19,7 @@ export function useQuickSetup(spaceId: UUID | null) {
         return null;
       }
 
-      console.log('[useQuickSetup] preview');
+      devLog('[useQuickSetup] preview');
       setLoading(true);
       setError(null);
 
@@ -46,7 +47,7 @@ export function useQuickSetup(spaceId: UUID | null) {
         return null;
       }
 
-      console.log('[useQuickSetup] execute', idempotencyKey);
+      devLog('[useQuickSetup] execute', idempotencyKey);
       setLoading(true);
       setError(null);
 
