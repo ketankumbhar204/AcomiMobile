@@ -1,4 +1,4 @@
-export { colors } from './colors';
+export { colors, pastels } from './colors';
 export { spacing } from './spacing';
 export { typography, fontSize, fontWeight, fontFamily, lineHeight } from './typography';
 export { radius } from './radius';

@@ -8,7 +8,7 @@ import {
   Wallet,
 } from 'lucide-react-native';
 import type { DashboardFinancialSummary } from '../../api/types';
-import { colors, spacing, typography } from '../../theme';
+import { colors, pastels, spacing, typography } from '../../theme';
 import { formatComboPrice } from '../../utils/comboPrice';
 import { DashboardSectionTitle } from './DashboardSectionTitle';
 import { DashboardStatCard } from './shared/DashboardStatCard';
@@ -27,11 +27,11 @@ type DashboardFinancialSnapshotProps = {
   onPendingPress?: () => void;
 };
 
-const ACCENT = {
-  expected: colors.primaryDark,
-  collected: colors.success,
-  underReview: '#2563EB',
-  pending: '#D97706',
+const TILE = {
+  expected: pastels.mint,
+  collected: pastels.green,
+  underReview: pastels.blue,
+  pending: pastels.orange,
 } as const;
 
 /** Dashboard money display: never show "—" — null/zero → ₹0.0 */
@@ -121,7 +121,9 @@ export function DashboardFinancialSnapshot({
           <DashboardStatCard
             compact
             icon={Wallet}
-            accent={ACCENT.expected}
+            accent={TILE.expected.fg}
+            surface={TILE.expected.bg}
+            surfaceBorder={TILE.expected.border}
             value={balanceSold}
             label={t('dashboard.financial.balanceSold')}
             onPress={onExpectedPress}
@@ -129,7 +131,9 @@ export function DashboardFinancialSnapshot({
           <DashboardStatCard
             compact
             icon={Inbox}
-            accent={ACCENT.collected}
+            accent={TILE.collected.fg}
+            surface={TILE.collected.bg}
+            surfaceBorder={TILE.collected.border}
             value={balanceConsumed}
             label={t('dashboard.financial.balanceConsumed')}
             onPress={onCollectedPress}
@@ -137,7 +141,9 @@ export function DashboardFinancialSnapshot({
           <DashboardStatCard
             compact
             icon={IndianRupee}
-            accent={ACCENT.pending}
+            accent={TILE.pending.fg}
+            surface={TILE.pending.bg}
+            surfaceBorder={TILE.pending.border}
             value={balanceRemaining}
             label={t('dashboard.financial.balanceRemaining')}
             onPress={onPendingPress}
@@ -148,7 +154,9 @@ export function DashboardFinancialSnapshot({
           <DashboardStatCard
             compact
             icon={Wallet}
-            accent={ACCENT.expected}
+            accent={TILE.expected.fg}
+            surface={TILE.expected.bg}
+            surfaceBorder={TILE.expected.border}
             value={expected}
             label={t('dashboard.financial.expected')}
             onPress={onExpectedPress}
@@ -156,7 +164,9 @@ export function DashboardFinancialSnapshot({
           <DashboardStatCard
             compact
             icon={Inbox}
-            accent={ACCENT.collected}
+            accent={TILE.collected.fg}
+            surface={TILE.collected.bg}
+            surfaceBorder={TILE.collected.border}
             value={collected}
             label={t('dashboard.financial.collected')}
             onPress={onCollectedPress}
@@ -164,7 +174,9 @@ export function DashboardFinancialSnapshot({
           <DashboardStatCard
             compact
             icon={Clock}
-            accent={ACCENT.underReview}
+            accent={TILE.underReview.fg}
+            surface={TILE.underReview.bg}
+            surfaceBorder={TILE.underReview.border}
             value={underReview}
             label={t('dashboard.financial.underReview')}
             onPress={onUnderReviewPress}
@@ -172,7 +184,9 @@ export function DashboardFinancialSnapshot({
           <DashboardStatCard
             compact
             icon={IndianRupee}
-            accent={ACCENT.pending}
+            accent={TILE.pending.fg}
+            surface={TILE.pending.bg}
+            surfaceBorder={TILE.pending.border}
             value={pending}
             label={t('dashboard.financial.pending')}
             onPress={onPendingPress}

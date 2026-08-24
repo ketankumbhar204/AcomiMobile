@@ -1,9 +1,9 @@
 /**
  * Acomi surface + brand color system.
- * Page uses a subtle light-green canvas; cards stay pure white.
+ * Page uses a cool light canvas; KPI tiles use semantic pastels.
  *
  * Hierarchy (shared with Web):
- *   primary  #25D366  — CTAs, selected chrome
+ *   primary  #25d366  — CTAs, selected chrome
  *   teal     #128C7E  — brand chrome / secondary
  *   tealDark #075E54  — header / mark accents
  */
@@ -14,11 +14,12 @@ export const colors = {
   primaryActive: '#1AAE50',
   teal: '#128C7E',
   tealDark: '#075E54',
-  primaryDark: '#128C7E',
+  /** CTA / selected actions — same family as primary, not teal chrome. */
+  primaryDark: '#25D366',
 
   // Surfaces
   /** App / page background */
-  background: '#F3FAF6',
+  background: '#F5F7FA',
   mintSubtle: '#EAF8F2',
   /** Secondary surface (wells, chips behind content) */
   surfaceSecondary: '#EDF8F2',
@@ -50,4 +51,13 @@ export const colors = {
   danger: '#DC2626',
   warning: '#D97706',
   info: '#2563EB',
+} as const;
+
+/** Soft semantic fills for KPI / action tiles (not page chrome). */
+export const pastels = {
+  mint: { bg: '#E8F8EF', border: '#C6EBD7', fg: '#047857' },
+  green: { bg: '#ECFBF3', border: '#BFE8D4', fg: '#059669' },
+  blue: { bg: '#EEF4FF', border: '#D0E0F8', fg: '#1D4ED8' },
+  orange: { bg: '#FFF4EC', border: '#FED7AA', fg: '#C2410C' },
+  purple: { bg: '#F4F0FF', border: '#DDD6FE', fg: '#6D28D9' },
 } as const;
