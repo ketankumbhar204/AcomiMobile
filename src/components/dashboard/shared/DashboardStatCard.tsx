@@ -28,6 +28,9 @@ export type DashboardStatCardProps = {
   gridItem?: boolean;
   /** Compact Design A card for equal-width This-month rows. */
   compact?: boolean;
+  /** Pastel tile fill — used on dashboard KPI rows. */
+  surface?: string;
+  surfaceBorder?: string;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -44,6 +47,8 @@ export const DashboardStatCard = memo(function DashboardStatCard({
   onPress,
   gridItem = false,
   compact = false,
+  surface,
+  surfaceBorder,
   style,
 }: DashboardStatCardProps) {
   const body = (
@@ -87,6 +92,9 @@ export const DashboardStatCard = memo(function DashboardStatCard({
     styles.card,
     compact && styles.cardCompact,
     gridItem && !compact && styles.gridItem,
+    surface
+      ? { backgroundColor: surface, borderColor: surfaceBorder ?? `${accent}33` }
+      : null,
     style,
   ];
 

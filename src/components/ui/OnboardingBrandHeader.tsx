@@ -27,7 +27,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 10,
-    backgroundColor: colors.primaryDark,
+    backgroundColor: colors.teal,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   wordmark: {
-    color: colors.primaryDark,
+    color: colors.teal,
     fontSize: 18,
     fontWeight: '800',
     letterSpacing: 0.4,

@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ChevronRight, type LucideIcon } from 'lucide-react-native';
-import { colors, radius, shadows, spacing, typography } from '../../../theme';
+import { colors, pastels, radius, shadows, spacing, typography } from '../../../theme';
 
 export type DashboardActionRowProps = {
   title: string;
@@ -44,10 +44,10 @@ export const DashboardActionRow = memo(function DashboardActionRow({
       <View
         style={[
           styles.iconWrap,
-          { backgroundColor: highlight ? '#FEF3C7' : `${accent}18` },
+          { backgroundColor: highlight ? pastels.orange.bg : `${accent}18` },
           disabled && styles.iconWrapDisabled,
         ]}>
-        <Icon size={18} color={highlight ? '#D97706' : accent} strokeWidth={2.2} />
+        <Icon size={18} color={highlight ? pastels.orange.fg : accent} strokeWidth={2.2} />
       </View>
       <View style={styles.body}>
         <Text style={[styles.title, disabled && styles.titleDisabled]} numberOfLines={1}>
@@ -85,8 +85,8 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
   cardHighlight: {
-    borderColor: '#F59E0B',
-    backgroundColor: colors.warningTint,
+    borderColor: pastels.orange.border,
+    backgroundColor: pastels.orange.bg,
   },
   cardDisabled: {
     backgroundColor: colors.surface,
