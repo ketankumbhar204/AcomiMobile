@@ -1,7 +1,7 @@
-import { ApiError } from '../api/types';
+import { ApiError, type OtpPurpose } from '../api/types';
 import { i18n } from '../i18n';
 
-export function mapOtpRequestError(err: unknown): string {
+export function mapOtpRequestError(err: unknown, purpose?: OtpPurpose): string {
   if (!(err instanceof ApiError)) {
     return i18n.t('common.errors.generic');
   }
@@ -19,6 +19,9 @@ export function mapOtpRequestError(err: unknown): string {
     return i18n.t('common.errors.sendOtp');
   }
   if (err.status === 409 || message.includes('already registered')) {
+    if (purpose === 'LOGIN' || purpose === 'RESET_PASSWORD' || purpose === 'ACCOUNT_DELETION') {
+      return i18n.t('common.errors.sendOtp');
+    }
     return i18n.t('common.errors.mobileAlreadyRegistered');
   }
   return err.message || i18n.t('common.errors.sendOtp');
@@ -34,6 +37,12 @@ export function mapOtpVerifyError(err: unknown): string {
   const message = err.message.toLowerCase();
   if (message.includes('expired')) {
     return i18n.t('common.errors.otpExpired');
+  }
+  if (message.includes("couldn't verify") || message.includes('could not verify')) {
+    return i18n.t('common.errors.verifyOtp');
+  }
+  if (err.status === 503) {
+    return i18n.t('common.errors.verifyOtp');
   }
   if (message.includes('too many incorrect attempts')) {
     return i18n.t('common.errors.otpMaxAttempts');
@@ -60,7 +69,8 @@ export function mapRegistrationTokenError(err: unknown): string {
   const message = err.message.toLowerCase();
   if (
     message.includes('verification token') ||
-    message.includes('already been used')
+    message.includes('already been used') ||
+    message.includes('verification is required')
   ) {
     return i18n.t('common.errors.registrationTokenExpired');
   }

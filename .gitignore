@@ -66,6 +66,12 @@ yarn-error.log
 # Temporary files created by Metro to check the health of the file watcher
 .metro-health-check*
 
+# Local operator secrets — never commit
+docs/ACOMI_AWS_SECRETS.local.md
+docs/**/*.local.md
+**/*.pem
+**/*.ppk
+
 # testing
 /coverage
 

@@ -16,8 +16,9 @@ import { useTranslation } from 'react-i18next';
 import { Lock, Smartphone, TriangleAlert, UserRound } from 'lucide-react-native';
 import { AuthHero } from '../../components/auth';
 import { StickyFormActions } from '../../components/progressive';
-import { useRegister } from '../../hooks/useAuth';
+import { useSendOtp } from '../../hooks/useAuth';
 import type { AuthStackParamList } from '../../navigation/types';
+import { useRegistrationDraftStore } from '../../store/registrationDraftStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { isValidIndianMobile, normalizeIndianMobileDigits } from '../../utils/indianMobile';
 import { passwordsMatch, validatePassword } from '../../utils/passwordRules';
@@ -28,7 +29,8 @@ export function RegisterScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<RegisterNav>();
-  const { submit, isLoading, error, clearError } = useRegister();
+  const { sendOtp, isLoading, error, clearError } = useSendOtp();
+  const setCredentials = useRegistrationDraftStore(state => state.setCredentials);
 
   const [fullName, setFullName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
@@ -85,12 +87,15 @@ export function RegisterScreen() {
       return;
     }
 
-    await submit({
+    setCredentials({
       fullName: fullName.trim(),
-      mobileNumber,
       password,
       confirmPassword,
     });
+    const result = await sendOtp(mobileNumber, 'REGISTER');
+    if (result) {
+      navigation.navigate('OtpVerification', { mobileNumber, purpose: 'REGISTER' });
+    }
   }
 
   return (

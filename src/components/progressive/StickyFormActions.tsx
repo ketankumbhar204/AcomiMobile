@@ -63,7 +63,7 @@ export function StickyFormActions({
               onPress={primary.onPress}
               loading={primary.loading}
               disabled={primary.disabled}
-              style={stickyBarStackStyle.rowButton}
+              style={StyleSheet.flatten([stickyBarStackStyle.rowButton, primary.style])}
             />
           ) : null}
         </View>
@@ -75,6 +75,7 @@ export function StickyFormActions({
               onPress={primary.onPress}
               loading={primary.loading}
               disabled={primary.disabled}
+              style={primary.style}
             />
           ) : null}
           {secondary ? (

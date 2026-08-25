@@ -19,11 +19,11 @@ describe('password authentication', () => {
   it('uses password copy for production login', () => {
     expect(en.auth.login.submit).toBe('Sign In');
     expect(en.auth.register.submit).toBe('Create Account');
-    expect(en.auth.login.subheading.toLowerCase()).not.toContain('otp');
+    expect(en.auth.login.modeOtp.toLowerCase()).toContain('otp');
     expect(en.common.appName).toBe('ACOMI');
   });
 
-  it('keeps login password-only and does not use OTP in the production register screen', () => {
+  it('keeps password login and adds OTP login plus forgot-password screens', () => {
     const authNavigator = fs.readFileSync(
       path.join(__dirname, '../../navigation/AuthNavigator.tsx'),
       'utf8',
@@ -41,10 +41,13 @@ describe('password authentication', () => {
     expect(authNavigator).toContain('OtpScreen');
     expect(authNavigator).toContain('OtpVerification');
     expect(authNavigator).toContain('RegisterPassword');
-    expect(loginScreen).not.toMatch(/useSendOtp|OtpVerification|sendOtp/);
+    expect(authNavigator).toContain('ForgotPassword');
+    expect(authNavigator).toContain('ResetPassword');
     expect(loginScreen).toMatch(/useLogin/);
-    expect(registerScreen).toMatch(/useRegister/);
-    expect(registerScreen).not.toMatch(/useSendOtp|OtpVerification|sendOtp/);
+    expect(loginScreen).toMatch(/useSendOtp/);
+    expect(loginScreen).toMatch(/ForgotPassword/);
+    expect(registerScreen).toMatch(/useSendOtp/);
+    expect(registerScreen).toMatch(/OtpVerification/);
     expect(registerScreen).toMatch(/secureTextEntry/);
     expect(fs.existsSync(path.join(__dirname, '../../screens/auth/OtpScreen.tsx'))).toBe(
       true,

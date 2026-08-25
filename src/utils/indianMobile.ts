@@ -8,3 +8,12 @@ export function normalizeIndianMobileDigits(value: string): string {
 export function isValidIndianMobile(value: string): boolean {
   return INDIAN_MOBILE_REGEX.test(normalizeIndianMobileDigits(value));
 }
+
+/** Display form: +91 XXXXXX3210 */
+export function maskIndianMobile(value: string): string {
+  const digits = normalizeIndianMobileDigits(value);
+  if (digits.length !== 10) {
+    return '+91 XXXXXXXXXX';
+  }
+  return `+91 XXXXXX${digits.slice(6)}`;
+}

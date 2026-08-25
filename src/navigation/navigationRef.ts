@@ -271,7 +271,7 @@ export function navigateBootstrapResult(result: SpaceBootstrapResult): void {
   }
 }
 
-export function resetToLogin(): void {
+export function resetToLogin(params?: { accountDeleted?: boolean }): void {
   if (!navigationRef.isReady()) {
     return;
   }
@@ -284,7 +284,7 @@ export function resetToLogin(): void {
           name: 'Auth',
           state: {
             index: 0,
-            routes: [{ name: 'Login' }],
+            routes: [{ name: 'Login', params: params ?? {} }],
           },
         },
       ],

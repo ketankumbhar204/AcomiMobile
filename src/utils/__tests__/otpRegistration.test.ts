@@ -48,6 +48,14 @@ const LOGIN_SCREEN = fs.readFileSync(
   path.join(__dirname, '../../screens/auth/LoginScreen.tsx'),
   'utf8',
 );
+const FORGOT_SCREEN = fs.readFileSync(
+  path.join(__dirname, '../../screens/auth/ForgotPasswordScreen.tsx'),
+  'utf8',
+);
+const RESET_SCREEN = fs.readFileSync(
+  path.join(__dirname, '../../screens/auth/ResetPasswordScreen.tsx'),
+  'utf8',
+);
 
 describe('OTP registration contract', () => {
   beforeEach(() => {
@@ -59,7 +67,7 @@ describe('OTP registration contract', () => {
     expect(AUTH_API).toMatch(/post<ApiResponse<SendOtpResponse>>\('\/auth\/send-otp'/);
     expect(AUTH_API).toMatch(/post<ApiResponse<VerifyOtpResponse>>\('\/auth\/verify-otp'/);
     expect(AUTH_API).toContain('payload.verificationToken');
-    expect(USE_AUTH).toContain("purpose: 'REGISTER'");
+    expect(USE_AUTH).toContain("purpose: OtpPurpose = 'REGISTER'");
     const verifyHook = USE_AUTH.slice(
       USE_AUTH.indexOf('export function useVerifyOtp'),
       USE_AUTH.indexOf('export function useLogin'),
@@ -82,7 +90,6 @@ describe('OTP registration contract', () => {
   });
 
   it('does not put verification tokens in navigation params', () => {
-    expect(OTP_SCREEN).not.toContain('verificationToken');
     expect(REGISTER_SCREEN).not.toContain('verificationToken');
     expect(PASSWORD_SCREEN).toContain('useRegistrationDraftStore');
     const navTypes = fs.readFileSync(
@@ -134,9 +141,18 @@ describe('OTP registration contract', () => {
     expect(
       mapRegistrationTokenError(new ApiError('Verification token has expired', 400)),
     ).toBe(en.common.errors.registrationTokenExpired);
+    expect(
+      mapOtpVerifyError(new ApiError('Unable to send OTP right now.', 503)),
+    ).toBe(en.common.errors.verifyOtp);
     expect(mapOtpRequestError(new ApiError('Network error', 0, undefined, true))).toBe(
       en.common.errors.network,
     );
+    expect(
+      mapOtpRequestError(new ApiError('This mobile number is already registered.', 409), 'RESET_PASSWORD'),
+    ).toBe(en.common.errors.sendOtp);
+    expect(
+      mapOtpRequestError(new ApiError('This mobile number is already registered.', 409), 'REGISTER'),
+    ).toBe(en.common.errors.mobileAlreadyRegistered);
   });
 
   it('formats countdown using backend-provided remaining seconds', () => {
@@ -144,11 +160,20 @@ describe('OTP registration contract', () => {
     expect(formatCountdown(0)).toBe('0:00');
   });
 
-  it('keeps login and production register on password auth without send-otp', () => {
+  it('keeps password login available and starts OTP from register or login OTP mode', () => {
     expect(LOGIN_SCREEN).toMatch(/useLogin/);
-    expect(LOGIN_SCREEN).not.toMatch(/sendOtp|useSendOtp|useVerifyOtp/);
-    expect(REGISTER_SCREEN).toMatch(/useRegister/);
-    expect(REGISTER_SCREEN).not.toMatch(/sendOtp|useSendOtp|useVerifyOtp|OtpVerification/);
+    expect(LOGIN_SCREEN).toMatch(/useSendOtp/);
+    expect(LOGIN_SCREEN).toMatch(/'LOGIN'/);
+    expect(LOGIN_SCREEN).toContain("otpInstead");
+    expect(LOGIN_SCREEN).not.toContain('modeRow');
+    expect(REGISTER_SCREEN).toMatch(/useSendOtp/);
+    expect(REGISTER_SCREEN).toMatch(/OtpVerification/);
     expect(USE_AUTH).toMatch(/authApi\.login\(\{ mobileNumber, password \}\)/);
+    expect(AUTH_API).toContain("'/auth/login-with-otp'");
+    expect(AUTH_API).toContain("'/auth/reset-password'");
+    expect(FORGOT_SCREEN).toContain("'RESET_PASSWORD'");
+    expect(FORGOT_SCREEN).not.toMatch(/already registered|accountExists|getMe\(/);
+    expect(RESET_SCREEN).toContain('useResetPassword');
+    expect(RESET_SCREEN).toContain("name: 'Login'");
   });
 });

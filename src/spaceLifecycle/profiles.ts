@@ -5,8 +5,8 @@ import type { ProfileMilestone, SetupProfile } from './types';
 
 /** Mirrors SPACE_TYPE_VALUES without importing i18n-bound spaceTypes module. */
 export const LIFECYCLE_SPACE_TYPES: SpaceType[] = [
-  'PG',
   'MESS',
+  'PG',
   'HOSTEL',
   'CO_LIVING',
   'RENTAL',

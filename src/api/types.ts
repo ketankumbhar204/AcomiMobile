@@ -1056,7 +1056,7 @@ export interface AcceptInvitationRequest {
 
 // ─── Auth types ────────────────────────────────────────────────────────────
 
-export type OtpPurpose = 'REGISTER' | 'ACCOUNT_DELETION';
+export type OtpPurpose = 'REGISTER' | 'LOGIN' | 'RESET_PASSWORD' | 'ACCOUNT_DELETION';
 
 export interface SendOtpRequest {
   mobileNumber: string;
@@ -1093,13 +1093,25 @@ export interface RegisterRequest {
   mobileNumber: string;
   password: string;
   confirmPassword: string;
-  /** Optional. Reserved for future OTP-verified registration. */
+  /** Required after POST /auth/verify-otp to finish registration. */
   verificationToken?: string;
 }
 
 export interface PasswordAccountDeletionRequest {
   mobileNumber: string;
   password: string;
+}
+
+export interface OtpVerifiedActionRequest {
+  mobileNumber: string;
+  verificationToken: string;
+}
+
+export interface ResetPasswordRequest {
+  mobileNumber: string;
+  verificationToken: string;
+  password: string;
+  confirmPassword: string;
 }
 
 export interface UserResponse {
