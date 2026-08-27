@@ -56,6 +56,15 @@ const RESET_SCREEN = fs.readFileSync(
   path.join(__dirname, '../../screens/auth/ResetPasswordScreen.tsx'),
   'utf8',
 );
+const DELETE_SCREEN = fs.readFileSync(
+  path.join(__dirname, '../../screens/auth/DeleteAccountScreen.tsx'),
+  'utf8',
+);
+const CHANGE_MOBILE_SCREEN = fs.readFileSync(
+  path.join(__dirname, '../../screens/auth/ChangeMobileScreen.tsx'),
+  'utf8',
+);
+const API_TYPES = fs.readFileSync(path.join(__dirname, '../../api/types.ts'), 'utf8');
 
 describe('OTP registration contract', () => {
   beforeEach(() => {
@@ -153,6 +162,28 @@ describe('OTP registration contract', () => {
     expect(
       mapOtpRequestError(new ApiError('This mobile number is already registered.', 409), 'REGISTER'),
     ).toBe(en.common.errors.mobileAlreadyRegistered);
+    expect(
+      mapOtpRequestError(new ApiError('This mobile number is already registered.', 409), 'CHANGE_MOBILE'),
+    ).toBe(en.common.errors.mobileAlreadyRegistered);
+  });
+
+  it('surfaces a missing account instead of advancing to the OTP screen', () => {
+    expect(
+      mapOtpRequestError(
+        new ApiError('No ACOMI account found with this mobile number.', 404),
+        'LOGIN',
+      ),
+    ).toBe(en.common.errors.accountNotFound);
+    expect(
+      mapOtpRequestError(
+        new ApiError('No ACOMI account found with this mobile number.', 404),
+        'RESET_PASSWORD',
+      ),
+    ).toBe(en.common.errors.accountNotFound);
+    // Deleting the account between send and verify must not read as a wrong code.
+    expect(
+      mapOtpVerifyError(new ApiError('No ACOMI account found with this mobile number.', 404)),
+    ).toBe(en.common.errors.accountNotFound);
   });
 
   it('formats countdown using backend-provided remaining seconds', () => {
@@ -175,5 +206,36 @@ describe('OTP registration contract', () => {
     expect(FORGOT_SCREEN).not.toMatch(/already registered|accountExists|getMe\(/);
     expect(RESET_SCREEN).toContain('useResetPassword');
     expect(RESET_SCREEN).toContain("name: 'Login'");
+  });
+
+  it('counts down the resend cooldown on every screen that sends an OTP', () => {
+    const screens: Array<[string, string]> = [
+      ['login', LOGIN_SCREEN],
+      ['register', REGISTER_SCREEN],
+      ['forgot password', FORGOT_SCREEN],
+      ['delete account', DELETE_SCREEN],
+      ['change mobile', CHANGE_MOBILE_SCREEN],
+      ['otp', OTP_SCREEN],
+    ];
+    for (const [name, source] of screens) {
+      expect([name, source.includes('useOtpCooldown')]).toEqual([name, true]);
+    }
+    expect(en.auth.otp.sendOtpIn).toContain('{{time}}');
+  });
+
+  it('records the cooldown from a successful send and from a throttled send', () => {
+    expect(USE_AUTH).toContain('noteCooldown');
+    expect(USE_AUTH).toContain('err.retryAfterSeconds');
+    expect(API_TYPES).toContain('retryAfterSeconds');
+
+    const store = useRegistrationDraftStore.getState();
+    store.noteCooldown('9876543210', 'LOGIN', 45);
+    const state = useRegistrationDraftStore.getState();
+    expect(state.cooldownMobile).toBe('9876543210');
+    expect(state.cooldownPurpose).toBe('LOGIN');
+    expect(state.cooldownUntil).toBeGreaterThan(Date.now());
+
+    store.clear();
+    expect(useRegistrationDraftStore.getState().cooldownUntil).toBeNull();
   });
 });

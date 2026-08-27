@@ -11,6 +11,7 @@ import {
 import { i18n } from '../i18n';
 import { useAuthStore } from '../store/authStore';
 import { useRegistrationDraftStore } from '../store/registrationDraftStore';
+import { normalizeIndianMobileDigits } from '../utils/indianMobile';
 import {
   mapOtpRequestError,
   mapOtpVerifyError,
@@ -39,6 +40,7 @@ type UseSendOtpResult = {
 export function useSendOtp(): UseSendOtpResult {
   const beginOtp = useRegistrationDraftStore(state => state.beginOtp);
   const markResent = useRegistrationDraftStore(state => state.markResent);
+  const noteCooldown = useRegistrationDraftStore(state => state.noteCooldown);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,15 +62,31 @@ export function useSendOtp(): UseSendOtpResult {
         } else {
           beginOtp(mobileNumber, result.expiresIn, result.resendAfter, purpose);
         }
+        noteCooldown(
+          normalizeIndianMobileDigits(mobileNumber),
+          purpose,
+          result.resendAfter,
+        );
         return result;
       } catch (err) {
+        if (
+          err instanceof ApiError &&
+          err.status === 429 &&
+          err.retryAfterSeconds != null
+        ) {
+          noteCooldown(
+            normalizeIndianMobileDigits(mobileNumber),
+            purpose,
+            err.retryAfterSeconds,
+          );
+        }
         setError(mapOtpRequestError(err, purpose));
         return null;
       } finally {
         setIsLoading(false);
       }
     },
-    [beginOtp, markResent],
+    [beginOtp, markResent, noteCooldown],
   );
 
   return { sendOtp, isLoading, error, clearError: () => setError(null) };

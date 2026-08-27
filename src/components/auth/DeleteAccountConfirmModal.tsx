@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { TriangleAlert } from 'lucide-react-native';
+import { Check, TriangleAlert } from 'lucide-react-native';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { Button } from '../ui';
 
@@ -76,7 +76,9 @@ export function DeleteAccountConfirmModal({
               disabled={deleting}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: confirmed }}>
-              <View style={[styles.checkbox, confirmed && styles.checkboxChecked]} />
+              <View style={[styles.checkbox, confirmed && styles.checkboxChecked]}>
+                {confirmed ? <Check size={14} color={colors.white} strokeWidth={3} /> : null}
+              </View>
               <Text style={styles.confirmLabel}>
                 {t('settings.profile.deleteAccountUnderstand')}
               </Text>
@@ -180,6 +182,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.white,
     marginTop: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   checkboxChecked: {
     borderColor: colors.primary,

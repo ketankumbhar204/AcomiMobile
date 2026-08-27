@@ -12,6 +12,15 @@ type RegistrationDraftState = {
   otpSentAt: number | null;
   verificationToken: string | null;
   verificationTokenExpiresAt: number | null;
+  /** Resend cooldown tracked per number+purpose so any send screen can show a countdown. */
+  cooldownMobile: string | null;
+  cooldownPurpose: OtpPurpose | null;
+  cooldownUntil: number | null;
+  noteCooldown: (
+    mobileNumber: string,
+    purpose: OtpPurpose,
+    seconds: number,
+  ) => void;
   setCredentials: (input: {
     fullName: string;
     password: string;
@@ -40,6 +49,16 @@ export const useRegistrationDraftStore = create<RegistrationDraftState>(set => (
   otpSentAt: null,
   verificationToken: null,
   verificationTokenExpiresAt: null,
+  cooldownMobile: null,
+  cooldownPurpose: null,
+  cooldownUntil: null,
+
+  noteCooldown: (mobileNumber, purpose, seconds) =>
+    set({
+      cooldownMobile: mobileNumber,
+      cooldownPurpose: purpose,
+      cooldownUntil: Date.now() + Math.max(0, seconds) * 1000,
+    }),
 
   setCredentials: ({ fullName, password, confirmPassword }) =>
     set({
@@ -92,6 +111,9 @@ export const useRegistrationDraftStore = create<RegistrationDraftState>(set => (
       otpSentAt: null,
       verificationToken: null,
       verificationTokenExpiresAt: null,
+      cooldownMobile: null,
+      cooldownPurpose: null,
+      cooldownUntil: null,
     }),
 }));
 

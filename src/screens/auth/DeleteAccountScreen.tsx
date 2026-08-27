@@ -12,17 +12,19 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { Lock, ShieldCheck, Trash2, TriangleAlert } from 'lucide-react-native';
+import { Check, Lock, ShieldCheck, Trash2, TriangleAlert } from 'lucide-react-native';
 import { AuthHero } from '../../components/auth';
 import { StickyFormActions } from '../../components/progressive';
 import { useAuthenticatedUser, useSendOtp } from '../../hooks/useAuth';
 import { useDeleteAccount } from '../../hooks/useDeleteAccount';
+import { useOtpCooldown } from '../../hooks/useOtpCooldown';
 import type { MainStackParamList } from '../../navigation/types';
 import { resetToLogin } from '../../navigation/navigationRef';
 import { useRegistrationDraftStore } from '../../store/registrationDraftStore';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { maskIndianMobile, normalizeIndianMobileDigits } from '../../utils/indianMobile';
+import { formatCountdown } from '../../utils/otpAuthErrors';
 import { validatePassword } from '../../utils/passwordRules';
 
 type DeleteNav = NativeStackNavigationProp<MainStackParamList, 'DeleteAccount'>;
@@ -49,7 +51,8 @@ export function DeleteAccountScreen() {
   const busy = sendingOtp || isDeleting;
   const passwordValid = validatePassword(password) == null;
   const canDeletePassword = Boolean(mobileNumber) && passwordValid && confirmed && !busy;
-  const canSendOtp = Boolean(mobileNumber) && confirmed && !busy;
+  const otpCooldown = useOtpCooldown(mobileNumber, 'ACCOUNT_DELETION');
+  const canSendOtp = Boolean(mobileNumber) && confirmed && !busy && otpCooldown === 0;
 
   useEffect(() => {
     navigation.setOptions({ title: t('settings.profile.deleteAccount') });
@@ -206,7 +209,9 @@ export function DeleteAccountScreen() {
           disabled={busy}
           accessibilityRole="checkbox"
           accessibilityState={{ checked: confirmed }}>
-          <View style={[styles.checkbox, confirmed && styles.checkboxChecked]} />
+          <View style={[styles.checkbox, confirmed && styles.checkboxChecked]}>
+            {confirmed ? <Check size={14} color={colors.white} strokeWidth={3} /> : null}
+          </View>
           <Text style={styles.confirmLabel}>
             {t('settings.profile.deleteAccountUnderstand')}
           </Text>
@@ -217,7 +222,9 @@ export function DeleteAccountScreen() {
         primary={{
           label:
             authMethod === 'otp'
-              ? t('settings.profile.deleteAccountSendOtp')
+              ? otpCooldown > 0
+                ? t('auth.otp.sendOtpIn', { time: formatCountdown(otpCooldown) })
+                : t('settings.profile.deleteAccountSendOtp')
               : t('settings.profile.deleteAccountFinalConfirm'),
           onPress: () => {
             if (authMethod === 'otp') {
@@ -361,6 +368,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.white,
     marginTop: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   checkboxChecked: {
     borderColor: colors.primary,

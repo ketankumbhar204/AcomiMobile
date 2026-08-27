@@ -49,6 +49,8 @@ export type MainStackParamList = {
   Profile: undefined;
   DeleteAccount: undefined;
   DeleteAccountOtp: OtpVerificationParams;
+  ChangeMobile: undefined;
+  ChangeMobileOtp: OtpVerificationParams;
   CreateSpace: undefined;
   SpaceDetails: { spaceId: UUID };
   EditSpace: { spaceId: UUID };

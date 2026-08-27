@@ -22,9 +22,11 @@ import { AuthHero } from '../../components/auth';
 import { StickyFormActions } from '../../components/progressive';
 import { env } from '../../config/env';
 import { useLogin, useSendOtp } from '../../hooks/useAuth';
+import { useOtpCooldown } from '../../hooks/useOtpCooldown';
 import type { AuthStackParamList } from '../../navigation/types';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { isValidIndianMobile, normalizeIndianMobileDigits } from '../../utils/indianMobile';
+import { formatCountdown } from '../../utils/otpAuthErrors';
 import { validatePassword } from '../../utils/passwordRules';
 
 type LoginNav = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
@@ -47,9 +49,10 @@ export function LoginScreen() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [focusedField, setFocusedField] = useState<'mobile' | 'password' | null>(null);
 
+  const otpCooldown = useOtpCooldown(mobileNumber, 'LOGIN');
   const isValidPasswordForm =
     isValidIndianMobile(mobileNumber) && validatePassword(password) == null;
-  const isValidOtp = isValidIndianMobile(mobileNumber);
+  const isValidOtp = isValidIndianMobile(mobileNumber) && otpCooldown === 0;
   const busy = isLoading || isSendingOtp;
   const bannerError = error || otpError;
   const formatError =
@@ -274,7 +277,12 @@ export function LoginScreen() {
 
       <StickyFormActions
         primary={{
-          label: authMethod === 'otp' ? t('auth.login.sendOtp') : t('auth.login.submit'),
+          label:
+            authMethod === 'otp'
+              ? otpCooldown > 0
+                ? t('auth.otp.sendOtpIn', { time: formatCountdown(otpCooldown) })
+                : t('auth.login.sendOtp')
+              : t('auth.login.submit'),
           onPress: () => {
             if (authMethod === 'otp') {
               void handleSendOtp();

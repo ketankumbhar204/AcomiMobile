@@ -415,6 +415,11 @@ export function CompleteProfileScreen() {
                 editable={false}
                 leadingIcon={Smartphone}
               />
+              <Pressable
+                onPress={() => navigation.navigate('ChangeMobile')}
+                accessibilityRole="button">
+                <Text style={styles.changeMobileLink}>{t('settings.profile.changeMobile')}</Text>
+              </Pressable>
               <FormInput
                 label={t('profileCompletion.fields.email')}
                 value={email}
@@ -688,6 +693,13 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: '#DC2626',
     flex: 1,
+  },
+  changeMobileLink: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    fontWeight: '700',
+    marginTop: -spacing.sm,
+    marginBottom: spacing.sm,
   },
   logoutLink: {
     ...typography.body,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Keyboard,
   Pressable,
@@ -10,54 +10,71 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { KeyRound, Smartphone, TriangleAlert } from 'lucide-react-native';
+import { ShieldCheck, Smartphone, TriangleAlert } from 'lucide-react-native';
 import { AuthHero } from '../../components/auth';
 import { StickyFormActions } from '../../components/progressive';
-import { useSendOtp } from '../../hooks/useAuth';
+import { useAuthenticatedUser, useSendOtp } from '../../hooks/useAuth';
 import { useOtpCooldown } from '../../hooks/useOtpCooldown';
-import type { AuthStackParamList } from '../../navigation/types';
+import type { MainStackParamList } from '../../navigation/types';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
-import { isValidIndianMobile, normalizeIndianMobileDigits } from '../../utils/indianMobile';
+import {
+  isValidIndianMobile,
+  maskIndianMobile,
+  normalizeIndianMobileDigits,
+} from '../../utils/indianMobile';
 import { formatCountdown } from '../../utils/otpAuthErrors';
 
-type ForgotNav = NativeStackNavigationProp<AuthStackParamList, 'ForgotPassword'>;
+type ChangeMobileNav = NativeStackNavigationProp<MainStackParamList, 'ChangeMobile'>;
 
-export function ForgotPasswordScreen() {
+export function ChangeMobileScreen() {
   const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
-  const navigation = useNavigation<ForgotNav>();
+  const navigation = useNavigation<ChangeMobileNav>();
+  const user = useAuthenticatedUser();
   const { sendOtp, isLoading, error, clearError } = useSendOtp();
+  const currentMobile = normalizeIndianMobileDigits(user?.mobileNumber ?? '');
   const [mobileNumber, setMobileNumber] = useState('');
-  const [mobileError, setMobileError] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
   const [focused, setFocused] = useState(false);
 
-  const cooldown = useOtpCooldown(mobileNumber, 'RESET_PASSWORD');
-  const canSubmit = isValidIndianMobile(mobileNumber) && !isLoading && cooldown === 0;
+  const bannerError = localError || error;
+  const nextMobile = normalizeIndianMobileDigits(mobileNumber);
+  const cooldown = useOtpCooldown(nextMobile, 'CHANGE_MOBILE');
+  const canSubmit =
+    isValidIndianMobile(nextMobile) &&
+    nextMobile !== currentMobile &&
+    !isLoading &&
+    cooldown === 0;
+
+  useEffect(() => {
+    navigation.setOptions({ title: t('auth.changeMobile.heading') });
+  }, [navigation, t]);
 
   async function handleSubmit() {
     Keyboard.dismiss();
     clearError();
-    if (!mobileNumber.trim()) {
-      setMobileError(t('auth.login.mobileRequired'));
+    setLocalError(null);
+    if (!isValidIndianMobile(nextMobile)) {
+      setLocalError(
+        mobileNumber.trim() ? t('auth.login.mobileInvalid') : t('auth.login.mobileRequired'),
+      );
       return;
     }
-    if (!isValidIndianMobile(mobileNumber)) {
-      setMobileError(t('auth.login.mobileInvalid'));
+    if (nextMobile === currentMobile) {
+      setLocalError(t('auth.changeMobile.sameNumber'));
       return;
     }
-    const result = await sendOtp(mobileNumber, 'RESET_PASSWORD');
+    const result = await sendOtp(nextMobile, 'CHANGE_MOBILE');
     if (result) {
-      navigation.navigate('OtpVerification', {
-        mobileNumber,
-        purpose: 'RESET_PASSWORD',
+      navigation.navigate('ChangeMobileOtp', {
+        mobileNumber: nextMobile,
+        purpose: 'CHANGE_MOBILE',
       });
     }
   }
 
   return (
-    <View style={[styles.flex, { paddingTop: insets.top }]}>
+    <View style={styles.flex}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -65,16 +82,25 @@ export function ForgotPasswordScreen() {
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}>
         <AuthHero
-          icon={KeyRound}
-          eyebrow={t('auth.forgotPassword.eyebrow')}
-          heading={t('auth.forgotPassword.heading')}
-          subheading={t('auth.forgotPassword.subheading')}
+          icon={Smartphone}
+          eyebrow={t('auth.changeMobile.eyebrow')}
+          heading={t('auth.changeMobile.heading')}
+          subheading={t('auth.changeMobile.subheading')}
         />
 
-        {error ? (
+        {bannerError ? (
           <View style={styles.errorBanner}>
             <TriangleAlert size={16} color="#B91C1C" strokeWidth={2.2} />
-            <Text style={styles.errorBannerText}>{error}</Text>
+            <Text style={styles.errorBannerText}>{bannerError}</Text>
+          </View>
+        ) : null}
+
+        {currentMobile ? (
+          <View style={styles.currentCard}>
+            <ShieldCheck size={14} color={colors.primaryDark} strokeWidth={2.2} />
+            <Text style={styles.currentText}>
+              {t('auth.changeMobile.currentLabel')} {maskIndianMobile(currentMobile)}
+            </Text>
           </View>
         ) : null}
 
@@ -91,7 +117,7 @@ export function ForgotPasswordScreen() {
               style={[
                 styles.phoneInput,
                 focused && styles.phoneInputFocused,
-                mobileError ? styles.phoneInputError : null,
+                localError ? styles.phoneInputError : null,
               ]}
               placeholder={t('auth.login.mobilePlaceholder')}
               placeholderTextColor={colors.muted}
@@ -100,8 +126,8 @@ export function ForgotPasswordScreen() {
               onBlur={() => setFocused(false)}
               onChangeText={text => {
                 setMobileNumber(normalizeIndianMobileDigits(text));
-                if (mobileError) {
-                  setMobileError(null);
+                if (localError) {
+                  setLocalError(null);
                 }
                 if (error) {
                   clearError();
@@ -110,17 +136,17 @@ export function ForgotPasswordScreen() {
               keyboardType="phone-pad"
               maxLength={10}
               autoCorrect={false}
+              editable={!isLoading}
               accessibilityLabel={t('auth.login.mobileLabel')}
             />
           </View>
-          {mobileError ? <Text style={styles.fieldError}>{mobileError}</Text> : null}
         </View>
 
         <Pressable
           style={({ pressed }) => [styles.linkRow, pressed && styles.linkPressed]}
-          onPress={() => navigation.navigate('Login')}
+          onPress={() => navigation.navigate('Profile')}
           accessibilityRole="button">
-          <Text style={styles.linkText}>{t('auth.forgotPassword.backToSignIn')}</Text>
+          <Text style={styles.linkText}>{t('auth.changeMobile.backToProfile')}</Text>
         </Pressable>
       </ScrollView>
 
@@ -129,7 +155,7 @@ export function ForgotPasswordScreen() {
           label:
             cooldown > 0
               ? t('auth.otp.sendOtpIn', { time: formatCountdown(cooldown) })
-              : t('auth.forgotPassword.submit'),
+              : t('auth.changeMobile.sendOtp'),
           onPress: () => {
             void handleSubmit();
           },
@@ -170,6 +196,23 @@ const styles = StyleSheet.create({
     ...typography.body,
     flex: 1,
     color: '#DC2626',
+  },
+  currentCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadows.sm,
+  },
+  currentText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    flex: 1,
   },
   card: {
     backgroundColor: colors.white,
@@ -230,10 +273,6 @@ const styles = StyleSheet.create({
   phoneInputError: {
     borderColor: '#F87171',
     backgroundColor: '#FFF5F5',
-  },
-  fieldError: {
-    ...typography.caption,
-    color: '#DC2626',
   },
   linkRow: {
     minHeight: 44,

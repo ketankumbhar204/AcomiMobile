@@ -37,6 +37,7 @@ import { MemberOccupancyHistoryScreen } from '../screens/MemberOccupancyHistoryS
 import { MySpacesScreen } from '../screens/MySpacesScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { DeleteAccountScreen } from '../screens/auth/DeleteAccountScreen';
+import { ChangeMobileScreen } from '../screens/auth/ChangeMobileScreen';
 import { OtpScreen } from '../screens/auth/OtpScreen';
 import { SpaceDetailsScreen } from '../screens/SpaceDetailsScreen';
 import { MenuPlanningScreen } from '../screens/meals/MenuPlanningScreen';
@@ -144,6 +145,16 @@ export function MainNavigator() {
           component={OtpScreen}
           options={{ title: 'Verify OTP' }}
         />
+        <Stack.Screen
+          name="ChangeMobile"
+          component={ChangeMobileScreen}
+          options={{ title: 'Change mobile number' }}
+        />
+        <Stack.Screen
+          name="ChangeMobileOtp"
+          component={OtpScreen}
+          options={{ title: 'Verify OTP' }}
+        />
       </Stack.Navigator>
     );
   }
@@ -183,6 +194,16 @@ export function MainNavigator() {
       />
       <Stack.Screen
         name="DeleteAccountOtp"
+        component={OtpScreen}
+        options={{ title: 'Verify OTP' }}
+      />
+      <Stack.Screen
+        name="ChangeMobile"
+        component={ChangeMobileScreen}
+        options={{ title: 'Change mobile number' }}
+      />
+      <Stack.Screen
+        name="ChangeMobileOtp"
         component={OtpScreen}
         options={{ title: 'Verify OTP' }}
       />

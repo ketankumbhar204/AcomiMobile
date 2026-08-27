@@ -1056,7 +1056,7 @@ export interface AcceptInvitationRequest {
 
 // ─── Auth types ────────────────────────────────────────────────────────────
 
-export type OtpPurpose = 'REGISTER' | 'LOGIN' | 'RESET_PASSWORD' | 'ACCOUNT_DELETION';
+export type OtpPurpose = 'REGISTER' | 'LOGIN' | 'RESET_PASSWORD' | 'ACCOUNT_DELETION' | 'CHANGE_MOBILE';
 
 export interface SendOtpRequest {
   mobileNumber: string;
@@ -1899,7 +1899,7 @@ export interface ApiErrorBody {
   message?: string;
   error?: string;
   errorCode?: string;
-  data?: Record<string, string> | null;
+  data?: Record<string, string | number> | null;
   status?: number;
   timestamp?: string;
   path?: string;
@@ -2548,17 +2548,30 @@ export class ApiError extends Error {
   readonly status: number;
   readonly body: ApiErrorBody | undefined;
   readonly isNetworkError: boolean;
+  /** Seconds the caller must wait, sent by the API on throttled (429) responses. */
+  readonly retryAfterSeconds: number | undefined;
 
   constructor(
     message: string,
     status: number,
     body?: ApiErrorBody,
     isNetworkError = false,
+    retryAfterSeconds?: number,
   ) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.body = body;
     this.isNetworkError = isNetworkError;
+    this.retryAfterSeconds =
+      retryAfterSeconds ?? parseRetryAfter(body?.data?.retryAfterSeconds);
   }
+}
+
+export function parseRetryAfter(value: unknown): number | undefined {
+  const seconds = typeof value === 'string' ? Number(value) : value;
+  if (typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds <= 0) {
+    return undefined;
+  }
+  return Math.ceil(seconds);
 }

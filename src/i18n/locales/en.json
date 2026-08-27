@@ -121,6 +121,7 @@
       "registrationTokenExpired": "Your verification has expired. Please request a new OTP.",
       "invalidCredentials": "Invalid mobile number or password.",
       "mobileAlreadyRegistered": "This mobile number is already registered.",
+      "accountNotFound": "No ACOMI account found with this mobile number.",
       "accountDisabled": "Your account has been disabled. Please contact support."
     }
   },
@@ -273,6 +274,16 @@
       "loginPrompt": "Already have an account?",
       "loginLink": "Sign in"
     },
+    "changeMobile": {
+      "eyebrow": "Account",
+      "heading": "Change mobile number",
+      "subheading": "Enter a new 10-digit Indian mobile number. We will send an OTP to that number and update your account only after it is verified.",
+      "currentLabel": "Current number:",
+      "sendOtp": "Send OTP",
+      "sameNumber": "Enter a different mobile number.",
+      "backToProfile": "Back to profile",
+      "success": "Your mobile number has been updated."
+    },
     "otp": {
       "eyebrow": "Verification",
       "heading": "Verify your number",
@@ -282,6 +293,7 @@
       "resend": "Resend code",
       "resent": "Verification code sent.",
       "resendIn": "Resend in {{time}}",
+      "sendOtpIn": "Send OTP in {{time}}",
       "expiresIn": "OTP expires in {{time}}",
       "expiredHint": "This OTP has expired. Request a new OTP.",
       "devHint": "If you don't receive a code, check the backend development log.",
@@ -3873,7 +3885,8 @@
       "cancel": "Cancel",
       "fullNameLabel": "Full name",
       "mobileLabel": "Mobile number",
-      "mobileHint": "Used to sign in. Cannot be changed here.",
+      "mobileHint": "Used to sign in. Change it with OTP verification.",
+      "changeMobile": "Change mobile number",
       "emailLabel": "Email",
       "genderLabel": "Gender",
       "dateOfBirthLabel": "Date of birth",

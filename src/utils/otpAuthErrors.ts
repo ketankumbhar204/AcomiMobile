@@ -18,6 +18,9 @@ export function mapOtpRequestError(err: unknown, purpose?: OtpPurpose): string {
   if (err.status === 503 || message.includes('unable to send otp')) {
     return i18n.t('common.errors.sendOtp');
   }
+  if (err.status === 404 || message.includes('no acomi account found')) {
+    return i18n.t('common.errors.accountNotFound');
+  }
   if (err.status === 409 || message.includes('already registered')) {
     if (purpose === 'LOGIN' || purpose === 'RESET_PASSWORD' || purpose === 'ACCOUNT_DELETION') {
       return i18n.t('common.errors.sendOtp');
@@ -49,6 +52,10 @@ export function mapOtpVerifyError(err: unknown): string {
   }
   if (message.includes('no longer valid')) {
     return i18n.t('common.errors.otpConsumed');
+  }
+  // The account can be deleted between sending and verifying.
+  if (err.status === 404 || message.includes('no acomi account found')) {
+    return i18n.t('common.errors.accountNotFound');
   }
   if (err.status === 400) {
     return i18n.t('common.errors.incorrectOtp');

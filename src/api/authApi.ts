@@ -168,4 +168,17 @@ export const authApi = {
       }),
     );
   },
+
+  changeMobile: async (payload: OtpVerifiedActionRequest): Promise<AuthTokenResponse> => {
+    if (__DEV__) {
+      console.log(`${LOG_TAG} changeMobile → mobile:`, payload.mobileNumber);
+    }
+    const result = await unwrapApiResponse(
+      apiClient.post<ApiResponse<AuthTokenResponse>>('/auth/change-mobile', payload),
+    );
+    if (__DEV__) {
+      console.log(`${LOG_TAG} changeMobile ← userId:`, result.user.id);
+    }
+    return result;
+  },
 };

@@ -17,10 +17,12 @@ import { Lock, Smartphone, TriangleAlert, UserRound } from 'lucide-react-native'
 import { AuthHero } from '../../components/auth';
 import { StickyFormActions } from '../../components/progressive';
 import { useSendOtp } from '../../hooks/useAuth';
+import { useOtpCooldown } from '../../hooks/useOtpCooldown';
 import type { AuthStackParamList } from '../../navigation/types';
 import { useRegistrationDraftStore } from '../../store/registrationDraftStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { isValidIndianMobile, normalizeIndianMobileDigits } from '../../utils/indianMobile';
+import { formatCountdown } from '../../utils/otpAuthErrors';
 import { passwordsMatch, validatePassword } from '../../utils/passwordRules';
 
 type RegisterNav = NativeStackNavigationProp<AuthStackParamList, 'Register'>;
@@ -55,12 +57,14 @@ export function RegisterScreen() {
     return null;
   }
 
+  const cooldown = useOtpCooldown(mobileNumber, 'REGISTER');
   const canSubmit =
     fullName.trim().length > 0 &&
     isValidIndianMobile(mobileNumber) &&
     validatePassword(password) == null &&
     passwordsMatch(password, confirmPassword) &&
-    !isLoading;
+    !isLoading &&
+    cooldown === 0;
 
   async function handleCreateAccount() {
     Keyboard.dismiss();
@@ -271,7 +275,10 @@ export function RegisterScreen() {
 
       <StickyFormActions
         primary={{
-          label: t('auth.register.submit'),
+          label:
+            cooldown > 0
+              ? t('auth.otp.sendOtpIn', { time: formatCountdown(cooldown) })
+              : t('auth.register.submit'),
           onPress: () => {
             handleCreateAccount();
           },

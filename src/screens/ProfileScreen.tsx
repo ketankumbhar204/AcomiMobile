@@ -10,6 +10,7 @@ import {
   Languages,
   LogOut,
   SquarePen,
+  Smartphone,
   Trash2,
   TriangleAlert,
   UserRound,
@@ -360,6 +361,12 @@ export function ProfileScreen() {
             })}
             icon={SquarePen}
             onPress={handleEditProfile}
+          />
+          <DashboardActionRow
+            title={t('settings.profile.changeMobile')}
+            subtitle={t('settings.profile.mobileHint')}
+            icon={Smartphone}
+            onPress={() => navigation.navigate('ChangeMobile')}
           />
           <DashboardActionRow
             title={t('settings.profile.switchSpace', {

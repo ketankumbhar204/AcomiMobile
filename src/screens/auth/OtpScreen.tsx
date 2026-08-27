@@ -14,11 +14,13 @@ import type {
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { Pencil, ShieldCheck, TriangleAlert } from 'lucide-react-native';
+import { authApi } from '../../api/authApi';
 import { AuthHero } from '../../components/auth';
 import { DeleteAccountConfirmModal } from '../../components/auth/DeleteAccountConfirmModal';
 import { StickyFormActions } from '../../components/progressive';
 import { HeaderBackButton, OtpInput } from '../../components/ui';
 import { useCountdown } from '../../hooks/useCountdown';
+import { useOtpCooldown } from '../../hooks/useOtpCooldown';
 import {
   useLoginWithOtp,
   useRegister,
@@ -32,14 +34,19 @@ import {
   isRegistrationTokenValid,
   useRegistrationDraftStore,
 } from '../../store/registrationDraftStore';
+import { useAuthStore } from '../../store/authStore';
 import { useToastStore } from '../../store/toastStore';
 import { colors, shadows, spacing, typography } from '../../theme';
 import type { OtpPurpose } from '../../api/types';
-import { formatCountdown } from '../../utils/otpAuthErrors';
-import { maskIndianMobile } from '../../utils/indianMobile';
+import { isVerificationTokenInvalidated } from '../../utils/accountDeletion';
+import { formatCountdown, mapRegistrationTokenError } from '../../utils/otpAuthErrors';
+import { maskIndianMobile, normalizeIndianMobileDigits } from '../../utils/indianMobile';
 
 type OtpNav = NativeStackNavigationProp<AuthStackParamList & MainStackParamList>;
-type OtpRoute = NativeStackScreenProps<AuthStackParamList & MainStackParamList, 'OtpVerification' | 'DeleteAccountOtp'>['route'];
+type OtpRoute = NativeStackScreenProps<
+  AuthStackParamList & MainStackParamList,
+  'OtpVerification' | 'DeleteAccountOtp' | 'ChangeMobileOtp'
+>['route'];
 
 export function OtpScreen() {
   const { t, i18n } = useTranslation();
@@ -61,12 +68,12 @@ export function OtpScreen() {
   } = useLoginWithOtp();
   const otpSentAt = useRegistrationDraftStore(state => state.otpSentAt);
   const expiresIn = useRegistrationDraftStore(state => state.expiresIn);
-  const resendAfter = useRegistrationDraftStore(state => state.resendAfter);
   const verificationToken = useRegistrationDraftStore(state => state.verificationToken);
   const tokenExpiresAt = useRegistrationDraftStore(state => state.verificationTokenExpiresAt);
   const clearDraft = useRegistrationDraftStore(state => state.clear);
   const clearVerification = useRegistrationDraftStore(state => state.clearVerification);
   const { deleteAccountByOtp, isDeleting } = useDeleteAccount();
+  const setSession = useAuthStore(state => state.setSession);
   const showToast = useToastStore(state => state.showToast);
   const fullName = useRegistrationDraftStore(state => state.fullName);
   const password = useRegistrationDraftStore(state => state.password);
@@ -77,11 +84,13 @@ export function OtpScreen() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deletionConfirmed, setDeletionConfirmed] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [changingMobile, setChangingMobile] = useState(false);
+  const [changeError, setChangeError] = useState<string | null>(null);
   const isComplete = otp.length === 6;
   const tokenOk = isRegistrationTokenValid(verificationToken, tokenExpiresAt);
   const deletionVerified = purpose === 'ACCOUNT_DELETION' && tokenOk;
-  const busy = isLoading || isResending || isRegistering || isOtpLoggingIn || isDeleting;
-  const bannerError = error || registerError || loginOtpError;
+  const busy = isLoading || isResending || isRegistering || isOtpLoggingIn || isDeleting || changingMobile;
+  const bannerError = error || registerError || loginOtpError || changeError;
   const canConfirmDelete =
     deletionConfirmed && tokenOk && Boolean(verificationToken) && !isDeleting;
 
@@ -89,12 +98,8 @@ export function OtpScreen() {
     () => (otpSentAt != null && expiresIn != null ? otpSentAt + expiresIn * 1000 : null),
     [expiresIn, otpSentAt],
   );
-  const resendDeadline = useMemo(
-    () => (otpSentAt != null && resendAfter != null ? otpSentAt + resendAfter * 1000 : null),
-    [otpSentAt, resendAfter],
-  );
   const otpRemaining = useCountdown(otpDeadline);
-  const resendRemaining = useCountdown(resendDeadline);
+  const resendRemaining = useOtpCooldown(mobileNumber, purpose);
 
   const headerLeft = useCallback(() => <HeaderBackButton />, []);
 
@@ -112,6 +117,7 @@ export function OtpScreen() {
     clearRegisterError();
     clearLoginOtpError();
     setInfo(null);
+    setChangeError(null);
     if (!isComplete) {
       return;
     }
@@ -136,6 +142,28 @@ export function OtpScreen() {
       setDeleteError(null);
       setDeletionConfirmed(false);
       setConfirmOpen(true);
+      return;
+    }
+    if (purpose === 'CHANGE_MOBILE') {
+      setChangingMobile(true);
+      setChangeError(null);
+      try {
+        const changed = await authApi.changeMobile({
+          mobileNumber: normalizeIndianMobileDigits(mobileNumber),
+          verificationToken: result.verificationToken,
+        });
+        clearDraft();
+        await setSession(changed.user, changed.accessToken);
+        showToast(t('auth.changeMobile.success'));
+        navigation.navigate('Profile');
+      } catch (err) {
+        setChangeError(mapRegistrationTokenError(err));
+        if (isVerificationTokenInvalidated(err)) {
+          clearVerification();
+        }
+      } finally {
+        setChangingMobile(false);
+      }
       return;
     }
     await submit({
@@ -179,6 +207,7 @@ export function OtpScreen() {
     clearError();
     clearRegisterError();
     clearLoginOtpError();
+    setChangeError(null);
     setOtp('');
     const result = await sendOtp(mobileNumber, purpose);
     if (result) {
@@ -202,6 +231,10 @@ export function OtpScreen() {
     }
     if (purpose === 'ACCOUNT_DELETION') {
       navigation.navigate('DeleteAccount');
+      return;
+    }
+    if (purpose === 'CHANGE_MOBILE') {
+      navigation.navigate('ChangeMobile');
       return;
     }
     navigation.navigate('Register');
