@@ -1,0 +1,110 @@
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { adminApi } from '../../api/adminApi';
+import type { PropertyRegistrationDetail } from '../../api/types';
+import { AdminDetailField, AdminDetailSection } from '../../components/admin';
+import { Button, Card, useConfirmDialog } from '../../components/ui';
+import { StickyFormActions } from '../../components/progressive';
+import type { AdminStackParamList } from '../../navigation/types';
+import { useToastStore } from '../../store/toastStore';
+import { formatRegistrationSource, formatRegistrationStatus } from '../../utils/adminLabels';
+import { colors, spacing, typography } from '../../theme';
+
+type Props = NativeStackScreenProps<AdminStackParamList, 'AdminPropertyDetail'>;
+
+export function AdminPropertyDetailScreen({ navigation, route }: Props) {
+  const { showConfirm } = useConfirmDialog();
+  const showToast = useToastStore(state => state.showToast);
+  const [detail, setDetail] = useState<PropertyRegistrationDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    void adminApi.getPropertyRegistration(route.params.id).then(setDetail).finally(() => setLoading(false));
+  }, [route.params.id]);
+
+  function handleDeletePress() {
+    if (!detail || deleting) return;
+    showConfirm({
+      title: 'Delete this property lead?',
+      message: `${detail.propertyName}\n\nThis action will remove the registration from the Admin lead list.`,
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      destructive: true,
+      onConfirm: async () => {
+        setDeleting(true);
+        try {
+          await adminApi.deletePropertyRegistration(route.params.id);
+          showToast('Property lead deleted.');
+          navigation.goBack();
+        } catch {
+          showToast('Could not delete property lead.');
+        } finally {
+          setDeleting(false);
+        }
+      },
+    });
+  }
+
+  if (loading || !detail) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator color={colors.primary} />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.flex}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+        <Card style={styles.headerCard}>
+          <Text style={styles.title}>{detail.propertyName}</Text>
+          <Text style={styles.ref}>{detail.reference}</Text>
+        </Card>
+
+        <AdminDetailSection>
+          <AdminDetailField label="Type" value={detail.propertyType} />
+          <AdminDetailField label="Owner" value={detail.ownerName} />
+          <AdminDetailField label="Mobile" value={detail.mobileNumber} />
+        </AdminDetailSection>
+
+        <AdminDetailSection>
+          <AdminDetailField label="Source" value={formatRegistrationSource(detail.source)} />
+          <AdminDetailField label="Status" value={formatRegistrationStatus(detail.status)} />
+          <AdminDetailField label="Test lead" value={detail.testLead ? 'Yes' : 'No'} />
+        </AdminDetailSection>
+
+        <AdminDetailSection>
+          <AdminDetailField
+            label="Address"
+            value={`${detail.addressLine}, ${detail.city}, ${detail.state} ${detail.pincode}`}
+          />
+          <AdminDetailField label="Starting price" value={`₹${detail.startingPrice}`} />
+          {detail.claimedAt ? (
+            <AdminDetailField label="Claimed" value={new Date(detail.claimedAt).toLocaleString()} />
+          ) : null}
+        </AdminDetailSection>
+      </ScrollView>
+
+      <StickyFormActions>
+        <Button
+          label="Delete lead"
+          variant="secondary"
+          loading={deleting}
+          onPress={handleDeletePress}
+        />
+      </StickyFormActions>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  flex: { flex: 1, backgroundColor: colors.background },
+  scroll: { flex: 1 },
+  content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.sm },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  headerCard: { marginBottom: spacing.sm },
+  title: { ...typography.h2, color: colors.textPrimary },
+  ref: { ...typography.caption, color: colors.textSecondary, marginTop: 4 },
+});

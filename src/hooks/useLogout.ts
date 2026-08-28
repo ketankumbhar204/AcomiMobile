@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { InteractionManager } from 'react-native';
 import { useAuthStore } from '../store/authStore';
+import { useAdminStore } from '../store/adminStore';
 import { useMemberStore } from '../store/memberStore';
 import { useSpaceStore } from '../store/spaceStore';
 import { invalidateDashboardQueries } from '../utils/dashboardQueryCache';
@@ -10,6 +11,7 @@ const LOG_TAG = '[Logout]';
 
 export function useLogout(): () => Promise<void> {
   const clearSession = useAuthStore(state => state.clearSession);
+  const setAdminMode = useAdminStore(state => state.setAdminMode);
   const resetSpaceSession = useSpaceStore(state => state.resetSpaceSession);
   const resetMembership = useMemberStore(state => state.reset);
 
@@ -19,6 +21,7 @@ export function useLogout(): () => Promise<void> {
     try {
       // Drop owner-scoped Action Center caches before switching accounts on this device.
       invalidateDashboardQueries();
+      setAdminMode(false);
       await clearSession();
       resetMembership();
       await resetSpaceSession();
@@ -26,6 +29,7 @@ export function useLogout(): () => Promise<void> {
     } catch (err) {
       console.error(`${LOG_TAG} Error during logout`, err);
       invalidateDashboardQueries();
+      setAdminMode(false);
       await clearSession();
       resetMembership();
       void resetSpaceSession();
@@ -34,5 +38,5 @@ export function useLogout(): () => Promise<void> {
     await new Promise<void>(resolve => {
       InteractionManager.runAfterInteractions(() => resolve());
     });
-  }, [clearSession, resetMembership, resetSpaceSession]);
+  }, [clearSession, resetMembership, resetSpaceSession, setAdminMode]);
 }

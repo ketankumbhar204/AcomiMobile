@@ -271,10 +271,26 @@ export type MainStackParamList = {
   InventoryItemForm: { spaceId: UUID; mode: 'create' | 'edit'; itemId?: UUID };
 };
 
+export type AdminListFilterParams = {
+  tab?: 'leads' | 'active';
+  source?: 'PUBLIC_WEBSITE' | 'ADMIN';
+};
+
+export type AdminStackParamList = {
+  AdminDashboard: undefined;
+  AdminPropertyList: AdminListFilterParams | undefined;
+  AdminPropertyDetail: { id: string };
+  AdminAddProperty: undefined;
+  AdminMessList: AdminListFilterParams | undefined;
+  AdminMessDetail: { id: string };
+  AdminAddMess: undefined;
+};
+
 export type RootStackParamList = {
   Bootstrap: undefined;
   Auth: undefined;
   Main: undefined;
+  Admin: undefined;
 };
 
 declare global {

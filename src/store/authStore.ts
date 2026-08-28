@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { authApi } from '../api/authApi';
 import { setAuthToken } from '../api/client';
 import type { UserResponse, UUID } from '../api/types';
+import { syncAdminModeForUser, useAdminStore } from './adminStore';
 import { isUserProfileComplete } from '../utils/profileCompletion';
 
 const TOKEN_KEY = '@acomi/access_token';
@@ -120,6 +121,8 @@ export const useAuthStore = create<AuthState>(set => ({
 
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(mergedUser));
 
+      syncAdminModeForUser(mergedUser.systemRole);
+
       set({
         isBootstrapping: false,
         isAuthenticated: true,
@@ -164,6 +167,8 @@ export const useAuthStore = create<AuthState>(set => ({
 
     await AsyncStorage.setItem(TOKEN_KEY, accessToken);
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
+
+    syncAdminModeForUser(user.systemRole);
 
     set({
       isAuthenticated: true,
@@ -213,6 +218,8 @@ export const useAuthStore = create<AuthState>(set => ({
     } catch (err) {
       console.error(`${LOG_TAG} clearSession AsyncStorage error`, err);
     }
+
+    useAdminStore.getState().setAdminMode(false);
 
     set({
       isAuthenticated: false,

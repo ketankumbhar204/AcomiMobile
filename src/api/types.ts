@@ -1114,6 +1114,8 @@ export interface ResetPasswordRequest {
   confirmPassword: string;
 }
 
+export type SystemRole = 'USER' | 'ADMIN';
+
 export interface UserResponse {
   id: UUID;
   mobileNumber: string;
@@ -1134,6 +1136,7 @@ export interface UserResponse {
   profileCompletionPercentage?: number | null;
   documentsUploaded?: number | null;
   kycStatus?: KycStatus | null;
+  systemRole?: SystemRole | null;
 }
 
 export type ProfileStatus =
@@ -2574,4 +2577,157 @@ export function parseRetryAfter(value: unknown): number | undefined {
     return undefined;
   }
   return Math.ceil(seconds);
+}
+
+// ─── Admin module ───────────────────────────────────────────────────────────
+
+export type RegistrationSource = 'PUBLIC_WEBSITE' | 'ADMIN';
+
+export type RegistrationStatus =
+  | 'PENDING'
+  | 'IN_REVIEW'
+  | 'CONTACTED'
+  | 'CONVERTED'
+  | 'REJECTED'
+  | 'DUPLICATE';
+
+export interface AdminDashboardSummary {
+  propertyRegistrationCount: number;
+  messRegistrationCount: number;
+  adminPropertyLeads: number;
+  adminMessLeads: number;
+  websitePropertyLeads: number;
+  websiteMessLeads: number;
+  unclaimedAdminPropertyLeads: number;
+  unclaimedAdminMessLeads: number;
+  claimedPropertyLeads: number;
+  claimedMessLeads: number;
+  activePropertySpaces: number;
+  activeMessSpaces: number;
+}
+
+export interface AdminActiveSpace {
+  id: UUID;
+  name: string;
+  type: SpaceType;
+  address?: string | null;
+  contactNumber?: string | null;
+  ownerId: UUID;
+  ownerName: string;
+  ownerMobile: string;
+  createdAt: string;
+}
+
+export interface PropertyRegistrationListItem {
+  id: UUID;
+  reference: string;
+  propertyType: SpaceType;
+  propertyName: string;
+  ownerName: string;
+  mobileNumber: string;
+  city: string;
+  state: string;
+  pincode: string;
+  status: RegistrationStatus;
+  source: RegistrationSource;
+  claimedAt?: string | null;
+  createdAt: string;
+  testLead: boolean;
+}
+
+export interface PropertyRegistrationDetail extends PropertyRegistrationListItem {
+  mobileVerifiedAt?: string | null;
+  description?: string | null;
+  addressLine: string;
+  mapUrl?: string | null;
+  startingPrice: number;
+  priceBasis: string;
+  capacityEstimate?: number | null;
+  convertedSpaceId?: UUID | null;
+  claimedVia?: string | null;
+  updatedAt: string;
+  amenities: Array<{ code: string; customLabel?: string | null; displayOrder: number }>;
+}
+
+export interface MessRegistrationListItem {
+  id: UUID;
+  reference: string;
+  messName: string;
+  ownerName: string;
+  mobileNumber: string;
+  city: string;
+  state: string;
+  pincode: string;
+  status: RegistrationStatus;
+  source: RegistrationSource;
+  claimedAt?: string | null;
+  createdAt: string;
+  testLead: boolean;
+}
+
+export interface MessRegistrationDetail extends MessRegistrationListItem {
+  mobileVerifiedAt?: string | null;
+  description?: string | null;
+  addressLine: string;
+  mapUrl?: string | null;
+  monthlyPrice: number;
+  mealPrice: number;
+  capacityEstimate?: number | null;
+  convertedSpaceId?: UUID | null;
+  claimedVia?: string | null;
+  updatedAt: string;
+}
+
+export interface AdminCreatePropertyRegistrationRequest {
+  propertyType?: Exclude<SpaceType, 'MESS'>;
+  propertyName?: string;
+  ownerName?: string;
+  description?: string;
+  mobileNumber?: string;
+  addressLine?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  mapUrl?: string;
+  startingPrice?: number;
+  capacityEstimate?: number;
+  amenities?: Array<{ code: string; label?: string }>;
+  testLead?: boolean;
+}
+
+export interface AdminCreateMessRegistrationRequest {
+  messName?: string;
+  ownerName?: string;
+  description?: string;
+  mobileNumber?: string;
+  addressLine?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  mapUrl?: string;
+  monthlyPrice?: number;
+  mealPrice?: number;
+  capacityEstimate?: number;
+  testLead?: boolean;
+}
+
+export interface PropertyRegistrationResponse {
+  reference: string;
+  priceBasis?: string;
+  submittedAt: string;
+}
+
+export interface MessRegistrationResponse {
+  reference: string;
+  submittedAt: string;
+}
+
+export interface PagedResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  first: boolean;
+  last: boolean;
 }
