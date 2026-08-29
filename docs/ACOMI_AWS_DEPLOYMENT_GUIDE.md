@@ -192,6 +192,7 @@ Copy from here during a deploy. Values below are **identifiers**, not credential
 | Database password | EC2 `/home/ubuntu/acomi-backend.env` → `DB_PASSWORD` |
 | JWT signing key | same file → `JWT_SECRET` |
 | OTP hash secret | same file → `OTP_HASH_SECRET` (23 Aug host keys) |
+| 2Factor SMS API key | same file → `TWOFACTOR_API_KEY` (set on EC2; never Git) |
 | SSH private key | local PEM only, never Git |
 | AWS login session | AWS CLI profile / `aws login` on the operator PC — not stored in this repo |
 | Android release keystore passwords | `K:\AcomiMobile\android\keystore.properties` (gitignored) — mobile only |
@@ -210,6 +211,8 @@ CORS_ALLOWED_ORIGINS=https://app.acomi.in
 PORT=8080
 OTP_HASH_SECRET=<SECRET — not in Git>
 ```
+
+`TWOFACTOR_API_KEY` was **not** on the 23 Aug host file. Add it to `~/acomi-backend.env` **before** deploying a backend image with `acomi.otp.sender: twofactor`. Missing it fails startup (`Could not resolve placeholder 'TWOFACTOR_API_KEY'`). Do not put the value in Git.
 
 16 Aug inventory listed `CORS_ALLOWED_ORIGINS` and `SPRING_PROFILES_ACTIVE`. 23 Aug host keys were `CORS_ALLOWED_ORIGINS` and `SPRING_PROFILES_ACTIVE`. If the live file differs, **trust `~/acomi-backend.env`**, do not invent a second file.
 
@@ -363,8 +366,12 @@ Env **names** observed on the host (values redacted except public origin):
 | `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USERNAME` / `DB_PASSWORD` | Database — never commit |
 | `JWT_SECRET` | Never commit |
 | `OTP_HASH_SECRET` | Never commit |
+| `TWOFACTOR_API_KEY` | 2Factor SMS. Required for production OTP. Never commit. No default in `application-prod.yml`. |
+| `TWOFACTOR_OTP_TEMPLATE` | Optional. Defaults to `OTP1`. |
 | `PORT` | Container listen port |
 | `CORS_ALLOWED_ORIGINS` | **VERIFIED** `https://app.acomi.in` |
+
+**Before deploying 2Factor production OTP:** append `TWOFACTOR_API_KEY=...` to `/home/ubuntu/acomi-backend.env` on EC2 (value never in Git). Recreate the container with the same `--env-file` so the process picks it up. Optional: `TWOFACTOR_OTP_TEMPLATE` if 2Factor issued a template other than `OTP1`.
 
 Spring config binds CORS from environment (`CORS_ALLOWED_ORIGINS` in YAML). **Do not** set production CORS to `*`. **Do not** add Render development URLs.
 

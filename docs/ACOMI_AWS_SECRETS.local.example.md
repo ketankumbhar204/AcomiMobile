@@ -24,6 +24,9 @@ JWT_SECRET=FILL_FROM_EC2
 CORS_ALLOWED_ORIGINS=https://app.acomi.in
 PORT=8080
 OTP_HASH_SECRET=FILL_FROM_EC2
+TWOFACTOR_API_KEY=SET_ON_EC2_NOT_IN_GIT
+# Optional. Only if 2Factor assigned a production template other than OTP1:
+# TWOFACTOR_OTP_TEMPLATE=OTP1
 ```
 
 ## SSH
