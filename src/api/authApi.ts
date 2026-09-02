@@ -5,7 +5,10 @@ import type {
   AuthTokenResponse,
   CompleteUserProfileRequest,
   LoginRequest,
+  OtpVerifiedActionRequest,
   RegisterRequest,
+  ResetPasswordRequest,
+  PasswordAccountDeletionRequest,
   SendOtpRequest,
   SendOtpResponse,
   UpdateUserRequest,
@@ -118,5 +121,64 @@ export const authApi = {
       console.log(`${LOG_TAG} deleteAccount →`);
     }
     await unwrapVoidResponse(apiClient.delete('/auth/me'));
+  },
+
+  loginWithOtp: async (payload: OtpVerifiedActionRequest): Promise<AuthTokenResponse> => {
+    if (__DEV__) {
+      console.log(`${LOG_TAG} loginWithOtp → mobile:`, payload.mobileNumber);
+    }
+    const result = await unwrapApiResponse(
+      apiClient.post<ApiResponse<AuthTokenResponse>>('/auth/login-with-otp', payload),
+    );
+    if (__DEV__) {
+      console.log(`${LOG_TAG} loginWithOtp ← userId:`, result.user.id);
+    }
+    return result;
+  },
+
+  resetPassword: async (payload: ResetPasswordRequest): Promise<void> => {
+    if (__DEV__) {
+      console.log(`${LOG_TAG} resetPassword → mobile:`, payload.mobileNumber);
+    }
+    await unwrapVoidResponse(
+      apiClient.post<ApiResponse<void>>('/auth/reset-password', {
+        mobileNumber: payload.mobileNumber,
+        verificationToken: payload.verificationToken,
+        password: payload.password,
+        confirmPassword: payload.confirmPassword,
+      }),
+    );
+  },
+
+  deleteAccountByOtp: async (payload: OtpVerifiedActionRequest): Promise<void> => {
+    if (__DEV__) {
+      console.log(`${LOG_TAG} deleteAccountByOtp → mobile:`, payload.mobileNumber);
+    }
+    await unwrapVoidResponse(apiClient.post('/auth/account-deletion', payload));
+  },
+
+  deleteAccountByPassword: async (payload: PasswordAccountDeletionRequest): Promise<void> => {
+    if (__DEV__) {
+      console.log(`${LOG_TAG} deleteAccountByPassword → mobile:`, payload.mobileNumber);
+    }
+    await unwrapVoidResponse(
+      apiClient.post('/auth/account-deletion/password', {
+        mobileNumber: payload.mobileNumber,
+        password: payload.password,
+      }),
+    );
+  },
+
+  changeMobile: async (payload: OtpVerifiedActionRequest): Promise<AuthTokenResponse> => {
+    if (__DEV__) {
+      console.log(`${LOG_TAG} changeMobile → mobile:`, payload.mobileNumber);
+    }
+    const result = await unwrapApiResponse(
+      apiClient.post<ApiResponse<AuthTokenResponse>>('/auth/change-mobile', payload),
+    );
+    if (__DEV__) {
+      console.log(`${LOG_TAG} changeMobile ← userId:`, result.user.id);
+    }
+    return result;
   },
 };

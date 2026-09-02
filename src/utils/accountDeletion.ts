@@ -9,6 +9,18 @@ export type DeleteAccountFailure = {
   serverMessage?: string;
 };
 
+export function isVerificationTokenInvalidated(error: unknown): boolean {
+  if (!(error instanceof ApiError)) {
+    return false;
+  }
+  const message = error.message.toLowerCase();
+  return (
+    message.includes('verification token') ||
+    message.includes('already been used') ||
+    message.includes('verification is required')
+  );
+}
+
 /** 401/404 mean the login is already gone; clear the local session. */
 export function shouldClearSessionAfterDeleteFailure(error: unknown): boolean {
   return error instanceof ApiError && (error.status === 401 || error.status === 404);

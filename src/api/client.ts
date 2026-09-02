@@ -4,7 +4,7 @@ import axios, {
   InternalAxiosRequestConfig,
 } from 'axios';
 import { env } from '../config/env';
-import { ApiError, ApiErrorBody } from './types';
+import { ApiError, ApiErrorBody, parseRetryAfter } from './types';
 
 const LOG_TAG = '[Acomi API]';
 
@@ -121,14 +121,17 @@ function normalizeApiError(error: AxiosError<ApiErrorBody>): ApiError {
     );
   }
 
-  const { status, data } = error.response;
+  const { status, data, headers } = error.response;
   const message =
     data?.message ??
     data?.error ??
     error.message ??
     'An unexpected error occurred.';
+  const retryAfter =
+    parseRetryAfter(data?.data?.retryAfterSeconds) ??
+    parseRetryAfter((headers as Record<string, unknown> | undefined)?.['retry-after']);
 
-  return new ApiError(message, status, data);
+  return new ApiError(message, status, data, false, retryAfter);
 }
 
 const apiClient: AxiosInstance = axios.create({

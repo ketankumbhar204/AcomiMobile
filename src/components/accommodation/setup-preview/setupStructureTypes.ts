@@ -4,6 +4,8 @@ export type EditableBed = {
   id: string;
   label: string;
   number: string;
+  defaultRent?: number | null;
+  defaultDeposit?: number | null;
 };
 
 export type EditableRoom = {

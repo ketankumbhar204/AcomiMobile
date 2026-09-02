@@ -1,13 +1,37 @@
 import { create } from 'zustand';
+import type { OtpPurpose } from '../api/types';
 
 type RegistrationDraftState = {
   mobileNumber: string | null;
+  purpose: OtpPurpose | null;
+  fullName: string | null;
+  password: string | null;
+  confirmPassword: string | null;
   expiresIn: number | null;
   resendAfter: number | null;
   otpSentAt: number | null;
   verificationToken: string | null;
   verificationTokenExpiresAt: number | null;
-  beginOtp: (mobileNumber: string, expiresIn: number, resendAfter: number) => void;
+  /** Resend cooldown tracked per number+purpose so any send screen can show a countdown. */
+  cooldownMobile: string | null;
+  cooldownPurpose: OtpPurpose | null;
+  cooldownUntil: number | null;
+  noteCooldown: (
+    mobileNumber: string,
+    purpose: OtpPurpose,
+    seconds: number,
+  ) => void;
+  setCredentials: (input: {
+    fullName: string;
+    password: string;
+    confirmPassword: string;
+  }) => void;
+  beginOtp: (
+    mobileNumber: string,
+    expiresIn: number,
+    resendAfter: number,
+    purpose?: OtpPurpose,
+  ) => void;
   markResent: (expiresIn: number, resendAfter: number) => void;
   setVerified: (token: string, expiresInSeconds: number) => void;
   clearVerification: () => void;
@@ -16,15 +40,37 @@ type RegistrationDraftState = {
 
 export const useRegistrationDraftStore = create<RegistrationDraftState>(set => ({
   mobileNumber: null,
+  purpose: null,
+  fullName: null,
+  password: null,
+  confirmPassword: null,
   expiresIn: null,
   resendAfter: null,
   otpSentAt: null,
   verificationToken: null,
   verificationTokenExpiresAt: null,
+  cooldownMobile: null,
+  cooldownPurpose: null,
+  cooldownUntil: null,
 
-  beginOtp: (mobileNumber, expiresIn, resendAfter) =>
+  noteCooldown: (mobileNumber, purpose, seconds) =>
+    set({
+      cooldownMobile: mobileNumber,
+      cooldownPurpose: purpose,
+      cooldownUntil: Date.now() + Math.max(0, seconds) * 1000,
+    }),
+
+  setCredentials: ({ fullName, password, confirmPassword }) =>
+    set({
+      fullName,
+      password,
+      confirmPassword,
+    }),
+
+  beginOtp: (mobileNumber, expiresIn, resendAfter, purpose = 'REGISTER') =>
     set({
       mobileNumber,
+      purpose,
       expiresIn,
       resendAfter,
       otpSentAt: Date.now(),
@@ -56,11 +102,18 @@ export const useRegistrationDraftStore = create<RegistrationDraftState>(set => (
   clear: () =>
     set({
       mobileNumber: null,
+      purpose: null,
+      fullName: null,
+      password: null,
+      confirmPassword: null,
       expiresIn: null,
       resendAfter: null,
       otpSentAt: null,
       verificationToken: null,
       verificationTokenExpiresAt: null,
+      cooldownMobile: null,
+      cooldownPurpose: null,
+      cooldownUntil: null,
     }),
 }));
 

@@ -1,15 +1,20 @@
 import type { NavigatorScreenParams } from '@react-navigation/native';
-import type { MembershipRole, UUID } from '../api/types';
+import type { MembershipRole, OtpPurpose, UUID } from '../api/types';
+
+export type OtpVerificationParams = {
+  mobileNumber: string;
+  purpose?: OtpPurpose;
+};
 
 export type AuthStackParamList = {
-  Login: undefined;
+  Login: { accountDeleted?: boolean } | undefined;
   Register: undefined;
-  OtpVerification: {
-    mobileNumber: string;
-  };
+  OtpVerification: OtpVerificationParams;
   RegisterPassword: {
     mobileNumber: string;
   };
+  ForgotPassword: undefined;
+  ResetPassword: undefined;
 };
 
 export type SpaceTabParamList = {
@@ -42,6 +47,10 @@ export type MainStackParamList = {
   ProfileCompletionGate: undefined;
   CompleteProfile: { mode?: 'onboarding' | 'edit' } | undefined;
   Profile: undefined;
+  DeleteAccount: undefined;
+  DeleteAccountOtp: OtpVerificationParams;
+  ChangeMobile: undefined;
+  ChangeMobileOtp: OtpVerificationParams;
   CreateSpace: undefined;
   SpaceDetails: { spaceId: UUID };
   EditSpace: { spaceId: UUID };
@@ -262,10 +271,28 @@ export type MainStackParamList = {
   InventoryItemForm: { spaceId: UUID; mode: 'create' | 'edit'; itemId?: UUID };
 };
 
+export type AdminListFilterParams = {
+  tab?: 'leads' | 'active';
+  source?: 'PUBLIC_WEBSITE' | 'ADMIN';
+};
+
+export type AdminStackParamList = {
+  AdminDashboard: undefined;
+  AdminPropertyList: AdminListFilterParams | undefined;
+  AdminPropertyDetail: { id: string };
+  AdminAddProperty: undefined;
+  AdminMessList: AdminListFilterParams | undefined;
+  AdminMessDetail: { id: string };
+  AdminAddMess: undefined;
+  AdminRegisteredUsers: undefined;
+  AdminSavedAddresses: undefined;
+};
+
 export type RootStackParamList = {
   Bootstrap: undefined;
   Auth: undefined;
   Main: undefined;
+  Admin: undefined;
 };
 
 declare global {

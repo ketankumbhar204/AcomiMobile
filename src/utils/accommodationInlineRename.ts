@@ -96,6 +96,8 @@ export async function renameBedName(
       name,
       bedNumber: bed.bedNumber,
       status: bed.status,
+      defaultRent: bed.defaultRent ?? null,
+      defaultDeposit: bed.defaultDeposit ?? null,
     });
   } catch (err) {
     throw new Error(getAccommodationErrorMessage(err, 'accommodation.errors.saveBed'));
@@ -116,6 +118,29 @@ export async function renameBedNumber(
       name: bed.name,
       bedNumber,
       status: bed.status,
+      defaultRent: bed.defaultRent ?? null,
+      defaultDeposit: bed.defaultDeposit ?? null,
+    });
+  } catch (err) {
+    throw new Error(getAccommodationErrorMessage(err, 'accommodation.errors.saveBed'));
+  }
+}
+
+export async function updateBedPricingField(
+  spaceId: UUID,
+  roomId: UUID,
+  bedId: UUID,
+  field: 'defaultRent' | 'defaultDeposit',
+  value: number | null,
+): Promise<BedResponse> {
+  try {
+    const bed = await accommodationApi.getBed(spaceId, roomId, bedId);
+    return await accommodationApi.updateBed(spaceId, roomId, bedId, {
+      name: bed.name,
+      bedNumber: bed.bedNumber,
+      status: bed.status,
+      defaultRent: field === 'defaultRent' ? value : (bed.defaultRent ?? null),
+      defaultDeposit: field === 'defaultDeposit' ? value : (bed.defaultDeposit ?? null),
     });
   } catch (err) {
     throw new Error(getAccommodationErrorMessage(err, 'accommodation.errors.saveBed'));

@@ -2,8 +2,8 @@ import { i18n } from '../i18n';
 import type { SpaceType } from './types';
 
 export const SPACE_TYPE_VALUES: SpaceType[] = [
-  'PG',
   'MESS',
+  'PG',
   'HOSTEL',
   'CO_LIVING',
   'RENTAL',

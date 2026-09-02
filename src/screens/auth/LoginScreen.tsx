@@ -10,35 +10,49 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type {
+  NativeStackNavigationProp,
+  NativeStackScreenProps,
+} from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { Lock, LogIn, Smartphone, TriangleAlert } from 'lucide-react-native';
-import { AuthHero } from '../../components/auth';
+import { LogIn, Smartphone, TriangleAlert } from 'lucide-react-native';
+import { AuthHero, PasswordField } from '../../components/auth';
 import { StickyFormActions } from '../../components/progressive';
 import { env } from '../../config/env';
-import { useLogin } from '../../hooks/useAuth';
+import { useLogin, useSendOtp } from '../../hooks/useAuth';
+import { useOtpCooldown } from '../../hooks/useOtpCooldown';
 import type { AuthStackParamList } from '../../navigation/types';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { isValidIndianMobile, normalizeIndianMobileDigits } from '../../utils/indianMobile';
-import { validatePassword } from '../../utils/passwordRules';
+import { formatCountdown } from '../../utils/otpAuthErrors';
+import { loginPasswordError } from '../../utils/passwordMessages';
 
 type LoginNav = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
+type LoginRoute = NativeStackScreenProps<AuthStackParamList, 'Login'>['route'];
 
 export function LoginScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<LoginNav>();
+  const route = useRoute<LoginRoute>();
+  const accountDeleted = Boolean(route.params?.accountDeleted);
   const { submit, isLoading, error, clearError } = useLogin();
+  const { sendOtp, isLoading: isSendingOtp, error: otpError, clearError: clearOtpError } =
+    useSendOtp();
 
+  const [authMethod, setAuthMethod] = useState<'password' | 'otp'>('password');
   const [mobileNumber, setMobileNumber] = useState('');
   const [password, setPassword] = useState('');
   const [mobileError, setMobileError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [focusedField, setFocusedField] = useState<'mobile' | 'password' | null>(null);
 
-  const isValid = isValidIndianMobile(mobileNumber) && validatePassword(password) == null;
+  const otpCooldown = useOtpCooldown(mobileNumber, 'LOGIN');
+  const isValidOtp = isValidIndianMobile(mobileNumber) && otpCooldown === 0;
+  const busy = isLoading || isSendingOtp;
+  const bannerError = error || otpError;
   const formatError =
     mobileNumber.length === 10 && !isValidIndianMobile(mobileNumber)
       ? t('auth.login.mobileInvalid')
@@ -54,27 +68,15 @@ export function LoginScreen() {
     return null;
   }
 
-  function passwordMessage(code: ReturnType<typeof validatePassword>): string | null {
-    if (code === 'required') {
-      return t('auth.login.passwordRequired');
-    }
-    if (code === 'tooShort') {
-      return t('auth.login.passwordTooShort');
-    }
-    if (code === 'tooLong') {
-      return t('auth.login.passwordTooLong');
-    }
-    return null;
-  }
-
   const fieldError = mobileError ?? formatError;
 
   async function handleSignIn() {
     Keyboard.dismiss();
     clearError();
+    clearOtpError();
 
     const nextMobileError = validateMobile(mobileNumber);
-    const nextPasswordError = passwordMessage(validatePassword(password));
+    const nextPasswordError = loginPasswordError(t, password);
     setMobileError(nextMobileError);
     setPasswordError(nextPasswordError);
     if (nextMobileError || nextPasswordError) {
@@ -82,6 +84,28 @@ export function LoginScreen() {
     }
 
     await submit(mobileNumber, password);
+  }
+
+  async function handleSendOtp() {
+    Keyboard.dismiss();
+    clearError();
+    clearOtpError();
+    const nextMobileError = validateMobile(mobileNumber);
+    setMobileError(nextMobileError);
+    if (nextMobileError) {
+      return;
+    }
+    const result = await sendOtp(mobileNumber, 'LOGIN');
+    if (result) {
+      navigation.navigate('OtpVerification', { mobileNumber, purpose: 'LOGIN' });
+    }
+  }
+
+  function switchAuthMethod() {
+    clearError();
+    clearOtpError();
+    setPasswordError(null);
+    setAuthMethod(current => (current === 'otp' ? 'password' : 'otp'));
   }
 
   return (
@@ -109,15 +133,22 @@ export function LoginScreen() {
 
         <AuthHero
           icon={LogIn}
+          splitHeadline
           eyebrow={t('auth.login.eyebrow', { defaultValue: 'Sign in' })}
           heading={t('auth.login.heading')}
           subheading={t('auth.login.subheading')}
         />
 
-        {error ? (
+        {bannerError ? (
           <View style={styles.errorBanner}>
             <TriangleAlert size={16} color="#B91C1C" strokeWidth={2.2} />
-            <Text style={styles.errorBannerText}>{error}</Text>
+            <Text style={styles.errorBannerText}>{bannerError}</Text>
+          </View>
+        ) : accountDeleted ? (
+          <View style={styles.successBanner}>
+            <Text style={styles.successBannerText}>
+              {t('settings.profile.deleteAccountSuccess')}
+            </Text>
           </View>
         ) : null}
 
@@ -152,6 +183,9 @@ export function LoginScreen() {
                 if (error) {
                   clearError();
                 }
+                if (otpError) {
+                  clearOtpError();
+                }
               }}
               keyboardType="phone-pad"
               returnKeyType="next"
@@ -164,41 +198,34 @@ export function LoginScreen() {
           </View>
           {fieldError ? <Text style={styles.fieldError}>{fieldError}</Text> : null}
 
-          <View style={styles.fieldLabelRow}>
-            <Lock size={14} color={colors.primaryDark} strokeWidth={2.2} />
-            <Text style={styles.fieldLabel}>{t('auth.login.passwordLabel')}</Text>
-          </View>
-          <TextInput
-            style={[
-              styles.phoneInput,
-              focusedField === 'password' && styles.phoneInputFocused,
-              passwordError ? styles.phoneInputError : null,
-            ]}
-            placeholder={t('auth.login.passwordPlaceholder')}
-            placeholderTextColor={colors.muted}
-            value={password}
-            onFocus={() => setFocusedField('password')}
-            onBlur={() => setFocusedField(null)}
-            onChangeText={text => {
-              setPassword(text);
-              if (passwordError) {
-                setPasswordError(null);
-              }
-              if (error) {
-                clearError();
-              }
-            }}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            textContentType="password"
-            returnKeyType="done"
-            onSubmitEditing={() => {
-              handleSignIn();
-            }}
-            accessibilityLabel={t('auth.login.passwordLabel')}
-          />
-          {passwordError ? <Text style={styles.fieldError}>{passwordError}</Text> : null}
+          {authMethod === 'password' ? (
+            <PasswordField
+              label={t('auth.login.passwordLabel')}
+              placeholder={t('auth.login.passwordPlaceholder')}
+              value={password}
+              focused={focusedField === 'password'}
+              error={passwordError}
+              onFocus={() => setFocusedField('password')}
+              onBlur={() => {
+                setFocusedField(null);
+                setPasswordError(loginPasswordError(t, password));
+              }}
+              onChangeText={text => {
+                setPassword(text);
+                if (passwordError) {
+                  setPasswordError(loginPasswordError(t, text));
+                }
+                if (error) {
+                  clearError();
+                }
+              }}
+              textContentType="password"
+              autoComplete="password"
+              onSubmitEditing={() => {
+                void handleSignIn();
+              }}
+            />
+          ) : null}
         </View>
 
         <Pressable
@@ -225,13 +252,46 @@ export function LoginScreen() {
 
       <StickyFormActions
         primary={{
-          label: t('auth.login.submit'),
+          label:
+            authMethod === 'otp'
+              ? otpCooldown > 0
+                ? t('auth.otp.sendOtpIn', { time: formatCountdown(otpCooldown) })
+                : t('auth.login.sendOtp')
+              : t('auth.login.submit'),
           onPress: () => {
-            handleSignIn();
+            if (authMethod === 'otp') {
+              void handleSendOtp();
+              return;
+            }
+            void handleSignIn();
           },
-          loading: isLoading,
-          disabled: isLoading || !isValid,
+          loading: busy,
+          disabled: busy || (authMethod === 'otp' && !isValidOtp),
         }}
+        footerExtra={
+          <View style={styles.footerLinks}>
+            {authMethod === 'password' ? (
+              <Pressable
+                style={({ pressed }) => [styles.footerLink, pressed && styles.linkPressed]}
+                onPress={() => navigation.navigate('ForgotPassword')}
+                accessibilityRole="button"
+                accessibilityLabel={t('auth.login.forgotPassword')}>
+                <Text style={styles.linkText}>{t('auth.login.forgotPassword')}</Text>
+              </Pressable>
+            ) : null}
+            <Pressable
+              style={({ pressed }) => [styles.footerLink, pressed && styles.linkPressed]}
+              onPress={switchAuthMethod}
+              disabled={busy}
+              accessibilityRole="button">
+              <Text style={styles.otpInsteadText}>
+                {authMethod === 'otp'
+                  ? t('auth.login.modePassword')
+                  : t('auth.login.otpInstead')}
+              </Text>
+            </Pressable>
+          </View>
+        }
       />
     </View>
   );
@@ -291,6 +351,20 @@ const styles = StyleSheet.create({
     ...typography.body,
     flex: 1,
     color: '#DC2626',
+  },
+  successBanner: {
+    backgroundColor: '#ECFDF3',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    borderRadius: 18,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  successBannerText: {
+    ...typography.body,
+    color: '#166534',
+    fontWeight: '600',
+    textAlign: 'center',
   },
   phoneCard: {
     backgroundColor: colors.white,
@@ -376,6 +450,22 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.primaryDark,
     fontWeight: '700',
+    textAlign: 'center',
+  },
+  footerLinks: {
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingTop: spacing.md,
+  },
+  footerLink: {
+    minHeight: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  otpInsteadText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontWeight: '600',
     textAlign: 'center',
   },
 });

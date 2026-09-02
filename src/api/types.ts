@@ -1056,7 +1056,7 @@ export interface AcceptInvitationRequest {
 
 // ─── Auth types ────────────────────────────────────────────────────────────
 
-export type OtpPurpose = 'REGISTER' | 'ACCOUNT_DELETION';
+export type OtpPurpose = 'REGISTER' | 'LOGIN' | 'RESET_PASSWORD' | 'ACCOUNT_DELETION' | 'CHANGE_MOBILE';
 
 export interface SendOtpRequest {
   mobileNumber: string;
@@ -1093,7 +1093,7 @@ export interface RegisterRequest {
   mobileNumber: string;
   password: string;
   confirmPassword: string;
-  /** Optional. Reserved for future OTP-verified registration. */
+  /** Required after POST /auth/verify-otp to finish registration. */
   verificationToken?: string;
 }
 
@@ -1101,6 +1101,20 @@ export interface PasswordAccountDeletionRequest {
   mobileNumber: string;
   password: string;
 }
+
+export interface OtpVerifiedActionRequest {
+  mobileNumber: string;
+  verificationToken: string;
+}
+
+export interface ResetPasswordRequest {
+  mobileNumber: string;
+  verificationToken: string;
+  password: string;
+  confirmPassword: string;
+}
+
+export type SystemRole = 'USER' | 'ADMIN';
 
 export interface UserResponse {
   id: UUID;
@@ -1122,6 +1136,7 @@ export interface UserResponse {
   profileCompletionPercentage?: number | null;
   documentsUploaded?: number | null;
   kycStatus?: KycStatus | null;
+  systemRole?: SystemRole | null;
 }
 
 export type ProfileStatus =
@@ -1256,6 +1271,8 @@ export interface CreateBedRequest {
   name: string;
   bedNumber: string;
   status?: AccommodationStatus;
+  defaultRent?: number | null;
+  defaultDeposit?: number | null;
 }
 
 export interface UpdateBedRequest {
@@ -1383,6 +1400,11 @@ export interface UnitSetupConfig {
   defaultRoomType?: RoomType;
   capacityPerRoom?: number;
   defaultStatus?: AccommodationStatus;
+}
+
+export interface BuildingAvailabilityResponse {
+  nameAvailable: boolean;
+  message?: string | null;
 }
 
 export interface AccommodationSetupRequest {
@@ -1566,6 +1588,8 @@ export interface BedListItemResponse {
   label: string;
   status: AccommodationStatus;
   active?: boolean;
+  defaultRent?: number | null;
+  defaultDeposit?: number | null;
 }
 
 export interface BedSpaceListItemResponse {
@@ -1887,7 +1911,7 @@ export interface ApiErrorBody {
   message?: string;
   error?: string;
   errorCode?: string;
-  data?: Record<string, string> | null;
+  data?: Record<string, string | number> | null;
   status?: number;
   timestamp?: string;
   path?: string;
@@ -2536,17 +2560,238 @@ export class ApiError extends Error {
   readonly status: number;
   readonly body: ApiErrorBody | undefined;
   readonly isNetworkError: boolean;
+  /** Seconds the caller must wait, sent by the API on throttled (429) responses. */
+  readonly retryAfterSeconds: number | undefined;
 
   constructor(
     message: string,
     status: number,
     body?: ApiErrorBody,
     isNetworkError = false,
+    retryAfterSeconds?: number,
   ) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.body = body;
     this.isNetworkError = isNetworkError;
+    this.retryAfterSeconds =
+      retryAfterSeconds ?? parseRetryAfter(body?.data?.retryAfterSeconds);
   }
+}
+
+export function parseRetryAfter(value: unknown): number | undefined {
+  const seconds = typeof value === 'string' ? Number(value) : value;
+  if (typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds <= 0) {
+    return undefined;
+  }
+  return Math.ceil(seconds);
+}
+
+// ─── Admin module ───────────────────────────────────────────────────────────
+
+export type RegistrationSource = 'PUBLIC_WEBSITE' | 'ADMIN';
+
+export type RegistrationStatus =
+  | 'PENDING'
+  | 'IN_REVIEW'
+  | 'CONTACTED'
+  | 'CONVERTED'
+  | 'REJECTED'
+  | 'DUPLICATE';
+
+export interface AdminDashboardSummary {
+  propertyRegistrationCount: number;
+  messRegistrationCount: number;
+  adminPropertyLeads: number;
+  adminMessLeads: number;
+  websitePropertyLeads: number;
+  websiteMessLeads: number;
+  unclaimedAdminPropertyLeads: number;
+  unclaimedAdminMessLeads: number;
+  claimedPropertyLeads: number;
+  claimedMessLeads: number;
+  activePropertySpaces: number;
+  activeMessSpaces: number;
+  registeredUsersCount: number;
+}
+
+export interface AdminActiveSpace {
+  id: UUID;
+  name: string;
+  type: SpaceType;
+  address?: string | null;
+  contactNumber?: string | null;
+  ownerId: UUID;
+  ownerName: string;
+  ownerMobile: string;
+  createdAt: string;
+}
+
+export type AdminUserSelectedRole = 'NOT_SELECTED' | 'OWNER' | 'MEMBER' | 'OWNER_AND_MEMBER';
+
+export type AdminUserOnboardingStatus = 'INCOMPLETE' | 'COMPLETE';
+
+export interface AdminRegisteredUserSpace {
+  id: UUID;
+  name: string;
+  type: SpaceType;
+  membershipRole: string;
+}
+
+export interface AdminRegisteredUser {
+  id: UUID;
+  fullName?: string | null;
+  mobileNumber: string;
+  mobileVerified: boolean;
+  mobileVerifiedAt?: string | null;
+  registeredAt: string;
+  selectedRole: AdminUserSelectedRole;
+  onboardingStatus: AdminUserOnboardingStatus;
+  profileCompleted: boolean;
+  spaces: AdminRegisteredUserSpace[];
+}
+
+export interface SavedAddress {
+  id: UUID;
+  addressLine: string;
+  city: string;
+  state: string;
+  pincode: string;
+  mapUrl?: string | null;
+  usageCount: number;
+  lastUsedAt?: string | null;
+  createdAt: string;
+}
+
+export interface SavedAddressRequest {
+  addressLine: string;
+  city: string;
+  state: string;
+  pincode: string;
+  mapUrl?: string;
+}
+
+export interface PropertyRegistrationListItem {
+  id: UUID;
+  reference: string;
+  propertyType: SpaceType;
+  propertyName: string;
+  ownerName: string;
+  mobileNumber: string;
+  alternateMobileNumber?: string | null;
+  city: string;
+  state: string;
+  pincode: string;
+  status: RegistrationStatus;
+  source: RegistrationSource;
+  claimedAt?: string | null;
+  createdAt: string;
+  testLead: boolean;
+}
+
+export interface PropertyRegistrationDetail extends PropertyRegistrationListItem {
+  mobileVerifiedAt?: string | null;
+  description?: string | null;
+  addressLine: string;
+  mapUrl?: string | null;
+  startingPrice: number;
+  priceBasis: string;
+  capacityEstimate?: number | null;
+  convertedSpaceId?: UUID | null;
+  claimedVia?: string | null;
+  updatedAt: string;
+  amenities: Array<{ code: string; customLabel?: string | null; displayOrder: number }>;
+}
+
+export interface MessRegistrationListItem {
+  id: UUID;
+  reference: string;
+  messName: string;
+  ownerName: string;
+  mobileNumber: string;
+  alternateMobileNumber?: string | null;
+  city: string;
+  state: string;
+  pincode: string;
+  status: RegistrationStatus;
+  source: RegistrationSource;
+  claimedAt?: string | null;
+  createdAt: string;
+  testLead: boolean;
+}
+
+export interface MessRegistrationDetail extends MessRegistrationListItem {
+  mobileVerifiedAt?: string | null;
+  description?: string | null;
+  addressLine: string;
+  mapUrl?: string | null;
+  monthlyPrice: number;
+  mealPrice: number;
+  capacityEstimate?: number | null;
+  convertedSpaceId?: UUID | null;
+  claimedVia?: string | null;
+  updatedAt: string;
+}
+
+export interface AdminCreatePropertyRegistrationRequest {
+  propertyType?: Exclude<SpaceType, 'MESS'>;
+  propertyName?: string;
+  ownerName?: string;
+  description?: string;
+  mobileNumber?: string;
+  alternateMobileNumber?: string | null;
+  addressLine?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  mapUrl?: string;
+  startingPrice?: number;
+  capacityEstimate?: number;
+  amenities?: Array<{ code: string; label?: string }>;
+  testLead?: boolean;
+}
+
+export interface AdminCreateMessRegistrationRequest {
+  messName?: string;
+  ownerName?: string;
+  description?: string;
+  mobileNumber?: string;
+  alternateMobileNumber?: string | null;
+  addressLine?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  mapUrl?: string;
+  monthlyPrice?: number;
+  mealPrice?: number;
+  capacityEstimate?: number;
+  testLead?: boolean;
+}
+
+export interface AdminUpdateRegistrationContactRequest {
+  ownerName?: string;
+  mobileNumber?: string;
+  alternateMobileNumber?: string | null;
+}
+
+export interface PropertyRegistrationResponse {
+  reference: string;
+  priceBasis?: string;
+  submittedAt: string;
+}
+
+export interface MessRegistrationResponse {
+  reference: string;
+  submittedAt: string;
+}
+
+export interface PagedResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  first: boolean;
+  last: boolean;
 }

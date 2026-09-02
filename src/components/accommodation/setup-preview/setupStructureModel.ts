@@ -187,7 +187,7 @@ export function expandToEditableStructure(
       return {
         id: parsedFloor?.id ?? createStructureId(),
         name: parsedFloor?.label ?? floorName(index, config.includeGroundFloor),
-        number: index + 1,
+        number: config.includeGroundFloor ? index : index + 1,
         units: createUnits(
           unitCount || 1,
           roomsPerUnit || config.roomsPerParent,
@@ -208,9 +208,9 @@ export function expandToEditableStructure(
 
     return {
       id: parsedFloor?.id ?? createStructureId(),
-      name: parsedFloor?.label ?? floorName(index, config.includeGroundFloor),
-      number: index + 1,
-      units: [],
+        name: parsedFloor?.label ?? floorName(index, config.includeGroundFloor),
+        number: config.includeGroundFloor ? index : index + 1,
+        units: [],
       rooms: createRooms(
         roomsPerFloor,
         bedsPerRoom || config.bedsPerRoom,

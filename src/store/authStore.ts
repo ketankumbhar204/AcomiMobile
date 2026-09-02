@@ -2,7 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { authApi } from '../api/authApi';
 import { setAuthToken } from '../api/client';
-import type { UserResponse, UUID } from '../api/types';
+import { ApiError, type UserResponse, type UUID } from '../api/types';
+import { syncAdminModeForUser, useAdminStore } from './adminStore';
 import { isUserProfileComplete } from '../utils/profileCompletion';
 
 const TOKEN_KEY = '@acomi/access_token';
@@ -120,6 +121,8 @@ export const useAuthStore = create<AuthState>(set => ({
 
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(mergedUser));
 
+      syncAdminModeForUser(mergedUser.systemRole);
+
       set({
         isBootstrapping: false,
         isAuthenticated: true,
@@ -128,7 +131,29 @@ export const useAuthStore = create<AuthState>(set => ({
         accessToken: storedToken,
       });
     } catch (err: unknown) {
-      const status = (err as { status?: number })?.status;
+      const status = err instanceof ApiError ? err.status : (err as { status?: number })?.status;
+      const storedToken = await AsyncStorage.getItem(TOKEN_KEY);
+      const storedUser = await readStoredUser();
+      const isInvalidSession = status === 401 || status === 403;
+
+      if (!isInvalidSession && storedToken && storedUser) {
+        if (__DEV__) {
+          console.warn(
+            `${LOG_TAG} bootstrap profile refresh failed (status ${status}) -> keeping stored session`,
+            err,
+          );
+        }
+        setAuthToken(storedToken);
+        syncAdminModeForUser(storedUser.systemRole);
+        set({
+          isBootstrapping: false,
+          isAuthenticated: true,
+          userId: storedUser.id,
+          user: storedUser,
+          accessToken: storedToken,
+        });
+        return;
+      }
 
       if (__DEV__) {
         console.error(
@@ -164,6 +189,8 @@ export const useAuthStore = create<AuthState>(set => ({
 
     await AsyncStorage.setItem(TOKEN_KEY, accessToken);
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
+
+    syncAdminModeForUser(user.systemRole);
 
     set({
       isAuthenticated: true,
@@ -213,6 +240,8 @@ export const useAuthStore = create<AuthState>(set => ({
     } catch (err) {
       console.error(`${LOG_TAG} clearSession AsyncStorage error`, err);
     }
+
+    useAdminStore.getState().setAdminMode(false);
 
     set({
       isAuthenticated: false,

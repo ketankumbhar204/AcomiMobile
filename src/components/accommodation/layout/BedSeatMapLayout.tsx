@@ -31,6 +31,12 @@ type BedSeatMapLayoutProps = {
     editableName?: boolean;
     onSaveName?: (name: string) => Promise<void>;
   };
+  pricingEditable?: boolean;
+  onCommitBedPricing?: (
+    bed: BedListItemResponse,
+    field: 'defaultRent' | 'defaultDeposit',
+    value: number | null,
+  ) => Promise<void>;
 };
 
 function countByStatus(beds: BedListItemResponse[], status: AccommodationStatus): number {
@@ -49,6 +55,8 @@ export function BedSeatMapLayout({
   editableRoomName = false,
   onSaveRoomName,
   renderBedNameEditor,
+  pricingEditable = false,
+  onCommitBedPricing,
 }: BedSeatMapLayoutProps) {
   const { t } = useTranslation();
   const activeBeds = filterActiveEntities(beds);
@@ -112,6 +120,12 @@ export function BedSeatMapLayout({
                 menu={renderBedMenu?.(bed)}
                 editableName={nameEditor?.editableName}
                 onSaveName={nameEditor?.onSaveName}
+                pricingEditable={pricingEditable}
+                onCommitPricing={
+                  onCommitBedPricing
+                    ? (field, value) => onCommitBedPricing(bed, field, value)
+                    : undefined
+                }
               />
             );
           })}

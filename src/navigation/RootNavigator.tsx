@@ -7,9 +7,11 @@ import {
 } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuthStore } from '../store/authStore';
+import { isPlatformAdmin, useAdminStore } from '../store/adminStore';
 import { useSpaceStore } from '../store/spaceStore';
 import { colors } from '../theme';
 import { AuthNavigator } from './AuthNavigator';
+import { AdminNavigator } from './AdminNavigator';
 import { MainNavigator } from './MainNavigator';
 import {
   navigationRef,
@@ -46,6 +48,8 @@ function applyStartupNavigation(result: SpaceBootstrapResult) {
 
 export function RootNavigator() {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const user = useAuthStore(state => state.user);
+  const adminMode = useAdminStore(state => state.adminMode);
   const isBootstrapping = useAuthStore(state => state.isBootstrapping);
   const bootstrap = useAuthStore(state => state.bootstrap);
 
@@ -57,9 +61,18 @@ export function RootNavigator() {
   const pendingNavigationRef = useRef<SpaceBootstrapResult | null>(null);
   const bootstrapStartedRef = useRef(false);
 
-  const rootStackKey = isAuthenticated ? 'authenticated' : 'unauthenticated';
+  const inAdminApp =
+    isAuthenticated && adminMode && isPlatformAdmin(user?.systemRole);
+
+  const rootStackKey = inAdminApp
+    ? 'admin'
+    : isAuthenticated
+      ? 'authenticated'
+      : 'unauthenticated';
+
   const showBootstrap =
-    isBootstrapping || (isAuthenticated && !hasSpaceBootstrapped) || isSpaceBootstrapping;
+    isBootstrapping ||
+    (isAuthenticated && !inAdminApp && (!hasSpaceBootstrapped || isSpaceBootstrapping));
 
   useEffect(() => {
     bootstrap().then(() => {
@@ -78,7 +91,7 @@ export function RootNavigator() {
   }, [isAuthenticated]);
 
   useEffect(() => {
-    if (!isAuthenticated || isBootstrapping || bootstrapStartedRef.current) {
+    if (!isAuthenticated || isBootstrapping || bootstrapStartedRef.current || inAdminApp) {
       return;
     }
 
@@ -99,7 +112,7 @@ export function RootNavigator() {
     return () => {
       isActive = false;
     };
-  }, [bootstrapSpaces, isAuthenticated, isBootstrapping]);
+  }, [bootstrapSpaces, inAdminApp, isAuthenticated, isBootstrapping]);
 
   function handleNavigationReady() {
     const pending = pendingNavigationRef.current;
@@ -120,14 +133,16 @@ export function RootNavigator() {
           animation: 'none',
           contentStyle: { backgroundColor: colors.background },
         }}>
-        {isAuthenticated ? (
+        {inAdminApp ? (
+          <Stack.Screen name="Admin" component={AdminNavigator} />
+        ) : isAuthenticated ? (
           <Stack.Screen name="Main" component={MainNavigator} />
         ) : (
           <Stack.Screen name="Auth" component={AuthNavigator} />
         )}
       </Stack.Navigator>
     ),
-    [isAuthenticated, rootStackKey],
+    [inAdminApp, isAuthenticated, rootStackKey],
   );
 
   return (

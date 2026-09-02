@@ -47,7 +47,7 @@ import { colors, spacing, typography } from '../../theme';
 import { buildAccommodationTrail } from '../../utils/accommodationContext';
 import { navigateToAccommodationTrailSegment } from '../../utils/accommodationNavigation';
 import { invalidateAccommodationQueries } from '../../utils/accommodationQueryCache';
-import { renameBedNumber, renameRoomName } from '../../utils/accommodationInlineRename';
+import { renameBedNumber, renameRoomName, updateBedPricingField } from '../../utils/accommodationInlineRename';
 import { isAccommodationEntityActive } from '../../utils/accommodationEntityActive';
 import { accommodationInactiveScopeKey } from '../../utils/accommodationInactiveRegistry';
 import { applyAccommodationInactiveLifecycle } from '../../utils/accommodationInactiveLifecycle';
@@ -484,6 +484,15 @@ export function AccommodationBedsScreen() {
                 }
               : {}
           }
+          pricingEditable={canManage}
+          onCommitBedPricing={async (bed, field, value) => {
+            const updated = await updateBedPricingField(spaceId, roomId, bed.bedId, field, value);
+            patchBed(bed.bedId, {
+              defaultRent: updated.defaultRent,
+              defaultDeposit: updated.defaultDeposit,
+            });
+            await refresh();
+          }}
         />
         {loadingMore ? (
           <ActivityIndicator color={colors.primary} style={styles.loadMore} />
