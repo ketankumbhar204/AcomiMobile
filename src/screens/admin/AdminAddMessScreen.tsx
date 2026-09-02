@@ -17,6 +17,7 @@ import type { AdminCreateMessRegistrationRequest } from '../../api/types';
 import {
   AdminFormHero,
   AdminFormSection,
+  AdminSavedAddressPicker,
   AdminTestLeadToggle,
   adminErrorBanner,
 } from '../../components/admin';
@@ -47,6 +48,7 @@ export function AdminAddMessScreen() {
   const [messName, setMessName] = useState('');
   const [ownerName, setOwnerName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
+  const [alternateMobileNumber, setAlternateMobileNumber] = useState('');
   const [addressLine, setAddressLine] = useState('');
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
@@ -64,6 +66,18 @@ export function AdminAddMessScreen() {
 
     if (mobileNumber.trim() && !isValidIndianMobile(mobileNumber)) {
       setError('Enter a valid mobile number, or leave it blank.');
+      return;
+    }
+    if (alternateMobileNumber.trim() && !isValidIndianMobile(alternateMobileNumber)) {
+      setError('Enter a valid alternate mobile number, or leave it blank.');
+      return;
+    }
+    if (
+      mobileNumber.trim() &&
+      alternateMobileNumber.trim() &&
+      mobileNumber.trim() === alternateMobileNumber.trim()
+    ) {
+      setError('Alternate mobile number must be different from the primary mobile number.');
       return;
     }
     if (pincode.trim() && !isValidPincode(pincode.trim())) {
@@ -96,6 +110,7 @@ export function AdminAddMessScreen() {
     const name = optionalText(messName);
     const owner = optionalText(ownerName);
     const mobile = optionalText(mobileNumber);
+    const alternateMobile = optionalText(alternateMobileNumber);
     const address = optionalText(addressLine);
     const cityValue = optionalText(city);
     const stateValue = optionalText(state);
@@ -104,6 +119,7 @@ export function AdminAddMessScreen() {
     if (name) payload.messName = name;
     if (owner) payload.ownerName = owner;
     if (mobile) payload.mobileNumber = mobile;
+    if (alternateMobile) payload.alternateMobileNumber = alternateMobile;
     if (address) payload.addressLine = address;
     if (cityValue) payload.city = cityValue;
     if (stateValue) payload.state = stateValue;
@@ -161,15 +177,33 @@ export function AdminAddMessScreen() {
                   leadingIcon={UserRound}
                 />
                 <FormInput
-                  label="Mobile"
+                  label="Primary mobile"
                   value={mobileNumber}
                   onChangeText={setMobileNumber}
                   keyboardType="number-pad"
                   maxLength={10}
                 />
+                <FormInput
+                  label="Alternate mobile"
+                  value={alternateMobileNumber}
+                  onChangeText={setAlternateMobileNumber}
+                  keyboardType="number-pad"
+                  maxLength={10}
+                  hint="Optional secondary contact"
+                />
               </AdminFormSection>
 
-              <AdminFormSection title="Location">
+              <AdminFormSection title="Location" description="Reuse a recent address or enter a new one.">
+                <AdminSavedAddressPicker
+                  value={{ addressLine, city, state, pincode, mapUrl }}
+                  onChange={next => {
+                    setAddressLine(next.addressLine);
+                    setCity(next.city);
+                    setState(next.state);
+                    setPincode(next.pincode);
+                    setMapUrl(next.mapUrl);
+                  }}
+                />
                 <FormInput label="Address" value={addressLine} onChangeText={setAddressLine} leadingIcon={MapPin} />
                 <FormInput label="City" value={city} onChangeText={setCity} />
                 <FormInput label="State" value={state} onChangeText={setState} />

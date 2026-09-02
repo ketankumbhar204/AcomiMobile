@@ -17,8 +17,8 @@ import type {
 } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { Lock, LogIn, Smartphone, TriangleAlert } from 'lucide-react-native';
-import { AuthHero } from '../../components/auth';
+import { LogIn, Smartphone, TriangleAlert } from 'lucide-react-native';
+import { AuthHero, PasswordField } from '../../components/auth';
 import { StickyFormActions } from '../../components/progressive';
 import { env } from '../../config/env';
 import { useLogin, useSendOtp } from '../../hooks/useAuth';
@@ -27,7 +27,7 @@ import type { AuthStackParamList } from '../../navigation/types';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { isValidIndianMobile, normalizeIndianMobileDigits } from '../../utils/indianMobile';
 import { formatCountdown } from '../../utils/otpAuthErrors';
-import { validatePassword } from '../../utils/passwordRules';
+import { loginPasswordError } from '../../utils/passwordMessages';
 
 type LoginNav = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 type LoginRoute = NativeStackScreenProps<AuthStackParamList, 'Login'>['route'];
@@ -50,8 +50,6 @@ export function LoginScreen() {
   const [focusedField, setFocusedField] = useState<'mobile' | 'password' | null>(null);
 
   const otpCooldown = useOtpCooldown(mobileNumber, 'LOGIN');
-  const isValidPasswordForm =
-    isValidIndianMobile(mobileNumber) && validatePassword(password) == null;
   const isValidOtp = isValidIndianMobile(mobileNumber) && otpCooldown === 0;
   const busy = isLoading || isSendingOtp;
   const bannerError = error || otpError;
@@ -70,19 +68,6 @@ export function LoginScreen() {
     return null;
   }
 
-  function passwordMessage(code: ReturnType<typeof validatePassword>): string | null {
-    if (code === 'required') {
-      return t('auth.login.passwordRequired');
-    }
-    if (code === 'tooShort') {
-      return t('auth.login.passwordTooShort');
-    }
-    if (code === 'tooLong') {
-      return t('auth.login.passwordTooLong');
-    }
-    return null;
-  }
-
   const fieldError = mobileError ?? formatError;
 
   async function handleSignIn() {
@@ -91,7 +76,7 @@ export function LoginScreen() {
     clearOtpError();
 
     const nextMobileError = validateMobile(mobileNumber);
-    const nextPasswordError = passwordMessage(validatePassword(password));
+    const nextPasswordError = loginPasswordError(t, password);
     setMobileError(nextMobileError);
     setPasswordError(nextPasswordError);
     if (nextMobileError || nextPasswordError) {
@@ -148,6 +133,7 @@ export function LoginScreen() {
 
         <AuthHero
           icon={LogIn}
+          splitHeadline
           eyebrow={t('auth.login.eyebrow', { defaultValue: 'Sign in' })}
           heading={t('auth.login.heading')}
           subheading={t('auth.login.subheading')}
@@ -213,43 +199,32 @@ export function LoginScreen() {
           {fieldError ? <Text style={styles.fieldError}>{fieldError}</Text> : null}
 
           {authMethod === 'password' ? (
-            <>
-              <View style={styles.fieldLabelRow}>
-                <Lock size={14} color={colors.primaryDark} strokeWidth={2.2} />
-                <Text style={styles.fieldLabel}>{t('auth.login.passwordLabel')}</Text>
-              </View>
-              <TextInput
-                style={[
-                  styles.phoneInput,
-                  focusedField === 'password' && styles.phoneInputFocused,
-                  passwordError ? styles.phoneInputError : null,
-                ]}
-                placeholder={t('auth.login.passwordPlaceholder')}
-                placeholderTextColor={colors.muted}
-                value={password}
-                onFocus={() => setFocusedField('password')}
-                onBlur={() => setFocusedField(null)}
-                onChangeText={text => {
-                  setPassword(text);
-                  if (passwordError) {
-                    setPasswordError(null);
-                  }
-                  if (error) {
-                    clearError();
-                  }
-                }}
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-                textContentType="password"
-                returnKeyType="done"
-                onSubmitEditing={() => {
-                  void handleSignIn();
-                }}
-                accessibilityLabel={t('auth.login.passwordLabel')}
-              />
-              {passwordError ? <Text style={styles.fieldError}>{passwordError}</Text> : null}
-            </>
+            <PasswordField
+              label={t('auth.login.passwordLabel')}
+              placeholder={t('auth.login.passwordPlaceholder')}
+              value={password}
+              focused={focusedField === 'password'}
+              error={passwordError}
+              onFocus={() => setFocusedField('password')}
+              onBlur={() => {
+                setFocusedField(null);
+                setPasswordError(loginPasswordError(t, password));
+              }}
+              onChangeText={text => {
+                setPassword(text);
+                if (passwordError) {
+                  setPasswordError(loginPasswordError(t, text));
+                }
+                if (error) {
+                  clearError();
+                }
+              }}
+              textContentType="password"
+              autoComplete="password"
+              onSubmitEditing={() => {
+                void handleSignIn();
+              }}
+            />
           ) : null}
         </View>
 
@@ -291,7 +266,7 @@ export function LoginScreen() {
             void handleSignIn();
           },
           loading: busy,
-          disabled: busy || (authMethod === 'otp' ? !isValidOtp : !isValidPasswordForm),
+          disabled: busy || (authMethod === 'otp' && !isValidOtp),
         }}
         footerExtra={
           <View style={styles.footerLinks}>

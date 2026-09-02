@@ -4,7 +4,11 @@ import type {
   AdminActiveSpace,
   AdminCreateMessRegistrationRequest,
   AdminCreatePropertyRegistrationRequest,
+  AdminUpdateRegistrationContactRequest,
   AdminDashboardSummary,
+  AdminRegisteredUser,
+  SavedAddress,
+  SavedAddressRequest,
   ApiResponse,
   MessRegistrationDetail,
   MessRegistrationListItem,
@@ -59,6 +63,17 @@ export const adminApi = {
       ),
     ),
 
+  updatePropertyRegistrationContact: async (
+    id: string,
+    payload: AdminUpdateRegistrationContactRequest,
+  ): Promise<PropertyRegistrationDetail> =>
+    unwrapApiResponse(
+      apiClient.put<ApiResponse<PropertyRegistrationDetail>>(
+        `/admin/property-registrations/${id}/contact`,
+        payload,
+      ),
+    ),
+
   deletePropertyRegistration: async (id: string): Promise<void> =>
     unwrapVoidResponse(
       apiClient.delete(`/admin/property-registrations/${id}`),
@@ -92,6 +107,46 @@ export const adminApi = {
       ),
     ),
 
+  updateMessRegistrationContact: async (
+    id: string,
+    payload: AdminUpdateRegistrationContactRequest,
+  ): Promise<MessRegistrationDetail> =>
+    unwrapApiResponse(
+      apiClient.put<ApiResponse<MessRegistrationDetail>>(
+        `/admin/mess-registrations/${id}/contact`,
+        payload,
+      ),
+    ),
+
   deleteMessRegistration: async (id: string): Promise<void> =>
     unwrapVoidResponse(apiClient.delete(`/admin/mess-registrations/${id}`)),
+
+  listRegisteredUsers: async (params?: {
+    page?: number;
+    size?: number;
+  }): Promise<PagedResponse<AdminRegisteredUser>> =>
+    unwrapApiResponse(
+      apiClient.get<ApiResponse<PagedResponse<AdminRegisteredUser>>>('/admin/registered-users', {
+        params,
+      }),
+    ),
+
+  listSavedAddresses: async (params?: {
+    search?: string;
+    page?: number;
+    size?: number;
+  }): Promise<PagedResponse<SavedAddress>> =>
+    unwrapApiResponse(
+      apiClient.get<ApiResponse<PagedResponse<SavedAddress>>>('/admin/saved-addresses', {
+        params,
+      }),
+    ),
+
+  updateSavedAddress: async (id: string, payload: SavedAddressRequest): Promise<SavedAddress> =>
+    unwrapApiResponse(
+      apiClient.put<ApiResponse<SavedAddress>>(`/admin/saved-addresses/${id}`, payload),
+    ),
+
+  deleteSavedAddress: async (id: string): Promise<void> =>
+    unwrapVoidResponse(apiClient.delete(`/admin/saved-addresses/${id}`)),
 };

@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Building2, ChefHat, LogOut } from 'lucide-react-native';
+import { Building2, ChefHat, LogOut, MapPin, Users } from 'lucide-react-native';
 import { adminApi } from '../../api/adminApi';
 import type { AdminDashboardSummary } from '../../api/types';
 import { DashboardStatCard } from '../../components/dashboard/shared/DashboardStatCard';
@@ -85,6 +85,21 @@ export function AdminDashboardScreen() {
         </Pressable>
       </View>
 
+      <View style={styles.sectionLabelWrap}>
+        <Text style={styles.sectionLabel}>Registration</Text>
+      </View>
+      <View style={styles.grid}>
+        <DashboardStatCard
+          gridItem
+          label="Registered Users"
+          value={String(summary?.registeredUsersCount ?? 0)}
+          onPress={() => navigation.navigate('AdminRegisteredUsers')}
+        />
+      </View>
+
+      <View style={styles.sectionLabelWrap}>
+        <Text style={styles.sectionLabel}>Leads & spaces</Text>
+      </View>
       <View style={styles.grid}>
         <DashboardStatCard
           gridItem
@@ -136,6 +151,22 @@ export function AdminDashboardScreen() {
         />
       </View>
 
+      <Pressable style={styles.navCard} onPress={() => navigation.navigate('AdminRegisteredUsers')}>
+        <Users color={colors.primary} size={22} />
+        <View style={styles.navText}>
+          <Text style={styles.navTitle}>Registered Users</Text>
+          <Text style={styles.navHint}>Phone-verified accounts, including incomplete onboarding</Text>
+        </View>
+      </Pressable>
+
+      <Pressable style={styles.navCard} onPress={() => navigation.navigate('AdminSavedAddresses')}>
+        <MapPin color={colors.primary} size={22} />
+        <View style={styles.navText}>
+          <Text style={styles.navTitle}>Saved Addresses</Text>
+          <Text style={styles.navHint}>Reuse recent locations for new properties and messes</Text>
+        </View>
+      </Pressable>
+
       <Pressable style={styles.navCard} onPress={() => navigation.navigate('AdminPropertyList', undefined)}>
         <Building2 color={colors.primary} size={22} />
         <View style={styles.navText}>
@@ -168,6 +199,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  sectionLabelWrap: { marginTop: spacing.xs },
+  sectionLabel: { ...typography.caption, color: colors.textSecondary, fontWeight: '700' },
   navCard: {
     flexDirection: 'row',
     alignItems: 'center',

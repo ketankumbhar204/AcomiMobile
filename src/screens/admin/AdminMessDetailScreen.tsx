@@ -2,8 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { adminApi } from '../../api/adminApi';
-import type { MessRegistrationDetail } from '../../api/types';
-import { AdminDetailField, AdminDetailSection } from '../../components/admin';
+import type { AdminUpdateRegistrationContactRequest, MessRegistrationDetail } from '../../api/types';
+import {
+  AdminDetailField,
+  AdminDetailSection,
+  AdminRegistrationContactEditor,
+} from '../../components/admin';
 import { Button, Card, useConfirmDialog } from '../../components/ui';
 import { StickyFormActions } from '../../components/progressive';
 import type { AdminStackParamList } from '../../navigation/types';
@@ -19,10 +23,26 @@ export function AdminMessDetailScreen({ navigation, route }: Props) {
   const [detail, setDetail] = useState<MessRegistrationDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [editingContact, setEditingContact] = useState(false);
+  const [savingContact, setSavingContact] = useState(false);
 
   useEffect(() => {
-    void adminApi.getMessRegistration(route.params.id).then(setDetail).finally(() => setLoading(false));
+    adminApi.getMessRegistration(route.params.id).then(setDetail).finally(() => setLoading(false));
   }, [route.params.id]);
+
+  async function handleSaveContact(payload: AdminUpdateRegistrationContactRequest) {
+    setSavingContact(true);
+    try {
+      const updated = await adminApi.updateMessRegistrationContact(route.params.id, payload);
+      setDetail(updated);
+      setEditingContact(false);
+      showToast('Owner contact updated.');
+    } catch {
+      showToast('Could not update owner contact.');
+    } finally {
+      setSavingContact(false);
+    }
+  }
 
   function handleDeletePress() {
     if (!detail || deleting) return;
@@ -64,8 +84,25 @@ export function AdminMessDetailScreen({ navigation, route }: Props) {
         </Card>
 
         <AdminDetailSection>
-          <AdminDetailField label="Owner" value={detail.ownerName} />
-          <AdminDetailField label="Mobile" value={detail.mobileNumber} />
+          {editingContact ? (
+            <AdminRegistrationContactEditor
+              ownerName={detail.ownerName}
+              mobileNumber={detail.mobileNumber}
+              alternateMobileNumber={detail.alternateMobileNumber}
+              saving={savingContact}
+              onSave={handleSaveContact}
+              onCancel={() => setEditingContact(false)}
+            />
+          ) : (
+            <>
+              <AdminDetailField label="Owner" value={detail.ownerName} />
+              <AdminDetailField label="Mobile" value={detail.mobileNumber} />
+              {detail.alternateMobileNumber ? (
+                <AdminDetailField label="Alternate mobile" value={detail.alternateMobileNumber} />
+              ) : null}
+              <Button label="Edit contact" variant="ghost" onPress={() => setEditingContact(true)} />
+            </>
+          )}
         </AdminDetailSection>
 
         <AdminDetailSection>

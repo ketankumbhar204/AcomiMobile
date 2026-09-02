@@ -13,8 +13,8 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { Lock, Smartphone, TriangleAlert, UserRound } from 'lucide-react-native';
-import { AuthHero } from '../../components/auth';
+import { Smartphone, TriangleAlert, UserRound } from 'lucide-react-native';
+import { AuthHero, PasswordField } from '../../components/auth';
 import { StickyFormActions } from '../../components/progressive';
 import { useSendOtp } from '../../hooks/useAuth';
 import { useOtpCooldown } from '../../hooks/useOtpCooldown';
@@ -23,7 +23,7 @@ import { useRegistrationDraftStore } from '../../store/registrationDraftStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { isValidIndianMobile, normalizeIndianMobileDigits } from '../../utils/indianMobile';
 import { formatCountdown } from '../../utils/otpAuthErrors';
-import { passwordsMatch, validatePassword } from '../../utils/passwordRules';
+import { confirmPasswordError, newPasswordError } from '../../utils/passwordMessages';
 
 type RegisterNav = NativeStackNavigationProp<AuthStackParamList, 'Register'>;
 
@@ -44,27 +44,7 @@ export function RegisterScreen() {
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
-  function passwordMessage(code: ReturnType<typeof validatePassword>): string | null {
-    if (code === 'required') {
-      return t('auth.register.passwordRequired');
-    }
-    if (code === 'tooShort') {
-      return t('auth.register.passwordTooShort');
-    }
-    if (code === 'tooLong') {
-      return t('auth.register.passwordTooLong');
-    }
-    return null;
-  }
-
   const cooldown = useOtpCooldown(mobileNumber, 'REGISTER');
-  const canSubmit =
-    fullName.trim().length > 0 &&
-    isValidIndianMobile(mobileNumber) &&
-    validatePassword(password) == null &&
-    passwordsMatch(password, confirmPassword) &&
-    !isLoading &&
-    cooldown === 0;
 
   async function handleCreateAccount() {
     Keyboard.dismiss();
@@ -76,12 +56,8 @@ export function RegisterScreen() {
       : isValidIndianMobile(mobileNumber)
         ? null
         : t('auth.login.mobileInvalid');
-    const nextPasswordError = passwordMessage(validatePassword(password));
-    const nextConfirmError = !confirmPassword
-      ? t('auth.register.confirmPasswordRequired')
-      : passwordsMatch(password, confirmPassword)
-        ? null
-        : t('auth.register.passwordMismatch');
+    const nextPasswordError = newPasswordError(t, password);
+    const nextConfirmError = confirmPasswordError(t, password, confirmPassword);
 
     setNameError(nextNameError);
     setMobileError(nextMobileError);
@@ -192,74 +168,61 @@ export function RegisterScreen() {
           </View>
           {mobileError ? <Text style={styles.fieldError}>{mobileError}</Text> : null}
 
-          <View style={styles.fieldLabelRow}>
-            <Lock size={14} color={colors.primaryDark} strokeWidth={2.2} />
-            <Text style={styles.fieldLabel}>{t('auth.register.passwordLabel')}</Text>
-          </View>
-          <TextInput
-            style={[
-              styles.input,
-              focusedField === 'password' && styles.inputFocused,
-              passwordError ? styles.inputError : null,
-            ]}
+          <PasswordField
+            label={t('auth.register.passwordLabel')}
             placeholder={t('auth.register.passwordPlaceholder')}
-            placeholderTextColor={colors.muted}
             value={password}
+            focused={focusedField === 'password'}
+            error={passwordError}
             onFocus={() => setFocusedField('password')}
-            onBlur={() => setFocusedField(null)}
+            onBlur={() => {
+              setFocusedField(null);
+              setPasswordError(newPasswordError(t, password));
+              if (confirmPassword) {
+                setConfirmError(confirmPasswordError(t, password, confirmPassword));
+              }
+            }}
             onChangeText={text => {
               setPassword(text);
               if (passwordError) {
-                setPasswordError(null);
+                setPasswordError(newPasswordError(t, text));
+              }
+              if (confirmPassword) {
+                setConfirmError(confirmPasswordError(t, text, confirmPassword));
               }
               if (error) {
                 clearError();
               }
             }}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
             textContentType="newPassword"
             returnKeyType="next"
-            accessibilityLabel={t('auth.register.passwordLabel')}
           />
-          {passwordError ? <Text style={styles.fieldError}>{passwordError}</Text> : null}
 
-          <View style={styles.fieldLabelRow}>
-            <Lock size={14} color={colors.primaryDark} strokeWidth={2.2} />
-            <Text style={styles.fieldLabel}>{t('auth.register.confirmPasswordLabel')}</Text>
-          </View>
-          <TextInput
-            style={[
-              styles.input,
-              focusedField === 'confirm' && styles.inputFocused,
-              confirmError ? styles.inputError : null,
-            ]}
+          <PasswordField
+            label={t('auth.register.confirmPasswordLabel')}
             placeholder={t('auth.register.confirmPasswordPlaceholder')}
-            placeholderTextColor={colors.muted}
             value={confirmPassword}
+            focused={focusedField === 'confirm'}
+            error={confirmError}
             onFocus={() => setFocusedField('confirm')}
-            onBlur={() => setFocusedField(null)}
+            onBlur={() => {
+              setFocusedField(null);
+              setConfirmError(confirmPasswordError(t, password, confirmPassword));
+            }}
             onChangeText={text => {
               setConfirmPassword(text);
-              if (confirmError) {
-                setConfirmError(null);
+              if (confirmError || text.length > 0) {
+                setConfirmError(confirmPasswordError(t, password, text));
               }
               if (error) {
                 clearError();
               }
             }}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
             textContentType="newPassword"
-            returnKeyType="done"
             onSubmitEditing={() => {
-              handleCreateAccount();
+              void handleCreateAccount();
             }}
-            accessibilityLabel={t('auth.register.confirmPasswordLabel')}
           />
-          {confirmError ? <Text style={styles.fieldError}>{confirmError}</Text> : null}
         </View>
 
         <Pressable
@@ -283,7 +246,7 @@ export function RegisterScreen() {
             handleCreateAccount();
           },
           loading: isLoading,
-          disabled: !canSubmit,
+          disabled: isLoading || cooldown > 0,
         }}
       />
     </View>

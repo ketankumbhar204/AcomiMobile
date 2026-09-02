@@ -36,6 +36,22 @@ describe('password authentication', () => {
       path.join(__dirname, '../../screens/auth/RegisterScreen.tsx'),
       'utf8',
     );
+    const registerPasswordScreen = fs.readFileSync(
+      path.join(__dirname, '../../screens/auth/RegisterPasswordScreen.tsx'),
+      'utf8',
+    );
+    const resetScreen = fs.readFileSync(
+      path.join(__dirname, '../../screens/auth/ResetPasswordScreen.tsx'),
+      'utf8',
+    );
+    const deleteScreen = fs.readFileSync(
+      path.join(__dirname, '../../screens/auth/DeleteAccountScreen.tsx'),
+      'utf8',
+    );
+    const passwordField = fs.readFileSync(
+      path.join(__dirname, '../../components/auth/PasswordField.tsx'),
+      'utf8',
+    );
 
     expect(authNavigator).toContain('RegisterScreen');
     expect(authNavigator).toContain('OtpScreen');
@@ -48,7 +64,21 @@ describe('password authentication', () => {
     expect(loginScreen).toMatch(/ForgotPassword/);
     expect(registerScreen).toMatch(/useSendOtp/);
     expect(registerScreen).toMatch(/OtpVerification/);
-    expect(registerScreen).toMatch(/secureTextEntry/);
+    expect(passwordField).toMatch(/secureTextEntry=\{!visible\}/);
+    expect(passwordField).toMatch(/EyeOff/);
+    expect(passwordField).toMatch(/styles\.inputSlot/);
+    expect(en.auth.password.show).toBe('Show password');
+    expect(en.auth.password.hide).toBe('Hide password');
+    expect(en.auth.register.passwordMismatch).toBe('Passwords do not match.');
+    for (const source of [
+      loginScreen,
+      registerScreen,
+      registerPasswordScreen,
+      resetScreen,
+      deleteScreen,
+    ]) {
+      expect(source).toContain('PasswordField');
+    }
     expect(fs.existsSync(path.join(__dirname, '../../screens/auth/OtpScreen.tsx'))).toBe(
       true,
     );

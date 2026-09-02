@@ -284,6 +284,8 @@ export type AdminStackParamList = {
   AdminMessList: AdminListFilterParams | undefined;
   AdminMessDetail: { id: string };
   AdminAddMess: undefined;
+  AdminRegisteredUsers: undefined;
+  AdminSavedAddresses: undefined;
 };
 
 export type RootStackParamList = {

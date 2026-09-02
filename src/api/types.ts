@@ -1271,6 +1271,8 @@ export interface CreateBedRequest {
   name: string;
   bedNumber: string;
   status?: AccommodationStatus;
+  defaultRent?: number | null;
+  defaultDeposit?: number | null;
 }
 
 export interface UpdateBedRequest {
@@ -1398,6 +1400,11 @@ export interface UnitSetupConfig {
   defaultRoomType?: RoomType;
   capacityPerRoom?: number;
   defaultStatus?: AccommodationStatus;
+}
+
+export interface BuildingAvailabilityResponse {
+  nameAvailable: boolean;
+  message?: string | null;
 }
 
 export interface AccommodationSetupRequest {
@@ -1581,6 +1588,8 @@ export interface BedListItemResponse {
   label: string;
   status: AccommodationStatus;
   active?: boolean;
+  defaultRent?: number | null;
+  defaultDeposit?: number | null;
 }
 
 export interface BedSpaceListItemResponse {
@@ -2604,6 +2613,7 @@ export interface AdminDashboardSummary {
   claimedMessLeads: number;
   activePropertySpaces: number;
   activeMessSpaces: number;
+  registeredUsersCount: number;
 }
 
 export interface AdminActiveSpace {
@@ -2618,6 +2628,50 @@ export interface AdminActiveSpace {
   createdAt: string;
 }
 
+export type AdminUserSelectedRole = 'NOT_SELECTED' | 'OWNER' | 'MEMBER' | 'OWNER_AND_MEMBER';
+
+export type AdminUserOnboardingStatus = 'INCOMPLETE' | 'COMPLETE';
+
+export interface AdminRegisteredUserSpace {
+  id: UUID;
+  name: string;
+  type: SpaceType;
+  membershipRole: string;
+}
+
+export interface AdminRegisteredUser {
+  id: UUID;
+  fullName?: string | null;
+  mobileNumber: string;
+  mobileVerified: boolean;
+  mobileVerifiedAt?: string | null;
+  registeredAt: string;
+  selectedRole: AdminUserSelectedRole;
+  onboardingStatus: AdminUserOnboardingStatus;
+  profileCompleted: boolean;
+  spaces: AdminRegisteredUserSpace[];
+}
+
+export interface SavedAddress {
+  id: UUID;
+  addressLine: string;
+  city: string;
+  state: string;
+  pincode: string;
+  mapUrl?: string | null;
+  usageCount: number;
+  lastUsedAt?: string | null;
+  createdAt: string;
+}
+
+export interface SavedAddressRequest {
+  addressLine: string;
+  city: string;
+  state: string;
+  pincode: string;
+  mapUrl?: string;
+}
+
 export interface PropertyRegistrationListItem {
   id: UUID;
   reference: string;
@@ -2625,6 +2679,7 @@ export interface PropertyRegistrationListItem {
   propertyName: string;
   ownerName: string;
   mobileNumber: string;
+  alternateMobileNumber?: string | null;
   city: string;
   state: string;
   pincode: string;
@@ -2655,6 +2710,7 @@ export interface MessRegistrationListItem {
   messName: string;
   ownerName: string;
   mobileNumber: string;
+  alternateMobileNumber?: string | null;
   city: string;
   state: string;
   pincode: string;
@@ -2684,6 +2740,7 @@ export interface AdminCreatePropertyRegistrationRequest {
   ownerName?: string;
   description?: string;
   mobileNumber?: string;
+  alternateMobileNumber?: string | null;
   addressLine?: string;
   city?: string;
   state?: string;
@@ -2700,6 +2757,7 @@ export interface AdminCreateMessRegistrationRequest {
   ownerName?: string;
   description?: string;
   mobileNumber?: string;
+  alternateMobileNumber?: string | null;
   addressLine?: string;
   city?: string;
   state?: string;
@@ -2709,6 +2767,12 @@ export interface AdminCreateMessRegistrationRequest {
   mealPrice?: number;
   capacityEstimate?: number;
   testLead?: boolean;
+}
+
+export interface AdminUpdateRegistrationContactRequest {
+  ownerName?: string;
+  mobileNumber?: string;
+  alternateMobileNumber?: string | null;
 }
 
 export interface PropertyRegistrationResponse {

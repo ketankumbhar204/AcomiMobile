@@ -223,6 +223,10 @@
     }
   },
   "auth": {
+    "password": {
+      "show": "Show password",
+      "hide": "Hide password"
+    },
     "login": {
       "eyebrow": "Sign in",
       "heading": "Welcome back",
@@ -877,7 +881,11 @@
       "created": "Created",
       "updated": "Updated",
       "defaultRent": "Default monthly rent (prefill only)",
-      "defaultDeposit": "Default deposit (prefill only)"
+      "defaultDeposit": "Default deposit (prefill only)",
+      "rent": "Rent",
+      "deposit": "Deposit",
+      "enterRent": "Enter rent",
+      "enterDeposit": "Enter deposit"
     },
     "pricingHints": {
       "title": "Set rent after you save",
@@ -1101,6 +1109,9 @@
       "back": "Back",
       "generate": "Generate",
       "generateStructure": "Generate Structure",
+      "creatingLayout": "Creating layout...",
+      "buildingNameTaken": "An active building with this name already exists in this space.",
+      "optional": "Optional",
       "success": "{{beds}} beds ready in {{name}}",
       "notApplicable": "Quick Setup is not available for this space type.",
       "totals": {

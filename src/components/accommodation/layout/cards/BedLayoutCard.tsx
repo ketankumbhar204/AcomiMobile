@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { AccommodationStatus, BedListItemResponse, UUID } from '../../../../api/types';
+import { FormInput } from '../../../ui';
 import { InlineEditableName } from '../../../ui/InlineEditableName';
 import { useBedOccupantLabel } from '../../../../hooks/useBedOccupantLabel';
+import { parseOptionalMoney } from '../../setup-preview/setupPricingAutofill';
 import { colors, radius, shadows, spacing, typography } from '../../../../theme';
 import { isAccommodationEntityActive } from '../../../../utils/accommodationEntityActive';
 import { AccommodationInactiveBadge, accommodationInactiveCardStyle, accommodationInactiveIllustrationStyle } from '../../AccommodationInactiveBadge';
@@ -21,6 +23,11 @@ type BedLayoutCardProps = {
   menu?: React.ReactNode;
   editableName?: boolean;
   onSaveName?: (name: string) => Promise<void>;
+  pricingEditable?: boolean;
+  onCommitPricing?: (
+    field: 'defaultRent' | 'defaultDeposit',
+    value: number | null,
+  ) => Promise<void>;
 };
 
 function BedOccupantLine({
@@ -60,6 +67,10 @@ function BedOccupantLine({
   );
 }
 
+function moneyText(value: number | null | undefined): string {
+  return value == null ? '' : String(value);
+}
+
 export function BedLayoutCard({
   bed,
   spaceId,
@@ -69,8 +80,29 @@ export function BedLayoutCard({
   menu,
   editableName = false,
   onSaveName,
+  pricingEditable = false,
+  onCommitPricing,
 }: BedLayoutCardProps) {
+  const { t } = useTranslation();
   const inactive = !isAccommodationEntityActive(bed);
+  const [rentEdit, setRentEdit] = useState<string | null>(null);
+  const [depositEdit, setDepositEdit] = useState<string | null>(null);
+  const rentText = rentEdit ?? moneyText(bed.defaultRent);
+  const depositText = depositEdit ?? moneyText(bed.defaultDeposit);
+
+  async function commit(field: 'defaultRent' | 'defaultDeposit', raw: string, current?: number | null) {
+    const parsed = parseOptionalMoney(raw);
+    const existing = current ?? null;
+    if (field === 'defaultRent') {
+      setRentEdit(null);
+    } else {
+      setDepositEdit(null);
+    }
+    if (parsed === existing || !onCommitPricing) {
+      return;
+    }
+    await onCommitPricing(field, parsed);
+  }
 
   return (
     <LayoutCardShell
@@ -106,6 +138,40 @@ export function BedLayoutCard({
       ) : (
         <AccommodationStatusBadge status={bed.status} />
       )}
+      <View
+        style={styles.pricingRow}
+        onStartShouldSetResponder={() => true}>
+        <View style={styles.pricingField}>
+          <FormInput
+            size="compact"
+            label={t('accommodation.fields.rent')}
+            prefix="₹"
+            value={rentText}
+            onChangeText={setRentEdit}
+            onBlur={() => {
+              commit('defaultRent', rentText, bed.defaultRent);
+            }}
+            keyboardType="numeric"
+            placeholder={t('accommodation.fields.enterRent')}
+            editable={pricingEditable && !inactive}
+          />
+        </View>
+        <View style={styles.pricingField}>
+          <FormInput
+            size="compact"
+            label={t('accommodation.fields.deposit')}
+            prefix="₹"
+            value={depositText}
+            onChangeText={setDepositEdit}
+            onBlur={() => {
+              commit('defaultDeposit', depositText, bed.defaultDeposit);
+            }}
+            keyboardType="numeric"
+            placeholder={t('accommodation.fields.enterDeposit')}
+            editable={pricingEditable && !inactive}
+          />
+        </View>
+      </View>
     </LayoutCardShell>
   );
 }
@@ -125,7 +191,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: spacing.md,
     alignItems: 'center',
-    minHeight: 188,
+    minHeight: 220,
     ...shadows.sm,
   },
   highlighted: {
@@ -161,5 +227,15 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.muted,
     marginBottom: spacing.xs,
+  },
+  pricingRow: {
+    width: '100%',
+    flexDirection: 'row',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  pricingField: {
+    flex: 1,
+    minWidth: 0,
   },
 });

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   LayoutAnimation,
   Platform,
@@ -26,11 +26,12 @@ import {
   DashboardSectionHeader,
   DashboardStatCard,
 } from '../../dashboard';
-import { Button } from '../../ui';
+import { Button, FormInput } from '../../ui';
 import { useAccommodationActionSheetStore } from '../../../store/accommodationActionSheetStore';
 import { colors, radius, shadows, spacing, typography } from '../../../theme';
 import { executeSetupStructure } from './executeSetupStructure';
 import { InlineEditableField, InlineEditableTitle } from './InlineEditableTitle';
+import { parseOptionalMoney, propagateBedPricing, setBedPricingField, type PricingField } from './setupPricingAutofill';
 import { computeStructureTotals } from './setupStructureModel';
 import {
   addBed,
@@ -162,27 +163,67 @@ function HeaderIconButton({
   );
 }
 
+function formatMoney(value: number | null | undefined): string {
+  return value == null ? '' : String(value);
+}
+
 function BedRow({
   bed,
   onChange,
+  onCommitPricing,
   onDelete,
 }: {
   bed: EditableBed;
   onChange: (bed: EditableBed) => void;
+  onCommitPricing: (field: PricingField, value: number | null) => void;
   onDelete: () => void;
 }) {
   const { t } = useTranslation();
+  const [rentText, setRentText] = useState(formatMoney(bed.defaultRent));
+  const [depositText, setDepositText] = useState(formatMoney(bed.defaultDeposit));
+
+  useEffect(() => {
+    setRentText(formatMoney(bed.defaultRent));
+  }, [bed.defaultRent]);
+
+  useEffect(() => {
+    setDepositText(formatMoney(bed.defaultDeposit));
+  }, [bed.defaultDeposit]);
 
   return (
-    <View style={styles.bedRow}>
-      <InlineEditableTitle
-        value={bed.label}
-        onSave={label => onChange({ ...bed, label, number: label })}
-        style={styles.bedTitle}
-      />
-      <Pressable onPress={onDelete} style={styles.smallBtn}>
-        <Text style={styles.smallBtnText}>{t('accommodation.setup.editor.delete')}</Text>
-      </Pressable>
+    <View style={styles.bedBlock}>
+      <View style={styles.bedRow}>
+        <InlineEditableTitle
+          value={bed.label}
+          onSave={label => onChange({ ...bed, label, number: label })}
+          style={styles.bedTitle}
+        />
+        <Pressable onPress={onDelete} style={styles.smallBtn}>
+          <Text style={styles.smallBtnText}>{t('accommodation.setup.editor.delete')}</Text>
+        </Pressable>
+      </View>
+      <View style={styles.bedPricing}>
+        <View style={styles.bedPriceField}>
+          <FormInput
+            size="compact"
+            label={`${t('accommodation.form.rent')} (${t('accommodation.setup.optional')})`}
+            value={rentText}
+            onChangeText={setRentText}
+            onBlur={() => onCommitPricing('defaultRent', parseOptionalMoney(rentText))}
+            keyboardType="numeric"
+          />
+        </View>
+        <View style={styles.bedPriceField}>
+          <FormInput
+            size="compact"
+            label={`${t('accommodation.form.deposit')} (${t('accommodation.setup.optional')})`}
+            value={depositText}
+            onChangeText={setDepositText}
+            onBlur={() => onCommitPricing('defaultDeposit', parseOptionalMoney(depositText))}
+            keyboardType="numeric"
+          />
+        </View>
+      </View>
     </View>
   );
 }
@@ -360,6 +401,15 @@ function RoomSection({
                   beds: room.beds.map(item => (item.id === bed.id ? nextBed : item)),
                 })
               }
+              onCommitPricing={(field, value) => {
+                onChangeStructure(
+                  propagateBedPricing(
+                    setBedPricingField(structure, bed.id, field, value),
+                    bed.id,
+                    field,
+                  ),
+                );
+              }}
               onDelete={() =>
                 onChangeStructure(deleteBed(structure, floorId, unitId, room.id, bed.id))
               }
@@ -995,12 +1045,23 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     backgroundColor: colors.surface,
   },
+  bedBlock: {
+    gap: spacing.xs,
+    paddingLeft: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
   bedRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingLeft: spacing.sm,
-    paddingVertical: spacing.xs,
+  },
+  bedPricing: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  bedPriceField: {
+    flex: 1,
+    minWidth: 0,
   },
   bedTitle: {
     flex: 1,

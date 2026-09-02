@@ -21,7 +21,6 @@ import { accommodationApi } from '../../api/accommodationApi';
 import {
   AccommodationFormHero,
   AccommodationStatusPicker,
-  PricingAfterCreateHint,
 } from '../../components/accommodation';
 import { FormInput, HeaderBackButton } from '../../components/ui';
 import { StickyFormActions } from '../../components/progressive';
@@ -87,13 +86,11 @@ export function BedFormScreen() {
     try {
       const parsedRent = defaultRent.trim() ? Number(defaultRent.trim()) : null;
       const parsedDeposit = defaultDeposit.trim() ? Number(defaultDeposit.trim()) : null;
-      const catalogFields = isEdit
-        ? {
-            defaultRent: parsedRent != null && Number.isFinite(parsedRent) ? parsedRent : null,
-            defaultDeposit:
-              parsedDeposit != null && Number.isFinite(parsedDeposit) ? parsedDeposit : null,
-          }
-        : undefined;
+      const catalogFields = {
+        defaultRent: parsedRent != null && Number.isFinite(parsedRent) ? parsedRent : null,
+        defaultDeposit:
+          parsedDeposit != null && Number.isFinite(parsedDeposit) ? parsedDeposit : null,
+      };
 
       if (isEdit && bedId && status) {
         await accommodationApi.updateBed(spaceId, roomId, bedId, {
@@ -108,6 +105,7 @@ export function BedFormScreen() {
           name: name.trim(),
           bedNumber: bedNumber.trim(),
           status: status ?? 'AVAILABLE',
+          ...catalogFields,
         });
         showToast(t('accommodation.beds.createSuccess'));
       }
@@ -141,8 +139,6 @@ export function BedFormScreen() {
               }
             />
 
-            {!isEdit ? <PricingAfterCreateHint entityKey="bed" /> : null}
-
             {submitError ? (
               <View style={styles.errorBanner}>
                 <Text style={styles.errorBannerText}>{submitError}</Text>
@@ -165,26 +161,22 @@ export function BedFormScreen() {
               {isEdit ? (
                 <AccommodationStatusPicker value={status} onChange={setStatus} />
               ) : null}
-              {isEdit ? (
-                <>
-                  <FormInput
-                    label={t('accommodation.fields.defaultRent')}
-                    value={defaultRent}
-                    onChangeText={setDefaultRent}
-                    keyboardType="numeric"
-                    placeholder={t('occupancy.contract.amountPlaceholder')}
-                    leadingIcon={CircleDollarSign}
-                  />
-                  <FormInput
-                    label={t('accommodation.fields.defaultDeposit')}
-                    value={defaultDeposit}
-                    onChangeText={setDefaultDeposit}
-                    keyboardType="numeric"
-                    placeholder="0"
-                    leadingIcon={CircleDollarSign}
-                  />
-                </>
-              ) : null}
+              <FormInput
+                label={t('accommodation.fields.defaultRent')}
+                value={defaultRent}
+                onChangeText={setDefaultRent}
+                keyboardType="numeric"
+                placeholder={t('occupancy.contract.amountPlaceholder')}
+                leadingIcon={CircleDollarSign}
+              />
+              <FormInput
+                label={t('accommodation.fields.defaultDeposit')}
+                value={defaultDeposit}
+                onChangeText={setDefaultDeposit}
+                keyboardType="numeric"
+                placeholder="0"
+                leadingIcon={CircleDollarSign}
+              />
             </View>
           </ScrollView>
           <StickyFormActions

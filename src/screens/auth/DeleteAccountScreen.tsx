@@ -1,19 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import {
   Keyboard,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { Check, Lock, ShieldCheck, Trash2, TriangleAlert } from 'lucide-react-native';
-import { AuthHero } from '../../components/auth';
+import { Check, ShieldCheck, Trash2, TriangleAlert } from 'lucide-react-native';
+import { AuthHero, PasswordField } from '../../components/auth';
 import { StickyFormActions } from '../../components/progressive';
 import { useAuthenticatedUser, useSendOtp } from '../../hooks/useAuth';
 import { useDeleteAccount } from '../../hooks/useDeleteAccount';
@@ -22,10 +20,10 @@ import type { MainStackParamList } from '../../navigation/types';
 import { resetToLogin } from '../../navigation/navigationRef';
 import { useRegistrationDraftStore } from '../../store/registrationDraftStore';
 import { useToastStore } from '../../store/toastStore';
-import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { colors, shadows, spacing, typography } from '../../theme';
 import { maskIndianMobile, normalizeIndianMobileDigits } from '../../utils/indianMobile';
 import { formatCountdown } from '../../utils/otpAuthErrors';
-import { validatePassword } from '../../utils/passwordRules';
+import { loginPasswordError } from '../../utils/passwordMessages';
 
 type DeleteNav = NativeStackNavigationProp<MainStackParamList, 'DeleteAccount'>;
 
@@ -49,27 +47,13 @@ export function DeleteAccountScreen() {
   );
   const bannerError = localError || otpSendError;
   const busy = sendingOtp || isDeleting;
-  const passwordValid = validatePassword(password) == null;
-  const canDeletePassword = Boolean(mobileNumber) && passwordValid && confirmed && !busy;
+  const canDeletePassword = Boolean(mobileNumber) && confirmed && !busy;
   const otpCooldown = useOtpCooldown(mobileNumber, 'ACCOUNT_DELETION');
   const canSendOtp = Boolean(mobileNumber) && confirmed && !busy && otpCooldown === 0;
 
   useEffect(() => {
     navigation.setOptions({ title: t('settings.profile.deleteAccount') });
   }, [navigation, t]);
-
-  function passwordMessage(code: ReturnType<typeof validatePassword>): string | null {
-    if (code === 'required') {
-      return t('auth.login.passwordRequired');
-    }
-    if (code === 'tooShort') {
-      return t('auth.login.passwordTooShort');
-    }
-    if (code === 'tooLong') {
-      return t('auth.login.passwordTooLong');
-    }
-    return null;
-  }
 
   function switchAuthMethod() {
     if (busy) {
@@ -85,7 +69,7 @@ export function DeleteAccountScreen() {
     Keyboard.dismiss();
     clearError();
     setLocalError(null);
-    const nextPasswordError = passwordMessage(validatePassword(password));
+    const nextPasswordError = loginPasswordError(t, password);
     setPasswordError(nextPasswordError);
     if (!confirmed || !mobileNumber || nextPasswordError) {
       return;
@@ -160,42 +144,33 @@ export function DeleteAccountScreen() {
 
         {authMethod === 'password' ? (
           <View style={styles.passwordCard}>
-            <View style={styles.fieldLabelRow}>
-              <Lock size={14} color={colors.primaryDark} strokeWidth={2.2} />
-              <Text style={styles.fieldLabel}>{t('auth.login.passwordLabel')}</Text>
-            </View>
-            <TextInput
-              style={[
-                styles.passwordInput,
-                focusedField === 'password' && styles.passwordInputFocused,
-                passwordError ? styles.passwordInputError : null,
-              ]}
+            <PasswordField
+              label={t('auth.login.passwordLabel')}
               placeholder={t('auth.login.passwordPlaceholder')}
-              placeholderTextColor={colors.muted}
               value={password}
+              focused={focusedField === 'password'}
+              error={passwordError}
+              editable={!busy}
               onFocus={() => setFocusedField('password')}
-              onBlur={() => setFocusedField(null)}
+              onBlur={() => {
+                setFocusedField(null);
+                setPasswordError(loginPasswordError(t, password));
+              }}
               onChangeText={text => {
                 setPassword(text);
                 if (passwordError) {
-                  setPasswordError(null);
+                  setPasswordError(loginPasswordError(t, text));
                 }
                 if (localError) {
                   setLocalError(null);
                 }
               }}
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
               textContentType="password"
-              returnKeyType="done"
-              editable={!busy}
+              autoComplete="password"
               onSubmitEditing={() => {
                 void handleDeletePassword();
               }}
-              accessibilityLabel={t('auth.login.passwordLabel')}
             />
-            {passwordError ? <Text style={styles.fieldError}>{passwordError}</Text> : null}
           </View>
         ) : null}
 
@@ -316,42 +291,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.md,
     ...shadows.sm,
-  },
-  fieldLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  fieldLabel: {
-    ...typography.caption,
-    fontWeight: '700',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  passwordInput: {
-    minHeight: 48,
-    backgroundColor: colors.white,
-    borderRadius: radius.input,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: Platform.OS === 'android' ? 0 : spacing.md,
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    ...(Platform.OS === 'android' ? { textAlignVertical: 'center' as const } : null),
-  },
-  passwordInputFocused: {
-    borderColor: colors.primary,
-  },
-  passwordInputError: {
-    borderColor: '#F87171',
-    backgroundColor: '#FFF5F5',
-  },
-  fieldError: {
-    ...typography.caption,
-    color: '#DC2626',
   },
   confirmRow: {
     marginTop: spacing.lg,

@@ -1,0 +1,90 @@
+GOOGLE PLAY DEFAULT STORE LISTING (en-IN)
+Copy and paste. Do not invent extra claims.
+
+============================================================
+APP NAME (max 30)
+============================================================
+ACOMI
+
+(Change the current "Acomi" to "ACOMI".)
+
+============================================================
+SHORT DESCRIPTION (max 80)
+============================================================
+Manage PG, hostel, and mess occupancy, meals, dues, and complaints in one app.
+
+Character count: 80
+
+============================================================
+FULL DESCRIPTION (max 4000)
+============================================================
+ACOMI helps paying guest (PG) houses, hostels, and messes run day-to-day operations in one place.
+
+Residents can join their space, see occupancy and meals, track dues, submit payment proofs, and raise complaints.
+
+Owners and operators can manage buildings, rooms, and beds, add members, run meal polls, review payment proofs, and handle complaints.
+
+What you can do
+• Create and manage a space (PG, hostel, or mess)
+• Set up accommodation: buildings, floors, rooms, and beds
+• Invite and manage members
+• Plan meals and collect meal responses
+• Track rent and meal dues
+• Upload and review payment proofs (UPI, bank transfer, cash, cheque, or other)
+• Raise and resolve complaints with photos
+• Complete your profile, including optional ID and address proofs
+
+ACOMI records occupancy, meals, dues, and payment proofs for your space. It does not process card payments, store a digital wallet, or transfer money.
+
+Need help? Visit https://app.acomi.in
+Privacy: https://app.acomi.in/privacy
+Delete account: https://app.acomi.in/delete-account
+
+============================================================
+VIDEO
+============================================================
+Leave empty. No YouTube promo is required.
+
+============================================================
+CHROMEBOOK / ANDROID XR
+============================================================
+Leave collapsed / empty. This is a phone app.
+
+============================================================
+FILES TO UPLOAD
+============================================================
+App icon (512 x 512 PNG):
+  app-icon\app-icon-512.png
+
+Feature graphic (1024 x 500 PNG):
+  feature-graphic\feature-graphic-1024x500.png
+
+Phone screenshots (upload in this order, 7 files, 1080 x 1920, 9:16):
+  phone\01-dashboard.png
+  phone\02-spaces.png
+  phone\03-accommodation.png
+  phone\04-members.png
+  phone\05-meals.png
+  phone\06-payments.png
+  phone\07-complaints.png
+
+7-inch tablet screenshots (1920 x 1080, 16:9; phone UI is not stretched):
+  tablet-7inch\01-dashboard.png
+  tablet-7inch\02-spaces.png
+  tablet-7inch\03-accommodation.png
+  tablet-7inch\04-members.png
+  tablet-7inch\05-meals.png
+  tablet-7inch\06-payments.png
+  tablet-7inch\07-complaints.png
+
+10-inch tablet screenshots (2560 x 1440, 16:9; each side >= 1080 px):
+  tablet-10inch\01-dashboard.png
+  tablet-10inch\02-spaces.png
+  tablet-10inch\03-accommodation.png
+  tablet-10inch\04-members.png
+  tablet-10inch\05-meals.png
+  tablet-10inch\06-payments.png
+  tablet-10inch\07-complaints.png
+
+Note: There are no native tablet layout captures in this project. Tablet
+assets are landscape marketing frames around the real phone UI, unstretched.
