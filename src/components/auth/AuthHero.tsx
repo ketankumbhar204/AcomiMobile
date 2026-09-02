@@ -19,6 +19,8 @@ type AuthHeroProps = {
   soft?: string;
   border?: string;
   illustration?: ImageSourcePropType;
+  /** Heading on the left; eyebrow + icon on the right. */
+  splitHeadline?: boolean;
 };
 
 /** Soft green CreateSpace-style hero for auth & onboarding. */
@@ -32,10 +34,30 @@ export function AuthHero({
   soft = colors.lightGreen,
   border = `${colors.primary}33`,
   illustration,
+  splitHeadline = false,
 }: AuthHeroProps) {
+  const headingNode = (
+    <Text
+      style={[
+        styles.heading,
+        splitHeadline && styles.splitHeading,
+        { color: illustration ? colors.textPrimary : accent },
+      ]}
+      numberOfLines={splitHeadline ? 1 : undefined}>
+      {heading}
+      {headingHighlight ? (
+        <Text style={{ color: accent }}>{headingHighlight}</Text>
+      ) : null}
+    </Text>
+  );
+
   return (
     <View
-      style={[styles.hero, { backgroundColor: soft, borderColor: border }]}
+      style={[
+        styles.hero,
+        splitHeadline && styles.heroCompact,
+        { backgroundColor: soft, borderColor: border },
+      ]}
       accessibilityRole="header">
       {illustration ? null : (
         <>
@@ -51,22 +73,31 @@ export function AuthHero({
       )}
       <View style={styles.row}>
         <View style={styles.copy}>
-          <View
-            style={[styles.heroIconWrap, { borderColor: border }]}
-            accessibilityElementsHidden>
-            <Icon size={16} color={accent} strokeWidth={2.2} />
-          </View>
-          <Text style={[styles.eyebrow, { color: accent }]}>{eyebrow}</Text>
-          <Text
-            style={[
-              styles.heading,
-              { color: illustration ? colors.textPrimary : accent },
-            ]}>
-            {heading}
-            {headingHighlight ? (
-              <Text style={{ color: accent }}>{headingHighlight}</Text>
-            ) : null}
-          </Text>
+          {splitHeadline ? (
+            <View style={styles.splitRow}>
+              {headingNode}
+              <View style={styles.splitMeta}>
+                <Text style={[styles.eyebrow, styles.splitEyebrow, { color: accent }]}>
+                  {eyebrow}
+                </Text>
+                <View
+                  style={[styles.heroIconWrap, styles.splitIcon, { borderColor: border }]}
+                  accessibilityElementsHidden>
+                  <Icon size={16} color={accent} strokeWidth={2.2} />
+                </View>
+              </View>
+            </View>
+          ) : (
+            <>
+              <View
+                style={[styles.heroIconWrap, { borderColor: border }]}
+                accessibilityElementsHidden>
+                <Icon size={16} color={accent} strokeWidth={2.2} />
+              </View>
+              <Text style={[styles.eyebrow, { color: accent }]}>{eyebrow}</Text>
+              {headingNode}
+            </>
+          )}
           {subheading ? <Text style={styles.subheading}>{subheading}</Text> : null}
         </View>
         {illustration ? (
@@ -95,7 +126,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
     minHeight: 132,
+    marginBottom: spacing.md,
     ...shadows.sm,
+  },
+  heroCompact: {
+    minHeight: 0,
+    paddingRight: spacing.md,
+    paddingBottom: spacing.md,
   },
   row: {
     flexDirection: 'row',
@@ -147,6 +184,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.sm,
   },
+  splitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  splitMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flexShrink: 0,
+  },
+  splitEyebrow: {
+    marginBottom: 0,
+  },
+  splitIcon: {
+    marginBottom: 0,
+  },
   eyebrow: {
     ...typography.eyebrow,
     fontSize: 11,
@@ -158,6 +212,10 @@ const styles = StyleSheet.create({
     fontSize: 22,
     lineHeight: 28,
     fontWeight: '800',
+  },
+  splitHeading: {
+    flex: 1,
+    minWidth: 0,
   },
   subheading: {
     ...typography.caption,

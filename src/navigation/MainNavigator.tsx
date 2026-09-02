@@ -36,6 +36,9 @@ import { MemberDetailsScreen } from '../screens/MemberDetailsScreen';
 import { MemberOccupancyHistoryScreen } from '../screens/MemberOccupancyHistoryScreen';
 import { MySpacesScreen } from '../screens/MySpacesScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
+import { DeleteAccountScreen } from '../screens/auth/DeleteAccountScreen';
+import { ChangeMobileScreen } from '../screens/auth/ChangeMobileScreen';
+import { OtpScreen } from '../screens/auth/OtpScreen';
 import { SpaceDetailsScreen } from '../screens/SpaceDetailsScreen';
 import { MenuPlanningScreen } from '../screens/meals/MenuPlanningScreen';
 import { MealDeliveryLocationsScreen } from '../screens/meals/MealDeliveryLocationsScreen';
@@ -132,6 +135,26 @@ export function MainNavigator() {
           component={ProfileScreen}
           options={{ title: 'Profile' }}
         />
+        <Stack.Screen
+          name="DeleteAccount"
+          component={DeleteAccountScreen}
+          options={{ title: 'Delete account' }}
+        />
+        <Stack.Screen
+          name="DeleteAccountOtp"
+          component={OtpScreen}
+          options={{ title: 'Verify OTP' }}
+        />
+        <Stack.Screen
+          name="ChangeMobile"
+          component={ChangeMobileScreen}
+          options={{ title: 'Change mobile number' }}
+        />
+        <Stack.Screen
+          name="ChangeMobileOtp"
+          component={OtpScreen}
+          options={{ title: 'Verify OTP' }}
+        />
       </Stack.Navigator>
     );
   }
@@ -163,6 +186,26 @@ export function MainNavigator() {
         name="Profile"
         component={ProfileScreen}
         options={{ title: 'Profile' }}
+      />
+      <Stack.Screen
+        name="DeleteAccount"
+        component={DeleteAccountScreen}
+        options={{ title: 'Delete account' }}
+      />
+      <Stack.Screen
+        name="DeleteAccountOtp"
+        component={OtpScreen}
+        options={{ title: 'Verify OTP' }}
+      />
+      <Stack.Screen
+        name="ChangeMobile"
+        component={ChangeMobileScreen}
+        options={{ title: 'Change mobile number' }}
+      />
+      <Stack.Screen
+        name="ChangeMobileOtp"
+        component={OtpScreen}
+        options={{ title: 'Verify OTP' }}
       />
       <Stack.Screen
         name="CompleteProfile"

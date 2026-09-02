@@ -2,6 +2,8 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { LoginScreen } from '../screens/auth/LoginScreen';
 import { OtpScreen } from '../screens/auth/OtpScreen';
+import { ForgotPasswordScreen } from '../screens/auth/ForgotPasswordScreen';
+import { ResetPasswordScreen } from '../screens/auth/ResetPasswordScreen';
 import { RegisterPasswordScreen } from '../screens/auth/RegisterPasswordScreen';
 import { RegisterScreen } from '../screens/auth/RegisterScreen';
 import { stackHeaderOptions } from '../theme';
@@ -22,11 +24,20 @@ export function AuthNavigator() {
         component={RegisterScreen}
         options={{ headerShown: false }}
       />
-      {/* OTP screens remain mounted for future OTP authentication. Production login/register do not navigate here. */}
       <Stack.Screen
         name="OtpVerification"
         component={OtpScreen}
         options={{ headerShown: true }}
+      />
+      <Stack.Screen
+        name="ForgotPassword"
+        component={ForgotPasswordScreen}
+        options={{ headerShown: true, title: 'Forgot password' }}
+      />
+      <Stack.Screen
+        name="ResetPassword"
+        component={ResetPasswordScreen}
+        options={{ headerShown: true, title: 'Reset password' }}
       />
       <Stack.Screen
         name="RegisterPassword"

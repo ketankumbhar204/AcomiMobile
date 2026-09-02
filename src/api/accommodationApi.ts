@@ -12,6 +12,7 @@ import {
   BedListItemResponse,
   BedSpaceListItemResponse,
   BedResponse,
+  BuildingAvailabilityResponse,
   BuildingResponse,
   BuildingSummaryResponse,
   BulkCreateBedsRequest,
@@ -755,6 +756,18 @@ export const accommodationApi = {
 
     devLog(`${LOG_TAG} previewSetup response`, response.totals);
     return response;
+  },
+
+  checkBuildingAvailability: async (
+    spaceId: UUID,
+    name: string,
+  ): Promise<BuildingAvailabilityResponse> => {
+    return unwrapApiResponse(
+      apiClient.post<ApiResponse<BuildingAvailabilityResponse>>(
+        `/spaces/${spaceId}/accommodation/setup/building-check`,
+        { name },
+      ),
+    );
   },
 
   executeSetup: async (

@@ -1,9 +1,17 @@
 import { useCallback, useState } from 'react';
 import { authApi } from '../api/authApi';
-import { ApiError, SendOtpResponse, UserResponse, UUID, VerifyOtpResponse } from '../api/types';
+import {
+  ApiError,
+  OtpPurpose,
+  SendOtpResponse,
+  UserResponse,
+  UUID,
+  VerifyOtpResponse,
+} from '../api/types';
 import { i18n } from '../i18n';
 import { useAuthStore } from '../store/authStore';
 import { useRegistrationDraftStore } from '../store/registrationDraftStore';
+import { normalizeIndianMobileDigits } from '../utils/indianMobile';
 import {
   mapOtpRequestError,
   mapOtpVerifyError,
@@ -23,7 +31,7 @@ export function useAuthenticatedUserId(): UUID | null {
 }
 
 type UseSendOtpResult = {
-  sendOtp: (mobileNumber: string) => Promise<SendOtpResponse | null>;
+  sendOtp: (mobileNumber: string, purpose?: OtpPurpose) => Promise<SendOtpResponse | null>;
   isLoading: boolean;
   error: string | null;
   clearError: () => void;
@@ -32,40 +40,64 @@ type UseSendOtpResult = {
 export function useSendOtp(): UseSendOtpResult {
   const beginOtp = useRegistrationDraftStore(state => state.beginOtp);
   const markResent = useRegistrationDraftStore(state => state.markResent);
+  const noteCooldown = useRegistrationDraftStore(state => state.noteCooldown);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const sendOtp = useCallback(
-    async (mobileNumber: string): Promise<SendOtpResponse | null> => {
+    async (
+      mobileNumber: string,
+      purpose: OtpPurpose = 'REGISTER',
+    ): Promise<SendOtpResponse | null> => {
       setIsLoading(true);
       setError(null);
       try {
         const result = await authApi.sendOtp({
           mobileNumber,
-          purpose: 'REGISTER',
+          purpose,
         });
-        const currentMobile = useRegistrationDraftStore.getState().mobileNumber;
-        if (currentMobile === mobileNumber) {
+        const current = useRegistrationDraftStore.getState();
+        if (current.mobileNumber === mobileNumber && current.purpose === purpose) {
           markResent(result.expiresIn, result.resendAfter);
         } else {
-          beginOtp(mobileNumber, result.expiresIn, result.resendAfter);
+          beginOtp(mobileNumber, result.expiresIn, result.resendAfter, purpose);
         }
+        noteCooldown(
+          normalizeIndianMobileDigits(mobileNumber),
+          purpose,
+          result.resendAfter,
+        );
         return result;
       } catch (err) {
-        setError(mapOtpRequestError(err));
+        if (
+          err instanceof ApiError &&
+          err.status === 429 &&
+          err.retryAfterSeconds != null
+        ) {
+          noteCooldown(
+            normalizeIndianMobileDigits(mobileNumber),
+            purpose,
+            err.retryAfterSeconds,
+          );
+        }
+        setError(mapOtpRequestError(err, purpose));
         return null;
       } finally {
         setIsLoading(false);
       }
     },
-    [beginOtp, markResent],
+    [beginOtp, markResent, noteCooldown],
   );
 
   return { sendOtp, isLoading, error, clearError: () => setError(null) };
 }
 
 type UseVerifyOtpResult = {
-  verifyOtp: (mobileNumber: string, otp: string) => Promise<VerifyOtpResponse | null>;
+  verifyOtp: (
+    mobileNumber: string,
+    otp: string,
+    purpose?: OtpPurpose,
+  ) => Promise<VerifyOtpResponse | null>;
   isLoading: boolean;
   error: string | null;
   clearError: () => void;
@@ -77,14 +109,18 @@ export function useVerifyOtp(): UseVerifyOtpResult {
   const [error, setError] = useState<string | null>(null);
 
   const verifyOtp = useCallback(
-    async (mobileNumber: string, otp: string): Promise<VerifyOtpResponse | null> => {
+    async (
+      mobileNumber: string,
+      otp: string,
+      purpose: OtpPurpose = 'REGISTER',
+    ): Promise<VerifyOtpResponse | null> => {
       setIsLoading(true);
       setError(null);
       try {
         const result = await authApi.verifyOtp({
           mobileNumber,
           otp,
-          purpose: 'REGISTER',
+          purpose,
         });
         setVerified(result.verificationToken, result.expiresIn);
         return result;
@@ -132,6 +168,84 @@ export function useLogin(): UsePasswordAuthResult {
   );
 
   return { submit, isLoading, error, clearError: () => setError(null) };
+}
+
+type UseLoginWithOtpResult = {
+  loginWithOtp: (mobileNumber: string, verificationToken: string) => Promise<boolean>;
+  isLoading: boolean;
+  error: string | null;
+  clearError: () => void;
+};
+
+export function useLoginWithOtp(): UseLoginWithOtpResult {
+  const setSession = useAuthStore(state => state.setSession);
+  const clearDraft = useRegistrationDraftStore(state => state.clear);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loginWithOtp = useCallback(
+    async (mobileNumber: string, verificationToken: string): Promise<boolean> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const result = await authApi.loginWithOtp({ mobileNumber, verificationToken });
+        clearDraft();
+        await setSession(result.user, result.accessToken);
+        return true;
+      } catch (err) {
+        setError(mapPasswordAuthError(err, 'login'));
+        return false;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [clearDraft, setSession],
+  );
+
+  return { loginWithOtp, isLoading, error, clearError: () => setError(null) };
+}
+
+type UseResetPasswordResult = {
+  resetPassword: (payload: {
+    mobileNumber: string;
+    verificationToken: string;
+    password: string;
+    confirmPassword: string;
+  }) => Promise<boolean>;
+  isLoading: boolean;
+  error: string | null;
+  clearError: () => void;
+};
+
+export function useResetPassword(): UseResetPasswordResult {
+  const clearDraft = useRegistrationDraftStore(state => state.clear);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const resetPassword = useCallback(
+    async (payload: {
+      mobileNumber: string;
+      verificationToken: string;
+      password: string;
+      confirmPassword: string;
+    }): Promise<boolean> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        await authApi.resetPassword(payload);
+        clearDraft();
+        return true;
+      } catch (err) {
+        setError(mapPasswordAuthError(err, 'register'));
+        return false;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [clearDraft],
+  );
+
+  return { resetPassword, isLoading, error, clearError: () => setError(null) };
 }
 
 type UseRegisterResult = {

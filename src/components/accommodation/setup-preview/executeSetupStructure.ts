@@ -14,6 +14,8 @@ async function createBedsForRoom(
       name: bed.label.trim(),
       bedNumber: bed.number.trim() || bed.label.trim(),
       status: 'AVAILABLE',
+      defaultRent: bed.defaultRent ?? undefined,
+      defaultDeposit: bed.defaultDeposit ?? undefined,
     });
     count += 1;
   }

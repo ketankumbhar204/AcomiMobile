@@ -10,6 +10,7 @@ import {
   Languages,
   LogOut,
   SquarePen,
+  Smartphone,
   Trash2,
   TriangleAlert,
   UserRound,
@@ -34,7 +35,6 @@ import {
   useConfirmDialog,
 } from '../components/ui';
 import { useAuthenticatedUser } from '../hooks/useAuth';
-import { useDeleteAccount } from '../hooks/useDeleteAccount';
 import { useLogout } from '../hooks/useLogout';
 import type { AppLanguage } from '../i18n';
 import type { MainStackParamList } from '../navigation/types';
@@ -80,7 +80,6 @@ export function ProfileScreen() {
   const refreshUser = useAuthStore(state => state.refreshUser);
   const updateUser = useAuthStore(state => state.updateUser);
   const logout = useLogout();
-  const { deleteAccount, isDeleting } = useDeleteAccount();
   const { showConfirm } = useConfirmDialog();
   const showToast = useToastStore(state => state.showToast);
   const selectedSpaceId = useSpaceStore(state => state.selectedSpaceId);
@@ -293,15 +292,7 @@ export function ProfileScreen() {
   };
 
   const handleDeleteAccount = () => {
-    showConfirm({
-      title: t('settings.profile.deleteAccountTitle'),
-      message: t('settings.profile.deleteAccountMessage'),
-      confirmLabel: t('settings.profile.deleteAccountConfirm'),
-      destructive: true,
-      onConfirm: async () => {
-        await deleteAccount();
-      },
-    });
+    navigation.navigate('DeleteAccount');
   };
 
   const handleOpenPrivacyPolicy = async () => {
@@ -370,6 +361,12 @@ export function ProfileScreen() {
             })}
             icon={SquarePen}
             onPress={handleEditProfile}
+          />
+          <DashboardActionRow
+            title={t('settings.profile.changeMobile')}
+            subtitle={t('settings.profile.mobileHint')}
+            icon={Smartphone}
+            onPress={() => navigation.navigate('ChangeMobile')}
           />
           <DashboardActionRow
             title={t('settings.profile.switchSpace', {
@@ -506,7 +503,7 @@ export function ProfileScreen() {
           onPress={() => {
             void handleOpenPrivacyPolicy();
           }}
-          disabled={isDeleting || isLoggingOut}
+          disabled={isLoggingOut}
         />
 
         <Button
@@ -514,8 +511,7 @@ export function ProfileScreen() {
           variant="ghost"
           icon={Trash2}
           onPress={handleDeleteAccount}
-          loading={isDeleting}
-          disabled={isDeleting || isLoggingOut}
+          disabled={isLoggingOut}
           style={styles.deleteAccountButton}
         />
 
@@ -525,7 +521,7 @@ export function ProfileScreen() {
           icon={LogOut}
           onPress={handleLogout}
           loading={isLoggingOut}
-          disabled={isLoggingOut || isDeleting}
+          disabled={isLoggingOut}
           style={styles.logoutButton}
         />
       </Screen>

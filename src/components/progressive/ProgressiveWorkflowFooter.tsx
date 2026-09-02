@@ -29,6 +29,7 @@ export type ProgressiveWorkflowAction = {
   onPress: () => void;
   disabled?: boolean;
   loading?: boolean;
+  style?: ViewStyle;
 };
 
 type ProgressiveWorkflowFooterProps = {

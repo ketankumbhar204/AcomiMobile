@@ -1,13 +1,11 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
-  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
   Switch,
   Text,
-  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -38,6 +36,8 @@ import type { EditableSetupStructure } from '../../components/accommodation/setu
 import { StickyFormActions } from '../../components/progressive';
 import { FormInput, HeaderBackButton } from '../../components/ui';
 import { useQuickSetup } from '../../hooks/useQuickSetup';
+import { accommodationApi } from '../../api/accommodationApi';
+import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
 import type { MainStackParamList } from '../../navigation/types';
 import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
@@ -96,7 +96,7 @@ export function QuickSetupWizardScreen() {
   const [buildingNameError, setBuildingNameError] = useState<string | null>(null);
   const [layoutMode, setLayoutMode] = useState<PropertyLayoutMode>('CORRIDOR_PG');
   const [floorCount, setFloorCount] = useState('3');
-  const [includeGroundFloor, setIncludeGroundFloor] = useState(true);
+  const [includeGroundFloor, setIncludeGroundFloor] = useState(false);
   const [apartmentsPerFloor, setApartmentsPerFloor] = useState('4');
 
   const [unitCount, setUnitCount] = useState('10');
@@ -111,6 +111,9 @@ export function QuickSetupWizardScreen() {
   const [preview, setPreview] = useState<AccommodationSetupPreviewResponse | null>(null);
   const [editableStructure, setEditableStructure] = useState<EditableSetupStructure | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [checkingBuilding, setCheckingBuilding] = useState(false);
+  const generatingRef = useRef(false);
+  const checkingBuildingRef = useRef(false);
 
   const currentStep = steps[stepIndex] ?? 'building';
   const isApartmentPg = layoutMode === 'APARTMENT_PG';
@@ -125,15 +128,16 @@ export function QuickSetupWizardScreen() {
   }, [spaceType]);
 
   const bedsPerRoomCount = Number(bedsPerRoom) || 1;
+  const isRental = spaceType === 'RENTAL';
   const expandConfig = useMemo(
     () => ({
-      roomsPerParent: Number(roomsPerParent) || 1,
-      bedsPerRoom: bedsPerRoomCount,
+      roomsPerParent: isRental ? 0 : Number(roomsPerParent) || 1,
+      bedsPerRoom: isRental ? 0 : bedsPerRoomCount,
       // Capacity tracks beds so API/validation stay valid without a separate UI field.
-      capacityPerRoom: bedsPerRoomCount,
+      capacityPerRoom: isRental ? 0 : bedsPerRoomCount,
       includeGroundFloor,
     }),
-    [bedsPerRoomCount, includeGroundFloor, roomsPerParent],
+    [bedsPerRoomCount, includeGroundFloor, isRental, roomsPerParent],
   );
 
   const buildExpandConfig = useCallback(() => {
@@ -221,9 +225,21 @@ export function QuickSetupWizardScreen() {
     unitCount,
   ]);
 
-  function validateBuildingStep(): boolean {
+  async function validateBuildingStep(): Promise<boolean> {
     if (!buildingName.trim()) {
       setBuildingNameError(t('accommodation.buildings.nameRequired'));
+      return false;
+    }
+    try {
+      const result = await accommodationApi.checkBuildingAvailability(spaceId, buildingName.trim());
+      if (!result.nameAvailable) {
+        setBuildingNameError(
+          result.message || t('accommodation.setup.buildingNameTaken'),
+        );
+        return false;
+      }
+    } catch (error) {
+      setBuildingNameError(getAccommodationErrorMessage(error, 'accommodation.setup.errors.preview'));
       return false;
     }
     setBuildingNameError(null);
@@ -322,10 +338,21 @@ export function QuickSetupWizardScreen() {
     setError(null);
 
     if (currentStep === 'building') {
-      if (!validateBuildingStep()) {
+      if (checkingBuildingRef.current) {
         return;
       }
-      setStepIndex(index => Math.min(index + 1, steps.length - 1));
+      checkingBuildingRef.current = true;
+      setCheckingBuilding(true);
+      try {
+        const available = await validateBuildingStep();
+        if (!available) {
+          return;
+        }
+        setStepIndex(index => Math.min(index + 1, steps.length - 1));
+      } finally {
+        checkingBuildingRef.current = false;
+        setCheckingBuilding(false);
+      }
       return;
     }
 
@@ -367,7 +394,7 @@ export function QuickSetupWizardScreen() {
   }
 
   async function handleGenerate() {
-    if (!editableStructure || !spaceType) {
+    if (!editableStructure || !spaceType || generatingRef.current) {
       return;
     }
 
@@ -378,6 +405,7 @@ export function QuickSetupWizardScreen() {
 
     setStepError(null);
     setError(null);
+    generatingRef.current = true;
     setGenerating(true);
 
     try {
@@ -394,8 +422,9 @@ export function QuickSetupWizardScreen() {
       });
     } catch (generateError) {
       console.error('[QuickSetupWizard] generate structure failed', generateError);
-      setError(t('accommodation.setup.errors.generate'));
+      setError(getAccommodationErrorMessage(generateError, 'accommodation.setup.errors.generate'));
     } finally {
+      generatingRef.current = false;
       setGenerating(false);
     }
   }
@@ -448,13 +477,15 @@ export function QuickSetupWizardScreen() {
     <KeyboardAvoidingView
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.flex}>
-          <ScrollView
-            style={styles.flex}
-            contentContainerStyle={styles.content}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}>
+      <View style={styles.flex}>
+        <ScrollView
+          style={styles.flex}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          nestedScrollEnabled
+          showsVerticalScrollIndicator>
+
           {stepIndex === 0 ? (
             <AccommodationFormHero
               level="building"
@@ -479,7 +510,15 @@ export function QuickSetupWizardScreen() {
               <FormInput
                 label={t('accommodation.fields.name')}
                 value={buildingName}
-                onChangeText={setBuildingName}
+                onChangeText={text => {
+                  setBuildingName(text);
+                  setBuildingNameError(null);
+                }}
+                onBlur={() => {
+                  if (buildingName.trim()) {
+                    void validateBuildingStep();
+                  }
+                }}
                 placeholder={t('accommodation.buildings.namePlaceholder')}
                 error={buildingNameError}
                 leadingIcon={Type}
@@ -635,6 +674,9 @@ export function QuickSetupWizardScreen() {
                     : undefined
                 }
               />
+              {generating ? (
+                <Text style={styles.creatingText}>{t('accommodation.setup.creatingLayout')}</Text>
+              ) : null}
               {preview.warnings.length > 0 ? (
                 <View style={styles.warnings}>
                   {preview.warnings.map((warning, index) => (
@@ -670,23 +712,27 @@ export function QuickSetupWizardScreen() {
             secondary={{
               label: stepIndex === 0 ? t('common.cancel') : t('accommodation.setup.back'),
               onPress: goBack,
+              disabled: generating || checkingBuilding,
             }}
             primary={
               currentStep === 'preview'
                 ? {
-                    label: t('accommodation.setup.generateStructure'),
+                    label: generating
+                      ? t('accommodation.setup.creatingLayout')
+                      : t('accommodation.setup.generateStructure'),
                     onPress: handleGenerate,
                     loading: generating,
+                    disabled: generating,
                   }
                 : {
                     label: t('accommodation.setup.next'),
                     onPress: goNext,
-                    loading: loading,
+                    loading: loading || checkingBuilding,
+                    disabled: checkingBuilding,
                   }
             }
           />
-        </View>
-      </TouchableWithoutFeedback>
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -698,7 +744,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
-    paddingBottom: spacing.xxl,
+    paddingBottom: spacing.xxxl,
   },
   centered: {
     flex: 1,
@@ -778,6 +824,12 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textSecondary,
     marginTop: spacing.md,
+  },
+  creatingText: {
+    ...typography.bodyStrong,
+    color: colors.primaryDark,
+    marginTop: spacing.md,
+    textAlign: 'center',
   },
   errorBanner: {
     backgroundColor: '#FEF2F2',

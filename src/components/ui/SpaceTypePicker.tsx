@@ -23,6 +23,7 @@ type SpaceTypePickerProps = {
   value: SpaceType | null;
   onChange: (type: SpaceType) => void;
   error?: string | null;
+  allowedTypes?: readonly SpaceType[];
 };
 
 const TYPE_VISUAL: Record<
@@ -62,14 +63,15 @@ const TYPE_VISUAL: Record<
 };
 
 /** Design A selectable space-type cards — icon + copy row, equal height, compact. */
-export function SpaceTypePicker({ value, onChange, error }: SpaceTypePickerProps) {
+export function SpaceTypePicker({ value, onChange, error, allowedTypes }: SpaceTypePickerProps) {
   const { t } = useTranslation();
+  const types = allowedTypes ?? SPACE_TYPE_VALUES;
 
   return (
     <View style={styles.wrapper}>
       <Text style={styles.label}>{t('spaces.types.label')}</Text>
       <View style={styles.grid}>
-        {SPACE_TYPE_VALUES.map(type => {
+        {types.map(type => {
           const isSelected = value === type;
           const { icon: Icon, accent, tint, selectedTint } = TYPE_VISUAL[type];
           return (

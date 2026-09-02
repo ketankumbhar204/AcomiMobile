@@ -297,11 +297,13 @@ Do **not** commit values. Do **not** put them in the Dockerfile.
 | `PORT` | HTTP listen port | Injected by Render | Render-provided (successful develop runtime historically used **10000**) | No | Render runtime | Bound via `${PORT:8080}` |
 | `SWAGGER_ENABLED` | Enable springdoc UI/docs | Recommended set | Prefer `false` on public Render URL | No | Render env | Defaults in yml |
 
-**Additional property (not typically an env var):**
+**Additional properties:**
 
 | Property | Notes |
 |----------|-------|
-| `OTP_HASH_SECRET` | HMAC secret for hashing OTPs (≥ 32 characters). Required at backend startup even though OTP is not used in the current production UI. Production sender is `none`. There is no `mvp-code` / hardcoded OTP. |
+| `OTP_HASH_SECRET` | HMAC secret for hashing OTPs (≥ 32 characters). Required at backend startup. Production SMS uses 2Factor (`acomi.otp.sender: twofactor`). There is no `mvp-code` / hardcoded OTP. |
+| `TWOFACTOR_API_KEY` | 2Factor API key. **Required on production EC2** (`~/acomi-backend.env`). Never commit. Do not put in mobile or web apps. |
+| `TWOFACTOR_OTP_TEMPLATE` | Optional 2Factor template name. Defaults to `OTP1`. |
 
 **Local-only defaults warning:** `application-local.yml` contains local developer defaults for DB password and JWT secret so laptops can boot without exporting env vars. Those defaults must **never** be copied into Render or Supabase production/develop dashboards as “the” secret.
 
