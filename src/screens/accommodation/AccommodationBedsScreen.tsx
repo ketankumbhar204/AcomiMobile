@@ -248,6 +248,22 @@ export function AccommodationBedsScreen() {
     [refresh],
   );
 
+  const commitBedPricing = useCallback(
+    async (
+      bed: BedListItemResponse,
+      field: 'defaultRent' | 'defaultDeposit',
+      value: number | null,
+    ) => {
+      const updated = await updateBedPricingField(spaceId, roomId, bed.bedId, field, value);
+      patchBed(bed.bedId, {
+        defaultRent: updated.defaultRent,
+        defaultDeposit: updated.defaultDeposit,
+      });
+      await refresh();
+    },
+    [patchBed, refresh, roomId, spaceId],
+  );
+
   const handleRoomLifecycleSuccess = useCallback(() => {
     invalidateAccommodationQueries();
     void loadRoom();
@@ -485,14 +501,7 @@ export function AccommodationBedsScreen() {
               : {}
           }
           pricingEditable={canManage}
-          onCommitBedPricing={async (bed, field, value) => {
-            const updated = await updateBedPricingField(spaceId, roomId, bed.bedId, field, value);
-            patchBed(bed.bedId, {
-              defaultRent: updated.defaultRent,
-              defaultDeposit: updated.defaultDeposit,
-            });
-            await refresh();
-          }}
+          onCommitBedPricing={commitBedPricing}
         />
         {loadingMore ? (
           <ActivityIndicator color={colors.primary} style={styles.loadMore} />
@@ -564,6 +573,8 @@ export function AccommodationBedsScreen() {
                 patchBed(bed.bedId, { label: bedNumber });
                 showToast(t('accommodation.beds.updateSuccess'));
               }}
+              pricingEditable={canManage}
+              onCommitPricing={(field, value) => commitBedPricing(bed, field, value)}
               onPress={() => openBedDetail(bed)}
               lifecycleMenuProps={{
                 spaceId,

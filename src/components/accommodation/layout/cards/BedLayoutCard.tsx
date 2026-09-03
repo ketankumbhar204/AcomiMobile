@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { StyleSheet, Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { AccommodationStatus, BedListItemResponse, UUID } from '../../../../api/types';
-import { FormInput } from '../../../ui';
 import { InlineEditableName } from '../../../ui/InlineEditableName';
 import { useBedOccupantLabel } from '../../../../hooks/useBedOccupantLabel';
-import { parseOptionalMoney } from '../../setup-preview/setupPricingAutofill';
 import { colors, radius, shadows, spacing, typography } from '../../../../theme';
 import { isAccommodationEntityActive } from '../../../../utils/accommodationEntityActive';
+import { formatBedDisplayLabel } from '../../../../utils/formatBedDisplayLabel';
 import { AccommodationInactiveBadge, accommodationInactiveCardStyle, accommodationInactiveIllustrationStyle } from '../../AccommodationInactiveBadge';
 import { AccommodationStatusBadge } from '../../AccommodationStatusBadge';
+import { BedPricingFields } from '../../BedPricingFields';
 import { getBedIllustration } from '../illustrations/illustrationAssets';
 import { LayoutCardShell } from './LayoutCardShell';
 import { LayoutIllustration } from './LayoutIllustration';
@@ -67,10 +67,6 @@ function BedOccupantLine({
   );
 }
 
-function moneyText(value: number | null | undefined): string {
-  return value == null ? '' : String(value);
-}
-
 export function BedLayoutCard({
   bed,
   spaceId,
@@ -85,24 +81,7 @@ export function BedLayoutCard({
 }: BedLayoutCardProps) {
   const { t } = useTranslation();
   const inactive = !isAccommodationEntityActive(bed);
-  const [rentEdit, setRentEdit] = useState<string | null>(null);
-  const [depositEdit, setDepositEdit] = useState<string | null>(null);
-  const rentText = rentEdit ?? moneyText(bed.defaultRent);
-  const depositText = depositEdit ?? moneyText(bed.defaultDeposit);
-
-  async function commit(field: 'defaultRent' | 'defaultDeposit', raw: string, current?: number | null) {
-    const parsed = parseOptionalMoney(raw);
-    const existing = current ?? null;
-    if (field === 'defaultRent') {
-      setRentEdit(null);
-    } else {
-      setDepositEdit(null);
-    }
-    if (parsed === existing || !onCommitPricing) {
-      return;
-    }
-    await onCommitPricing(field, parsed);
-  }
+  const displayLabel = formatBedDisplayLabel(bed.label, t);
 
   return (
     <LayoutCardShell
@@ -123,9 +102,14 @@ export function BedLayoutCard({
         style={inactive ? accommodationInactiveIllustrationStyle : undefined}
       />
       {editableName && onSaveName ? (
-        <InlineEditableName value={bed.label} editable onSave={onSaveName} />
+        <InlineEditableName
+          value={bed.label}
+          displayValue={displayLabel}
+          editable
+          onSave={onSaveName}
+        />
       ) : (
-        <Text style={[styles.label, inactive && styles.labelInactive]}>{bed.label}</Text>
+        <Text style={[styles.label, inactive && styles.labelInactive]}>{displayLabel}</Text>
       )}
       <BedOccupantLine
         spaceId={spaceId}
@@ -138,40 +122,12 @@ export function BedLayoutCard({
       ) : (
         <AccommodationStatusBadge status={bed.status} />
       )}
-      <View
-        style={styles.pricingRow}
-        onStartShouldSetResponder={() => true}>
-        <View style={styles.pricingField}>
-          <FormInput
-            size="compact"
-            label={t('accommodation.fields.rent')}
-            prefix="₹"
-            value={rentText}
-            onChangeText={setRentEdit}
-            onBlur={() => {
-              commit('defaultRent', rentText, bed.defaultRent);
-            }}
-            keyboardType="numeric"
-            placeholder={t('accommodation.fields.enterRent')}
-            editable={pricingEditable && !inactive}
-          />
-        </View>
-        <View style={styles.pricingField}>
-          <FormInput
-            size="compact"
-            label={t('accommodation.fields.deposit')}
-            prefix="₹"
-            value={depositText}
-            onChangeText={setDepositEdit}
-            onBlur={() => {
-              commit('defaultDeposit', depositText, bed.defaultDeposit);
-            }}
-            keyboardType="numeric"
-            placeholder={t('accommodation.fields.enterDeposit')}
-            editable={pricingEditable && !inactive}
-          />
-        </View>
-      </View>
+      <BedPricingFields
+        rent={bed.defaultRent}
+        deposit={bed.defaultDeposit}
+        editable={pricingEditable && !inactive}
+        onCommit={onCommitPricing}
+      />
     </LayoutCardShell>
   );
 }
@@ -227,15 +183,5 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.muted,
     marginBottom: spacing.xs,
-  },
-  pricingRow: {
-    width: '100%',
-    flexDirection: 'row',
-    gap: spacing.xs,
-    marginTop: spacing.xs,
-  },
-  pricingField: {
-    flex: 1,
-    minWidth: 0,
   },
 });

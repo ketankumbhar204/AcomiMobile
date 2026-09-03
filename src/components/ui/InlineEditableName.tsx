@@ -12,6 +12,8 @@ import { colors, radius, spacing, typography } from '../../theme';
 
 type InlineEditableNameProps = {
   value: string;
+  /** Shown when not editing. Use to display "Bed A" while still editing the identifier "A". */
+  displayValue?: string;
   editable?: boolean;
   onSave?: (value: string) => Promise<void>;
   onTitlePress?: () => void;
@@ -20,6 +22,7 @@ type InlineEditableNameProps = {
 
 export function InlineEditableName({
   value,
+  displayValue,
   editable = false,
   onSave,
   onTitlePress,
@@ -31,22 +34,23 @@ export function InlineEditableName({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const displayValue = value ?? '';
+  const storedValue = value ?? '';
+  const visibleValue = displayValue ?? storedValue;
 
   useEffect(() => {
     if (!isEditing) {
-      setDraft(displayValue);
+      setDraft(storedValue);
     }
-  }, [displayValue, isEditing]);
+  }, [storedValue, isEditing]);
 
   function startEditing() {
-    setDraft(displayValue);
+    setDraft(storedValue);
     setError(null);
     setIsEditing(true);
   }
 
   function cancelEditing() {
-    setDraft(displayValue);
+    setDraft(storedValue);
     setError(null);
     setIsEditing(false);
   }
@@ -57,7 +61,7 @@ export function InlineEditableName({
       setError(t('accommodation.inlineEdit.nameRequired'));
       return;
     }
-    if (trimmed === displayValue.trim()) {
+    if (trimmed === storedValue.trim()) {
       setIsEditing(false);
       return;
     }
@@ -81,7 +85,7 @@ export function InlineEditableName({
   if (!editable || !onSave) {
     return (
       <Text style={styles.title} numberOfLines={2}>
-        {displayValue}
+        {visibleValue}
       </Text>
     );
   }
@@ -126,7 +130,7 @@ export function InlineEditableName({
 
   const titleNode = (
     <Text style={styles.title} numberOfLines={2}>
-      {displayValue}
+      {visibleValue}
     </Text>
   );
 
