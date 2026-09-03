@@ -1,17 +1,23 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { BedListItemResponse, SpaceType } from '../../api/types';
-import { AccommodationEntityRow } from '../accommodation/AccommodationEntityRow';
 import { AccommodationStatusBadge } from '../accommodation/AccommodationStatusBadge';
+import { BedPricingFields } from '../accommodation/BedPricingFields';
 import { BuilderRowLifecycleMenu } from '../accommodation/BuilderRowLifecycleMenu';
 import type { BuilderRowLifecycleMenuProps } from '../accommodation/BuilderRowLifecycleMenu';
+import { InlineEditableName } from '../ui/InlineEditableName';
 import { useBedOccupantLabel } from '../../hooks/useBedOccupantLabel';
 import type { useAccommodationOccupancyFlow } from '../../hooks/useAccommodationOccupancyFlow';
-import { colors, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { isAccommodationEntityActive } from '../../utils/accommodationEntityActive';
+import { formatBedDisplayLabel } from '../../utils/formatBedDisplayLabel';
 import { buildBedOccupancyMenuOptions } from '../../utils/bedOccupancyMenuOptions';
 import { buildBedOccupancyTarget } from '../../utils/buildOccupancyTarget';
+import {
+  AccommodationInactiveBadge,
+  accommodationInactiveCardStyle,
+} from '../accommodation/AccommodationInactiveBadge';
 
 type FlowController = ReturnType<typeof useAccommodationOccupancyFlow>;
 
@@ -33,37 +39,17 @@ type BedInventoryListRowProps = {
   canManageOccupancyActions?: boolean;
   editableName?: boolean;
   onSaveName?: (name: string) => Promise<void>;
+  pricingEditable?: boolean;
+  onCommitPricing?: (
+    field: 'defaultRent' | 'defaultDeposit',
+    value: number | null,
+  ) => Promise<void>;
   onPress: () => void;
   lifecycleMenuProps: Omit<
     BuilderRowLifecycleMenuProps,
     'prependOptions' | 'sheetTitle' | 'forceShowTrigger'
   >;
 };
-
-function BedOccupantMeta({
-  status,
-  occupantLabel,
-}: {
-  status: BedListItemResponse['status'];
-  occupantLabel: string | null;
-}) {
-  const { t } = useTranslation();
-
-  const text =
-    status === 'RESERVED' && occupantLabel
-      ? t('occupancy.quickActions.reservedFor', { name: occupantLabel })
-      : status === 'OCCUPIED' && occupantLabel
-        ? t('occupancy.quickActions.occupiedBy', { name: occupantLabel })
-        : status === 'RESERVED' || status === 'OCCUPIED'
-          ? t('occupancy.quickActions.loadingOccupant')
-          : '\u00A0';
-
-  return (
-    <Text style={styles.meta} numberOfLines={1}>
-      {text}
-    </Text>
-  );
-}
 
 export function BedInventoryListRow({
   bed,
@@ -82,12 +68,15 @@ export function BedInventoryListRow({
   canManageOccupancyActions = false,
   editableName,
   onSaveName,
+  pricingEditable = false,
+  onCommitPricing,
   onPress,
   lifecycleMenuProps,
 }: BedInventoryListRowProps) {
   const { t } = useTranslation();
   const inactive = !isAccommodationEntityActive(bed);
   const occupantLabel = useBedOccupantLabel(spaceId, bed.bedId, bed.status);
+  const displayLabel = formatBedDisplayLabel(bed.label, t);
 
   const occupancyContext = useMemo(
     () => ({
@@ -101,16 +90,16 @@ export function BedInventoryListRow({
         roomId,
         roomName,
         bedId: bed.bedId,
-        bedName: bed.label,
+        bedName: displayLabel,
       }),
       accommodationStatus: bed.status,
       occupancy: null,
     }),
     [
       bed.bedId,
-      bed.label,
       buildingId,
       buildingName,
+      displayLabel,
       floorId,
       parentName,
       parentType,
@@ -144,46 +133,108 @@ export function BedInventoryListRow({
   ]);
 
   const showMenu = canManageLifecycle || occupancyMenuOptions.length > 0;
+  const occupantText =
+    bed.status === 'RESERVED' && occupantLabel
+      ? t('occupancy.quickActions.reservedFor', { name: occupantLabel })
+      : bed.status === 'OCCUPIED' && occupantLabel
+        ? t('occupancy.quickActions.occupiedBy', { name: occupantLabel })
+        : null;
 
   return (
-    <AccommodationEntityRow
-      title={bed.label}
-      active={bed.active}
-      meta={
-        canManageOccupancyActions && !inactive ? (
-          <BedOccupantMeta status={bed.status} occupantLabel={occupantLabel} />
-        ) : undefined
-      }
-      badge={inactive ? undefined : <AccommodationStatusBadge status={bed.status} />}
-      iconLabel={bed.label.charAt(0).toUpperCase()}
-      editableName={editableName}
-      onSaveName={onSaveName}
-      onPress={onPress}
-      showChevron={!showMenu}
-      menu={
-        showMenu ? (
-          <BuilderRowLifecycleMenu
-            {...lifecycleMenuProps}
-            isInactive={inactive}
-            prependOptions={occupancyMenuOptions}
-            sheetTitle={t('occupancy.bedMenu.title', {
-              bed: bed.label,
-              defaultValue: `Bed ${bed.label}`,
-            })}
-            forceShowTrigger
+    <View style={styles.wrap}>
+      <View style={[styles.card, inactive && accommodationInactiveCardStyle]}>
+        <View style={styles.header}>
+          <Pressable
+            onPress={onPress}
+            android_ripple={{ color: 'rgba(18, 140, 126, 0.08)' }}
+            style={({ pressed }) => [styles.headerMain, pressed && styles.headerPressed]}
+            accessibilityRole="button"
+            accessibilityLabel={displayLabel}>
+            <InlineEditableName
+              value={bed.label}
+              displayValue={displayLabel}
+              editable={editableName}
+              onSave={onSaveName}
+            />
+            {inactive ? (
+              <AccommodationInactiveBadge />
+            ) : (
+              <AccommodationStatusBadge status={bed.status} />
+            )}
+            {canManageOccupancyActions && !inactive && occupantText ? (
+              <Text style={styles.meta} numberOfLines={1}>
+                {occupantText}
+              </Text>
+            ) : null}
+          </Pressable>
+          {showMenu ? (
+            <View style={styles.menuSlot}>
+              <BuilderRowLifecycleMenu
+                {...lifecycleMenuProps}
+                isInactive={inactive}
+                prependOptions={occupancyMenuOptions}
+                sheetTitle={t('occupancy.bedMenu.title', {
+                  bed: bed.label,
+                  defaultValue: `Bed ${bed.label}`,
+                })}
+                forceShowTrigger
+              />
+            </View>
+          ) : null}
+        </View>
+        <View style={styles.pricing}>
+          <BedPricingFields
+            rent={bed.defaultRent}
+            deposit={bed.defaultDeposit}
+            editable={pricingEditable && !inactive}
+            onCommit={onCommitPricing}
           />
-        ) : undefined
-      }
-    />
+        </View>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrap: {
+    marginBottom: spacing.sm,
+  },
+  card: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+    ...shadows.sm,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  headerMain: {
+    flex: 1,
+    minWidth: 0,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+    gap: spacing.xs,
+  },
+  headerPressed: {
+    backgroundColor: colors.surface,
+  },
+  menuSlot: {
+    width: 44,
+    paddingTop: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    zIndex: 1,
+  },
   meta: {
     ...typography.caption,
     color: colors.textSecondary,
-    minHeight: 18,
-    marginTop: 2,
-    marginBottom: spacing.xs,
+  },
+  pricing: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
   },
 });
