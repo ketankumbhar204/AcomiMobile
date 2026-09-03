@@ -8,7 +8,7 @@ export function formatBedDisplayLabel(
   if (!trimmed) {
     return t('occupancy.section.bed');
   }
-  if (/^bed\s/i.test(trimmed)) {
+  if (/^(bed|lower|middle|upper|top|bottom)\b/i.test(trimmed)) {
     return trimmed;
   }
   return t('accommodation.listItem.bed', { label: trimmed });
