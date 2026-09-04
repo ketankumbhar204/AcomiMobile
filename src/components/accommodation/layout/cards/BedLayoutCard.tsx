@@ -1,10 +1,10 @@
 import React from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { AccommodationStatus, BedListItemResponse, UUID } from '../../../../api/types';
 import { InlineEditableName } from '../../../ui/InlineEditableName';
 import { useBedOccupantLabel } from '../../../../hooks/useBedOccupantLabel';
-import { colors, radius, shadows, spacing, typography } from '../../../../theme';
+import { colors, radius, spacing, typography } from '../../../../theme';
 import { isAccommodationEntityActive } from '../../../../utils/accommodationEntityActive';
 import { formatBedDisplayLabel } from '../../../../utils/formatBedDisplayLabel';
 import { AccommodationInactiveBadge, accommodationInactiveCardStyle, accommodationInactiveIllustrationStyle } from '../../AccommodationInactiveBadge';
@@ -44,14 +44,8 @@ function BedOccupantLine({
   const { t } = useTranslation();
   const occupantLabel = useBedOccupantLabel(spaceId ?? ('' as UUID), bedId, status);
 
-  if (inactive) {
+  if (inactive || status === 'AVAILABLE') {
     return null;
-  }
-
-  if (status === 'AVAILABLE') {
-    return (
-      <Text style={styles.availableText}>{t('accommodation.status.AVAILABLE')}</Text>
-    );
   }
 
   if (occupantLabel) {
@@ -62,9 +56,15 @@ function BedOccupantLine({
     );
   }
 
-  return (
-    <Text style={styles.statusOnly}>{t(`accommodation.status.${status}`)}</Text>
-  );
+  if (status === 'RESERVED' || status === 'OCCUPIED') {
+    return (
+      <Text style={styles.occupant} numberOfLines={1}>
+        {t('occupancy.quickActions.loadingOccupant')}
+      </Text>
+    );
+  }
+
+  return null;
 }
 
 export function BedLayoutCard({
@@ -99,29 +99,38 @@ export function BedLayoutCard({
       <LayoutIllustration
         source={getBedIllustration(bed.status)}
         size="bed"
-        style={inactive ? accommodationInactiveIllustrationStyle : undefined}
+        style={[
+          styles.illustration,
+          inactive ? accommodationInactiveIllustrationStyle : undefined,
+        ]}
       />
-      {editableName && onSaveName ? (
-        <InlineEditableName
-          value={bed.label}
-          displayValue={displayLabel}
-          editable
-          onSave={onSaveName}
-        />
-      ) : (
-        <Text style={[styles.label, inactive && styles.labelInactive]}>{displayLabel}</Text>
-      )}
+      <View style={styles.titleRow}>
+        <View style={styles.titleWrap}>
+          {editableName && onSaveName ? (
+            <InlineEditableName
+              value={bed.label}
+              displayValue={displayLabel}
+              editable
+              onSave={onSaveName}
+            />
+          ) : (
+            <Text style={[styles.label, inactive && styles.labelInactive]} numberOfLines={1}>
+              {displayLabel}
+            </Text>
+          )}
+        </View>
+        {inactive ? (
+          <AccommodationInactiveBadge />
+        ) : (
+          <AccommodationStatusBadge status={bed.status} />
+        )}
+      </View>
       <BedOccupantLine
         spaceId={spaceId}
         bedId={bed.bedId}
         status={bed.status}
         inactive={inactive}
       />
-      {inactive ? (
-        <AccommodationInactiveBadge />
-      ) : (
-        <AccommodationStatusBadge status={bed.status} />
-      )}
       <BedPricingFields
         rent={bed.defaultRent}
         deposit={bed.defaultDeposit}
@@ -146,42 +155,44 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.md,
-    alignItems: 'center',
-    minHeight: 220,
-    ...shadows.sm,
+    alignItems: 'stretch',
+    minHeight: 200,
   },
   highlighted: {
     borderColor: colors.primary,
-    borderWidth: 2,
+    borderWidth: 1.5,
   },
   pressed: {
     opacity: 0.92,
     transform: [{ scale: 0.98 }],
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+    marginBottom: spacing.xs,
+    width: '100%',
+  },
+  titleWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
   label: {
     ...typography.bodyStrong,
-    fontSize: 16,
-    marginTop: spacing.xs,
-    marginBottom: 2,
+    fontSize: 15,
   },
   labelInactive: {
     color: '#6B7280',
   },
+  illustration: {
+    alignSelf: 'center',
+  },
   occupant: {
     ...typography.caption,
     color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: spacing.xs,
-  },
-  availableText: {
-    ...typography.caption,
-    color: colors.success,
-    fontWeight: '600',
-    marginBottom: spacing.xs,
-  },
-  statusOnly: {
-    ...typography.caption,
-    color: colors.muted,
+    textAlign: 'left',
     marginBottom: spacing.xs,
   },
 });

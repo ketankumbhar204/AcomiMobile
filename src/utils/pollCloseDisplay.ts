@@ -1,10 +1,20 @@
+export type PollCloseLabelCopy = {
+  today?: string;
+  tomorrow?: string;
+  yesterday?: string;
+  am?: string;
+  pm?: string;
+};
+
 /**
  * Format poll close / closed timestamps for Menu Planning (space timezone aware).
+ * Pass localized day/AM-PM labels from i18n when available.
  */
 export function formatPollCloseLabel(
   isoLocalDateTime: string | null | undefined,
   timezone: string | null | undefined,
   language = 'en',
+  copy: PollCloseLabelCopy = {},
 ): string {
   if (!isoLocalDateTime) {
     return '';
@@ -16,18 +26,21 @@ export function formatPollCloseLabel(
 
   const zone = timezone && timezone.trim() ? timezone.trim() : 'Asia/Kolkata';
   const now = nowInTimeZone(zone);
-  const timeLabel = formatTime12h(parsed.hour, parsed.minute);
+  const timeLabel = formatTime12h(parsed.hour, parsed.minute, copy.am, copy.pm);
+  const today = copy.today ?? 'Today';
+  const tomorrowLabel = copy.tomorrow ?? 'Tomorrow';
+  const yesterdayLabel = copy.yesterday ?? 'Yesterday';
 
   if (isSameCalendarDay(parsed, now)) {
-    return `Today ${timeLabel}`;
+    return `${today} ${timeLabel}`;
   }
   const tomorrow = addCalendarDays(now, 1);
   if (isSameCalendarDay(parsed, tomorrow)) {
-    return `Tomorrow ${timeLabel}`;
+    return `${tomorrowLabel} ${timeLabel}`;
   }
   const yesterday = addCalendarDays(now, -1);
   if (isSameCalendarDay(parsed, yesterday)) {
-    return `Yesterday ${timeLabel}`;
+    return `${yesterdayLabel} ${timeLabel}`;
   }
 
   const date = new Date(Date.UTC(parsed.year, parsed.month - 1, parsed.day, 12, 0, 0));
@@ -70,8 +83,13 @@ export function toPollCloseAtPayload(dateIso: string, hour: number, minute: numb
   return `${dateIso}T${hh}:${mm}:00`;
 }
 
-function formatTime12h(hour: number, minute: number): string {
-  const suffix = hour >= 12 ? 'PM' : 'AM';
+function formatTime12h(
+  hour: number,
+  minute: number,
+  am = 'AM',
+  pm = 'PM',
+): string {
+  const suffix = hour >= 12 ? pm : am;
   const h12 = hour % 12 === 0 ? 12 : hour % 12;
   const mm = String(minute).padStart(2, '0');
   return `${h12}:${mm} ${suffix}`;

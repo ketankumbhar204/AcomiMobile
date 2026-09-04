@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { LucideIcon } from 'lucide-react-native';
-import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { colors, radius, spacing, typography } from '../../theme';
 
 export type SegmentedTabItem<T extends string> = {
   key: T;
@@ -70,6 +70,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: colors.surfaceSecondary,
     borderRadius: radius.button,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: spacing.xs,
     gap: spacing.xxs,
   },
@@ -87,6 +89,8 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingHorizontal: spacing.sm,
     borderRadius: radius.button,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   tabCompact: {
     minHeight: 40,
@@ -95,7 +99,7 @@ const styles = StyleSheet.create({
   },
   tabActive: {
     backgroundColor: colors.white,
-    ...shadows.sm,
+    borderColor: colors.border,
   },
   tabPressed: {
     opacity: 0.7,

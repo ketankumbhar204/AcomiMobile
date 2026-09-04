@@ -137,8 +137,10 @@ export function QuickSetupWizardScreen() {
       // Capacity tracks beds so API/validation stay valid without a separate UI field.
       capacityPerRoom: isRental ? 0 : bedsPerRoomCount,
       includeGroundFloor,
+      groundFloorName: t('accommodation.setup.groundFloorName'),
+      floorNameTemplate: t('accommodation.setup.floorNameNumber'),
     }),
-    [bedsPerRoomCount, includeGroundFloor, isRental, roomsPerParent],
+    [bedsPerRoomCount, includeGroundFloor, isRental, roomsPerParent, t],
   );
 
   const buildExpandConfig = useCallback(() => {

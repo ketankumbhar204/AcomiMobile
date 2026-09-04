@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -144,7 +144,7 @@ export function SpaceTabNavigator({ spaceId }: SpaceTabNavigatorProps) {
 
   if (profileBlocked) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center' }}>
+      <View style={styles.blocked}>
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
@@ -156,18 +156,21 @@ export function SpaceTabNavigator({ spaceId }: SpaceTabNavigatorProps) {
       // Fabric + react-native-screens: remounting inactive screens causes
       // addViewAt "child already has a parent" when opening Mess (fewer tabs).
       detachInactiveScreens={false}
-      screenOptions={({ route }) => ({
-        ...tabScreenOptions,
-        tabBarIcon: ({ color, focused }) =>
-          renderSpaceTabIcon(route.name as keyof SpaceTabParamList, {
-            color,
-            focused,
-          }),
-        tabBarIconStyle: {
-          width: 28,
-          height: 28,
-        },
-      })}>
+      screenOptions={({ route }) => {
+        const routeName = route.name as keyof SpaceTabParamList;
+        return {
+          ...tabScreenOptions,
+          tabBarIcon: ({ color, focused }) =>
+            renderSpaceTabIcon(routeName, {
+              color,
+              focused,
+            }),
+          tabBarIconStyle: {
+            width: 28,
+            height: 28,
+          },
+        };
+      }}>
       <Tab.Screen
         name="Dashboard"
         component={DashboardTabScreen}
@@ -175,7 +178,11 @@ export function SpaceTabNavigator({ spaceId }: SpaceTabNavigatorProps) {
         options={{
           title: t('navigation.dashboard'),
           tabBarLabel: ({ focused, color }) => (
-            <SpaceTabBarLabel label={t('navigation.dashboard')} focused={focused} color={color} />
+            <SpaceTabBarLabel
+              label={t('navigation.dashboard')}
+              focused={focused}
+              color={color}
+            />
           ),
         }}
       />
@@ -188,7 +195,11 @@ export function SpaceTabNavigator({ spaceId }: SpaceTabNavigatorProps) {
             headerShown: true,
             title: t('navigation.members'),
             tabBarLabel: ({ focused, color }) => (
-              <SpaceTabBarLabel label={t('navigation.members')} focused={focused} color={color} />
+              <SpaceTabBarLabel
+                label={t('navigation.members')}
+                focused={focused}
+                color={color}
+              />
             ),
           }}
         />
@@ -199,10 +210,10 @@ export function SpaceTabNavigator({ spaceId }: SpaceTabNavigatorProps) {
           component={AccommodationHomeScreen}
           initialParams={{ spaceId }}
           options={{
-            title: t('navigation.accommodation'),
+            title: t('navigation.rooms'),
             tabBarLabel: ({ focused, color }) => (
               <SpaceTabBarLabel
-                label={t('navigation.accommodation')}
+                label={t('navigation.rooms')}
                 focused={focused}
                 color={color}
               />
@@ -228,7 +239,11 @@ export function SpaceTabNavigator({ spaceId }: SpaceTabNavigatorProps) {
         options={{
           title: t('navigation.payments'),
           tabBarLabel: ({ focused, color }) => (
-            <SpaceTabBarLabel label={t('navigation.payments')} focused={focused} color={color} />
+            <SpaceTabBarLabel
+              label={t('navigation.payments')}
+              focused={focused}
+              color={color}
+            />
           ),
           tabBarBadge:
             canManagePay && paymentsReviewBadge > 0
@@ -247,17 +262,25 @@ export function SpaceTabNavigator({ spaceId }: SpaceTabNavigatorProps) {
           },
         }}
       />
+      {/* Hidden — kept for deep links / header More → Complaints. */}
       <Tab.Screen
         name="Complaints"
         component={ComplaintsTabScreen}
         initialParams={{ spaceId }}
         options={{
           title: t('navigation.complaints'),
-          tabBarLabel: ({ focused, color }) => (
-            <SpaceTabBarLabel label={t('navigation.complaints')} focused={focused} color={color} />
-          ),
+          tabBarButton: () => null,
+          tabBarItemStyle: { display: 'none', width: 0, height: 0, flex: 0 },
         }}
       />
     </Tab.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  blocked: {
+    flex: 1,
+    backgroundColor: colors.background,
+    justifyContent: 'center',
+  },
+});

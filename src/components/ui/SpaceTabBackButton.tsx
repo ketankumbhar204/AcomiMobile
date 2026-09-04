@@ -8,6 +8,7 @@ import {
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { resetToMySpaces } from '../../navigation/navigationRef';
 import type { MainStackParamList } from '../../navigation/types';
+import { useTranslation } from 'react-i18next';
 import { spacing } from '../../theme';
 import { ChevronLeftIcon } from './icons/ChevronLeftIcon';
 import { devLog } from '../../utils/devLog';
@@ -34,6 +35,7 @@ function goBackInStack(navigation: NavigationProp<ParamListBase>): boolean {
 
 export function SpaceTabBackButton() {
   const navigation = useNavigation();
+  const { t } = useTranslation();
 
   const handlePress = () => {
     if (goBackInStack(navigation)) {
@@ -59,7 +61,7 @@ export function SpaceTabBackButton() {
       style={({ pressed }) => [styles.button, pressed && styles.pressed]}
       hitSlop={8}
       accessibilityRole="button"
-      accessibilityLabel="Go back">
+      accessibilityLabel={t('navigation.goBack')}>
       <ChevronLeftIcon size={22} />
     </Pressable>
   );

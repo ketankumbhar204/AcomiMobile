@@ -62,6 +62,19 @@ export async function initI18n(): Promise<typeof i18n> {
       interpolation: {
         escapeValue: false,
       },
+      returnNull: false,
+      parseMissingKeyHandler: (key: string, defaultValue?: string) => {
+        const fromEnglish = i18n.getResource('en', 'translation', key);
+        if (typeof fromEnglish === 'string' && fromEnglish.length > 0) {
+          return fromEnglish;
+        }
+        if (typeof defaultValue === 'string' && defaultValue.length > 0) {
+          return defaultValue;
+        }
+        // Prefer a readable last segment over the full dotted key path.
+        const leaf = key.includes('.') ? key.slice(key.lastIndexOf('.') + 1) : key;
+        return leaf || key;
+      },
       react: {
         useSuspense: false,
       },

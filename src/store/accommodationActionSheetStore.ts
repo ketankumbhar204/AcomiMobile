@@ -2,6 +2,8 @@ import { create } from 'zustand';
 
 export type AccommodationActionSheetOption = {
   label: string;
+  /** Optional secondary line under the label (e.g. More menu). */
+  subtitle?: string;
   action: () => void;
   destructive?: boolean;
 };

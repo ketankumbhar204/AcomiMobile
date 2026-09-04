@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { colors, shadows } from '../../theme';
 
 type FABProps = {
@@ -11,10 +12,12 @@ type FABProps = {
 
 export function FAB({
   onPress,
-  accessibilityLabel = 'Action',
+  accessibilityLabel,
   inline = false,
   open = false,
 }: FABProps) {
+  const { t } = useTranslation();
+  const label = accessibilityLabel ?? t('common.fabAction');
   return (
     <Pressable
       onPress={onPress}
@@ -24,7 +27,7 @@ export function FAB({
         pressed && styles.fabPressed,
       ]}
       accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}>
+      accessibilityLabel={label}>
       <Text style={[styles.icon, open && styles.iconOpen]} allowFontScaling={false}>
         {open ? '×' : '+'}
       </Text>

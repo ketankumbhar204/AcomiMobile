@@ -65,4 +65,8 @@ export type ExpandStructureConfig = {
   bedsPerRoom: number;
   capacityPerRoom: number;
   includeGroundFloor: boolean;
+  /** Localized "Ground Floor" when includeGroundFloor is true. */
+  groundFloorName?: string;
+  /** Localized "Floor {{number}}" template. */
+  floorNameTemplate?: string;
 };

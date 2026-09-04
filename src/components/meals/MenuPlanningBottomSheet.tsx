@@ -14,6 +14,7 @@ import {
   View,
   type ViewStyle,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { colors, spacing, typography } from '../../theme';
 
 const DEFAULT_MIN_SHEET_RATIO = 0.5;
@@ -61,6 +62,7 @@ export function MenuPlanningBottomSheet({
   minHeightRatio = DEFAULT_MIN_SHEET_RATIO,
   maxHeightRatio = DEFAULT_MAX_SHEET_RATIO,
 }: MenuPlanningBottomSheetProps) {
+  const { t } = useTranslation();
   const { height: windowHeightRaw } = useWindowDimensions();
   // Modal first paint on Android can report 0 — fall back to screen size.
   const windowHeight =
@@ -189,7 +191,7 @@ export function MenuPlanningBottomSheet({
           disabled={!backdropDismissible}
           onPress={handleBackdropPress}
           accessibilityRole="button"
-          accessibilityLabel="Close"
+          accessibilityLabel={t('common.close')}
         />
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -234,7 +236,7 @@ export function MenuPlanningBottomSheet({
                     style={styles.headerSide}
                     disabled={busy}
                     accessibilityRole="button"
-                    accessibilityLabel="Close">
+                    accessibilityLabel={t('common.close')}>
                     <Text style={[styles.closeBtn, busy && styles.closeBtnDisabled]}>✕</Text>
                   </Pressable>
                 </View>

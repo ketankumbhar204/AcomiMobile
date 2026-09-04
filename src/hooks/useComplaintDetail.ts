@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { complaintsApi } from '../api/complaintsApi';
 import type { ComplaintResponse, UUID } from '../api/types';
 import { ApiError } from '../api/types';
+import { i18n } from '../i18n';
 
 export function useComplaintDetail(spaceId: UUID, complaintId: UUID) {
   const [complaint, setComplaint] = useState<ComplaintResponse | null>(null);
@@ -16,7 +17,9 @@ export function useComplaintDetail(spaceId: UUID, complaintId: UUID) {
       setComplaint(response);
     } catch (err) {
       const message =
-        err instanceof ApiError ? err.message : 'Failed to load complaint';
+        err instanceof ApiError && err.message
+          ? err.message
+          : i18n.t('complaints.errors.load');
       setError(message);
     } finally {
       setLoading(false);

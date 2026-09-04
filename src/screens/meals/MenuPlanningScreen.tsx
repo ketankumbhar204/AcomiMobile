@@ -593,6 +593,13 @@ export function MenuPlanningScreen({
                       selectedPoll.pollCloseAt,
                       selectedPoll.timezone,
                       i18n.language,
+                      {
+                        today: t('meals.dates.today'),
+                        tomorrow: t('meals.dates.tomorrow'),
+                        yesterday: t('meals.dates.yesterday'),
+                        am: t('common.time.am'),
+                        pm: t('common.time.pm'),
+                      },
                     )
                   : null
               }
@@ -602,6 +609,13 @@ export function MenuPlanningScreen({
                       selectedPoll.closedAt,
                       selectedPoll.timezone,
                       i18n.language,
+                      {
+                        today: t('meals.dates.today'),
+                        tomorrow: t('meals.dates.tomorrow'),
+                        yesterday: t('meals.dates.yesterday'),
+                        am: t('common.time.am'),
+                        pm: t('common.time.pm'),
+                      },
                     )
                   : null
               }

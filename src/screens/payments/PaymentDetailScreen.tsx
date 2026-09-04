@@ -260,8 +260,8 @@ export function PaymentDetailScreen() {
     if (payment.paymentType !== 'MEAL') {
       return payment.title;
     }
-    return displayMealPaymentTitle(payment.title);
-  }, [payment]);
+    return displayMealPaymentTitle(payment.title, undefined, undefined, t('payments.mealPaymentTitle'));
+  }, [payment, t]);
 
   const billingPeriodLabel = useMemo(() => {
     if (!payment?.month) {
