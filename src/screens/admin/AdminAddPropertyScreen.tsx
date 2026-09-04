@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import { Building2, IndianRupee, MapPin, UserRound } from 'lucide-react-native';
 import { adminApi } from '../../api/adminApi';
 import type { AdminCreatePropertyRegistrationRequest, SpaceType } from '../../api/types';
@@ -46,6 +47,7 @@ function optionalText(value: string): string | undefined {
 }
 
 export function AdminAddPropertyScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const [propertyType, setPropertyType] = useState<SpaceType | null>('PG');
   const [propertyName, setPropertyName] = useState('');
@@ -67,11 +69,11 @@ export function AdminAddPropertyScreen() {
     setError(null);
 
     if (mobileNumber.trim() && !isValidIndianMobile(mobileNumber)) {
-      setError('Enter a valid mobile number, or leave it blank.');
+      setError(t('admin.property.errors.mobile'));
       return;
     }
     if (alternateMobileNumber.trim() && !isValidIndianMobile(alternateMobileNumber)) {
-      setError('Enter a valid alternate mobile number, or leave it blank.');
+      setError(t('admin.property.errors.alternateMobile'));
       return;
     }
     if (
@@ -79,15 +81,15 @@ export function AdminAddPropertyScreen() {
       alternateMobileNumber.trim() &&
       mobileNumber.trim() === alternateMobileNumber.trim()
     ) {
-      setError('Alternate mobile number must be different from the primary mobile number.');
+      setError(t('admin.property.errors.alternateDifferent'));
       return;
     }
     if (pincode.trim() && !isValidPincode(pincode.trim())) {
-      setError('Enter a valid pincode, or leave it blank.');
+      setError(t('admin.property.errors.pincode'));
       return;
     }
     if (mapUrl.trim() && !isValidMapUrl(mapUrl)) {
-      setError('Map link must start with http:// or https://');
+      setError(t('admin.property.errors.mapUrl'));
       return;
     }
 
@@ -95,7 +97,7 @@ export function AdminAddPropertyScreen() {
     if (startingPrice.trim()) {
       price = Number(startingPrice);
       if (!Number.isFinite(price) || price < 0) {
-        setError('Enter a valid starting price, or leave it blank.');
+        setError(t('admin.property.errors.startingPrice'));
         return;
       }
     }
@@ -129,7 +131,7 @@ export function AdminAddPropertyScreen() {
       await adminApi.createPropertyRegistration(payload);
       navigation.goBack();
     } catch {
-      setError('Could not save property registration.');
+      setError(t('admin.property.saveFailed'));
     } finally {
       setLoading(false);
     }
@@ -148,9 +150,9 @@ export function AdminAddPropertyScreen() {
             showsVerticalScrollIndicator={false}>
             <AdminFormHero
               icon={Building2}
-              eyebrow="Admin"
-              heading="Add property lead"
-              subheading="Create a registration record for the admin lead list."
+              eyebrow={t('admin.property.addEyebrow')}
+              heading={t('admin.property.addHeading')}
+              subheading={t('admin.property.addSubheading')}
             />
 
             {error ? (
@@ -160,40 +162,50 @@ export function AdminAddPropertyScreen() {
             ) : null}
 
             <View style={styles.sections}>
-              <AdminFormSection title="Property details" description="Type and name shown on the lead list.">
+              <AdminFormSection
+                title={t('admin.property.detailsTitle')}
+                description={t('admin.property.detailsHint')}>
                 <SpaceTypePicker
                   value={propertyType}
                   onChange={setPropertyType}
                   allowedTypes={PROPERTY_TYPES}
                 />
-                <FormInput label="Property name" value={propertyName} onChangeText={setPropertyName} />
+                <FormInput
+                  label={t('admin.property.name')}
+                  value={propertyName}
+                  onChangeText={setPropertyName}
+                />
               </AdminFormSection>
 
-              <AdminFormSection title="Owner contact" description="Optional — can be filled when the owner claims.">
+              <AdminFormSection
+                title={t('admin.common.ownerContact')}
+                description={t('admin.common.ownerContactHint')}>
                 <FormInput
-                  label="Owner name"
+                  label={t('admin.common.ownerName')}
                   value={ownerName}
                   onChangeText={setOwnerName}
                   leadingIcon={UserRound}
                 />
                 <FormInput
-                  label="Primary mobile"
+                  label={t('admin.common.primaryMobile')}
                   value={mobileNumber}
                   onChangeText={setMobileNumber}
                   keyboardType="number-pad"
                   maxLength={10}
                 />
                 <FormInput
-                  label="Alternate mobile"
+                  label={t('admin.common.alternateMobileLabel')}
                   value={alternateMobileNumber}
                   onChangeText={setAlternateMobileNumber}
                   keyboardType="number-pad"
                   maxLength={10}
-                  hint="Optional secondary contact"
+                  hint={t('admin.common.alternateMobileHint')}
                 />
               </AdminFormSection>
 
-              <AdminFormSection title="Location" description="Reuse a recent address or enter a new one.">
+              <AdminFormSection
+                title={t('admin.common.location')}
+                description={t('admin.common.locationHint')}>
                 <AdminSavedAddressPicker
                   value={{ addressLine, city, state, pincode, mapUrl }}
                   onChange={next => {
@@ -204,29 +216,34 @@ export function AdminAddPropertyScreen() {
                     setMapUrl(next.mapUrl);
                   }}
                 />
-                <FormInput label="Address" value={addressLine} onChangeText={setAddressLine} leadingIcon={MapPin} />
-                <FormInput label="City" value={city} onChangeText={setCity} />
-                <FormInput label="State" value={state} onChangeText={setState} />
                 <FormInput
-                  label="Pincode"
+                  label={t('admin.common.address')}
+                  value={addressLine}
+                  onChangeText={setAddressLine}
+                  leadingIcon={MapPin}
+                />
+                <FormInput label={t('admin.common.city')} value={city} onChangeText={setCity} />
+                <FormInput label={t('admin.common.state')} value={state} onChangeText={setState} />
+                <FormInput
+                  label={t('admin.common.pincode')}
                   value={pincode}
                   onChangeText={setPincode}
                   keyboardType="number-pad"
                   maxLength={6}
                 />
                 <FormInput
-                  label="Google Maps link"
+                  label={t('admin.common.mapLink')}
                   value={mapUrl}
                   onChangeText={setMapUrl}
-                  placeholder="https://maps.google.com/..."
+                  placeholder={t('admin.common.mapLinkPlaceholder')}
                   autoCapitalize="none"
                   autoCorrect={false}
                 />
               </AdminFormSection>
 
-              <AdminFormSection title="Pricing & options">
+              <AdminFormSection title={t('admin.common.pricingOptions')}>
                 <FormInput
-                  label="Starting price (₹)"
+                  label={t('admin.property.startingPriceLabel')}
                   value={startingPrice}
                   onChangeText={setStartingPrice}
                   keyboardType="numeric"
@@ -239,7 +256,7 @@ export function AdminAddPropertyScreen() {
 
           <StickyFormActions
             primary={{
-              label: 'Save property',
+              label: t('admin.property.save'),
               onPress: () => {
                 handleSubmit().catch(() => undefined);
               },
@@ -247,7 +264,7 @@ export function AdminAddPropertyScreen() {
               disabled: loading,
             }}
             secondary={{
-              label: 'Cancel',
+              label: t('common.cancel'),
               onPress: () => navigation.goBack(),
               disabled: loading,
             }}

@@ -73,6 +73,7 @@ import { InventoryItemsScreen } from '../screens/inventory/InventoryItemsScreen'
 import { InventoryItemDetailsScreen } from '../screens/inventory/InventoryItemDetailsScreen';
 import { InventoryItemFormScreen } from '../screens/inventory/InventoryItemFormScreen';
 import { stackHeaderOptions } from '../theme';
+import { useTranslation } from 'react-i18next';
 import { useSpaceStore } from '../store/spaceStore';
 import { useProfileCompletionGate } from '../hooks/useProfileCompletionGate';
 import { SpaceTabNavigator } from './SpaceTabNavigator';
@@ -91,6 +92,7 @@ function SpaceTabsScreen({
 }
 
 export function MainNavigator() {
+  const { t } = useTranslation();
   const startupRoute = useSpaceStore(state => state.startupRoute);
   const selectedSpaceId = useSpaceStore(state => state.selectedSpaceId);
   const { blocked: profileBlocked } = useProfileCompletionGate();
@@ -128,32 +130,32 @@ export function MainNavigator() {
         <Stack.Screen
           name="CompleteProfile"
           component={CompleteProfileScreen}
-          options={{ title: 'Complete Profile', headerBackVisible: false }}
+          options={{ title: t('navigation.completeProfile'), headerBackVisible: false }}
         />
         <Stack.Screen
           name="Profile"
           component={ProfileScreen}
-          options={{ title: 'Profile' }}
+          options={{ title: t('navigation.profile') }}
         />
         <Stack.Screen
           name="DeleteAccount"
           component={DeleteAccountScreen}
-          options={{ title: 'Delete account' }}
+          options={{ title: t('navigation.deleteAccount') }}
         />
         <Stack.Screen
           name="DeleteAccountOtp"
           component={OtpScreen}
-          options={{ title: 'Verify OTP' }}
+          options={{ title: t('navigation.verifyOtp') }}
         />
         <Stack.Screen
           name="ChangeMobile"
           component={ChangeMobileScreen}
-          options={{ title: 'Change mobile number' }}
+          options={{ title: t('navigation.changeMobile') }}
         />
         <Stack.Screen
           name="ChangeMobileOtp"
           component={OtpScreen}
-          options={{ title: 'Verify OTP' }}
+          options={{ title: t('navigation.verifyOtp') }}
         />
       </Stack.Navigator>
     );
@@ -166,7 +168,7 @@ export function MainNavigator() {
       <Stack.Screen
         name="AcceptInvitations"
         component={AcceptInvitationsScreen}
-        options={{ title: 'Join Space' }}
+        options={{ title: t('navigation.acceptInvitations') }}
       />
       <Stack.Screen
         name="OnboardingChoice"
@@ -178,94 +180,94 @@ export function MainNavigator() {
         name="MySpaces"
         component={MySpacesScreen}
         options={{
-          title: 'My Spaces',
+          title: t('navigation.mySpaces'),
           headerBackVisible: false,
         }}
       />
       <Stack.Screen
         name="Profile"
         component={ProfileScreen}
-        options={{ title: 'Profile' }}
+        options={{ title: t('navigation.profile') }}
       />
       <Stack.Screen
         name="DeleteAccount"
         component={DeleteAccountScreen}
-        options={{ title: 'Delete account' }}
+        options={{ title: t('navigation.deleteAccount') }}
       />
       <Stack.Screen
         name="DeleteAccountOtp"
         component={OtpScreen}
-        options={{ title: 'Verify OTP' }}
+        options={{ title: t('navigation.verifyOtp') }}
       />
       <Stack.Screen
         name="ChangeMobile"
         component={ChangeMobileScreen}
-        options={{ title: 'Change mobile number' }}
+        options={{ title: t('navigation.changeMobile') }}
       />
       <Stack.Screen
         name="ChangeMobileOtp"
         component={OtpScreen}
-        options={{ title: 'Verify OTP' }}
+        options={{ title: t('navigation.verifyOtp') }}
       />
       <Stack.Screen
         name="CompleteProfile"
         component={CompleteProfileScreen}
-        options={{ title: 'Edit Profile' }}
+        options={{ title: t('navigation.editProfile') }}
       />
       <Stack.Screen
         name="CreateSpace"
         component={CreateSpaceScreen}
-        options={{ title: 'Create Space' }}
+        options={{ title: t('navigation.createSpace') }}
       />
       <Stack.Screen
         name="SpaceDetails"
         component={SpaceDetailsScreen}
-        options={{ title: 'Space Details' }}
+        options={{ title: t('navigation.spaceDetails') }}
       />
       <Stack.Screen
         name="EditSpace"
         component={EditSpaceScreen}
-        options={{ title: 'Edit Space' }}
+        options={{ title: t('navigation.editSpace') }}
       />
       <Stack.Screen
         name="InviteMembers"
         component={InviteMemberScreen}
-        options={{ title: 'Invite Member' }}
+        options={{ title: t('navigation.inviteMember') }}
       />
       <Stack.Screen
         name="AddMember"
         component={AddMemberScreen}
-        options={{ title: 'Add Member' }}
+        options={{ title: t('navigation.addMember') }}
       />
       <Stack.Screen
         name="AddCustomersHub"
         component={AddCustomersHubScreen}
-        options={{ title: 'Add Customers' }}
+        options={{ title: t('navigation.addCustomers') }}
       />
       <Stack.Screen
         name="ImportExistingPeople"
         component={ImportExistingPeopleScreen}
-        options={{ title: 'Import Existing People' }}
+        options={{ title: t('navigation.importExistingPeople') }}
       />
       <Stack.Screen
         name="MemberDetails"
         component={MemberDetailsScreen}
-        options={{ title: 'Member Details' }}
+        options={{ title: t('navigation.memberDetails') }}
       />
       <Stack.Screen
         name="EditMember"
         component={EditMemberScreen}
-        options={{ title: 'Edit Member' }}
+        options={{ title: t('navigation.editMember') }}
       />
       <Stack.Screen
         name="MemberSubscription"
         component={MemberSubscriptionScreen}
-        options={{ title: 'Subscription' }}
+        options={{ title: t('navigation.subscription') }}
       />
       <Stack.Screen
         name="MemberSubscriptionHistory"
         component={MemberSubscriptionHistoryScreen}
-        options={{ title: 'Subscription history' }}
+        options={{ title: t('navigation.subscriptionHistory') }}
       />
       <Stack.Screen
         name="MemberOccupancyHistory"
@@ -294,11 +296,11 @@ export function MainNavigator() {
       <Stack.Screen
         name="OccupancyWizard"
         component={OccupancyWizardScreen}
-        options={{ title: 'Occupancy' }}
+        options={{ title: t('navigation.occupancy') }}
       />
       <Stack.Screen
         name="MenuLibrary"
-        options={{ title: 'Menu Library' }}
+        options={{ title: t('navigation.moreMenu.menuLibrary') }}
         children={({ route }) => (
           <MenuLibraryScreen
             spaceId={route.params.spaceId}
@@ -308,7 +310,7 @@ export function MainNavigator() {
       />
       <Stack.Screen
         name="DailyMenuToday"
-        options={{ title: "Today's Menu" }}
+        options={{ title: t('navigation.todayMenu') }}
         children={({ route }) => (
           <DailyMenuTodayScreen
             spaceId={route.params.spaceId}
@@ -321,7 +323,7 @@ export function MainNavigator() {
         getId={({ params }) =>
           `${params.spaceId}-${params.menuDate}-${params.mealType}`
         }
-        options={{ title: 'Plan Menu' }}
+        options={{ title: t('navigation.planMenu') }}
         children={({ route }) => (
           <DailyMenuEditScreen
             spaceId={route.params.spaceId}
@@ -335,7 +337,7 @@ export function MainNavigator() {
         getId={({ params }) =>
           `${params.spaceId}-${params.menuDate}-${params.mealType}`
         }
-        options={{ title: 'Select Combo' }}
+        options={{ title: t('navigation.selectCombo') }}
         children={({ route }) => (
           <DailyMenuSelectComboScreen
             spaceId={route.params.spaceId}
@@ -349,7 +351,7 @@ export function MainNavigator() {
         getId={({ params }) =>
           `${params.spaceId}-${params.menuDate}-${params.mealType}`
         }
-        options={{ title: 'Select Menu' }}
+        options={{ title: t('navigation.selectMenu') }}
         children={({ route }) => (
           <SelectMenuHubScreen
             spaceId={route.params.spaceId}
@@ -362,12 +364,12 @@ export function MainNavigator() {
         name="MealComboForm"
         component={MealComboFormScreen}
         options={({ route }) => ({
-          title: route.params.mode === 'edit' ? 'Edit Combo' : 'Add Combo',
+          title: route.params.mode === 'edit' ? t('navigation.editCombo') : t('navigation.addCombo'),
         })}
       />
       <Stack.Screen
         name="MenuPlanning"
-        options={{ title: 'Menu Planning' }}
+        options={{ title: t('navigation.menuPlanning') }}
         children={({ route }) => (
           <MenuPlanningScreen
             spaceId={route.params.spaceId}
@@ -378,14 +380,14 @@ export function MainNavigator() {
       />
       <Stack.Screen
         name="MealDeliveryLocations"
-        options={{ title: 'Delivery locations' }}
+        options={{ title: t('navigation.deliveryLocations') }}
         children={({ route }) => (
           <MealDeliveryLocationsScreen spaceId={route.params.spaceId} />
         )}
       />
       <Stack.Screen
         name="MenuSharePreview"
-        options={{ title: 'Share Preview' }}
+        options={{ title: t('navigation.sharePreview') }}
         children={({ route }) => (
           <MenuSharePreviewScreen
             spaceId={route.params.spaceId}
@@ -397,7 +399,7 @@ export function MainNavigator() {
       <Stack.Screen
         name="MealPollResponse"
         options={{
-          title: 'Meal choices',
+          title: t('navigation.mealChoices'),
           presentation: 'modal',
         }}
         children={({ route }) => (
@@ -409,12 +411,12 @@ export function MainNavigator() {
       />
       <Stack.Screen
         name="SubscriptionPlans"
-        options={{ title: 'Meal Subscription Plan' }}
+        options={{ title: t('navigation.mealSubscriptionPlan') }}
         children={({ route }) => <SubscriptionPlansScreen spaceId={route.params.spaceId} />}
       />
       <Stack.Screen
         name="CustomerSubscriptionPlans"
-        options={{ title: 'Meal Subscription Plan' }}
+        options={{ title: t('navigation.mealSubscriptionPlan') }}
         children={({ route }) => (
           <CustomerSubscriptionPlansScreen
             spaceId={route.params.spaceId}
@@ -424,29 +426,29 @@ export function MainNavigator() {
       />
       <Stack.Screen
         name="DashboardPendingActions"
-        options={{ title: 'Pending actions' }}
+        options={{ title: t('navigation.pendingActions') }}
         children={({ route }) => (
           <DashboardPendingActionsScreen spaceId={route.params.spaceId} />
         )}
       />
       <Stack.Screen
         name="DashboardSpaceHealth"
-        options={{ title: 'Space Health' }}
+        options={{ title: t('navigation.spaceHealth') }}
         component={DashboardSpaceHealthScreen}
       />
       <Stack.Screen
         name="DashboardOccupancyList"
-        options={{ title: 'Residents' }}
+        options={{ title: t('navigation.residents') }}
         component={DashboardOccupancyListScreen}
       />
       <Stack.Screen
         name="DashboardBedInventory"
-        options={{ title: 'Beds' }}
+        options={{ title: t('navigation.beds') }}
         component={DashboardBedInventoryScreen}
       />
       <Stack.Screen
         name="SubscriptionActivationRequests"
-        options={{ title: 'Activation Requests' }}
+        options={{ title: t('navigation.activationRequests') }}
         children={({ route }) => (
           <SubscriptionActivationRequestsScreen spaceId={route.params.spaceId} />
         )}
@@ -456,12 +458,12 @@ export function MainNavigator() {
       <Stack.Screen
         name="DayMealPaymentDetail"
         component={DayMealPaymentDetailScreen}
-        options={{ title: 'Payment' }}
+        options={{ title: t('navigation.payment') }}
       />
       <Stack.Screen
         name="DayMealBulkPay"
         component={DayMealBulkPayScreen}
-        options={{ title: 'Pay' }}
+        options={{ title: t('navigation.pay') }}
       />
       <Stack.Screen name="PaymentReview" component={PaymentReviewScreen} />
       <Stack.Screen name="PaymentHistory" component={PaymentHistoryScreen} />

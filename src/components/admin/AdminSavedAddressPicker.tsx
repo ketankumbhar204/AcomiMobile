@@ -8,6 +8,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { MapPin, Plus, X } from 'lucide-react-native';
 import { adminApi } from '../../api/adminApi';
 import type { SavedAddress } from '../../api/types';
@@ -28,6 +29,7 @@ type AdminSavedAddressPickerProps = {
 };
 
 export function AdminSavedAddressPicker({ value, onChange }: AdminSavedAddressPickerProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [debounced, setDebounced] = useState('');
@@ -53,7 +55,7 @@ export function AdminSavedAddressPicker({ value, onChange }: AdminSavedAddressPi
       .catch(() => {
         if (!cancelled) {
           setOptions([]);
-          setError('Unable to load saved addresses. Please try again.');
+          setError(t('admin.addressPicker.loadFailed'));
         }
       })
       .finally(() => {
@@ -62,7 +64,7 @@ export function AdminSavedAddressPicker({ value, onChange }: AdminSavedAddressPi
     return () => {
       cancelled = true;
     };
-  }, [open, debounced]);
+  }, [open, debounced, t]);
 
   function apply(address: SavedAddress) {
     onChange({
@@ -87,21 +89,21 @@ export function AdminSavedAddressPicker({ value, onChange }: AdminSavedAddressPi
       <Pressable style={styles.trigger} onPress={() => setOpen(true)}>
         <MapPin size={16} color={colors.primaryDark} />
         <View style={styles.triggerText}>
-          <Text style={styles.triggerLabel}>Select saved address</Text>
+          <Text style={styles.triggerLabel}>{t('admin.addressPicker.selectLabel')}</Text>
           <Text style={styles.triggerValue} numberOfLines={2}>
-            {summary || 'Search recently used addresses'}
+            {summary || t('admin.addressPicker.searchHint')}
           </Text>
         </View>
       </Pressable>
       <Pressable onPress={startNew} style={styles.addNew} hitSlop={8}>
         <Plus size={14} color={colors.primaryDark} />
-        <Text style={styles.addNewText}>Add new address</Text>
+        <Text style={styles.addNewText}>{t('admin.addressPicker.addNew')}</Text>
       </Pressable>
 
       <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
         <View style={styles.modal}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Saved addresses</Text>
+            <Text style={styles.modalTitle}>{t('admin.addressPicker.modalTitle')}</Text>
             <Pressable onPress={() => setOpen(false)} hitSlop={12} style={styles.closeBtn}>
               <X size={18} color={colors.textSecondary} />
             </Pressable>
@@ -109,7 +111,7 @@ export function AdminSavedAddressPicker({ value, onChange }: AdminSavedAddressPi
           <ListSearchBar
             value={search}
             onChangeText={setSearch}
-            placeholder="Search address, city, state, or pincode"
+            placeholder={t('admin.addresses.searchPlaceholder')}
           />
           {error ? <Text style={styles.error}>{error}</Text> : null}
           {loading ? (
@@ -129,7 +131,9 @@ export function AdminSavedAddressPicker({ value, onChange }: AdminSavedAddressPi
               )}
               ListEmptyComponent={
                 <Text style={styles.empty}>
-                  {debounced ? 'No saved addresses match that search.' : 'No recently used addresses yet.'}
+                  {debounced
+                    ? t('admin.addressPicker.emptySearch')
+                    : t('admin.addressPicker.empty')}
                 </Text>
               }
             />

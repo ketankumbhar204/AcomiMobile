@@ -411,6 +411,7 @@ export function displayMealPaymentTitle(
   paymentTitle: string,
   _monthKey?: string,
   _formatMonth?: (monthKey: string) => string,
+  mealPaymentLabel = 'Meal Payment',
 ): string {
   const trimmed = paymentTitle.trim();
   if (
@@ -419,7 +420,7 @@ export function displayMealPaymentTitle(
     /^meal\s+payment\b/i.test(trimmed) ||
     /^meals?\s*$/i.test(trimmed)
   ) {
-    return 'Meal Payment';
+    return mealPaymentLabel;
   }
   return paymentTitle;
 }

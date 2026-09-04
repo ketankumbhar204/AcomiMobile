@@ -5,6 +5,8 @@ import { colors, radius, shadows, spacing, typography } from '../../theme';
 
 export type QuickActionSheetOption = {
   label: string;
+  /** Optional secondary line under the label. */
+  subtitle?: string;
   action: () => void;
   destructive?: boolean;
 };
@@ -65,6 +67,9 @@ export function QuickActionSheetModal({
                 ]}>
                 {option.label}
               </Text>
+              {option.subtitle ? (
+                <Text style={styles.menuItemSubtitle}>{option.subtitle}</Text>
+              ) : null}
             </Pressable>
           ))}
           <Pressable
@@ -117,6 +122,11 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.primaryDark,
     fontWeight: '600',
+  },
+  menuItemSubtitle: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
   menuItemDestructive: {
     color: '#DC2626',

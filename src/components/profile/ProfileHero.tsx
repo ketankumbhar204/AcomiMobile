@@ -44,7 +44,7 @@ export function ProfileHero({
   statusTone = 'active',
   membershipLabel,
   completionPercent,
-  completionLabel = 'Profile completion',
+  completionLabel,
   editLabel,
   onEdit,
 }: ProfileHeroProps) {

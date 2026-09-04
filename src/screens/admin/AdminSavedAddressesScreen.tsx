@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import { adminApi } from '../../api/adminApi';
 import type { SavedAddress } from '../../api/types';
 import { AdminLeadCard } from '../../components/admin';
@@ -27,6 +28,7 @@ type Nav = NativeStackNavigationProp<AdminStackParamList, 'AdminSavedAddresses'>
 const PINCODE_PATTERN = /^[1-9]\d{5}$/;
 
 export function AdminSavedAddressesScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const { showConfirm } = useConfirmDialog();
   const showToast = useToastStore(state => state.showToast);
@@ -61,11 +63,11 @@ export function AdminSavedAddressesScreen() {
       });
       setAddresses(page.content);
     } catch {
-      setError('Unable to load saved addresses. Please try again.');
+      setError(t('admin.addresses.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -87,16 +89,16 @@ export function AdminSavedAddressesScreen() {
   async function handleSave() {
     if (!editTarget) return;
     if (!form.addressLine.trim() || !form.city.trim() || !form.state.trim()) {
-      showToast('Address, city, and state are required.');
+      showToast(t('admin.addresses.requiredFields'));
       return;
     }
     if (!PINCODE_PATTERN.test(form.pincode.trim())) {
-      showToast('Enter a valid 6-digit pincode.');
+      showToast(t('admin.addresses.invalidPincode'));
       return;
     }
     const mapUrl = form.mapUrl.trim();
     if (mapUrl && !mapUrl.startsWith('http://') && !mapUrl.startsWith('https://')) {
-      showToast('Map link must start with http:// or https://');
+      showToast(t('admin.addresses.invalidMapUrl'));
       return;
     }
     setSaving(true);
@@ -108,11 +110,11 @@ export function AdminSavedAddressesScreen() {
         pincode: form.pincode.trim(),
         mapUrl: mapUrl || undefined,
       });
-      showToast('Saved address updated.');
+      showToast(t('admin.addresses.updated'));
       setEditTarget(null);
       await load(debounced);
     } catch {
-      showToast('Could not update saved address.');
+      showToast(t('admin.addresses.updateFailed'));
     } finally {
       setSaving(false);
     }
@@ -120,18 +122,21 @@ export function AdminSavedAddressesScreen() {
 
   function handleDelete(address: SavedAddress) {
     showConfirm({
-      title: 'Remove this saved address?',
-      message: `${address.addressLine}, ${address.city}. Existing property leads keep their address.`,
-      confirmLabel: 'Remove',
-      cancelLabel: 'Cancel',
+      title: t('admin.addresses.removeTitle'),
+      message: t('admin.addresses.removeMessage', {
+        address: address.addressLine,
+        city: address.city,
+      }),
+      confirmLabel: t('admin.common.remove'),
+      cancelLabel: t('common.cancel'),
       destructive: true,
       onConfirm: async () => {
         try {
           await adminApi.deleteSavedAddress(address.id);
           setAddresses(prev => prev.filter(item => item.id !== address.id));
-          showToast('Saved address removed.');
+          showToast(t('admin.addresses.removed'));
         } catch {
-          showToast('Could not remove saved address.');
+          showToast(t('admin.addresses.removeFailed'));
         }
       },
     });
@@ -139,12 +144,12 @@ export function AdminSavedAddressesScreen() {
 
   return (
     <View style={styles.root}>
-      <Text style={styles.hint}>Recently used first. Multiple properties can share one address.</Text>
+      <Text style={styles.hint}>{t('admin.addresses.hint')}</Text>
       <View style={styles.search}>
         <ListSearchBar
           value={search}
           onChangeText={setSearch}
-          placeholder="Search address, city, state, or pincode"
+          placeholder={t('admin.addresses.searchPlaceholder')}
         />
       </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -159,17 +164,17 @@ export function AdminSavedAddressesScreen() {
             <AdminLeadCard
               title={item.addressLine}
               subtitle={`${item.city}, ${item.state} - ${item.pincode}`}
-              meta={`Used ${item.usageCount} ${item.usageCount === 1 ? 'time' : 'times'} · ${formatAdminDate(item.lastUsedAt ?? item.createdAt)}`}
+              meta={`${item.usageCount === 1 ? t('admin.addresses.usedOnce', { count: item.usageCount }) : t('admin.addresses.usedMany', { count: item.usageCount })} · ${formatAdminDate(item.lastUsedAt ?? item.createdAt)}`}
               onPress={() => openEdit(item)}
               showDelete
               onDelete={() => handleDelete(item)}
             />
           )}
-          ListEmptyComponent={<Text style={styles.empty}>No saved addresses yet.</Text>}
+          ListEmptyComponent={<Text style={styles.empty}>{t('admin.addresses.empty')}</Text>}
         />
       )}
       <Pressable onPress={() => navigation.goBack()} style={styles.back}>
-        <Text style={styles.backText}>Back to dashboard</Text>
+        <Text style={styles.backText}>{t('admin.addresses.backToDashboard')}</Text>
       </Pressable>
 
       <Modal visible={editTarget != null} animationType="slide" onRequestClose={() => setEditTarget(null)}>
@@ -177,32 +182,32 @@ export function AdminSavedAddressesScreen() {
           style={styles.modal}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <Text style={styles.modalTitle}>Edit saved address</Text>
+          <Text style={styles.modalTitle}>{t('admin.addresses.editTitle')}</Text>
           <ScrollView keyboardShouldPersistTaps="handled">
             <FormInput
-              label="Address"
+              label={t('admin.common.address')}
               value={form.addressLine}
               onChangeText={addressLine => setForm(prev => ({ ...prev, addressLine }))}
             />
             <FormInput
-              label="City"
+              label={t('admin.common.city')}
               value={form.city}
               onChangeText={city => setForm(prev => ({ ...prev, city }))}
             />
             <FormInput
-              label="State"
+              label={t('admin.common.state')}
               value={form.state}
               onChangeText={state => setForm(prev => ({ ...prev, state }))}
             />
             <FormInput
-              label="Pincode"
+              label={t('admin.common.pincode')}
               value={form.pincode}
               onChangeText={pincode => setForm(prev => ({ ...prev, pincode }))}
               keyboardType="number-pad"
               maxLength={6}
             />
             <FormInput
-              label="Google Maps link"
+              label={t('admin.common.mapLink')}
               value={form.mapUrl}
               onChangeText={mapUrl => setForm(prev => ({ ...prev, mapUrl }))}
               autoCapitalize="none"
@@ -210,10 +215,12 @@ export function AdminSavedAddressesScreen() {
           </ScrollView>
           <View style={styles.modalActions}>
             <Pressable onPress={() => setEditTarget(null)} disabled={saving} style={styles.modalBtn}>
-              <Text style={styles.modalBtnText}>Cancel</Text>
+              <Text style={styles.modalBtnText}>{t('common.cancel')}</Text>
             </Pressable>
             <Pressable onPress={() => void handleSave()} disabled={saving} style={styles.modalBtn}>
-              <Text style={styles.modalBtnPrimary}>{saving ? 'Saving…' : 'Save'}</Text>
+              <Text style={styles.modalBtnPrimary}>
+                {saving ? t('common.saving') : t('common.save')}
+              </Text>
             </Pressable>
           </View>
         </KeyboardAvoidingView>

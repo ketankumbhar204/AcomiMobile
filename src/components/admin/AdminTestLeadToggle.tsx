@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Switch, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { FlaskConical } from 'lucide-react-native';
 import { Card } from '../ui';
 import { colors, radius, spacing, typography } from '../../theme';
@@ -12,16 +13,15 @@ type AdminTestLeadToggleProps = {
 };
 
 export function AdminTestLeadToggle({ value, onValueChange, embedded }: AdminTestLeadToggleProps) {
+  const { t } = useTranslation();
   const content = (
       <View style={styles.row}>
         <View style={styles.iconWrap}>
           <FlaskConical size={18} color={colors.primaryDark} strokeWidth={2.2} />
         </View>
         <View style={styles.copy}>
-          <Text style={styles.title}>Test lead</Text>
-          <Text style={styles.description}>
-            Mark as test data. Visible in lists only — does not affect delete or claim flows.
-          </Text>
+          <Text style={styles.title}>{t('admin.testLead.title')}</Text>
+          <Text style={styles.description}>{t('admin.testLead.description')}</Text>
         </View>
         <Switch
           value={value}

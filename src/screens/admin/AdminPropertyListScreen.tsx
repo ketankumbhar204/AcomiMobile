@@ -3,6 +3,8 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from '
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { adminApi } from '../../api/adminApi';
 import type { PropertyRegistrationListItem, RegistrationSource } from '../../api/types';
 import { AdminLeadCard, adminList } from '../../components/admin';
@@ -15,14 +17,19 @@ import { colors, spacing, typography } from '../../theme';
 type Nav = NativeStackNavigationProp<AdminStackParamList, 'AdminPropertyList'>;
 type Route = NativeStackScreenProps<AdminStackParamList, 'AdminPropertyList'>['route'];
 
-function filterLabel(tab: 'leads' | 'active', source?: RegistrationSource): string | null {
-  if (tab === 'active') return 'Active spaces';
-  if (source === 'PUBLIC_WEBSITE') return 'Website registrations';
-  if (source === 'ADMIN') return 'Added by admin';
+function filterLabel(
+  t: TFunction,
+  tab: 'leads' | 'active',
+  source?: RegistrationSource,
+): string | null {
+  if (tab === 'active') return t('admin.filters.activeSpaces');
+  if (source === 'PUBLIC_WEBSITE') return t('admin.filters.websiteRegistrations');
+  if (source === 'ADMIN') return t('admin.filters.addedByAdmin');
   return null;
 }
 
 export function AdminPropertyListScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { showConfirm } = useConfirmDialog();
@@ -90,22 +97,22 @@ export function AdminPropertyListScreen() {
     }, [route.params?.source, route.params?.tab]),
   );
 
-  const activeFilterLabel = filterLabel(tab, sourceFilter);
+  const activeFilterLabel = filterLabel(t, tab, sourceFilter);
 
   function handleDelete(item: PropertyRegistrationListItem) {
     showConfirm({
-      title: 'Delete this property lead?',
-      message: `${item.propertyName}\n\nThis action will remove the registration from the Admin lead list.`,
-      confirmLabel: 'Delete',
-      cancelLabel: 'Cancel',
+      title: t('admin.property.deleteTitle'),
+      message: t('admin.property.deleteMessage', { name: item.propertyName }),
+      confirmLabel: t('admin.common.delete'),
+      cancelLabel: t('common.cancel'),
       destructive: true,
       onConfirm: async () => {
         try {
           await adminApi.deletePropertyRegistration(item.id);
           setItems(prev => prev.filter(row => row.id !== item.id));
-          showToast('Property lead deleted.');
+          showToast(t('admin.property.deleted'));
         } catch {
-          showToast('Could not delete property lead.');
+          showToast(t('admin.property.deleteFailed'));
         }
       },
     });
@@ -123,12 +130,12 @@ export function AdminPropertyListScreen() {
               navigation.setParams({ tab: key, source: key === 'active' ? undefined : sourceFilter });
             }}>
             <Text style={[adminList.tabText, tab === key && adminList.tabTextActive]}>
-              {key === 'leads' ? 'Leads' : 'Active'}
+              {key === 'leads' ? t('admin.filters.leads') : t('admin.filters.active')}
             </Text>
           </Pressable>
         ))}
         <Pressable style={adminList.addBtn} onPress={() => navigation.navigate('AdminAddProperty')}>
-          <Text style={adminList.addBtnText}>Add</Text>
+          <Text style={adminList.addBtnText}>{t('admin.filters.add')}</Text>
         </Pressable>
       </View>
       {activeFilterLabel && tab === 'leads' ? (
@@ -145,7 +152,7 @@ export function AdminPropertyListScreen() {
             <AdminLeadCard
               title={item.propertyName}
               subtitle={`${item.propertyType} · ${item.ownerName}`}
-              meta={`${item.mobileNumber} · ${item.city || '—'}`}
+              meta={`${item.mobileNumber} · ${item.city || t('admin.labels.emDash')}`}
               sourceLabel={tab === 'leads' ? formatRegistrationSource(item.source) : undefined}
               testLead={tab === 'leads' ? item.testLead : undefined}
               showDelete={tab === 'leads'}
@@ -157,7 +164,7 @@ export function AdminPropertyListScreen() {
               onDelete={() => handleDelete(item)}
             />
           )}
-          ListEmptyComponent={<Text style={styles.empty}>No records found.</Text>}
+          ListEmptyComponent={<Text style={styles.empty}>{t('admin.list.empty')}</Text>}
         />
       )}
     </View>

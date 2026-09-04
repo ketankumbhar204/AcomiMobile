@@ -39,18 +39,21 @@ function formatOccupancyLocation(row: OccupancyResponse): string {
     .join(' · ');
 }
 
-function occupancyStatusTone(status: OccupancyResponse['status']): {
+function occupancyStatusTone(
+  status: OccupancyResponse['status'],
+  t: (key: string) => string,
+): {
   label: string;
   color: string;
 } {
   switch (status) {
     case 'RESERVED':
-      return { label: 'Reserved', color: '#D97706' };
+      return { label: t('occupancy.occupancyStatus.RESERVED'), color: '#D97706' };
     case 'VACATED':
-      return { label: 'Vacated', color: colors.muted };
+      return { label: t('occupancy.occupancyStatus.VACATED'), color: colors.muted };
     case 'ACTIVE':
     default:
-      return { label: 'Occupied', color: colors.primaryDark };
+      return { label: t('occupancy.occupancyStatus.ACTIVE'), color: colors.primaryDark };
   }
 }
 
@@ -153,7 +156,7 @@ export function DashboardOccupancyListScreen() {
           contentContainerStyle={styles.listContent}
           keyboardShouldPersistTaps="handled"
           renderItem={({ item }) => {
-            const status = occupancyStatusTone(item.status);
+            const status = occupancyStatusTone(item.status, t);
             const foodIncluded = Boolean(item.foodEnabled || item.foodIncludedInRent);
             return (
               <AccommodationEntityRow

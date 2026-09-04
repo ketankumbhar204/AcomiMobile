@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { adminApi } from '../../api/adminApi';
 import type { AdminRegisteredUser } from '../../api/types';
 import { AdminLeadCard } from '../../components/admin';
@@ -14,6 +15,7 @@ import {
 import { colors, spacing, typography } from '../../theme';
 
 export function AdminRegisteredUsersScreen() {
+  const { t } = useTranslation();
   const [users, setUsers] = useState<AdminRegisteredUser[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -38,9 +40,7 @@ export function AdminRegisteredUsersScreen() {
 
   return (
     <View style={styles.root}>
-      <Text style={styles.hint}>
-        Phone-verified accounts. Owner/Member selection is not required.
-      </Text>
+      <Text style={styles.hint}>{t('admin.users.hint')}</Text>
       {loading ? (
         <ActivityIndicator style={styles.loader} color={colors.primary} />
       ) : (
@@ -51,12 +51,12 @@ export function AdminRegisteredUsersScreen() {
           renderItem={({ item }) => (
             <AdminLeadCard
               title={formatAdminUserName(item.fullName)}
-              subtitle={`${item.mobileNumber} · ${item.mobileVerified ? 'Verified' : 'Not verified'}`}
+              subtitle={`${item.mobileNumber} · ${item.mobileVerified ? t('admin.labels.verified') : t('admin.labels.notVerified')}`}
               meta={`${formatAdminUserRole(item.selectedRole)} · ${formatAdminOnboardingStatus(item.onboardingStatus)} · ${formatAdminDate(item.registeredAt)}`}
               sourceLabel={formatAdminAssociatedSpaces(item.spaces)}
             />
           )}
-          ListEmptyComponent={<Text style={styles.empty}>No registered users found.</Text>}
+          ListEmptyComponent={<Text style={styles.empty}>{t('admin.users.empty')}</Text>}
         />
       )}
     </View>

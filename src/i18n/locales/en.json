@@ -123,12 +123,39 @@
       "mobileAlreadyRegistered": "This mobile number is already registered.",
       "accountNotFound": "No ACOMI account found with this mobile number.",
       "accountDisabled": "Your account has been disabled. Please contact support."
-    }
+    },
+    "loading": "Loading…",
+    "loadMore": "Load more",
+    "moveDown": "Move down",
+    "moveUp": "Move up",
+    "remove": "Remove",
+    "time": {
+      "am": "AM",
+      "pm": "PM"
+    },
+    "fabAction": "Action"
   },
   "notifications": {
     "title": "Notifications",
     "emptyTitle": "No notifications",
-    "emptyDescription": "Updates about payments, meals, and your stay will appear here."
+    "emptyDescription": "Updates about payments, meals, and your stay will appear here.",
+    "allCaughtUp": "You",
+    "eyebrow": "Space",
+    "filters": {
+      "action": "Action needed",
+      "billing": "Billing",
+      "general": "General",
+      "meals": "Meals",
+      "unread": "Unread"
+    },
+    "groups": {
+      "earlier": "Earlier",
+      "today": "Today",
+      "yesterday": "Yesterday"
+    },
+    "noMatchTitle": "No matching notifications",
+    "searchPlaceholder": "Search notifications",
+    "unreadSummary": "{{count}} unread updates"
   },
   "list": {
     "search": {
@@ -179,11 +206,56 @@
     "createPassword": "Create password",
     "dashboard": "Dashboard",
     "members": "Members",
-    "accommodation": "Accommodation",
+    "accommodation": "Rooms",
     "rooms": "Rooms",
     "meals": "Meals",
     "payments": "Payments",
-    "complaints": "Complaints"
+    "complaints": "Complaints",
+    "inventory": "Inventory",
+    "more": "More",
+    "moreMenu": {
+      "complaintsSubtitle": "Manage complaints",
+      "menuLibrary": "Menu Library",
+      "mealSubscriptionPlans": "Meal Subscription Plans"
+    },
+    "completeProfile": "Complete Profile",
+    "joinSpace": "Join Space",
+    "editProfile": "Edit Profile",
+    "deleteAccount": "Delete account",
+    "changeMobile": "Change mobile number",
+    "forgotPassword": "Forgot password",
+    "resetPassword": "Reset password",
+    "addCustomers": "Add Customers",
+    "importExistingPeople": "Import Existing People",
+    "subscription": "Subscription",
+    "subscriptionHistory": "Subscription history",
+    "occupancy": "Occupancy",
+    "todayMenu": "Today's Menu",
+    "planMenu": "Plan Menu",
+    "selectCombo": "Select Combo",
+    "selectMenu": "Select Menu",
+    "menuPlanning": "Menu Planning",
+    "deliveryLocations": "Delivery locations",
+    "sharePreview": "Share Preview",
+    "mealChoices": "Meal choices",
+    "mealSubscriptionPlan": "Meal Subscription Plan",
+    "pendingActions": "Pending actions",
+    "spaceHealth": "Space Health",
+    "residents": "Residents",
+    "beds": "Beds",
+    "activationRequests": "Activation Requests",
+    "payment": "Payment",
+    "pay": "Pay",
+    "addCombo": "Add Combo",
+    "editCombo": "Edit Combo",
+    "goBack": "Go back",
+    "dismissMenu": "Dismiss menu",
+    "otpField": "One-time password",
+    "otpDigit": "OTP digit {{index}}",
+    "decreaseQuantity": "Decrease quantity",
+    "increaseQuantity": "Increase quantity",
+    "closeFilterDropdown": "Close filter dropdown",
+    "loadingDashboard": "Loading dashboard"
   },
   "onboarding": {
     "choice": {
@@ -362,7 +434,15 @@
       "viewAll": "View all →",
       "viewArrow": "View →",
       "pendingActions_one": "{{count}} Pending Action",
-      "pendingActions_other": "{{count}} Pending Actions"
+      "pendingActions_other": "{{count}} Pending Actions",
+      "activityCount": "{{count}} recent updates",
+      "activityEyebrow": "My Spaces",
+      "groups": {
+        "earlier": "Earlier",
+        "today": "Today",
+        "week": "This week",
+        "yesterday": "Yesterday"
+      }
     },
     "switcher": {
       "open": "Switch space",
@@ -480,7 +560,25 @@
       "openDashboard": "Open Dashboard",
       "deactivateTitle": "Deactivate space?",
       "deactivateMessage": "This will deactivate \"{{name}}\". It will no longer appear in your spaces list.",
-      "deactivateConfirm": "Deactivate"
+      "deactivateConfirm": "Deactivate",
+      "activity": {
+        "created": "Space created",
+        "title": "Activity",
+        "updated": "Details updated"
+      },
+      "contactInfo": "Contact information",
+      "generalInfo": "General information",
+      "kpi": {
+        "collected": "Collected",
+        "mealMembers": "Meal members",
+        "occupiedBeds": "Occupied beds",
+        "openPolls": "Open polls",
+        "pending": "Pending",
+        "vacantBeds": "Vacant beds"
+      },
+      "share": "Share",
+      "statusActive": "Active",
+      "statusInactive": "Inactive"
     },
     "editSpace": {
       "eyebrow": "Edit",
@@ -491,7 +589,10 @@
       "save": "Save Changes",
       "nameRequired": "Space name is required.",
       "successTitle": "Space updated",
-      "successMessage": "Changes saved successfully."
+      "successMessage": "Changes saved successfully.",
+      "contactHelper": "How residents and staff can reach this space.",
+      "generalHelper": "Basic details shown across the space.",
+      "rulesTitle": "Rules & policy"
     },
     "mealBilling": {
       "title": "Meal billing",
@@ -580,7 +681,8 @@
         "typeCustomer": "Customer",
         "typeResident": "Resident",
         "addAction": "+ Add"
-      }
+      },
+      "detailsHeading": "Member details"
     },
     "addCustomersHub": {
       "navTitle": "Add Customers",
@@ -652,7 +754,9 @@
       "updated": "Updated",
       "edit": "Edit Member",
       "mealBilling": "Meal billing",
-      "editMealBilling": "Change meal billing"
+      "editMealBilling": "Change meal billing",
+      "actionsHeading": "Actions",
+      "editSubtitle": "Update name, role, and profile details"
     },
     "gender": {
       "label": "Gender",
@@ -738,7 +842,8 @@
       "change": "Change Status",
       "required": "Please select a status.",
       "updatedAt": "Status Updated",
-      "successToast": "Member status updated."
+      "successToast": "Member status updated.",
+      "changeSubtitle": "Active, left, or other status"
     },
     "emergency": {
       "heading": "Emergency Contact",
@@ -752,7 +857,8 @@
       "nameRequired": "Contact name is required.",
       "relationRequired": "Relation is required.",
       "mobileRequired": "Mobile number is required.",
-      "successToast": "Emergency contact updated."
+      "successToast": "Emergency contact updated.",
+      "editSubtitle": "Name, relation, and mobile"
     },
     "meals": {
       "emptyTitle": "No meal subscription found",
@@ -1011,7 +1117,13 @@
           "coLiving": "Co-living",
           "rental": "Rental"
         }
-      }
+      },
+      "buildingsSubtitle": "Open a building to manage floors and beds",
+      "buildingsTitle": "Buildings",
+      "eyebrow": "Property",
+      "quickActions": "Quick actions",
+      "subtitle": "Buildings, floors, rooms, and beds in one place",
+      "title": "Rooms"
     },
     "setup": {
       "title": "Quick Setup",
@@ -1134,7 +1246,9 @@
         "roomType": "Please select a room type.",
         "capacity": "Capacity must be at least 1.",
         "apartmentsPerFloor": "Apartments per floor must be at least 1."
-      }
+      },
+      "groundFloorName": "Ground Floor",
+      "floorNameNumber": "Floor {{number}}"
     },
     "overview": {
       "title": "Building Overview",
@@ -1167,7 +1281,8 @@
       "addUnit": "Add unit",
       "addRoom": "Add room",
       "addBed": "Add bed",
-      "loadMore": "Load more"
+      "loadMore": "Load more",
+      "listSubtitle": "Tap to open · long-press for details"
     },
     "duplicate": {
       "confirm": "Duplicate",
@@ -1212,7 +1327,8 @@
         "title": "Bulk add units",
         "count": "Number of units",
         "startNumber": "Starting unit number",
-        "success": "{{count}} units created."
+        "success": "{{count}} units created.",
+        "hint": "Add multiple units at once"
       },
       "rooms": {
         "action": "Bulk add rooms",
@@ -1407,6 +1523,11 @@
       "saveUnit": "Failed to save unit. Please try again.",
       "saveRoom": "Failed to save room. Please try again.",
       "saveBed": "Failed to save bed. Please try again."
+    },
+    "active": "Active",
+    "form": {
+      "rent": "Rent",
+      "deposit": "Deposit"
     }
   },
   "occupancyWizard": {
@@ -1472,6 +1593,7 @@
     },
     "occupancyStatus": {
       "ALLOCATED": "Allocated",
+      "ACTIVE": "Occupied",
       "RESERVED": "Reserved",
       "VACATED": "Vacated"
     },
@@ -1771,6 +1893,7 @@
       "notFound": "Occupancy record not found.",
       "loadMember": "Failed to load occupancy history.",
       "loadTarget": "Failed to load occupant details.",
+      "loadList": "Failed to load occupancies.",
       "allocate": "Failed to allocate member.",
       "reserve": "Failed to reserve accommodation.",
       "moveIn": "Failed to complete move-in.",
@@ -1800,6 +1923,11 @@
         "FOOD_CHARGE_REQUIRED": "Food charge is required when food is enabled.",
         "FOOD_CHARGE_NOT_ALLOWED": "Food charge cannot be set when food is included in rent."
       }
+    },
+    "occupancyStatus": {
+      "ACTIVE": "Occupied",
+      "RESERVED": "Reserved",
+      "VACATED": "Vacated"
     }
   },
   "dashboard": {
@@ -1988,7 +2116,8 @@
         "addBeds": "Add beds so you can assign residents.",
         "addMembers": "Invite or add members to start allocating beds and meals.",
         "configureMeals": "Set up your menu library so you can plan and share meals."
-      }
+      },
+      "openStepA11y": "Opens this setup step"
     },
     "pollCard": {
       "title": "Tomorrow's Menu",
@@ -2128,7 +2257,9 @@
         "subtitle": "Review and approve activation",
         "body": "Customers are waiting for you to approve their meal subscription.",
         "action": "Review requests"
-      }
+      },
+      "pendingActions": "Pending actions",
+      "pendingActionsSubtitle": "{{count}} items need your attention"
     },
     "financial": {
       "title": "Payment Summary",
@@ -2185,7 +2316,10 @@
       "showingBeds": "Showing {{count}} beds",
       "roomBedCount": "{{count}} beds · {{available}} available",
       "unitBedCount": "{{count}} beds · {{available}} available",
-      "roomAvailableCount": "{{available}} of {{count}} available"
+      "roomAvailableCount": "{{available}} of {{count}} available",
+      "foodIncluded": "Food included",
+      "moveOutLine": "Move-out {{date}}",
+      "occupancyCount": "{{count}} residents"
     },
     "operations": {
       "title": "Meal operations",
@@ -2283,7 +2417,22 @@
         "RESERVATION_STARTING_TODAY": "Reservations Starting Today",
         "COMPLAINT_PENDING": "Complaints Pending",
         "COMPLAINT_OVERDUE": "Complaints Overdue"
+      },
+      "emptyTitle": "All clear",
+      "eyebrow": "Dashboard",
+      "kpi": {
+        "critical": "Critical",
+        "pending": "Pending",
+        "today": "Today"
+      },
+      "sections": {
+        "attention": "Needs attention",
+        "today": "Today"
       }
+    },
+    "accommodationOps": {
+      "subtitle": "Occupancy at a glance",
+      "title": "Property operations"
     }
   },
   "paymentCollection": {
@@ -2320,12 +2469,15 @@
         "submitTitle": "Submit payment",
         "submitHint": "Upload one payment proof for all selected days.",
         "proofTitleSingle": "Meals — {{date}}",
-        "proofTitleMulti": "Meals — {{count}} days"
+        "proofTitleMulti": "Meals — {{count}} days",
+        "datesTitle": "Selected days",
+        "eyebrow": "Pay"
       },
       "errors": {
         "loadList": "Could not load meal payments",
         "loadDetail": "Could not load this day's payment"
-      }
+      },
+      "detailEyebrow": "Day meal"
     },
     "updateRequestedTitle": "Update requested",
     "updateRequestedHint": "The owner asked for changes before approving your payment.",
@@ -2382,7 +2534,8 @@
       "dashboardSubtitle": "Pay rent, meals, and other charges",
       "emptyTitle": "No payments available",
       "emptyDescription": "You have no pending or submitted payments for this month.",
-      "noLinkedMember": "Your member profile is not linked yet. Contact the property manager if this persists."
+      "noLinkedMember": "Your member profile is not linked yet. Contact the property manager if this persists.",
+      "eyebrow": "Billing"
     },
     "tenantFilters": {
       "all": "All ({{count}})",
@@ -2423,7 +2576,8 @@
       "mealDaysCount_other": "{{count}} days",
       "openFromReview": "Open payment details",
       "loadingMemberPayment": "Opening payment…",
-      "noPaymentsForMember": "No payments found for this member this month."
+      "noPaymentsForMember": "No payments found for this member this month.",
+      "eyebrow": "Payment"
     },
     "proof": {
       "title": "Submit payment proof",
@@ -2551,7 +2705,10 @@
       "RESUBMITTED": "Resubmitted",
       "PAID": "Paid",
       "REFUNDED": "Refunded",
-      "UPDATE_REQUESTED": "Changes requested"
+      "UPDATE_REQUESTED": "Changes requested",
+      "emptyHint": "Events will appear as this payment moves through review.",
+      "eyebrow": "Payment",
+      "subtitle": "Status changes and review events for this payment."
     },
     "errors": {
       "loadPayments": "Failed to load payments.",
@@ -2615,7 +2772,8 @@
       "underReview": "Under review",
       "needsUpdate": "Needs update",
       "rejected": "Rejected",
-      "none": "No charges"
+      "none": "No charges",
+      "PENDING": "Pending"
     },
     "row": {
       "expected": "Expected {{expected}}",
@@ -2623,7 +2781,8 @@
       "balanceLine": "{{remaining}} left · {{used}} used",
       "purchasedThisMonth": "Sold this month",
       "collectedThisMonth": "Collected this month"
-    }
+    },
+    "mealPaymentTitle": "Meal Payment"
   },
   "members": {
     "mealBilling": {
@@ -2736,7 +2895,6 @@
       "shareBlockedNoCustomersTitle": "No customers yet",
       "shareBlockedNoCustomersBody": "No customers are enrolled in this mess yet. Add customers first so they can receive today's menu.",
       "shareBlockedNoCustomersCta": "Add customers",
-      "dayStatusVisual": "{{shared}} shared · {{notShared}} not shared · {{empty}} empty",
       "dayStatusNotSharedYet": "Today's menu hasn't been shared yet. After sharing, customers will receive meal confirmations.",
       "dayShare": {
         "notShared": "Not shared",
@@ -2895,12 +3053,12 @@
       "selectItems": "Select items",
       "selectItemsHint": "Pick individual items. Save to add them, or save as a combo for next time.",
       "createCombo": "+ Create new combo",
-      "comboAdded": "{{name}} added to menu",
+      "comboAdded": "\"{{name}}\" added to meal",
       "itemsAdded": "Items added to menu",
       "saveAsCombo": "Save as combo",
       "saveAsComboTitle": "Save as combo?",
       "saveAsComboHint": "Name this combination so you can add it in one tap next time.",
-      "comboNamePlaceholder": "e.g. Regular Lunch",
+      "comboNamePlaceholder": "e.g. Regular Thali, Jain Option",
       "comboNameRequired": "Enter a combo name",
       "comboSavedAndAdded": "{{name}} saved and added to menu",
       "nextWeek": "In 7 days",
@@ -2963,13 +3121,11 @@
       "createComboTitle": "Create Combo",
       "createComboHint": "Pick items and give the combo a name. It will be added as one choice in this meal.",
       "comboNameLabel": "Combo name",
-      "comboNamePlaceholder": "e.g. Regular Thali, Jain Option",
       "comboDefaultName": "Combo",
       "comboItemsLabel": "Items in this combo",
       "itemDetailsLabel": "Item details",
       "itemDetailsEmpty": "No details available for this item.",
       "addComboToMeal": "Add to meal",
-      "comboAdded": "\"{{name}}\" added to meal",
       "comboSavedToLibrary": "\"{{name}}\" saved to library and added to meal",
       "saveToLibraryLabel": "Save to Combo Library",
       "saveToLibraryHint": "Make this combo reusable for future meals"
@@ -3115,7 +3271,7 @@
       "updateTitle": "Update subscription",
       "renewAction": "Renew subscription",
       "renewTitle": "Renew subscription",
-      "renewSubtitle": "Start the next subscription cycle. Unused meals from the previous period are not carried forward.",
+      "renewSubtitle": "Start a new subscription period with meals and amount collected.",
       "updateSubtitle": "This replaces the member's current subscription with the values below.",
       "drawerCurrentTitle": "Current subscription",
       "drawerLastTitle": "Last subscription",
@@ -3140,13 +3296,10 @@
       "expiredOn": "Expired on",
       "noSubscription": "No active subscription yet.",
       "editAction": "Edit subscription",
-      "renewAction": "Renew subscription",
       "createTitle": "Create subscription",
       "editTitle": "Edit subscription",
-      "renewTitle": "Renew subscription",
       "createSubtitle": "Set how many meals are included and the amount collected.",
       "editSubtitle": "Update meals included and amount for this subscription.",
-      "renewSubtitle": "Start a new subscription period with meals and amount collected.",
       "saveSuccess": "Subscription saved",
       "mealsRemaining": "Meals remaining",
       "purchasedLabel": "Purchased",
@@ -3256,7 +3409,9 @@
         "proofOrReferenceRequired": "Add a payment reference or upload a payment screenshot.",
         "requestSubmitted": "Activation request sent to owner",
         "selectionRequiredHint": "Activate a subscription to select meals",
-        "selectionPendingHint": "Meal selection unlocks after owner approves your request"
+        "selectionPendingHint": "Meal selection unlocks after owner approves your request",
+        "eyebrow": "Subscription",
+        "title": "Choose a plan"
       }
     },
     "pollClosing": {
@@ -3314,7 +3469,14 @@
       "rejectTitle": "Reject request?",
       "rejectMessage": "Reject subscription request from {{name}}?",
       "rejectAction": "Reject",
-      "rejectSuccess": "Request rejected"
+      "rejectSuccess": "Request rejected",
+      "emptyHint": "Create a prepaid meal pack customers can request.",
+      "eyebrow": "Billing",
+      "noPendingRequestsHint": "New customer activation requests will appear here.",
+      "requestsEyebrow": "Approvals",
+      "requestsSubtitle": "Review payment proof and activate prepaid plans.",
+      "requestsTitle": "Activation requests",
+      "viewRequestsHint": "Review pending activation requests"
     },
     "deliveryLocations": {
       "manage": "Delivery locations",
@@ -3328,7 +3490,16 @@
       "created": "Delivery location added",
       "updated": "Delivery location updated",
       "editTitle": "Edit delivery location",
-      "addressPlaceholder": "Address (optional)"
+      "addressPlaceholder": "Address (optional)",
+      "addressLabel": "Address",
+      "addSection": "Add location",
+      "descriptionLabel": "Notes",
+      "emptyHint": "Add a location above so members can pick delivery points.",
+      "eyebrow": "Delivery",
+      "listSubtitle": "Reorder with arrows · tap Edit to update",
+      "listTitle": "Locations",
+      "nameLabel": "Name",
+      "title": "Delivery locations"
     },
     "deliveryConfig": {
       "title": "Delivery Configuration",
@@ -3590,7 +3761,6 @@
       "comboPreviewEmpty": "No items in this combo yet.",
       "comboCategoryTitle": "{{category}} ({{total}})",
       "comboCategorySelected": "{{category}} ({{selected}}/{{total}})",
-      "uncategorized": "Other",
       "comboManageHint": "Tap selected combo to edit · long-press for options",
       "comboActionsHint": "Edit items in this combo or hide it from the library.",
       "addCategory": "+ Add category",
@@ -3833,7 +4003,9 @@
       "heading": "Complete Your Profile",
       "description": "Please complete your profile before accessing PG services.",
       "completeProfile": "Complete Profile",
-      "progress": "{{percent}}% complete"
+      "progress": "{{percent}}% complete",
+      "benefit1": "Unlock PG services, meals, and payments",
+      "benefit2": "Help managers allocate beds and resolve issues faster"
     },
     "wizard": {
       "title": "Complete Profile",
@@ -3841,14 +4013,14 @@
       "submit": "Submit profile",
       "uploadPhoto": "Upload photo",
       "replacePhoto": "Replace photo",
-      "replacePhoto": "Replace photo",
       "documentsOptional": "Document uploads are optional. You can add them now or later from your profile.",
       "sections": {
         "personal": "Personal information",
         "address": "Address information",
         "emergency": "Emergency contact",
         "documents": "Identity & documents"
-      }
+      },
+      "helper": "A few details help us personalize ACOMI for you."
     },
     "fields": {
       "fullName": "Full name",
@@ -3969,7 +4141,13 @@
       "deleteAccountContinue": "Continue to delete account",
       "deleteAccountFailed": "Could not delete your account. Please try again.",
       "deleteAccountForbidden": "You are not allowed to delete this account.",
-      "privacyPolicy": "Privacy Policy"
+      "privacyPolicy": "Privacy Policy",
+      "completionLabel": "Profile completion",
+      "quickEditSubtitle": "Update personal details and KYC",
+      "spacesJoined": "{{count}} spaces",
+      "switchSpace": "Switch space",
+      "switchSpaceSubtitle": "Open My Spaces",
+      "versionLabel": "App version"
     },
     "language": {
       "title": "Language",
@@ -4005,7 +4183,9 @@
     },
     "empty": {
       "title": "No complaints yet",
-      "description": "Raise a complaint to track maintenance, food, or service issues."
+      "description": "Raise a complaint to track maintenance, food, or service issues.",
+      "searchDescription": "Try a different search or clear filters.",
+      "searchTitle": "No matching complaints"
     },
     "fields": {
       "category": "Category",
@@ -4018,7 +4198,14 @@
       "meal": "Related meal",
       "resolution": "Resolution",
       "comment": "Add a comment",
-      "internalNote": "Internal note"
+      "internalNote": "Internal note",
+      "assigned": "Assigned",
+      "categoryHelper": "Choose the issue type",
+      "categorySection": "Category",
+      "priorityHelper": "How urgent is this issue?",
+      "prioritySection": "Priority",
+      "reporter": "Reporter",
+      "updated": "Updated"
     },
     "hints": {
       "internalNoteOn": "Only owners and managers can see this note.",
@@ -4105,9 +4292,37 @@
       "requiredFields": "Subject and description are required.",
       "create": "Failed to create complaint.",
       "load": "Failed to load complaint.",
+      "loadList": "Failed to load complaints.",
       "action": "Action failed.",
       "maxPhotos": "You can attach up to 5 photos."
-    }
+    },
+    "commentsEmpty": "No comments yet. Add an update below.",
+    "hero": {
+      "eyebrow": "Issue tracking",
+      "heading": "Complaints",
+      "subManage": "Track open issues, urgency, and resolution progress.",
+      "subMine": "Follow your reported issues and updates."
+    },
+    "photos": {
+      "empty": "No photos attached yet.",
+      "helper": "Add up to 5 photos so the team can act faster."
+    },
+    "raiseHero": {
+      "eyebrow": "New issue",
+      "subheading": "Describe the issue, set priority, and attach photos."
+    },
+    "search": {
+      "placeholder": "Search title, member, or category"
+    },
+    "stats": {
+      "title": "At a glance"
+    },
+    "summary": {
+      "title": "Complaint Summary"
+    },
+    "timelineEmpty": "Activity will appear here as the issue progresses.",
+    "unassigned": "Unassigned",
+    "listTitle": "Complaints"
   },
   "spaceLifecycle": {
     "milestones": {
@@ -4193,7 +4408,8 @@
   "inventory": {
     "eyebrow": "Inventory",
     "hero": {
-      "subheading": "Track stock levels, purchases, and suppliers."
+      "subheading": "Track stock levels, purchases, and suppliers.",
+      "summaryLine": "{{items}} Items · {{attention}} Need Attention"
     },
     "kpi": {
       "value": "Value",
@@ -4247,7 +4463,13 @@
       "healthyBody": "No low or out-of-stock items right now.",
       "activity": "No recent movements yet.",
       "itemsTitle": "No items yet",
-      "itemsBody": "Add your first inventory item to start tracking stock."
+      "itemsBody": "Add your first inventory item to start tracking stock.",
+      "itemsBodySimple": "Add rice, milk, oil — whatever you track day to day."
+    },
+    "errors": {
+      "loadDashboard": "Could not load inventory",
+      "loadItems": "Could not load items",
+      "loadActivity": "Could not load activity"
     },
     "items": {
       "title": "Catalog",
@@ -4295,7 +4517,9 @@
       "reasonPlaceholder": "Optional note",
       "qtyRequired": "Enter a valid quantity",
       "createSuccess": "Item created",
-      "updateSuccess": "Item updated"
+      "updateSuccess": "Item updated",
+      "currentStock": "Current Stock",
+      "reasonOptional": "Optional note"
     },
     "categories": {
       "title": "Categories",
@@ -4343,6 +4567,239 @@
       "furniture": {
         "title": "Furniture & Appliances"
       }
+    },
+    "banner": {
+      "attention": "{{count}} items need attention",
+      "attentionA11y": "{{count}} items need attention. View them.",
+      "showingAttention": "Showing {{count}} items that need attention · Clear",
+      "view": "View →"
+    },
+    "sheet": {
+      "addStock": "Add Stock",
+      "removeStock": "Remove Stock"
     }
+  },
+  "admin": {
+    "brand": "Acomi Admin",
+    "dashboard": {
+      "title": "Admin Dashboard",
+      "welcome": "Admin",
+      "signOut": "Sign out",
+      "sectionRegistration": "Registration",
+      "sectionLeadsSpaces": "Leads & spaces",
+      "stats": {
+        "registeredUsers": "Registered Users",
+        "propertyLeads": "Property leads",
+        "messLeads": "Mess leads",
+        "websiteProperty": "Website property",
+        "websiteMess": "Website mess",
+        "adminProperty": "Admin property",
+        "adminMess": "Admin mess",
+        "activeProperties": "Active properties",
+        "activeMesses": "Active messes"
+      },
+      "nav": {
+        "registeredUsersTitle": "Registered Users",
+        "registeredUsersHint": "Phone-verified accounts, including incomplete onboarding",
+        "savedAddressesTitle": "Saved Addresses",
+        "savedAddressesHint": "Reuse recent locations for new properties and messes",
+        "propertiesTitle": "Properties",
+        "propertiesHint": "Leads, active spaces, add property",
+        "messTitle": "Mess",
+        "messHint": "Leads, active messes, add mess"
+      }
+    },
+    "nav": {
+      "dashboard": "Admin",
+      "users": "Registered Users",
+      "properties": "Properties",
+      "property": "Property",
+      "addProperty": "Add Property",
+      "mess": "Mess",
+      "addMess": "Add Mess",
+      "addresses": "Saved Addresses"
+    },
+    "labels": {
+      "addedByAdmin": "Added by Admin",
+      "registeredOnWebsite": "Registered on Website",
+      "owner": "Owner",
+      "member": "Member",
+      "ownerAndMember": "Owner & member",
+      "notSelected": "Not selected",
+      "complete": "Complete",
+      "incomplete": "Incomplete",
+      "verified": "Verified",
+      "notVerified": "Not verified",
+      "emDash": "—",
+      "testYes": "Test: Yes",
+      "testNo": "Test: No"
+    },
+    "filters": {
+      "activeSpaces": "Active spaces",
+      "websiteRegistrations": "Website registrations",
+      "addedByAdmin": "Added by admin",
+      "leads": "Leads",
+      "active": "Active",
+      "add": "Add"
+    },
+    "users": {
+      "hint": "Phone-verified accounts. Owner/Member selection is not required.",
+      "empty": "No registered users found."
+    },
+    "list": {
+      "empty": "No records found."
+    },
+    "common": {
+      "delete": "Delete",
+      "remove": "Remove",
+      "type": "Type",
+      "owner": "Owner",
+      "mobile": "Mobile",
+      "alternateMobile": "Alternate mobile",
+      "source": "Source",
+      "status": "Status",
+      "testLead": "Test lead",
+      "address": "Address",
+      "city": "City",
+      "state": "State",
+      "pincode": "Pincode",
+      "mapLink": "Google Maps link",
+      "mapLinkPlaceholder": "https://maps.google.com/...",
+      "claimed": "Claimed",
+      "editContact": "Edit contact",
+      "deleteLead": "Delete lead",
+      "ownerName": "Owner name",
+      "primaryMobile": "Primary mobile",
+      "alternateMobileLabel": "Alternate mobile",
+      "alternateMobileHint": "Optional secondary contact",
+      "ownerContact": "Owner contact",
+      "ownerContactHint": "Optional — can be filled when the owner claims.",
+      "location": "Location",
+      "locationHint": "Reuse a recent address or enter a new one.",
+      "pricingOptions": "Pricing & options"
+    },
+    "property": {
+      "deleteTitle": "Delete this property lead?",
+      "deleteMessage": "{{name}}\n\nThis action will remove the registration from the Admin lead list.",
+      "deleted": "Property lead deleted.",
+      "deleteFailed": "Could not delete property lead.",
+      "contactUpdated": "Owner contact updated.",
+      "contactUpdateFailed": "Could not update owner contact.",
+      "startingPrice": "Starting price",
+      "addEyebrow": "Admin",
+      "addHeading": "Add property lead",
+      "addSubheading": "Create a registration record for the admin lead list.",
+      "detailsTitle": "Property details",
+      "detailsHint": "Type and name shown on the lead list.",
+      "name": "Property name",
+      "startingPriceLabel": "Starting price (₹)",
+      "save": "Save property",
+      "saveFailed": "Could not save property registration.",
+      "errors": {
+        "mobile": "Enter a valid mobile number, or leave it blank.",
+        "alternateMobile": "Enter a valid alternate mobile number, or leave it blank.",
+        "alternateDifferent": "Alternate mobile number must be different from the primary mobile number.",
+        "pincode": "Enter a valid pincode, or leave it blank.",
+        "mapUrl": "Map link must start with http:// or https://",
+        "startingPrice": "Enter a valid starting price, or leave it blank."
+      }
+    },
+    "mess": {
+      "deleteTitle": "Delete this mess lead?",
+      "deleteMessage": "{{name}}\n\nThis action will remove the registration from the Admin lead list.",
+      "deleted": "Mess lead deleted.",
+      "deleteFailed": "Could not delete mess lead.",
+      "contactUpdated": "Owner contact updated.",
+      "contactUpdateFailed": "Could not update owner contact.",
+      "monthlyPrice": "Monthly price",
+      "mealPrice": "Meal price",
+      "addEyebrow": "Admin",
+      "addHeading": "Add mess lead",
+      "addSubheading": "Create a registration record for the admin lead list.",
+      "detailsTitle": "Mess details",
+      "name": "Mess name",
+      "monthlyPriceLabel": "Monthly price (₹)",
+      "mealPriceLabel": "Per meal price (₹)",
+      "save": "Save mess",
+      "saveFailed": "Could not save mess registration.",
+      "errors": {
+        "mobile": "Enter a valid mobile number, or leave it blank.",
+        "alternateMobile": "Enter a valid alternate mobile number, or leave it blank.",
+        "alternateDifferent": "Alternate mobile number must be different from the primary mobile number.",
+        "pincode": "Enter a valid pincode, or leave it blank.",
+        "mapUrl": "Map link must start with http:// or https://",
+        "monthlyPrice": "Enter a valid monthly price, or leave it blank.",
+        "mealPrice": "Enter a valid meal price, or leave it blank."
+      }
+    },
+    "addresses": {
+      "hint": "Recently used first. Multiple properties can share one address.",
+      "searchPlaceholder": "Search address, city, state, or pincode",
+      "empty": "No saved addresses yet.",
+      "loadFailed": "Unable to load saved addresses. Please try again.",
+      "backToDashboard": "Back to dashboard",
+      "editTitle": "Edit saved address",
+      "usedOnce": "Used {{count}} time",
+      "usedMany": "Used {{count}} times",
+      "removeTitle": "Remove this saved address?",
+      "removeMessage": "{{address}}, {{city}}. Existing property leads keep their address.",
+      "removed": "Saved address removed.",
+      "removeFailed": "Could not remove saved address.",
+      "updated": "Saved address updated.",
+      "updateFailed": "Could not update saved address.",
+      "requiredFields": "Address, city, and state are required.",
+      "invalidPincode": "Enter a valid 6-digit pincode.",
+      "invalidMapUrl": "Map link must start with http:// or https://"
+    },
+    "addressPicker": {
+      "selectLabel": "Select saved address",
+      "searchHint": "Search recently used addresses",
+      "addNew": "Add new address",
+      "modalTitle": "Saved addresses",
+      "emptySearch": "No saved addresses match that search.",
+      "empty": "No recently used addresses yet.",
+      "loadFailed": "Unable to load saved addresses. Please try again."
+    },
+    "contactEditor": {
+      "ownerName": "Owner name",
+      "primaryMobile": "Primary mobile number",
+      "alternateMobile": "Alternate mobile number",
+      "alternateHint": "Optional. Leave blank to remove the alternate number.",
+      "save": "Save contact",
+      "errors": {
+        "primaryMobile": "Enter a valid 10-digit primary mobile number, or leave it unchanged.",
+        "alternateMobile": "Enter a valid 10-digit alternate mobile number, or leave it blank.",
+        "alternateDifferent": "Alternate mobile number must be different from the primary mobile number."
+      }
+    },
+    "testLead": {
+      "title": "Test lead",
+      "description": "Mark as test data. Visible in lists only — does not affect delete or claim flows."
+    }
+  },
+  "home": {
+    "aboutBody": "ACOMI brings accommodation, meals, payments, and complaints into one Material Design workspace.",
+    "aboutTitle": "Built for Indian PGs & hostels",
+    "breakfast": "Breakfast",
+    "collectionLabel": "Collection",
+    "dinner": "Dinner",
+    "eyebrow": "ACOMI",
+    "heading": "Smart PG & hostel operations",
+    "insightTitle": "Meal breakdown",
+    "lunch": "Lunch",
+    "mealsLabel": "Meals today",
+    "rentLabel": "Rent collected",
+    "shortcutComplaints": "Complaints",
+    "shortcutComplaintsBody": "Tickets and resolution",
+    "shortcutMeals": "Meals",
+    "shortcutMealsBody": "Menus, polls, and headcount",
+    "shortcutMembers": "Members",
+    "shortcutMembersBody": "Residents, invites, and profiles",
+    "shortcutPayments": "Payments",
+    "shortcutPaymentsBody": "Collections and reviews",
+    "shortcutsTitle": "Product areas",
+    "subheading": "Manage tenants, payments, meals, and daily operations from one premium workspace.",
+    "summaryTitle": "Today",
+    "wasteHint": "↓ 18% less waste vs last week"
   }
 }

@@ -9,7 +9,7 @@ import type { BuilderRowLifecycleMenuProps } from '../accommodation/BuilderRowLi
 import { InlineEditableName } from '../ui/InlineEditableName';
 import { useBedOccupantLabel } from '../../hooks/useBedOccupantLabel';
 import type { useAccommodationOccupancyFlow } from '../../hooks/useAccommodationOccupancyFlow';
-import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { colors, radius, spacing, typography } from '../../theme';
 import { isAccommodationEntityActive } from '../../utils/accommodationEntityActive';
 import { formatBedDisplayLabel } from '../../utils/formatBedDisplayLabel';
 import { buildBedOccupancyMenuOptions } from '../../utils/bedOccupancyMenuOptions';
@@ -150,17 +150,21 @@ export function BedInventoryListRow({
             style={({ pressed }) => [styles.headerMain, pressed && styles.headerPressed]}
             accessibilityRole="button"
             accessibilityLabel={displayLabel}>
-            <InlineEditableName
-              value={bed.label}
-              displayValue={displayLabel}
-              editable={editableName}
-              onSave={onSaveName}
-            />
-            {inactive ? (
-              <AccommodationInactiveBadge />
-            ) : (
-              <AccommodationStatusBadge status={bed.status} />
-            )}
+            <View style={styles.titleRow}>
+              <View style={styles.titleWrap}>
+                <InlineEditableName
+                  value={bed.label}
+                  displayValue={displayLabel}
+                  editable={editableName}
+                  onSave={onSaveName}
+                />
+              </View>
+              {inactive ? (
+                <AccommodationInactiveBadge />
+              ) : (
+                <AccommodationStatusBadge status={bed.status} />
+              )}
+            </View>
             {canManageOccupancyActions && !inactive && occupantText ? (
               <Text style={styles.meta} numberOfLines={1}>
                 {occupantText}
@@ -205,7 +209,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
-    ...shadows.sm,
   },
   header: {
     flexDirection: 'row',
@@ -221,6 +224,16 @@ const styles = StyleSheet.create({
   },
   headerPressed: {
     backgroundColor: colors.surface,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    width: '100%',
+  },
+  titleWrap: {
+    flex: 1,
+    minWidth: 0,
   },
   menuSlot: {
     width: 44,

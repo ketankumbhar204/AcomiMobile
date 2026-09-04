@@ -62,11 +62,17 @@ function createUnits(
   }));
 }
 
-function floorName(index: number, includeGroundFloor: boolean): string {
+function floorName(
+  index: number,
+  includeGroundFloor: boolean,
+  groundFloorName = 'Ground Floor',
+  floorNameTemplate = 'Floor {{number}}',
+): string {
   if (includeGroundFloor && index === 0) {
-    return 'Ground Floor';
+    return groundFloorName;
   }
-  return `Floor ${includeGroundFloor ? index : index + 1}`;
+  const number = includeGroundFloor ? index : index + 1;
+  return floorNameTemplate.replace('{{number}}', String(number));
 }
 
 export function duplicateFloor(structure: EditableSetupStructure, floorId: string): EditableSetupStructure {
@@ -95,7 +101,15 @@ export function deleteFloor(structure: EditableSetupStructure, floorId: string):
 export function setFloorCount(
   structure: EditableSetupStructure,
   count: number,
-  config: Pick<ExpandStructureConfig, 'roomsPerParent' | 'bedsPerRoom' | 'capacityPerRoom' | 'includeGroundFloor'>,
+  config: Pick<
+    ExpandStructureConfig,
+    | 'roomsPerParent'
+    | 'bedsPerRoom'
+    | 'capacityPerRoom'
+    | 'includeGroundFloor'
+    | 'groundFloorName'
+    | 'floorNameTemplate'
+  >,
 ): EditableSetupStructure {
   const safeCount = Math.max(1, Math.min(count, 20));
   const floors = [...structure.floors];
@@ -107,12 +121,22 @@ export function setFloorCount(
       ? reassignIdsFloor(template)
       : {
           id: createStructureId(),
-          name: floorName(index, config.includeGroundFloor),
+          name: floorName(
+            index,
+            config.includeGroundFloor,
+            config.groundFloorName,
+            config.floorNameTemplate,
+          ),
           number: index + 1,
           units: [],
           rooms: [],
         };
-    next.name = floorName(index, config.includeGroundFloor);
+    next.name = floorName(
+      index,
+      config.includeGroundFloor,
+      config.groundFloorName,
+      config.floorNameTemplate,
+    );
     next.number = index + 1;
     if (structure.kind === 'floors_with_units' && next.units.length === 0) {
       next.units = createUnits(1, config.roomsPerParent, config.bedsPerRoom, config.capacityPerRoom);

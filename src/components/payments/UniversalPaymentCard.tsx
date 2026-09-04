@@ -48,6 +48,7 @@ export function UniversalPaymentCard({
     payment.paymentType === 'MEAL'
       ? displayMealPaymentTitle(payment.title, payment.month, month =>
           formatBillingPeriod(month, i18n.language),
+          t('payments.mealPaymentTitle'),
         )
       : payment.title;
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Skeleton } from '../ui/Skeleton';
 import { colors, radius, shadows, spacing } from '../../theme';
 
@@ -18,8 +19,9 @@ export function DashboardOwnerLoadingSkeleton({
   showPropertyOps = true,
   showMealOps = true,
 }: DashboardOwnerLoadingSkeletonProps) {
+  const { t } = useTranslation();
   return (
-    <View style={styles.wrap} accessibilityLabel="Loading dashboard" accessibilityRole="progressbar">
+    <View style={styles.wrap} accessibilityLabel={t('navigation.loadingDashboard')} accessibilityRole="progressbar">
       <View style={styles.hero}>
         <View style={styles.heroCol}>
           <Skeleton width={28} height={28} borderRadius={14} />

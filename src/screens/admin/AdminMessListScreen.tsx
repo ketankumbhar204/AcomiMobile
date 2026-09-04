@@ -3,6 +3,8 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from '
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { adminApi } from '../../api/adminApi';
 import type { MessRegistrationListItem, RegistrationSource } from '../../api/types';
 import { AdminLeadCard, adminList } from '../../components/admin';
@@ -15,14 +17,19 @@ import { colors, spacing, typography } from '../../theme';
 type Nav = NativeStackNavigationProp<AdminStackParamList, 'AdminMessList'>;
 type Route = NativeStackScreenProps<AdminStackParamList, 'AdminMessList'>['route'];
 
-function filterLabel(tab: 'leads' | 'active', source?: RegistrationSource): string | null {
-  if (tab === 'active') return 'Active spaces';
-  if (source === 'PUBLIC_WEBSITE') return 'Website registrations';
-  if (source === 'ADMIN') return 'Added by admin';
+function filterLabel(
+  t: TFunction,
+  tab: 'leads' | 'active',
+  source?: RegistrationSource,
+): string | null {
+  if (tab === 'active') return t('admin.filters.activeSpaces');
+  if (source === 'PUBLIC_WEBSITE') return t('admin.filters.websiteRegistrations');
+  if (source === 'ADMIN') return t('admin.filters.addedByAdmin');
   return null;
 }
 
 export function AdminMessListScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { showConfirm } = useConfirmDialog();
@@ -87,22 +94,22 @@ export function AdminMessListScreen() {
     }, [route.params?.source, route.params?.tab]),
   );
 
-  const activeFilterLabel = filterLabel(tab, sourceFilter);
+  const activeFilterLabel = filterLabel(t, tab, sourceFilter);
 
   function handleDelete(item: MessRegistrationListItem) {
     showConfirm({
-      title: 'Delete this mess lead?',
-      message: `${item.messName}\n\nThis action will remove the registration from the Admin lead list.`,
-      confirmLabel: 'Delete',
-      cancelLabel: 'Cancel',
+      title: t('admin.mess.deleteTitle'),
+      message: t('admin.mess.deleteMessage', { name: item.messName }),
+      confirmLabel: t('admin.common.delete'),
+      cancelLabel: t('common.cancel'),
       destructive: true,
       onConfirm: async () => {
         try {
           await adminApi.deleteMessRegistration(item.id);
           setItems(prev => prev.filter(row => row.id !== item.id));
-          showToast('Mess lead deleted.');
+          showToast(t('admin.mess.deleted'));
         } catch {
-          showToast('Could not delete mess lead.');
+          showToast(t('admin.mess.deleteFailed'));
         }
       },
     });
@@ -120,12 +127,12 @@ export function AdminMessListScreen() {
               navigation.setParams({ tab: key, source: key === 'active' ? undefined : sourceFilter });
             }}>
             <Text style={[adminList.tabText, tab === key && adminList.tabTextActive]}>
-              {key === 'leads' ? 'Leads' : 'Active'}
+              {key === 'leads' ? t('admin.filters.leads') : t('admin.filters.active')}
             </Text>
           </Pressable>
         ))}
         <Pressable style={adminList.addBtn} onPress={() => navigation.navigate('AdminAddMess')}>
-          <Text style={adminList.addBtnText}>Add</Text>
+          <Text style={adminList.addBtnText}>{t('admin.filters.add')}</Text>
         </Pressable>
       </View>
       {activeFilterLabel && tab === 'leads' ? (
@@ -142,7 +149,7 @@ export function AdminMessListScreen() {
             <AdminLeadCard
               title={item.messName}
               subtitle={`${item.ownerName} · ${item.mobileNumber}`}
-              meta={`${item.city || '—'} · ${item.pincode || '—'}`}
+              meta={`${item.city || t('admin.labels.emDash')} · ${item.pincode || t('admin.labels.emDash')}`}
               sourceLabel={tab === 'leads' ? formatRegistrationSource(item.source) : undefined}
               testLead={tab === 'leads' ? item.testLead : undefined}
               showDelete={tab === 'leads'}
@@ -154,7 +161,7 @@ export function AdminMessListScreen() {
               onDelete={() => handleDelete(item)}
             />
           )}
-          ListEmptyComponent={<Text style={styles.empty}>No records found.</Text>}
+          ListEmptyComponent={<Text style={styles.empty}>{t('admin.list.empty')}</Text>}
         />
       )}
     </View>

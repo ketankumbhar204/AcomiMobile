@@ -9,7 +9,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
-import { colors, radius, shadows, spacing, typography } from '../../../theme';
+import { colors, radius, spacing, typography } from '../../../theme';
 
 type IconProps = {
   size?: number;
@@ -139,7 +139,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
-    ...shadows.sm,
   },
   cardCompact: {
     flex: 1,

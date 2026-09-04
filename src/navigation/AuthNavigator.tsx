@@ -1,5 +1,6 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import { LoginScreen } from '../screens/auth/LoginScreen';
 import { OtpScreen } from '../screens/auth/OtpScreen';
 import { ForgotPasswordScreen } from '../screens/auth/ForgotPasswordScreen';
@@ -12,6 +13,7 @@ import type { AuthStackParamList } from './types';
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
 export function AuthNavigator() {
+  const { t } = useTranslation();
   return (
     <Stack.Navigator screenOptions={stackHeaderOptions}>
       <Stack.Screen
@@ -32,12 +34,12 @@ export function AuthNavigator() {
       <Stack.Screen
         name="ForgotPassword"
         component={ForgotPasswordScreen}
-        options={{ headerShown: true, title: 'Forgot password' }}
+        options={{ headerShown: true, title: t('navigation.forgotPassword') }}
       />
       <Stack.Screen
         name="ResetPassword"
         component={ResetPasswordScreen}
-        options={{ headerShown: true, title: 'Reset password' }}
+        options={{ headerShown: true, title: t('navigation.resetPassword') }}
       />
       <Stack.Screen
         name="RegisterPassword"

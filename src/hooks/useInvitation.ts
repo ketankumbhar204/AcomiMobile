@@ -1,13 +1,14 @@
 import { useCallback, useState } from 'react';
-import { ApiError, memberApi } from '../api';
+import { memberApi } from '../api';
 import type {
   CreateInvitationRequest,
   InvitationResponse,
   SpaceMembershipResponse,
   UUID,
 } from '../api/types';
-import { getAuthRequiredMessage, useAuthenticatedUserId } from './useAuth';
+import { getMembershipErrorMessage } from '../utils/membershipErrors';
 import { invalidateDashboardQueries } from '../utils/dashboardQueryCache';
+import { getAuthRequiredMessage, useAuthenticatedUserId } from './useAuth';
 
 export type CreateInvitationInput = Omit<
   CreateInvitationRequest,
@@ -46,11 +47,7 @@ export function useCreateInvitation(): UseCreateInvitationResult {
         invalidateDashboardQueries();
         return created;
       } catch (err) {
-        const message =
-          err instanceof ApiError
-            ? err.message
-            : 'Failed to send invitation. Please try again.';
-        setError(message);
+        setError(getMembershipErrorMessage(err, 'membership.errors.invite'));
         return null;
       } finally {
         setIsSubmitting(false);
@@ -91,11 +88,7 @@ export function useAcceptInvitation(): UseAcceptInvitationResult {
         invalidateDashboardQueries();
         return membership;
       } catch (err) {
-        const message =
-          err instanceof ApiError
-            ? err.message
-            : 'Failed to accept invitation. Please try again.';
-        setError(message);
+        setError(getMembershipErrorMessage(err, 'membership.errors.accept'));
         return null;
       } finally {
         setIsSubmitting(false);
