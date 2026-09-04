@@ -133,11 +133,17 @@ function detectStructureKind(
   return 'building_units';
 }
 
-function floorName(index: number, includeGroundFloor: boolean): string {
+function floorName(
+  index: number,
+  includeGroundFloor: boolean,
+  groundFloorName = 'Ground Floor',
+  floorNameTemplate = 'Floor {{number}}',
+): string {
   if (includeGroundFloor && index === 0) {
-    return 'Ground Floor';
+    return groundFloorName;
   }
-  return `Floor ${includeGroundFloor ? index : index + 1}`;
+  const number = includeGroundFloor ? index : index + 1;
+  return floorNameTemplate.replace('{{number}}', String(number));
 }
 
 export function expandToEditableStructure(
@@ -186,7 +192,12 @@ export function expandToEditableStructure(
 
       return {
         id: parsedFloor?.id ?? createStructureId(),
-        name: parsedFloor?.label ?? floorName(index, config.includeGroundFloor),
+        name: parsedFloor?.label ?? floorName(
+          index,
+          config.includeGroundFloor,
+          config.groundFloorName,
+          config.floorNameTemplate,
+        ),
         number: config.includeGroundFloor ? index : index + 1,
         units: createUnits(
           unitCount || 1,
@@ -208,7 +219,12 @@ export function expandToEditableStructure(
 
     return {
       id: parsedFloor?.id ?? createStructureId(),
-        name: parsedFloor?.label ?? floorName(index, config.includeGroundFloor),
+        name: parsedFloor?.label ?? floorName(
+          index,
+          config.includeGroundFloor,
+          config.groundFloorName,
+          config.floorNameTemplate,
+        ),
         number: config.includeGroundFloor ? index : index + 1,
         units: [],
       rooms: createRooms(

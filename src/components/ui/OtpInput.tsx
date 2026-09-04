@@ -6,6 +6,7 @@ import {
   TextInputKeyPressEventData,
   View,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { colors, shadows, spacing } from '../../theme';
 
 const OTP_LENGTH = 6;
@@ -17,6 +18,7 @@ type OtpInputProps = {
 };
 
 export function OtpInput({ value, onChange, disabled = false }: OtpInputProps) {
+  const { t } = useTranslation();
   const inputRefs = useRef<Array<TextInput | null>>([]);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(0);
 
@@ -66,7 +68,7 @@ export function OtpInput({ value, onChange, disabled = false }: OtpInputProps) {
   };
 
   return (
-    <View style={styles.row} accessibilityLabel="One-time password">
+    <View style={styles.row} accessibilityLabel={t('navigation.otpField')}>
       {digits.map((digit, index) => {
         const isFilled = digit.length > 0;
         const isFocused = focusedIndex === index;
@@ -92,7 +94,7 @@ export function OtpInput({ value, onChange, disabled = false }: OtpInputProps) {
             selectTextOnFocus
             caretHidden
             textAlign="center"
-            accessibilityLabel={`OTP digit ${index + 1}`}
+            accessibilityLabel={t('navigation.otpDigit', { index: index + 1 })}
           />
         );
       })}

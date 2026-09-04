@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Card } from '../ui';
 import { colors, spacing, typography } from '../../theme';
 
@@ -24,6 +25,8 @@ export function AdminLeadCard({
   onPress,
   onDelete,
 }: AdminLeadCardProps) {
+  const { t } = useTranslation();
+
   return (
     <Card style={styles.card}>
       <Pressable onPress={onPress} disabled={!onPress}>
@@ -34,14 +37,14 @@ export function AdminLeadCard({
           {sourceLabel ? <Text style={styles.sourceBadge}>{sourceLabel}</Text> : null}
           {testLead != null ? (
             <Text style={[styles.testBadge, testLead && styles.testBadgeActive]}>
-              Test: {testLead ? 'Yes' : 'No'}
+              {testLead ? t('admin.labels.testYes') : t('admin.labels.testNo')}
             </Text>
           ) : null}
         </View>
       </Pressable>
       {showDelete && onDelete ? (
         <Pressable style={styles.deleteBtn} onPress={onDelete} hitSlop={8}>
-          <Text style={styles.deleteText}>Delete</Text>
+          <Text style={styles.deleteText}>{t('admin.common.delete')}</Text>
         </Pressable>
       ) : null}
     </Card>

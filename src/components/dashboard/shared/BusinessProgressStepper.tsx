@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { Check } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { colors, spacing, typography } from '../../../theme';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -56,6 +57,7 @@ export function BusinessProgressStepper({
   accessibilityLabel,
   onStepPress,
 }: BusinessProgressStepperProps) {
+  const { t } = useTranslation();
   const prevIndex = useRef(currentStepIndex);
 
   useEffect(() => {
@@ -132,7 +134,7 @@ export function BusinessProgressStepper({
               onPress={() => onStepPress(step.id, index)}
               accessibilityRole="button"
               accessibilityLabel={step.label}
-              accessibilityHint="Opens this setup step">
+              accessibilityHint={t('dashboard.setup.openStepA11y')}>
               {body}
             </Pressable>
           );

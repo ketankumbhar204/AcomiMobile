@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { colors, radius, spacing, typography } from '../../theme';
 
 type QuantityStepperProps = {
@@ -16,6 +17,7 @@ export function QuantityStepper({
   min = 1,
   disabled = false,
 }: QuantityStepperProps) {
+  const { t } = useTranslation();
   const canDecrement = !disabled && quantity > min;
 
   return (
@@ -28,7 +30,7 @@ export function QuantityStepper({
           }
         }}
         disabled={!canDecrement}
-        accessibilityLabel="Decrease quantity">
+        accessibilityLabel={t('navigation.decreaseQuantity')}>
         <Text style={styles.buttonLabel}>−</Text>
       </Pressable>
       <Text style={styles.quantity}>{quantity}</Text>
@@ -40,7 +42,7 @@ export function QuantityStepper({
           }
         }}
         disabled={disabled}
-        accessibilityLabel="Increase quantity">
+        accessibilityLabel={t('navigation.increaseQuantity')}>
         <Text style={styles.buttonLabel}>+</Text>
       </Pressable>
     </View>

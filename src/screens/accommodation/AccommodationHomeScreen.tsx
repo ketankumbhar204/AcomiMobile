@@ -313,7 +313,7 @@ export function AccommodationHomeScreen() {
             {isEmpty ? (
               <View style={styles.pageIntro}>
                 <Text style={styles.pageTitle}>
-                  {t('accommodation.home.title', { defaultValue: 'Accommodation' })}
+                  {t('accommodation.home.title', { defaultValue: 'Rooms' })}
                 </Text>
                 <Text style={styles.pageSubtitle}>
                   {t('accommodation.home.pageSubtitle', {
@@ -331,7 +331,7 @@ export function AccommodationHomeScreen() {
                   {t('accommodation.home.eyebrow', { defaultValue: 'Property' })}
                 </Text>
                 <Text style={styles.heading}>
-                  {t('accommodation.home.title', { defaultValue: 'Accommodation' })}
+                  {t('accommodation.home.title', { defaultValue: 'Rooms' })}
                 </Text>
                 <Text style={styles.subheading}>
                   {t('accommodation.home.subtitle', {

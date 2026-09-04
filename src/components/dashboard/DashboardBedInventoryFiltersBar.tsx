@@ -117,6 +117,7 @@ export function DashboardBedInventoryFilterDropdownOverlay({
   onSelect: (value?: string) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const { anchorBottom, options, selectedValue, openField } = layout;
 
   return (
@@ -125,7 +126,7 @@ export function DashboardBedInventoryFilterDropdownOverlay({
         style={styles.backdrop}
         onPress={onClose}
         accessibilityRole="button"
-        accessibilityLabel="Close filter dropdown"
+        accessibilityLabel={t('navigation.closeFilterDropdown')}
       />
       <View
         style={[styles.dropdownOverlay, { top: anchorBottom }]}

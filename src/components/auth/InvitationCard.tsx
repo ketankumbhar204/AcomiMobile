@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Building2, CalendarDays, MailPlus, UserRound } from 'lucide-react-native';
 import { DashboardAvatar } from '../dashboard/shared/DashboardPersonCard';
 import { Button } from '../ui';
@@ -28,6 +29,7 @@ export function InvitationCard({
   disabled,
   onAccept,
 }: InvitationCardProps) {
+  const { t } = useTranslation();
   return (
     <View style={styles.card} accessibilityRole="summary">
       <View style={styles.header}>
@@ -59,7 +61,7 @@ export function InvitationCard({
       </View>
       <View style={styles.pendingChip}>
         <MailPlus size={12} color="#B45309" strokeWidth={2.4} />
-        <Text style={styles.pendingText}>Pending</Text>
+        <Text style={styles.pendingText}>{t('payments.status.PENDING')}</Text>
       </View>
 
       <Button

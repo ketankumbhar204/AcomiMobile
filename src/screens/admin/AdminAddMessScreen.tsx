@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import { ChefHat, IndianRupee, MapPin, UserRound } from 'lucide-react-native';
 import { adminApi } from '../../api/adminApi';
 import type { AdminCreateMessRegistrationRequest } from '../../api/types';
@@ -44,6 +45,7 @@ function optionalText(value: string): string | undefined {
 }
 
 export function AdminAddMessScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const [messName, setMessName] = useState('');
   const [ownerName, setOwnerName] = useState('');
@@ -65,11 +67,11 @@ export function AdminAddMessScreen() {
     setError(null);
 
     if (mobileNumber.trim() && !isValidIndianMobile(mobileNumber)) {
-      setError('Enter a valid mobile number, or leave it blank.');
+      setError(t('admin.mess.errors.mobile'));
       return;
     }
     if (alternateMobileNumber.trim() && !isValidIndianMobile(alternateMobileNumber)) {
-      setError('Enter a valid alternate mobile number, or leave it blank.');
+      setError(t('admin.mess.errors.alternateMobile'));
       return;
     }
     if (
@@ -77,15 +79,15 @@ export function AdminAddMessScreen() {
       alternateMobileNumber.trim() &&
       mobileNumber.trim() === alternateMobileNumber.trim()
     ) {
-      setError('Alternate mobile number must be different from the primary mobile number.');
+      setError(t('admin.mess.errors.alternateDifferent'));
       return;
     }
     if (pincode.trim() && !isValidPincode(pincode.trim())) {
-      setError('Enter a valid pincode, or leave it blank.');
+      setError(t('admin.mess.errors.pincode'));
       return;
     }
     if (mapUrl.trim() && !isValidMapUrl(mapUrl)) {
-      setError('Map link must start with http:// or https://');
+      setError(t('admin.mess.errors.mapUrl'));
       return;
     }
 
@@ -93,7 +95,7 @@ export function AdminAddMessScreen() {
     if (monthlyPrice.trim()) {
       monthly = Number(monthlyPrice);
       if (!Number.isFinite(monthly) || monthly < 0) {
-        setError('Enter a valid monthly price, or leave it blank.');
+        setError(t('admin.mess.errors.monthlyPrice'));
         return;
       }
     }
@@ -101,7 +103,7 @@ export function AdminAddMessScreen() {
     if (mealPrice.trim()) {
       meal = Number(mealPrice);
       if (!Number.isFinite(meal) || meal < 0) {
-        setError('Enter a valid meal price, or leave it blank.');
+        setError(t('admin.mess.errors.mealPrice'));
         return;
       }
     }
@@ -134,7 +136,7 @@ export function AdminAddMessScreen() {
       await adminApi.createMessRegistration(payload);
       navigation.goBack();
     } catch {
-      setError('Could not save mess registration.');
+      setError(t('admin.mess.saveFailed'));
     } finally {
       setLoading(false);
     }
@@ -153,9 +155,9 @@ export function AdminAddMessScreen() {
             showsVerticalScrollIndicator={false}>
             <AdminFormHero
               icon={ChefHat}
-              eyebrow="Admin"
-              heading="Add mess lead"
-              subheading="Create a registration record for the admin lead list."
+              eyebrow={t('admin.mess.addEyebrow')}
+              heading={t('admin.mess.addHeading')}
+              subheading={t('admin.mess.addSubheading')}
             />
 
             {error ? (
@@ -165,35 +167,44 @@ export function AdminAddMessScreen() {
             ) : null}
 
             <View style={styles.sections}>
-              <AdminFormSection title="Mess details">
-                <FormInput label="Mess name" value={messName} onChangeText={setMessName} leadingIcon={ChefHat} />
+              <AdminFormSection title={t('admin.mess.detailsTitle')}>
+                <FormInput
+                  label={t('admin.mess.name')}
+                  value={messName}
+                  onChangeText={setMessName}
+                  leadingIcon={ChefHat}
+                />
               </AdminFormSection>
 
-              <AdminFormSection title="Owner contact" description="Optional — can be filled when the owner claims.">
+              <AdminFormSection
+                title={t('admin.common.ownerContact')}
+                description={t('admin.common.ownerContactHint')}>
                 <FormInput
-                  label="Owner name"
+                  label={t('admin.common.ownerName')}
                   value={ownerName}
                   onChangeText={setOwnerName}
                   leadingIcon={UserRound}
                 />
                 <FormInput
-                  label="Primary mobile"
+                  label={t('admin.common.primaryMobile')}
                   value={mobileNumber}
                   onChangeText={setMobileNumber}
                   keyboardType="number-pad"
                   maxLength={10}
                 />
                 <FormInput
-                  label="Alternate mobile"
+                  label={t('admin.common.alternateMobileLabel')}
                   value={alternateMobileNumber}
                   onChangeText={setAlternateMobileNumber}
                   keyboardType="number-pad"
                   maxLength={10}
-                  hint="Optional secondary contact"
+                  hint={t('admin.common.alternateMobileHint')}
                 />
               </AdminFormSection>
 
-              <AdminFormSection title="Location" description="Reuse a recent address or enter a new one.">
+              <AdminFormSection
+                title={t('admin.common.location')}
+                description={t('admin.common.locationHint')}>
                 <AdminSavedAddressPicker
                   value={{ addressLine, city, state, pincode, mapUrl }}
                   onChange={next => {
@@ -204,36 +215,41 @@ export function AdminAddMessScreen() {
                     setMapUrl(next.mapUrl);
                   }}
                 />
-                <FormInput label="Address" value={addressLine} onChangeText={setAddressLine} leadingIcon={MapPin} />
-                <FormInput label="City" value={city} onChangeText={setCity} />
-                <FormInput label="State" value={state} onChangeText={setState} />
                 <FormInput
-                  label="Pincode"
+                  label={t('admin.common.address')}
+                  value={addressLine}
+                  onChangeText={setAddressLine}
+                  leadingIcon={MapPin}
+                />
+                <FormInput label={t('admin.common.city')} value={city} onChangeText={setCity} />
+                <FormInput label={t('admin.common.state')} value={state} onChangeText={setState} />
+                <FormInput
+                  label={t('admin.common.pincode')}
                   value={pincode}
                   onChangeText={setPincode}
                   keyboardType="number-pad"
                   maxLength={6}
                 />
                 <FormInput
-                  label="Google Maps link"
+                  label={t('admin.common.mapLink')}
                   value={mapUrl}
                   onChangeText={setMapUrl}
-                  placeholder="https://maps.google.com/..."
+                  placeholder={t('admin.common.mapLinkPlaceholder')}
                   autoCapitalize="none"
                   autoCorrect={false}
                 />
               </AdminFormSection>
 
-              <AdminFormSection title="Pricing & options">
+              <AdminFormSection title={t('admin.common.pricingOptions')}>
                 <FormInput
-                  label="Monthly price (₹)"
+                  label={t('admin.mess.monthlyPriceLabel')}
                   value={monthlyPrice}
                   onChangeText={setMonthlyPrice}
                   keyboardType="numeric"
                   leadingIcon={IndianRupee}
                 />
                 <FormInput
-                  label="Per meal price (₹)"
+                  label={t('admin.mess.mealPriceLabel')}
                   value={mealPrice}
                   onChangeText={setMealPrice}
                   keyboardType="numeric"
@@ -246,7 +262,7 @@ export function AdminAddMessScreen() {
 
           <StickyFormActions
             primary={{
-              label: 'Save mess',
+              label: t('admin.mess.save'),
               onPress: () => {
                 handleSubmit().catch(() => undefined);
               },
@@ -254,7 +270,7 @@ export function AdminAddMessScreen() {
               disabled: loading,
             }}
             secondary={{
-              label: 'Cancel',
+              label: t('common.cancel'),
               onPress: () => navigation.goBack(),
               disabled: loading,
             }}

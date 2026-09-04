@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { inventoryApi } from '../api/inventoryApi';
+import { i18n } from '../i18n';
 import type {
   InventoryCategory,
   InventoryDashboardSummary,
@@ -25,7 +26,7 @@ export function useInventoryDashboard(spaceId: UUID, spaceType: SpaceType, enabl
       const next = await inventoryApi.getDashboard(spaceId, spaceType);
       setData(next);
     } catch {
-      setError('Could not load inventory');
+      setError(i18n.t('inventory.errors.loadDashboard'));
     } finally {
       setLoading(false);
     }
@@ -62,7 +63,7 @@ export function useInventoryItems(spaceId: UUID, spaceType: SpaceType, enabled =
       setCategories(nextCategories);
       setSuppliers(nextSuppliers);
     } catch {
-      setError('Could not load items');
+      setError(i18n.t('inventory.errors.loadItems'));
     } finally {
       setLoading(false);
     }
@@ -96,7 +97,7 @@ export function useInventoryTransactions(
       const next = await inventoryApi.listTransactions(spaceId, spaceType, itemId);
       setTransactions(next);
     } catch {
-      setError('Could not load activity');
+      setError(i18n.t('inventory.errors.loadActivity'));
     } finally {
       setLoading(false);
     }

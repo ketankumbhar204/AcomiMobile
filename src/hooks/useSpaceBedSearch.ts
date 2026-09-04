@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { accommodationApi } from '../api/accommodationApi';
 import type { AccommodationStatus, BedSpaceListItemResponse, UUID } from '../api/types';
+import { getAccommodationErrorMessage } from '../utils/accommodationErrors';
 import { dedupeBedsById } from '../utils/groupBedsByRoom';
 
 const PAGE_SIZE = 100;
@@ -98,7 +99,7 @@ export function useSpaceBedSearch({
         setTotalElements(response.totalElements);
         setError(null);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load beds');
+        setError(getAccommodationErrorMessage(err, 'accommodation.errors.loadBeds'));
         if (!append) {
           setItems([]);
           setTotalElements(0);

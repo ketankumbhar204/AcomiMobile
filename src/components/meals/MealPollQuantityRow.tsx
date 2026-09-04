@@ -147,14 +147,14 @@ export function MealPollQuantityRow({
                 style={[styles.button, quantity <= 1 && styles.buttonDisabled]}
                 onPress={decrement}
                 disabled={quantity <= 1}
-                accessibilityLabel="Decrease quantity">
+                accessibilityLabel={t('navigation.decreaseQuantity')}>
                 <Text style={styles.buttonLabel}>−</Text>
               </Pressable>
               <Text style={styles.quantity}>{quantity}</Text>
               <Pressable
                 style={styles.button}
                 onPress={increment}
-                accessibilityLabel="Increase quantity">
+                accessibilityLabel={t('navigation.increaseQuantity')}>
                 <Text style={styles.buttonLabel}>+</Text>
               </Pressable>
             </Pressable>

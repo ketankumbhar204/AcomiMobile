@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { occupancyApi } from '../api/occupancyApi';
 import type { OccupancyResponse, OccupancyStatus, UUID } from '../api/types';
 import { currentMonthKey } from '../utils/dashboardFinancial';
+import { getOccupancyErrorMessage } from '../utils/occupancyErrors';
 
 export type DashboardOccupancyListMode = 'active' | 'moveInsThisMonth';
 
@@ -71,7 +72,7 @@ export function useSpaceOccupancyList({
         setRows(response.content ?? []);
         setError(null);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load occupancies');
+        setError(getOccupancyErrorMessage(err, 'occupancy.errors.loadList'));
         setRows([]);
       } finally {
         setLoading(false);

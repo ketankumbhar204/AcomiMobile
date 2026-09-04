@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Keyboard, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import type { AdminUpdateRegistrationContactRequest } from '../../api/types';
 import { Button, FormInput } from '../ui';
 import { isValidIndianMobile, normalizeIndianMobileDigits } from '../../utils/indianMobile';
@@ -23,6 +24,7 @@ export function AdminRegistrationContactEditor({
   onSave,
   onCancel,
 }: AdminRegistrationContactEditorProps) {
+  const { t } = useTranslation();
   const [owner, setOwner] = useState(ownerName ?? '');
   const [primary, setPrimary] = useState(mobileNumber ?? '');
   const [alternate, setAlternate] = useState(alternateMobileNumber ?? '');
@@ -32,11 +34,11 @@ export function AdminRegistrationContactEditor({
     Keyboard.dismiss();
     setError(null);
     if (primary.trim() && !isValidIndianMobile(primary)) {
-      setError('Enter a valid 10-digit primary mobile number, or leave it unchanged.');
+      setError(t('admin.contactEditor.errors.primaryMobile'));
       return;
     }
     if (alternate.trim() && !isValidIndianMobile(alternate)) {
-      setError('Enter a valid 10-digit alternate mobile number, or leave it blank.');
+      setError(t('admin.contactEditor.errors.alternateMobile'));
       return;
     }
     if (
@@ -44,7 +46,7 @@ export function AdminRegistrationContactEditor({
       alternate.trim() &&
       normalizeIndianMobileDigits(primary) === normalizeIndianMobileDigits(alternate)
     ) {
-      setError('Alternate mobile number must be different from the primary mobile number.');
+      setError(t('admin.contactEditor.errors.alternateDifferent'));
       return;
     }
 
@@ -63,25 +65,30 @@ export function AdminRegistrationContactEditor({
           <Text style={adminErrorBanner.text}>{error}</Text>
         </View>
       ) : null}
-      <FormInput label="Owner name" value={owner} onChangeText={setOwner} />
+      <FormInput label={t('admin.contactEditor.ownerName')} value={owner} onChangeText={setOwner} />
       <FormInput
-        label="Primary mobile number"
+        label={t('admin.contactEditor.primaryMobile')}
         value={primary}
         onChangeText={text => setPrimary(normalizeIndianMobileDigits(text))}
         keyboardType="number-pad"
         maxLength={10}
       />
       <FormInput
-        label="Alternate mobile number"
+        label={t('admin.contactEditor.alternateMobile')}
         value={alternate}
         onChangeText={text => setAlternate(normalizeIndianMobileDigits(text))}
         keyboardType="number-pad"
         maxLength={10}
-        hint="Optional. Leave blank to remove the alternate number."
+        hint={t('admin.contactEditor.alternateHint')}
       />
       <View style={styles.actions}>
-        <Button label="Save contact" loading={saving} onPress={handleSubmit} />
-        <Button label="Cancel" variant="secondary" disabled={saving} onPress={onCancel} />
+        <Button label={t('admin.contactEditor.save')} loading={saving} onPress={handleSubmit} />
+        <Button
+          label={t('common.cancel')}
+          variant="secondary"
+          disabled={saving}
+          onPress={onCancel}
+        />
       </View>
     </View>
   );

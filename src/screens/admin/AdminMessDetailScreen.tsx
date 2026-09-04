@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import { adminApi } from '../../api/adminApi';
 import type { AdminUpdateRegistrationContactRequest, MessRegistrationDetail } from '../../api/types';
 import {
@@ -18,6 +19,7 @@ import { colors, spacing, typography } from '../../theme';
 type Props = NativeStackScreenProps<AdminStackParamList, 'AdminMessDetail'>;
 
 export function AdminMessDetailScreen({ navigation, route }: Props) {
+  const { t } = useTranslation();
   const { showConfirm } = useConfirmDialog();
   const showToast = useToastStore(state => state.showToast);
   const [detail, setDetail] = useState<MessRegistrationDetail | null>(null);
@@ -36,9 +38,9 @@ export function AdminMessDetailScreen({ navigation, route }: Props) {
       const updated = await adminApi.updateMessRegistrationContact(route.params.id, payload);
       setDetail(updated);
       setEditingContact(false);
-      showToast('Owner contact updated.');
+      showToast(t('admin.mess.contactUpdated'));
     } catch {
-      showToast('Could not update owner contact.');
+      showToast(t('admin.mess.contactUpdateFailed'));
     } finally {
       setSavingContact(false);
     }
@@ -47,19 +49,19 @@ export function AdminMessDetailScreen({ navigation, route }: Props) {
   function handleDeletePress() {
     if (!detail || deleting) return;
     showConfirm({
-      title: 'Delete this mess lead?',
-      message: `${detail.messName}\n\nThis action will remove the registration from the Admin lead list.`,
-      confirmLabel: 'Delete',
-      cancelLabel: 'Cancel',
+      title: t('admin.mess.deleteTitle'),
+      message: t('admin.mess.deleteMessage', { name: detail.messName }),
+      confirmLabel: t('admin.common.delete'),
+      cancelLabel: t('common.cancel'),
       destructive: true,
       onConfirm: async () => {
         setDeleting(true);
         try {
           await adminApi.deleteMessRegistration(route.params.id);
-          showToast('Mess lead deleted.');
+          showToast(t('admin.mess.deleted'));
           navigation.goBack();
         } catch {
-          showToast('Could not delete mess lead.');
+          showToast(t('admin.mess.deleteFailed'));
         } finally {
           setDeleting(false);
         }
@@ -95,38 +97,60 @@ export function AdminMessDetailScreen({ navigation, route }: Props) {
             />
           ) : (
             <>
-              <AdminDetailField label="Owner" value={detail.ownerName} />
-              <AdminDetailField label="Mobile" value={detail.mobileNumber} />
+              <AdminDetailField label={t('admin.common.owner')} value={detail.ownerName} />
+              <AdminDetailField label={t('admin.common.mobile')} value={detail.mobileNumber} />
               {detail.alternateMobileNumber ? (
-                <AdminDetailField label="Alternate mobile" value={detail.alternateMobileNumber} />
+                <AdminDetailField
+                  label={t('admin.common.alternateMobile')}
+                  value={detail.alternateMobileNumber}
+                />
               ) : null}
-              <Button label="Edit contact" variant="ghost" onPress={() => setEditingContact(true)} />
+              <Button
+                label={t('admin.common.editContact')}
+                variant="ghost"
+                onPress={() => setEditingContact(true)}
+              />
             </>
           )}
         </AdminDetailSection>
 
         <AdminDetailSection>
-          <AdminDetailField label="Source" value={formatRegistrationSource(detail.source)} />
-          <AdminDetailField label="Status" value={formatRegistrationStatus(detail.status)} />
-          <AdminDetailField label="Test lead" value={detail.testLead ? 'Yes' : 'No'} />
+          <AdminDetailField
+            label={t('admin.common.source')}
+            value={formatRegistrationSource(detail.source)}
+          />
+          <AdminDetailField
+            label={t('admin.common.status')}
+            value={formatRegistrationStatus(detail.status)}
+          />
+          <AdminDetailField
+            label={t('admin.common.testLead')}
+            value={detail.testLead ? t('common.yes') : t('common.no')}
+          />
         </AdminDetailSection>
 
         <AdminDetailSection>
           <AdminDetailField
-            label="Address"
+            label={t('admin.common.address')}
             value={`${detail.addressLine}, ${detail.city}, ${detail.state} ${detail.pincode}`}
           />
-          <AdminDetailField label="Monthly price" value={`₹${detail.monthlyPrice}`} />
-          <AdminDetailField label="Meal price" value={`₹${detail.mealPrice}`} />
+          <AdminDetailField
+            label={t('admin.mess.monthlyPrice')}
+            value={`₹${detail.monthlyPrice}`}
+          />
+          <AdminDetailField label={t('admin.mess.mealPrice')} value={`₹${detail.mealPrice}`} />
           {detail.claimedAt ? (
-            <AdminDetailField label="Claimed" value={new Date(detail.claimedAt).toLocaleString()} />
+            <AdminDetailField
+              label={t('admin.common.claimed')}
+              value={new Date(detail.claimedAt).toLocaleString()}
+            />
           ) : null}
         </AdminDetailSection>
       </ScrollView>
 
       <StickyFormActions>
         <Button
-          label="Delete lead"
+          label={t('admin.common.deleteLead')}
           variant="secondary"
           loading={deleting}
           onPress={handleDeletePress}

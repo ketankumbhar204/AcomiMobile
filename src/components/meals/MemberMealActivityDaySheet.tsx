@@ -663,7 +663,7 @@ export function MemberMealActivityDaySheet({
                 }
               }}
               accessibilityRole="button"
-              accessibilityLabel="Close"
+              accessibilityLabel={t('common.close')}
             />
             <Animated.View style={[styles.sheet, { height: sheetHeightAnim }]}>
               <View {...panResponder.panHandlers} style={styles.handleArea}>

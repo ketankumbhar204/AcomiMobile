@@ -5,6 +5,7 @@ import {
   ParamListBase,
   useNavigation,
 } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { spacing } from '../../theme';
 import { ChevronLeftIcon } from './icons/ChevronLeftIcon';
 
@@ -42,6 +43,7 @@ function goBack(navigation: NavigationProp<ParamListBase>) {
 
 export function HeaderBackButton() {
   const navigation = useNavigation();
+  const { t } = useTranslation();
 
   if (!canNavigateBack(navigation)) {
     return null;
@@ -53,7 +55,7 @@ export function HeaderBackButton() {
       style={({ pressed }) => [styles.button, pressed && styles.pressed]}
       hitSlop={8}
       accessibilityRole="button"
-      accessibilityLabel="Go back">
+      accessibilityLabel={t('navigation.goBack')}>
       <ChevronLeftIcon size={22} />
     </Pressable>
   );

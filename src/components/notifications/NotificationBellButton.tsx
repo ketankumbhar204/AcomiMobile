@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import type { MainStackParamList } from '../../navigation/types';
 import type { UUID } from '../../api/types';
 import { useSpaceNotifications } from '../../hooks/useSpaceNotifications';
@@ -34,6 +35,7 @@ function readOperatorBadgeCount(spaceId: UUID): number {
  * Tenants: unread inbox count via notifications list (lightweight; no sync).
  */
 export function NotificationBellButton({ spaceId }: NotificationBellButtonProps) {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const permissions = useSpacePermissions(spaceId);
   const isOperator = canManageNotifications(permissions);
@@ -67,7 +69,7 @@ export function NotificationBellButton({ spaceId }: NotificationBellButtonProps)
       onPress={() => navigation.navigate('SpaceNotifications', { spaceId })}
       hitSlop={8}
       accessibilityRole="button"
-      accessibilityLabel="Notifications"
+      accessibilityLabel={t('notifications.title')}
       style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
       <Text style={styles.icon}>🔔</Text>
       {badgeCount > 0 ? (

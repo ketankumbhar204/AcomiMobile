@@ -16,6 +16,7 @@ import {
   View,
   type LayoutRectangle,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { MoreVertical } from 'lucide-react-native';
 import { navigationRef } from '../../navigation/navigationRef';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
@@ -62,6 +63,7 @@ type OverflowMenuProviderProps = {
  * native navigation headers (which sit above normal JS views in the tree).
  */
 export function OverflowMenuProvider({ children }: OverflowMenuProviderProps) {
+  const { t } = useTranslation();
   const [menuState, setMenuState] = useState<OverflowMenuState | null>(null);
 
   const closeMenu = useCallback(() => {
@@ -125,7 +127,7 @@ export function OverflowMenuProvider({ children }: OverflowMenuProviderProps) {
           style={styles.backdrop}
           onPress={closeMenu}
           accessibilityRole="button"
-          accessibilityLabel="Dismiss menu">
+          accessibilityLabel={t('navigation.dismissMenu')}>
           {menuState && menuPosition ? (
             <Pressable
               style={[
