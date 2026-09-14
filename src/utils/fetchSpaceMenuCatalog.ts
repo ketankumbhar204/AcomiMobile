@@ -44,16 +44,22 @@ export async function fetchSpaceMenuCatalog(
   spaceId: UUID,
   options?: { force?: boolean },
 ): Promise<SpaceMenuCatalog> {
-  if (!options?.force) {
+  const force = options?.force === true;
+
+  if (!force) {
     const cached = cache.get(spaceId);
     if (cached) {
       return cached;
     }
-  }
-
-  const existing = inflight.get(spaceId);
-  if (existing) {
-    return existing;
+    const existing = inflight.get(spaceId);
+    if (existing) {
+      return existing;
+    }
+  } else {
+    // Force must not join a concurrent non-force load — that request can race
+    // backend lazy-seed and cache an empty catalog, which then keeps MEAL_OPS locked
+    // even after Menu Library shows seeded defaults.
+    cache.delete(spaceId);
   }
 
   const request = (async () => {

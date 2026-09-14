@@ -45,6 +45,42 @@ export function buildPaymentDetailMetaRows(
     });
   }
 
+  if (payment.billingPeriodStart && payment.billingPeriodEnd) {
+    rows.push({
+      key: 'periodDates',
+      labelKey: 'paymentCollection.detail.fields.billingPeriodDates',
+      value: `${payment.billingPeriodStart} → ${payment.billingPeriodEnd}`,
+    });
+  }
+
+  if (payment.baseAmount != null) {
+    rows.push({
+      key: 'baseAmount',
+      labelKey: 'paymentCollection.detail.fields.baseAmount',
+      value: `₹${Number(payment.baseAmount).toLocaleString('en-IN')}`,
+    });
+  }
+
+  if (payment.taxEnabled && payment.taxAmount != null) {
+    rows.push({
+      key: 'taxAmount',
+      labelKey: 'paymentCollection.detail.fields.taxAmount',
+      value: `₹${Number(payment.taxAmount).toLocaleString('en-IN')}${
+        payment.taxRatePercent != null ? ` (${payment.taxRatePercent}%)` : ''
+      }`,
+    });
+  }
+
+  if (payment.isOverdue) {
+    rows.push({
+      key: 'overdue',
+      labelKey: 'paymentCollection.detail.fields.overdue',
+      value: t('paymentCollection.detail.fields.overdueDays', {
+        days: payment.daysOverdue ?? 0,
+      }),
+    });
+  }
+
   rows.push({
     key: 'due',
     labelKey: 'paymentCollection.detail.fields.dueDate',

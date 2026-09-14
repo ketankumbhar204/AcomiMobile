@@ -55,4 +55,28 @@ describe('shouldShowDashboardMealOperations', () => {
       }),
     ).toBe(false);
   });
+
+  it('hides for Rental even when meals can be managed', () => {
+    expect(
+      shouldShowDashboardMealOperations({
+        showOwnerDashboard: true,
+        canManageMeals: true,
+        isMess: false,
+        accommodationApplicable: true,
+        isRental: true,
+      }),
+    ).toBe(false);
+  });
+
+  it('hides when meal ops capability is HIDDEN', () => {
+    expect(
+      shouldShowDashboardMealOperations({
+        showOwnerDashboard: true,
+        canManageMeals: true,
+        isMess: false,
+        accommodationApplicable: true,
+        mealOpsHidden: true,
+      }),
+    ).toBe(false);
+  });
 });

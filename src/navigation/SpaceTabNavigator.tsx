@@ -16,6 +16,7 @@ import { navigateMainStack } from './mainStackNavigation';
 import { colors, tabBarOptions, tabHeaderOptions } from '../theme';
 import { MealsHomeScreen } from '../screens/meals/MealsHomeScreen';
 import { PermissionDeniedScreen } from '../components/ui/PermissionDeniedScreen';
+import { LockedCapabilityFromAccess } from '../components/ui/LockedCapabilityScreen';
 import { PaymentsScreen } from '../screens/payments/PaymentsScreen';
 import { TenantPaymentsTabScreen } from '../screens/payments/TenantPaymentsTabScreen';
 import { ComplaintsListScreen } from '../screens/complaints/ComplaintsListScreen';
@@ -26,6 +27,7 @@ import { usePaymentsUnderReviewBadge } from '../hooks/usePaymentsUnderReviewBadg
 import { seedPaymentsUnderReviewFromPendingActions } from '../utils/paymentsReviewAttentionCache';
 import { peekPendingActions } from '../utils/pendingActionsQueryCache';
 import { peekDashboardSummary } from '../utils/dashboardQueryCache';
+import { useSpaceProgressiveAccess } from '../hooks/useSpaceProgressiveAccess';
 
 const Tab = createBottomTabNavigator<SpaceTabParamList>();
 
@@ -63,19 +65,74 @@ function DashboardTabScreen() {
 }
 
 function MembersTabScreen() {
+  const { t } = useTranslation();
   const route = useRoute<RouteProp<SpaceTabParamList, 'Members'>>();
   const spaceId = useActiveSpaceId(route.params.spaceId);
+  const { getCapability, spaceType, loading } = useSpaceProgressiveAccess(spaceId);
   useSpaceTabHeader(spaceId);
+
+  const membersAccess = getCapability('MEMBERS');
+  if (!loading && membersAccess?.mode === 'LOCKED') {
+    return (
+      <LockedCapabilityFromAccess
+        access={membersAccess}
+        featureTitle={t('navigation.members')}
+        spaceId={spaceId}
+        spaceType={spaceType}
+      />
+    );
+  }
+
   return <MembersScreen />;
 }
 
 function MealsTabScreen() {
+  const { t } = useTranslation();
   const route = useRoute<RouteProp<SpaceTabParamList, 'Meals'>>();
   const spaceId = useActiveSpaceId(route.params.spaceId);
   const permissions = useSpacePermissions(spaceId);
+  const { getCapability, spaceType, loading } = useSpaceProgressiveAccess(spaceId);
   useSpaceTabHeader(spaceId);
 
   if (!permissions.canViewMeals) {
+    return <PermissionDeniedScreen spaceId={spaceId} />;
+  }
+
+  const mealConfig = getCapability('MEAL_CONFIG');
+  const mealOps = getCapability('MEAL_OPS');
+  if (
+    permissions.canManageMeals &&
+    !loading &&
+    mealConfig?.mode === 'LOCKED'
+  ) {
+    return (
+      <LockedCapabilityFromAccess
+        access={mealConfig}
+        featureTitle={t('navigation.meals')}
+        spaceId={spaceId}
+        spaceType={spaceType}
+      />
+    );
+  }
+  if (
+    permissions.canManageMeals &&
+    !loading &&
+    mealOps?.mode === 'LOCKED'
+  ) {
+    return (
+      <LockedCapabilityFromAccess
+        access={mealOps}
+        featureTitle={t('navigation.meals')}
+        spaceId={spaceId}
+        spaceType={spaceType}
+      />
+    );
+  }
+  if (
+    !loading &&
+    mealConfig?.mode === 'HIDDEN' &&
+    mealOps?.mode === 'HIDDEN'
+  ) {
     return <PermissionDeniedScreen spaceId={spaceId} />;
   }
 
@@ -122,6 +179,12 @@ export function SpaceTabNavigator({ spaceId }: SpaceTabNavigatorProps) {
   );
 
   const showMembersTab = permissions.canManageMembers;
+  const { getCapability } = useSpaceProgressiveAccess(spaceId);
+  const mealConfigMode = getCapability('MEAL_CONFIG')?.mode;
+  const mealOpsMode = getCapability('MEAL_OPS')?.mode;
+  const showMealsTab =
+    permissions.canViewMeals === true &&
+    !(mealConfigMode === 'HIDDEN' && mealOpsMode === 'HIDDEN');
 
   // Seed badge from dashboard/pending-actions already in memory (no new fetch).
   useEffect(() => {
@@ -221,17 +284,19 @@ export function SpaceTabNavigator({ spaceId }: SpaceTabNavigatorProps) {
           }}
         />
       ) : null}
-      <Tab.Screen
-        name="Meals"
-        component={MealsTabScreen}
-        initialParams={{ spaceId }}
-        options={{
-          title: t('navigation.meals'),
-          tabBarLabel: ({ focused, color }) => (
-            <SpaceTabBarLabel label={t('navigation.meals')} focused={focused} color={color} />
-          ),
-        }}
-      />
+      {showMealsTab ? (
+        <Tab.Screen
+          name="Meals"
+          component={MealsTabScreen}
+          initialParams={{ spaceId }}
+          options={{
+            title: t('navigation.meals'),
+            tabBarLabel: ({ focused, color }) => (
+              <SpaceTabBarLabel label={t('navigation.meals')} focused={focused} color={color} />
+            ),
+          }}
+        />
+      ) : null}
       <Tab.Screen
         name="Payments"
         component={PaymentsTabScreen}

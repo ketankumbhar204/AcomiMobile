@@ -1,16 +1,42 @@
 import { launchImageLibrary } from 'react-native-image-picker';
+import type { LocalFileInput } from '../services/fileUploadService';
 
 export type PickedImage = {
-  /** URI for on-screen preview (file:// or data:). */
+  /** URI for on-screen preview (file://). */
   previewUri: string;
-  /** Value persisted or sent to the API. */
+  uri: string;
+  mime: string;
+  size: number;
+  name?: string;
+  /** @deprecated Display only; do not send as file identity. */
   fileUrl: string;
 };
+
+function toPickedImage(asset: {
+  uri?: string;
+  type?: string | null;
+  fileSize?: number | null;
+  fileName?: string | null;
+}): PickedImage | null {
+  if (!asset.uri) {
+    return null;
+  }
+  const mime = asset.type && asset.type !== 'application/octet-stream' ? asset.type : 'image/jpeg';
+  const size = asset.fileSize && asset.fileSize > 0 ? asset.fileSize : 1;
+  return {
+    previewUri: asset.uri,
+    uri: asset.uri,
+    mime,
+    size,
+    name: asset.fileName ?? undefined,
+    fileUrl: asset.uri,
+  };
+}
 
 export async function pickProfileImage(): Promise<PickedImage | null> {
   const result = await launchImageLibrary({
     mediaType: 'photo',
-    includeBase64: true,
+    includeBase64: false,
     selectionLimit: 1,
     maxWidth: 1200,
     maxHeight: 1200,
@@ -25,20 +51,14 @@ export async function pickProfileImage(): Promise<PickedImage | null> {
     throw new Error(result.errorMessage ?? result.errorCode);
   }
 
-  const asset = result.assets?.[0];
-  if (!asset) {
-    return null;
-  }
+  return toPickedImage(result.assets?.[0] ?? {});
+}
 
-  if (asset.base64) {
-    const mime = asset.type ?? 'image/jpeg';
-    const dataUri = `data:${mime};base64,${asset.base64}`;
-    return { previewUri: dataUri, fileUrl: dataUri };
-  }
-
-  if (asset.uri) {
-    return { previewUri: asset.uri, fileUrl: asset.uri };
-  }
-
-  return null;
+export function toLocalFileInput(picked: PickedImage): LocalFileInput {
+  return {
+    uri: picked.uri,
+    mime: picked.mime,
+    size: picked.size,
+    name: picked.name,
+  };
 }

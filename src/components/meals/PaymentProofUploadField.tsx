@@ -31,9 +31,9 @@ export function PaymentProofUploadField({
     }
     setPicking(true);
     try {
-      const dataUri = await pickPaymentProofImage();
-      if (dataUri) {
-        onChange(dataUri);
+      const picked = await pickPaymentProofImage();
+      if (picked) {
+        onChange(picked.previewUri);
       }
     } finally {
       setPicking(false);

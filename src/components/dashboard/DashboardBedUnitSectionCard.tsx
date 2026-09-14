@@ -1,13 +1,14 @@
 import React, { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Bookmark, UserPlus } from 'lucide-react-native';
 import type { BedSpaceListItemResponse } from '../../api/types';
-import { Card } from '../ui';
-import { colors, radius, spacing, typography } from '../../theme';
+import { BuildingInventoryRoomSection } from '../accommodation/BuildingInventoryRoomSection';
+import { Button } from '../ui';
+import { colors, spacing, typography } from '../../theme';
 import type { BedUnitGroup } from '../../utils/groupBedsByRoom';
 import { formatUnitGroupLocation } from '../../utils/groupBedsByRoom';
 import type { BedInventoryFlowAction } from './DashboardBedInventoryBedRow';
-import { DashboardBedInventoryBedRow } from './DashboardBedInventoryBedRow';
 
 type BedSectionFlowProps = {
   flowAction?: BedInventoryFlowAction;
@@ -41,7 +42,7 @@ function DashboardBedUnitSectionCardComponent({
   );
 
   return (
-    <Card style={styles.card}>
+    <View style={styles.wrap}>
       <View style={styles.unitHeader}>
         <Text style={styles.unitName}>{unitTitle}</Text>
         {location ? <Text style={styles.unitLocation}>{location}</Text> : null}
@@ -53,53 +54,73 @@ function DashboardBedUnitSectionCardComponent({
         </Text>
       </View>
 
-      {group.rooms.map(room => {
-        const roomAvailable = room.beds.filter(bed => bed.status === 'AVAILABLE').length;
-        return (
-          <View key={room.key} style={styles.roomBlock}>
-            <View style={styles.roomHeader}>
-              <Text style={styles.roomName}>{room.roomName}</Text>
-              <Text style={styles.roomCount}>
-                {t('dashboard.drilldown.roomAvailableCount', {
-                  count: room.beds.length,
-                  available: roomAvailable,
-                })}
-              </Text>
-            </View>
-            <View style={styles.bedList}>
-              {room.beds.map((bed, bedIndex) => (
-                <DashboardBedInventoryBedRow
-                  key={bed.bedId}
-                  bed={bed}
-                  canManageOccupancy={canManageOccupancy}
-                  onPress={() => onBedPress(bed)}
-                  onAllocate={onAllocate ? () => onAllocate(bed) : undefined}
-                  onReserve={onReserve ? () => onReserve(bed) : undefined}
-                  onFlowAction={onFlowAction ? () => onFlowAction(bed) : undefined}
-                  flowAction={flowAction}
-                  showDivider={bedIndex > 0}
-                />
-              ))}
-            </View>
-          </View>
-        );
-      })}
-    </Card>
+      {group.rooms.map(room => (
+        <BuildingInventoryRoomSection
+          key={room.key}
+          group={room}
+          onBedPress={bed => {
+            if (flowAction !== 'dashboard' && bed.status === 'AVAILABLE' && onFlowAction) {
+              onFlowAction(bed);
+              return;
+            }
+            onBedPress(bed);
+          }}
+          renderBedFooter={bed => {
+            const isAvailable = bed.status === 'AVAILABLE';
+            if (
+              flowAction === 'dashboard' &&
+              canManageOccupancy &&
+              isAvailable &&
+              onAllocate &&
+              onReserve
+            ) {
+              return (
+                <View style={styles.actions}>
+                  <Button
+                    label={t('occupancy.actions.allocate')}
+                    onPress={() => onAllocate(bed)}
+                    icon={UserPlus}
+                    style={styles.actionBtn}
+                  />
+                  <Button
+                    label={t('occupancy.actions.reserve')}
+                    variant="secondary"
+                    onPress={() => onReserve(bed)}
+                    icon={Bookmark}
+                    style={styles.actionBtn}
+                  />
+                </View>
+              );
+            }
+            if (flowAction !== 'dashboard' && isAvailable && onFlowAction) {
+              const label =
+                flowAction === 'allocate'
+                  ? t('occupancy.actions.allocate')
+                  : flowAction === 'reserve'
+                    ? t('occupancy.actions.reserve')
+                    : t('occupancy.actions.transfer');
+              return (
+                <Button label={label} onPress={() => onFlowAction(bed)} style={styles.singleAction} />
+              );
+            }
+            return null;
+          }}
+        />
+      ))}
+    </View>
   );
 }
 
 export const DashboardBedUnitSectionCard = memo(DashboardBedUnitSectionCardComponent);
 
 const styles = StyleSheet.create({
-  card: {
-    marginBottom: spacing.md,
+  wrap: {
+    marginBottom: spacing.sm,
   },
   unitHeader: {
     gap: spacing.xxs,
-    paddingBottom: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
     marginBottom: spacing.sm,
+    paddingHorizontal: spacing.xxs,
   },
   unitName: {
     ...typography.h3,
@@ -114,33 +135,13 @@ const styles = StyleSheet.create({
     color: colors.muted,
     marginTop: spacing.xxs,
   },
-  roomBlock: {
-    marginTop: spacing.sm,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
+  actions: {
+    gap: spacing.xs,
   },
-  roomHeader: {
-    backgroundColor: colors.lightGreen,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    gap: spacing.xxs,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
+  actionBtn: {
+    minHeight: 36,
   },
-  roomName: {
-    ...typography.bodyStrong,
-    fontSize: typography.h3.fontSize,
-    color: colors.primaryDark,
-  },
-  roomCount: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    fontWeight: '600',
-  },
-  bedList: {
-    backgroundColor: colors.white,
-    paddingHorizontal: spacing.md,
+  singleAction: {
+    minHeight: 36,
   },
 });

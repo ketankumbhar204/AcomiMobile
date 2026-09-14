@@ -2,7 +2,7 @@ export { inventoryApi } from './inventoryApi';
 export { dashboardApi } from './dashboardApi';
 export { paymentsApi, PaymentServiceUnavailableError } from './paymentsApi';
 export { default as apiClient, getAuthToken, setAuthToken } from './client';
-export { authApi } from './authApi';
+export { filesApi } from './filesApi';
 export { unwrapApiResponse, unwrapVoidResponse } from './apiRequest';
 export { invitationApi } from './invitationApi';
 export { accommodationApi } from './accommodationApi';
@@ -12,6 +12,9 @@ export { enrollMemberInFullMeals, mealsApi, setMemberMealAccess } from './mealsA
 export { memberApi } from './memberApi';
 export { membershipApi } from './membershipApi';
 export { mySpacesApi } from './mySpacesApi';
+export { spaceDiscoverApi } from './spaceDiscoverApi';
+export { enquiryApi, adminEnquiryApi } from './enquiryApi';
+export { deviceTokensApi } from './deviceTokensApi';
 export { spaceApi } from './spaceApi';
 export {
   defaultSpaceResponseToSpace,

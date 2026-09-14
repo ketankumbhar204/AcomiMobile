@@ -91,19 +91,24 @@ export function getNotificationIcon(
   if (
     type.startsWith('MEAL') ||
     type.startsWith('MENU') ||
-    type === 'SUBSCRIPTION_ACTIVATION_PENDING'
+    type.startsWith('SUBSCRIPTION')
   ) {
     return UtensilsCrossed;
   }
   if (
     type.startsWith('MOVE_') ||
     type.startsWith('RESERVATION') ||
+    type === 'ALLOCATION_CREATED' ||
     type === 'VACANT_RESERVED_BED' ||
     type === 'EXPIRED_RESERVATION'
   ) {
     return CalendarClock;
   }
-  if (type === 'PENDING_INVITATION' || type === 'INVITATION_ACCEPTED') {
+  if (
+    type === 'PENDING_INVITATION' ||
+    type === 'INVITATION_ACCEPTED' ||
+    type === 'INVITATION_EXPIRED'
+  ) {
     return MailPlus;
   }
   if (
@@ -152,7 +157,7 @@ export function notificationMatchesFilter(
     case 'action':
       return category === 'ACTION_REQUIRED' || category === 'ERROR';
     case 'billing':
-      return type.startsWith('PAYMENT') || type === 'SUBSCRIPTION_ACTIVATION_PENDING';
+      return type.startsWith('PAYMENT') || type.startsWith('SUBSCRIPTION');
     case 'meals':
       return type.startsWith('MEAL') || type.startsWith('MENU');
     case 'general':

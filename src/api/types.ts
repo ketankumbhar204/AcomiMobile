@@ -79,6 +79,24 @@ export interface MealBillingSettings {
   fallbackToPayPerMeal: boolean;
 }
 
+export type PriceTaxMode = 'EXCLUSIVE' | 'INCLUSIVE';
+
+export interface SpaceBillingSettings {
+  taxEnabled: boolean;
+  taxRatePercent?: number | null;
+  priceTaxMode?: PriceTaxMode | null;
+  gstin?: string | null;
+  billingDueDay: number;
+}
+
+export interface UpdateSpaceBillingSettingsRequest {
+  taxEnabled: boolean;
+  taxRatePercent?: number | null;
+  priceTaxMode?: PriceTaxMode | null;
+  gstin?: string | null;
+  billingDueDay?: number | null;
+}
+
 export interface UpdateMealBillingSettingsRequest {
   billingType: MealBillingType;
   prepaidBalanceUnit?: PrepaidBalanceUnit | null;
@@ -478,6 +496,7 @@ export interface MealPollDayResponse {
   myPaymentStatus?: MealPollPaymentStatus | null;
   myPaymentChoice?: MealPollPaymentChoice | null;
   myProofImageUrl?: string | null;
+  myProofFileId?: UUID | null;
   myRejectionReason?: string | null;
   deliveryLocations?: MealDeliveryLocation[];
   myLastDeliveryLocationIds?: Partial<Record<MealType, UUID>>;
@@ -787,6 +806,96 @@ export interface MySpaceResponse {
   permissions?: SpacePermissionsResponse;
 }
 
+/** Public discovery card — GET /spaces/discover */
+export interface DiscoverSpaceCardResponse {
+  spaceId: UUID;
+  name: string;
+  type: SpaceType;
+  address?: string | null;
+  amenityCodes?: string[];
+  amenityLabels?: string[];
+  foodIncludedInRent: boolean;
+  genderPolicy?: GenderPolicy | null;
+  alreadyMember: boolean;
+  /** True when the signed-in user owns this Space. Contact enquiry is blocked. */
+  ownedByCurrentUser?: boolean;
+  /** Converted from a test-lead registration (shown in local discovery). */
+  testSpace?: boolean;
+}
+
+/** Public discovery detail — GET /spaces/discover/{spaceId} */
+export interface DiscoverSpaceDetailResponse extends DiscoverSpaceCardResponse {
+  amenities?: AmenityAssignment[];
+}
+
+export type SpaceEnquiryStatus = 'PENDING' | 'SHARED' | 'REJECTED' | 'EXPIRED' | 'CANCELLED';
+
+export type EnquiryRequesterType = 'MEMBER' | 'OWNER';
+
+export interface SpaceEnquiryResponse {
+  enquiryId: UUID;
+  spaceId: UUID;
+  spaceName: string;
+  spaceType?: string | null;
+  locationLabel?: string | null;
+  sharingNotes?: string | null;
+  amenityLabels?: string[] | null;
+  foodIncludedInRent?: boolean | null;
+  requesterType: EnquiryRequesterType;
+  status: SpaceEnquiryStatus;
+  requestedAt: string;
+  expiresAt: string;
+  sharedAt?: string | null;
+  detailsShared: boolean;
+  requesterEmail: string;
+  reusedExisting?: boolean;
+}
+
+export interface CreateSpaceEnquiryRequest {
+  email?: string;
+}
+
+export interface OwnerContactResponse {
+  ownerName?: string | null;
+  mobileNumber?: string | null;
+  alternateMobileNumber?: string | null;
+  additionalMobileNumber?: string | null;
+  email?: string | null;
+  available: boolean;
+}
+
+export interface AdminSpaceEnquiryListItem {
+  enquiryId: UUID;
+  spaceId: UUID;
+  spaceName: string;
+  requesterUserId: UUID;
+  requesterName: string;
+  requesterType: EnquiryRequesterType;
+  status: SpaceEnquiryStatus;
+  requestedAt: string;
+  expiresAt: string;
+  sharedAt?: string | null;
+}
+
+export interface AdminSpaceEnquiryDetail extends AdminSpaceEnquiryListItem {
+  spaceType?: SpaceType | null;
+  spaceAddress?: string | null;
+  requesterEmail: string;
+  reviewedAt?: string | null;
+  sharedByAdminId?: UUID | null;
+  rejectedAt?: string | null;
+  rejectionReason?: string | null;
+  ownerContact: OwnerContactResponse;
+}
+
+export interface DiscoverSpacesParams {
+  search?: string;
+  type?: SpaceType;
+  page?: number;
+  size?: number;
+  sort?: 'newest' | string;
+}
+
 export interface DefaultSpaceResponse {
   spaceId: UUID;
   spaceName: string;
@@ -861,7 +970,8 @@ export interface UpdateDepositRequest {
 export interface CreateMemberDocumentRequest {
   documentType: MemberDocumentType;
   documentNumber: string;
-  fileUrl: string;
+  fileUrl?: string;
+  fileId?: UUID | null;
 }
 
 export interface CreateMemberNoteRequest {
@@ -873,6 +983,7 @@ export interface MemberDocumentResponse {
   documentType: MemberDocumentType;
   documentNumber: string;
   fileUrl: string;
+  fileId?: UUID | null;
   verificationStatus: DocumentVerificationStatus;
   uploadedAt: string;
 }
@@ -1069,6 +1180,10 @@ export interface SendOtpResponse {
   expiresIn: number;
   resendAfter: number;
   message: string;
+  /** True when local backend skipped OTP and returned a verification token. */
+  otpSkipped?: boolean;
+  /** Present only when otpSkipped is true. */
+  verificationToken?: string;
 }
 
 export interface VerifyOtpRequest {
@@ -1121,6 +1236,7 @@ export interface UserResponse {
   mobileNumber: string;
   fullName: string;
   profilePhotoUrl?: string | null;
+  profilePhotoFileId?: UUID | null;
   active: boolean;
   createdAt: string;
   email?: string | null;
@@ -1137,6 +1253,7 @@ export interface UserResponse {
   documentsUploaded?: number | null;
   kycStatus?: KycStatus | null;
   systemRole?: SystemRole | null;
+  enquiryEmails?: string[] | null;
 }
 
 export type ProfileStatus =
@@ -1158,6 +1275,7 @@ export interface CompleteUserProfileRequest {
   dateOfBirth?: string | null;
   email?: string | null;
   profilePhotoUrl?: string | null;
+  profilePhotoFileId?: UUID | null;
   permanentAddress: string;
   city: string;
   state: string;
@@ -1170,6 +1288,9 @@ export interface CompleteUserProfileRequest {
   addressProofFileUrl?: string | null;
   identityProofFileUrl?: string | null;
   additionalDocumentFileUrl?: string | null;
+  identityProofFileId?: UUID | null;
+  addressProofFileId?: UUID | null;
+  additionalDocumentFileId?: UUID | null;
   profileCompleted?: boolean;
   profileStatus?: ProfileStatus;
 }
@@ -1604,6 +1725,9 @@ export interface BedSpaceListItemResponse {
   unitName?: string | null;
   roomId: UUID;
   roomName: string;
+  roomType?: string | null;
+  defaultRent?: number | null;
+  defaultDeposit?: number | null;
 }
 
 export interface DuplicateBuildingRequest {
@@ -1988,19 +2112,27 @@ export type NotificationType =
   | 'PAYMENT_APPROVED'
   | 'PAYMENT_REJECTED'
   | 'PAYMENT_UPDATE_REQUESTED'
+  | 'PAYMENT_REMINDER_SENT'
   | 'MEAL_POLL_NOT_PUBLISHED'
   | 'MEAL_RESPONSES_BELOW_THRESHOLD'
   | 'MENU_NOT_PLANNED'
   | 'MENU_DRAFT_PENDING_PUBLISH'
   | 'SUBSCRIPTION_ACTIVATION_PENDING'
+  | 'MENU_PUBLISHED'
   | 'MEAL_POLL_PUBLISHED'
   | 'MEAL_POLL_REMINDER'
+  | 'SUBSCRIPTION_ACTIVATION_APPROVED'
+  | 'SUBSCRIPTION_ACTIVATION_REJECTED'
+  | 'MEAL_BALANCE_UPDATED'
+  | 'MEAL_PARTICIPATION_CHANGED'
   | 'RESERVATION_STARTING_TODAY'
   | 'MOVE_IN_SCHEDULED_TODAY'
   | 'MOVE_OUT_SCHEDULED_TODAY'
   | 'VACANT_RESERVED_BED'
   | 'EXPIRED_RESERVATION'
   | 'RESERVATION_CREATED'
+  | 'RESERVATION_CANCELLED'
+  | 'ALLOCATION_CREATED'
   | 'MOVE_IN_COMPLETED'
   | 'MOVE_OUT_COMPLETED'
   | 'PENDING_INVITATION'
@@ -2008,12 +2140,24 @@ export type NotificationType =
   | 'MISSING_KYC_DOCUMENTS'
   | 'MISSING_ADDRESS_PROOF'
   | 'INVITATION_ACCEPTED'
+  | 'INVITATION_EXPIRED'
+  | 'MEMBERSHIP_APPROVED'
+  | 'MEMBERSHIP_REJECTED'
+  | 'MEMBERSHIP_REMOVED'
+  | 'MEMBERSHIP_ROLE_CHANGED'
   | 'TENANT_PROFILE_COMPLETED'
+  | 'SPACE_DEACTIVATED'
+  | 'OWNERSHIP_TRANSFERRED'
   | 'COMPLAINT_PENDING'
   | 'COMPLAINT_OVERDUE'
   | 'COMPLAINT_CREATED'
   | 'COMPLAINT_COMMENTED'
-  | 'COMPLAINT_RESOLVED';
+  | 'COMPLAINT_RESOLVED'
+  | 'CONTACT_ENQUIRY'
+  | 'CONTACT_ENQUIRY_SUBMITTED'
+  | 'CONTACT_ENQUIRY_SHARED'
+  | 'CONTACT_ENQUIRY_REJECTED'
+  | 'CONTACT_ENQUIRY_EXPIRED';
 
 export type NotificationCategory =
   | 'INFORMATION'
@@ -2047,6 +2191,33 @@ export interface SpaceNotification {
   deliveryChannels: string[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface NotificationListResponse {
+  notifications: SpaceNotification[];
+  unreadCount: number;
+}
+
+export interface UserNotification {
+  notificationId: UUID;
+  spaceId: UUID;
+  enquiryId?: UUID | null;
+  notificationType: string;
+  title: string;
+  message?: string | null;
+  actionLabel?: string | null;
+  actionRoute?: string | null;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface UserNotificationListResponse {
+  notifications: UserNotification[];
+  unreadCount: number;
+  page?: number;
+  size?: number;
+  totalElements?: number;
+  totalPages?: number;
 }
 
 export interface PendingActionGroup {
@@ -2221,6 +2392,7 @@ export interface CreateSubscriptionActivationRequest {
   planId: UUID;
   paymentReference?: string;
   proofImageBase64?: string;
+  proofFileId?: UUID;
   customerNotes?: string;
 }
 
@@ -2289,6 +2461,7 @@ export interface SpacePaymentResponse {
   paymentMethod?: UniversalPaymentMethod | null;
   paymentStatus: UniversalPaymentStatus;
   proofUrl?: string | null;
+  proofFileId?: UUID | null;
   referenceNumber?: string | null;
   remarks?: string | null;
   rejectionReason?: string | null;
@@ -2308,6 +2481,23 @@ export interface SpacePaymentResponse {
   mealDates?: string[] | null;
   createdAt: string;
   updatedAt: string;
+  billingPeriodStart?: string | null;
+  billingPeriodEnd?: string | null;
+  billableDays?: number | null;
+  daysInMonth?: number | null;
+  isProrated?: boolean | null;
+  configuredMonthlyAmount?: number | null;
+  taxEnabled?: boolean | null;
+  taxRatePercent?: number | null;
+  priceTaxMode?: PriceTaxMode | null;
+  baseAmount?: number | null;
+  taxAmount?: number | null;
+  paidAmount?: number | null;
+  outstandingAmount?: number | null;
+  isOverdue?: boolean | null;
+  daysOverdue?: number | null;
+  reminderEligible?: boolean | null;
+  settlementStatus?: 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' | null;
 }
 
 export interface SpacePaymentListResponse {
@@ -2388,6 +2578,7 @@ export interface ListSpacePaymentsParams {
 
 export interface SubmitPaymentProofRequest {
   proofImageBase64?: string;
+  proofFileId?: UUID;
   referenceNumber?: string;
   remarks?: string;
   paymentMethod?: UniversalPaymentMethod;
@@ -2465,6 +2656,7 @@ export interface ComplaintComment {
 
 export interface ComplaintAttachment {
   attachmentId: UUID;
+  fileId?: UUID | null;
   storageUrl: string;
   contentType?: string | null;
   fileName?: string | null;
@@ -2525,6 +2717,7 @@ export interface CreateComplaintRequest {
   mealDate?: string;
   mealType?: MealType;
   attachmentImagesBase64?: string[];
+  attachmentFileIds?: UUID[];
 }
 
 export interface UpdateComplaintStatusRequest {
@@ -2538,7 +2731,8 @@ export interface AddComplaintCommentRequest {
 }
 
 export interface AddComplaintAttachmentRequest {
-  imageBase64: string;
+  imageBase64?: string;
+  fileId?: UUID;
   fileName?: string;
   contentType?: string;
 }

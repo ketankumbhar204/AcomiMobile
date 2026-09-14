@@ -42,6 +42,15 @@ export type MealSelectionSummaryModel = {
   selectedMealTypes: MealType[];
 };
 
+export function isMenuEntryOption(option?: { optionType?: string } | null): boolean {
+  return option?.optionType === 'MENU_ENTRY';
+}
+
+/** Single-select poll: a food choice is 1 plate; Not available / skip is 0. */
+export function platesForSingleSelectOption(option?: { optionType?: string } | null): number {
+  return isMenuEntryOption(option) ? 1 : 0;
+}
+
 function sumLineAmounts(items: MealSummaryLineItem[]): number {
   return items.reduce((sum, item) => {
     if (item.lineAmount != null) {
@@ -97,7 +106,7 @@ export function buildMealSummaryFromPolls(
       }
     } else if (poll.mySelectedOptionId) {
       const option = poll.options.find(row => row.id === poll.mySelectedOptionId);
-      if (option) {
+      if (option && isMenuEntryOption(option)) {
         items.push({
           label: option.label,
           quantity: 1,
@@ -196,7 +205,7 @@ export function buildMealSummaryFromDraftSelections(
       const option = selectedId
         ? poll.options.find(row => row.id === selectedId)
         : undefined;
-      if (option) {
+      if (option && isMenuEntryOption(option)) {
         items.push({
           label: option.label,
           quantity: 1,

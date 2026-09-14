@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { MoreVertical, Pencil } from 'lucide-react-native';
 import { accommodationApi } from '../../api/accommodationApi';
 import { accommodationLifecycleApi } from '../../api/accommodationLifecycleApi';
 import type {
@@ -43,6 +44,10 @@ export type BuilderRowLifecycleMenuProps = {
   onDuplicate?: () => void;
   duplicateLabel?: string;
   prependOptions?: MenuOption[];
+  /** When true, only show prependOptions (no Edit/Duplicate/Delete lifecycle rows). */
+  hierarchyOnly?: boolean;
+  /** Pencil consolidates hierarchy edits and frees header space vs MoreVertical. */
+  triggerVariant?: 'more' | 'pencil';
   sheetTitle?: string;
   forceShowTrigger?: boolean;
   isInactive?: boolean;
@@ -138,6 +143,8 @@ export function BuilderRowLifecycleMenu({
   onDuplicate,
   duplicateLabel,
   prependOptions = [],
+  hierarchyOnly = false,
+  triggerVariant = 'more',
   sheetTitle,
   forceShowTrigger = false,
   isInactive = false,
@@ -268,6 +275,11 @@ export function BuilderRowLifecycleMenu({
       return;
     }
 
+    if (hierarchyOnly) {
+      presentActionSheet(prependOptions);
+      return;
+    }
+
     if (prependOptions.length > 0) {
       presentActionSheet(prependOptions);
     }
@@ -311,6 +323,7 @@ export function BuilderRowLifecycleMenu({
     closeActionSheet,
     entityId,
     entityType,
+    hierarchyOnly,
     prependOptions,
     presentActionSheet,
     role,
@@ -329,29 +342,39 @@ export function BuilderRowLifecycleMenu({
     return null;
   }
 
+  const usePencil = triggerVariant === 'pencil';
+
   return (
     <Pressable
       onPress={() => void showMenu()}
       hitSlop={8}
-      style={styles.trigger}
+      style={[styles.trigger, usePencil ? styles.pencilTrigger : null]}
       accessibilityRole="button"
-      accessibilityLabel={t('accommodation.lifecycle.menuTitle')}>
-      <Text style={styles.icon}>⋯</Text>
+      accessibilityLabel={
+        usePencil
+          ? t('accommodation.builder.editHierarchy', { defaultValue: 'Edit' })
+          : t('accommodation.lifecycle.menuTitle')
+      }>
+      {usePencil ? (
+        <Pencil size={16} color={colors.info} strokeWidth={2.4} />
+      ) : (
+        <MoreVertical size={18} color={colors.muted} strokeWidth={2.4} />
+      )}
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   trigger: {
-    width: 44,
-    height: 44,
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  icon: {
-    fontSize: 20,
-    lineHeight: 22,
-    color: colors.muted,
-    fontWeight: '700',
+  pencilTrigger: {
+    borderRadius: 8,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
   },
 });

@@ -21,6 +21,8 @@ export function emptyPredicateContext(
     bedCount: 0,
     memberCount: 0,
     hasMealLibrary: false,
+    allocatedMemberCount: 0,
+    hasBillableActivity: false,
     hasTodaysMenuPlanned: false,
     hasMenuShared: false,
     deliveryLocationCount: 0,

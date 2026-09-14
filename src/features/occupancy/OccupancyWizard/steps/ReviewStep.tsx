@@ -1,7 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import type { MemberResponse, TransferRentPolicy, AmenityAssignment } from '../../../../api/types';
+import { Pencil } from 'lucide-react-native';
+import type { MemberResponse, TransferRentPolicy } from '../../../../api/types';
 import { Card } from '../../../../components/ui';
 import { HierarchyBreadcrumbCard } from '../../../../components/occupancy/HierarchyBreadcrumbCard';
 import type { OccupancyHierarchyContext } from '../../../../components/occupancy/HierarchyBreadcrumbCard';
@@ -26,7 +27,36 @@ type ReviewStepProps = {
   moveInDate?: string;
   expectedExitDate?: string;
   remarks?: string;
+  onEditAccommodation?: () => void;
+  onEditContract?: () => void;
+  onEditMember?: () => void;
 };
+
+function SectionHeader({
+  title,
+  onEdit,
+}: {
+  title: string;
+  onEdit?: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {onEdit ? (
+        <Pressable
+          onPress={onEdit}
+          hitSlop={8}
+          style={styles.editBtn}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.edit')}>
+          <Pencil size={14} color={colors.primaryDark} strokeWidth={2.2} />
+          <Text style={styles.editLabel}>{t('common.edit')}</Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
 
 export function ReviewStep({
   mode,
@@ -39,6 +69,9 @@ export function ReviewStep({
   moveInDate,
   expectedExitDate,
   remarks,
+  onEditAccommodation,
+  onEditContract,
+  onEditMember,
 }: ReviewStepProps) {
   const { t } = useTranslation();
   const monthlyTotal =
@@ -62,44 +95,19 @@ export function ReviewStep({
     <View style={styles.wrap}>
       {!hideTitle ? <Text style={styles.title}>{t('occupancyWizard.steps.review')}</Text> : null}
 
-      {hierarchyContext && !hideTitle ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('occupancyWizard.review.accommodation')}</Text>
-          <HierarchyBreadcrumbCard context={hierarchyContext} compact />
-        </View>
-      ) : null}
-
-      <Card style={styles.card}>
-        <Text style={styles.sectionTitle}>{t('occupancyWizard.review.member')}</Text>
-        <Text style={styles.value}>
-          {member ? `${member.fullName} · ${member.mobileNumber}` : '—'}
-        </Text>
-      </Card>
-
-      {mode === 'RESERVE' ? (
+      {hierarchyContext ? (
         <Card style={styles.card}>
-          <Text style={styles.sectionTitle}>{t('occupancy.section.moveInDate')}</Text>
-          <Text style={styles.value}>{moveInDate || '—'}</Text>
-          {expectedExitDate ? (
-            <>
-              <Text style={[styles.sectionTitle, styles.gap]}>
-                {t('occupancy.fields.expectedExit')}
-              </Text>
-              <Text style={styles.value}>{expectedExitDate}</Text>
-            </>
-          ) : null}
-          {remarks ? (
-            <>
-              <Text style={[styles.sectionTitle, styles.gap]}>{t('occupancy.fields.remarks')}</Text>
-              <Text style={styles.value}>{remarks}</Text>
-            </>
-          ) : null}
+          <SectionHeader
+            title={t('occupancyWizard.review.accommodation')}
+            onEdit={onEditAccommodation}
+          />
+          <HierarchyBreadcrumbCard context={hierarchyContext} compact />
         </Card>
       ) : null}
 
       {contractValues && mode !== 'RESERVE' ? (
         <Card style={styles.card}>
-          <Text style={styles.sectionTitle}>{t('occupancy.contract.title')}</Text>
+          <SectionHeader title={t('occupancy.contract.title')} onEdit={onEditContract} />
           {contractValues.rentSnapshot ? (
             <View style={styles.lineRow}>
               <Text style={styles.lineLabel}>{t('occupancy.contract.rent')}</Text>
@@ -134,6 +142,37 @@ export function ReviewStep({
           ) : null}
         </Card>
       ) : null}
+
+      <Card style={styles.card}>
+        <SectionHeader title={t('occupancyWizard.review.member')} onEdit={onEditMember} />
+        <Text style={styles.value}>
+          {member ? `${member.fullName}` : '—'}
+        </Text>
+        {member?.mobileNumber ? (
+          <Text style={styles.meta}>{member.mobileNumber}</Text>
+        ) : null}
+      </Card>
+
+      {mode === 'RESERVE' ? (
+        <Card style={styles.card}>
+          <Text style={styles.sectionTitle}>{t('occupancy.section.moveInDate')}</Text>
+          <Text style={styles.value}>{moveInDate || '—'}</Text>
+          {expectedExitDate ? (
+            <>
+              <Text style={[styles.sectionTitle, styles.gap]}>
+                {t('occupancy.fields.expectedExit')}
+              </Text>
+              <Text style={styles.value}>{expectedExitDate}</Text>
+            </>
+          ) : null}
+          {remarks ? (
+            <>
+              <Text style={[styles.sectionTitle, styles.gap]}>{t('occupancy.fields.remarks')}</Text>
+              <Text style={styles.value}>{remarks}</Text>
+            </>
+          ) : null}
+        </Card>
+      ) : null}
     </View>
   );
 }
@@ -141,16 +180,32 @@ export function ReviewStep({
 const styles = StyleSheet.create({
   wrap: { gap: spacing.md },
   title: { ...typography.h3, fontSize: 18, lineHeight: 22, fontWeight: '600' },
-  section: { gap: spacing.xs },
   card: { gap: spacing.sm, borderRadius: 18 },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
   sectionTitle: {
+    ...typography.bodyStrong,
+    fontSize: 15,
+    color: colors.textPrimary,
+    fontWeight: '700',
+  },
+  editBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  editLabel: {
     ...typography.caption,
-    color: colors.muted,
-    fontWeight: '600',
-    fontSize: 12,
+    color: colors.primaryDark,
+    fontWeight: '700',
   },
   gap: { marginTop: spacing.sm },
   value: { ...typography.bodyStrong },
+  meta: { ...typography.caption, color: colors.textSecondary },
   lineRow: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -84,10 +84,36 @@ export function UniversalPaymentCard({
           </Text>
           <PaymentStatusBadge status={payment.paymentStatus} style={styles.statusBadge} />
         </View>
+        {payment.isOverdue ? (
+          <View style={styles.overdueBox}>
+            <Text style={styles.overdueTitle}>{t('paymentCollection.overdue.badge')}</Text>
+            <Text style={styles.overdueText}>
+              {t('paymentCollection.overdue.days', { days: payment.daysOverdue ?? 0 })}
+            </Text>
+            {payment.outstandingAmount != null ? (
+              <Text style={styles.overdueText}>
+                {t('paymentCollection.overdue.outstanding', {
+                  amount: formatPaymentAmount(
+                    payment.outstandingAmount,
+                    payment.currencyCode,
+                  ),
+                })}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
         <PaymentReferenceLabel source={payment} style={styles.paymentReference} />
         <Text style={styles.due}>
           {t('paymentCollection.dueDate', { date: formatPaymentDueDate(payment.dueDate) })}
         </Text>
+        {payment.billingPeriodStart && payment.billingPeriodEnd ? (
+          <Text style={styles.period}>
+            {t('paymentCollection.billingPeriodRange', {
+              start: payment.billingPeriodStart,
+              end: payment.billingPeriodEnd,
+            })}
+          </Text>
+        ) : null}
 
         {payment.paymentStatus === 'REJECTED' && payment.rejectionReason ? (
           <View style={styles.messageBox}>
@@ -198,6 +224,29 @@ const styles = StyleSheet.create({
   due: {
     ...typography.caption,
     color: colors.muted,
+  },
+  period: {
+    ...typography.caption,
+    color: colors.muted,
+    marginTop: 2,
+  },
+  overdueBox: {
+    marginTop: spacing.sm,
+    backgroundColor: '#FEF2F2',
+    borderRadius: radius.button,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    padding: spacing.sm,
+    gap: 2,
+  },
+  overdueTitle: {
+    ...typography.bodyStrong,
+    color: '#B91C1C',
+    fontWeight: '700',
+  },
+  overdueText: {
+    ...typography.caption,
+    color: '#991B1B',
   },
   messageBox: {
     marginTop: spacing.sm,

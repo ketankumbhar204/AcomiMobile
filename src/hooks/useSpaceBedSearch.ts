@@ -8,7 +8,8 @@ const PAGE_SIZE = 100;
 
 type UseSpaceBedSearchOptions = {
   spaceId: UUID;
-  status: AccommodationStatus;
+  /** When omitted, returns beds of every status. */
+  status?: AccommodationStatus;
   query?: string;
   buildingId?: UUID;
   floorId?: UUID;

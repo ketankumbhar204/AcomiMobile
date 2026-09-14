@@ -50,6 +50,14 @@ export { MonthlySummaryCards } from './MonthlySummaryCards';
 export type { MonthlySummaryCardItem, MonthlySummaryCardTone } from './MonthlySummaryCards';
 export { MonthlySummaryHeader } from './MonthlySummaryHeader';
 export { PermissionDeniedScreen, RequireAccommodationAccess } from './PermissionDeniedScreen';
+export {
+  LockedCapabilityScreen,
+  LockedCapabilityFromAccess,
+} from './LockedCapabilityScreen';
+export {
+  CapabilityStackGate,
+  CapabilityStackGateI18n,
+} from './CapabilityStackGate';
 export { Screen } from './Screen';
 export { SegmentedTabs } from './SegmentedTabs';
 export type { SegmentedTabItem } from './SegmentedTabs';

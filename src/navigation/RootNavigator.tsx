@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import {
   DefaultTheme,
@@ -19,6 +19,7 @@ import {
 } from './navigationRef';
 import type { RootStackParamList } from './types';
 import type { SpaceBootstrapResult } from '../store/spaceStore';
+import { usePushNotifications } from '../notifications/push/usePushNotifications';
 import { devLog } from '../utils/devLog';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -60,6 +61,7 @@ export function RootNavigator() {
 
   const pendingNavigationRef = useRef<SpaceBootstrapResult | null>(null);
   const bootstrapStartedRef = useRef(false);
+  const [navigationReady, setNavigationReady] = useState(false);
 
   const inAdminApp =
     isAuthenticated && adminMode && isPlatformAdmin(user?.systemRole);
@@ -73,6 +75,12 @@ export function RootNavigator() {
   const showBootstrap =
     isBootstrapping ||
     (isAuthenticated && !inAdminApp && (!hasSpaceBootstrapped || isSpaceBootstrapping));
+
+  usePushNotifications({
+    navigationReady,
+    spaceReady: inAdminApp || (hasSpaceBootstrapped && !isSpaceBootstrapping),
+    inAdminApp,
+  });
 
   useEffect(() => {
     bootstrap().then(() => {
@@ -115,6 +123,7 @@ export function RootNavigator() {
   }, [bootstrapSpaces, inAdminApp, isAuthenticated, isBootstrapping]);
 
   function handleNavigationReady() {
+    setNavigationReady(true);
     const pending = pendingNavigationRef.current;
     if (!pending) {
       return;

@@ -57,7 +57,7 @@ import {
   getComplaintTimelineIcon,
 } from '../../utils/complaintVisuals';
 import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
-import { pickPaymentProofImage } from '../../utils/pickPaymentProofImage';
+import { pickPaymentProofImage, paymentProofToLocalFile } from '../../utils/pickPaymentProofImage';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'ComplaintDetail'>;
 type Route = NativeStackScreenProps<MainStackParamList, 'ComplaintDetail'>['route'];
@@ -311,7 +311,9 @@ export function ComplaintDetailScreen() {
                   return;
                 }
                 const updated = await complaintsApi.addAttachment(spaceId, complaintId, {
-                  imageBase64: image,
+                  localFile: paymentProofToLocalFile(image),
+                  fileName: image.name,
+                  contentType: image.mime,
                 });
                 setComplaint(updated);
               }, 'complaints.updated')

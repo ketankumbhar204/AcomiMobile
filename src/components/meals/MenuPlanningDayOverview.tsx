@@ -3,15 +3,17 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Share2 } from 'lucide-react-native';
 import type { DailyMenuResponse, MealType } from '../../api/types';
-import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { colors, radius, spacing, typography } from '../../theme';
 import { mealTypeLabelKey, MEAL_TYPES } from '../../utils/mealLabels';
 import type { DailyMenuDaySummary } from '../../utils/dailyMenuDayStatus';
+import { mealTypeTheme } from '../../utils/mealTypeTheme';
 import { MealTypeVisual } from './MealTypeVisual';
 
 type MenuPlanningDayOverviewProps = {
   menuMap: Partial<Record<MealType, DailyMenuResponse>>;
   statusSummary: DailyMenuDaySummary;
-  selectedMealType: MealType;
+  /** Kept for call-site compatibility; cards are no longer visually selected. */
+  selectedMealType?: MealType;
   onSelectMealType: (mealType: MealType) => void;
   onShareDay?: () => void;
   shareDisabled?: boolean;
@@ -21,15 +23,14 @@ type MenuPlanningDayOverviewProps = {
 function CompactMealSlotCell({
   mealType,
   menu,
-  selected,
   onPress,
 }: {
   mealType: MealType;
   menu?: DailyMenuResponse | null;
-  selected: boolean;
   onPress: () => void;
 }) {
   const { t } = useTranslation();
+  const mealTheme = mealTypeTheme(mealType);
   const hasPlan = (menu?.options?.filter(option => option.isAvailable) ?? []).length > 0;
   const status =
     !hasPlan
@@ -54,19 +55,18 @@ function CompactMealSlotCell({
   return (
     <Pressable
       onPress={onPress}
-      android_ripple={{ color: 'rgba(18, 140, 126, 0.12)' }}
+      android_ripple={{ color: 'rgba(15, 23, 42, 0.06)' }}
       style={({ pressed }) => [
         styles.slotCell,
-        selected && styles.slotCellSelected,
-        selected && { borderColor: colors.primary, backgroundColor: '#F0FDF4' },
-        !selected && { borderColor: colors.border, backgroundColor: colors.white },
+        { backgroundColor: mealTheme.soft },
+        // Always re-assert neutral border last so nothing can tint it green.
+        styles.slotCellBorder,
         pressed && styles.slotCellPressed,
       ]}
-      accessibilityRole="tab"
-      accessibilityState={{ selected }}
+      accessibilityRole="button"
       accessibilityLabel={`${t(mealTypeLabelKey(mealType))}, ${statusLabel}`}>
-      <MealTypeVisual mealType={mealType} size={18} style={styles.slotIcon} />
-      <Text style={[styles.slotName, selected && styles.slotNameSelected]} numberOfLines={1}>
+      <MealTypeVisual mealType={mealType} size={20} style={styles.slotIcon} />
+      <Text style={[styles.slotName, { color: mealTheme.accent }]} numberOfLines={1}>
         {t(mealTypeLabelKey(mealType))}
       </Text>
       <View
@@ -89,7 +89,7 @@ function CompactMealSlotCell({
           {statusLabel}
         </Text>
       </View>
-      <Text style={styles.slotHint} numberOfLines={1}>
+      <Text style={[styles.slotHint, { color: mealTheme.accent }]} numberOfLines={1}>
         {actionLabel}
       </Text>
     </Pressable>
@@ -99,7 +99,6 @@ function CompactMealSlotCell({
 export function MenuPlanningDayOverview({
   menuMap,
   statusSummary,
-  selectedMealType,
   onSelectMealType,
   onShareDay,
   shareDisabled = false,
@@ -176,7 +175,6 @@ export function MenuPlanningDayOverview({
             key={mealType}
             mealType={mealType}
             menu={menuMap[mealType]}
-            selected={selectedMealType === mealType}
             onPress={() => onSelectMealType(mealType)}
           />
         ))}
@@ -266,18 +264,18 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     minHeight: 132,
-    borderWidth: 1,
     borderRadius: radius.button,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xs,
     gap: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
-  slotCellSelected: {
-    borderWidth: 2,
-    ...shadows.sm,
-    transform: [{ scale: 1.02 }],
+  /** Neutral gray — colors.border is mint and looks like a selected Lunch card. */
+  slotCellBorder: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   slotCellPressed: {
     opacity: 0.92,
@@ -288,15 +286,11 @@ const styles = StyleSheet.create({
     borderRadius: 19,
   },
   slotName: {
-    ...typography.caption,
+    ...typography.bodyStrong,
     fontWeight: '700',
-    color: colors.textPrimary,
     textAlign: 'center',
-    fontSize: 12,
-    lineHeight: 14,
-  },
-  slotNameSelected: {
-    color: colors.primaryDark,
+    fontSize: 15,
+    lineHeight: 18,
   },
   statusChip: {
     maxWidth: '100%',
@@ -343,10 +337,9 @@ const styles = StyleSheet.create({
   },
   slotHint: {
     ...typography.caption,
-    color: colors.textSecondary,
     fontSize: 12,
     lineHeight: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     textAlign: 'center',
   },
 });

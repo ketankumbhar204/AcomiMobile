@@ -9,6 +9,7 @@ import { colors, radius, spacing, typography } from '../../theme';
 type OccupancyWizardStepHeaderProps = {
   stepProgress?: { current: number; total: number };
   stepTitle: string;
+  stepHint?: string | null;
   Icon?: LucideIcon;
   hierarchyContext: OccupancyHierarchyContext;
   bulkProgress?: string | null;
@@ -18,6 +19,7 @@ type OccupancyWizardStepHeaderProps = {
 export function OccupancyWizardStepHeader({
   stepProgress,
   stepTitle,
+  stepHint,
   Icon,
   hierarchyContext,
   bulkProgress,
@@ -33,26 +35,32 @@ export function OccupancyWizardStepHeader({
     <View style={styles.wrap}>
       {stepProgress ? (
         <View style={styles.progressBlock}>
-          <View style={styles.progressTrack}>
-            <View
-              style={[styles.progressFill, { width: `${progressRatio * 100}%` }]}
-            />
-          </View>
           <Text style={styles.stepProgress}>
             {t('occupancyWizard.stepProgress', {
               current: stepProgress.current,
               total: stepProgress.total,
             })}
           </Text>
+          <View style={styles.progressTrack}>
+            <View
+              style={[styles.progressFill, { width: `${progressRatio * 100}%` }]}
+            />
+          </View>
         </View>
       ) : null}
+
+      <HierarchyBreadcrumbCard context={hierarchyContext} />
+
       <View style={styles.titleRow}>
         {Icon ? (
           <View style={styles.iconWrap} accessibilityElementsHidden>
             <Icon size={18} color={colors.primaryDark} strokeWidth={2.2} />
           </View>
         ) : null}
-        <Text style={styles.stepTitle}>{stepTitle}</Text>
+        <View style={styles.titleBlock}>
+          <Text style={styles.stepTitle}>{stepTitle}</Text>
+          {stepHint ? <Text style={styles.stepHint}>{stepHint}</Text> : null}
+        </View>
       </View>
       {bulkProgress ? (
         <Text style={styles.bulkProgress}>
@@ -60,7 +68,6 @@ export function OccupancyWizardStepHeader({
         </Text>
       ) : null}
       {bulkHint ? <Text style={styles.bulkHint}>{bulkHint}</Text> : null}
-      <HierarchyBreadcrumbCard context={hierarchyContext} />
     </View>
   );
 }
@@ -68,9 +75,10 @@ export function OccupancyWizardStepHeader({
 const styles = StyleSheet.create({
   wrap: {
     marginBottom: spacing.sm,
+    paddingHorizontal: spacing.xl,
   },
   progressBlock: {
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
     gap: spacing.xs,
   },
   progressTrack: {
@@ -93,7 +101,7 @@ const styles = StyleSheet.create({
   },
   titleRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: spacing.sm,
     marginBottom: spacing.sm,
   },
@@ -106,13 +114,22 @@ const styles = StyleSheet.create({
     borderColor: `${colors.primary}33`,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 2,
+  },
+  titleBlock: {
+    flex: 1,
+    gap: 4,
   },
   stepTitle: {
     ...typography.h3,
-    flex: 1,
-    fontSize: 18,
-    lineHeight: 22,
-    fontWeight: '600',
+    fontSize: 20,
+    lineHeight: 26,
+    fontWeight: '700',
+  },
+  stepHint: {
+    ...typography.caption,
+    color: colors.muted,
+    lineHeight: 18,
   },
   bulkProgress: {
     ...typography.caption,

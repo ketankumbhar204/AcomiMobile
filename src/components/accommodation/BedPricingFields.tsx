@@ -11,6 +11,8 @@ type BedPricingFieldsProps = {
   rent?: number | null;
   deposit?: number | null;
   editable?: boolean;
+  /** Side-by-side (wide cards) or stacked (compact mock bed tiles). */
+  layout?: 'row' | 'stack';
   onCommit?: (field: BedPricingField, value: number | null) => Promise<void> | void;
 };
 
@@ -22,6 +24,7 @@ export function BedPricingFields({
   rent,
   deposit,
   editable = false,
+  layout = 'row',
   onCommit,
 }: BedPricingFieldsProps) {
   const { t } = useTranslation();
@@ -29,6 +32,7 @@ export function BedPricingFields({
   const [depositEdit, setDepositEdit] = useState<string | null>(null);
   const rentText = rentEdit ?? moneyText(rent);
   const depositText = depositEdit ?? moneyText(deposit);
+  const stacked = layout === 'stack';
 
   async function commit(field: BedPricingField, raw: string, current?: number | null) {
     const parsed = parseOptionalMoney(raw);
@@ -45,8 +49,10 @@ export function BedPricingFields({
   }
 
   return (
-    <View style={styles.pricingRow} onStartShouldSetResponder={() => true}>
-      <View style={styles.pricingField}>
+    <View
+      style={[styles.pricingRow, stacked ? styles.pricingStack : null]}
+      onStartShouldSetResponder={() => true}>
+      <View style={[styles.pricingField, stacked ? styles.pricingFieldStack : null]}>
         <FormInput
           size="compact"
           label={t('accommodation.fields.rent')}
@@ -61,7 +67,7 @@ export function BedPricingFields({
           editable={editable}
         />
       </View>
-      <View style={styles.pricingField}>
+      <View style={[styles.pricingField, stacked ? styles.pricingFieldStack : null]}>
         <FormInput
           size="compact"
           label={t('accommodation.fields.deposit')}
@@ -86,8 +92,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.xs,
   },
+  pricingStack: {
+    flexDirection: 'column',
+    gap: 2,
+  },
   pricingField: {
     flex: 1,
     minWidth: 0,
+  },
+  pricingFieldStack: {
+    flex: 0,
+    width: '100%',
   },
 });

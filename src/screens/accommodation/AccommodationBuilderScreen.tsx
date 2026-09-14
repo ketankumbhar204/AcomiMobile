@@ -1,6 +1,7 @@
 import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import {
   FlatList,
+  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
@@ -12,8 +13,9 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { Copy, Grid2x2, Layers } from 'lucide-react-native';
+import { Copy, Grid2x2, Layers, Pencil } from 'lucide-react-native';
 import type {
+  BedSpaceListItemResponse,
   FloorListItemResponse,
   SpaceType,
   UnitListItemResponse,
@@ -26,6 +28,7 @@ import {
   AccommodationStatusBadge,
   AccommodationViewModeToggle,
   BuildingElevationLayout,
+  BuildingInventoryRoomSection,
   BuildingSummaryHeader,
   BuildingUnitElevation,
   BuilderRowLifecycleMenu,
@@ -35,6 +38,7 @@ import {
   HeaderMenuSlot,
   UNIT_GRID_NUM_COLUMNS,
 } from '../../components/accommodation';
+import type { MenuOption } from '../../components/accommodation/BuilderRowLifecycleMenu';
 import { EmptyState, FAB, HeaderBackButton, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
 import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
 import { DashboardActionRow } from '../../components/dashboard/shared/DashboardActionRow';
@@ -49,6 +53,7 @@ import { useDuplicateBuilding } from '../../hooks/useDuplicateBuilding';
 import { useDuplicateFloor } from '../../hooks/useDuplicateFloor';
 import { useFloors } from '../../hooks/useFloors';
 import { useUnits } from '../../hooks/useUnits';
+import { useSpaceBedSearch } from '../../hooks/useSpaceBedSearch';
 import { resetToAccommodationHome } from '../../navigation/navigationRef';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
@@ -60,9 +65,11 @@ import {
   renameBuildingName,
   renameFloorName,
   renameUnitName,
+  updateBedPricingField,
 } from '../../utils/accommodationInlineRename';
 import { isAccommodationEntityActive } from '../../utils/accommodationEntityActive';
 import { applyAccommodationInactiveLifecycle } from '../../utils/accommodationInactiveLifecycle';
+import { groupBedsByRoom, roomGroupPathSegments, type BedRoomGroup } from '../../utils/groupBedsByRoom';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'AccommodationBuilder'>;
 type Route = NativeStackScreenProps<MainStackParamList, 'AccommodationBuilder'>['route'];
@@ -111,6 +118,23 @@ export function AccommodationBuilderScreen() {
     enabled: Boolean(profile?.showUnits),
     searchQuery,
   });
+
+  const inventoryEnabled = Boolean(
+    profile?.showBeds && profile.layoutMode !== 'RENTAL',
+  );
+  const bedsHook = useSpaceBedSearch({
+    spaceId,
+    buildingId,
+    query: searchQuery,
+    enabled: inventoryEnabled,
+    loadAll: true,
+  });
+  const roomGroups = useMemo(
+    () => groupBedsByRoom(bedsHook.items),
+    [bedsHook.items],
+  );
+  /** Same inventory mock for List and Layout (elevation layout kept for non-bed modes). */
+  const useInventoryList = inventoryEnabled;
 
   const listHook = profile?.showFloors ? floorsHook : unitsHook;
   const {
@@ -162,9 +186,14 @@ export function AccommodationBuilderScreen() {
   );
   const [bulkUnitsVisible, setBulkUnitsVisible] = useState(false);
 
+  const refreshBeds = bedsHook.refresh;
   const refreshAll = useCallback(async () => {
-    await Promise.all([refreshSummary(), refreshList()]);
-  }, [refreshList, refreshSummary]);
+    await Promise.all([
+      refreshSummary(),
+      refreshList(),
+      inventoryEnabled ? refreshBeds() : Promise.resolve(),
+    ]);
+  }, [inventoryEnabled, refreshBeds, refreshList, refreshSummary]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -272,9 +301,11 @@ export function AccommodationBuilderScreen() {
     });
   };
 
-  const showListLoading = listLoading && !refreshing && items.length === 0;
-  const error = summaryError ?? listError;
-  const useUnitGrid = isLayout && profile?.showUnits;
+  const showListLoading = useInventoryList
+    ? bedsHook.loading && !refreshing && roomGroups.length === 0
+    : listLoading && !refreshing && items.length === 0;
+  const error = summaryError ?? (useInventoryList ? bedsHook.error : listError);
+  const useUnitGrid = isLayout && !useInventoryList && profile?.showUnits;
 
   const listHeader = (
     <View style={styles.header}>
@@ -307,6 +338,16 @@ export function AccommodationBuilderScreen() {
 
       <AccommodationViewModeToggle value={isLayout ? 'layout' : 'list'} onChange={setViewMode} />
 
+      <AccommodationSearchBar
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        placeholder={
+          useInventoryList
+            ? t('accommodation.builder.searchRooms', { defaultValue: 'Search rooms...' })
+            : undefined
+        }
+      />
+
       {canManage && profile?.showUnits && (spaceType === 'CO_LIVING' || spaceType === 'RENTAL') ? (
         <DashboardActionRow
           icon={Grid2x2}
@@ -325,7 +366,7 @@ export function AccommodationBuilderScreen() {
           accent="#2563EB"
           title={t('accommodation.duplicate.building.action')}
           subtitle={t('accommodation.duplicate.building.hint', {
-            defaultValue: 'Copy this building structure',
+            name: summary?.name ?? '',
           })}
           onPress={() => setDuplicateBuildingVisible(true)}
         />
@@ -333,16 +374,18 @@ export function AccommodationBuilderScreen() {
 
       <DashboardSectionTitle
         title={
-          profile?.showFloors
-            ? t('accommodation.floors.title')
-            : t('accommodation.units.title')
+          useInventoryList
+            ? t('accommodation.builder.allRooms', { defaultValue: 'All Rooms' })
+            : profile?.showFloors
+              ? t('accommodation.floors.title')
+              : t('accommodation.units.title')
         }
-        subtitle={t('accommodation.builder.listSubtitle', {
-          defaultValue: 'Tap to open · long-press for details',
-        })}
+        subtitle={
+          useInventoryList
+            ? t('accommodation.builder.inventorySubtitle')
+            : t('accommodation.builder.listSubtitle')
+        }
       />
-
-      <AccommodationSearchBar value={searchQuery} onChangeText={setSearchQuery} />
 
       {showListLoading ? <SkeletonCard /> : null}
     </View>
@@ -466,7 +509,7 @@ export function AccommodationBuilderScreen() {
   };
 
   const layoutVisual =
-    isLayout && !showListLoading && floorItems.length > 0 ? (
+    !useInventoryList && isLayout && !showListLoading && floorItems.length > 0 ? (
       <BuildingElevationLayout
         buildingName={summary?.name}
         buildingSummary={summary}
@@ -476,7 +519,7 @@ export function AccommodationBuilderScreen() {
         onFloorPress={openFloorRooms}
         renderFloorMenu={renderFloorMenu}
       />
-    ) : isLayout && !showListLoading && unitItems.length > 0 ? (
+    ) : !useInventoryList && isLayout && !showListLoading && unitItems.length > 0 ? (
       <BuildingUnitElevation
         buildingName={summary?.name}
         buildingSummary={summary}
@@ -489,6 +532,7 @@ export function AccommodationBuilderScreen() {
     ) : null;
 
   const hasLayoutContent =
+    !useInventoryList &&
     isLayout &&
     !showListLoading &&
     (floorItems.length > 0 || unitItems.length > 0);
@@ -497,18 +541,184 @@ export function AccommodationBuilderScreen() {
     hasLayoutContent ? null : !showListLoading && !error ? (
       <EmptyState
         title={
-          profile?.showFloors
-            ? t('accommodation.floors.emptyTitle')
-            : t('accommodation.units.emptyTitle')
+          useInventoryList
+            ? t('accommodation.rooms.emptyTitle', { defaultValue: 'No rooms yet' })
+            : profile?.showFloors
+              ? t('accommodation.floors.emptyTitle')
+              : t('accommodation.units.emptyTitle')
         }
         description={
-          profile?.showFloors
-            ? t('accommodation.floors.emptyDescription')
-            : t('accommodation.units.emptyDescription')
+          useInventoryList
+            ? t('accommodation.rooms.emptyDescription', {
+                defaultValue: 'Add floors and rooms to see beds here.',
+              })
+            : profile?.showFloors
+              ? t('accommodation.floors.emptyDescription')
+              : t('accommodation.units.emptyDescription')
         }
-        Icon={profile?.showFloors ? Layers : Grid2x2}
+        Icon={useInventoryList ? Layers : profile?.showFloors ? Layers : Grid2x2}
       />
     ) : null;
+
+  const openBedDetail = (bed: BedSpaceListItemResponse) => {
+    navigation.navigate('BedDetail', {
+      spaceId,
+      buildingId: bed.buildingId,
+      roomId: bed.roomId,
+      bedId: bed.bedId,
+      buildingName: bed.buildingName,
+      parentName: bed.unitName ?? bed.floorName ?? undefined,
+      parentType: bed.unitId ? 'unit' : 'floor',
+      floorId: bed.floorId ?? undefined,
+      unitId: bed.unitId ?? undefined,
+      roomName: bed.roomName,
+      bedLabel: bed.label,
+    });
+  };
+
+  const renderRoomMenu = (group: BedRoomGroup) => {
+    if (!canManage) {
+      return undefined;
+    }
+    const prependOptions: MenuOption[] = [
+      {
+        label: t('accommodation.builder.editBuilding', { defaultValue: 'Edit building' }),
+        action: () =>
+          navigation.navigate('BuildingForm', {
+            spaceId,
+            buildingId,
+            mode: 'edit',
+          }),
+      },
+    ];
+    if (group.floorId) {
+      prependOptions.push({
+        label: t('accommodation.builder.editFloor', { defaultValue: 'Edit floor' }),
+        action: () =>
+          navigation.navigate('FloorForm', {
+            spaceId,
+            buildingId,
+            mode: 'edit',
+            floorId: group.floorId!,
+          }),
+      });
+    }
+    if (group.unitId) {
+      prependOptions.push({
+        label: t('accommodation.builder.editUnit', { defaultValue: 'Edit unit' }),
+        action: () =>
+          navigation.navigate('UnitForm', {
+            spaceId,
+            buildingId,
+            mode: 'edit',
+            unitId: group.unitId!,
+          }),
+      });
+    }
+    prependOptions.push({
+      label: t('accommodation.builder.editRoom', { defaultValue: 'Edit room' }),
+      action: () =>
+        navigation.navigate('RoomForm', {
+          spaceId,
+          buildingId,
+          parentType: group.unitId ? 'unit' : 'floor',
+          parentId: (group.unitId ?? group.floorId) as string,
+          mode: 'edit',
+          roomId: group.roomId,
+        }),
+    });
+
+    return (
+      <BuilderRowLifecycleMenu
+        spaceId={spaceId}
+        buildingId={buildingId}
+        entityType="room"
+        entityId={group.roomId}
+        role={permissions.membershipRole}
+        prependOptions={prependOptions}
+        hierarchyOnly
+        triggerVariant="pencil"
+        forceShowTrigger
+        onEdit={() =>
+          navigation.navigate('RoomForm', {
+            spaceId,
+            buildingId,
+            parentType: group.unitId ? 'unit' : 'floor',
+            parentId: (group.unitId ?? group.floorId) as string,
+            mode: 'edit',
+            roomId: group.roomId,
+          })
+        }
+        onSuccess={() => {
+          void refreshAll();
+        }}
+      />
+    );
+  };
+
+  const renderBedMenu = (bed: BedSpaceListItemResponse) => {
+    if (!canManage) {
+      return undefined;
+    }
+    return (
+      <Pressable
+        onPress={() =>
+          navigation.navigate('BedForm', {
+            spaceId,
+            buildingId,
+            roomId: bed.roomId,
+            bedId: bed.bedId,
+            mode: 'edit',
+          })
+        }
+        hitSlop={8}
+        style={({ pressed }) => [styles.bedEditBtn, pressed && styles.bedEditBtnPressed]}
+        accessibilityRole="button"
+        accessibilityLabel={t('accommodation.builder.editBed', { defaultValue: 'Edit bed' })}>
+        <Pencil size={16} color={colors.info} strokeWidth={2.4} />
+      </Pressable>
+    );
+  };
+
+  const renderInventoryItem = ({ item }: { item: BedRoomGroup }) => (
+    <BuildingInventoryRoomSection
+      group={item}
+      pathSegments={roomGroupPathSegments(item, {
+        includeBuilding: true,
+        includeUnit: Boolean(profile?.showUnits || profile?.showUnitsOnFloor),
+      })}
+      pricingEditable={canManage}
+      showAddBed={canManage}
+      menu={renderRoomMenu(item)}
+      renderBedMenu={renderBedMenu}
+      onRoomPress={() =>
+        navigation.navigate('AccommodationBeds', {
+          spaceId,
+          buildingId,
+          roomId: item.roomId,
+          roomName: item.roomName,
+          buildingName: item.buildingName,
+          parentName: item.unitName ?? item.floorName ?? undefined,
+          parentType: item.unitId ? 'unit' : 'floor',
+          floorId: item.floorId ?? undefined,
+          unitId: item.unitId ?? undefined,
+        })
+      }
+      onBedPress={openBedDetail}
+      onAddBed={() =>
+        navigation.navigate('BedForm', {
+          spaceId,
+          buildingId,
+          roomId: item.roomId,
+          mode: 'create',
+        })
+      }
+      onCommitPricing={async (bed, field, value) => {
+        await updateBedPricingField(spaceId, bed.roomId, bed.bedId, field, value);
+        await bedsHook.refresh();
+      }}
+    />
+  );
 
   const renderItem = ({ item }: { item: ListItem }) => {
     if (isFloorItem(item)) {
@@ -576,12 +786,32 @@ export function AccommodationBuilderScreen() {
     <View style={styles.root}>
       <FlatList
         ref={listRef}
-        data={showListLoading || isLayout ? [] : items}
-        key={isLayout ? 'accommodation-layout' : useUnitGrid ? 'unit-grid' : 'accommodation-list'}
-        numColumns={!isLayout && useUnitGrid ? UNIT_GRID_NUM_COLUMNS : 1}
-        columnWrapperStyle={!isLayout && useUnitGrid ? styles.unitGridRow : undefined}
+        data={
+          showListLoading || (!useInventoryList && isLayout)
+            ? []
+            : useInventoryList
+              ? roomGroups
+              : items
+        }
+        key={
+          useInventoryList
+            ? 'building-inventory-rooms'
+            : isLayout
+              ? 'accommodation-layout'
+              : useUnitGrid
+                ? 'unit-grid'
+                : 'accommodation-list'
+        }
+        numColumns={!useInventoryList && !isLayout && useUnitGrid ? UNIT_GRID_NUM_COLUMNS : 1}
+        columnWrapperStyle={
+          !useInventoryList && !isLayout && useUnitGrid ? styles.unitGridRow : undefined
+        }
         keyExtractor={item =>
-          isFloorItem(item) ? item.floorId : (item as UnitListItemResponse).unitId
+          useInventoryList
+            ? (item as BedRoomGroup).key
+            : isFloorItem(item as ListItem)
+              ? (item as FloorListItemResponse).floorId
+              : (item as UnitListItemResponse).unitId
         }
         contentContainerStyle={styles.content}
         refreshControl={
@@ -594,14 +824,25 @@ export function AccommodationBuilderScreen() {
           </>
         }
         ListEmptyComponent={listEmpty}
-        ListFooterComponent={<AccommodationListFooter loadingMore={loadingMore} />}
+        ListFooterComponent={
+          <AccommodationListFooter
+            loadingMore={useInventoryList ? bedsHook.loadingMore : loadingMore}
+          />
+        }
         onEndReached={() => {
+          if (useInventoryList) {
+            return;
+          }
           if (hasMore) {
             void loadMore();
           }
         }}
         onEndReachedThreshold={0.3}
-        renderItem={renderItem}
+        renderItem={
+          useInventoryList
+            ? (renderInventoryItem as never)
+            : (renderItem as never)
+        }
       />
 
       {showFab ? (
@@ -757,5 +998,18 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: '#DC2626',
     marginBottom: spacing.lg,
+  },
+  bedEditBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  bedEditBtnPressed: {
+    opacity: 0.85,
   },
 });

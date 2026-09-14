@@ -37,11 +37,25 @@ export type SpaceTabParamList = {
   Complaints: { spaceId: UUID };
 };
 
+/** Member account tabs — Home/My Spaces · Find a place · Profile */
+export type MemberTabParamList = {
+  Home: undefined;
+  FindAPlace: undefined;
+  Profile: undefined;
+};
+
 export type AccommodationFormMode = 'create' | 'edit';
 
 export type MainStackParamList = {
+  /** Primary member shell (bottom tabs). */
+  MemberTabs: NavigatorScreenParams<MemberTabParamList> | undefined;
   MySpaces: undefined;
+  FindAPlace: undefined;
+  FindAPlaceDetail: { spaceId: UUID };
+  MyEnquiries: { enquiryId?: UUID } | undefined;
+  AccountNotifications: undefined;
   OnboardingChoice: undefined;
+  MemberHome: undefined;
   JoinSpace: undefined;
   AcceptInvitations: undefined;
   ProfileCompletionGate: undefined;
@@ -252,7 +266,13 @@ export type MainStackParamList = {
     currencyCode: string;
     memberName?: string;
   };
-  PaymentReview: { spaceId: UUID };
+  PaymentReview: {
+    spaceId: UUID;
+    month?: string;
+    section?: 'pendingReview' | 'history';
+    pendingFilter?: 'SUBMITTED' | 'NEEDS_UPDATE';
+    historyFilter?: 'PAID' | 'REJECTED';
+  };
   PaymentHistory: { spaceId: UUID; paymentId: UUID };
   SpaceNotifications: { spaceId: UUID };
   RaiseComplaint: { spaceId: UUID };
@@ -286,13 +306,15 @@ export type AdminStackParamList = {
   AdminAddMess: undefined;
   AdminRegisteredUsers: undefined;
   AdminSavedAddresses: undefined;
+  AdminEnquiryList: undefined;
+  AdminEnquiryDetail: { id: string };
 };
 
 export type RootStackParamList = {
   Bootstrap: undefined;
   Auth: undefined;
   Main: undefined;
-  Admin: undefined;
+  Admin: NavigatorScreenParams<AdminStackParamList> | undefined;
 };
 
 declare global {

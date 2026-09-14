@@ -1,15 +1,19 @@
 import { useMemo } from 'react';
 import type { SpaceType } from '../api/types';
-import { evaluateSpaceLifecycle } from '../spaceLifecycle/evaluate';
-import type {
-  LifecycleEvaluationResult,
-  LifecycleState,
-  MilestoneId,
-  MilestoneStatus,
-  PredicateContext,
-  RecommendedAction,
-  SetupProgressSnapshot,
-} from '../spaceLifecycle/types';
+import {
+  evaluateSpaceCapabilities,
+  evaluateSpaceLifecycle,
+  type CapabilityAccess,
+  type CapabilityId,
+  type LifecycleEvaluationResult,
+  type LifecycleState,
+  type MilestoneId,
+  type MilestoneStatus,
+  type PredicateContext,
+  type RecommendedAction,
+  type SetupProgressSnapshot,
+  type SpaceCapabilitiesResult,
+} from '../spaceLifecycle';
 
 export type UseSpaceLifecycleResult = {
   /** Full evaluation result; null when disabled or spaceType missing. */
@@ -21,6 +25,9 @@ export type UseSpaceLifecycleResult = {
   nextRecommendedAction: RecommendedAction | null;
   completedMilestoneIds: MilestoneId[];
   pendingMilestoneIds: MilestoneId[];
+  /** Progressive Guided Access capabilities (null when no context). */
+  capabilities: SpaceCapabilitiesResult | null;
+  getCapability: (id: CapabilityId) => CapabilityAccess | null;
 };
 
 type UseSpaceLifecycleArgs = {
@@ -31,8 +38,7 @@ type UseSpaceLifecycleArgs = {
 };
 
 /**
- * Evaluates lifecycle from a pure PredicateContext (no network I/O).
- * Phase 2+: Dashboard builds context via useSpaceLifecycleSignals.
+ * Evaluates lifecycle + capabilities from a pure PredicateContext (no network I/O).
  */
 export function useSpaceLifecycle({
   spaceType,
@@ -49,6 +55,13 @@ export function useSpaceLifecycle({
     });
   }, [context, enabled, spaceType]);
 
+  const capabilities = useMemo(() => {
+    if (!enabled || !spaceType || !context) {
+      return null;
+    }
+    return evaluateSpaceCapabilities({ ...context, spaceType });
+  }, [context, enabled, spaceType]);
+
   return useMemo(() => {
     if (!evaluation) {
       return {
@@ -60,6 +73,8 @@ export function useSpaceLifecycle({
         nextRecommendedAction: null,
         completedMilestoneIds: [],
         pendingMilestoneIds: [],
+        capabilities: null,
+        getCapability: () => null,
       };
     }
 
@@ -79,6 +94,8 @@ export function useSpaceLifecycle({
       nextRecommendedAction: evaluation.recommendation,
       completedMilestoneIds: evaluation.progress.completedMilestoneIds,
       pendingMilestoneIds: evaluation.progress.pendingMilestoneIds,
+      capabilities,
+      getCapability: (id: CapabilityId) => capabilities?.byId[id] ?? null,
     };
-  }, [evaluation]);
+  }, [capabilities, evaluation]);
 }

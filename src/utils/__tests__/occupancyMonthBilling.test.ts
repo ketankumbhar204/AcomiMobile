@@ -32,6 +32,12 @@ describe('occupancy month billing', () => {
     expect(computeOccupancyMonthlyTotalForMonth(row, '2026-07')).toBe(10000);
   });
 
+  it('prorates mid-month move-in for display helpers', () => {
+    const row = occupancy({ moveInDate: '2026-09-15', rentSnapshot: 10000 });
+
+    expect(computeOccupancyMonthlyTotalForMonth(row, '2026-09')).toBe(5333.33);
+  });
+
   it('excludes reserved occupancies', () => {
     const row = occupancy({ status: 'RESERVED', moveInDate: '2026-07-01' });
 
