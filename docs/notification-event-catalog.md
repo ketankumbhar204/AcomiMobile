@@ -109,6 +109,19 @@ Deprecated: dashboard `attention` array is always empty; do not rebuild client a
 
 ---
 
+## Push (FCM)
+
+In-app rows remain the source of truth (`NotificationService.publish`). Firebase Cloud Messaging is a delivery channel only.
+
+- Device tokens: `user_device_tokens` via `POST/DELETE /api/v1/notifications/devices`
+- FCM is sent after the business transaction commits (`NotificationCreatedEvent` / `AFTER_COMMIT`)
+- FCM failure never rolls back the business event
+- Duplicate open `dedupe_key` rows do not re-send FCM
+
+Additional member-facing types: `MENU_PUBLISHED`, `MEMBERSHIP_APPROVED`, `MEMBERSHIP_REJECTED`, `ALLOCATION_CREATED`. Payment reminders reuse `PAYMENT_REMINDER_SENT` (existing scheduler). Rental Spaces are not sent meal push events.
+
+---
+
 ## Adding a new event (checklist)
 
 1. Add or reuse `NotificationType` (BE enum + FE union).

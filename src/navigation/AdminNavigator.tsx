@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { AdminAddMessScreen } from '../screens/admin/AdminAddMessScreen';
 import { AdminAddPropertyScreen } from '../screens/admin/AdminAddPropertyScreen';
 import { AdminDashboardScreen } from '../screens/admin/AdminDashboardScreen';
+import { AdminEnquiryDetailScreen } from '../screens/admin/AdminEnquiryDetailScreen';
+import { AdminEnquiryListScreen } from '../screens/admin/AdminEnquiryListScreen';
 import { AdminMessDetailScreen } from '../screens/admin/AdminMessDetailScreen';
 import { AdminMessListScreen } from '../screens/admin/AdminMessListScreen';
 import { AdminPropertyDetailScreen } from '../screens/admin/AdminPropertyDetailScreen';
@@ -24,6 +26,16 @@ export function AdminNavigator() {
         name="AdminDashboard"
         component={AdminDashboardScreen}
         options={{ title: t('admin.nav.dashboard') }}
+      />
+      <Stack.Screen
+        name="AdminEnquiryList"
+        component={AdminEnquiryListScreen}
+        options={{ title: t('admin.nav.enquiries') }}
+      />
+      <Stack.Screen
+        name="AdminEnquiryDetail"
+        component={AdminEnquiryDetailScreen}
+        options={{ title: t('admin.nav.enquiries') }}
       />
       <Stack.Screen
         name="AdminPropertyList"

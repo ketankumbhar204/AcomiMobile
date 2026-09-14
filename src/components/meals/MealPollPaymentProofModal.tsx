@@ -12,12 +12,13 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/Button';
 import { colors, radius, spacing, typography } from '../../theme';
 import { pickPaymentProofImage } from '../../utils/pickPaymentProofImage';
+import type { PickedPaymentProof } from '../../utils/pickPaymentProofImage';
 
 type MealPollPaymentProofModalProps = {
   visible: boolean;
   submitting?: boolean;
   onClose: () => void;
-  onSubmit: (proofImageBase64: string) => void;
+  onSubmit: (proof: PickedPaymentProof) => void;
 };
 
 export function MealPollPaymentProofModal({
@@ -28,12 +29,12 @@ export function MealPollPaymentProofModal({
 }: MealPollPaymentProofModalProps) {
   const { t } = useTranslation();
   const [previewUri, setPreviewUri] = useState<string | null>(null);
-  const [proofImageBase64, setProofImageBase64] = useState<string | null>(null);
+  const [pickedFile, setPickedFile] = useState<PickedPaymentProof | null>(null);
   const [picking, setPicking] = useState(false);
 
   const reset = () => {
     setPreviewUri(null);
-    setProofImageBase64(null);
+    setPickedFile(null);
     setPicking(false);
   };
 
@@ -54,10 +55,10 @@ export function MealPollPaymentProofModal({
   const handlePickImage = async () => {
     setPicking(true);
     try {
-      const dataUri = await pickPaymentProofImage();
-      if (dataUri) {
-        setPreviewUri(dataUri);
-        setProofImageBase64(dataUri);
+      const picked = await pickPaymentProofImage();
+      if (picked) {
+        setPreviewUri(picked.previewUri);
+        setPickedFile(picked);
       }
     } finally {
       setPicking(false);
@@ -65,10 +66,10 @@ export function MealPollPaymentProofModal({
   };
 
   const handleSubmit = () => {
-    if (!proofImageBase64 || submitting) {
+    if (!pickedFile || submitting) {
       return;
     }
-    onSubmit(proofImageBase64);
+    onSubmit(pickedFile);
   };
 
   return (
@@ -104,7 +105,7 @@ export function MealPollPaymentProofModal({
               label={t('meals.poll.submitProof')}
               onPress={handleSubmit}
               loading={submitting}
-              disabled={!proofImageBase64 || submitting}
+              disabled={!pickedFile || submitting}
             />
             <Button label={t('common.cancel')} variant="ghost" onPress={handleClose} disabled={submitting} />
           </View>

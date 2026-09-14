@@ -57,8 +57,15 @@ function inferLabels(
       : 1;
 
   if (firstNumber !== null) {
-    const floorHundreds = Math.floor(firstNumber / 100) * 100;
-    const offset = floorHundreds > 0 ? index * 100 : index * step * count;
+    // Floor 0 → 1xx, floor 1 → 2xx, etc. If the template is already in the
+    // target floor's hundreds band (e.g. preview already numbered Unit 201 for
+    // floor index 1), do not apply the offset a second time.
+    const templateHundreds = Math.floor(firstNumber / 100) * 100;
+    const targetHundreds = (index + 1) * 100;
+    const offset =
+      templateHundreds > 0
+        ? targetHundreds - templateHundreds
+        : index * step * count;
     return Array.from({ length: count }, (_, itemIndex) => {
       const value = firstNumber + offset + itemIndex * step;
       const suffix = String(value);
@@ -204,7 +211,11 @@ export function expandToEditableStructure(
           roomsPerUnit || config.roomsPerParent,
           config.bedsPerRoom,
           config.capacityPerRoom,
-          parsedFloor?.childItems.map(item => item.label) ?? templateUnitLabels,
+          // Always number from the floor-0 template so the floor hundreds
+          // offset is applied once (preview child labels may already be offset).
+          templateUnitLabels.length > 0
+            ? templateUnitLabels
+            : parsedFloor?.childItems.map(item => item.label) ?? [],
           index,
         ),
         rooms: [],

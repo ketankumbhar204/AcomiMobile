@@ -9,6 +9,8 @@ import {
   Info,
   Languages,
   LogOut,
+  Bell,
+  MessageCircle,
   SquarePen,
   Smartphone,
   Trash2,
@@ -25,6 +27,7 @@ import { ProfileHero } from '../components/profile/ProfileHero';
 import { SettingsGroupCard } from '../components/profile/SettingsGroupCard';
 import { UserProfileFields } from '../components/profile/UserProfileFields';
 import { DashboardActionRow } from '../components/dashboard/shared/DashboardActionRow';
+import { AccountNotificationBellButton } from '../components/notifications/AccountNotificationBellButton';
 import {
   Button,
   EmptyState,
@@ -55,7 +58,8 @@ import {
   profileDocumentsToFormState,
   type ProfileDocumentFormState,
 } from '../utils/profileDocuments';
-import { pickProfileImage } from '../utils/pickProfileImage';
+import { pickProfileImage, toLocalFileInput } from '../utils/pickProfileImage';
+import { uploadLocalFile } from '../services/fileUploadService';
 import {
   isProfileCorrectionNote,
   profileCorrectionMessage,
@@ -176,19 +180,21 @@ export function ProfileScreen() {
   );
 
   useLayoutEffect(() => {
+    const showBack = navigation.canGoBack();
     navigation.setOptions({
       title: t('navigation.profile'),
       headerBackVisible: false,
-      headerLeft: () => <HeaderBackButton />,
+      headerLeft: showBack ? () => <HeaderBackButton /> : undefined,
+      headerRight: () => <AccountNotificationBellButton />,
     });
-  }, [navigation, t]);
+  }, [navigation, t, i18n.language]);
 
   const handleEditProfile = () => {
     navigation.navigate('CompleteProfile', { mode: 'edit' });
   };
 
   const handleOpenMySpaces = () => {
-    navigation.navigate('MySpaces');
+    navigation.navigate('MemberTabs', { screen: 'Home' });
   };
 
   const handleOpenUpload = () => {
@@ -214,12 +220,23 @@ export function ProfileScreen() {
         return;
       }
 
+      const fileId = await uploadLocalFile(toLocalFileInput(picked), {
+        purpose:
+          asset === 'profilePhoto'
+            ? 'PROFILE_PHOTO'
+            : asset === 'identityProof'
+              ? 'IDENTITY_DOCUMENT'
+              : 'ADDRESS_PROOF',
+        spaceId: consumerSpaceId ?? undefined,
+        memberId: linkedMemberId ?? undefined,
+      });
+
       const fileOverride =
         asset === 'profilePhoto'
-          ? { profilePhotoUrl: picked.fileUrl }
+          ? { profilePhotoFileId: fileId, profilePhotoUrl: picked.previewUri }
           : asset === 'identityProof'
-            ? { identityProofFileUrl: picked.fileUrl }
-            : { addressProofFileUrl: picked.fileUrl };
+            ? { identityProofFileId: fileId }
+            : { addressProofFileId: fileId };
 
       const payload = buildCompleteProfilePayloadFromUser(user, {
         linkedMember,
@@ -367,6 +384,18 @@ export function ProfileScreen() {
             subtitle={t('settings.profile.mobileHint')}
             icon={Smartphone}
             onPress={() => navigation.navigate('ChangeMobile')}
+          />
+          <DashboardActionRow
+            title={t('notifications.title')}
+            subtitle={t('spaces.enquiries.notificationsEmpty')}
+            icon={Bell}
+            onPress={() => navigation.navigate('AccountNotifications')}
+          />
+          <DashboardActionRow
+            title={t('settings.profile.myEnquiries')}
+            subtitle={t('spaces.enquiries.subtitle')}
+            icon={MessageCircle}
+            onPress={() => navigation.navigate('MyEnquiries')}
           />
           <DashboardActionRow
             title={t('settings.profile.switchSpace', {

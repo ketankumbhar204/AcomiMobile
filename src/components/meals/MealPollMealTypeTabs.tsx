@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import type { MealPollSlot, MealType, UUID } from '../../api/types';
 import { colors, radius, spacing, typography } from '../../theme';
 import { MEAL_TYPES, mealTypeLabelKey } from '../../utils/mealLabels';
+import { mealTypeTheme } from '../../utils/mealTypeTheme';
+import { platesForSingleSelectOption } from '../../utils/mealSelectionSummary';
 
 type MealPollMealTypeTabsProps = {
   polls: MealPollSlot[];
@@ -16,7 +18,7 @@ type MealPollMealTypeTabsProps = {
 };
 
 function platesForMeal(
-  mealType: MealType,
+  poll: MealPollSlot,
   multiQuantity: boolean,
   selections: Partial<Record<MealType, UUID>>,
   quantitySelections: Partial<Record<MealType, Record<UUID, number>>>,
@@ -24,12 +26,14 @@ function platesForMeal(
 ): number {
   if (multiQuantity) {
     if (totalPlatesForMeal) {
-      return totalPlatesForMeal(mealType);
+      return totalPlatesForMeal(poll.mealType);
     }
-    const qtyMap = quantitySelections[mealType] ?? {};
+    const qtyMap = quantitySelections[poll.mealType] ?? {};
     return Object.values(qtyMap).reduce((sum, qty) => sum + (qty > 0 ? qty : 0), 0);
   }
-  return selections[mealType] ? 1 : 0;
+  const selectedId = selections[poll.mealType];
+  const option = selectedId ? poll.options.find(row => row.id === selectedId) : undefined;
+  return platesForSingleSelectOption(option);
 }
 
 /** Compact Breakfast / Lunch / Dinner tabs for customer meal selection. */
@@ -56,21 +60,24 @@ export function MealPollMealTypeTabs({
       {sorted.map(poll => {
         const mealType = poll.mealType;
         const selected = selectedMealType === mealType;
+        const theme = mealTypeTheme(mealType);
         const plates = platesForMeal(
-          mealType,
+          poll,
           multiQuantity,
           selections,
           quantitySelections,
           totalPlatesForMeal,
         );
-        const hasSelection = plates > 0;
-        const statusLabel = hasSelection
+        const hasAnswer = multiQuantity
+          ? plates > 0
+          : Boolean(selections[mealType]);
+        const statusLabel = hasAnswer
           ? t('meals.poll.tabSelected')
           : t('meals.poll.tabNotSelected');
         const countLabel = multiQuantity
           ? t('meals.poll.tabPlates', { count: plates })
-          : hasSelection
-            ? '1'
+          : hasAnswer
+            ? String(plates)
             : '0';
 
         return (
@@ -79,27 +86,29 @@ export function MealPollMealTypeTabs({
             onPress={() => onSelectMealType(mealType)}
             style={({ pressed }) => [
               styles.cell,
-              selected && styles.cellSelected,
+              {
+                borderColor: selected ? theme.borderStrong : theme.border,
+                backgroundColor: theme.soft,
+                borderWidth: selected ? 2 : 1,
+              },
               pressed && styles.cellPressed,
             ]}
             accessibilityRole="tab"
             accessibilityState={{ selected }}
             accessibilityLabel={`${t(mealTypeLabelKey(mealType))}, ${statusLabel}`}>
-            <Text
-              style={[styles.name, selected && styles.nameSelected]}
-              numberOfLines={1}>
+            <Text style={[styles.name, { color: theme.accent }]} numberOfLines={1}>
               {t(mealTypeLabelKey(mealType))}
             </Text>
             <Text
               style={[
                 styles.meta,
-                hasSelection ? styles.metaSelected : styles.metaEmpty,
+                hasAnswer ? { color: theme.accent, fontWeight: '600' } : styles.metaEmpty,
               ]}
               numberOfLines={1}>
               {countLabel}
             </Text>
             <Text
-              style={[styles.status, hasSelection && styles.statusActive]}
+              style={[styles.status, hasAnswer && styles.statusActive]}
               numberOfLines={1}>
               {statusLabel}
             </Text>
@@ -127,30 +136,18 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     gap: 2,
   },
-  cellSelected: {
-    borderColor: colors.primary,
-    borderWidth: 2,
-    backgroundColor: `${colors.primary}12`,
-  },
   cellPressed: {
     opacity: 0.92,
   },
   name: {
-    ...typography.caption,
-    color: colors.textPrimary,
+    ...typography.bodyStrong,
     fontWeight: '700',
-    fontSize: 13,
-  },
-  nameSelected: {
-    color: colors.primaryDark,
+    fontSize: 15,
+    lineHeight: 18,
   },
   meta: {
     ...typography.caption,
     fontSize: 11,
-  },
-  metaSelected: {
-    color: colors.primaryDark,
-    fontWeight: '600',
   },
   metaEmpty: {
     color: colors.muted,

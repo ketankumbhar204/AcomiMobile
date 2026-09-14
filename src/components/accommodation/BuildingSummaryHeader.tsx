@@ -8,6 +8,8 @@ import { colors, shadows, spacing, typography } from '../../theme';
 import type { AccommodationUiProfile } from '../../utils/accommodationProfile';
 import { getAccommodationHierarchyAccent } from '../../utils/accommodationHierarchy';
 import { getLayoutModeLabelKey } from '../../utils/propertyLayoutMode';
+import { CircularOccupancyIndicator } from './layout/cards/CircularOccupancyIndicator';
+import { calcOccupancyPercent } from './layout/cards/occupancyUtils';
 
 type BuildingSummaryHeaderProps = {
   summary: BuildingSummaryResponse | null;
@@ -43,11 +45,10 @@ export function BuildingSummaryHeader({
     return null;
   }
 
-  const metadataParts: string[] = [];
-  if (summary.code) {
-    metadataParts.push(summary.code);
-  }
-  metadataParts.push(t(getLayoutModeLabelKey(summary.layoutMode)));
+  const availableBeds = summary.availableBeds ?? summary.available;
+  const occupiedBeds = summary.occupiedBeds ?? summary.occupied;
+  const totalBeds = summary.beds || availableBeds + occupiedBeds;
+  const occupancyPercent = calcOccupancyPercent(occupiedBeds, totalBeds);
 
   return (
     <Card style={styles.card}>
@@ -65,8 +66,30 @@ export function BuildingSummaryHeader({
             editable={editableName}
             onSave={onSaveName}
           />
-          <Text style={styles.metadata}>{metadataParts.join(' · ')}</Text>
+          <Text style={styles.metadata}>
+            {t(getLayoutModeLabelKey(summary.layoutMode))}
+          </Text>
+          <Text style={styles.counts}>
+            {t('accommodation.builder.summaryCounts', {
+              floors: summary.floors,
+              rooms: summary.rooms,
+              beds: summary.beds,
+              defaultValue: `${summary.floors} Floors · ${summary.rooms} Rooms · ${summary.beds} Beds`,
+            })}
+          </Text>
         </View>
+        {totalBeds > 0 ? (
+          <View style={styles.ringWrap}>
+            <CircularOccupancyIndicator percent={occupancyPercent} size={56} />
+            <Text style={styles.availableLabel}>
+              {t('accommodation.builder.availableOfTotal', {
+                available: availableBeds,
+                total: totalBeds,
+                defaultValue: `${availableBeds}/${totalBeds} Available`,
+              })}
+            </Text>
+          </View>
+        ) : null}
       </View>
       {actions ? <View style={styles.actions}>{actions}</View> : null}
     </Card>
@@ -104,6 +127,24 @@ const styles = StyleSheet.create({
     ...typography.caption,
     fontSize: 12,
     color: colors.textSecondary,
+  },
+  counts: {
+    ...typography.caption,
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  ringWrap: {
+    alignItems: 'center',
+    gap: 4,
+    maxWidth: 88,
+  },
+  availableLabel: {
+    ...typography.caption,
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    textAlign: 'center',
   },
   actions: {
     marginTop: spacing.md,

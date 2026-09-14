@@ -6,6 +6,7 @@ import type { DailyMenuResponse, MealPollSlot, MealType } from '../../api/types'
 import { colors, radius, spacing, typography } from '../../theme';
 import type { SlotShareState } from '../../utils/shareMenuSelection';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
+import { mealTypeTheme } from '../../utils/mealTypeTheme';
 import { resolveMealStatusKind } from '../../utils/mealStatusTheme';
 import { MealStatusBadge } from './MealStatusBadge';
 import { MealTypeVisual } from './MealTypeVisual';
@@ -31,6 +32,7 @@ export function ShareMealSlotCheckbox({
 }: ShareMealSlotCheckboxProps) {
   const { t } = useTranslation();
   const mealLabel = t(mealTypeLabelKey(mealType));
+  const theme = mealTypeTheme(mealType);
   const shareable = state === 'shareable' && !disabled;
   const statusKind = resolveMealStatusKind(menu, poll);
 
@@ -42,7 +44,15 @@ export function ShareMealSlotCheckbox({
         : t('meals.planning.shareNotPublished', { meal: mealLabel });
 
   return (
-    <View style={[styles.row, !shareable && styles.rowDisabled]}>
+    <View
+      style={[
+        styles.row,
+        {
+          borderColor: shareable ? theme.border : colors.border,
+          backgroundColor: shareable ? theme.soft : colors.surface,
+        },
+        !shareable && styles.rowDisabled,
+      ]}>
       <Pressable
         style={styles.checkboxHit}
         onPress={shareable ? onToggle : undefined}
@@ -56,7 +66,14 @@ export function ShareMealSlotCheckbox({
         />
         <View style={styles.labelBlock}>
           <View style={styles.labelRow}>
-            <Text style={[styles.label, !shareable && styles.labelDisabled]}>{mealLabel}</Text>
+            <Text
+              style={[
+                styles.label,
+                { color: theme.accent },
+                !shareable && styles.labelDisabled,
+              ]}>
+              {mealLabel}
+            </Text>
             {shareable || statusKind === 'empty' ? (
               <MealStatusBadge kind={statusKind} size="compact" />
             ) : null}
@@ -142,9 +159,11 @@ const styles = StyleSheet.create({
   },
   label: {
     ...typography.bodyStrong,
+    fontSize: 15,
+    fontWeight: '700',
   },
   labelDisabled: {
-    color: colors.muted,
+    opacity: 0.7,
   },
   hint: {
     ...typography.caption,

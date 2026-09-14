@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { colors, spacing, typography } from '../../theme';
+import { colors, radius, spacing, typography } from '../../theme';
 
 export type OccupancyHierarchyContext = {
   spaceName?: string;
@@ -53,7 +53,6 @@ export function HierarchyBreadcrumbCard({
 
   return (
     <View style={[styles.card, compact && styles.cardCompact]} pointerEvents="none">
-      <Text style={styles.heading}>{t('occupancyWizard.breadcrumb.selectedAccommodation')}</Text>
       {rows.map(row => (
         <View key={row.label} style={styles.row}>
           <Text style={styles.label}>{row.label}</Text>
@@ -68,27 +67,16 @@ export function HierarchyBreadcrumbCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: `${colors.muted}14`,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: `${colors.muted}33`,
-    borderStyle: 'dashed',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
+    backgroundColor: '#F3F4F6',
+    borderRadius: radius.card,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
     marginBottom: spacing.md,
-    gap: 4,
+    gap: 6,
   },
   cardCompact: {
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
     marginBottom: spacing.sm,
-  },
-  heading: {
-    ...typography.caption,
-    color: colors.muted,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-    marginBottom: 2,
   },
   row: {
     flexDirection: 'row',
@@ -98,16 +86,18 @@ const styles = StyleSheet.create({
     minHeight: 18,
   },
   label: {
-    fontSize: 11,
+    ...typography.caption,
+    fontSize: 12,
     lineHeight: 16,
     color: colors.muted,
     flex: 1,
   },
   value: {
-    fontSize: 12,
-    lineHeight: 16,
+    ...typography.bodyStrong,
+    fontSize: 13,
+    lineHeight: 18,
     fontWeight: '600',
-    color: colors.textSecondary,
+    color: colors.textPrimary,
     flex: 1.4,
     textAlign: 'right',
   },

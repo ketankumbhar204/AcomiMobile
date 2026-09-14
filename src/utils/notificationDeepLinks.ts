@@ -54,7 +54,8 @@ export function navigateFromNotificationType(
       navigateMainStack('MenuSharePreview', { spaceId, menuDate: tomorrow });
       return;
     case 'MEAL_POLL_PUBLISHED':
-    case 'MEAL_POLL_REMINDER': {
+    case 'MEAL_POLL_REMINDER':
+    case 'MENU_PUBLISHED': {
       const menuDate = extractIsoDateFromText(
         notification.message,
         notification.title,
@@ -69,6 +70,16 @@ export function navigateFromNotificationType(
     case 'SUBSCRIPTION_ACTIVATION_PENDING':
       navigateMainStack('SubscriptionActivationRequests', { spaceId });
       return;
+    case 'SUBSCRIPTION_ACTIVATION_APPROVED':
+    case 'SUBSCRIPTION_ACTIVATION_REJECTED':
+    case 'MEAL_BALANCE_UPDATED':
+    case 'MEAL_PARTICIPATION_CHANGED':
+      if (isOperator) {
+        navigateMainStack('SubscriptionActivationRequests', { spaceId });
+      } else {
+        navigateMainStack('SpaceTabs', { spaceId, screen: 'Meals', params: { spaceId } });
+      }
+      return;
     case 'COMPLAINT_PENDING':
     case 'COMPLAINT_OVERDUE':
     case 'COMPLAINT_CREATED':
@@ -78,20 +89,45 @@ export function navigateFromNotificationType(
         navigateMainStack('ComplaintDetail', { spaceId, complaintId: entityId });
       }
       return;
+    case 'CONTACT_ENQUIRY_SUBMITTED':
+    case 'CONTACT_ENQUIRY_SHARED':
+    case 'CONTACT_ENQUIRY_REJECTED':
+    case 'CONTACT_ENQUIRY_EXPIRED':
+      navigateMainStack('MyEnquiries', entityId ? { enquiryId: entityId } : undefined);
+      return;
+    case 'PAYMENT_REMINDER_SENT':
+      if (entityId) {
+        navigateMainStack('PaymentDetail', { spaceId, paymentId: entityId });
+      } else {
+        navigateToPaymentsTab(spaceId);
+      }
+      return;
     case 'MOVE_IN_SCHEDULED_TODAY':
     case 'RESERVATION_STARTING_TODAY':
     case 'RESERVATION_CREATED':
+    case 'RESERVATION_CANCELLED':
     case 'MOVE_IN_COMPLETED':
-      navigateMainStack('DashboardOccupancyList', { spaceId, mode: 'moveInsThisMonth' });
+    case 'ALLOCATION_CREATED':
+      if (isOperator) {
+        navigateMainStack('DashboardOccupancyList', { spaceId, mode: 'moveInsThisMonth' });
+      } else {
+        navigateMainStack('SpaceTabs', { spaceId, screen: 'Dashboard', params: { spaceId } });
+      }
       return;
     case 'MOVE_OUT_SCHEDULED_TODAY':
     case 'MOVE_OUT_COMPLETED':
+      if (isOperator) {
+        navigateMainStack('DashboardOccupancyList', { spaceId, mode: 'active' });
+      } else {
+        navigateMainStack('SpaceTabs', { spaceId, screen: 'Dashboard', params: { spaceId } });
+      }
+      return;
     case 'VACANT_RESERVED_BED':
     case 'EXPIRED_RESERVATION':
       navigateMainStack('DashboardOccupancyList', { spaceId, mode: 'active' });
       return;
     case 'PENDING_INVITATION':
-      if (isOperator) {
+      if (isOperator && notification.actionRoute !== 'AcceptInvitations') {
         navigateToMembersTab(spaceId);
       } else {
         navigateMainStack('AcceptInvitations', undefined);
@@ -99,6 +135,25 @@ export function navigateFromNotificationType(
       return;
     case 'INVITATION_ACCEPTED':
       navigateToMembersTab(spaceId);
+      return;
+    case 'INVITATION_EXPIRED':
+    case 'MEMBERSHIP_REJECTED':
+      navigateMainStack('AcceptInvitations', undefined);
+      return;
+    case 'MEMBERSHIP_APPROVED':
+    case 'MEMBERSHIP_ROLE_CHANGED':
+      navigateMainStack('SpaceTabs', { spaceId, screen: 'Dashboard', params: { spaceId } });
+      return;
+    case 'MEMBERSHIP_REMOVED':
+    case 'SPACE_DEACTIVATED':
+      navigateMainStack('MySpaces', undefined);
+      return;
+    case 'OWNERSHIP_TRANSFERRED':
+      if (notification.actionRoute === 'MySpaces' || !isOperator) {
+        navigateMainStack('MySpaces', undefined);
+      } else {
+        navigateMainStack('SpaceTabs', { spaceId, screen: 'Dashboard', params: { spaceId } });
+      }
       return;
     case 'TENANT_PROFILE_INCOMPLETE':
     case 'TENANT_PROFILE_COMPLETED':
@@ -115,8 +170,16 @@ export function navigateFromNotificationType(
         navigateToMembersTab(spaceId);
       } else if (notification.actionRoute === 'AcceptInvitations') {
         navigateMainStack('AcceptInvitations', undefined);
+      } else if (notification.actionRoute === 'MySpaces') {
+        navigateMainStack('MySpaces', undefined);
+      } else if (notification.actionRoute === 'Meals') {
+        navigateMainStack('SpaceTabs', { spaceId, screen: 'Meals', params: { spaceId } });
       } else if (notification.actionRoute === 'DashboardOccupancyList') {
-        navigateMainStack('DashboardOccupancyList', { spaceId, mode: 'active' });
+        if (isOperator) {
+          navigateMainStack('DashboardOccupancyList', { spaceId, mode: 'active' });
+        } else {
+          navigateMainStack('SpaceTabs', { spaceId, screen: 'Dashboard', params: { spaceId } });
+        }
       } else if (notification.actionRoute === 'MenuPlanning') {
         navigateMainStack('MenuPlanning', { spaceId, menuDate: tomorrow });
       } else if (notification.actionRoute === 'MenuSharePreview') {

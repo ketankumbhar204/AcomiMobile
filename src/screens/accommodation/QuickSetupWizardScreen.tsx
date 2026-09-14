@@ -37,8 +37,13 @@ import type { EditableSetupStructure } from '../../components/accommodation/setu
 import { StickyFormActions } from '../../components/progressive';
 import { FormInput, HeaderBackButton } from '../../components/ui';
 import { useQuickSetup } from '../../hooks/useQuickSetup';
+import { useBuildings } from '../../hooks/useBuildings';
 import { accommodationApi } from '../../api/accommodationApi';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
+import {
+  suggestBuildingCode,
+  suggestBuildingName,
+} from '../../utils/suggestBuildingDefaults';
 import type { MainStackParamList } from '../../navigation/types';
 import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
@@ -80,10 +85,12 @@ export function QuickSetupWizardScreen() {
   const showToast = useToastStore(state => state.showToast);
 
   const mySpaces = useSpaceStore(state => state.mySpaces);
-  const spaceType = useMemo(
-    () => mySpaces.find(space => space.spaceId === spaceId)?.spaceType as SpaceType | undefined,
+  const spaceMeta = useMemo(
+    () => mySpaces.find(space => space.spaceId === spaceId),
     [mySpaces, spaceId],
   );
+  const spaceType = spaceMeta?.spaceType as SpaceType | undefined;
+  const spaceName = spaceMeta?.spaceName ?? '';
 
   const steps = useMemo(() => (spaceType ? getSteps(spaceType) : []), [spaceType]);
   const pgLayoutModes = useMemo(
@@ -115,6 +122,7 @@ export function QuickSetupWizardScreen() {
   const [checkingBuilding, setCheckingBuilding] = useState(false);
   const generatingRef = useRef(false);
   const checkingBuildingRef = useRef(false);
+  const buildingDefaultsAppliedRef = useRef(false);
 
   const currentStep = steps[stepIndex] ?? 'building';
   const isApartmentPg = layoutMode === 'APARTMENT_PG';
@@ -164,7 +172,18 @@ export function QuickSetupWizardScreen() {
     spaceType,
   ]);
 
+  const { buildings, loading: buildingsLoading } = useBuildings(spaceId);
   const { preview: previewSetup, loading, error, setError } = useQuickSetup(spaceId);
+
+  // Prefill once from space name + next BLD N (still editable).
+  useEffect(() => {
+    if (buildingDefaultsAppliedRef.current || !spaceMeta || buildingsLoading) {
+      return;
+    }
+    setBuildingName(suggestBuildingName(spaceName));
+    setBuildingCode(suggestBuildingCode(buildings.length));
+    buildingDefaultsAppliedRef.current = true;
+  }, [buildings.length, buildingsLoading, spaceMeta, spaceName]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -522,7 +541,9 @@ export function QuickSetupWizardScreen() {
                     void validateBuildingStep();
                   }
                 }}
-                placeholder={t('accommodation.buildings.namePlaceholder')}
+                placeholder={t('accommodation.buildings.namePlaceholderSpace', {
+                  defaultValue: 'Uses your space name by default',
+                })}
                 error={buildingNameError}
                 leadingIcon={Type}
               />
@@ -530,7 +551,9 @@ export function QuickSetupWizardScreen() {
                 label={t('accommodation.fields.code')}
                 value={buildingCode}
                 onChangeText={setBuildingCode}
-                placeholder={t('accommodation.buildings.codePlaceholder')}
+                placeholder={t('accommodation.buildings.codePlaceholderBld', {
+                  defaultValue: 'e.g. BLD 1',
+                })}
                 leadingIcon={Tag}
               />
               {spaceType && isLayoutModeSelectable(spaceType) ? (

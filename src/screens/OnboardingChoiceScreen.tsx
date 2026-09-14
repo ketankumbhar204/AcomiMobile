@@ -14,6 +14,7 @@ import { ProfileHeaderButton } from '../components/ui/ProfileHeaderButton';
 import { Screen } from '../components/ui/Screen';
 import type { MainStackParamList } from '../navigation/types';
 import { spacing } from '../theme';
+import { setAccountIntent } from '../utils/accountIntent';
 
 const heroBuilding = require('../assets/onboarding/hero-building.png');
 
@@ -56,7 +57,10 @@ export function OnboardingChoiceScreen() {
           t('onboarding.choice.manageBenefit3'),
         ]}
         illustration="owner"
-        onPress={() => navigation.navigate('CreateSpace')}
+        onPress={() => {
+          void setAccountIntent('owner');
+          navigation.navigate('CreateSpace');
+        }}
       />
 
       <OnboardingChoiceCard
@@ -71,7 +75,10 @@ export function OnboardingChoiceScreen() {
         accent="#1D4ED8"
         soft="#EFF6FF"
         illustration="member"
-        onPress={() => navigation.navigate('JoinSpace')}
+        onPress={() => {
+          void setAccountIntent('member');
+          navigation.navigate('MemberTabs', { screen: 'Home' });
+        }}
       />
 
       <OnboardingTrustBanner

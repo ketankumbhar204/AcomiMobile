@@ -34,7 +34,9 @@ import { EditSpaceScreen } from '../screens/EditSpaceScreen';
 import { InviteMemberScreen } from '../screens/InviteMemberScreen';
 import { MemberDetailsScreen } from '../screens/MemberDetailsScreen';
 import { MemberOccupancyHistoryScreen } from '../screens/MemberOccupancyHistoryScreen';
-import { MySpacesScreen } from '../screens/MySpacesScreen';
+import { FindAPlaceDetailScreen } from '../screens/FindAPlaceDetailScreen';
+import { MyEnquiriesScreen } from '../screens/MyEnquiriesScreen';
+import { AccountNotificationsScreen } from '../screens/AccountNotificationsScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { DeleteAccountScreen } from '../screens/auth/DeleteAccountScreen';
 import { ChangeMobileScreen } from '../screens/auth/ChangeMobileScreen';
@@ -72,12 +74,16 @@ import { InventoryDashboardScreen } from '../screens/inventory/InventoryDashboar
 import { InventoryItemsScreen } from '../screens/inventory/InventoryItemsScreen';
 import { InventoryItemDetailsScreen } from '../screens/inventory/InventoryItemDetailsScreen';
 import { InventoryItemFormScreen } from '../screens/inventory/InventoryItemFormScreen';
+import { CapabilityStackGate } from '../components/ui/CapabilityStackGate';
 import { stackHeaderOptions } from '../theme';
 import { useTranslation } from 'react-i18next';
 import { useSpaceStore } from '../store/spaceStore';
 import { useProfileCompletionGate } from '../hooks/useProfileCompletionGate';
 import { SpaceTabNavigator } from './SpaceTabNavigator';
+import { MemberTabNavigator } from './MemberTabNavigator';
+import { MemberTabsRedirect } from './MemberTabsRedirect';
 import type { MainStackParamList } from './types';
+import type { CapabilityId } from '../spaceLifecycle';
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
@@ -89,6 +95,87 @@ function SpaceTabsScreen({
   const currentSpaceId = useSpaceStore(state => state.currentSpace?.spaceId);
   const spaceId = currentSpaceId ?? route.params.spaceId;
   return <SpaceTabNavigator key={spaceId} spaceId={spaceId} />;
+}
+
+function MemberHomeRedirect() {
+  return <MemberTabsRedirect screen="Home" />;
+}
+
+function MySpacesRedirect() {
+  return <MemberTabsRedirect screen="Home" />;
+}
+
+function FindAPlaceRedirect() {
+  return <MemberTabsRedirect screen="FindAPlace" />;
+}
+
+/** Progressive Guided Access — stack/deep-link gate (central; screens stay unaware). */
+function GatedStackScreen({
+  spaceId,
+  capabilityId,
+  featureTitle,
+  children,
+}: {
+  spaceId: string;
+  capabilityId: CapabilityId;
+  featureTitle: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <CapabilityStackGate
+      spaceId={spaceId}
+      capabilityId={capabilityId}
+      featureTitle={featureTitle}
+    >
+      {children}
+    </CapabilityStackGate>
+  );
+}
+
+function AddMemberGated({
+  route,
+}: NativeStackScreenProps<MainStackParamList, 'AddMember'>) {
+  const { t } = useTranslation();
+  return (
+    <GatedStackScreen
+      spaceId={route.params.spaceId}
+      capabilityId="MEMBERS"
+      featureTitle={t('navigation.addMember')}
+    >
+      <AddMemberScreen />
+    </GatedStackScreen>
+  );
+}
+
+function AddCustomersHubGated({
+  route,
+}: NativeStackScreenProps<MainStackParamList, 'AddCustomersHub'>) {
+  const { t } = useTranslation();
+  return (
+    <GatedStackScreen
+      spaceId={route.params.spaceId}
+      capabilityId="MEMBERS"
+      featureTitle={t('navigation.addCustomers')}
+    >
+      <AddCustomersHubScreen />
+    </GatedStackScreen>
+  );
+}
+
+function OccupancyWizardGated({
+  route,
+  navigation,
+}: NativeStackScreenProps<MainStackParamList, 'OccupancyWizard'>) {
+  const { t } = useTranslation();
+  return (
+    <GatedStackScreen
+      spaceId={route.params.spaceId}
+      capabilityId="ALLOCATION"
+      featureTitle={t('navigation.occupancy')}
+    >
+      <OccupancyWizardScreen navigation={navigation} route={route} />
+    </GatedStackScreen>
+  );
 }
 
 export function MainNavigator() {
@@ -104,22 +191,21 @@ export function MainNavigator() {
     if (startupRoute === 'OnboardingChoice') {
       return 'OnboardingChoice';
     }
-    if (startupRoute === 'JoinSpace') {
-      return 'JoinSpace';
+    if (
+      startupRoute === 'AcceptInvitations' ||
+      startupRoute === 'JoinSpace' ||
+      startupRoute === 'MemberHome' ||
+      startupRoute === 'MySpaces'
+    ) {
+      return 'MemberTabs';
     }
     if (startupRoute === 'CreateSpace') {
       return 'CreateSpace';
     }
-    if (startupRoute === 'AcceptInvitations') {
-      return 'AcceptInvitations';
-    }
-    if (startupRoute === 'MySpaces') {
-      return 'MySpaces';
-    }
     if (selectedSpaceId) {
       return 'SpaceTabs';
     }
-    return 'MySpaces';
+    return 'MemberTabs';
   }, [profileBlocked, selectedSpaceId, startupRoute]);
 
   if (profileBlocked) {
@@ -166,6 +252,11 @@ export function MainNavigator() {
       initialRouteName={initialRouteName}
       screenOptions={stackHeaderOptions}>
       <Stack.Screen
+        name="MemberTabs"
+        component={MemberTabNavigator}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
         name="AcceptInvitations"
         component={AcceptInvitationsScreen}
         options={{ title: t('navigation.acceptInvitations') }}
@@ -175,14 +266,40 @@ export function MainNavigator() {
         component={OnboardingChoiceScreen}
         options={{ headerShown: true }}
       />
-      <Stack.Screen name="JoinSpace" component={JoinSpaceScreen} />
+      <Stack.Screen
+        name="MemberHome"
+        component={MemberHomeRedirect}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="JoinSpace"
+        component={JoinSpaceScreen}
+        options={{ headerShown: false }}
+      />
       <Stack.Screen
         name="MySpaces"
-        component={MySpacesScreen}
-        options={{
-          title: t('navigation.mySpaces'),
-          headerBackVisible: false,
-        }}
+        component={MySpacesRedirect}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="FindAPlace"
+        component={FindAPlaceRedirect}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="FindAPlaceDetail"
+        component={FindAPlaceDetailScreen}
+        options={{ title: t('navigation.findAPlaceDetail') }}
+      />
+      <Stack.Screen
+        name="MyEnquiries"
+        component={MyEnquiriesScreen}
+        options={{ title: t('navigation.myEnquiries') }}
+      />
+      <Stack.Screen
+        name="AccountNotifications"
+        component={AccountNotificationsScreen}
+        options={{ title: t('notifications.title') }}
       />
       <Stack.Screen
         name="Profile"
@@ -236,12 +353,12 @@ export function MainNavigator() {
       />
       <Stack.Screen
         name="AddMember"
-        component={AddMemberScreen}
+        component={AddMemberGated}
         options={{ title: t('navigation.addMember') }}
       />
       <Stack.Screen
         name="AddCustomersHub"
-        component={AddCustomersHubScreen}
+        component={AddCustomersHubGated}
         options={{ title: t('navigation.addCustomers') }}
       />
       <Stack.Screen
@@ -295,27 +412,39 @@ export function MainNavigator() {
       <Stack.Screen name="AccommodationBuilder" component={AccommodationBuilderScreen} />
       <Stack.Screen
         name="OccupancyWizard"
-        component={OccupancyWizardScreen}
+        component={OccupancyWizardGated}
         options={{ title: t('navigation.occupancy') }}
       />
       <Stack.Screen
         name="MenuLibrary"
         options={{ title: t('navigation.moreMenu.menuLibrary') }}
         children={({ route }) => (
-          <MenuLibraryScreen
+          <GatedStackScreen
             spaceId={route.params.spaceId}
-            initialTab={route.params.initialTab}
-          />
+            capabilityId="MEAL_CONFIG"
+            featureTitle={t('navigation.moreMenu.menuLibrary')}
+          >
+            <MenuLibraryScreen
+              spaceId={route.params.spaceId}
+              initialTab={route.params.initialTab}
+            />
+          </GatedStackScreen>
         )}
       />
       <Stack.Screen
         name="DailyMenuToday"
         options={{ title: t('navigation.todayMenu') }}
         children={({ route }) => (
-          <DailyMenuTodayScreen
+          <GatedStackScreen
             spaceId={route.params.spaceId}
-            menuDate={route.params.menuDate}
-          />
+            capabilityId="MEAL_OPS"
+            featureTitle={t('navigation.todayMenu')}
+          >
+            <DailyMenuTodayScreen
+              spaceId={route.params.spaceId}
+              menuDate={route.params.menuDate}
+            />
+          </GatedStackScreen>
         )}
       />
       <Stack.Screen
@@ -325,11 +454,17 @@ export function MainNavigator() {
         }
         options={{ title: t('navigation.planMenu') }}
         children={({ route }) => (
-          <DailyMenuEditScreen
+          <GatedStackScreen
             spaceId={route.params.spaceId}
-            menuDate={route.params.menuDate}
-            mealType={route.params.mealType}
-          />
+            capabilityId="MEAL_OPS"
+            featureTitle={t('navigation.planMenu')}
+          >
+            <DailyMenuEditScreen
+              spaceId={route.params.spaceId}
+              menuDate={route.params.menuDate}
+              mealType={route.params.mealType}
+            />
+          </GatedStackScreen>
         )}
       />
       <Stack.Screen
@@ -339,11 +474,17 @@ export function MainNavigator() {
         }
         options={{ title: t('navigation.selectCombo') }}
         children={({ route }) => (
-          <DailyMenuSelectComboScreen
+          <GatedStackScreen
             spaceId={route.params.spaceId}
-            menuDate={route.params.menuDate}
-            mealType={route.params.mealType}
-          />
+            capabilityId="MEAL_OPS"
+            featureTitle={t('navigation.selectCombo')}
+          >
+            <DailyMenuSelectComboScreen
+              spaceId={route.params.spaceId}
+              menuDate={route.params.menuDate}
+              mealType={route.params.mealType}
+            />
+          </GatedStackScreen>
         )}
       />
       <Stack.Screen
@@ -353,29 +494,53 @@ export function MainNavigator() {
         }
         options={{ title: t('navigation.selectMenu') }}
         children={({ route }) => (
-          <SelectMenuHubScreen
+          <GatedStackScreen
             spaceId={route.params.spaceId}
-            menuDate={route.params.menuDate}
-            mealType={route.params.mealType}
-          />
+            capabilityId="MEAL_OPS"
+            featureTitle={t('navigation.selectMenu')}
+          >
+            <SelectMenuHubScreen
+              spaceId={route.params.spaceId}
+              menuDate={route.params.menuDate}
+              mealType={route.params.mealType}
+            />
+          </GatedStackScreen>
         )}
       />
       <Stack.Screen
         name="MealComboForm"
-        component={MealComboFormScreen}
         options={({ route }) => ({
           title: route.params.mode === 'edit' ? t('navigation.editCombo') : t('navigation.addCombo'),
         })}
+        children={({ route }) => (
+          <GatedStackScreen
+            spaceId={route.params.spaceId}
+            capabilityId="MEAL_CONFIG"
+            featureTitle={
+              route.params.mode === 'edit'
+                ? t('navigation.editCombo')
+                : t('navigation.addCombo')
+            }
+          >
+            <MealComboFormScreen />
+          </GatedStackScreen>
+        )}
       />
       <Stack.Screen
         name="MenuPlanning"
         options={{ title: t('navigation.menuPlanning') }}
         children={({ route }) => (
-          <MenuPlanningScreen
+          <GatedStackScreen
             spaceId={route.params.spaceId}
-            initialDate={route.params.menuDate}
-            initialMealType={route.params.mealType}
-          />
+            capabilityId="MEAL_OPS"
+            featureTitle={t('navigation.menuPlanning')}
+          >
+            <MenuPlanningScreen
+              spaceId={route.params.spaceId}
+              initialDate={route.params.menuDate}
+              initialMealType={route.params.mealType}
+            />
+          </GatedStackScreen>
         )}
       />
       <Stack.Screen
@@ -389,11 +554,17 @@ export function MainNavigator() {
         name="MenuSharePreview"
         options={{ title: t('navigation.sharePreview') }}
         children={({ route }) => (
-          <MenuSharePreviewScreen
+          <GatedStackScreen
             spaceId={route.params.spaceId}
-            menuDate={route.params.menuDate}
-            mealType={route.params.mealType}
-          />
+            capabilityId="MEAL_OPS"
+            featureTitle={t('navigation.sharePreview')}
+          >
+            <MenuSharePreviewScreen
+              spaceId={route.params.spaceId}
+              menuDate={route.params.menuDate}
+              mealType={route.params.mealType}
+            />
+          </GatedStackScreen>
         )}
       />
       <Stack.Screen
@@ -403,10 +574,16 @@ export function MainNavigator() {
           presentation: 'modal',
         }}
         children={({ route }) => (
-          <MealPollResponseScreen
+          <GatedStackScreen
             spaceId={route.params.spaceId}
-            menuDate={route.params.menuDate}
-          />
+            capabilityId="MEAL_OPS"
+            featureTitle={t('navigation.mealChoices')}
+          >
+            <MealPollResponseScreen
+              spaceId={route.params.spaceId}
+              menuDate={route.params.menuDate}
+            />
+          </GatedStackScreen>
         )}
       />
       <Stack.Screen
@@ -465,7 +642,11 @@ export function MainNavigator() {
         component={DayMealBulkPayScreen}
         options={{ title: t('navigation.pay') }}
       />
-      <Stack.Screen name="PaymentReview" component={PaymentReviewScreen} />
+      <Stack.Screen
+        name="PaymentReview"
+        component={PaymentReviewScreen}
+        options={{ title: t('paymentCollection.review.tabPendingReviewLabel') }}
+      />
       <Stack.Screen name="PaymentHistory" component={PaymentHistoryScreen} />
       <Stack.Screen name="SpaceNotifications" component={SpaceNotificationsScreen} />
       <Stack.Screen name="RaiseComplaint" component={RaiseComplaintScreen} />

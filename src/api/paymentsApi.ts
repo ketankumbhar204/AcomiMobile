@@ -21,6 +21,8 @@ import { dashboardApi } from './dashboardApi';
 import { computeOwnerPaymentCounts } from '../utils/ownerPaymentFilters';
 import { normalizePaymentLedger } from '../utils/normalizeDashboardSummary';
 import { devLog } from '../utils/devLog';
+import { ensureUploadedFileId } from '../services/fileUploadService';
+import type { LocalFileInput } from '../services/fileUploadService';
 
 const LOG_TAG = '[PaymentsApi]';
 
@@ -114,14 +116,23 @@ export const paymentsApi = {
   submitProof: async (
     spaceId: UUID,
     paymentId: UUID,
-    body: SubmitPaymentProofRequest,
+    body: SubmitPaymentProofRequest & { localFile?: LocalFileInput },
   ): Promise<SpacePaymentResponse> => {
     const path = `/spaces/${spaceId}/payments/${paymentId}/proof`;
     devLog(`${LOG_TAG} POST ${path}`);
 
     try {
+      const proofFileId = await ensureUploadedFileId(body.proofFileId, body.localFile, {
+        purpose: 'PAYMENT_PROOF',
+        spaceId,
+        paymentId,
+      });
+      const { localFile: _ignored, ...rest } = body;
       return await unwrapApiResponse(
-        apiClient.post<ApiResponse<SpacePaymentResponse>>(path, body),
+        apiClient.post<ApiResponse<SpacePaymentResponse>>(path, {
+          ...rest,
+          proofFileId,
+        }),
       );
     } catch (error) {
       rethrowUnlessUnavailable(error);
@@ -385,6 +396,68 @@ export const paymentsApi = {
       counts: computeOwnerPaymentCounts(list.payments, ledger.members),
     };
   },
+
+  getOverduePayments: async (
+    spaceId: UUID,
+    params?: {
+      paymentType?: string;
+      reminderEligibleOnly?: boolean;
+      page?: number;
+      size?: number;
+    },
+  ) => {
+    devLog(`${LOG_TAG} GET /spaces/${spaceId}/payments/overdue`, params);
+    return unwrapApiResponse(
+      apiClient.get<ApiResponse<unknown>>(`/spaces/${spaceId}/payments/overdue`, {
+        params,
+      }),
+    );
+  },
+
+  sendPaymentReminder: async (spaceId: UUID, paymentId: UUID) => {
+    devLog(`${LOG_TAG} POST /spaces/${spaceId}/payments/${paymentId}/reminders`);
+    return unwrapApiResponse(
+      apiClient.post<ApiResponse<PaymentReminderDeliveryResult>>(
+        `/spaces/${spaceId}/payments/${paymentId}/reminders`,
+      ),
+    );
+  },
+
+  processPaymentReminders: async (spaceId: UUID) => {
+    devLog(`${LOG_TAG} POST /spaces/${spaceId}/payments/reminders/process`);
+    return unwrapApiResponse(
+      apiClient.post<ApiResponse<PaymentReminderProcessResult>>(
+        `/spaces/${spaceId}/payments/reminders/process`,
+      ),
+    );
+  },
+};
+
+export type PaymentReminderDeliveryResult = {
+  deliveryId: string;
+  paymentId: string;
+  channel: string;
+  deliveryStatus: 'PENDING' | 'SENT' | 'FAILED' | 'SKIPPED';
+  businessDate?: string;
+  providerMessageId?: string | null;
+  failureReason?: string | null;
+  failureCode?: string | null;
+  providerConfigured: boolean;
+  retryable?: boolean;
+  sentAt?: string | null;
+  lastAttemptAt?: string | null;
+  attemptCount?: number;
+};
+
+export type PaymentReminderProcessResult = {
+  businessDate: string;
+  providerConfigured: boolean;
+  providerMode?: string;
+  candidatesFound: number;
+  remindersCreated: number;
+  remindersSkippedDuplicate: number;
+  deliverySuccesses: number;
+  deliveryFailures: number;
 };
 
 export { isServiceUnavailable as isPaymentServiceUnavailable };

@@ -3685,7 +3685,11 @@
     "moreSection": "अधिक",
     "library": {
       "title": "मेनू लायब्ररी",
-      "subtitle": "Set up categories, items, and combos before planning daily menus.",
+      "subtitle": "Defaults are ready to use — edit anytime, or continue to plan menus.",
+      "readyTipTitle": "Your menu library is ready",
+      "readyTipBody": "Sample items and combos are already here. You can edit the library now, or continue to menu planning and customize later.",
+      "readyTipContinue": "Continue to menu planning",
+      "readyTipStay": "Stay and edit library",
       "setupSteps": "तुमचा कॅटलॉग तयार करा",
       "categories": "श्रेण्या",
       "categoriesHint": "पोळी, भात, डाळ, भाजी, नाश्ता…",

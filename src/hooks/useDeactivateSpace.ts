@@ -27,7 +27,7 @@ export function useDeactivateSpace() {
           devLog('[DeactivateSpace] confirmed', spaceId);
           const success = await deactivateSpace(spaceId);
           if (success) {
-            navigation.navigate('MySpaces');
+            navigation.navigate('MemberTabs', { screen: 'Home' });
           }
         },
       });

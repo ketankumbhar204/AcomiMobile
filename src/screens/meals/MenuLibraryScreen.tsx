@@ -21,6 +21,7 @@ import {
   type MenuLibraryTab,
 } from '../../components/meals';
 import { ConfigureLibraryExtrasSheet } from '../../components/meals/ConfigureLibraryExtrasSheet';
+import { MenuLibraryReadyTip } from '../../components/meals/MenuLibraryReadyTip';
 import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
 import { DashboardActionRow } from '../../components/dashboard/shared/DashboardActionRow';
 import { EmptyState, PermissionDeniedScreen } from '../../components/ui';
@@ -31,6 +32,7 @@ import { useMealPricingPolicy } from '../../hooks/useMealPricingPolicy';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList, SpaceTabParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
+import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
 import { colors, shadows, spacing, typography } from '../../theme';
 
 type MenuLibraryScreenProps = {
@@ -83,6 +85,14 @@ export function MenuLibraryScreen({ spaceId, initialTab }: MenuLibraryScreenProp
     return initialTab ?? 'items';
   });
   const [configureExtrasOpen, setConfigureExtrasOpen] = useState(false);
+  const libraryHasContent = stats.itemCount > 0 || stats.comboCount > 0;
+
+  // Seeded defaults unlock planning — refresh progressive-access signals once catalog is loaded.
+  useEffect(() => {
+    if (!loading && !loadFailed && libraryHasContent) {
+      invalidateDashboardQueries();
+    }
+  }, [libraryHasContent, loadFailed, loading]);
 
   useEffect(() => {
     if (!initialTab) {
@@ -362,6 +372,16 @@ export function MenuLibraryScreen({ spaceId, initialTab }: MenuLibraryScreenProp
         heading={t('meals.library.title')}
         subheading={t('meals.library.subtitle')}
       />
+
+      {!loading && !loadFailed && libraryHasContent ? (
+        <MenuLibraryReadyTip
+          spaceId={spaceId}
+          visible
+          onContinuePlanning={() => {
+            navigateMain('MenuPlanning', { spaceId });
+          }}
+        />
+      ) : null}
 
       {loading ? <ActivityIndicator color={colors.primary} style={styles.loader} /> : null}
 

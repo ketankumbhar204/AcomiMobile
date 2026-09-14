@@ -1,4 +1,9 @@
-import { groupBedsByRoom, dedupeBedsById, groupBedsByUnit } from '../groupBedsByRoom';
+import {
+  groupBedsByRoom,
+  dedupeBedsById,
+  groupBedsByUnit,
+  formatRoomGroupPath,
+} from '../groupBedsByRoom';
 import type { BedSpaceListItemResponse } from '../../api/types';
 
 function bed(partial: Partial<BedSpaceListItemResponse> & Pick<BedSpaceListItemResponse, 'bedId' | 'roomId'>): BedSpaceListItemResponse {
@@ -46,5 +51,18 @@ describe('groupBedsByRoom', () => {
     expect(units).toHaveLength(1);
     expect(units[0].rooms).toHaveLength(2);
     expect(units[0].unitName).toBe('Unit 101');
+  });
+
+  it('formats Floor > Unit > Room path without building', () => {
+    const [group] = groupBedsByRoom([
+      bed({
+        bedId: '1',
+        roomId: 'r1',
+        floorName: 'Floor 1',
+        unitName: 'Unit 1',
+        roomName: 'Room 1',
+      }),
+    ]);
+    expect(formatRoomGroupPath(group)).toBe('Floor 1 > Unit 1 > Room 1');
   });
 });

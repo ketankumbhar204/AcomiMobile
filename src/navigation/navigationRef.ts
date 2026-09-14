@@ -191,7 +191,19 @@ export function resetToMySpaces(): void {
           name: 'Main',
           state: {
             index: 0,
-            routes: [{ name: 'MySpaces' }],
+            routes: [
+              {
+                name: 'MemberTabs',
+                state: {
+                  index: 0,
+                  routes: [
+                    { name: 'Home' },
+                    { name: 'FindAPlace' },
+                    { name: 'Profile' },
+                  ],
+                },
+              },
+            ],
           },
         },
       ],
@@ -221,6 +233,11 @@ export function resetToOnboardingChoice(): void {
 }
 
 export function resetToJoinSpace(): void {
+  // Backward-compatible alias — Join Space is no longer a primary screen.
+  resetToMemberHome();
+}
+
+export function resetToMemberHome(): void {
   if (!navigationRef.isReady()) {
     return;
   }
@@ -233,7 +250,19 @@ export function resetToJoinSpace(): void {
           name: 'Main',
           state: {
             index: 0,
-            routes: [{ name: 'JoinSpace' }],
+            routes: [
+              {
+                name: 'MemberTabs',
+                state: {
+                  index: 0,
+                  routes: [
+                    { name: 'Home' },
+                    { name: 'FindAPlace' },
+                    { name: 'Profile' },
+                  ],
+                },
+              },
+            ],
           },
         },
       ],
@@ -253,13 +282,12 @@ export function navigateBootstrapResult(result: SpaceBootstrapResult): void {
       }
       break;
     case 'AcceptInvitations':
-      resetToAcceptInvitations();
+    case 'JoinSpace':
+    case 'MemberHome':
+      resetToMemberHome();
       break;
     case 'OnboardingChoice':
       resetToOnboardingChoice();
-      break;
-    case 'JoinSpace':
-      resetToJoinSpace();
       break;
     case 'CreateSpace':
       resetToCreateSpace();

@@ -23,6 +23,7 @@ import type {
 } from '../../api/types';
 import { Button } from '../ui';
 import { ProgressiveWorkflowFooter } from '../progressive';
+import { AllocationSuccessModal } from './AllocationSuccessModal';
 import { OccupancyWizardStepHeader } from './OccupancyWizardStepHeader';
 import { OccupancyWizardTopBar } from './OccupancyWizardTopBar';
 import { useSpaceStore } from '../../store/spaceStore';
@@ -134,6 +135,8 @@ type RoomOption = {
   id: string;
   label: string;
   subtitle: string;
+  disabled?: boolean;
+  subtitleTone?: 'default' | 'success' | 'danger';
   group: OccupancyBrowseRoomGroup;
 };
 
@@ -142,28 +145,35 @@ function SelectRow({
   subtitle,
   selected,
   multi,
+  disabled,
+  subtitleTone = 'default',
   onPress,
 }: {
   label: string;
   subtitle?: string;
   selected: boolean;
   multi?: boolean;
+  disabled?: boolean;
+  subtitleTone?: 'default' | 'success' | 'danger';
   onPress: () => void;
 }) {
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       style={({ pressed }) => [
         styles.row,
         selected && styles.rowSelected,
-        pressed && !selected && styles.rowPressed,
+        disabled && styles.rowDisabled,
+        pressed && !selected && !disabled && styles.rowPressed,
       ]}>
       <View
         style={[
           multi ? styles.checkboxOuter : styles.radioOuter,
           selected && (multi ? styles.checkboxOuterSelected : styles.radioOuterSelected),
+          disabled && styles.radioDisabled,
         ]}>
-        {selected ? (
+        {selected && !disabled ? (
           multi ? (
             <Text style={styles.checkboxMark}>✓</Text>
           ) : (
@@ -172,8 +182,18 @@ function SelectRow({
         ) : null}
       </View>
       <View style={styles.rowBody}>
-        <Text style={styles.rowLabel}>{label}</Text>
-        {subtitle ? <Text style={styles.rowSubtitle}>{subtitle}</Text> : null}
+        <Text style={[styles.rowLabel, disabled && styles.rowLabelDisabled]}>{label}</Text>
+        {subtitle ? (
+          <Text
+            style={[
+              styles.rowSubtitle,
+              subtitleTone === 'success' && styles.rowSubtitleSuccess,
+              subtitleTone === 'danger' && styles.rowSubtitleDanger,
+              disabled && styles.rowLabelDisabled,
+            ]}>
+            {subtitle}
+          </Text>
+        ) : null}
       </View>
     </Pressable>
   );
@@ -233,6 +253,11 @@ export function HierarchyOccupancyPickerModal({
   const [newMemberMobile, setNewMemberMobile] = useState('');
   const [newMemberErrors, setNewMemberErrors] = useState<NewMemberFieldErrors>({});
   const [creatingMember, setCreatingMember] = useState(false);
+  const [successPayload, setSuccessPayload] = useState<{
+    memberId: string;
+    memberName: string;
+    locationLabel: string;
+  } | null>(null);
 
   const [catalogRent, setCatalogRent] = useState<number | null>(null);
   const [catalogDeposit, setCatalogDeposit] = useState<number | null>(null);
@@ -327,13 +352,55 @@ export function HierarchyOccupancyPickerModal({
       return t('occupancyWizard.steps.member');
     }
     if (phase === 'contract') {
-      return t('occupancyWizard.steps.contract');
+      return t('occupancy.contract.stepTitle');
     }
     if (phase === 'reserve_dates') {
       return t('occupancyWizard.steps.reserveDates');
     }
     return t('occupancyWizard.steps.review');
   }, [currentHierarchyStep, phase, t]);
+
+  const stepHint = useMemo(() => {
+    if (phase === 'hierarchy' && currentHierarchyStep === 'floor') {
+      return t('occupancy.hierarchy.selectFloorHint', {
+        building: building?.code || building?.name || scope.buildingName,
+      });
+    }
+    if (phase === 'hierarchy' && currentHierarchyStep === 'unit') {
+      return t('occupancy.hierarchy.selectUnitHint');
+    }
+    if (phase === 'hierarchy' && currentHierarchyStep === 'room') {
+      return t('occupancy.hierarchy.selectRoomHint', {
+        floor: selectedFloor?.name || scope.floorName || '',
+      });
+    }
+    if (phase === 'hierarchy' && currentHierarchyStep === 'bed') {
+      return t('occupancy.hierarchy.selectBedHint', {
+        room: selectedRoom?.roomName || scope.roomName || '',
+      });
+    }
+    if (phase === 'contract') {
+      return t('occupancy.contract.hint');
+    }
+    if (phase === 'review') {
+      return t('occupancyWizard.steps.reviewHint');
+    }
+    if (phase === 'member') {
+      return t('occupancyWizard.steps.memberHint');
+    }
+    return null;
+  }, [
+    building?.code,
+    building?.name,
+    currentHierarchyStep,
+    phase,
+    scope.buildingName,
+    scope.floorName,
+    scope.roomName,
+    selectedFloor?.name,
+    selectedRoom?.roomName,
+    t,
+  ]);
 
   const reset = useCallback(() => {
     pendingSelectionRef.current = emptyPendingSelection();
@@ -361,6 +428,7 @@ export function HierarchyOccupancyPickerModal({
     setNewMemberName('');
     setNewMemberMobile('');
     setNewMemberErrors({});
+    setSuccessPayload(null);
     setCatalogRent(null);
     setCatalogDeposit(null);
     setContractValues(emptyContractTermsFormValues());
@@ -588,19 +656,30 @@ export function HierarchyOccupancyPickerModal({
           return;
         }
 
-        const options = groups.map(group => ({
-          id: group.roomId,
-          label: group.roomName,
-          subtitle: t('occupancy.hierarchy.roomAvailability', {
-            available: group.availableCount,
-            total: group.bedCount,
-          }),
-          group,
-        }));
+        const options = groups.map(group => {
+          const full = group.availableCount <= 0;
+          return {
+            id: group.roomId,
+            label: group.roomName,
+            subtitle: full
+              ? t('occupancy.hierarchy.roomFull', {
+                  available: group.availableCount,
+                  total: group.bedCount,
+                })
+              : t('occupancy.hierarchy.roomAvailability', {
+                  available: group.availableCount,
+                  total: group.bedCount,
+                }),
+            disabled: full,
+            subtitleTone: full ? ('danger' as const) : ('default' as const),
+            group,
+          };
+        });
         setRoomOptions(options);
-        if (options.length === 1 && !suppressAutoSelectRef.current) {
-          pendingSelectionRef.current.room = options[0].group;
-          setSelectedRoom(options[0].group);
+        const selectable = options.filter(option => !option.disabled);
+        if (selectable.length === 1 && !suppressAutoSelectRef.current) {
+          pendingSelectionRef.current.room = selectable[0].group;
+          setSelectedRoom(selectable[0].group);
           setStepIndex(index => index + 1);
         }
         return;
@@ -971,9 +1050,21 @@ export function HierarchyOccupancyPickerModal({
             setPhase('member');
             return;
           }
+          if (wizardMode === 'ALLOCATE') {
+            const locationParts = [
+              activeTarget.roomName,
+              activeTarget.bedName,
+            ].filter(Boolean);
+            setSuccessPayload({
+              memberId: member.memberId,
+              memberName: member.fullName,
+              locationLabel: locationParts.join(' · ') || activeTarget.unitName || '',
+            });
+            return;
+          }
           reset();
           onClose();
-          if (wizardMode === 'ALLOCATE' || wizardMode === 'RESERVE') {
+          if (wizardMode === 'RESERVE') {
             navigateToMemberDetailsAfterOccupancyFromRef(spaceId, member.memberId);
           }
         },
@@ -1113,6 +1204,7 @@ export function HierarchyOccupancyPickerModal({
         <OccupancyWizardStepHeader
           stepProgress={{ current: currentStepNumber, total: totalSteps }}
           stepTitle={stepTitle}
+          stepHint={stepHint}
           hierarchyContext={hierarchyContext}
           bulkProgress={bulkProgress}
           bulkHint={
@@ -1161,6 +1253,8 @@ export function HierarchyOccupancyPickerModal({
                       label={option.label}
                       subtitle={option.subtitle}
                       selected={selectedRoom?.roomId === option.id}
+                      disabled={option.disabled}
+                      subtitleTone={option.subtitleTone}
                       onPress={() => selectRoom(option.group)}
                     />
                   ))
@@ -1170,6 +1264,8 @@ export function HierarchyOccupancyPickerModal({
                     <SelectRow
                       key={bed.bedId}
                       label={bed.label}
+                      subtitle={t('occupancy.hierarchy.bedAvailable')}
+                      subtitleTone="success"
                       selected={selectedBeds.some(item => item.bedId === bed.bedId)}
                       multi={bulkMode}
                       onPress={() => (bulkMode ? toggleBed(bed) : selectBed(bed))}
@@ -1282,6 +1378,12 @@ export function HierarchyOccupancyPickerModal({
               moveInDate={moveInDate}
               expectedExitDate={expectedExitDate}
               remarks={remarks}
+              onEditAccommodation={() => {
+                setPhase('hierarchy');
+                setStepIndex(0);
+              }}
+              onEditContract={() => setPhase('contract')}
+              onEditMember={() => setPhase('member')}
             />
           </ScrollView>
         ) : null}
@@ -1319,24 +1421,46 @@ export function HierarchyOccupancyPickerModal({
               minHeight={160}
             />
           ) : (
-            <>
+            <View style={styles.footerRow}>
+              <Button
+                label={t('common.back')}
+                variant="secondary"
+                onPress={handleBack}
+                disabled={submitting || creatingMember}
+                style={styles.footerBtn}
+              />
               {showContinueButton ? (
                 <Button
                   label={primaryLabel}
                   onPress={handleContinue}
                   disabled={!canContinue || loading || submitting || creatingMember}
                   loading={submitting || creatingMember}
+                  style={styles.footerBtn}
                 />
               ) : null}
-              <Button
-                label={t('common.back')}
-                variant="ghost"
-                onPress={handleBack}
-                disabled={submitting || creatingMember}
-              />
-            </>
+            </View>
           )}
         </View>
+
+        <AllocationSuccessModal
+          visible={successPayload != null}
+          memberName={successPayload?.memberName ?? ''}
+          locationLabel={successPayload?.locationLabel ?? ''}
+          onViewDetails={() => {
+            const payload = successPayload;
+            setSuccessPayload(null);
+            reset();
+            onClose();
+            if (payload) {
+              navigateToMemberDetailsAfterOccupancyFromRef(spaceId, payload.memberId);
+            }
+          }}
+          onDone={() => {
+            setSuccessPayload(null);
+            reset();
+            onClose();
+          }}
+        />
       </View>
     </Modal>
   );
@@ -1473,6 +1597,25 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textSecondary,
   },
+  rowSubtitleSuccess: {
+    color: colors.primaryDark,
+    fontWeight: '600',
+  },
+  rowSubtitleDanger: {
+    color: '#DC2626',
+    fontWeight: '600',
+  },
+  rowDisabled: {
+    opacity: 0.55,
+    backgroundColor: colors.surfaceSecondary,
+  },
+  rowLabelDisabled: {
+    color: colors.muted,
+  },
+  radioDisabled: {
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceSecondary,
+  },
   empty: {
     ...typography.body,
     color: colors.muted,
@@ -1485,6 +1628,13 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     backgroundColor: colors.white,
     gap: spacing.sm,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  footerBtn: {
+    flex: 1,
   },
   progressiveFooter: {
     borderTopWidth: 0,

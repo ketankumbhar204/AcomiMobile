@@ -11,9 +11,10 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { Building2, ChefHat, LogOut, MapPin, Users } from 'lucide-react-native';
+import { Building2, ChefHat, LogOut, MapPin, MessageCircle, Users } from 'lucide-react-native';
 import { adminApi } from '../../api/adminApi';
-import type { AdminDashboardSummary } from '../../api/types';
+import { adminEnquiryApi } from '../../api/enquiryApi';
+import type { AdminDashboardSummary, SpaceNotification } from '../../api/types';
 import { DashboardStatCard } from '../../components/dashboard/shared/DashboardStatCard';
 import { useAuthStore } from '../../store/authStore';
 import { useAdminStore } from '../../store/adminStore';
@@ -30,12 +31,18 @@ export function AdminDashboardScreen() {
   const user = useAuthStore(state => state.user);
 
   const [summary, setSummary] = useState<AdminDashboardSummary | null>(null);
+  const [notifications, setNotifications] = useState<SpaceNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      setSummary(await adminApi.getDashboardSummary());
+      const [nextSummary, inbox] = await Promise.all([
+        adminApi.getDashboardSummary(),
+        adminEnquiryApi.listNotifications().catch(() => ({ notifications: [], unreadCount: 0 })),
+      ]);
+      setSummary(nextSummary);
+      setNotifications(inbox.notifications);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -52,6 +59,19 @@ export function AdminDashboardScreen() {
   async function handleLogout() {
     setAdminMode(false);
     await clearSession();
+  }
+
+  async function openNotification(item: SpaceNotification) {
+    try {
+      await adminEnquiryApi.markNotificationRead(item.notificationId);
+    } catch {
+      // Best-effort read state.
+    }
+    if (item.actionRoute === 'AdminEnquiryDetail' && item.entityId) {
+      navigation.navigate('AdminEnquiryDetail', { id: item.entityId });
+      return;
+    }
+    navigation.navigate('AdminEnquiryList');
   }
 
   function openProperties(filter: AdminListFilterParams) {
@@ -89,6 +109,31 @@ export function AdminDashboardScreen() {
           <LogOut size={20} color={colors.textSecondary} />
         </Pressable>
       </View>
+
+      {notifications.length > 0 ? (
+        <View style={styles.noticeBlock}>
+          <Text style={styles.sectionLabel}>{t('admin.notifications.title')}</Text>
+          {notifications.slice(0, 5).map(item => (
+            <Pressable
+              key={item.notificationId}
+              style={styles.noticeCard}
+              onPress={() => void openNotification(item)}>
+              <Text style={[styles.navTitle, item.status === 'UNREAD' && styles.unread]}>
+                {item.title}
+              </Text>
+              {item.message ? <Text style={styles.navHint}>{item.message}</Text> : null}
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+
+      <Pressable style={styles.navCard} onPress={() => navigation.navigate('AdminEnquiryList')}>
+        <MessageCircle color={colors.primary} size={22} />
+        <View style={styles.navText}>
+          <Text style={styles.navTitle}>{t('admin.dashboard.nav.enquiriesTitle')}</Text>
+          <Text style={styles.navHint}>{t('admin.dashboard.nav.enquiriesHint')}</Text>
+        </View>
+      </Pressable>
 
       <View style={styles.sectionLabelWrap}>
         <Text style={styles.sectionLabel}>{t('admin.dashboard.sectionRegistration')}</Text>
@@ -219,4 +264,13 @@ const styles = StyleSheet.create({
   navText: { flex: 1 },
   navTitle: { ...typography.bodyStrong, color: colors.textPrimary },
   navHint: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },
+  noticeBlock: { gap: spacing.sm },
+  noticeCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  unread: { fontWeight: '700' },
 });

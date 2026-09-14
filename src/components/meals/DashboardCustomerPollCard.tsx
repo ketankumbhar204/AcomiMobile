@@ -26,8 +26,10 @@ import {
   type MealSummaryLineItem,
 } from '../../utils/mealSelectionSummary';
 import { countMenuItemsByMeal } from '../../utils/customerDashboardStats';
+import { mealTypeTheme } from '../../utils/mealTypeTheme';
 import { MealSelectionSummary } from './MealSelectionSummary';
 import { MealTypeVisual } from './MealTypeVisual';
+import { PollClosesInHint } from './PollClosesInHint';
 import { PaymentStatusBadge } from '../payments/PaymentStatusBadge';
 
 export type DashboardPollCardState = 'empty' | 'active' | 'partial' | 'complete';
@@ -145,6 +147,7 @@ function MealMiniCard({
 }: MealMiniCardProps) {
   const { t } = useTranslation();
   const label = t(mealTypeLabelKey(mealType));
+  const theme = mealTypeTheme(mealType);
   const selected = selectedItems.length > 0;
   const previewItems = selectedItems.slice(0, 2);
   const moreCount = Math.max(0, selectedItems.length - previewItems.length);
@@ -161,7 +164,10 @@ function MealMiniCard({
       disabled={disabled || !onPress}
       style={({ pressed }) => [
         styles.mealCard,
-        selected && styles.mealCardSelected,
+        {
+          borderColor: selected ? theme.borderStrong : theme.border,
+          backgroundColor: theme.soft,
+        },
         pressed && onPress && !disabled && styles.mealCardPressed,
       ]}
       accessibilityRole={onPress && !disabled ? 'button' : undefined}
@@ -169,7 +175,7 @@ function MealMiniCard({
       {/* TODO: swap MealTypeVisual imageSource with real food photos when available */}
       <MealTypeVisual mealType={mealType} size={20} />
       <View style={styles.mealCardBody}>
-        <Text style={styles.mealCardTitle} numberOfLines={1}>
+        <Text style={[styles.mealCardTitle, { color: theme.accent }]} numberOfLines={1}>
           {label}
         </Text>
         {selected ? (
@@ -344,6 +350,7 @@ export function DashboardCustomerPollCard({
             />
           </TouchableOpacity>
         </View>
+        <PollClosesInHint polls={openPolls} />
         {statusLabel && !(cardState === 'active' && !isPastDate) ? (
           <Text style={styles.statusBadge}>{statusLabel}</Text>
         ) : null}
@@ -561,13 +568,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     minHeight: 56,
   },
-  mealCardSelected: {
-    borderColor: `${colors.primary}55`,
-    backgroundColor: colors.lightGreen,
-  },
   mealCardPressed: {
     opacity: 0.9,
-    backgroundColor: colors.surface,
   },
   mealCardBody: {
     flex: 1,
@@ -576,7 +578,8 @@ const styles = StyleSheet.create({
   },
   mealCardTitle: {
     ...typography.bodyStrong,
-    color: colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '700',
   },
   mealCardMeta: {
     ...typography.caption,

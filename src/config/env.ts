@@ -23,9 +23,11 @@ function androidLocalDevelopmentHost(): string {
     return 'http://10.0.2.2:8080';
   }
 
-  // Physical device over USB: `adb reverse tcp:8080 tcp:8080` maps localhost → PC.
-  // Set useLanHostForPhysicalDevice to true for Wi‑Fi-only debugging (backend must bind 0.0.0.0).
-  const useLanHostForPhysicalDevice = false;
+  // Physical device: Xiaomi USB `adb reverse` drops whenever the USB transport
+  // reconnects, which makes localhost:8080 fail for every API. Wi‑Fi LAN host
+  // stays reachable while the backend listens on 0.0.0.0:8080.
+  // Keep `adb reverse tcp:8081 tcp:8081` for Metro.
+  const useLanHostForPhysicalDevice = true;
   if (useLanHostForPhysicalDevice) {
     return `http://${ANDROID_PHYSICAL_LAN_HOST}:8080`;
   }

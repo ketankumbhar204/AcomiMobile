@@ -13,6 +13,9 @@ export {
 } from './BedsFilterDrawer';
 export type { BedStatusFilterState } from './BedsFilterDrawer';
 export { BedPricingFields } from './BedPricingFields';
+export { BuildingInventoryBedCard, BuildingInventoryAddBedCard } from './BuildingInventoryBedCard';
+export { BuildingInventoryRoomSection } from './BuildingInventoryRoomSection';
+export { BuildingInventoryFloorSection } from './BuildingInventoryFloorSection';
 export { AccommodationStatusBadge } from './AccommodationStatusBadge';
 export { AccommodationStatusPicker } from './AccommodationStatusPicker';
 export { RoomTypePicker } from './RoomTypePicker';

@@ -6,6 +6,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TouchableWithoutFeedback,
   View,
@@ -30,8 +31,14 @@ import {
   type LucideIcon,
 } from 'lucide-react-native';
 import { formatSpaceType } from '../api';
+import { billingSettingsApi } from '../api/billingSettingsApi';
 import { mealBillingApi } from '../api/mealBillingApi';
 import { mealPollClosingApi } from '../api/mealPollClosingApi';
+import type {
+  PriceTaxMode,
+  SpaceBillingSettings,
+  UpdateSpaceBillingSettingsRequest,
+} from '../api/types';
 import type {
   GenderPolicy,
   MealBillingType,
@@ -56,6 +63,7 @@ import { useDeactivateSpace } from '../hooks/useDeactivateSpace';
 import type { AmenityAssignment } from '../api/types';
 import { normalizeAmenityAssignments, supportsSpaceAmenities } from '../utils/amenities';
 import { supportsSpacePropertyCategory } from '../utils/spacePropertyCategory';
+import { isDuplicateSpaceName } from '../utils/suggestBuildingDefaults';
 import { useAuthenticatedUserId } from '../hooks/useAuth';
 import type { MainStackParamList } from '../navigation/types';
 import { useSpaceStore } from '../store/spaceStore';
@@ -172,6 +180,7 @@ export function EditSpaceScreen() {
   const loadSpaceDetails = useSpaceStore(state => state.loadSpaceDetails);
   const updateSpace = useSpaceStore(state => state.updateSpace);
   const selectedSpace = useSpaceStore(state => state.selectedSpace);
+  const mySpaces = useSpaceStore(state => state.mySpaces);
   const isLoading = useSpaceStore(state => state.loading);
   const error = useSpaceStore(state => state.error);
 
@@ -184,6 +193,14 @@ export function EditSpaceScreen() {
   const [billingValues, setBillingValues] = useState<MealBillingSettingsFormValues>(DEFAULT_BILLING);
   const [initialBillingValues, setInitialBillingValues] =
     useState<MealBillingSettingsFormValues>(DEFAULT_BILLING);
+  const [taxEnabled, setTaxEnabled] = useState(false);
+  const [taxRatePercent, setTaxRatePercent] = useState('18');
+  const [priceTaxMode, setPriceTaxMode] = useState<PriceTaxMode>('EXCLUSIVE');
+  const [gstin, setGstin] = useState('');
+  const [billingDueDay, setBillingDueDay] = useState('1');
+  const [initialSpaceBilling, setInitialSpaceBilling] = useState<SpaceBillingSettings | null>(
+    null,
+  );
   const [pollClosingValues, setPollClosingValues] =
     useState<PollClosingDefaultsFormValues>(DEFAULT_POLL_CLOSING);
   const [initialPollClosingValues, setInitialPollClosingValues] =
@@ -199,13 +216,16 @@ export function EditSpaceScreen() {
   const showMealsTab = isMessSpace && owner;
   const showPollsTab = owner;
 
-  type EditSpaceTab = 'general' | 'meals' | 'polls';
+  type EditSpaceTab = 'general' | 'billing' | 'meals' | 'polls';
   const [activeTab, setActiveTab] = useState<EditSpaceTab>('general');
 
   const tabOptions = useMemo((): ListFilterChipOption<EditSpaceTab>[] => {
     const options: ListFilterChipOption<EditSpaceTab>[] = [
       { id: 'general', label: t('progressiveWorkflow.editSpace.tabGeneral') },
     ];
+    if (owner) {
+      options.push({ id: 'billing', label: t('progressiveWorkflow.editSpace.tabBilling') });
+    }
     if (showMealsTab) {
       options.push({ id: 'meals', label: t('progressiveWorkflow.editSpace.tabMeals') });
     }
@@ -213,16 +233,19 @@ export function EditSpaceScreen() {
       options.push({ id: 'polls', label: t('progressiveWorkflow.editSpace.tabPolls') });
     }
     return options;
-  }, [showMealsTab, showPollsTab, t]);
+  }, [owner, showMealsTab, showPollsTab, t]);
 
   useEffect(() => {
+    if (activeTab === 'billing' && !owner) {
+      setActiveTab('general');
+    }
     if (activeTab === 'meals' && !showMealsTab) {
       setActiveTab('general');
     }
     if (activeTab === 'polls' && !showPollsTab) {
       setActiveTab('general');
     }
-  }, [activeTab, showMealsTab, showPollsTab]);
+  }, [activeTab, owner, showMealsTab, showPollsTab]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -267,6 +290,20 @@ export function EditSpaceScreen() {
 
           if (owner) {
             try {
+              const settings = await billingSettingsApi.getSettings(spaceId);
+              setTaxEnabled(settings.taxEnabled);
+              setTaxRatePercent(
+                settings.taxRatePercent != null ? String(settings.taxRatePercent) : '18',
+              );
+              setPriceTaxMode(settings.priceTaxMode ?? 'EXCLUSIVE');
+              setGstin(settings.gstin ?? '');
+              setBillingDueDay(String(settings.billingDueDay ?? 1));
+              setInitialSpaceBilling(settings);
+            } catch {
+              setInitialSpaceBilling(null);
+            }
+
+            try {
               const closing = await mealPollClosingApi.getSettings(spaceId);
               const nextClosing: PollClosingDefaultsFormValues = {
                 timezone: closing.timezone || 'Asia/Kolkata',
@@ -293,6 +330,12 @@ export function EditSpaceScreen() {
     const errors: FieldErrors = {};
     if (!name.trim()) {
       errors.name = t('spaces.editSpace.nameRequired');
+    } else if (
+      isDuplicateSpaceName(name, mySpaces, { excludeSpaceId: spaceId })
+    ) {
+      errors.name = t('spaces.createSpace.nameTaken', {
+        defaultValue: 'You already have a space with this name.',
+      });
     }
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
@@ -334,6 +377,34 @@ export function EditSpaceScreen() {
       } catch {
         setIsSubmitting(false);
         return;
+      }
+    }
+
+    if (owner) {
+      const dueDay = Number.parseInt(billingDueDay, 10);
+      const nextBilling: UpdateSpaceBillingSettingsRequest = {
+        taxEnabled,
+        taxRatePercent: taxEnabled ? Number(taxRatePercent) : null,
+        priceTaxMode: taxEnabled ? priceTaxMode : null,
+        gstin: gstin.trim() || null,
+        billingDueDay: Number.isFinite(dueDay) ? dueDay : 1,
+      };
+      const changed =
+        !initialSpaceBilling ||
+        initialSpaceBilling.taxEnabled !== nextBilling.taxEnabled ||
+        String(initialSpaceBilling.taxRatePercent ?? '') !==
+          String(nextBilling.taxRatePercent ?? '') ||
+        (initialSpaceBilling.priceTaxMode ?? null) !== (nextBilling.priceTaxMode ?? null) ||
+        (initialSpaceBilling.gstin ?? '') !== (nextBilling.gstin ?? '') ||
+        initialSpaceBilling.billingDueDay !== nextBilling.billingDueDay;
+      if (changed) {
+        try {
+          const saved = await billingSettingsApi.updateSettings(spaceId, nextBilling);
+          setInitialSpaceBilling(saved);
+        } catch {
+          setIsSubmitting(false);
+          return;
+        }
       }
     }
 
@@ -501,6 +572,77 @@ export function EditSpaceScreen() {
                   </EditSectionCard>
                 ) : null}
               </>
+            ) : null}
+
+            {activeTab === 'billing' && owner ? (
+              <EditSectionCard
+                icon={Tag}
+                title={t('spaces.billingSettings.title')}
+                helper={t('spaces.billingSettings.subtitle')}
+                accent="#0F766E">
+                <View style={styles.taxRow}>
+                  <Text style={styles.taxLabel}>{t('spaces.billingSettings.taxEnabled')}</Text>
+                  <Switch
+                    value={taxEnabled}
+                    onValueChange={setTaxEnabled}
+                    disabled={isSubmitting || isLoading}
+                  />
+                </View>
+                {taxEnabled ? (
+                  <>
+                    <FormInput
+                      label={t('spaces.billingSettings.taxRate')}
+                      value={taxRatePercent}
+                      onChangeText={setTaxRatePercent}
+                      keyboardType="decimal-pad"
+                      editable={!isSubmitting && !isLoading}
+                    />
+                    <View style={styles.modeRow}>
+                      <Pressable
+                        onPress={() => setPriceTaxMode('EXCLUSIVE')}
+                        style={[
+                          styles.modeChip,
+                          priceTaxMode === 'EXCLUSIVE' && styles.modeChipActive,
+                        ]}>
+                        <Text
+                          style={[
+                            styles.modeChipText,
+                            priceTaxMode === 'EXCLUSIVE' && styles.modeChipTextActive,
+                          ]}>
+                          {t('spaces.billingSettings.exclusive')}
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => setPriceTaxMode('INCLUSIVE')}
+                        style={[
+                          styles.modeChip,
+                          priceTaxMode === 'INCLUSIVE' && styles.modeChipActive,
+                        ]}>
+                        <Text
+                          style={[
+                            styles.modeChipText,
+                            priceTaxMode === 'INCLUSIVE' && styles.modeChipTextActive,
+                          ]}>
+                          {t('spaces.billingSettings.inclusive')}
+                        </Text>
+                      </Pressable>
+                    </View>
+                    <FormInput
+                      label={t('spaces.billingSettings.gstin')}
+                      value={gstin}
+                      onChangeText={setGstin}
+                      editable={!isSubmitting && !isLoading}
+                    />
+                  </>
+                ) : null}
+                <FormInput
+                  label={t('spaces.billingSettings.dueDay')}
+                  value={billingDueDay}
+                  onChangeText={setBillingDueDay}
+                  keyboardType="number-pad"
+                  editable={!isSubmitting && !isLoading}
+                />
+              </EditSectionCard>
             ) : null}
 
             {activeTab === 'meals' && showMealsTab ? (
@@ -687,5 +829,40 @@ const styles = StyleSheet.create({
     ...typography.bodyStrong,
     color: '#DC2626',
     fontWeight: '700',
+  },
+  taxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  taxLabel: {
+    ...typography.bodyStrong,
+    flex: 1,
+  },
+  modeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  modeChip: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.button,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.white,
+  },
+  modeChipActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.lightGreen,
+  },
+  modeChipText: {
+    ...typography.caption,
+    color: colors.muted,
+    fontWeight: '600',
+  },
+  modeChipTextActive: {
+    color: colors.primary,
   },
 });

@@ -20,17 +20,27 @@ export type DashboardLifecycleVisibility = {
 
 export type DashboardVisibilityOptions = {
   spaceType?: SpaceType | null;
+  /** When true, lodging meal config/ops cards may show during NEW/SETUP. */
+  mealConfigOpen?: boolean;
+  /** When false, hide accommodation ops even if lifecycle would show them. */
+  accommodationOpen?: boolean;
 };
 
 /**
  * Dashboard widget visibility by lifecycle — design doc Decision Table.
  * Pure helper; no I/O. Mess shows meal ops earlier during setup.
+ *
+ * Progressive Guided Access: optional capability overrides refine coarse
+ * NEW/SETUP hiding so meal config can appear once MEAL_CONFIG is open.
  */
 export function dashboardVisibilityForLifecycle(
   lifecycle: LifecycleState | null,
   options?: DashboardVisibilityOptions,
 ): DashboardLifecycleVisibility {
   const isMess = options?.spaceType === 'MESS';
+  const mealConfigOpen = options?.mealConfigOpen === true;
+  // Default false during setup unless caller opts in (capability AVAILABLE).
+  const accommodationOpen = options?.accommodationOpen === true;
 
   if (lifecycle == null) {
     return {
@@ -51,8 +61,8 @@ export function dashboardVisibilityForLifecycle(
         showSetupChrome: true,
         showFinancial: true,
         softenFinancial: true,
-        showAccommodationOps: false,
-        showMealOps: isMess,
+        showAccommodationOps: accommodationOpen,
+        showMealOps: isMess || mealConfigOpen,
         showFullQuickActions: false,
         showMessSetupQuickActions: isMess,
         elevatePendingActions: false,
@@ -62,8 +72,8 @@ export function dashboardVisibilityForLifecycle(
         showSetupChrome: true,
         showFinancial: true,
         softenFinancial: true,
-        showAccommodationOps: false,
-        showMealOps: isMess,
+        showAccommodationOps: accommodationOpen,
+        showMealOps: isMess || mealConfigOpen,
         showFullQuickActions: false,
         showMessSetupQuickActions: isMess,
         elevatePendingActions: false,

@@ -118,6 +118,8 @@ export function useHierarchyOccupancyPicker(spaceId: string, spaceType: SpaceTyp
         <BuildingPickerModal
           visible
           spaceId={spaceId}
+          spaceType={spaceType}
+          wizardMode={pickerState.mode}
           title={pickerTitle(pickerState.mode)}
           onClose={closePicker}
           onSelect={handleBuildingSelect}

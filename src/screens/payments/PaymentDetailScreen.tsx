@@ -86,6 +86,7 @@ export function PaymentDetailScreen() {
   const [proofPreviewVisible, setProofPreviewVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [reviewing, setReviewing] = useState(false);
+  const [sendingReminder, setSendingReminder] = useState(false);
   const [rejectVisible, setRejectVisible] = useState(false);
   const [requestUpdateVisible, setRequestUpdateVisible] = useState(false);
   const [selectedReason, setSelectedReason] = useState<PaymentRejectionReason | null>(null);
@@ -238,6 +239,39 @@ export function PaymentDetailScreen() {
     [paymentId, showToast, spaceId, t],
   );
 
+  const handleSendReminder = useCallback(async () => {
+    setSendingReminder(true);
+    try {
+      const result = await paymentsApi.sendPaymentReminder(spaceId, paymentId);
+      const code = `${result.failureCode || ''} ${result.failureReason || ''}`;
+      if (result.deliveryStatus === 'SENT') {
+        showToast(t('paymentCollection.reminder.sent'));
+      } else if (
+        !result.providerConfigured ||
+        code.includes('WHATSAPP_PROVIDER_NOT_CONFIGURED') ||
+        code.includes('PROVIDER_NOT_CONFIGURED')
+      ) {
+        showToast(t('paymentCollection.reminder.providerUnavailable'));
+      } else if (result.deliveryStatus === 'SKIPPED' || code.includes('already')) {
+        showToast(t('paymentCollection.reminder.alreadySentToday'));
+      } else if (code.includes('INVALID_RECIPIENT') || code.includes('RECIPIENT_MOBILE_MISSING')) {
+        showToast(t('paymentCollection.reminder.invalidRecipient'));
+      } else {
+        showToast(t('paymentCollection.reminder.failed'));
+      }
+      const timelineResponse = await paymentsApi.getPaymentTimeline(spaceId, paymentId);
+      setTimeline(timelineResponse.events);
+    } catch (err) {
+      if (err instanceof PaymentServiceUnavailableError) {
+        showToast(t('paymentCollection.serviceUnavailable.title'));
+      } else {
+        showToast(t('paymentCollection.reminder.failed'));
+      }
+    } finally {
+      setSendingReminder(false);
+    }
+  }, [paymentId, showToast, spaceId, t]);
+
   const mealSummary = useMemo(() => {
     if (!payment || payment.paymentType !== 'MEAL' || mealDayDetails.length === 0) {
       return null;
@@ -343,6 +377,7 @@ export function PaymentDetailScreen() {
   const waitingReview = isAwaitingOwnerReview(payment.paymentStatus);
   const canOwnerReview =
     isOwnerOperator && isOwnerReviewActionable(payment.paymentStatus);
+  const canSendReminder = isOwnerOperator && Boolean(payment.reminderEligible);
   const canViewProof = Boolean(payment.proofUrl);
   const remarks = payment.remarks?.trim() || '';
   const ownerNotes =
@@ -353,7 +388,7 @@ export function PaymentDetailScreen() {
       ? payment.rejectionReason.trim()
       : null;
 
-  const hasStickyActions = canOwnerReview || canPay || canEditProof;
+  const hasStickyActions = canOwnerReview || canPay || canEditProof || canSendReminder;
 
   return (
     <Screen scrollable={false} contentStyle={styles.screen}>
@@ -531,6 +566,15 @@ export function PaymentDetailScreen() {
                 disabled={reviewing}
               />
             </View>
+          ) : null}
+          {canSendReminder ? (
+            <Button
+              label={t('paymentCollection.reminder.send')}
+              variant="secondary"
+              onPress={() => void handleSendReminder()}
+              loading={sendingReminder}
+              disabled={reviewing}
+            />
           ) : null}
           {canPay && payment.paymentStatus !== 'UPDATE_REQUESTED' ? (
             <Button

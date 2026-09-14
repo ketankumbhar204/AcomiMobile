@@ -17,6 +17,7 @@ import { Pencil, ShieldCheck, TriangleAlert } from 'lucide-react-native';
 import { authApi } from '../../api/authApi';
 import { AuthHero } from '../../components/auth';
 import { DeleteAccountConfirmModal } from '../../components/auth/DeleteAccountConfirmModal';
+import { OtpSmsSample } from '../../components/auth/OtpSmsSample';
 import { StickyFormActions } from '../../components/progressive';
 import { HeaderBackButton, OtpInput } from '../../components/ui';
 import { useCountdown } from '../../hooks/useCountdown';
@@ -259,6 +260,8 @@ export function OtpScreen() {
           heading={t('auth.otp.heading')}
           subheading={`${t('auth.otp.subheading')} ${maskIndianMobile(mobileNumber)}`}
         />
+
+        <OtpSmsSample />
 
         {bannerError ? (
           <View style={styles.errorBanner}>

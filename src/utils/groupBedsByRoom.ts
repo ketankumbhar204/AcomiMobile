@@ -10,6 +10,7 @@ export type BedRoomGroup = {
   unitName?: string | null;
   roomId: string;
   roomName: string;
+  roomType?: string | null;
   beds: BedSpaceListItemResponse[];
 };
 
@@ -55,8 +56,15 @@ export function groupBedsByRoom(beds: BedSpaceListItemResponse[]): BedRoomGroup[
       unitName: bed.unitName,
       roomId: bed.roomId,
       roomName: bed.roomName,
+      roomType: bed.roomType,
       beds: [bed],
     });
+  }
+
+  for (const group of groups.values()) {
+    if (!group.roomType) {
+      group.roomType = group.beds.find(b => b.roomType)?.roomType ?? null;
+    }
   }
 
   const result = Array.from(groups.values());
@@ -75,6 +83,42 @@ export function groupBedsByRoom(beds: BedSpaceListItemResponse[]): BedRoomGroup[
   });
 
   return result;
+}
+
+export function formatRoomGroupPath(group: BedRoomGroup): string {
+  return roomGroupPathSegments(group).join(' > ');
+}
+
+/** Path segments for arrow-icon separators in inventory headers. */
+export function roomGroupPathSegments(
+  group: BedRoomGroup,
+  options?: { includeBuilding?: boolean; includeUnit?: boolean },
+): string[] {
+  const includeBuilding = options?.includeBuilding ?? false;
+  const includeUnit = options?.includeUnit ?? Boolean(group.unitId);
+  return [
+    includeBuilding ? group.buildingName : null,
+    group.floorName,
+    includeUnit ? group.unitName : null,
+    group.roomName,
+  ]
+    .map(part => part?.trim())
+    .filter((part): part is string => Boolean(part));
+}
+
+/** Corridor-style path without unit (Floor > Room). */
+export function formatRoomGroupPathCompact(
+  group: BedRoomGroup,
+  options?: { includeUnit?: boolean },
+): string {
+  return roomGroupPathSegments(group, options).join(' > ');
+}
+
+/** Full path including building (dashboard / multi-building views). */
+export function formatRoomGroupPathWithBuilding(group: BedRoomGroup): string {
+  return [group.buildingName, group.floorName, group.unitName, group.roomName]
+    .filter(Boolean)
+    .join(' > ');
 }
 
 export function formatRoomGroupLocation(group: BedRoomGroup): string {
@@ -142,4 +186,51 @@ export function groupBedsByUnit(beds: BedSpaceListItemResponse[]): BedUnitGroup[
   });
 
   return result;
+}
+
+export type BedFloorGroup = {
+  key: string;
+  buildingId: string;
+  buildingName: string;
+  floorId?: string | null;
+  floorName?: string | null;
+  rooms: BedRoomGroup[];
+};
+
+function floorGroupKey(group: BedRoomGroup): string {
+  return [group.buildingId, group.floorId ?? 'no-floor'].join(':');
+}
+
+export function groupBedsByFloor(beds: BedSpaceListItemResponse[]): BedFloorGroup[] {
+  const roomGroups = groupBedsByRoom(beds);
+  const floors = new Map<string, BedFloorGroup>();
+
+  for (const room of roomGroups) {
+    const key = floorGroupKey(room);
+    const existing = floors.get(key);
+    if (existing) {
+      existing.rooms.push(room);
+      continue;
+    }
+    floors.set(key, {
+      key,
+      buildingId: room.buildingId,
+      buildingName: room.buildingName,
+      floorId: room.floorId,
+      floorName: room.floorName,
+      rooms: [room],
+    });
+  }
+
+  const result = Array.from(floors.values());
+  result.sort((a, b) => compareLabels(a.floorName, b.floorName));
+  return result;
+}
+
+export function floorGroupBedCount(group: BedFloorGroup): number {
+  return group.rooms.reduce((sum, room) => sum + room.beds.length, 0);
+}
+
+export function roomGroupAvailableCount(group: BedRoomGroup): number {
+  return group.beds.filter(bed => bed.status === 'AVAILABLE').length;
 }

@@ -9,7 +9,20 @@ import {
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { Bell, Crown, MapPin, Package, Share2, Users, UtensilsCrossed, Wallet } from 'lucide-react-native';
+import {
+  ArrowLeftRight,
+  Bell,
+  Crown,
+  Lock,
+  LogOut,
+  MapPin,
+  Package,
+  Share2,
+  UserPlus,
+  Users,
+  UtensilsCrossed,
+  Wallet,
+} from 'lucide-react-native';
 import { formatSpaceType, getSpaceTypeLabel } from '../../api';
 import {
   DashboardAccommodationOperations,
@@ -205,11 +218,18 @@ export function DashboardScreen() {
     progress: lifecycleProgress,
     nextRecommendedAction,
     evaluation,
+    getCapability,
   } = useSpaceLifecycle({
     spaceType,
     context: lifecycleContext,
     enabled: showOwnerDashboard,
   });
+
+  const mealConfigOpen = getCapability('MEAL_CONFIG')?.mode === 'AVAILABLE';
+  const propertyReadyDone =
+    evaluation?.statuses.find(s => s.id === 'PROPERTY_READY')?.done === true;
+  const accommodationOpen =
+    propertyReadyDone && getCapability('ACCOMMODATION')?.mode === 'AVAILABLE';
 
   const healthExtras = useMemo(() => {
     const financial = dashboard.financial;
@@ -241,8 +261,13 @@ export function DashboardScreen() {
   });
 
   const visibility = useMemo(
-    () => dashboardVisibilityForLifecycle(lifecycle, { spaceType }),
-    [lifecycle, spaceType],
+    () =>
+      dashboardVisibilityForLifecycle(lifecycle, {
+        spaceType,
+        mealConfigOpen,
+        accommodationOpen,
+      }),
+    [accommodationOpen, lifecycle, mealConfigOpen, spaceType],
   );
 
   const handleDashboardRefresh = useCallback(() => {
@@ -256,6 +281,8 @@ export function DashboardScreen() {
     canManageMeals: showMealsActions,
     isMess,
     accommodationApplicable,
+    isRental: spaceType === 'RENTAL',
+    mealOpsHidden: getCapability('MEAL_OPS')?.mode === 'HIDDEN',
   });
 
   const handlePendingActionsPress = useCallback(() => {
@@ -297,7 +324,7 @@ export function DashboardScreen() {
           navigateFromTab('MenuLibrary', { spaceId });
           break;
         case 'MenuPlanning':
-          navigateFromTab('MenuPlanning', { spaceId });
+          navigation.navigate('Meals', { spaceId });
           break;
         case 'MenuSharePreview':
           navigateFromTab('MenuSharePreview', {
@@ -425,7 +452,7 @@ export function DashboardScreen() {
     const actions: QuickActionSheetOption[] = [
       {
         label: t('dashboard.quickActions.mealsPlanning'),
-        action: () => navigateFromTab('MenuPlanning', { spaceId }),
+        action: () => navigation.navigate('Meals', { spaceId }),
       },
       {
         label: t('meals.planning.shareTomorrow'),
@@ -451,7 +478,7 @@ export function DashboardScreen() {
       });
     }
     showQuickActionSheet(t('dashboard.quickActions.meals'), actions);
-  }, [isMess, navigateFromTab, showQuickActionSheet, spaceId, t]);
+  }, [isMess, navigateFromTab, navigation, showQuickActionSheet, spaceId, t]);
 
   const handleDeliveryLocationsPress = useCallback(() => {
     navigateFromTab('MealDeliveryLocations', { spaceId });
@@ -482,18 +509,34 @@ export function DashboardScreen() {
     showQuickActionSheet(t('dashboard.quickActions.residents'), [
       {
         label: t('dashboard.quickActions.allocate'),
+        subtitle: t('dashboard.quickActions.allocateHint'),
+        icon: UserPlus,
+        iconColor: '#2563EB',
+        iconBackground: '#DBEAFE',
         action: () => hierarchyPicker.openFromSpace('ALLOCATE'),
       },
       {
         label: t('dashboard.quickActions.reserve'),
+        subtitle: t('dashboard.quickActions.reserveHint'),
+        icon: Lock,
+        iconColor: '#2563EB',
+        iconBackground: '#DBEAFE',
         action: () => hierarchyPicker.openFromSpace('RESERVE'),
       },
       {
         label: t('dashboard.quickActions.transfer'),
+        subtitle: t('dashboard.quickActions.transferHint'),
+        icon: ArrowLeftRight,
+        iconColor: '#EA580C',
+        iconBackground: '#FFEDD5',
         action: () => navigateFromTab('OccupancyWizard', { spaceId, mode: 'TRANSFER' }),
       },
       {
         label: t('dashboard.quickActions.vacate'),
+        subtitle: t('dashboard.quickActions.vacateHint'),
+        icon: LogOut,
+        iconColor: '#DC2626',
+        iconBackground: '#FEE2E2',
         action: () => navigateFromTab('OccupancyWizard', { spaceId, mode: 'VACATE' }),
         destructive: true,
       },
@@ -729,9 +772,7 @@ export function DashboardScreen() {
           accent="#0F766E"
           title={t('dashboard.quickActions.setupPlanTodaysMenu')}
           subtitle={t('dashboard.quickActions.setupPlanTodaysMenuSubtitle')}
-          onPress={() =>
-            navigateFromTab('MenuPlanning', { spaceId, menuDate: todayIsoDate() })
-          }
+          onPress={() => navigation.navigate('Meals', { spaceId })}
         />
         <DashboardActionRow
           icon={Share2}

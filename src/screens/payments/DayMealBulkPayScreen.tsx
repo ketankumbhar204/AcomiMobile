@@ -102,8 +102,10 @@ export function DayMealBulkPayScreen() {
     if (sortedDates.length === 0 || submitting) {
       return;
     }
-    const body: SubmitPaymentProofRequest = {
+    const body: SubmitPaymentProofRequest & { localFile?: UniversalPaymentProofPayload['localFile'] } = {
       proofImageBase64: payload.proofImageBase64,
+      proofFileId: payload.proofFileId,
+      localFile: payload.localFile,
       referenceNumber: payload.referenceNumber,
       remarks: payload.remarks,
       paymentMethod: payload.paymentMethod,

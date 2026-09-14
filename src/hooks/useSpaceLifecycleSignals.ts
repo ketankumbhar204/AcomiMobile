@@ -17,9 +17,13 @@ import { fetchDailyMenusByDateCached } from '../utils/mealDayQueryCache';
 import { todayIsoDate } from '../utils/mealDates';
 import { aggregateBuildingStructure } from '../utils/spaceSetupProgress';
 import { servingLocationMode } from '../utils/servingLocationPolicy';
+import {
+  catalogHasAnyMealLibrary,
+  catalogHasCuratedMealLibrary,
+} from '../spaceLifecycle/sampleMealCatalog';
 import { useBuildings } from './useBuildings';
 
-/** Mess: only CUSTOMER counts toward “customers added”. Lodging: all members. */
+/** Mess: only CUSTOMER counts toward “customers added”. Lodging: exclude OWNER. */
 function countLifecycleMembers(
   members: MemberResponse[] | null | undefined,
   spaceType: SpaceType,
@@ -30,7 +34,19 @@ function countLifecycleMembers(
   if (spaceType === 'MESS') {
     return members.filter(m => m.role === 'CUSTOMER').length;
   }
-  return members.length;
+  return members.filter(m => m.role !== 'OWNER').length;
+}
+
+function countAllocatedMembers(
+  members: MemberResponse[] | null | undefined,
+  spaceType: SpaceType,
+): number {
+  if (!Array.isArray(members) || spaceType === 'MESS') {
+    return 0;
+  }
+  return members.filter(
+    m => m.role !== 'OWNER' && m.occupancyStatus === 'ALLOCATED',
+  ).length;
 }
 
 export type UseSpaceLifecycleSignalsArgs = {
@@ -86,7 +102,9 @@ export function useSpaceLifecycleSignals({
   );
 
   const [memberCount, setMemberCount] = useState(0);
+  const [allocatedMemberCount, setAllocatedMemberCount] = useState(0);
   const [hasMealLibrary, setHasMealLibrary] = useState(false);
+  const [hasCuratedMealLibrary, setHasCuratedMealLibrary] = useState(false);
   const [hasTodaysMenuPlanned, setHasTodaysMenuPlanned] = useState(false);
   const [hasMenuShared, setHasMenuShared] = useState(false);
   const [deliveryLocationCount, setDeliveryLocationCount] = useState(0);
@@ -116,7 +134,9 @@ export function useSpaceLifecycleSignals({
   const loadExtras = useCallback(async (options?: { silent?: boolean }) => {
     if (!spaceId || !shouldLoad || !spaceType) {
       setMemberCount(0);
+      setAllocatedMemberCount(0);
       setHasMealLibrary(false);
+      setHasCuratedMealLibrary(false);
       setHasTodaysMenuPlanned(false);
       setHasMenuShared(false);
       setDeliveryLocationCount(0);
@@ -141,7 +161,9 @@ export function useSpaceLifecycleSignals({
       if (accommodationApplicable && buildingIds.length === 0) {
         const members = await memberApi.getMembers(spaceId).catch(() => []);
         setMemberCount(countLifecycleMembers(members, spaceType));
+        setAllocatedMemberCount(countAllocatedMembers(members, spaceType));
         setHasMealLibrary(false);
+        setHasCuratedMealLibrary(false);
         setHasTodaysMenuPlanned(false);
         setHasMenuShared(false);
         setDeliveryLocationCount(0);
@@ -176,13 +198,9 @@ export function useSpaceLifecycleSignals({
         ]);
 
       setMemberCount(countLifecycleMembers(members, spaceType));
-      setHasMealLibrary(
-        Boolean(
-          catalog &&
-            (catalog.items.some(item => item.isActive) ||
-              catalog.combos.some(combo => combo.isActive)),
-        ),
-      );
+      setAllocatedMemberCount(countAllocatedMembers(members, spaceType));
+      setHasMealLibrary(catalogHasAnyMealLibrary(catalog));
+      setHasCuratedMealLibrary(catalogHasCuratedMealLibrary(catalog));
 
       if (isMess) {
         const menus = Array.isArray(todaysMenus) ? todaysMenus : [];
@@ -282,6 +300,13 @@ export function useSpaceLifecycleSignals({
       bedCount: structure.beds,
       memberCount,
       hasMealLibrary,
+      hasCuratedMealLibrary,
+      allocatedMemberCount,
+      // Proxy until a dedicated payments readiness fetch is shared here.
+      hasBillableActivity:
+        allocatedMemberCount > 0 ||
+        (isMess && hasMenuShared && memberCount > 0) ||
+        hasOperationalSignal,
       hasTodaysMenuPlanned,
       hasMenuShared,
       deliveryLocationCount,
@@ -293,13 +318,16 @@ export function useSpaceLifecycleSignals({
     });
   }, [
     accommodationApplicable,
+    allocatedMemberCount,
     buildings.length,
     deliveryLocationCount,
     dismissedOptionalMilestoneIds,
+    hasCuratedMealLibrary,
     hasMealLibrary,
     hasMenuShared,
     hasOperationalSignal,
     hasTodaysMenuPlanned,
+    isMess,
     memberCount,
     pendingActionCount,
     permissions,

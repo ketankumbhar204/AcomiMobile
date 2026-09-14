@@ -285,4 +285,58 @@ describe('mealSelectionSummary', () => {
       'Hall A',
     );
   });
+
+  it('does not count Not available as a plate in single-select summaries', () => {
+    const polls: MealPollSlot[] = [
+      {
+        id: '1',
+        mealType: 'BREAKFAST',
+        status: 'OPEN',
+        mySelectedOptionId: 'skip',
+        options: [
+          {
+            id: 'egg',
+            label: 'Boiled Egg',
+            optionType: 'MENU_ENTRY',
+            price: 30,
+            currencyCode: 'INR',
+          },
+          {
+            id: 'skip',
+            label: 'Not available for Breakfast',
+            optionType: 'NOT_AVAILABLE',
+          },
+        ],
+      } as unknown as MealPollSlot,
+      {
+        id: '2',
+        mealType: 'LUNCH',
+        status: 'OPEN',
+        mySelectedOptionId: 'thali',
+        options: [
+          {
+            id: 'thali',
+            label: 'Standard Lunch Thali',
+            optionType: 'MENU_ENTRY',
+            price: 100,
+            currencyCode: 'INR',
+          },
+        ],
+      } as unknown as MealPollSlot,
+    ];
+
+    const fromPolls = buildMealSummaryFromPolls(polls, false);
+    expect(fromPolls.totalPlates).toBe(1);
+    expect(fromPolls.sections.find(s => s.mealType === 'BREAKFAST')?.items).toHaveLength(0);
+    expect(fromPolls.sections.find(s => s.mealType === 'LUNCH')?.items[0]?.label).toBe(
+      'Standard Lunch Thali',
+    );
+
+    const fromDraft = buildMealSummaryFromDraftSelections(polls, false, {
+      BREAKFAST: 'skip',
+      LUNCH: 'thali',
+    }, {});
+    expect(fromDraft.totalPlates).toBe(1);
+    expect(fromDraft.sections.find(s => s.mealType === 'BREAKFAST')?.items).toHaveLength(0);
+  });
 });

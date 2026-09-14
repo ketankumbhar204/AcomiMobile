@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -28,6 +28,11 @@ import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
 import { defaultLayoutModeForSpaceType } from '../../utils/accommodationProfile';
 import {
+  suggestBuildingCode,
+  suggestBuildingName,
+} from '../../utils/suggestBuildingDefaults';
+import { useBuildings } from '../../hooks/useBuildings';
+import {
   getLayoutModeLabelKey,
   isLayoutModeSelectable,
   layoutModesForSpaceType,
@@ -45,14 +50,20 @@ export function BuildingFormScreen() {
   const showToast = useToastStore(state => state.showToast);
 
   const mySpaces = useSpaceStore(state => state.mySpaces);
-  const spaceType = useMemo(
-    () => mySpaces.find(space => space.spaceId === spaceId)?.spaceType as SpaceType | undefined,
+  const spaceMeta = useMemo(
+    () => mySpaces.find(space => space.spaceId === spaceId),
     [mySpaces, spaceId],
   );
+  const spaceType = spaceMeta?.spaceType as SpaceType | undefined;
+  const spaceName = spaceMeta?.spaceName ?? '';
   const layoutModeOptions = useMemo(
     () => (spaceType ? layoutModesForSpaceType(spaceType) : []),
     [spaceType],
   );
+  const { buildings, loading: buildingsLoading } = useBuildings(spaceId, {
+    enabled: !isEdit,
+  });
+  const createDefaultsAppliedRef = useRef(false);
 
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
@@ -66,6 +77,15 @@ export function BuildingFormScreen() {
       setLayoutMode(defaultLayoutModeForSpaceType(spaceType));
     }
   }, [spaceType]);
+
+  useEffect(() => {
+    if (isEdit || createDefaultsAppliedRef.current || !spaceMeta || buildingsLoading) {
+      return;
+    }
+    setName(suggestBuildingName(spaceName));
+    setCode(suggestBuildingCode(buildings.length));
+    createDefaultsAppliedRef.current = true;
+  }, [buildings.length, buildingsLoading, isEdit, spaceMeta, spaceName]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -101,6 +121,20 @@ export function BuildingFormScreen() {
     setSubmitError(null);
 
     try {
+      if (!isEdit) {
+        const availability = await accommodationApi.checkBuildingAvailability(
+          spaceId,
+          name.trim(),
+        );
+        if (!availability.nameAvailable) {
+          setNameError(
+            availability.message || t('accommodation.setup.buildingNameTaken'),
+          );
+          setSubmitting(false);
+          return;
+        }
+      }
+
       const body = {
         name: name.trim(),
         code: code.trim() || undefined,
@@ -158,7 +192,9 @@ export function BuildingFormScreen() {
                 label={t('accommodation.fields.name')}
                 value={name}
                 onChangeText={setName}
-                placeholder={t('accommodation.buildings.namePlaceholder')}
+                placeholder={t('accommodation.buildings.namePlaceholderSpace', {
+                  defaultValue: 'Uses your space name by default',
+                })}
                 error={nameError}
                 leadingIcon={Type}
               />
@@ -166,7 +202,9 @@ export function BuildingFormScreen() {
                 label={t('accommodation.fields.code')}
                 value={code}
                 onChangeText={setCode}
-                placeholder={t('accommodation.buildings.codePlaceholder')}
+                placeholder={t('accommodation.buildings.codePlaceholderBld', {
+                  defaultValue: 'e.g. BLD 1',
+                })}
                 leadingIcon={Tag}
               />
               {spaceType && isLayoutModeSelectable(spaceType) ? (

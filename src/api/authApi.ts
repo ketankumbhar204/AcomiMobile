@@ -102,6 +102,7 @@ export const authApi = {
       console.log(`${LOG_TAG} completeProfile →`, {
         ...payload,
         profilePhotoUrl: payload.profilePhotoUrl ? '[redacted]' : null,
+        profilePhotoFileId: payload.profilePhotoFileId ?? null,
         addressProofFileUrl: payload.addressProofFileUrl ? '[redacted]' : null,
         identityProofFileUrl: payload.identityProofFileUrl ? '[redacted]' : null,
         additionalDocumentFileUrl: payload.additionalDocumentFileUrl ? '[redacted]' : null,

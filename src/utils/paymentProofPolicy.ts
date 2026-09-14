@@ -19,6 +19,7 @@ export const DEFAULT_PAYMENT_PROOF_REQUIREMENTS: PaymentProofRequirements = {
 
 export type PaymentProofSubmission = {
   proofImageBase64?: string;
+  proofFileId?: string;
   referenceNumber?: string;
   remarks?: string;
   paymentMethod?: UniversalPaymentMethod;
@@ -46,7 +47,7 @@ export function validatePaymentProofSubmission(
   payload: PaymentProofSubmission,
   requirements: PaymentProofRequirements = DEFAULT_PAYMENT_PROOF_REQUIREMENTS,
 ): PaymentProofValidationError | null {
-  if (requirements.screenshotRequired && !payload.proofImageBase64?.trim()) {
+  if (requirements.screenshotRequired && !payload.proofImageBase64?.trim() && !payload.proofFileId) {
     return 'screenshotRequired';
   }
   if (requirements.utrRequired && !payload.referenceNumber?.trim()) {
