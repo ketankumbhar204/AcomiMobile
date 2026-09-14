@@ -2,7 +2,8 @@ import React from 'react';
 import { Image, StyleSheet, View, type ImageSourcePropType, type StyleProp, type ViewStyle } from 'react-native';
 import { Moon, Sun, SunMedium, type LucideIcon } from 'lucide-react-native';
 import type { MealType } from '../../api/types';
-import { colors, radius } from '../../theme';
+import { radius } from '../../theme';
+import { mealTypeTheme } from '../../utils/mealTypeTheme';
 
 type MealTypeVisualProps = {
   mealType: MealType;
@@ -22,12 +23,6 @@ const MEAL_ICONS: Record<MealType, LucideIcon> = {
   DINNER: Moon,
 };
 
-const MEAL_TINTs: Record<MealType, string> = {
-  BREAKFAST: '#D97706',
-  LUNCH: colors.primaryDark,
-  DINNER: '#6366F1',
-};
-
 /**
  * Meal-type visual slot: Lucide icon today, Image later.
  * Keep the outer frame size stable so layout does not shift when photos arrive.
@@ -39,7 +34,7 @@ export function MealTypeVisual({
   imageSource,
   style,
 }: MealTypeVisualProps) {
-  const tint = color ?? MEAL_TINTs[mealType];
+  const tint = color ?? mealTypeTheme(mealType).accent;
   const frame = Math.max(size + 16, 40);
   const Icon = MEAL_ICONS[mealType];
 

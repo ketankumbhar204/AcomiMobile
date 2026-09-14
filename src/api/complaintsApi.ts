@@ -17,6 +17,8 @@ import type {
   UpdateComplaintStatusRequest,
   UUID,
 } from './types';
+import { ensureUploadedFileId, uploadLocalFile } from '../services/fileUploadService';
+import type { LocalFileInput } from '../services/fileUploadService';
 
 function buildQuery(params?: ListComplaintsParams): string {
   if (!params) {
@@ -62,10 +64,22 @@ export const complaintsApi = {
 
   create: async (
     spaceId: UUID,
-    body: CreateComplaintRequest,
+    body: CreateComplaintRequest & { localFiles?: LocalFileInput[] },
   ): Promise<ComplaintResponse> => {
+    const attachmentFileIds = [...(body.attachmentFileIds ?? [])];
+    if (body.localFiles?.length) {
+      for (const file of body.localFiles) {
+        attachmentFileIds.push(
+          await uploadLocalFile(file, { purpose: 'COMPLAINT_ATTACHMENT', spaceId }),
+        );
+      }
+    }
+    const { localFiles: _ignored, ...rest } = body;
     return unwrapApiResponse(
-      apiClient.post<ApiResponse<ComplaintResponse>>(`/spaces/${spaceId}/complaints`, body),
+      apiClient.post<ApiResponse<ComplaintResponse>>(`/spaces/${spaceId}/complaints`, {
+        ...rest,
+        attachmentFileIds: attachmentFileIds.length ? attachmentFileIds : undefined,
+      }),
     );
   },
 
@@ -98,12 +112,18 @@ export const complaintsApi = {
   addAttachment: async (
     spaceId: UUID,
     complaintId: UUID,
-    body: AddComplaintAttachmentRequest,
+    body: AddComplaintAttachmentRequest & { localFile?: LocalFileInput },
   ): Promise<ComplaintResponse> => {
+    const fileId = await ensureUploadedFileId(body.fileId, body.localFile, {
+      purpose: 'COMPLAINT_ATTACHMENT',
+      spaceId,
+      complaintId,
+    });
+    const { localFile: _ignored, ...rest } = body;
     return unwrapApiResponse(
       apiClient.post<ApiResponse<ComplaintResponse>>(
         `/spaces/${spaceId}/complaints/${complaintId}/attachments`,
-        body,
+        { ...rest, fileId },
       ),
     );
   },

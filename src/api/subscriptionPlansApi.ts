@@ -10,6 +10,8 @@ import type {
   UpdateSubscriptionPlanRequest,
   UUID,
 } from './types';
+import { ensureUploadedFileId } from '../services/fileUploadService';
+import type { LocalFileInput } from '../services/fileUploadService';
 
 export const subscriptionPlansApi = {
   listPlans: async (
@@ -83,12 +85,18 @@ export const subscriptionPlansApi = {
   createActivationRequest: async (
     spaceId: UUID,
     memberId: UUID,
-    payload: CreateSubscriptionActivationRequest,
+    payload: CreateSubscriptionActivationRequest & { localFile?: LocalFileInput },
   ): Promise<SubscriptionActivationRequestResponse> => {
+    const proofFileId = await ensureUploadedFileId(payload.proofFileId, payload.localFile, {
+      purpose: 'SUBSCRIPTION_PAYMENT_PROOF',
+      spaceId,
+      memberId,
+    });
+    const { localFile: _ignored, ...rest } = payload;
     return unwrapApiResponse(
       apiClient.post<ApiResponse<SubscriptionActivationRequestResponse>>(
         `/spaces/${spaceId}/members/${memberId}/subscription-activation-requests`,
-        payload,
+        { ...rest, proofFileId },
       ),
     );
   },

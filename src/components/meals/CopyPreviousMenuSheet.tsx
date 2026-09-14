@@ -18,6 +18,7 @@ import {
   formatMenuDate,
 } from '../../utils/mealDates';
 import { mealTypeLabelKey, MEAL_TYPES } from '../../utils/mealLabels';
+import { mealTypeTheme } from '../../utils/mealTypeTheme';
 import { useConfirmDialog } from '../ui/ConfirmDialog';
 import { MenuDatePickerModal } from './MenuDatePickerModal';
 import {
@@ -374,14 +375,27 @@ export function CopyPreviousMenuSheet({
                   disabled={!planned}
                   style={[
                     styles.mealPreview,
-                    selected && styles.mealPreviewSelected,
+                    {
+                      borderColor: selected
+                        ? mealTypeTheme(mealType).borderStrong
+                        : mealTypeTheme(mealType).border,
+                      backgroundColor: planned
+                        ? mealTypeTheme(mealType).soft
+                        : colors.surface,
+                    },
                     !planned && styles.mealPreviewDisabled,
                   ]}
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: selected, disabled: !planned }}>
                   <MealTypeVisual mealType={mealType} size={18} />
                   <View style={styles.mealCopy}>
-                    <Text style={styles.mealTitle}>{t(mealTypeLabelKey(mealType))}</Text>
+                    <Text
+                      style={[
+                        styles.mealTitle,
+                        { color: mealTypeTheme(mealType).accent },
+                      ]}>
+                      {t(mealTypeLabelKey(mealType))}
+                    </Text>
                     <Text style={[styles.optionList, !planned && styles.notPlanned]}>
                       {planned
                         ? options.join(' • ')
@@ -642,12 +656,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     backgroundColor: colors.white,
   },
-  mealPreviewSelected: {
-    borderColor: colors.primary,
-    backgroundColor: '#F0FDF4',
-  },
   mealPreviewDisabled: {
-    backgroundColor: colors.surface,
     opacity: 0.75,
   },
   mealCopy: {
@@ -657,8 +666,8 @@ const styles = StyleSheet.create({
   },
   mealTitle: {
     ...typography.bodyStrong,
-    fontSize: 14,
-    color: colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '700',
   },
   optionList: {
     ...typography.caption,

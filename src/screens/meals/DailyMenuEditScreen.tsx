@@ -742,9 +742,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
   };
 
   const persistRef = useRef(persist);
-  const shareMealRef = useRef(shareMeal);
   persistRef.current = persist;
-  shareMealRef.current = shareMeal;
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', event => {
@@ -755,15 +753,17 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
       Alert.alert(t('meals.menu.unsavedTitle'), t('meals.menu.unsavedMessage'), [
         { text: t('common.cancel'), style: 'cancel' },
         {
-          text: t('meals.actions.saveDraft'),
+          text: t('meals.menu.discardChanges'),
+          style: 'destructive',
           onPress: () => {
-            void persistRef.current();
+            allowLeaveRef.current = true;
+            navigation.dispatch(event.data.action);
           },
         },
         {
-          text: t('meals.actions.shareMeal'),
+          text: t('meals.actions.saveDraft'),
           onPress: () => {
-            void shareMealRef.current();
+            void persistRef.current();
           },
         },
       ]);
@@ -803,6 +803,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
           eyebrow={t('meals.title')}
           heading={t('meals.planning.editTitle', { meal: t(mealTypeLabelKey(mealType)) })}
           subheading={formatMenuDate(menuDate, i18n.language)}
+          compact
         />
         <View style={styles.metaRow}>
           <View style={styles.metaLeft}>

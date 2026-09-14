@@ -28,7 +28,8 @@ export type SpaceBootstrapRoute =
   | 'CreateSpace'
   | 'AcceptInvitations'
   | 'OnboardingChoice'
-  | 'JoinSpace';
+  | 'JoinSpace'
+  | 'MemberHome';
 
 export type SpaceBootstrapResult = {
   route: SpaceBootstrapRoute;
@@ -121,12 +122,12 @@ function applyStartupResolution(
       patch: {
         ...applyCurrentSpace(null),
         mySpaces: [],
-        startupRoute: 'AcceptInvitations',
+        startupRoute: 'MemberHome',
         hasSpaceBootstrapped: true,
         isSpaceBootstrapping: false,
         loading: false,
       },
-      result: { route: 'AcceptInvitations' },
+      result: { route: 'MemberHome' },
     };
   }
 
@@ -268,7 +269,7 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
       const message = getSpaceErrorMessage(err, 'common.errors.loadSpaces');
       console.error(`${LOG_TAG} refreshStartupNavigation failed`, err);
       set({ loading: false, error: message });
-      return { route: 'JoinSpace' };
+      return { route: 'MemberHome' };
     }
   },
 

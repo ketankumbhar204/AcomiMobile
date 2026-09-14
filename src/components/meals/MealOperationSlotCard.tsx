@@ -7,6 +7,7 @@ import { colors, radius, shadows, spacing, typography } from '../../theme';
 import type { DashboardMealSlotCaptionTone } from '../../utils/dashboardMealSlotDisplay';
 import { MENU_PLANNING_POLL_OPEN_COLOR } from '../../utils/menuPlanningStatusVisual';
 import { mealStatusTheme, type MealStatusKind } from '../../utils/mealStatusTheme';
+import { mealTypeTheme } from '../../utils/mealTypeTheme';
 
 function captionToneColor(tone: DashboardMealSlotCaptionTone): string {
   switch (tone) {
@@ -50,9 +51,12 @@ export function MealOperationSlotCard({
   selected = false,
   compact = false,
 }: MealOperationSlotCardProps) {
-  const theme = mealStatusTheme(statusKind);
+  const statusTheme = mealStatusTheme(statusKind);
+  const typeTheme = mealType ? mealTypeTheme(mealType) : null;
   const toneColor = captionToneColor(captionTone);
   const showMetric = countPrimary != null && countPrimary.length > 0;
+  const cardAccent = typeTheme?.accent ?? statusTheme.color;
+  const cardSoft = typeTheme?.soft ?? colors.white;
 
   return (
     <Pressable
@@ -64,19 +68,22 @@ export function MealOperationSlotCard({
         styles.slotCard,
         compact && styles.slotCardCompact,
         {
-          backgroundColor: selected ? theme.background : colors.white,
-          borderColor: selected ? theme.color : colors.border,
+          backgroundColor: cardSoft,
+          borderColor: '#E5E7EB',
+          borderWidth: 1,
         },
-        selected && styles.slotCardSelected,
-        selected && { borderColor: theme.color },
         pressed && styles.slotCardPressed,
         !selected && compact && styles.slotCardUnselectedCompact,
         !selected && !compact && styles.slotCardDesignA,
       ]}>
-      {selected ? <View style={[styles.selectedIndicator, { backgroundColor: theme.color }]} /> : null}
+      {selected ? (
+        <View style={[styles.selectedIndicator, { backgroundColor: cardAccent }]} />
+      ) : null}
       {/* TODO: pass imageSource on MealTypeVisual when meal photos are available */}
       {mealType && !compact ? <MealTypeVisual mealType={mealType} size={18} /> : null}
-      <Text style={styles.slotMealLabel} numberOfLines={1}>
+      <Text
+        style={[styles.slotMealLabel, typeTheme ? { color: typeTheme.accent } : null]}
+        numberOfLines={1}>
         {mealLabel}
       </Text>
       <MealStatusBadge kind={statusKind} size="compact" style={styles.slotStatusBadge} />
@@ -130,14 +137,6 @@ const styles = StyleSheet.create({
     minHeight: 80,
     opacity: 0.92,
   },
-  slotCardSelected: {
-    borderWidth: 2.5,
-    minHeight: 100,
-    paddingVertical: spacing.sm,
-    ...shadows.md,
-    elevation: 4,
-    transform: [{ scale: 1.02 }],
-  },
   selectedIndicator: {
     position: 'absolute',
     top: 0,
@@ -149,11 +148,12 @@ const styles = StyleSheet.create({
     opacity: 0.92,
   },
   slotMealLabel: {
-    ...typography.caption,
+    ...typography.bodyStrong,
     color: colors.textPrimary,
     fontWeight: '700',
     textAlign: 'center',
-    fontSize: 11,
+    fontSize: 15,
+    lineHeight: 18,
   },
   slotStatusBadge: {
     alignSelf: 'center',
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 14,
-    fontSize: 10,
+    fontSize: 11,
     flexShrink: 1,
   },
 });

@@ -34,6 +34,26 @@ export {
 export { recommendNextAction } from './recommendation';
 export { deriveLifecycleState } from './lifecycle';
 export { evaluateSpaceLifecycle } from './evaluate';
+export {
+  evaluateSpaceCapabilities,
+  getCapability,
+  isCapabilityLocked,
+  isCapabilityOpen,
+  isProgressiveOperator,
+} from './capabilities';
+export type {
+  AccessMode,
+  CapabilityAccess,
+  CapabilityId,
+  SpaceCapabilitiesResult,
+} from './capabilities';
+export { getBlockingCapability } from './capabilityGuard';
+export {
+  catalogHasAnyMealLibrary,
+  catalogHasCuratedMealLibrary,
+  isSystemSampleComboName,
+  SYSTEM_SAMPLE_COMBO_NAMES,
+} from './sampleMealCatalog';
 
 export {
   emptyPredicateContext,

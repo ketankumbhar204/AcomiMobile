@@ -1,16 +1,19 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import type { CompositeNavigationProp } from "@react-navigation/native";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
-import { Mail, Plus } from "lucide-react-native";
-import { getSpaceTypeLabel, spaceTypeIconLabel } from "../api";
+import { Plus, Search } from "lucide-react-native";
+import { formatSpaceType, getSpaceTypeLabel, spaceTypeIconLabel } from "../api";
 import type {
   MembershipRole,
   MyInvitationResponse,
   MySpaceResponse,
 } from "../api/types";
 import { memberApi } from "../api/memberApi";
+import { InvitationCard } from "../components/auth";
 import {
   SpaceAttentionCardStatus,
   SpaceAttentionCountBadge,
@@ -26,24 +29,40 @@ import {
   FAB,
   FormInput,
   ListCard,
-  ProfileHeaderButton,
   SkeletonCard,
 } from "../components/ui";
+import { useAcceptInvitationFlow } from "../hooks/useAcceptInvitationFlow";
 import { useConsumerSpacesAttention } from "../hooks/useConsumerSpacesAttention";
 import { useGlobalDashboard } from "../hooks/useGlobalDashboard";
 import { invalidateAccommodationQueries } from "../utils/accommodationQueryCache";
-import type { MainStackParamList } from "../navigation/types";
+import type { MainStackParamList, MemberTabParamList } from "../navigation/types";
 import { useSpaceStore } from "../store/spaceStore";
+import { useToastStore } from "../store/toastStore";
 import { colors, radius, spacing, typography } from "../theme";
 import { formatSpaceDisplayName } from "../utils/spaceLabels";
 import { isConsumerMembershipRole } from "../utils/profileCompletion";
 
-type MySpacesNavigation = NativeStackNavigationProp<MainStackParamList, "MySpaces">;
+type MySpacesNavigation = CompositeNavigationProp<
+  BottomTabNavigationProp<MemberTabParamList, "Home">,
+  NativeStackNavigationProp<MainStackParamList>
+>;
 
 const SEARCH_DEBOUNCE_MS = 300;
 
 function formatRoleLabel(role: MembershipRole, t: (key: string) => string): string {
   return t(`spaces.roles.${role}`);
+}
+
+function formatInviteDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function greetingKey(hour: number): string {
@@ -73,6 +92,9 @@ export function MySpacesScreen() {
   const [search, setSearch] = useState(searchQuery);
   const [refreshing, setRefreshing] = useState(false);
   const [myInvitations, setMyInvitations] = useState<MyInvitationResponse[]>([]);
+  const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const showToast = useToastStore(state => state.showToast);
+  const { acceptInvitation, isSubmitting } = useAcceptInvitationFlow();
 
   const hasOperatorSpace = useMemo(
     () => mySpaces.some(s => s.membershipRole === "OWNER" || s.membershipRole === "MANAGER"),
@@ -135,7 +157,8 @@ export function MySpacesScreen() {
   useLayoutEffect(() => {
     navigation.setOptions({
       title: t("navigation.mySpaces"),
-      headerRight: () => <ProfileHeaderButton />,
+      headerBackVisible: false,
+      headerRight: undefined,
     });
   }, [navigation, t, i18n.language]);
 
@@ -149,6 +172,9 @@ export function MySpacesScreen() {
       void loadMyInvitations();
     }, [loadMyInvitations, loadMySpaces, searchQuery, searchSpaces]),
   );
+
+  // Empty My Spaces for members is handled by MemberLandingScreen (shows MemberHome).
+  // Owners with zero spaces stay on this screen to create a space.
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -189,6 +215,24 @@ export function MySpacesScreen() {
     }
   };
 
+  const handleAcceptInvitation = useCallback(
+    async (invitation: MyInvitationResponse) => {
+      setAcceptingId(invitation.invitationId);
+      const membership = await acceptInvitation(invitation.invitationId);
+      setAcceptingId(null);
+      if (membership) {
+        showToast(
+          t("membership.incoming.success", { spaceName: membership.spaceName }),
+        );
+        setMyInvitations(prev =>
+          prev.filter(item => item.invitationId !== invitation.invitationId),
+        );
+        await loadMySpaces();
+      }
+    },
+    [acceptInvitation, loadMySpaces, showToast, t],
+  );
+
   const buildSubtitle = (space: MySpaceResponse) => {
     const typeLabel = getSpaceTypeLabel(space.spaceType);
     const roleLabel = formatRoleLabel(space.membershipRole, t);
@@ -198,8 +242,9 @@ export function MySpacesScreen() {
   const isSearching = search.trim().length > 0;
   const showLoading = (loading || searching) && mySpaces.length === 0;
   const showGlobalOverview = hasOperatorSpace && !isSearching;
-  // Join-invitation banner is for consumers joining a space — not for owners/managers.
-  const showInviteBanner = myInvitations.length > 0 && !hasOperatorSpace;
+  // Pending invitations stay visible for members who already have spaces.
+  const showPendingInvites = myInvitations.length > 0;
+  const inviteBusy = isSubmitting || acceptingId != null;
   const greeting = useMemo(() => t(greetingKey(new Date().getHours())), [t]);
 
   return (
@@ -234,16 +279,41 @@ export function MySpacesScreen() {
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        {showInviteBanner ? (
-          <View style={styles.inviteBanner}>
-            <DashboardActionRow
-              icon={Mail}
-              accent={colors.primaryDark}
-              title={t("membership.incoming.bannerTitle", { count: myInvitations.length })}
-              subtitle={t("membership.incoming.bannerSubtitle")}
-              badgeCount={myInvitations.length}
-              onPress={() => navigation.navigate("AcceptInvitations")}
+        {showPendingInvites ? (
+          <View style={styles.inviteSection}>
+            <DashboardSectionTitle
+              title={t("onboarding.memberHome.inviteSection")}
             />
+            <Text style={styles.inviteCount}>
+              {t("onboarding.memberHome.pendingCount", {
+                count: myInvitations.length,
+              })}
+            </Text>
+            {myInvitations.map(invitation => {
+              const accepting = acceptingId === invitation.invitationId;
+              return (
+                <InvitationCard
+                  key={invitation.invitationId}
+                  spaceName={invitation.spaceName}
+                  spaceTypeLabel={formatSpaceType(invitation.spaceType)}
+                  roleLabel={t(`spaces.roles.${invitation.role}`)}
+                  invitedBy={t("membership.incoming.invitedBy", {
+                    name: invitation.invitedBy,
+                  })}
+                  expiresLabel={t("membership.incoming.expires", {
+                    date: formatInviteDate(invitation.expiresAt),
+                  })}
+                  acceptLabel={
+                    accepting
+                      ? t("membership.incoming.accepting")
+                      : t("onboarding.join.accept")
+                  }
+                  accepting={accepting}
+                  disabled={inviteBusy}
+                  onAccept={() => void handleAcceptInvitation(invitation)}
+                />
+              );
+            })}
           </View>
         ) : null}
 
@@ -282,19 +352,30 @@ export function MySpacesScreen() {
             <SkeletonCard />
           </>
         ) : mySpaces.length === 0 ? (
-          <EmptyState
-            title={
-              isSearching
-                ? t("spaces.mySpaces.searchEmptyTitle")
-                : t("spaces.mySpaces.emptyTitle")
-            }
-            description={
-              isSearching
-                ? t("spaces.mySpaces.searchEmptyDescription")
-                : t("spaces.mySpaces.emptyDescription")
-            }
-            icon="🏠"
-          />
+          <View style={styles.emptyBlock}>
+            <EmptyState
+              title={
+                isSearching
+                  ? t("spaces.mySpaces.searchEmptyTitle")
+                  : t("spaces.mySpaces.emptyTitle")
+              }
+              description={
+                isSearching
+                  ? t("spaces.mySpaces.searchEmptyDescription")
+                  : t("spaces.mySpaces.emptyDescription")
+              }
+              icon="🏠"
+            />
+            {!isSearching ? (
+              <DashboardActionRow
+                icon={Search}
+                accent={colors.primaryDark}
+                title={t("spaces.mySpaces.findPlace")}
+                subtitle={t("spaces.mySpaces.findPlaceSubtitle")}
+                onPress={() => navigation.navigate("FindAPlace")}
+              />
+            ) : null}
+          </View>
         ) : (
           <View style={styles.list}>
             <DashboardSectionTitle title={t("spaces.mySpaces.spacesSection")} />
@@ -339,6 +420,13 @@ export function MySpacesScreen() {
 
         <View style={styles.quickSection}>
           <DashboardSectionTitle title={t("spaces.mySpaces.quickActionsTitle")} />
+          <DashboardActionRow
+            icon={Search}
+            accent={colors.primaryDark}
+            title={t("spaces.mySpaces.findPlace")}
+            subtitle={t("spaces.mySpaces.findPlaceSubtitle")}
+            onPress={() => navigation.navigate("FindAPlace")}
+          />
           <DashboardActionRow
             icon={Plus}
             accent={colors.primaryDark}
@@ -401,9 +489,15 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     marginBottom: spacing.lg,
   },
-  inviteBanner: {
+  inviteSection: {
     marginTop: spacing.md,
     marginBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  inviteCount: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
   },
   globalSection: {
     gap: spacing.md,
@@ -427,5 +521,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.xxl,
     marginBottom: spacing.lg,
     gap: spacing.sm,
+  },
+  emptyBlock: {
+    gap: spacing.md,
   },
 });

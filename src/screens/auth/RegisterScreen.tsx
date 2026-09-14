@@ -16,7 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { Smartphone, TriangleAlert, UserRound } from 'lucide-react-native';
 import { AuthHero, PasswordField } from '../../components/auth';
 import { StickyFormActions } from '../../components/progressive';
-import { useSendOtp } from '../../hooks/useAuth';
+import { useSendOtp, useRegister } from '../../hooks/useAuth';
 import { useOtpCooldown } from '../../hooks/useOtpCooldown';
 import type { AuthStackParamList } from '../../navigation/types';
 import { useRegistrationDraftStore } from '../../store/registrationDraftStore';
@@ -31,8 +31,17 @@ export function RegisterScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<RegisterNav>();
-  const { sendOtp, isLoading, error, clearError } = useSendOtp();
+  const { sendOtp, isLoading: isSendingOtp, error: sendError, clearError: clearSendError } =
+    useSendOtp();
+  const { submit: register, isLoading: isRegistering, error: registerError, clearError: clearRegisterError } =
+    useRegister();
   const setCredentials = useRegistrationDraftStore(state => state.setCredentials);
+  const isLoading = isSendingOtp || isRegistering;
+  const error = sendError || registerError;
+  const clearError = () => {
+    clearSendError();
+    clearRegisterError();
+  };
 
   const [fullName, setFullName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
@@ -73,9 +82,21 @@ export function RegisterScreen() {
       confirmPassword,
     });
     const result = await sendOtp(mobileNumber, 'REGISTER');
-    if (result) {
-      navigation.navigate('OtpVerification', { mobileNumber, purpose: 'REGISTER' });
+    if (!result) {
+      return;
     }
+    // Local backend may return a verification token so registration can skip the OTP screen.
+    if (result.otpSkipped && result.verificationToken) {
+      await register({
+        fullName: fullName.trim(),
+        mobileNumber,
+        password,
+        confirmPassword,
+        verificationToken: result.verificationToken,
+      });
+      return;
+    }
+    navigation.navigate('OtpVerification', { mobileNumber, purpose: 'REGISTER' });
   }
 
   return (

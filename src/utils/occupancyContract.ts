@@ -395,7 +395,36 @@ export function computeOccupancyMonthlyTotalForMonth(
   if (!isOccupancyBillableInMonth(occupancy, month)) {
     return null;
   }
-  return computeOccupancyMonthlyTotal(occupancy);
+  const monthly = computeOccupancyMonthlyTotal(occupancy);
+  if (monthly == null) {
+    return null;
+  }
+
+  const [year, monthNum] = month.split('-').map(Number);
+  const daysInMonth = new Date(year, monthNum, 0).getDate();
+  const monthStart = `${month}-01`;
+  const monthEnd = `${month}-${String(daysInMonth).padStart(2, '0')}`;
+  const startDate = (occupancy.actualMoveInAt ?? occupancy.moveInDate)?.slice(0, 10);
+  if (!startDate) {
+    return null;
+  }
+  const vacatedDate = occupancy.vacatedAt?.slice(0, 10) ?? null;
+  const periodStart = startDate > monthStart ? startDate : monthStart;
+  const periodEnd =
+    vacatedDate && vacatedDate < monthEnd ? vacatedDate : monthEnd;
+  if (periodStart > periodEnd) {
+    return null;
+  }
+
+  const start = new Date(`${periodStart}T00:00:00`);
+  const end = new Date(`${periodEnd}T00:00:00`);
+  const billableDays =
+    Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+  if (billableDays >= daysInMonth) {
+    return monthly;
+  }
+  // Display helper only — authoritative amounts come from payment APIs.
+  return Math.round((monthly * billableDays * 100) / daysInMonth) / 100;
 }
 
 export function hasContractSnapshot(occupancy: OccupancyResponse): boolean {

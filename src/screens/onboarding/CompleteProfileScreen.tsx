@@ -43,7 +43,8 @@ import { resetToDashboard, resetToMySpaces } from '../../navigation/navigationRe
 import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
 import { colors, shadows, spacing, typography } from '../../theme';
-import { pickProfileImage } from '../../utils/pickProfileImage';
+import { pickProfileImage, toLocalFileInput } from '../../utils/pickProfileImage';
+import { uploadLocalFile } from '../../services/fileUploadService';
 import { profileDocumentsToFormState } from '../../utils/profileDocuments';
 import { isConsumerMembershipRole } from '../../utils/profileCompletion';
 import { useAuthStore } from '../../store/authStore';
@@ -76,6 +77,9 @@ export function CompleteProfileScreen() {
   const [dateOfBirth, setDateOfBirth] = useState(user?.dateOfBirth ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
   const [profilePhotoUrl, setProfilePhotoUrl] = useState(user?.profilePhotoUrl ?? '');
+  const [profilePhotoFileId, setProfilePhotoFileId] = useState<string | null>(
+    user?.profilePhotoFileId ?? null,
+  );
 
   const [permanentAddress, setPermanentAddress] = useState(user?.permanentAddress ?? '');
   const [city, setCity] = useState(user?.city ?? '');
@@ -93,6 +97,9 @@ export function CompleteProfileScreen() {
   const [addressProofFileUrl, setAddressProofFileUrl] = useState('');
   const [identityProofFileUrl, setIdentityProofFileUrl] = useState('');
   const [additionalDocumentFileUrl, setAdditionalDocumentFileUrl] = useState('');
+  const [addressProofFileId, setAddressProofFileId] = useState<string | null>(null);
+  const [identityProofFileId, setIdentityProofFileId] = useState<string | null>(null);
+  const [additionalDocumentFileId, setAdditionalDocumentFileId] = useState<string | null>(null);
 
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -252,7 +259,8 @@ export function CompleteProfileScreen() {
       gender,
       dateOfBirth: dateOfBirth.trim() || null,
       email: email.trim() || null,
-      profilePhotoUrl: profilePhotoUrl.trim() || null,
+      profilePhotoUrl: profilePhotoFileId ? null : profilePhotoUrl.trim() || null,
+      profilePhotoFileId,
       permanentAddress: permanentAddress.trim(),
       city: city.trim(),
       state: stateName.trim(),
@@ -262,9 +270,14 @@ export function CompleteProfileScreen() {
       emergencyContactRelation: emergencyContactRelation.trim() || null,
       identityDocumentType,
       identityDocumentNumber: identityDocumentNumber.trim() || null,
-      addressProofFileUrl: addressProofFileUrl.trim() || null,
-      identityProofFileUrl: identityProofFileUrl.trim() || null,
-      additionalDocumentFileUrl: additionalDocumentFileUrl.trim() || null,
+      addressProofFileUrl: addressProofFileId ? null : addressProofFileUrl.trim() || null,
+      identityProofFileUrl: identityProofFileId ? null : identityProofFileUrl.trim() || null,
+      additionalDocumentFileUrl: additionalDocumentFileId
+        ? null
+        : additionalDocumentFileUrl.trim() || null,
+      identityProofFileId,
+      addressProofFileId,
+      additionalDocumentFileId,
     });
 
     if (success) {
@@ -292,19 +305,32 @@ export function CompleteProfileScreen() {
       if (!picked) {
         return;
       }
+      const purpose =
+        target === 'profile'
+          ? 'PROFILE_PHOTO'
+          : target === 'address'
+            ? 'ADDRESS_PROOF'
+            : target === 'identity'
+              ? 'IDENTITY_DOCUMENT'
+              : 'MEMBER_DOCUMENT';
+      const fileId = await uploadLocalFile(toLocalFileInput(picked), { purpose });
 
       switch (target) {
         case 'profile':
-          setProfilePhotoUrl(picked.fileUrl);
+          setProfilePhotoUrl(picked.previewUri);
+          setProfilePhotoFileId(fileId);
           break;
         case 'address':
-          setAddressProofFileUrl(picked.fileUrl);
+          setAddressProofFileUrl(picked.previewUri);
+          setAddressProofFileId(fileId);
           break;
         case 'identity':
-          setIdentityProofFileUrl(picked.fileUrl);
+          setIdentityProofFileUrl(picked.previewUri);
+          setIdentityProofFileId(fileId);
           break;
         case 'additional':
-          setAdditionalDocumentFileUrl(picked.fileUrl);
+          setAdditionalDocumentFileUrl(picked.previewUri);
+          setAdditionalDocumentFileId(fileId);
           break;
         default:
           break;

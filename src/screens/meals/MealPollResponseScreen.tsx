@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { MealPollPaymentStatus, UUID } from '../../api/types';
 import { MealPollDayContent } from '../../components/meals/MealPollDayContent';
+import { PollClosesInHint } from '../../components/meals/PollClosesInHint';
 import { MealFormHero } from '../../components/meals';
 import { MealSelectionSummary } from '../../components/meals/MealSelectionSummary';
 import {
@@ -32,7 +33,7 @@ import { colors, radius, spacing, typography } from '../../theme';
 import { formatMenuDate, isPastMenuDate } from '../../utils/mealDates';
 import { formatComboPrice } from '../../utils/comboPrice';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
-import { buildMealSummaryFromDraftSelections } from '../../utils/mealSelectionSummary';
+import { buildMealSummaryFromDraftSelections, platesForSingleSelectOption } from '../../utils/mealSelectionSummary';
 import { validatePaymentProofSubmission } from '../../utils/paymentProofPolicy';
 
 type MealPollResponseScreenProps = {
@@ -103,12 +104,18 @@ export function MealPollResponseScreen({ spaceId, menuDate }: MealPollResponseSc
       poll.deliveryLocations.map(location => [location.id, location.name]),
     );
     return visiblePolls.map(slot => {
-      const plates = poll.totalPlatesForMeal(slot.mealType);
       const locationId = poll.deliverySelections[slot.mealType];
       const qtyMap = poll.quantitySelections[slot.mealType] ?? {};
+      const selectedId = poll.selections[slot.mealType];
+      const selectedOption = selectedId
+        ? slot.options.find(row => row.id === selectedId)
+        : undefined;
       const items = poll.multiQuantity
         ? slot.options
-            .filter(option => (qtyMap[option.id] ?? 0) > 0)
+            .filter(
+              option =>
+                option.optionType === 'MENU_ENTRY' && (qtyMap[option.id] ?? 0) > 0,
+            )
             .sort((a, b) => {
               const aExtra = a.isExtra === true ? 1 : 0;
               const bExtra = b.isExtra === true ? 1 : 0;
@@ -120,22 +127,19 @@ export function MealPollResponseScreen({ spaceId, menuDate }: MealPollResponseSc
               quantity: qtyMap[option.id] ?? 0,
               isExtra: option.isExtra === true,
             }))
-        : (() => {
-            const selectedId = poll.selections[slot.mealType];
-            const option = selectedId
-              ? slot.options.find(row => row.id === selectedId)
-              : undefined;
-            return option
-              ? [
-                  {
-                    optionId: option.id,
-                    label: option.label,
-                    quantity: 1,
-                    isExtra: option.isExtra === true,
-                  },
-                ]
-              : [];
-          })();
+        : selectedOption
+          ? [
+              {
+                optionId: selectedOption.id,
+                label: selectedOption.label,
+                quantity: platesForSingleSelectOption(selectedOption),
+                isExtra: selectedOption.isExtra === true,
+              },
+            ]
+          : [];
+      const plates = poll.multiQuantity
+        ? poll.totalPlatesForMeal(slot.mealType)
+        : platesForSingleSelectOption(selectedOption);
       return {
         mealType: slot.mealType,
         plates,
@@ -288,6 +292,9 @@ export function MealPollResponseScreen({ spaceId, menuDate }: MealPollResponseSc
             }
             subheading={formatMenuDate(menuDate, i18n.language)}
           />
+          {!dateReadOnly && !paymentStep ? (
+            <PollClosesInHint polls={poll.openPolls} style={styles.pollCloseHint} />
+          ) : null}
           {!poll.loading && visiblePolls.length === 0 ? (
             <EmptyState
               title={
@@ -463,6 +470,10 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
+  },
+  pollCloseHint: {
+    marginTop: 0,
+    marginBottom: spacing.md,
   },
   button: { marginTop: spacing.sm },
   stickyBar: {

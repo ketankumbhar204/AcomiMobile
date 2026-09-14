@@ -15,7 +15,8 @@ import { Button, FormInput } from '../ui';
 import { useAuthStore } from '../../store/authStore';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
-import { pickProfileImage } from '../../utils/pickProfileImage';
+import { pickProfileImage, toLocalFileInput } from '../../utils/pickProfileImage';
+import { uploadLocalFile } from '../../services/fileUploadService';
 import { DocumentTypePicker } from '../member/DocumentTypePicker';
 
 type ProfileDocumentUploadModalProps = {
@@ -54,6 +55,7 @@ export function ProfileDocumentUploadModal({
   const [documentType, setDocumentType] = useState<MemberDocumentType | null>(null);
   const [documentNumber, setDocumentNumber] = useState('');
   const [fileUrl, setFileUrl] = useState('');
+  const [pickedFile, setPickedFile] = useState<ReturnType<typeof toLocalFileInput> | null>(null);
   const [previewUri, setPreviewUri] = useState('');
   const [pickingImage, setPickingImage] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -66,6 +68,7 @@ export function ProfileDocumentUploadModal({
     setDocumentType(null);
     setDocumentNumber('');
     setFileUrl('');
+    setPickedFile(null);
     setPreviewUri('');
     setFormError(null);
   }, [visible]);
@@ -78,7 +81,8 @@ export function ProfileDocumentUploadModal({
       if (!picked) {
         return;
       }
-      setFileUrl(picked.fileUrl);
+      setPickedFile(toLocalFileInput(picked));
+      setFileUrl(picked.previewUri);
       setPreviewUri(picked.previewUri);
     } catch {
       showToast(t('profileCompletion.errors.pickFailed'));
@@ -96,17 +100,25 @@ export function ProfileDocumentUploadModal({
       setFormError(t('membership.documents.numberRequired'));
       return;
     }
-    if (!fileUrl.trim()) {
+    if (!pickedFile && !fileUrl.trim()) {
       setFormError(t('settings.profile.documents.fileRequired'));
       return;
     }
 
     setLoading(true);
     try {
+      const uploadedId = pickedFile
+        ? await uploadLocalFile(pickedFile, {
+            purpose: documentType === 'OTHER' ? 'MEMBER_DOCUMENT' : 'IDENTITY_DOCUMENT',
+            spaceId,
+            memberId,
+          })
+        : null;
       await memberApi.addMemberDocument(spaceId, memberId, {
         documentType,
         documentNumber: documentNumber.trim(),
-        fileUrl: resolveUploadFileUrl(fileUrl),
+        fileId: uploadedId ?? undefined,
+        fileUrl: uploadedId ? undefined : resolveUploadFileUrl(fileUrl),
       });
       showToast(t('settings.profile.documents.uploadSuccess'));
       await refreshUser();

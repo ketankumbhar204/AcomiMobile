@@ -93,7 +93,7 @@ export function AcceptInvitationsScreen() {
     setRefreshing(true);
     try {
       const result = await refreshStartupNavigation();
-      if (result.route === 'AcceptInvitations') {
+      if (result.route === 'AcceptInvitations' || result.route === 'MemberHome') {
         await load();
       }
     } finally {

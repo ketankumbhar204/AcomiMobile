@@ -35,6 +35,7 @@ function mergeStoredUserProfile(
     active: apiUser.active,
     profilePhotoUrl: apiUser.profilePhotoUrl ?? storedUser.profilePhotoUrl ?? null,
     email: apiUser.email ?? storedUser.email ?? null,
+    enquiryEmails: apiUser.enquiryEmails ?? storedUser.enquiryEmails ?? [],
     gender: apiUser.gender ?? storedUser.gender ?? null,
     dateOfBirth: apiUser.dateOfBirth ?? storedUser.dateOfBirth ?? null,
     permanentAddress: apiUser.permanentAddress ?? storedUser.permanentAddress ?? null,

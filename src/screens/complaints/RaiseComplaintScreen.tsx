@@ -56,7 +56,8 @@ import { resolveProgressivePhase } from '../../utils/progressivePhase';
 import { colors, shadows, spacing, typography } from '../../theme';
 import { categoriesForSpaceType } from '../../utils/complaintPermissions';
 import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
-import { pickPaymentProofImage } from '../../utils/pickPaymentProofImage';
+import { pickPaymentProofImage, paymentProofToLocalFile } from '../../utils/pickPaymentProofImage';
+import type { PickedPaymentProof } from '../../utils/pickPaymentProofImage';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'RaiseComplaint'>;
 type Route = NativeStackScreenProps<MainStackParamList, 'RaiseComplaint'>['route'];
@@ -85,7 +86,7 @@ export function RaiseComplaintScreen() {
   const [description, setDescription] = useState('');
   const [mealDate, setMealDate] = useState('');
   const [mealType, setMealType] = useState<MealType | undefined>();
-  const [photos, setPhotos] = useState<string[]>([]);
+  const [photos, setPhotos] = useState<PickedPaymentProof[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -164,7 +165,8 @@ export function RaiseComplaintScreen() {
         description: description.trim(),
         mealDate: foodRelated && mealDate.trim() ? mealDate.trim() : undefined,
         mealType: foodRelated ? mealType ?? 'BREAKFAST' : undefined,
-        attachmentImagesBase64: photos.length > 0 ? photos : undefined,
+        attachmentImagesBase64: undefined,
+        localFiles: photos.map(paymentProofToLocalFile),
       });
       showToast(t('complaints.created'));
       invalidateDashboardQueries();
@@ -332,9 +334,9 @@ export function RaiseComplaintScreen() {
               </Text>
             </View>
             <View style={styles.photoRow}>
-              {photos.map((uri, index) => (
+              {photos.map((photo, index) => (
                 <View key={`${index}`} style={styles.thumbWrap}>
-                  <Image source={{ uri }} style={styles.thumb} />
+                  <Image source={{ uri: photo.previewUri }} style={styles.thumb} />
                   <Pressable
                     onPress={() => onRemovePhoto(index)}
                     style={styles.removeThumb}

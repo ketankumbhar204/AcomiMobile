@@ -188,7 +188,11 @@ export function DashboardSpaceHealthScreen() {
           navigateFromTab('MenuLibrary', { spaceId });
           break;
         case 'MenuPlanning':
-          navigateFromTab('MenuPlanning', { spaceId });
+          navigation.navigate('SpaceTabs', {
+            spaceId,
+            screen: 'Meals',
+            params: { spaceId },
+          });
           break;
         case 'MenuSharePreview':
           navigateFromTab('MenuSharePreview', {

@@ -78,8 +78,20 @@ export type PredicateContext = {
   roomCount: number;
   bedCount: number;
   memberCount: number;
-  /** Active menu library items or combos present. */
+  /**
+   * Active menu library items or combos (includes system samples).
+   * Unlocks MEAL_OPS / MEALS_READY planning readiness.
+   */
   hasMealLibrary: boolean;
+  /**
+   * Owner-curated library only — excludes system sample combos.
+   * Soft tips only; does not gate menu planning.
+   */
+  hasCuratedMealLibrary?: boolean;
+  /** Members with occupancyStatus ALLOCATED (lodging). */
+  allocatedMemberCount?: number;
+  /** True when expected dues / collected / meal billing signal exists (D4). */
+  hasBillableActivity?: boolean;
   /** At least one meal slot planned for today (draft or published). */
   hasTodaysMenuPlanned: boolean;
   /** At least one meal slot shared/published for today. */

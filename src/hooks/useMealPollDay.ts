@@ -19,6 +19,7 @@ import { useNavigationFocusReload } from './useNavigationFocusReload';
 import { hasPrepaidOverflow } from '../utils/mealPollPayment';
 import { isPastMenuDate } from '../utils/mealDates';
 import { resolvePreferredDeliveryLocationId } from '../utils/mealPollDeliveryLocations';
+import { platesForSingleSelectOption } from '../utils/mealSelectionSummary';
 
 type SingleSelections = Partial<Record<MealType, UUID>>;
 type QuantitySelections = Partial<Record<MealType, Record<UUID, number>>>;
@@ -123,15 +124,29 @@ export function useMealPollDay(
   const mealsWithPlates = useMemo(
     () =>
       displayPolls
-        .filter(poll => sumQuantities(quantitySelections[poll.mealType]) > 0)
+        .filter(poll => {
+          if (multiQuantity) {
+            return sumQuantities(quantitySelections[poll.mealType]) > 0;
+          }
+          const selectedId = selections[poll.mealType];
+          const option = selectedId
+            ? poll.options.find(row => row.id === selectedId)
+            : undefined;
+          return platesForSingleSelectOption(option) > 0;
+        })
         .map(poll => poll.mealType),
-    [displayPolls, quantitySelections],
+    [displayPolls, multiQuantity, quantitySelections, selections],
   );
 
-  const totalPlates = useMemo(
-    () => mealsWithPlates.reduce((sum, mealType) => sum + sumQuantities(quantitySelections[mealType]), 0),
-    [mealsWithPlates, quantitySelections],
-  );
+  const totalPlates = useMemo(() => {
+    if (multiQuantity) {
+      return mealsWithPlates.reduce(
+        (sum, mealType) => sum + sumQuantities(quantitySelections[mealType]),
+        0,
+      );
+    }
+    return mealsWithPlates.length;
+  }, [mealsWithPlates, multiQuantity, quantitySelections]);
 
   const buildPayload = useCallback((): SubmitMealPollSelection[] | null => {
     if (multiQuantity) {
@@ -389,6 +404,8 @@ export function useMealPollDay(
           : proof
             ? {
                 proofImageBase64: proof.proofImageBase64,
+                proofFileId: proof.proofFileId,
+                localFile: proof.localFile,
                 referenceNumber: proof.referenceNumber,
                 remarks: proof.remarks,
                 paymentMethod: proof.paymentMethod,
@@ -461,6 +478,8 @@ export function useMealPollDay(
           ? { proofImageBase64: proof }
           : {
               proofImageBase64: proof.proofImageBase64,
+              proofFileId: proof.proofFileId,
+              localFile: proof.localFile,
               referenceNumber: proof.referenceNumber,
               remarks: proof.remarks,
               paymentMethod: proof.paymentMethod,
@@ -513,8 +532,18 @@ export function useMealPollDay(
   ]);
 
   const totalPlatesForMeal = useCallback(
-    (mealType: MealType) => sumQuantities(quantitySelections[mealType]),
-    [quantitySelections],
+    (mealType: MealType) => {
+      if (multiQuantity) {
+        return sumQuantities(quantitySelections[mealType]);
+      }
+      const poll = displayPolls.find(row => row.mealType === mealType);
+      const selectedId = selections[mealType];
+      const option = selectedId
+        ? poll?.options.find(row => row.id === selectedId)
+        : undefined;
+      return platesForSingleSelectOption(option);
+    },
+    [displayPolls, multiQuantity, quantitySelections, selections],
   );
 
   return {

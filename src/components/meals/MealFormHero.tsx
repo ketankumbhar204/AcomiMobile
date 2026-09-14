@@ -58,17 +58,39 @@ export function MealFormHero({
         accessibilityElementsHidden>
         <Icon size={compact ? 16 : 18} color={accent} strokeWidth={2.2} />
       </View>
-      <View style={compact ? styles.compactText : undefined}>
-        <Text style={[styles.eyebrow, { color: accent }]}>{eyebrow}</Text>
-        <Text
-          style={[styles.heading, compact && styles.headingCompact, { color: accent }]}
-          numberOfLines={1}>
-          {heading}
-        </Text>
-        <Text style={styles.subheading} numberOfLines={compact ? 2 : undefined}>
-          {subheading}
-        </Text>
-      </View>
+      {compact ? (
+        <View style={styles.compactTextRow}>
+          <Text style={[styles.eyebrow, styles.eyebrowCompact, { color: accent }]} numberOfLines={1}>
+            {eyebrow}
+          </Text>
+          <Text style={styles.compactDot} accessibilityElementsHidden>
+            ·
+          </Text>
+          <Text
+            style={[styles.heading, styles.headingCompact, { color: accent }]}
+            numberOfLines={1}>
+            {heading}
+          </Text>
+          {subheading ? (
+            <>
+              <Text style={styles.compactDot} accessibilityElementsHidden>
+                ·
+              </Text>
+              <Text style={[styles.subheading, styles.subheadingCompact]} numberOfLines={1}>
+                {subheading}
+              </Text>
+            </>
+          ) : null}
+        </View>
+      ) : (
+        <View>
+          <Text style={[styles.eyebrow, { color: accent }]}>{eyebrow}</Text>
+          <Text style={[styles.heading, { color: accent }]} numberOfLines={1}>
+            {heading}
+          </Text>
+          <Text style={styles.subheading}>{subheading}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -107,10 +129,19 @@ const styles = StyleSheet.create({
     top: -40,
     right: -22,
   },
-  compactText: {
+  compactTextRow: {
     flex: 1,
     minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     zIndex: 1,
+  },
+  compactDot: {
+    ...typography.caption,
+    fontSize: 12,
+    color: colors.muted,
+    flexShrink: 0,
   },
   decorRing: {
     position: 'absolute',
@@ -142,6 +173,10 @@ const styles = StyleSheet.create({
     marginBottom: 2,
     zIndex: 1,
   },
+  eyebrowCompact: {
+    marginBottom: 0,
+    flexShrink: 0,
+  },
   heading: {
     ...typography.h2,
     fontSize: 22,
@@ -151,15 +186,20 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   headingCompact: {
-    fontSize: 18,
-    lineHeight: 22,
+    fontSize: 16,
+    lineHeight: 20,
     fontWeight: '700',
     marginBottom: 0,
+    flexShrink: 1,
   },
   subheading: {
     ...typography.caption,
     fontSize: 12,
     color: colors.muted,
     zIndex: 1,
+  },
+  subheadingCompact: {
+    flexShrink: 1,
+    minWidth: 0,
   },
 });

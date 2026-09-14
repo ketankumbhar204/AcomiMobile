@@ -134,8 +134,13 @@ function inferChildLabels(
       templateItems.length > 1
         ? (extractNumericSuffix(templateItems[1].label) ?? firstNumber + 1) - firstNumber
         : 1;
-    const floorHundreds = Math.floor(firstNumber / 100) * 100;
-    const floorOffset = floorHundreds > 0 ? floorIndex * 100 : floorIndex * step * count;
+    // Floor 0 → 1xx, floor 1 → 2xx. Skip offset when template is already on-band.
+    const templateHundreds = Math.floor(firstNumber / 100) * 100;
+    const targetHundreds = (floorIndex + 1) * 100;
+    const floorOffset =
+      templateHundreds > 0
+        ? targetHundreds - templateHundreds
+        : floorIndex * step * count;
 
     return Array.from({ length: count }, (_, itemIndex) => {
       const value = firstNumber + floorOffset + itemIndex * step;

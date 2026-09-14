@@ -46,8 +46,8 @@ export function SpaceTabBackButton() {
       navigation.getParent<MainNav>() ?? (navigation as MainNav);
 
     if (stackNavigation?.navigate) {
-      devLog('[SpaceTabBackButton] navigate MySpaces');
-      stackNavigation.navigate('MySpaces');
+      devLog('[SpaceTabBackButton] navigate MemberTabs');
+      stackNavigation.navigate('MemberTabs', { screen: 'Home' });
       return;
     }
 

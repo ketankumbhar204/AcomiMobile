@@ -31,6 +31,18 @@ function reassignIdsFloor(floor: EditableFloor): EditableFloor {
   return next;
 }
 
+/** Renumber units on a floor to N01, N02, … for 1-based floor N. */
+function renumberUnitsForFloor(floor: EditableFloor, floorIndex: number): EditableFloor {
+  const base = (floorIndex + 1) * 100;
+  return {
+    ...floor,
+    units: floor.units.map((unit, index) => {
+      const number = String(base + index + 1);
+      return { ...unit, name: `Unit ${number}`, number };
+    }),
+  };
+}
+
 function createRooms(count: number, bedsPerRoom: number, capacity: number): EditableRoom[] {
   return Array.from({ length: count }, (_, index) => {
     const letter = String.fromCharCode(65 + (index % 26));
@@ -80,12 +92,22 @@ export function duplicateFloor(structure: EditableSetupStructure, floorId: strin
   if (index < 0) {
     return structure;
   }
+  const insertAt = index + 1;
   const copy = reassignIdsFloor(structure.floors[index]);
-  copy.name = `${copy.name} Copy`;
-  copy.number = structure.floors.length + 1;
+  copy.name = `${structure.floors[index].name} Copy`;
+  copy.number = insertAt + 1;
   const floors = [...structure.floors];
-  floors.splice(index + 1, 0, copy);
-  return { ...structure, floors };
+  floors.splice(insertAt, 0, copy);
+  if (structure.kind !== 'floors_with_units') {
+    return { ...structure, floors };
+  }
+  return {
+    ...structure,
+    floors: floors.map((floor, floorIndex) => ({
+      ...renumberUnitsForFloor(floor, floorIndex),
+      number: floorIndex + 1,
+    })),
+  };
 }
 
 export function deleteFloor(structure: EditableSetupStructure, floorId: string): EditableSetupStructure {
@@ -117,7 +139,7 @@ export function setFloorCount(
   while (floors.length < safeCount) {
     const index = floors.length;
     const template = floors[floors.length - 1];
-    const next = template
+    let next = template
       ? reassignIdsFloor(template)
       : {
           id: createStructureId(),
@@ -138,8 +160,11 @@ export function setFloorCount(
       config.floorNameTemplate,
     );
     next.number = index + 1;
-    if (structure.kind === 'floors_with_units' && next.units.length === 0) {
-      next.units = createUnits(1, config.roomsPerParent, config.bedsPerRoom, config.capacityPerRoom);
+    if (structure.kind === 'floors_with_units') {
+      if (next.units.length === 0) {
+        next.units = createUnits(1, config.roomsPerParent, config.bedsPerRoom, config.capacityPerRoom);
+      }
+      next = renumberUnitsForFloor(next, index);
     }
     if (structure.kind === 'floors_with_rooms' && next.rooms.length === 0) {
       next.rooms = createRooms(config.roomsPerParent, config.bedsPerRoom, config.capacityPerRoom);

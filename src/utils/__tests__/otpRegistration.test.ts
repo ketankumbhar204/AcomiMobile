@@ -98,8 +98,16 @@ describe('OTP registration contract', () => {
     expect(en.auth.otp.devHint.toLowerCase()).toContain('development log');
   });
 
+  it('skips OTP UI only when backend returns otpSkipped + verificationToken', () => {
+    expect(REGISTER_SCREEN).toContain('result.otpSkipped');
+    expect(REGISTER_SCREEN).toContain('result.verificationToken');
+    expect(REGISTER_SCREEN).toContain("purpose: 'REGISTER'");
+    expect(REGISTER_SCREEN).toContain('OtpVerification');
+    expect(API_TYPES).toContain('otpSkipped?: boolean');
+  });
+
   it('does not put verification tokens in navigation params', () => {
-    expect(REGISTER_SCREEN).not.toContain('verificationToken');
+    expect(REGISTER_SCREEN).not.toMatch(/navigate\([^)]*verificationToken/);
     expect(PASSWORD_SCREEN).toContain('useRegistrationDraftStore');
     const navTypes = fs.readFileSync(
       path.join(__dirname, '../../navigation/types.ts'),

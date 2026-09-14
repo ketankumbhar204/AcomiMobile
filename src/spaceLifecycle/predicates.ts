@@ -45,6 +45,8 @@ export function isResidentsReady(ctx: PredicateContext): boolean {
 }
 
 export function isMealsReady(ctx: PredicateContext): boolean {
+  // Any active library (including seeded sample combos/items) unlocks planning.
+  // Soft guidance on Menu Library still encourages editing samples.
   return ctx.hasMealLibrary;
 }
 

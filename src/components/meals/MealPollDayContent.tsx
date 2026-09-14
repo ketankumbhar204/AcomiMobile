@@ -12,6 +12,7 @@ import { MealDeliveryLocationCompact } from './MealDeliveryLocationCompact';
 import { MealPollMealTypeTabs } from './MealPollMealTypeTabs';
 import { MealPollOptionRadio } from './MealPollOptionRadio';
 import { MealPollQuantityRow } from './MealPollQuantityRow';
+import { PollClosesInHint } from './PollClosesInHint';
 
 type MealPollDayContentProps = {
   menuDate: string;
@@ -244,6 +245,9 @@ export function MealPollDayContent({
               : t('meals.poll.responseHint')}
         </Text>
       ) : null}
+      {isSheet && !readOnly ? (
+        <PollClosesInHint polls={sortedPolls} style={styles.pollCloseHint} />
+      ) : null}
 
       {showSummary
         ? sortedPolls.map(poll => {
@@ -381,6 +385,7 @@ const styles = StyleSheet.create({
   sheetDate: { ...typography.bodyStrong, fontSize: 16, marginBottom: spacing.xs },
   screenDate: { ...typography.h2, marginBottom: spacing.xs },
   subtitle: { ...typography.body, color: colors.muted, marginBottom: spacing.lg },
+  pollCloseHint: { marginTop: 0, marginBottom: spacing.md },
   section: { marginBottom: spacing.lg },
   sectionTitle: { ...typography.bodyStrong, fontSize: 18, marginBottom: spacing.sm },
   mainItemsHeading: {

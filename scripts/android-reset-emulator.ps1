@@ -1,5 +1,5 @@
 param(
-  [string]$AvdName = 'Pixel_8'
+  [string]$AvdName = 'Acomi_API34'
 )
 
 $ErrorActionPreference = 'Stop'

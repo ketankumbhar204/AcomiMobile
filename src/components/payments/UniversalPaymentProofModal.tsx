@@ -21,7 +21,9 @@ import {
 } from '../../utils/paymentProofPolicy';
 import { Button } from '../ui/Button';
 import { colors, radius, spacing, typography } from '../../theme';
-import { pickPaymentProofImage } from '../../utils/pickPaymentProofImage';
+import { pickPaymentProofImage, paymentProofToLocalFile } from '../../utils/pickPaymentProofImage';
+import type { LocalFileInput } from '../../services/fileUploadService';
+import type { PickedPaymentProof } from '../../utils/pickPaymentProofImage';
 
 const PAYMENT_METHODS: UniversalPaymentMethod[] = [
   'UPI',
@@ -33,6 +35,8 @@ const PAYMENT_METHODS: UniversalPaymentMethod[] = [
 
 export type UniversalPaymentProofPayload = {
   proofImageBase64?: string;
+  proofFileId?: string;
+  localFile?: LocalFileInput;
   referenceNumber?: string;
   remarks?: string;
   paymentMethod?: UniversalPaymentMethod;
@@ -69,7 +73,7 @@ export function UniversalPaymentProofModal({
   const { t, i18n } = useTranslation();
   const showToast = useToastStore(state => state.showToast);
   const [previewUri, setPreviewUri] = useState<string | null>(null);
-  const [proofImageBase64, setProofImageBase64] = useState<string | null>(null);
+  const [pickedFile, setPickedFile] = useState<PickedPaymentProof | null>(null);
   const [referenceNumber, setReferenceNumber] = useState('');
   const [remarks, setRemarks] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<UniversalPaymentMethod>('UPI');
@@ -88,7 +92,7 @@ export function UniversalPaymentProofModal({
 
   const reset = () => {
     setPreviewUri(null);
-    setProofImageBase64(null);
+    setPickedFile(null);
     setReferenceNumber('');
     setRemarks('');
     setPaymentMethod('UPI');
@@ -123,7 +127,7 @@ export function UniversalPaymentProofModal({
       );
       remarksEditedRef.current = Boolean(payment.remarks?.trim());
       setPreviewUri(payment.proofUrl ?? null);
-      setProofImageBase64(null);
+      setPickedFile(null);
       return;
     }
 
@@ -152,11 +156,10 @@ export function UniversalPaymentProofModal({
   const handlePickImage = async () => {
     setPicking(true);
     try {
-      const dataUri = await pickPaymentProofImage();
-      if (dataUri) {
-        setPreviewUri(dataUri);
-        setProofImageBase64(dataUri);
-        // Future: OCR can extract amount, date, and UTR from the screenshot here.
+      const picked = await pickPaymentProofImage();
+      if (picked) {
+        setPickedFile(picked);
+        setPreviewUri(picked.previewUri);
       }
     } finally {
       setPicking(false);
@@ -169,7 +172,7 @@ export function UniversalPaymentProofModal({
   };
 
   const buildPayload = (): UniversalPaymentProofPayload => ({
-    proofImageBase64: proofImageBase64?.trim() || undefined,
+    localFile: pickedFile ? paymentProofToLocalFile(pickedFile) : undefined,
     referenceNumber: referenceNumber.trim() || undefined,
     remarks: remarks.trim() || undefined,
     paymentMethod,
@@ -181,7 +184,7 @@ export function UniversalPaymentProofModal({
     }
     onPayloadChange(buildPayload());
     // eslint-disable-next-line react-hooks/exhaustive-deps -- emit on field edits only
-  }, [visible, proofImageBase64, referenceNumber, remarks, paymentMethod]);
+  }, [visible, pickedFile, referenceNumber, remarks, paymentMethod]);
 
   const handleSubmit = () => {
     if (submitting) {

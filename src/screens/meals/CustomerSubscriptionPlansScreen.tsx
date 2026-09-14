@@ -147,6 +147,8 @@ export function CustomerSubscriptionPlansScreen({
       setProofPayload(payload);
       if (
         payload.proofImageBase64?.trim() ||
+        payload.localFile ||
+        payload.proofFileId ||
         payload.referenceNumber?.trim() ||
         payload.remarks?.trim()
       ) {
@@ -161,7 +163,7 @@ export function CustomerSubscriptionPlansScreen({
       return;
     }
     const reference = proofPayload.referenceNumber?.trim() ?? '';
-    if (!reference && !proofPayload.proofImageBase64?.trim()) {
+    if (!reference && !proofPayload.proofImageBase64?.trim() && !proofPayload.localFile && !proofPayload.proofFileId) {
       showToast(t('meals.subscription.customer.proofOrReferenceRequired'));
       return;
     }
@@ -178,6 +180,8 @@ export function CustomerSubscriptionPlansScreen({
         planId: selectedPlan.planId,
         paymentReference: reference || undefined,
         proofImageBase64: proofPayload.proofImageBase64 ?? undefined,
+        proofFileId: proofPayload.proofFileId,
+        localFile: proofPayload.localFile,
         customerNotes: noteParts.join('\n') || undefined,
       });
       showToast(t('meals.subscription.customer.requestSubmitted'));

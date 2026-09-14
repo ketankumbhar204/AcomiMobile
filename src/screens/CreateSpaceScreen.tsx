@@ -46,6 +46,7 @@ import { useAuthStore } from '../store/authStore';
 import { useSpaceStore } from '../store/spaceStore';
 import { useToastStore } from '../store/toastStore';
 import { resolveDefaultSpaceContact } from '../utils/defaultSpaceContact';
+import { isDuplicateSpaceName } from '../utils/suggestBuildingDefaults';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 
 type CreateSpaceNav = NativeStackNavigationProp<MainStackParamList, 'CreateSpace'>;
@@ -63,6 +64,7 @@ export function CreateSpaceScreen() {
   const { createSpace, isSubmitting, error, clearError } = useCreateSpace();
   const refresh = useSpaceStore(state => state.refresh);
   const switchSpace = useSpaceStore(state => state.switchSpace);
+  const mySpaces = useSpaceStore(state => state.mySpaces);
   const ownerSpaceContact = useSpaceStore(state => state.selectedSpace?.contactNumber);
   const userMobile = useAuthStore(state => state.user?.mobileNumber);
   const accessToken = useAuthStore(state => state.accessToken);
@@ -144,6 +146,10 @@ export function CreateSpaceScreen() {
     const errors: FieldErrors = {};
     if (!name.trim()) {
       errors.name = t('spaces.createSpace.nameRequired');
+    } else if (isDuplicateSpaceName(name, mySpaces)) {
+      errors.name = t('spaces.createSpace.nameTaken', {
+        defaultValue: 'You already have a space with this name.',
+      });
     }
     if (!type) {
       errors.type = t('spaces.createSpace.typeRequired');

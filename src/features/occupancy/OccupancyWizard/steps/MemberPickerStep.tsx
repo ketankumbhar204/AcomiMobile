@@ -10,7 +10,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import type { MemberOccupancyStatus } from '../../../../api/types';
 import { AccommodationSearchBar } from '../../../../components/accommodation/AccommodationSearchBar';
-import { Badge, Button, FormInput } from '../../../../components/ui';
+import { Button, FormInput } from '../../../../components/ui';
 import type { ResidentPickerItem } from '../../../../hooks/useResidentImportSearch';
 import { colors, radius, spacing, typography } from '../../../../theme';
 import type { NewMemberFieldErrors } from '../../../../utils/validateNewMemberFields';
@@ -44,16 +44,6 @@ type MemberPickerStepProps = {
   onSelect: (member: ResidentPickerItem) => void;
   onCreateNewPress?: () => void;
 };
-
-function occupancyBadgeLabel(
-  status: MemberOccupancyStatus | undefined,
-  t: (key: string) => string,
-): string {
-  if (!status) {
-    return t('occupancyWizard.occupancyStatus.VACATED');
-  }
-  return t(`occupancyWizard.occupancyStatus.${status}`);
-}
 
 function memberRoleLabel(role: string, t: (key: string) => string): string {
   const key = `membership.roles.${role.toLowerCase()}.label`;
@@ -244,6 +234,11 @@ export function MemberPickerStep({
                   ]}
                   disabled={blocked || creatingMember}
                   onPress={() => onSelect(item)}>
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>
+                      {(item.fullName.trim().charAt(0) || '?').toUpperCase()}
+                    </Text>
+                  </View>
                   <View style={styles.cardBody}>
                     {customerMeta ? (
                       <View style={styles.typeChipWrap}>
@@ -286,18 +281,9 @@ export function MemberPickerStep({
                     ) : null}
                   </View>
                   <View style={styles.cardAside}>
-                    {customerMeta ? (
-                      <Text style={styles.moveInAction}>{addActionLabel}</Text>
-                    ) : (
-                      <>
-                        <Badge label={occupancyBadgeLabel(item.occupancyStatus, t)} />
-                        {crossSpaceReuse ? (
-                          <Text style={styles.moveInAction}>{addActionLabel}</Text>
-                        ) : (
-                          <Text style={styles.radio}>{selected ? '●' : '○'}</Text>
-                        )}
-                      </>
-                    )}
+                    <View style={[styles.radioOuter, selected && styles.radioOuterSelected]}>
+                      {selected ? <View style={styles.radioInner} /> : null}
+                    </View>
                   </View>
                 </Pressable>
               );
@@ -398,10 +384,36 @@ const styles = StyleSheet.create({
     backgroundColor: colors.lightGreen,
   },
   cardDisabled: { opacity: 0.45 },
-  radio: {
-    ...typography.body,
-    width: 18,
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.successTint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    ...typography.bodyStrong,
     color: colors.primaryDark,
+    fontWeight: '700',
+  },
+  radioOuter: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioOuterSelected: {
+    borderColor: colors.primary,
+  },
+  radioInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: colors.primary,
   },
   cardBody: { flex: 1, gap: 2 },
   cardAside: { alignItems: 'flex-end', gap: spacing.xs },

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
@@ -9,6 +9,7 @@ const TOAST_DURATION_MS = 3000;
 export function Toast() {
   const insets = useSafeAreaInsets();
   const message = useToastStore(state => state.message);
+  const onPress = useToastStore(state => state.onPress);
   const hideToast = useToastStore(state => state.hideToast);
 
   useEffect(() => {
@@ -25,10 +26,20 @@ export function Toast() {
   }
 
   return (
-    <View style={[styles.container, { bottom: insets.bottom + spacing.xl }]} pointerEvents="none">
-      <View style={styles.toast}>
+    <View
+      style={[styles.container, { bottom: insets.bottom + spacing.xl }]}
+      pointerEvents={onPress ? 'box-none' : 'none'}>
+      <Pressable
+        style={styles.toast}
+        disabled={!onPress}
+        onPress={() => {
+          const action = onPress;
+          hideToast();
+          action?.();
+        }}
+        accessibilityRole={onPress ? 'button' : 'text'}>
         <Text style={styles.text}>{message}</Text>
-      </View>
+      </Pressable>
     </View>
   );
 }

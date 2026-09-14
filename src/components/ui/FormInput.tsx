@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   wrapperCompact: {
-    marginBottom: spacing.xs,
+    marginBottom: spacing.xxs,
   },
   label: {
     ...typography.label,
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   inputWrapCompact: {
-    minHeight: 40,
+    minHeight: 36,
     borderRadius: radius.button,
     paddingHorizontal: spacing.sm,
   },

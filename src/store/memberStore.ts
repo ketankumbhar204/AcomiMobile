@@ -119,7 +119,7 @@ interface MemberState {
   loadDocuments: (memberId: UUID, force?: boolean) => Promise<void>;
   addDocument: (
     memberId: UUID,
-    payload: Omit<CreateMemberDocumentRequest, 'fileUrl'> & { fileUrl?: string },
+    payload: Omit<CreateMemberDocumentRequest, 'fileUrl'> & { fileUrl?: string; fileId?: string | null },
   ) => Promise<MemberDocumentResponse | null>;
   deleteDocument: (memberId: UUID, documentId: UUID) => Promise<boolean>;
   loadNotes: (memberId: UUID, force?: boolean) => Promise<void>;
@@ -464,6 +464,7 @@ export const useMemberStore = create<MemberState>((set, get) => ({
         documentType: payload.documentType,
         documentNumber: payload.documentNumber,
         fileUrl: payload.fileUrl ?? PENDING_UPLOAD_FILE_URL,
+        fileId: payload.fileId,
       });
       devLog(`${LOG_TAG} addDocument success`, document.documentId);
       set({ loading: false });
