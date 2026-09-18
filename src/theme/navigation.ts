@@ -11,6 +11,7 @@ export const stackHeaderOptions: NativeStackNavigationOptions = {
   },
   headerShadowVisible: false,
   headerBackTitleVisible: false,
+  headerRightContainerStyle: { paddingRight: 8 },
   contentStyle: { backgroundColor: colors.background },
 };
 
@@ -22,6 +23,7 @@ export const tabHeaderOptions = {
     fontSize: 17,
   },
   headerShadowVisible: false,
+  headerRightContainerStyle: { paddingRight: 8 },
 };
 
 export const tabBarOptions = {

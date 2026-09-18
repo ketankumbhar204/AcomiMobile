@@ -19,6 +19,7 @@ export type AccommodationTrailContext = {
   unitName?: string;
   roomId?: UUID;
   roomName?: string;
+  bedId?: UUID;
   bedLabel?: string;
 };
 
@@ -44,7 +45,7 @@ export function parentFieldsForTrail(
 
 export function buildAccommodationTrail(
   context: AccommodationTrailContext,
-  current: AccommodationTrailLevel,
+  _current: AccommodationTrailLevel,
 ): AccommodationTrailSegment[] {
   const segments: AccommodationTrailSegment[] = [];
 
@@ -55,7 +56,7 @@ export function buildAccommodationTrail(
     segments.push({
       label: label.trim(),
       level,
-      navigable: level !== current,
+      navigable: true,
     });
   };
 

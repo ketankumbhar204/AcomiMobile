@@ -1,6 +1,7 @@
 import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import {
   Image,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -57,7 +58,9 @@ import {
   getComplaintTimelineIcon,
 } from '../../utils/complaintVisuals';
 import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
-import { pickPaymentProofImage, paymentProofToLocalFile } from '../../utils/pickPaymentProofImage';
+import { pickOptimizedImage, toLocalFileInput } from '../../utils/pickOptimizedImage';
+import { ImagePreviewModal } from '../../components/files/ImagePreviewModal';
+import { FileUploadUserError } from '../../utils/fileLimits';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'ComplaintDetail'>;
 type Route = NativeStackScreenProps<MainStackParamList, 'ComplaintDetail'>['route'];
@@ -80,6 +83,9 @@ export function ComplaintDetailScreen() {
   const [internalNote, setInternalNote] = useState(false);
   const [resolution, setResolution] = useState('');
   const [busy, setBusy] = useState(false);
+  const [viewer, setViewer] = useState<{ url?: string | null; fileId?: string | null } | null>(
+    null,
+  );
 
   const headerLeft = useCallback(() => <HeaderBackButton />, []);
 
@@ -113,7 +119,12 @@ export function ComplaintDetailScreen() {
       invalidateDashboardQueries();
       showToast(t(successKey));
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : t('complaints.errors.action');
+      const message =
+        err instanceof FileUploadUserError
+          ? err.message
+          : err instanceof ApiError
+            ? err.message
+            : t('complaints.errors.action');
       showToast(message);
     } finally {
       setBusy(false);
@@ -288,11 +299,14 @@ export function ComplaintDetailScreen() {
           {attachments.length > 0 ? (
             <View style={styles.photoRow}>
               {attachments.map(att => (
-                <Image
+                <Pressable
                   key={att.attachmentId}
-                  source={{ uri: att.storageUrl }}
-                  style={styles.thumb}
-                />
+                  onPress={() => setViewer({ url: att.storageUrl, fileId: att.fileId })}>
+                  <Image
+                    source={{ uri: att.storageUrl }}
+                    style={styles.thumb}
+                  />
+                </Pressable>
               ))}
             </View>
           ) : (
@@ -306,12 +320,12 @@ export function ComplaintDetailScreen() {
             disabled={busy}
             onPress={() =>
               runAction(async () => {
-                const image = await pickPaymentProofImage();
+                const image = await pickOptimizedImage('COMPLAINT_ATTACHMENT');
                 if (!image) {
                   return;
                 }
                 const updated = await complaintsApi.addAttachment(spaceId, complaintId, {
-                  localFile: paymentProofToLocalFile(image),
+                  localFile: toLocalFileInput(image),
                   fileName: image.name,
                   contentType: image.mime,
                 });
@@ -474,6 +488,13 @@ export function ComplaintDetailScreen() {
           </View>
         </StickyFormActions>
       ) : null}
+      <ImagePreviewModal
+        visible={Boolean(viewer)}
+        imageUrl={viewer?.url}
+        fileId={viewer?.fileId}
+        title={t('complaints.fields.photos')}
+        onClose={() => setViewer(null)}
+      />
     </View>
   );
 }

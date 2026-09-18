@@ -8,6 +8,8 @@ import { matchesAccommodationSearch } from '../../../utils/accommodationLayoutSe
 import { chunkIntoRows } from './visual/planLayoutUtils';
 import { BedLayoutCard } from './cards/BedLayoutCard';
 import { LayoutSummaryCard } from './cards/LayoutSummaryCard';
+import { LayoutEntityPhoto } from './cards/LayoutEntityPhoto';
+import { LayoutIllustration } from './cards/LayoutIllustration';
 import { calcOccupancyPercent } from './cards/occupancyUtils';
 import { getRoomIllustration } from './illustrations/illustrationAssets';
 import { aggregateBedStatusCounts, countInactiveFromList } from './layoutSummaryStats';
@@ -19,6 +21,8 @@ type BedSeatMapLayoutProps = {
   beds: BedListItemResponse[];
   roomType?: RoomType;
   roomName?: string;
+  roomId?: UUID;
+  roomPhotoFileId?: string | null;
   spaceId?: UUID;
   searchQuery: string;
   onBedPress: (bed: BedListItemResponse) => void;
@@ -46,6 +50,8 @@ function countByStatus(beds: BedListItemResponse[], status: AccommodationStatus)
 export function BedSeatMapLayout({
   beds,
   roomName,
+  roomId,
+  roomPhotoFileId,
   spaceId,
   searchQuery,
   onBedPress,
@@ -77,6 +83,23 @@ export function BedSeatMapLayout({
           title={roomName}
           illustration={getRoomIllustration(Math.max(activeBeds.length, 1))}
           illustrationSize="room"
+          photo={
+            roomId ? (
+              <LayoutEntityPhoto
+                kind="room"
+                entityId={roomId}
+                fileId={roomPhotoFileId}
+                title={roomName}
+                height={110}
+                fallback={
+                  <LayoutIllustration
+                    source={getRoomIllustration(Math.max(activeBeds.length, 1))}
+                    size="room"
+                  />
+                }
+              />
+            ) : undefined
+          }
           occupancyPercent={roomInactive ? undefined : occupancyPercent}
           statusCounts={statusCounts}
           inactive={roomInactive}

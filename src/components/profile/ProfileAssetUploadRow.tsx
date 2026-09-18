@@ -1,8 +1,9 @@
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../ui';
 import { colors, radius, spacing, typography } from '../../theme';
+import { ImagePreviewModal } from '../files/ImagePreviewModal';
 
 type ProfileAssetUploadRowProps = {
   label: string;
@@ -35,12 +36,17 @@ export function ProfileAssetUploadRow({
 }: ProfileAssetUploadRowProps) {
   const { t } = useTranslation();
   const uri = showPreview ? previewUriForStoredFile(previewUri) : '';
+  const [viewerOpen, setViewerOpen] = React.useState(false);
 
   return (
     <View style={styles.wrap}>
       <Text style={styles.label}>{label}</Text>
       {hint ? <Text style={styles.hint}>{hint}</Text> : null}
-      {uri ? <Image source={{ uri }} style={styles.preview} /> : null}
+      {uri ? (
+        <Pressable onPress={() => setViewerOpen(true)}>
+          <Image source={{ uri }} style={styles.preview} />
+        </Pressable>
+      ) : null}
       <Button
         label={
           uri
@@ -52,6 +58,12 @@ export function ProfileAssetUploadRow({
         loading={loading}
         disabled={disabled || loading}
         style={styles.button}
+      />
+      <ImagePreviewModal
+        visible={viewerOpen}
+        imageUrl={uri || previewUri}
+        title={label}
+        onClose={() => setViewerOpen(false)}
       />
     </View>
   );

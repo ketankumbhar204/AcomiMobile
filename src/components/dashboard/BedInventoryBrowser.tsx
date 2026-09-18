@@ -10,10 +10,15 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BedDouble, BedSingle } from 'lucide-react-native';
 import type { AccommodationStatus, BedSpaceListItemResponse, SpaceType, UUID } from '../../api/types';
 import { EmptyState, ListSearchBar, SkeletonCard } from '../ui';
 import { useBuildings } from '../../hooks/useBuildings';
+import { useSpacePermissions } from '../../hooks/useSpacePermissions';
+import { navigateToRoomGroupEntityEdit } from '../../utils/accommodationNavigation';
+import type { MainStackParamList } from '../../navigation/types';
 import { useSpaceBedSearch } from '../../hooks/useSpaceBedSearch';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import {
@@ -78,6 +83,8 @@ export function BedInventoryBrowser({
   headerAccessory,
 }: BedInventoryBrowserProps) {
   const { t } = useTranslation();
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const canManageStructure = useSpacePermissions(spaceId).canManageAccommodation;
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLabels, setFilterLabels] = useState<DashboardBedInventoryFilterLabels>({});
   const [filters, setFilters] = useState<DashboardBedInventoryFilters>(
@@ -155,18 +162,43 @@ export function BedInventoryBrowser({
       };
 
       if (item.type === 'unit') {
-        return <DashboardBedUnitSectionCard group={item.group} {...sharedProps} />;
+        return (
+          <DashboardBedUnitSectionCard
+            group={item.group}
+            {...sharedProps}
+            onPathCrumbPress={
+              canManageStructure
+                ? (room, crumb) =>
+                    navigateToRoomGroupEntityEdit(navigation, spaceId, room, crumb.level)
+                : undefined
+            }
+          />
+        );
       }
 
-      return <DashboardBedRoomSectionCard group={item.group} {...sharedProps} />;
+      return (
+        <DashboardBedRoomSectionCard
+          group={item.group}
+          {...sharedProps}
+          onPathCrumbPress={
+            canManageStructure
+              ? crumb =>
+                  navigateToRoomGroupEntityEdit(navigation, spaceId, item.group, crumb.level)
+              : undefined
+          }
+        />
+      );
     },
     [
       canManageOccupancy,
+      canManageStructure,
       flowAction,
+      navigation,
       onAllocate,
       onBedPress,
       onFlowAction,
       onReserve,
+      spaceId,
     ],
   );
 

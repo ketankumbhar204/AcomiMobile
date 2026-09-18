@@ -7,6 +7,8 @@ import { colors, radius, spacing, typography } from '../../theme';
 import { getEffectivePriceDraft } from '../../utils/comboPrice';
 import { comboPriceDraftErrorMessage, type ComboPriceDraftErrors } from '../../utils/comboSelectionPricing';
 import { ComboPickerCard } from './ComboPickerCard';
+import { EntityPhoto } from '../files/EntityPhoto';
+import { FoodTypeIcon } from '../ui/FoodTypeIcon';
 import { InlineChipEditor } from './library/InlineChipEditor';
 import { ScrollableChipRail } from './library/ScrollableChipRail';
 import { MenuChip } from './library/MenuChip';
@@ -29,6 +31,8 @@ type PlanningItemPickerListProps = {
   canAddCategory?: boolean;
   onAddItem?: (categoryId: string, name: string, foodType?: FoodType) => Promise<FoodItemResponse>;
   onAddCategory?: (name: string) => Promise<FoodCategoryResponse>;
+  spaceId?: string;
+  canEditPhoto?: boolean;
 };
 
 export function PlanningItemPickerList({
@@ -48,6 +52,8 @@ export function PlanningItemPickerList({
   canAddCategory = false,
   onAddItem,
   onAddCategory,
+  spaceId,
+  canEditPhoto = false,
 }: PlanningItemPickerListProps) {
   const { t } = useTranslation();
   const [addingCategoryId, setAddingCategoryId] = useState<string | null>(null);
@@ -199,6 +205,20 @@ export function PlanningItemPickerList({
               }
               focusPriceInput={focusPriceInputId === draftId}
               onPress={() => onToggle(item.itemId)}
+              photo={
+                spaceId ? (
+                  <EntityPhoto
+                    spaceId={spaceId}
+                    entityId={item.itemId}
+                    kind="menuItem"
+                    fileId={item.photoFileId}
+                    canEdit={canEditPhoto}
+                    size={28}
+                    title={item.name}
+                    fallback={<FoodTypeIcon foodType={item.foodType ?? 'VEG'} size={14} />}
+                  />
+                ) : undefined
+              }
             />
           );
         })

@@ -4,6 +4,7 @@ import type { AccommodationStatus } from '../../api/types';
 import { colors, shadows, spacing, typography } from '../../theme';
 import { AccommodationStatusBadge } from './AccommodationStatusBadge';
 import { LayoutIllustration } from './layout/cards/LayoutIllustration';
+import { LayoutEntityPhoto } from './layout/cards/LayoutEntityPhoto';
 import { getBedIllustration } from './layout/illustrations/illustrationAssets';
 
 type BedDetailHeroProps = {
@@ -11,6 +12,8 @@ type BedDetailHeroProps = {
   status: AccommodationStatus;
   occupantName?: string | null;
   subtitle?: string | null;
+  bedId?: string;
+  photoFileId?: string | null;
 };
 
 export function BedDetailHero({
@@ -18,13 +21,21 @@ export function BedDetailHero({
   status,
   occupantName,
   subtitle,
+  bedId,
+  photoFileId,
 }: BedDetailHeroProps) {
   return (
     <View style={styles.card}>
       <View style={styles.row}>
-        <LayoutIllustration
-          source={getBedIllustration(status)}
-          size="bedHero"
+        <LayoutEntityPhoto
+          kind="bed"
+          entityId={bedId ?? ''}
+          fileId={photoFileId}
+          title={label}
+          height={140}
+          fallback={
+            <LayoutIllustration source={getBedIllustration(status)} size="bedHero" />
+          }
         />
         <View style={styles.info}>
           <Text style={styles.label}>{label}</Text>

@@ -1,21 +1,27 @@
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { adminApi } from '../../api/adminApi';
 import type { AdminRegisteredUser } from '../../api/types';
 import { AdminLeadCard } from '../../components/admin';
+import type { AdminStackParamList } from '../../navigation/types';
 import {
   formatAdminAssociatedSpaces,
   formatAdminDate,
   formatAdminOnboardingStatus,
+  formatAdminUserMobile,
   formatAdminUserName,
   formatAdminUserRole,
 } from '../../utils/adminLabels';
 import { colors, spacing, typography } from '../../theme';
 
+type Nav = NativeStackNavigationProp<AdminStackParamList, 'AdminRegisteredUsers'>;
+
 export function AdminRegisteredUsersScreen() {
   const { t } = useTranslation();
+  const navigation = useNavigation<Nav>();
   const [users, setUsers] = useState<AdminRegisteredUser[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -51,9 +57,14 @@ export function AdminRegisteredUsersScreen() {
           renderItem={({ item }) => (
             <AdminLeadCard
               title={formatAdminUserName(item.fullName)}
-              subtitle={`${item.mobileNumber} · ${item.mobileVerified ? t('admin.labels.verified') : t('admin.labels.notVerified')}`}
-              meta={`${formatAdminUserRole(item.selectedRole)} · ${formatAdminOnboardingStatus(item.onboardingStatus)} · ${formatAdminDate(item.registeredAt)}`}
+              subtitle={`${formatAdminUserMobile(item.mobileNumber)} · ${
+                item.mobileVerified ? t('admin.labels.verified') : t('admin.labels.notVerified')
+              }`}
+              meta={`${formatAdminUserRole(item.selectedRole)} · ${formatAdminOnboardingStatus(
+                item.onboardingStatus,
+              )} · ${formatAdminDate(item.registeredAt)}`}
               sourceLabel={formatAdminAssociatedSpaces(item.spaces)}
+              onPress={() => navigation.navigate('AdminRegisteredUserDetail', { user: item })}
             />
           )}
           ListEmptyComponent={<Text style={styles.empty}>{t('admin.users.empty')}</Text>}

@@ -17,6 +17,7 @@ type MenuChipProps = {
   onPress?: () => void;
   onLongPress?: () => void;
   style?: ViewStyle;
+  leading?: React.ReactNode;
 };
 
 export function MenuChip({
@@ -29,6 +30,7 @@ export function MenuChip({
   onPress,
   onLongPress,
   style,
+  leading,
 }: MenuChipProps) {
   const isAdd = variant === 'add';
   const isSelected =
@@ -52,7 +54,9 @@ export function MenuChip({
         style,
       ]}>
       <View style={styles.row}>
-        {showFoodTypeIcon ? (
+        {leading
+          ? leading
+          : showFoodTypeIcon ? (
           <FoodTypeIcon foodType={foodType} size={isCompact ? 12 : 14} style={styles.icon} />
         ) : null}
         <Text

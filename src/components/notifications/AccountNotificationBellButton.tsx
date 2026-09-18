@@ -1,33 +1,16 @@
-import React, { useCallback, useState } from 'react';
+import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { enquiryApi } from '../../api/enquiryApi';
+import { useAccountEnquiryUnreadCount } from '../../hooks/useAccountEnquiryUnreadCount';
 import type { MainStackParamList } from '../../navigation/types';
-import { colors, typography } from '../../theme';
+import { colors, spacing, typography } from '../../theme';
 
 export function AccountNotificationBellButton() {
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  useFocusEffect(
-    useCallback(() => {
-      let cancelled = false;
-      void enquiryApi
-        .listNotifications({ size: 1 })
-        .then(data => {
-          if (!cancelled) setUnreadCount(data.unreadCount ?? 0);
-        })
-        .catch(() => {
-          if (!cancelled) setUnreadCount(0);
-        });
-      return () => {
-        cancelled = true;
-      };
-    }, []),
-  );
+  const unreadCount = useAccountEnquiryUnreadCount();
 
   return (
     <Pressable
@@ -52,6 +35,7 @@ const styles = StyleSheet.create({
     height: 36,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: spacing.lg,
   },
   pressed: {
     opacity: 0.7,

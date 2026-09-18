@@ -6,12 +6,16 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { adminApi } from '../../api/adminApi';
-import type { PropertyRegistrationListItem, RegistrationSource } from '../../api/types';
+import type {
+  AdminActiveSpace,
+  PropertyRegistrationListItem,
+  RegistrationSource,
+} from '../../api/types';
 import { AdminLeadCard, adminList } from '../../components/admin';
 import { useConfirmDialog } from '../../components/ui';
 import type { AdminStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
-import { formatRegistrationSource } from '../../utils/adminLabels';
+import { formatAdminDate, formatRegistrationSource } from '../../utils/adminLabels';
 import { colors, spacing, typography } from '../../theme';
 
 type Nav = NativeStackNavigationProp<AdminStackParamList, 'AdminPropertyList'>;
@@ -28,18 +32,23 @@ function filterLabel(
   return null;
 }
 
+function locationLine(item: PropertyRegistrationListItem, dash: string): string {
+  const parts = [item.city, item.state].map(v => v?.trim()).filter(Boolean);
+  return parts.length > 0 ? parts.join(', ') : dash;
+}
+
 export function AdminPropertyListScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { showConfirm } = useConfirmDialog();
   const showToast = useToastStore(state => state.showToast);
-  const initialTab = route.params?.tab ?? 'leads';
   const sourceFilter = route.params?.source;
 
-  const [items, setItems] = useState<PropertyRegistrationListItem[]>([]);
+  const [leads, setLeads] = useState<PropertyRegistrationListItem[]>([]);
+  const [activeSpaces, setActiveSpaces] = useState<AdminActiveSpace[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'leads' | 'active'>(initialTab);
+  const [tab, setTab] = useState<'leads' | 'active'>(route.params?.tab ?? 'leads');
 
   useFocusEffect(
     useCallback(() => {
@@ -61,29 +70,11 @@ export function AdminPropertyListScreen() {
               source,
               size: 50,
             });
-            if (!cancelled) setItems(page.content);
+            if (!cancelled) setLeads(page.content);
           } else {
             const spaces = await adminApi.listActiveSpaces();
             if (!cancelled) {
-              setItems(
-                spaces
-                  .filter(s => s.type !== 'MESS')
-                  .map(s => ({
-                    id: s.id,
-                    reference: s.id,
-                    propertyType: s.type,
-                    propertyName: s.name,
-                    ownerName: s.ownerName,
-                    mobileNumber: s.ownerMobile,
-                    city: '',
-                    state: '',
-                    pincode: '',
-                    status: 'CONVERTED',
-                    source: 'ADMIN',
-                    testLead: false,
-                    createdAt: s.createdAt,
-                  })),
-              );
+              setActiveSpaces(spaces.filter(s => s.type !== 'MESS'));
             }
           }
         } finally {
@@ -98,6 +89,7 @@ export function AdminPropertyListScreen() {
   );
 
   const activeFilterLabel = filterLabel(t, tab, sourceFilter);
+  const dash = t('admin.labels.emDash');
 
   function handleDelete(item: PropertyRegistrationListItem) {
     showConfirm({
@@ -109,7 +101,7 @@ export function AdminPropertyListScreen() {
       onConfirm: async () => {
         try {
           await adminApi.deletePropertyRegistration(item.id);
-          setItems(prev => prev.filter(row => row.id !== item.id));
+          setLeads(prev => prev.filter(row => row.id !== item.id));
           showToast(t('admin.property.deleted'));
         } catch {
           showToast(t('admin.property.deleteFailed'));
@@ -143,25 +135,36 @@ export function AdminPropertyListScreen() {
       ) : null}
       {loading ? (
         <ActivityIndicator style={styles.loader} color={colors.primary} />
-      ) : (
+      ) : tab === 'leads' ? (
         <FlatList
-          data={items}
+          data={leads}
           keyExtractor={item => item.id}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
             <AdminLeadCard
               title={item.propertyName}
               subtitle={`${item.propertyType} · ${item.ownerName}`}
-              meta={`${item.mobileNumber} · ${item.city || t('admin.labels.emDash')}`}
-              sourceLabel={tab === 'leads' ? formatRegistrationSource(item.source) : undefined}
-              testLead={tab === 'leads' ? item.testLead : undefined}
-              showDelete={tab === 'leads'}
-              onPress={
-                tab === 'leads'
-                  ? () => navigation.navigate('AdminPropertyDetail', { id: item.id })
-                  : undefined
-              }
+              meta={`${item.mobileNumber} · ${locationLine(item, dash)} · ${formatAdminDate(item.createdAt)}`}
+              sourceLabel={formatRegistrationSource(item.source)}
+              testLead={item.testLead}
+              showDelete
+              onPress={() => navigation.navigate('AdminPropertyDetail', { id: item.id })}
               onDelete={() => handleDelete(item)}
+            />
+          )}
+          ListEmptyComponent={<Text style={styles.empty}>{t('admin.list.empty')}</Text>}
+        />
+      ) : (
+        <FlatList
+          data={activeSpaces}
+          keyExtractor={item => item.id}
+          contentContainerStyle={styles.list}
+          renderItem={({ item }) => (
+            <AdminLeadCard
+              title={item.name}
+              subtitle={`${item.type} · ${item.ownerName}`}
+              meta={`${item.ownerMobile} · ${item.address?.trim() || dash}`}
+              onPress={() => navigation.navigate('AdminActiveSpaceDetail', { space: item })}
             />
           )}
           ListEmptyComponent={<Text style={styles.empty}>{t('admin.list.empty')}</Text>}

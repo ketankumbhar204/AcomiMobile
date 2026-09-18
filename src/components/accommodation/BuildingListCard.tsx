@@ -11,12 +11,16 @@ import {
 } from '../../utils/buildingListCardContent';
 import { isAccommodationEntityActive } from '../../utils/accommodationEntityActive';
 import { getAccommodationHierarchyAccent } from '../../utils/accommodationHierarchy';
-import { AccommodationInactiveBadge, accommodationInactiveCardStyle } from './AccommodationInactiveBadge';
+import { EntityPhoto } from '../files/EntityPhoto';
+import type { EntityPhotoKind } from '../../files/entityPhoto';
 
 type BuildingListCardProps = {
   building: BuildingResponse;
   summary?: BuildingSummaryResponse;
   spaceType?: SpaceType;
+  spaceId?: string;
+  canEditPhoto?: boolean;
+  onPhotoChanged?: (fileId: string | null) => void;
   editableName?: boolean;
   onSaveName?: (name: string) => Promise<void>;
   onPress?: () => void;
@@ -99,6 +103,9 @@ function BuildingCardDetails({
 export function BuildingListCard({
   building,
   summary,
+  spaceId,
+  canEditPhoto = false,
+  onPhotoChanged,
   editableName = false,
   onSaveName,
   onPress,
@@ -136,11 +143,31 @@ export function BuildingListCard({
               borderColor: inactive ? '#D1D5DB' : buildingAccent.border,
             },
           ]}>
-          <Building2
-            size={20}
-            color={inactive ? '#9CA3AF' : buildingAccent.accent}
-            strokeWidth={2.2}
-          />
+          {spaceId ? (
+            <EntityPhoto
+              spaceId={spaceId}
+              entityId={building.buildingId}
+              kind={'building' as EntityPhotoKind}
+              fileId={building.photoFileId ?? summary?.photoFileId}
+              canEdit={canEditPhoto}
+              size={42}
+              title={building.name}
+              onChanged={onPhotoChanged}
+              fallback={
+                <Building2
+                  size={20}
+                  color={inactive ? '#9CA3AF' : buildingAccent.accent}
+                  strokeWidth={2.2}
+                />
+              }
+            />
+          ) : (
+            <Building2
+              size={20}
+              color={inactive ? '#9CA3AF' : buildingAccent.accent}
+              strokeWidth={2.2}
+            />
+          )}
         </View>
 
         <View style={styles.headerBody}>

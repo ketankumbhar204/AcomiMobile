@@ -4,8 +4,10 @@ import { useTranslation } from 'react-i18next';
 import type { BuildingSummaryResponse, FloorListItemResponse } from '../../../api/types';
 import { colors, spacing, typography } from '../../../theme';
 import { matchesAccommodationSearch } from '../../../utils/accommodationLayoutSearch';
-import { FloorLayoutCard } from './cards/FloorLayoutCard';
 import { LayoutSummaryCard } from './cards/LayoutSummaryCard';
+import { FloorLayoutCard } from './cards/FloorLayoutCard';
+import { LayoutEntityPhoto } from './cards/LayoutEntityPhoto';
+import { LayoutIllustration } from './cards/LayoutIllustration';
 import { calcOccupancyPercent } from './cards/occupancyUtils';
 import { getBuildingIllustration } from './illustrations/illustrationAssets';
 import {
@@ -62,6 +64,18 @@ export function BuildingElevationLayout({
         title={buildingName ?? t('accommodation.builder.title')}
         illustration={getBuildingIllustration()}
         illustrationSize="building"
+        photo={
+          buildingSummary ? (
+            <LayoutEntityPhoto
+              kind="building"
+              entityId={buildingSummary.buildingId}
+              fileId={buildingSummary.photoFileId}
+              title={buildingSummary.name}
+              height={180}
+              fallback={<LayoutIllustration source={getBuildingIllustration()} size="building" />}
+            />
+          ) : undefined
+        }
         occupancyPercent={occupancyPercent}
         statusCounts={statusCounts}
         metrics={[

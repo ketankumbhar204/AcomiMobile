@@ -12,6 +12,7 @@ import { AccommodationStatusBadge } from '../../AccommodationStatusBadge';
 import { BedPricingFields } from '../../BedPricingFields';
 import { getBedIllustration } from '../illustrations/illustrationAssets';
 import { LayoutCardShell } from './LayoutCardShell';
+import { LayoutEntityPhoto } from './LayoutEntityPhoto';
 import { LayoutIllustration } from './LayoutIllustration';
 
 type BedLayoutCardProps = {
@@ -96,13 +97,22 @@ export function BedLayoutCard({
         inactive && accommodationInactiveCardStyle,
       ]}
       pressedStyle={styles.pressed}>
-      <LayoutIllustration
-        source={getBedIllustration(bed.status)}
-        size="bed"
-        style={[
-          styles.illustration,
-          inactive ? accommodationInactiveIllustrationStyle : undefined,
-        ]}
+      <LayoutEntityPhoto
+        kind="bed"
+        entityId={bed.bedId}
+        fileId={bed.photoFileId}
+        title={displayLabel}
+        height={80}
+        fallback={
+          <LayoutIllustration
+            source={getBedIllustration(bed.status)}
+            size="bed"
+            style={[
+              styles.illustration,
+              inactive ? accommodationInactiveIllustrationStyle : undefined,
+            ]}
+          />
+        }
       />
       <View style={styles.titleRow}>
         <View style={styles.titleWrap}>

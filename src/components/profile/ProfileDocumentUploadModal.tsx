@@ -15,7 +15,8 @@ import { Button, FormInput } from '../ui';
 import { useAuthStore } from '../../store/authStore';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
-import { pickProfileImage, toLocalFileInput } from '../../utils/pickProfileImage';
+import { pickOptimizedImage, toLocalFileInput } from '../../utils/pickOptimizedImage';
+import { FileUploadUserError } from '../../utils/fileLimits';
 import { uploadLocalFile } from '../../services/fileUploadService';
 import { DocumentTypePicker } from '../member/DocumentTypePicker';
 
@@ -77,15 +78,23 @@ export function ProfileDocumentUploadModal({
     setPickingImage(true);
     setFormError(null);
     try {
-      const picked = await pickProfileImage();
+      const picked = await pickOptimizedImage(
+        documentType === 'OTHER' ? 'MEMBER_DOCUMENT' : 'IDENTITY_DOCUMENT',
+      );
       if (!picked) {
         return;
       }
       setPickedFile(toLocalFileInput(picked));
       setFileUrl(picked.previewUri);
       setPreviewUri(picked.previewUri);
-    } catch {
-      showToast(t('profileCompletion.errors.pickFailed'));
+    } catch (error) {
+      showToast(
+        error instanceof FileUploadUserError
+          ? error.message
+          : t('files.pickerFailed', {
+              defaultValue: "Couldn't select the photo. Please try again.",
+            }),
+      );
     } finally {
       setPickingImage(false);
     }

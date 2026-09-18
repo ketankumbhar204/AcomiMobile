@@ -1,6 +1,7 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { AdminActiveSpaceDetailScreen } from '../screens/admin/AdminActiveSpaceDetailScreen';
 import { AdminAddMessScreen } from '../screens/admin/AdminAddMessScreen';
 import { AdminAddPropertyScreen } from '../screens/admin/AdminAddPropertyScreen';
 import { AdminDashboardScreen } from '../screens/admin/AdminDashboardScreen';
@@ -10,6 +11,7 @@ import { AdminMessDetailScreen } from '../screens/admin/AdminMessDetailScreen';
 import { AdminMessListScreen } from '../screens/admin/AdminMessListScreen';
 import { AdminPropertyDetailScreen } from '../screens/admin/AdminPropertyDetailScreen';
 import { AdminPropertyListScreen } from '../screens/admin/AdminPropertyListScreen';
+import { AdminRegisteredUserDetailScreen } from '../screens/admin/AdminRegisteredUserDetailScreen';
 import { AdminRegisteredUsersScreen } from '../screens/admin/AdminRegisteredUsersScreen';
 import { AdminSavedAddressesScreen } from '../screens/admin/AdminSavedAddressesScreen';
 import { stackHeaderOptions } from '../theme';
@@ -71,6 +73,16 @@ export function AdminNavigator() {
         name="AdminRegisteredUsers"
         component={AdminRegisteredUsersScreen}
         options={{ title: t('admin.nav.users') }}
+      />
+      <Stack.Screen
+        name="AdminRegisteredUserDetail"
+        component={AdminRegisteredUserDetailScreen}
+        options={{ title: t('admin.nav.userDetail', { defaultValue: 'User' }) }}
+      />
+      <Stack.Screen
+        name="AdminActiveSpaceDetail"
+        component={AdminActiveSpaceDetailScreen}
+        options={{ title: t('admin.nav.activeSpace', { defaultValue: 'Active space' }) }}
       />
       <Stack.Screen
         name="AdminSavedAddresses"

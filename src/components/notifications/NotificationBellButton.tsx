@@ -7,7 +7,7 @@ import type { MainStackParamList } from '../../navigation/types';
 import type { UUID } from '../../api/types';
 import { useSpaceNotifications } from '../../hooks/useSpaceNotifications';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
-import { colors, typography } from '../../theme';
+import { colors, spacing, typography } from '../../theme';
 import { currentMonthKey } from '../../utils/dashboardFinancial';
 import { canManageNotifications } from '../../utils/spaceOperator';
 import {
@@ -87,6 +87,7 @@ const styles = StyleSheet.create({
     height: 36,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: spacing.sm,
   },
   pressed: {
     opacity: 0.7,

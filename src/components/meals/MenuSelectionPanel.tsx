@@ -28,6 +28,10 @@ import type {
   UUID,
 } from '../../api/types';
 import { useToastStore } from '../../store/toastStore';
+import { useSpacePermissions } from '../../hooks/useSpacePermissions';
+import { canEditEntityPhoto } from '../../files/entityPhoto';
+import { EntityPhoto } from '../files/EntityPhoto';
+import { FoodTypeIcon } from '../ui/FoodTypeIcon';
 import { colors, radius, spacing, typography } from '../../theme';
 import type { MenuAdHocPackage, MenuDraftOption, MenuSelectionItemPackage } from '../../utils/dailyMenuDraft';
 import {
@@ -150,6 +154,8 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
   const seed = seedFromOptions(initialOptions);
   const { t } = useTranslation();
   const showToast = useToastStore(state => state.showToast);
+  const permissions = useSpacePermissions(spaceId);
+  const canEditPhoto = canEditEntityPhoto(permissions.membershipRole);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [loadingCatalog, setLoadingCatalog] = useState(false);
   const [catalogLoaded, setCatalogLoaded] = useState(false);
@@ -960,6 +966,18 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
                 }
                 focusPriceInput={focusPriceInputId === combo.comboId}
                 onPress={() => toggleCombo(combo.comboId)}
+                photo={
+                  <EntityPhoto
+                    spaceId={spaceId}
+                    entityId={combo.comboId}
+                    kind="combo"
+                    fileId={combo.photoFileId}
+                    canEdit={canEditPhoto}
+                    size={28}
+                    title={combo.name}
+                    fallback={<FoodTypeIcon foodType={combo.foodType ?? 'VEG'} size={14} />}
+                  />
+                }
               />
             );
           })}
@@ -1005,6 +1023,8 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
             canAddCategory
             onAddItem={addItemInline}
             onAddCategory={addCategoryInline}
+            spaceId={spaceId}
+            canEditPhoto={canEditPhoto}
           />
         </View>
       ) : null}

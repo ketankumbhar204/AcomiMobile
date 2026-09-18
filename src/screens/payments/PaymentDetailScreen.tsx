@@ -616,6 +616,7 @@ export function PaymentDetailScreen() {
       <PaymentProofPreviewModal
         visible={proofPreviewVisible}
         proofUrl={payment.proofUrl}
+        fileId={payment.proofFileId}
         onClose={() => setProofPreviewVisible(false)}
       />
 

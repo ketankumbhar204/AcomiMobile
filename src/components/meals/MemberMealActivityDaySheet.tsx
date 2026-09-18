@@ -32,6 +32,7 @@ import { MEAL_TYPES, mealTypeLabelKey } from '../../utils/mealLabels';
 import { dayDetailHasActivity, formatPlateCount } from '../../utils/memberMealActivityDayDetail';
 import { canSendPaymentReminder } from '../../utils/mealPollPayment';
 import { MealPollPaymentReviewModal } from './MealPollPaymentReviewModal';
+import { ImagePreviewModal } from '../files/ImagePreviewModal';
 
 const BACKDROP_DELAY_MS = 450;
 const SHEET_MIN_RATIO = 0.88;
@@ -213,6 +214,7 @@ function PaymentSummarySection({
   locale: string;
 }) {
   const payment = detail.payment;
+  const [proofViewerOpen, setProofViewerOpen] = useState(false);
   const hasCharges = (detail.dailyCharges?.length ?? 0) > 0;
   const dayTotalFormatted = formatComboPrice(detail.dayTotal, detail.currencyCode);
 
@@ -311,7 +313,9 @@ function PaymentSummarySection({
       ) : null}
 
       {payment?.proofImageUrl ? (
-        <Image source={{ uri: payment.proofImageUrl }} style={styles.proofPreview} resizeMode="contain" />
+        <Pressable onPress={() => setProofViewerOpen(true)}>
+          <Image source={{ uri: payment.proofImageUrl }} style={styles.proofPreview} resizeMode="contain" />
+        </Pressable>
       ) : null}
 
       {showReview ? (
@@ -330,6 +334,13 @@ function PaymentSummarySection({
           </Text>
         </Pressable>
       ) : null}
+      <ImagePreviewModal
+        visible={proofViewerOpen}
+        imageUrl={payment?.proofImageUrl}
+        fileId={payment?.proofFileId}
+        title={t('paymentCollection.proof.title', { defaultValue: 'Payment proof' })}
+        onClose={() => setProofViewerOpen(false)}
+      />
     </Section>
   );
 }
@@ -759,6 +770,7 @@ export function MemberMealActivityDaySheet({
         memberName={memberName}
         memberId={memberId}
         proofImageUrl={detail?.payment?.proofImageUrl}
+        proofFileId={detail?.payment?.proofFileId}
         reviewing={reviewing}
         onClose={() => {
           if (!reviewing) {

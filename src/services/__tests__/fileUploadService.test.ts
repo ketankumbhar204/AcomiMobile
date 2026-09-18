@@ -112,4 +112,23 @@ describe('fileUploadService', () => {
     expect(url).toContain('/files/file-3/content');
     expect(mockedFilesApi.getContentUrl).toHaveBeenCalledTimes(2);
   });
+
+  it('rejects files over the purpose limit before creating a session', async () => {
+    await expect(
+      uploadLocalFile(
+        { uri: 'file://huge.jpg', mime: 'image/jpeg', size: 5 * 1024 * 1024 + 1, name: 'huge.jpg' },
+        { purpose: 'PROFILE_PHOTO' },
+      ),
+    ).rejects.toMatchObject({ code: 'TOO_LARGE' });
+    expect(mockedFilesApi.createUploadSession).not.toHaveBeenCalled();
+  });
+
+  it('rejects unsupported document types', async () => {
+    await expect(
+      uploadLocalFile(
+        { uri: 'file://doc.pdf', mime: 'application/pdf', size: 100, name: 'doc.pdf' },
+        { purpose: 'MEMBER_DOCUMENT' },
+      ),
+    ).rejects.toMatchObject({ code: 'UNSUPPORTED' });
+  });
 });

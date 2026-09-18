@@ -4056,7 +4056,7 @@
       "identityNumberRequired": "Enter the document number.",
       "identityProofRequired": "Upload identity proof.",
       "addressProofRequired": "Upload address proof.",
-      "pickFailed": "Could not open the photo library. Check app permissions and try again.",
+      "pickFailed": "Couldn't open the photo picker. Please try again.",
       "submitFailed": "Could not save your profile. Please try again."
     }
   },
@@ -4805,5 +4805,25 @@
     "subheading": "Manage tenants, payments, meals, and daily operations from one premium workspace.",
     "summaryTitle": "Today",
     "wasteHint": "↓ 18% less waste vs last week"
+  },
+  "files": {
+    "tooLarge": "File size must be {{maxMb}} MB or less.",
+    "tooLargeAbsolute": "File size must be 5 MB or less.",
+    "compressFailed": "This image is too large to upload. Please choose a smaller image.",
+    "unsupportedType": "This file type is not supported.",
+    "uploadFailed": "Unable to upload the file. Please try again.",
+    "downloadFailed": "Unable to download the file. Please try again.",
+    "previewUnavailable": "No photo to display.",
+    "viewerTitle": "Photo",
+    "download": "Download",
+    "share": "Share",
+    "view": "View photo",
+    "remove": "Remove photo",
+    "replace": "Replace photo",
+    "add": "Add photo",
+    "takePhoto": "Take photo",
+    "chooseGallery": "Choose from gallery",
+    "attached": "Attached",
+    "sizeHint": "JPEG, PNG, or WebP. Maximum {{maxMb}} MB after compression."
   }
 }

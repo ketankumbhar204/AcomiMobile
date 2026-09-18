@@ -40,6 +40,9 @@ import { DashboardStatCard } from '../components/dashboard/shared/DashboardStatC
 import { SpaceStatusChip } from '../components/spaces/SpaceStatusChip';
 import { useDeactivateSpace } from '../hooks/useDeactivateSpace';
 import { useAuthenticatedUserId } from '../hooks/useAuth';
+import { useSpacePermissions } from '../hooks/useSpacePermissions';
+import { canEditEntityPhoto } from '../files/entityPhoto';
+import { EntityPhoto } from '../components/files/EntityPhoto';
 import type { MainStackParamList } from '../navigation/types';
 import { useSpaceStore } from '../store/spaceStore';
 import { colors, radius, shadows, spacing, typography } from '../theme';
@@ -182,6 +185,8 @@ export function SpaceDetailsScreen() {
   );
 
   const owner = isSpaceOwner(space, currentUserId);
+  const permissions = useSpacePermissions(spaceId);
+  const canEditPhoto = canEditEntityPhoto(permissions.membershipRole);
   const accent = space ? getSpaceTypeAccent(space.type) : colors.primaryDark;
   const TypeIcon = space ? getSpaceTypeIcon(space.type) : Settings2;
 
@@ -309,7 +314,19 @@ export function SpaceDetailsScreen() {
         <View style={[styles.hero, { backgroundColor: `${accent}0F`, borderColor: `${accent}33` }]}>
           <View style={styles.heroTop}>
             <View style={[styles.heroIcon, { borderColor: `${accent}33` }]}>
-              <TypeIcon size={26} color={accent} strokeWidth={2.2} />
+              <EntityPhoto
+                spaceId={spaceId}
+                entityId={spaceId}
+                kind="space"
+                fileId={space.photoFileId}
+                canEdit={canEditPhoto}
+                size={52}
+                title={space.name}
+                onChanged={fileId =>
+                  setSpace(prev => (prev ? { ...prev, photoFileId: fileId } : prev))
+                }
+                fallback={<TypeIcon size={26} color={accent} strokeWidth={2.2} />}
+              />
             </View>
             <View style={styles.heroInfo}>
               <Text style={[styles.heroType, { color: accent }]}>

@@ -7,6 +7,7 @@ import { enquiryApi } from '../api/enquiryApi';
 import type { UserNotification } from '../api/types';
 import { EmptyState } from '../components/ui';
 import type { MainStackParamList } from '../navigation/types';
+import { refreshAccountEnquiryUnread } from '../store/accountEnquiryUnreadStore';
 import { colors, spacing, typography } from '../theme';
 
 const UUID_RE =
@@ -53,7 +54,11 @@ export function AccountNotificationsScreen() {
       }
     }
     const enquiryId = item.enquiryId && UUID_RE.test(item.enquiryId) ? item.enquiryId : undefined;
-    navigation.navigate('MyEnquiries', enquiryId ? { enquiryId } : undefined);
+    void refreshAccountEnquiryUnread();
+    navigation.navigate('MemberTabs', {
+      screen: 'Enquiries',
+      params: enquiryId ? { enquiryId } : undefined,
+    });
   }
 
   return (

@@ -2,6 +2,8 @@ import React from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { MealComboResponse } from '../../../api/types';
+import { EntityPhoto } from '../../files/EntityPhoto';
+import { FoodTypeIcon } from '../../ui/FoodTypeIcon';
 import { spacing, typography } from '../../../theme';
 import { formatComboNameWithPrice } from '../../../utils/comboPrice';
 import { MenuChip } from './MenuChip';
@@ -16,6 +18,9 @@ type ComboChipRailProps = {
   onAddCombo?: () => void;
   onEditCombo?: (combo: MealComboResponse) => void;
   onRemoveCombo?: (combo: MealComboResponse) => void;
+  spaceId?: string;
+  canEditPhoto?: boolean;
+  onPhotoChanged?: () => void;
 };
 
 export function ComboChipRail({
@@ -27,6 +32,9 @@ export function ComboChipRail({
   onAddCombo,
   onEditCombo,
   onRemoveCombo,
+  spaceId,
+  canEditPhoto = false,
+  onPhotoChanged,
 }: ComboChipRailProps) {
   const { t } = useTranslation();
   const activeCombos = combos
@@ -91,6 +99,21 @@ export function ComboChipRail({
               variant="combo"
               selected={selectedComboId === combo.comboId}
               foodType={combo.foodType ?? 'VEG'}
+              leading={
+                spaceId ? (
+                  <EntityPhoto
+                    spaceId={spaceId}
+                    entityId={combo.comboId}
+                    kind="combo"
+                    fileId={combo.photoFileId}
+                    canEdit={canEditPhoto}
+                    size={18}
+                    title={combo.name}
+                    onChanged={onPhotoChanged}
+                    fallback={<FoodTypeIcon foodType={combo.foodType ?? 'VEG'} size={12} />}
+                  />
+                ) : undefined
+              }
               onPress={() => handleComboPress(combo)}
               onLongPress={() => openComboActions(combo)}
             />

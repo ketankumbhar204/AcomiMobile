@@ -36,6 +36,8 @@ import {
 } from '../../components/ui';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
+import { canEditEntityPhoto } from '../../files/entityPhoto';
+import { EntityPhotoProvider } from '../../files/EntityPhotoContext';
 import { useTargetOccupancy } from '../../hooks/useTargetOccupancy';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
@@ -44,7 +46,7 @@ import { buildAccommodationTrail } from '../../utils/accommodationContext';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
 import { buildBedOccupancyTarget } from '../../utils/buildOccupancyTarget';
 import { formatBedDisplayLabel } from '../../utils/formatBedDisplayLabel';
-import { navigateToAccommodationTrailSegment } from '../../utils/accommodationNavigation';
+import { handleAccommodationTrailPress } from '../../utils/accommodationNavigation';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'BedDetail'>;
 type Route = NativeStackScreenProps<MainStackParamList, 'BedDetail'>['route'];
@@ -79,6 +81,7 @@ export function BedDetailScreen() {
     bed?.status === 'OCCUPIED' || bed?.status === 'RESERVED';
   const canViewOccupant = permissions.canViewSpaceOccupancies;
   const canManageOccupancyActions = permissions.canManageOccupancy;
+  const canManage = permissions.canManageAccommodation;
   const hasBedOccupant = Boolean(bed?.occupant);
   const {
     occupancy,
@@ -138,6 +141,7 @@ export function BedDetailScreen() {
       unitName: parentType === 'unit' ? parentName : undefined,
       roomId,
       roomName,
+      bedId,
       bedLabel: displayBedLabel,
     }),
     [
@@ -151,6 +155,7 @@ export function BedDetailScreen() {
       roomName,
       spaceId,
       unitId,
+      bedId,
     ],
   );
 
@@ -160,10 +165,10 @@ export function BedDetailScreen() {
   );
 
   const onTrailNavigate = useCallback(
-    (level: Parameters<typeof navigateToAccommodationTrailSegment>[2]) => {
-      navigateToAccommodationTrailSegment(navigation, trailContext, level);
+    (level: Parameters<typeof handleAccommodationTrailPress>[2]) => {
+      handleAccommodationTrailPress(navigation, trailContext, level, canManage);
     },
-    [navigation, trailContext],
+    [canManage, navigation, trailContext],
   );
 
   const loadBed = useCallback(async () => {
@@ -264,6 +269,9 @@ export function BedDetailScreen() {
 
   return (
     <RequireAccommodationAccess spaceId={spaceId}>
+      <EntityPhotoProvider
+        spaceId={spaceId}
+        canEdit={canEditEntityPhoto(permissions.membershipRole)}>
       <Screen scrollable contentStyle={styles.content}>
         {error ? (
           <View style={styles.errorBanner}>
@@ -288,6 +296,8 @@ export function BedDetailScreen() {
             <BedDetailHero
               label={displayBedLabel}
               status={bed.status}
+              bedId={bed.bedId}
+              photoFileId={bed.photoFileId}
               occupantName={
                 bed.occupant?.memberName ?? occupancy?.memberName ?? null
               }
@@ -355,6 +365,7 @@ export function BedDetailScreen() {
           </>
         ) : null}
       </Screen>
+      </EntityPhotoProvider>
     </RequireAccommodationAccess>
   );
 }

@@ -49,7 +49,7 @@ import { currentMonthKey } from '../../utils/dashboardFinancial';
 import { peekDashboardSummary } from '../../utils/dashboardQueryCache';
 import { peekPendingActions } from '../../utils/pendingActionsQueryCache';
 import { canManageNotifications } from '../../utils/spaceOperator';
-import { isAccommodationApplicable } from '../../utils/accommodationProfile';
+import { canEditEntityPhoto } from '../../files/entityPhoto';
 import { devLog } from '../../utils/devLog';
 
 type AccommodationNav = CompositeNavigationProp<
@@ -476,6 +476,11 @@ export function AccommodationHomeScreen() {
                     building={building}
                     summary={summaries[building.buildingId]}
                     spaceType={spaceType}
+                    spaceId={spaceId}
+                    canEditPhoto={canEditEntityPhoto(permissions.membershipRole)}
+                    onPhotoChanged={fileId => {
+                      patchBuilding(building.buildingId, { photoFileId: fileId });
+                    }}
                     editableName={canManage}
                     onSaveName={async name => {
                       await renameBuildingName(

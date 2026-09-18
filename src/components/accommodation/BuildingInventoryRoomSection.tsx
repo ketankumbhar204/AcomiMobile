@@ -6,8 +6,9 @@ import type { BedSpaceListItemResponse } from '../../api/types';
 import { colors, pastels, spacing, typography } from '../../theme';
 import {
   roomGroupAvailableCount,
-  roomGroupPathSegments,
+  roomGroupPathCrumbs,
   type BedRoomGroup,
+  type RoomPathCrumb,
 } from '../../utils/groupBedsByRoom';
 import {
   BuildingInventoryAddBedCard,
@@ -16,6 +17,8 @@ import {
 
 type BuildingInventoryRoomSectionProps = {
   group: BedRoomGroup;
+  /** Override path crumbs (defaults to Floor / Unit / Room). */
+  pathCrumbs?: RoomPathCrumb[];
   /** Override path segments (defaults to Floor / Unit / Room). */
   pathSegments?: string[];
   /** @deprecated Prefer pathSegments. */
@@ -24,6 +27,7 @@ type BuildingInventoryRoomSectionProps = {
   showAddBed?: boolean;
   menu?: React.ReactNode;
   onRoomPress?: () => void;
+  onPathCrumbPress?: (crumb: RoomPathCrumb) => void;
   /** @deprecated Prefer consolidating hierarchy edits into `menu` (pencil trigger). */
   onEditRoom?: () => void;
   onBedPress?: (bed: BedSpaceListItemResponse) => void;
@@ -39,12 +43,14 @@ type BuildingInventoryRoomSectionProps = {
 
 function BuildingInventoryRoomSectionComponent({
   group,
+  pathCrumbs: pathCrumbsProp,
   pathSegments: pathSegmentsProp,
   title,
   pricingEditable = false,
   showAddBed = false,
   menu,
   onRoomPress,
+  onPathCrumbPress,
   onEditRoom,
   onBedPress,
   onAddBed,
@@ -54,11 +60,15 @@ function BuildingInventoryRoomSectionComponent({
 }: BuildingInventoryRoomSectionProps) {
   const { t } = useTranslation();
   const available = roomGroupAvailableCount(group);
-  const pathSegments =
-    pathSegmentsProp ??
-    (title
-      ? title.split(/\s*>\s*/).filter(Boolean)
-      : roomGroupPathSegments(group));
+  const pathCrumbs =
+    pathCrumbsProp ??
+    roomGroupPathCrumbs(group, {
+      includeBuilding: Boolean(title) || Boolean(pathSegmentsProp?.includes(group.buildingName)),
+      includeUnit: pathSegmentsProp
+        ? pathSegmentsProp.some(segment => segment === group.unitName)
+        : Boolean(group.unitId),
+    });
+  const pathSegments = pathSegmentsProp ?? pathCrumbs.map(crumb => crumb.label);
   const availabilityLabel = t('accommodation.builder.bedsAvailable', {
     available,
     total: group.beds.length,
@@ -73,33 +83,72 @@ function BuildingInventoryRoomSectionComponent({
     <View style={styles.wrap}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <Pressable
-            onPress={onRoomPress}
-            disabled={!onRoomPress}
-            style={({ pressed }) => [
-              styles.titleMain,
-              pressed && onRoomPress ? styles.pressed : null,
-            ]}
-            accessibilityRole={onRoomPress ? 'button' : undefined}>
-            <View style={styles.pathIcon}>
-              <DoorOpen size={16} color={pastels.purple.fg} strokeWidth={2.2} />
-            </View>
-            <View style={styles.pathRow}>
-              {pathSegments.map((segment, index) => (
-                <View key={`${segment}-${index}`} style={styles.pathPart}>
-                  {index > 0 ? (
-                    <ChevronRight
-                      size={14}
-                      color={colors.muted}
-                      strokeWidth={2.4}
-                      style={styles.pathChevron}
-                    />
-                  ) : null}
-                  <Text style={styles.path}>{segment}</Text>
+          {onPathCrumbPress ? (
+            <View style={styles.titleMain}>
+              <Pressable
+                onPress={onRoomPress}
+                disabled={!onRoomPress}
+                hitSlop={4}
+                accessibilityRole={onRoomPress ? 'button' : undefined}>
+                <View style={styles.pathIcon}>
+                  <DoorOpen size={16} color={pastels.purple.fg} strokeWidth={2.2} />
                 </View>
-              ))}
+              </Pressable>
+              <View style={styles.pathRow}>
+                {pathCrumbs.map((crumb, index) => (
+                  <View key={`${crumb.level}-${crumb.label}`} style={styles.pathPart}>
+                    {index > 0 ? (
+                      <ChevronRight
+                        size={14}
+                        color={colors.muted}
+                        strokeWidth={2.4}
+                        style={styles.pathChevron}
+                      />
+                    ) : null}
+                    <Pressable
+                      onPress={() => onPathCrumbPress(crumb)}
+                      hitSlop={4}
+                      accessibilityRole="link"
+                      accessibilityLabel={crumb.label}>
+                      <Text style={styles.pathLink} numberOfLines={1}>
+                        {crumb.label}
+                      </Text>
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
             </View>
-          </Pressable>
+          ) : (
+            <Pressable
+              onPress={onRoomPress}
+              disabled={!onRoomPress}
+              style={({ pressed }) => [
+                styles.titleMain,
+                pressed && onRoomPress ? styles.pressed : null,
+              ]}
+              accessibilityRole={onRoomPress ? 'button' : undefined}>
+              <View style={styles.pathIcon}>
+                <DoorOpen size={16} color={pastels.purple.fg} strokeWidth={2.2} />
+              </View>
+              <View style={styles.pathRow}>
+                {pathCrumbs.map((crumb, index) => (
+                  <View key={`${crumb.level}-${crumb.label}`} style={styles.pathPart}>
+                    {index > 0 ? (
+                      <ChevronRight
+                        size={14}
+                        color={colors.muted}
+                        strokeWidth={2.4}
+                        style={styles.pathChevron}
+                      />
+                    ) : null}
+                    <Text style={styles.path} numberOfLines={1}>
+                      {pathSegments[index] ?? crumb.label}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </Pressable>
+          )}
 
           <View style={styles.titleActions}>
             {/* Hierarchy edits live under a single pencil menu to avoid truncating the path. */}
@@ -229,6 +278,12 @@ const styles = StyleSheet.create({
     ...typography.bodyStrong,
     fontSize: 14,
     color: colors.textPrimary,
+  },
+  pathLink: {
+    ...typography.bodyStrong,
+    fontSize: 14,
+    color: colors.info,
+    textDecorationLine: 'underline',
   },
   titleActions: {
     flexDirection: 'row',

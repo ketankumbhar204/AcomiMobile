@@ -7,6 +7,8 @@ import { matchesAccommodationSearch } from '../../../utils/accommodationLayoutSe
 import { chunkIntoRows } from './visual/planLayoutUtils';
 import { LayoutSummaryCard } from './cards/LayoutSummaryCard';
 import { RoomLayoutCard } from './cards/RoomLayoutCard';
+import { LayoutEntityPhoto } from './cards/LayoutEntityPhoto';
+import { LayoutIllustration } from './cards/LayoutIllustration';
 import { calcOccupancyPercent } from './cards/occupancyUtils';
 import { getFloorIllustration } from './illustrations/illustrationAssets';
 import { aggregateRoomBedStatusCounts } from './layoutSummaryStats';
@@ -14,6 +16,8 @@ const GRID_COLUMNS = 2;
 
 type CorridorFloorPlanLayoutProps = {
   floorName?: string;
+  floorId?: string;
+  floorPhotoFileId?: string | null;
   rooms: RoomListItemResponse[];
   layoutMode?: string;
   searchQuery: string;
@@ -24,6 +28,8 @@ type CorridorFloorPlanLayoutProps = {
 
 export function CorridorFloorPlanLayout({
   floorName,
+  floorId,
+  floorPhotoFileId,
   rooms,
   layoutMode,
   searchQuery,
@@ -49,6 +55,23 @@ export function CorridorFloorPlanLayout({
         title={floorName ?? t('accommodation.rooms.title')}
         illustration={getFloorIllustration(layoutMode ?? 'CORRIDOR_PG')}
         illustrationSize="floor"
+        photo={
+          floorId ? (
+            <LayoutEntityPhoto
+              kind="floor"
+              entityId={floorId}
+              fileId={floorPhotoFileId}
+              title={floorName}
+              height={90}
+              fallback={
+                <LayoutIllustration
+                  source={getFloorIllustration(layoutMode ?? 'CORRIDOR_PG')}
+                  size="floor"
+                />
+              }
+            />
+          ) : undefined
+        }
         occupancyPercent={occupancyPercent}
         statusCounts={statusCounts}
         metrics={[          {

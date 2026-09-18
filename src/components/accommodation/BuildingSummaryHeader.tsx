@@ -8,7 +8,7 @@ import { colors, shadows, spacing, typography } from '../../theme';
 import type { AccommodationUiProfile } from '../../utils/accommodationProfile';
 import { getAccommodationHierarchyAccent } from '../../utils/accommodationHierarchy';
 import { getLayoutModeLabelKey } from '../../utils/propertyLayoutMode';
-import { CircularOccupancyIndicator } from './layout/cards/CircularOccupancyIndicator';
+import { EntityPhoto } from '../files/EntityPhoto';
 import { calcOccupancyPercent } from './layout/cards/occupancyUtils';
 
 type BuildingSummaryHeaderProps = {
@@ -16,6 +16,9 @@ type BuildingSummaryHeaderProps = {
   profile: AccommodationUiProfile;
   loading?: boolean;
   editableName?: boolean;
+  spaceId?: string;
+  canEditPhoto?: boolean;
+  onPhotoChanged?: (fileId: string | null) => void;
   onSaveName?: (name: string) => Promise<void>;
   actions?: React.ReactNode;
 };
@@ -25,6 +28,9 @@ export function BuildingSummaryHeader({
   profile: _profile,
   loading,
   editableName = false,
+  spaceId,
+  canEditPhoto = false,
+  onPhotoChanged,
   onSaveName,
   actions,
 }: BuildingSummaryHeaderProps) {
@@ -58,7 +64,21 @@ export function BuildingSummaryHeader({
             styles.iconWell,
             { backgroundColor: accent.soft, borderColor: accent.border },
           ]}>
-          <Building2 size={20} color={accent.accent} strokeWidth={2.2} />
+          {spaceId ? (
+            <EntityPhoto
+              spaceId={spaceId}
+              entityId={summary.buildingId}
+              kind="building"
+              fileId={summary.photoFileId}
+              canEdit={canEditPhoto}
+              size={42}
+              title={summary.name}
+              onChanged={onPhotoChanged}
+              fallback={<Building2 size={20} color={accent.accent} strokeWidth={2.2} />}
+            />
+          ) : (
+            <Building2 size={20} color={accent.accent} strokeWidth={2.2} />
+          )}
         </View>
         <View style={styles.copy}>
           <InlineEditableName

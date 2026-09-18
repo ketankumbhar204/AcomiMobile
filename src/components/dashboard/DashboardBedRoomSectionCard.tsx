@@ -6,7 +6,7 @@ import type { BedSpaceListItemResponse } from '../../api/types';
 import { BuildingInventoryRoomSection } from '../accommodation/BuildingInventoryRoomSection';
 import { Button } from '../ui';
 import { spacing } from '../../theme';
-import type { BedRoomGroup } from '../../utils/groupBedsByRoom';
+import type { BedRoomGroup, RoomPathCrumb } from '../../utils/groupBedsByRoom';
 import { formatRoomGroupPathWithBuilding } from '../../utils/groupBedsByRoom';
 import type { BedInventoryFlowAction } from './DashboardBedInventoryBedRow';
 
@@ -21,6 +21,7 @@ type DashboardBedRoomSectionCardProps = BedSectionFlowProps & {
   onBedPress: (bed: BedSpaceListItemResponse) => void;
   onAllocate?: (bed: BedSpaceListItemResponse) => void;
   onReserve?: (bed: BedSpaceListItemResponse) => void;
+  onPathCrumbPress?: (crumb: RoomPathCrumb) => void;
 };
 
 function DashboardBedRoomSectionCardComponent({
@@ -31,6 +32,7 @@ function DashboardBedRoomSectionCardComponent({
   onReserve,
   flowAction = 'dashboard',
   onFlowAction,
+  onPathCrumbPress,
 }: DashboardBedRoomSectionCardProps) {
   const { t } = useTranslation();
 
@@ -38,6 +40,7 @@ function DashboardBedRoomSectionCardComponent({
     <BuildingInventoryRoomSection
       group={group}
       title={formatRoomGroupPathWithBuilding(group)}
+      onPathCrumbPress={onPathCrumbPress}
       onBedPress={bed => {
         if (flowAction !== 'dashboard' && bed.status === 'AVAILABLE' && onFlowAction) {
           onFlowAction(bed);
