@@ -14,6 +14,7 @@ import {
 import { CorridorFloorLayoutCard } from './CorridorFloorLayoutCard';
 import { CircularOccupancyIndicator } from './CircularOccupancyIndicator';
 import { LayoutCardShell } from './LayoutCardShell';
+import { LayoutEntityPhoto } from './LayoutEntityPhoto';
 import { LayoutIllustration } from './LayoutIllustration';
 import { OccupancyLevelBadge } from './OccupancyLevelBadge';
 import { OccupancyProgressBar } from './OccupancyProgressBar';
@@ -83,10 +84,19 @@ export function FloorLayoutCard({
         ]}
         pressedStyle={styles.pressed}>
         <View style={styles.row}>
-          <LayoutIllustration
-            source={getFloorIllustration(layoutMode)}
-            size="floor"
-            style={inactive ? accommodationInactiveIllustrationStyle : undefined}
+          <LayoutEntityPhoto
+            kind="floor"
+            entityId={floor.floorId}
+            fileId={floor.photoFileId}
+            title={floor.name}
+            height={90}
+            fallback={
+              <LayoutIllustration
+                source={getFloorIllustration(layoutMode)}
+                size="floor"
+                style={inactive ? accommodationInactiveIllustrationStyle : undefined}
+              />
+            }
           />
           <View style={styles.body}>
             {editableName && onSaveName ? (

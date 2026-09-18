@@ -8,6 +8,7 @@ import {
   floorGroupBedCount,
   type BedFloorGroup,
   type BedRoomGroup,
+  type RoomPathCrumb,
 } from '../../utils/groupBedsByRoom';
 import { BuildingInventoryRoomSection } from './BuildingInventoryRoomSection';
 
@@ -19,6 +20,7 @@ type BuildingInventoryFloorSectionProps = {
   floorMenu?: React.ReactNode;
   renderRoomMenu?: (room: BedRoomGroup) => React.ReactNode;
   onRoomPress?: (room: BedRoomGroup) => void;
+  onPathCrumbPress?: (room: BedRoomGroup, crumb: RoomPathCrumb) => void;
   onBedPress?: (bed: BedSpaceListItemResponse) => void;
   onAddBed?: (room: BedRoomGroup) => void;
   onCommitPricing?: (
@@ -38,6 +40,7 @@ function BuildingInventoryFloorSectionComponent({
   floorMenu,
   renderRoomMenu,
   onRoomPress,
+  onPathCrumbPress,
   onBedPress,
   onAddBed,
   onCommitPricing,
@@ -89,6 +92,9 @@ function BuildingInventoryFloorSectionComponent({
               showAddBed={showAddBed}
               menu={renderRoomMenu?.(room)}
               onRoomPress={onRoomPress ? () => onRoomPress(room) : undefined}
+              onPathCrumbPress={
+                onPathCrumbPress ? crumb => onPathCrumbPress(room, crumb) : undefined
+              }
               onBedPress={onBedPress}
               onAddBed={onAddBed ? () => onAddBed(room) : undefined}
               onCommitPricing={onCommitPricing}

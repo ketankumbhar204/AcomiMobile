@@ -25,6 +25,7 @@ type LayoutSummaryCardProps = {
   statusCounts?: LayoutStatusCounts;
   illustration?: ImageSourcePropType;
   illustrationSize?: 'building' | 'floor' | 'unit' | 'room' | 'bed' | 'bedHero';
+  photo?: React.ReactNode;
   actions?: React.ReactNode;
   inactive?: boolean;
   editableName?: boolean;
@@ -53,6 +54,7 @@ export function LayoutSummaryCard({
   statusCounts,
   illustration,
   illustrationSize = 'building',
+  photo,
   actions,
   inactive = false,
   editableName = false,
@@ -62,7 +64,11 @@ export function LayoutSummaryCard({
 
   return (
     <View style={[styles.card, inactive && accommodationInactiveCardStyle]}>
-      {illustration ? (
+      {photo ? (
+        <View style={illustrationSize === 'floor' ? styles.floorIllustrationWrap : undefined}>
+          {photo}
+        </View>
+      ) : illustration ? (
         <View style={illustrationSize === 'floor' ? styles.floorIllustrationWrap : undefined}>
           <LayoutIllustration
             source={illustration}

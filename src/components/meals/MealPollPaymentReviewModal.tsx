@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { Image, Modal, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { UUID } from '../../api/types';
 import { Button } from '../ui/Button';
 import { colors, radius, spacing, typography } from '../../theme';
+import { ImagePreviewModal } from '../files/ImagePreviewModal';
 
 type MealPollPaymentReviewModalProps = {
   visible: boolean;
   memberName: string;
   memberId: UUID;
   proofImageUrl?: string | null;
+  proofFileId?: UUID | null;
   reviewing?: boolean;
   onClose: () => void;
   onApprove: (memberId: UUID, approvalRemarks?: string) => void;
@@ -21,6 +23,7 @@ export function MealPollPaymentReviewModal({
   memberName,
   memberId,
   proofImageUrl,
+  proofFileId,
   reviewing = false,
   onClose,
   onApprove,
@@ -29,6 +32,7 @@ export function MealPollPaymentReviewModal({
   const { t } = useTranslation();
   const [approvalRemarks, setApprovalRemarks] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
+  const [viewerOpen, setViewerOpen] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -50,7 +54,9 @@ export function MealPollPaymentReviewModal({
           <Text style={styles.hint}>{t('meals.poll.reviewPaymentHint')}</Text>
 
           {proofImageUrl ? (
-            <Image source={{ uri: proofImageUrl }} style={styles.preview} resizeMode="contain" />
+            <Pressable onPress={() => setViewerOpen(true)}>
+              <Image source={{ uri: proofImageUrl }} style={styles.preview} resizeMode="contain" />
+            </Pressable>
           ) : (
             <Text style={styles.missing}>{t('meals.poll.noProofImage')}</Text>
           )}
@@ -87,6 +93,13 @@ export function MealPollPaymentReviewModal({
           </View>
         </View>
       </View>
+      <ImagePreviewModal
+        visible={viewerOpen}
+        imageUrl={proofImageUrl}
+        fileId={proofFileId}
+        title={t('paymentCollection.proof.title', { defaultValue: 'Payment proof' })}
+        onClose={() => setViewerOpen(false)}
+      />
     </Modal>
   );
 }

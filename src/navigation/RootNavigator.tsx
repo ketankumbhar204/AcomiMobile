@@ -17,9 +17,11 @@ import {
   navigationRef,
   navigateBootstrapResult,
 } from './navigationRef';
+import { linking } from './linking';
 import type { RootStackParamList } from './types';
 import type { SpaceBootstrapResult } from '../store/spaceStore';
 import { usePushNotifications } from '../notifications/push/usePushNotifications';
+import { useUnseenEnquiryStartupRedirect } from '../notifications/push/useUnseenEnquiryStartupRedirect';
 import { devLog } from '../utils/devLog';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -76,11 +78,18 @@ export function RootNavigator() {
     isBootstrapping ||
     (isAuthenticated && !inAdminApp && (!hasSpaceBootstrapped || isSpaceBootstrapping));
 
+  const spaceReady =
+    inAdminApp || (hasSpaceBootstrapped && !isSpaceBootstrapping);
+
   usePushNotifications({
     navigationReady,
-    spaceReady: inAdminApp || (hasSpaceBootstrapped && !isSpaceBootstrapping),
+    spaceReady,
     inAdminApp,
   });
+
+  useUnseenEnquiryStartupRedirect(
+    Boolean(isAuthenticated && navigationReady && spaceReady && !inAdminApp && !showBootstrap),
+  );
 
   useEffect(() => {
     bootstrap().then(() => {
@@ -158,6 +167,7 @@ export function RootNavigator() {
     <View style={styles.root}>
       <NavigationContainer
         ref={navigationRef}
+        linking={linking}
         theme={navigationTheme}
         onReady={handleNavigationReady}>
         {stack}

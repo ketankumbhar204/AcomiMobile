@@ -86,6 +86,12 @@ export function AdminMessDetailScreen({ navigation, route }: Props) {
         </Card>
 
         <AdminDetailSection>
+          {detail.description ? (
+            <AdminDetailField
+              label={t('admin.common.description', { defaultValue: 'Description' })}
+              value={detail.description}
+            />
+          ) : null}
           {editingContact ? (
             <AdminRegistrationContactEditor
               ownerName={detail.ownerName}
@@ -127,6 +133,10 @@ export function AdminMessDetailScreen({ navigation, route }: Props) {
             label={t('admin.common.testLead')}
             value={detail.testLead ? t('common.yes') : t('common.no')}
           />
+          <AdminDetailField
+            label={t('admin.common.created', { defaultValue: 'Created' })}
+            value={new Date(detail.createdAt).toLocaleString()}
+          />
         </AdminDetailSection>
 
         <AdminDetailSection>
@@ -134,15 +144,30 @@ export function AdminMessDetailScreen({ navigation, route }: Props) {
             label={t('admin.common.address')}
             value={`${detail.addressLine}, ${detail.city}, ${detail.state} ${detail.pincode}`}
           />
+          {detail.mapUrl ? (
+            <AdminDetailField label={t('admin.common.mapLink')} value={detail.mapUrl} />
+          ) : null}
           <AdminDetailField
             label={t('admin.mess.monthlyPrice')}
             value={`₹${detail.monthlyPrice}`}
           />
           <AdminDetailField label={t('admin.mess.mealPrice')} value={`₹${detail.mealPrice}`} />
+          {detail.capacityEstimate != null ? (
+            <AdminDetailField
+              label={t('admin.common.capacityEstimate', { defaultValue: 'Capacity estimate' })}
+              value={String(detail.capacityEstimate)}
+            />
+          ) : null}
           {detail.claimedAt ? (
             <AdminDetailField
               label={t('admin.common.claimed')}
               value={new Date(detail.claimedAt).toLocaleString()}
+            />
+          ) : null}
+          {detail.convertedSpaceId ? (
+            <AdminDetailField
+              label={t('admin.common.convertedSpace', { defaultValue: 'Converted space' })}
+              value={detail.convertedSpaceId}
             />
           ) : null}
         </AdminDetailSection>

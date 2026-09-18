@@ -74,6 +74,7 @@ import { InventoryDashboardScreen } from '../screens/inventory/InventoryDashboar
 import { InventoryItemsScreen } from '../screens/inventory/InventoryItemsScreen';
 import { InventoryItemDetailsScreen } from '../screens/inventory/InventoryItemDetailsScreen';
 import { InventoryItemFormScreen } from '../screens/inventory/InventoryItemFormScreen';
+import { InquiryCreditsScreen } from '../screens/InquiryCreditsScreen';
 import { CapabilityStackGate } from '../components/ui/CapabilityStackGate';
 import { stackHeaderOptions } from '../theme';
 import { useTranslation } from 'react-i18next';
@@ -657,6 +658,11 @@ export function MainNavigator() {
       <Stack.Screen name="InventoryItems" component={InventoryItemsScreen} />
       <Stack.Screen name="InventoryItemDetails" component={InventoryItemDetailsScreen} />
       <Stack.Screen name="InventoryItemForm" component={InventoryItemFormScreen} />
+      <Stack.Screen
+        name="InquiryCredits"
+        component={InquiryCreditsScreen}
+        options={{ title: t('inquiryCredits.title', { defaultValue: 'Inquiry Credits' }) }}
+      />
       <Stack.Screen
         name="SpaceTabs"
         component={SpaceTabsScreen}

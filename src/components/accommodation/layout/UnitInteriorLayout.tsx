@@ -7,6 +7,8 @@ import { matchesAccommodationSearch } from '../../../utils/accommodationLayoutSe
 import { chunkIntoRows } from './visual/planLayoutUtils';
 import { LayoutSummaryCard } from './cards/LayoutSummaryCard';
 import { RoomLayoutCard } from './cards/RoomLayoutCard';
+import { LayoutEntityPhoto } from './cards/LayoutEntityPhoto';
+import { LayoutIllustration } from './cards/LayoutIllustration';
 import { calcOccupancyPercent } from './cards/occupancyUtils';
 import { getUnitIllustration } from './illustrations/illustrationAssets';
 import { aggregateRoomBedStatusCounts } from './layoutSummaryStats';
@@ -14,6 +16,8 @@ const GRID_COLUMNS = 2;
 
 type UnitInteriorLayoutProps = {
   unitName?: string;
+  unitId?: string;
+  unitPhotoFileId?: string | null;
   rooms: RoomListItemResponse[];
   searchQuery: string;
   onRoomPress: (room: RoomListItemResponse) => void;
@@ -23,6 +27,8 @@ type UnitInteriorLayoutProps = {
 
 export function UnitInteriorLayout({
   unitName,
+  unitId,
+  unitPhotoFileId,
   rooms,
   searchQuery,
   onRoomPress,
@@ -47,6 +53,23 @@ export function UnitInteriorLayout({
         title={unitName ?? t('accommodation.rooms.title')}
         illustration={getUnitIllustration(rooms.length, totals.bedCount)}
         illustrationSize="unit"
+        photo={
+          unitId ? (
+            <LayoutEntityPhoto
+              kind="unit"
+              entityId={unitId}
+              fileId={unitPhotoFileId}
+              title={unitName}
+              height={100}
+              fallback={
+                <LayoutIllustration
+                  source={getUnitIllustration(rooms.length, totals.bedCount)}
+                  size="unit"
+                />
+              }
+            />
+          ) : undefined
+        }
         occupancyPercent={occupancyPercent}
         statusCounts={statusCounts}
         metrics={[          {

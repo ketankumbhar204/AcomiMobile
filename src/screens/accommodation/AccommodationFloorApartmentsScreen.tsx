@@ -32,6 +32,8 @@ import { useAccommodationViewMode } from '../../hooks/useAccommodationViewMode';
 import { useAccommodationSearchScroll } from '../../hooks/useAccommodationSearchScroll';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
+import { canEditEntityPhoto } from '../../files/entityPhoto';
+import { EntityPhotoProvider } from '../../files/EntityPhotoContext';
 import { useUnitsByFloor } from '../../hooks/useUnitsByFloor';
 import type { MainStackParamList } from '../../navigation/types';
 import { colors, spacing, typography } from '../../theme';
@@ -42,7 +44,7 @@ import {
 } from '../../utils/accommodationContext';
 import {
   accommodationTrailContextFromParent,
-  navigateToAccommodationTrailSegment,
+  handleAccommodationTrailPress,
 } from '../../utils/accommodationNavigation';
 import { renameUnitName } from '../../utils/accommodationInlineRename';
 import { useToastStore } from '../../store/toastStore';
@@ -127,9 +129,9 @@ export function AccommodationFloorApartmentsScreen() {
 
   const onTrailNavigate = useCallback(
     (level: AccommodationTrailLevel) => {
-      navigateToAccommodationTrailSegment(navigation, trailContext, level);
+      handleAccommodationTrailPress(navigation, trailContext, level, canManage);
     },
-    [navigation, trailContext],
+    [canManage, navigation, trailContext],
   );
 
   const openUnitRooms = (unit: UnitListItemResponse) => {
@@ -216,6 +218,7 @@ export function AccommodationFloorApartmentsScreen() {
     isLayout && !showLoading && units.length > 0 ? (
       <ApartmentFloorPlanLayout
         floorName={floorName}
+        floorId={floorId}
         units={units}
         searchQuery={searchQuery}
         onUnitPress={openUnitRooms}
@@ -249,6 +252,9 @@ export function AccommodationFloorApartmentsScreen() {
 
   return (
     <RequireAccommodationAccess spaceId={spaceId}>
+    <EntityPhotoProvider
+      spaceId={spaceId}
+      canEdit={canEditEntityPhoto(permissions.membershipRole)}>
     <View style={styles.container}>
       <FlatList
         ref={listRef}
@@ -301,6 +307,7 @@ export function AccommodationFloorApartmentsScreen() {
       ) : null}
       {hierarchyPicker.pickerModal}
     </View>
+    </EntityPhotoProvider>
     </RequireAccommodationAccess>
   );
 }

@@ -49,7 +49,7 @@ import { spacing, typography } from '../../theme';
 import { buildAccommodationTrail } from '../../utils/accommodationContext';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
 import { buildUnitOccupancyTarget } from '../../utils/buildOccupancyTarget';
-import { navigateToAccommodationTrailSegment } from '../../utils/accommodationNavigation';
+import { handleAccommodationTrailPress } from '../../utils/accommodationNavigation';
 import { useAccommodationUiProfile } from '../../hooks/useAccommodationUiProfile';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'UnitDetail'>;
@@ -81,6 +81,7 @@ export function UnitDetailScreen() {
     unit?.status === 'OCCUPIED' || unit?.status === 'RESERVED';
   const canViewOccupant = permissions.canViewSpaceOccupancies;
   const canManageOccupancyActions = permissions.canManageOccupancy;
+  const canManage = permissions.canManageAccommodation;
   const {
     occupancy,
     loading: occupancyLoading,
@@ -123,10 +124,10 @@ export function UnitDetailScreen() {
   );
 
   const onTrailNavigate = useCallback(
-    (level: Parameters<typeof navigateToAccommodationTrailSegment>[2]) => {
-      navigateToAccommodationTrailSegment(navigation, trailContext, level);
+    (level: Parameters<typeof handleAccommodationTrailPress>[2]) => {
+      handleAccommodationTrailPress(navigation, trailContext, level, canManage);
     },
-    [navigation, trailContext],
+    [canManage, navigation, trailContext],
   );
 
   useLayoutEffect(() => {

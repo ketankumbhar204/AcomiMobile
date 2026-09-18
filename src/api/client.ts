@@ -105,6 +105,7 @@ function logError(error: AxiosError<ApiErrorBody>): void {
 function attachAuthHeader(
   config: InternalAxiosRequestConfig,
 ): InternalAxiosRequestConfig {
+  config.headers['X-ACOMI-CLIENT'] = 'ANDROID';
   if (authToken) {
     config.headers.Authorization = `Bearer ${authToken}`;
   }

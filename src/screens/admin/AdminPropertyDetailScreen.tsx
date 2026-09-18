@@ -90,6 +90,12 @@ export function AdminPropertyDetailScreen({ navigation, route }: Props) {
 
         <AdminDetailSection>
           <AdminDetailField label={t('admin.common.type')} value={detail.propertyType} />
+          {detail.description ? (
+            <AdminDetailField
+              label={t('admin.common.description', { defaultValue: 'Description' })}
+              value={detail.description}
+            />
+          ) : null}
           {editingContact ? (
             <AdminRegistrationContactEditor
               ownerName={detail.ownerName}
@@ -107,6 +113,12 @@ export function AdminPropertyDetailScreen({ navigation, route }: Props) {
                 <AdminDetailField
                   label={t('admin.common.alternateMobile')}
                   value={detail.alternateMobileNumber}
+                />
+              ) : null}
+              {detail.mobileVerifiedAt ? (
+                <AdminDetailField
+                  label={t('admin.users.verifiedAt', { defaultValue: 'Mobile verified at' })}
+                  value={new Date(detail.mobileVerifiedAt).toLocaleString()}
                 />
               ) : null}
               <Button
@@ -131,6 +143,16 @@ export function AdminPropertyDetailScreen({ navigation, route }: Props) {
             label={t('admin.common.testLead')}
             value={detail.testLead ? t('common.yes') : t('common.no')}
           />
+          <AdminDetailField
+            label={t('admin.common.created', { defaultValue: 'Created' })}
+            value={new Date(detail.createdAt).toLocaleString()}
+          />
+          {detail.updatedAt ? (
+            <AdminDetailField
+              label={t('admin.common.updated', { defaultValue: 'Updated' })}
+              value={new Date(detail.updatedAt).toLocaleString()}
+            />
+          ) : null}
         </AdminDetailSection>
 
         <AdminDetailSection>
@@ -138,14 +160,50 @@ export function AdminPropertyDetailScreen({ navigation, route }: Props) {
             label={t('admin.common.address')}
             value={`${detail.addressLine}, ${detail.city}, ${detail.state} ${detail.pincode}`}
           />
+          {detail.mapUrl ? (
+            <AdminDetailField label={t('admin.common.mapLink')} value={detail.mapUrl} />
+          ) : null}
           <AdminDetailField
             label={t('admin.property.startingPrice')}
             value={`₹${detail.startingPrice}`}
           />
+          {detail.priceBasis ? (
+            <AdminDetailField
+              label={t('admin.property.priceBasis', { defaultValue: 'Price basis' })}
+              value={detail.priceBasis}
+            />
+          ) : null}
+          {detail.capacityEstimate != null ? (
+            <AdminDetailField
+              label={t('admin.common.capacityEstimate', { defaultValue: 'Capacity estimate' })}
+              value={String(detail.capacityEstimate)}
+            />
+          ) : null}
+          {detail.amenities?.length ? (
+            <AdminDetailField
+              label={t('admin.property.amenities', { defaultValue: 'Amenities' })}
+              value={detail.amenities
+                .map(item => item.customLabel || item.code)
+                .filter(Boolean)
+                .join(', ')}
+            />
+          ) : null}
           {detail.claimedAt ? (
             <AdminDetailField
               label={t('admin.common.claimed')}
               value={new Date(detail.claimedAt).toLocaleString()}
+            />
+          ) : null}
+          {detail.claimedVia ? (
+            <AdminDetailField
+              label={t('admin.common.claimedVia', { defaultValue: 'Claimed via' })}
+              value={detail.claimedVia}
+            />
+          ) : null}
+          {detail.convertedSpaceId ? (
+            <AdminDetailField
+              label={t('admin.common.convertedSpace', { defaultValue: 'Converted space' })}
+              value={detail.convertedSpaceId}
             />
           ) : null}
         </AdminDetailSection>

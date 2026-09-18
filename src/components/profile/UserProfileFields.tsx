@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import {
   MapPin,
@@ -13,6 +13,7 @@ import { MemberDetailRow } from '../member/MemberDetailRow';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { isSelectableMemberGender, memberGenderLabelKey } from '../../utils/memberGender';
 import { ProfileAssetUploadRow } from './ProfileAssetUploadRow';
+import { ImagePreviewModal } from '../files/ImagePreviewModal';
 
 type UserProfileFieldsProps = {
   user: UserResponse;
@@ -73,6 +74,7 @@ export function UserProfileFields({
   onUploadAddressProof,
 }: UserProfileFieldsProps) {
   const { t } = useTranslation();
+  const [photoViewerOpen, setPhotoViewerOpen] = React.useState(false);
 
   const genderLabel = isSelectableMemberGender(user.gender)
     ? t(memberGenderLabelKey(user.gender))
@@ -97,7 +99,9 @@ export function UserProfileFields({
           {showPhotoMeta ? (
             <View style={styles.photoRow}>
               {photoUri ? (
-                <Image source={{ uri: photoUri }} style={styles.photo} />
+                <Pressable onPress={() => setPhotoViewerOpen(true)}>
+                  <Image source={{ uri: photoUri }} style={styles.photo} />
+                </Pressable>
               ) : (
                 <View style={styles.avatarFallback}>
                   <Text style={styles.avatarText}>
@@ -239,6 +243,13 @@ export function UserProfileFields({
           isLast
         />
       </View>
+      <ImagePreviewModal
+        visible={photoViewerOpen}
+        imageUrl={photoUri || user.profilePhotoUrl}
+        fileId={user.profilePhotoFileId}
+        title={t('profileCompletion.fields.profilePhoto')}
+        onClose={() => setPhotoViewerOpen(false)}
+      />
     </View>
   );
 }

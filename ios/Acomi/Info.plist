@@ -36,6 +36,8 @@
 	</dict>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>ACOMI uses your photo library so you can upload a profile photo, identity documents, payment proofs, and complaint photos.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>ACOMI uses the camera so you can take a profile photo, identity documents, payment proofs, and complaint photos.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string></string>
 	<key>UILaunchStoryboardName</key>

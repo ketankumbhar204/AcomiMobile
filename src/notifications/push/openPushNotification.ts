@@ -73,7 +73,10 @@ export async function openPushNotification(
     payload.type === 'CONTACT_ENQUIRY_EXPIRED'
   ) {
     markReadBestEffort(payload);
-    navigateMainStack('MyEnquiries', payload.entityId ? { enquiryId: payload.entityId } : undefined);
+    navigateMainStack('MemberTabs', {
+      screen: 'Enquiries',
+      params: payload.entityId ? { enquiryId: payload.entityId } : undefined,
+    });
     return;
   }
 
