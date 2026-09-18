@@ -24,17 +24,25 @@ import { getAccommodationInvalidationGeneration, subscribeAccommodationInvalidat
 import type { BuildingResponse, BuildingSummaryResponse, SpaceType } from '../../api/types';
 import { AccommodationSearchBar, BuildingListCard } from '../../components/accommodation';
 import { AccommodationHomeSpeedDial } from '../../components/accommodation/AccommodationHomeSpeedDial';
-import { DashboardAccommodationOperations } from '../../components/dashboard/DashboardAccommodationOperations';
+import {
+  AccommodationOpsFocusInventory,
+  type RoomsOpsFocus,
+} from '../../components/accommodation/AccommodationOpsFocusInventory';
+import {
+  DashboardAccommodationOperations,
+  type AccommodationOpsMetricId,
+} from '../../components/dashboard/DashboardAccommodationOperations';
 import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
 import { DashboardActionRow } from '../../components/dashboard/shared/DashboardActionRow';
 import { SetupActionCard } from '../../components/accommodation/SetupActionCard';
 import { CoachmarkAnchor, CoachmarkSequence } from '../../components/coachmarks';
 import { RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
 import { ENABLE_SETUP_COACHMARKS } from '../../coachmarks';
+import { paymentsApi } from '../../api/paymentsApi';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useBuildings } from '../../hooks/useBuildings';
 import { useDashboardAccommodationOperationsQuick } from '../../hooks/useDashboardAccommodationOperationsQuick';
-import { useNavigateFromSpaceTab } from '../../hooks/useNavigateFromSpaceTab';
+import { useSpaceOccupancyList } from '../../hooks/useSpaceOccupancyList';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useSpaceLifecycle } from '../../hooks/useSpaceLifecycle';
 import { useSpaceLifecycleSignals } from '../../hooks/useSpaceLifecycleSignals';
@@ -45,6 +53,7 @@ import { useToastStore } from '../../store/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { matchesSearch } from '../../utils/accommodationSearch';
 import { renameBuildingName } from '../../utils/accommodationInlineRename';
+import { isAccommodationApplicable } from '../../utils/accommodationProfile';
 import { currentMonthKey } from '../../utils/dashboardFinancial';
 import { peekDashboardSummary } from '../../utils/dashboardQueryCache';
 import { peekPendingActions } from '../../utils/pendingActionsQueryCache';
@@ -78,15 +87,14 @@ export function AccommodationHomeScreen() {
   const showFab = permissions.canManageAccommodation;
   const canViewOccupancyDrilldown =
     permissions.canManageOccupancy || permissions.canViewSpaceOccupancies === true;
-  const navigateFromTab = useNavigateFromSpaceTab();
   const showToast = useToastStore(state => state.showToast);
   const showOwnerSetup =
     canManageNotifications(permissions) &&
     Boolean(spaceType) &&
-    isAccommodationApplicable(spaceType);
+    Boolean(spaceType && isAccommodationApplicable(spaceType));
 
   const pendingActionCount = spaceId
-    ? peekPendingActions(spaceId)?.length ?? 0
+    ? peekPendingActions(spaceId)?.totalCount ?? 0
     : 0;
   const { context: lifecycleContext } = useSpaceLifecycleSignals({
     spaceId,
@@ -130,10 +138,92 @@ export function AccommodationHomeScreen() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [opsFocus, setOpsFocus] = useState<RoomsOpsFocus | null>(null);
+  const [pendingMemberIds, setPendingMemberIds] = useState<Set<string>>(new Set());
   const [summaries, setSummaries] = useState<Record<string, BuildingSummaryResponse>>({});
   const [summaryGeneration, setSummaryGeneration] = useState(
     getAccommodationInvalidationGeneration(),
   );
+
+  const paymentMonth = currentMonthKey();
+  const moveInsQuery = useSpaceOccupancyList({
+    spaceId,
+    mode: 'moveInsThisMonth',
+    enabled: Boolean(spaceId && opsFocus === 'MOVE_INS_THIS_MONTH'),
+  });
+  const activeOccupanciesForPending = useSpaceOccupancyList({
+    spaceId,
+    mode: 'active',
+    enabled: Boolean(spaceId && opsFocus === 'PENDING_PAYMENTS'),
+  });
+
+  useEffect(() => {
+    if (opsFocus !== 'PENDING_PAYMENTS' || !spaceId) {
+      setPendingMemberIds(new Set());
+      return;
+    }
+    let cancelled = false;
+    void paymentsApi
+      .getPaymentsMembers(spaceId, {
+        month: paymentMonth,
+        status: 'PENDING',
+        page: 0,
+        size: 500,
+      })
+      .then(response => {
+        if (cancelled) {
+          return;
+        }
+        setPendingMemberIds(
+          new Set((response.page.content ?? []).map(member => member.memberId)),
+        );
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPendingMemberIds(new Set());
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [opsFocus, paymentMonth, spaceId]);
+
+  const focusedBedIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (opsFocus === 'MOVE_INS_THIS_MONTH') {
+      for (const row of moveInsQuery.items) {
+        if (row.bedId) {
+          ids.add(row.bedId);
+        }
+      }
+      return ids;
+    }
+    if (opsFocus === 'PENDING_PAYMENTS') {
+      for (const row of activeOccupanciesForPending.items) {
+        if (row.bedId && pendingMemberIds.has(row.memberId)) {
+          ids.add(row.bedId);
+        }
+      }
+    }
+    return ids;
+  }, [
+    activeOccupanciesForPending.items,
+    moveInsQuery.items,
+    opsFocus,
+    pendingMemberIds,
+  ]);
+
+  const selectedOpsMetricId = useMemo((): AccommodationOpsMetricId | null => {
+    if (opsFocus === 'OCCUPIED') return 'occupied';
+    if (opsFocus === 'VACANT') return 'vacant';
+    if (opsFocus === 'MOVE_INS_THIS_MONTH') return 'moveIns';
+    if (opsFocus === 'PENDING_PAYMENTS') return 'pendingPay';
+    return null;
+  }, [opsFocus]);
+
+  const toggleOpsFocus = useCallback((next: RoomsOpsFocus) => {
+    setOpsFocus(prev => (prev === next ? null : next));
+  }, []);
 
   useEffect(() => {
     return subscribeAccommodationInvalidation(() => {
@@ -221,31 +311,20 @@ export function AccommodationHomeScreen() {
   }, [quickAccommodation, refresh]);
 
   const handleOccupiedBedsPress = useCallback(() => {
-    // #region agent log
-    if (__DEV__) {
-      fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'AccommodationHomeScreen.tsx:handleOccupiedBedsPress',message:'occupancy card nav',data:{target:'DashboardOccupancyList',mode:'active',spaceId},timestamp:Date.now(),hypothesisId:'H1',runId:'accom-ui'})}).catch(()=>{});
-    }
-    // #endregion
-    navigateFromTab('DashboardOccupancyList', { spaceId, mode: 'active' });
-  }, [navigateFromTab, spaceId]);
+    toggleOpsFocus('OCCUPIED');
+  }, [toggleOpsFocus]);
 
   const handleVacantBedsPress = useCallback(() => {
-    // #region agent log
-    if (__DEV__) {
-      fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'AccommodationHomeScreen.tsx:handleVacantBedsPress',message:'vacant card nav',data:{target:'DashboardBedInventory',status:'AVAILABLE',spaceId},timestamp:Date.now(),hypothesisId:'H1',runId:'accom-ui'})}).catch(()=>{});
-    }
-    // #endregion
-    navigateFromTab('DashboardBedInventory', { spaceId, status: 'AVAILABLE' });
-  }, [navigateFromTab, spaceId]);
+    toggleOpsFocus('VACANT');
+  }, [toggleOpsFocus]);
 
   const handleMoveInsPress = useCallback(() => {
-    // #region agent log
-    if (__DEV__) {
-      fetch('http://127.0.0.1:7467/ingest/f9f35980-71d6-4fcd-84a3-a0c24a6875ff',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1a4af9'},body:JSON.stringify({sessionId:'1a4af9',location:'AccommodationHomeScreen.tsx:handleMoveInsPress',message:'move-ins card nav',data:{target:'DashboardOccupancyList',mode:'moveInsThisMonth',spaceId},timestamp:Date.now(),hypothesisId:'H1',runId:'accom-ui'})}).catch(()=>{});
-    }
-    // #endregion
-    navigateFromTab('DashboardOccupancyList', { spaceId, mode: 'moveInsThisMonth' });
-  }, [navigateFromTab, spaceId]);
+    toggleOpsFocus('MOVE_INS_THIS_MONTH');
+  }, [toggleOpsFocus]);
+
+  const handlePendingPaymentsPress = useCallback(() => {
+    toggleOpsFocus('PENDING_PAYMENTS');
+  }, [toggleOpsFocus]);
 
   const openBuilder = (building: BuildingResponse) => {
     devLog('[AccommodationHomeScreen] open builder', building.buildingId);
@@ -354,6 +433,7 @@ export function AccommodationHomeScreen() {
                 <DashboardAccommodationOperations
                   hideTitle
                   operations={accommodationOperations}
+                  selectedMetricId={selectedOpsMetricId}
                   onOccupiedPress={
                     canOpenOccupancyDrilldown ? handleOccupiedBedsPress : undefined
                   }
@@ -362,6 +442,9 @@ export function AccommodationHomeScreen() {
                   }
                   onMoveInsPress={
                     canOpenOccupancyDrilldown ? handleMoveInsPress : undefined
+                  }
+                  onPendingPress={
+                    canOpenOccupancyDrilldown ? handlePendingPaymentsPress : undefined
                   }
                 />
               </>
@@ -400,7 +483,14 @@ export function AccommodationHomeScreen() {
               </View>
             ) : null}
 
-            {!isEmpty ? (
+            {opsFocus ? (
+              <AccommodationOpsFocusInventory
+                spaceId={spaceId}
+                opsFocus={opsFocus}
+                focusedBedIds={focusedBedIds}
+                onClear={() => setOpsFocus(null)}
+              />
+            ) : !isEmpty ? (
               <>
                 <DashboardSectionTitle
                   title={t('accommodation.home.buildingsTitle', {
@@ -417,7 +507,7 @@ export function AccommodationHomeScreen() {
               </>
             ) : null}
 
-            {showLoading ? (
+            {opsFocus ? null : showLoading ? (
               <>
                 <SkeletonCard />
                 <View style={styles.gap} />
