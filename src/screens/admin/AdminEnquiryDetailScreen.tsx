@@ -72,6 +72,12 @@ export function AdminEnquiryDetailScreen({ route }: Props) {
             label={t('admin.enquiries.columns.listing')}
             value={detail.spaceName}
           />
+          {detail.spaceType ? (
+            <AdminDetailField label={t('admin.common.type')} value={detail.spaceType} />
+          ) : null}
+          {detail.spaceAddress ? (
+            <AdminDetailField label={t('admin.common.address')} value={detail.spaceAddress} />
+          ) : null}
           <AdminDetailField
             label={t('admin.enquiries.columns.requestedBy')}
             value={`${detail.requesterName} · ${
@@ -89,10 +95,32 @@ export function AdminEnquiryDetailScreen({ route }: Props) {
             label={t('admin.enquiries.expires')}
             value={new Date(detail.expiresAt).toLocaleString()}
           />
+          {detail.sharedAt ? (
+            <AdminDetailField
+              label={t('admin.enquiries.sharedAt', { defaultValue: 'Shared at' })}
+              value={new Date(detail.sharedAt).toLocaleString()}
+            />
+          ) : null}
+          {detail.reviewedAt ? (
+            <AdminDetailField
+              label={t('admin.enquiries.reviewedAt', { defaultValue: 'Reviewed at' })}
+              value={new Date(detail.reviewedAt).toLocaleString()}
+            />
+          ) : null}
+          {detail.rejectionReason ? (
+            <AdminDetailField
+              label={t('admin.enquiries.rejectReason')}
+              value={detail.rejectionReason}
+            />
+          ) : null}
         </AdminDetailSection>
 
         <Text style={styles.sectionTitle}>{t('admin.enquiries.ownerContact')}</Text>
         <AdminDetailSection>
+          <AdminDetailField
+            label={t('admin.enquiries.contactAvailable', { defaultValue: 'Contact available' })}
+            value={contact.available ? t('common.yes') : t('common.no')}
+          />
           <AdminDetailField
             label={t('admin.enquiries.ownerName')}
             value={contact.ownerName || t('admin.labels.emDash')}

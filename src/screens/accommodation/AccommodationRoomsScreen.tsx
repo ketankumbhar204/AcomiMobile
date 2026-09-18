@@ -39,6 +39,8 @@ import { useAccommodationViewMode } from '../../hooks/useAccommodationViewMode';
 import { useAccommodationSearchScroll } from '../../hooks/useAccommodationSearchScroll';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
+import { canEditEntityPhoto } from '../../files/entityPhoto';
+import { EntityPhotoProvider } from '../../files/EntityPhotoContext';
 import { useBulkRooms } from '../../hooks/useBulkRooms';
 import { useDuplicateRoom } from '../../hooks/useDuplicateRoom';
 import { useRoomsByFloor } from '../../hooks/useRoomsByFloor';
@@ -59,7 +61,7 @@ import { inferRoomListStatus } from '../../utils/inferRoomListStatus';
 import { buildAccommodationTrail } from '../../utils/accommodationContext';
 import {
   accommodationTrailContextFromParent,
-  navigateToAccommodationTrailSegment,
+  handleAccommodationTrailPress,
 } from '../../utils/accommodationNavigation';
 import { invalidateAccommodationQueries } from '../../utils/accommodationQueryCache';
 import { renameRoomName } from '../../utils/accommodationInlineRename';
@@ -195,10 +197,10 @@ export function AccommodationRoomsScreen() {
   );
 
   const onTrailNavigate = useCallback(
-    (level: Parameters<typeof navigateToAccommodationTrailSegment>[2]) => {
-      navigateToAccommodationTrailSegment(navigation, trailContext, level);
+    (level: Parameters<typeof handleAccommodationTrailPress>[2]) => {
+      handleAccommodationTrailPress(navigation, trailContext, level, canManage);
     },
-    [navigation, trailContext],
+    [canManage, navigation, trailContext],
   );
 
   const buildRoomContext = useCallback(
@@ -364,6 +366,7 @@ export function AccommodationRoomsScreen() {
       parentType === 'floor' ? (
         <CorridorFloorPlanLayout
           floorName={parentName}
+          floorId={parentId}
           rooms={rooms}
           searchQuery={searchQuery}
           onRoomPress={openRoom}
@@ -372,6 +375,7 @@ export function AccommodationRoomsScreen() {
       ) : (
         <UnitInteriorLayout
           unitName={parentName}
+          unitId={parentId}
           rooms={rooms}
           searchQuery={searchQuery}
           onRoomPress={openRoom}
@@ -393,6 +397,9 @@ export function AccommodationRoomsScreen() {
 
   return (
     <RequireAccommodationAccess spaceId={spaceId}>
+      <EntityPhotoProvider
+        spaceId={spaceId}
+        canEdit={canEditEntityPhoto(permissions.membershipRole)}>
     <View style={styles.root}>
       <FlatList
         ref={listRef}
@@ -542,6 +549,7 @@ export function AccommodationRoomsScreen() {
         }}
       />
     </View>
+      </EntityPhotoProvider>
     </RequireAccommodationAccess>
   );
 }

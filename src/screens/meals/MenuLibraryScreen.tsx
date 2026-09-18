@@ -30,6 +30,7 @@ import { useMenuLibrary } from '../../hooks/useMenuLibrary';
 import { useMainStackNavigation } from '../../hooks/useMainStackNavigation';
 import { useMealPricingPolicy } from '../../hooks/useMealPricingPolicy';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
+import { canEditEntityPhoto } from '../../files/entityPhoto';
 import type { MainStackParamList, SpaceTabParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
@@ -138,6 +139,7 @@ export function MenuLibraryScreen({ spaceId, initialTab }: MenuLibraryScreenProp
   );
 
   const canManage = permissions.canManageMeals === true;
+  const canEditPhoto = canEditEntityPhoto(permissions.membershipRole);
   const inlineBusy = inlineEditor !== null || editingItemId !== null;
 
   const closeInlineEditors = useCallback(() => {
@@ -440,6 +442,9 @@ export function MenuLibraryScreen({ spaceId, initialTab }: MenuLibraryScreenProp
               items={filteredItems}
               categoryName={selectedCategory?.name}
               canManage={canManage}
+              spaceId={spaceId}
+              canEditPhoto={canEditPhoto}
+              onPhotoChanged={() => void reload()}
               onRemoveCategory={
                 selectedCategory && canManage
                   ? () => removeCategory(selectedCategory)
@@ -485,6 +490,9 @@ export function MenuLibraryScreen({ spaceId, initialTab }: MenuLibraryScreenProp
             onSelect={setSelectedComboId}
             canManage={canManage}
             hideTitle
+            spaceId={spaceId}
+            canEditPhoto={canEditPhoto}
+            onPhotoChanged={() => void reload()}
             onAddCombo={() => openComboForm('create')}
             onEditCombo={combo => openComboForm('edit', combo.comboId)}
             onRemoveCombo={canManage ? removeCombo : undefined}
@@ -557,6 +565,9 @@ export function MenuLibraryScreen({ spaceId, initialTab }: MenuLibraryScreenProp
                       items={extrasVisibleItems}
                       categoryName={extrasSelectedCategory?.name}
                       canManage={canManage}
+                      spaceId={spaceId}
+                      canEditPhoto={canEditPhoto}
+                      onPhotoChanged={() => void reload()}
                       isAdding={false}
                       editingItemId={editingItemId}
                       onCancelAdd={closeInlineEditors}

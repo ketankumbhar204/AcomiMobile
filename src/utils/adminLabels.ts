@@ -39,6 +39,17 @@ export function formatAdminUserName(name: string | null | undefined): string {
   return trimmed;
 }
 
+export function formatAdminUserMobile(mobile: string | null | undefined): string {
+  const trimmed = mobile?.trim() ?? '';
+  if (!trimmed) {
+    return i18n.t('admin.labels.emDash');
+  }
+  if (trimmed.toLowerCase().startsWith('deleted_')) {
+    return i18n.t('admin.labels.deletedAccount', { defaultValue: 'Deleted account' });
+  }
+  return trimmed;
+}
+
 export function formatAdminAssociatedSpaces(spaces: Array<{ name: string; type: string }>): string {
   if (!spaces.length) {
     return i18n.t('admin.labels.emDash');

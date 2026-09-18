@@ -58,6 +58,8 @@ export function AdminAddMessScreen() {
   const [mapUrl, setMapUrl] = useState('');
   const [monthlyPrice, setMonthlyPrice] = useState('');
   const [mealPrice, setMealPrice] = useState('');
+  const [description, setDescription] = useState('');
+  const [capacityEstimate, setCapacityEstimate] = useState('');
   const [testLead, setTestLead] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -108,6 +110,19 @@ export function AdminAddMessScreen() {
       }
     }
 
+    let capacity: number | undefined;
+    if (capacityEstimate.trim()) {
+      capacity = Number(capacityEstimate);
+      if (!Number.isFinite(capacity) || capacity < 0 || !Number.isInteger(capacity)) {
+        setError(
+          t('admin.mess.errors.capacity', {
+            defaultValue: 'Enter a valid capacity estimate, or leave it blank.',
+          }),
+        );
+        return;
+      }
+    }
+
     const payload: AdminCreateMessRegistrationRequest = {};
     const name = optionalText(messName);
     const owner = optionalText(ownerName);
@@ -118,8 +133,10 @@ export function AdminAddMessScreen() {
     const stateValue = optionalText(state);
     const pincodeValue = optionalText(pincode);
     const map = optionalText(mapUrl);
+    const descriptionValue = optionalText(description);
     if (name) payload.messName = name;
     if (owner) payload.ownerName = owner;
+    if (descriptionValue) payload.description = descriptionValue;
     if (mobile) payload.mobileNumber = mobile;
     if (alternateMobile) payload.alternateMobileNumber = alternateMobile;
     if (address) payload.addressLine = address;
@@ -129,6 +146,7 @@ export function AdminAddMessScreen() {
     if (map) payload.mapUrl = map;
     if (monthly !== undefined) payload.monthlyPrice = monthly;
     if (meal !== undefined) payload.mealPrice = meal;
+    if (capacity !== undefined) payload.capacityEstimate = capacity;
     if (testLead) payload.testLead = true;
 
     setLoading(true);
@@ -173,6 +191,21 @@ export function AdminAddMessScreen() {
                   value={messName}
                   onChangeText={setMessName}
                   leadingIcon={ChefHat}
+                />
+                <FormInput
+                  label={t('admin.common.description', { defaultValue: 'Description' })}
+                  value={description}
+                  onChangeText={setDescription}
+                  hint={t('admin.common.optionalHint', { defaultValue: 'Optional' })}
+                />
+                <FormInput
+                  label={t('admin.common.capacityEstimate', {
+                    defaultValue: 'Capacity estimate',
+                  })}
+                  value={capacityEstimate}
+                  onChangeText={setCapacityEstimate}
+                  keyboardType="number-pad"
+                  hint={t('admin.common.optionalHint', { defaultValue: 'Optional' })}
                 />
               </AdminFormSection>
 

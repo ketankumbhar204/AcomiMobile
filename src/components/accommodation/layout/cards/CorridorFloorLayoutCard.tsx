@@ -6,6 +6,7 @@ import { colors, radius, shadows, spacing, typography } from '../../../../theme'
 import { getFloorIllustration } from '../illustrations/illustrationAssets';
 import { CircularOccupancyIndicator } from './CircularOccupancyIndicator';
 import { LayoutCardShell } from './LayoutCardShell';
+import { LayoutEntityPhoto } from './LayoutEntityPhoto';
 import { OccupancyLevelBadge } from './OccupancyLevelBadge';
 import { OccupancyProgressBar } from './OccupancyProgressBar';
 import { calcOccupancyPercent, getOccupancyLevel } from './occupancyUtils';
@@ -41,11 +42,20 @@ export function CorridorFloorLayoutCard({
         cardStyle={[styles.card, highlighted && styles.cardHighlighted]}
         pressedStyle={styles.pressed}>
         <View style={styles.imageBanner}>
-          <Image
-            source={getFloorIllustration('CORRIDOR_PG')}
-            style={styles.corridorImage}
-            resizeMode="contain"
-            accessibilityIgnoresInvertColors
+          <LayoutEntityPhoto
+            kind="floor"
+            entityId={floor.floorId}
+            fileId={floor.photoFileId}
+            title={floor.name}
+            height={CORRIDOR_IMAGE_HEIGHT}
+            fallback={
+              <Image
+                source={getFloorIllustration('CORRIDOR_PG')}
+                style={styles.corridorImage}
+                resizeMode="contain"
+                accessibilityIgnoresInvertColors
+              />
+            }
           />
         </View>
 

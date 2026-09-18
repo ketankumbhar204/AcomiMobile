@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
-import { Building2, Home, Search, UserRound } from 'lucide-react-native';
+import { Building2, Home, MessageCircle, Search, UserRound } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { FindAPlaceScreen } from '../screens/FindAPlaceScreen';
 import { MemberHomeScreen } from '../screens/MemberHomeScreen';
+import { MyEnquiriesScreen } from '../screens/MyEnquiriesScreen';
 import { MySpacesScreen } from '../screens/MySpacesScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
+import { useAccountEnquiryUnreadCount } from '../hooks/useAccountEnquiryUnreadCount';
 import { useSpaceStore } from '../store/spaceStore';
 import { colors, tabBarOptions, tabHeaderOptions } from '../theme';
 import { getAccountIntent } from '../utils/accountIntent';
@@ -18,6 +20,7 @@ const Tab = createBottomTabNavigator<MemberTabParamList>();
 const TAB_ICONS: Record<keyof MemberTabParamList, LucideIcon> = {
   Home: Home,
   FindAPlace: Search,
+  Enquiries: MessageCircle,
   Profile: UserRound,
 };
 
@@ -71,13 +74,14 @@ function renderMemberTabIcon(
 }
 
 /**
- * Zero-space: Home · Find a place · Profile
- * With spaces: My Spaces (same Home tab) · Find a place · Profile
+ * Zero-space: Home · Find a place · Enquiries · Profile
+ * With spaces: My Spaces (same Home tab) · Find a place · Enquiries · Profile
  */
 export function MemberTabNavigator() {
   const { t } = useTranslation();
   const mySpaces = useSpaceStore(state => state.mySpaces);
   const hasSpaces = mySpaces.length > 0;
+  const unreadEnquiries = useAccountEnquiryUnreadCount();
 
   const homeLabel = useMemo(
     () =>
@@ -86,6 +90,8 @@ export function MemberTabNavigator() {
         : t('navigation.home', { defaultValue: 'Home' }),
     [hasSpaces, t],
   );
+
+  const enquiriesLabel = t('navigation.enquiries', { defaultValue: 'Enquiries' });
 
   return (
     <Tab.Navigator
@@ -127,6 +133,31 @@ export function MemberTabNavigator() {
               color={color}
             />
           ),
+        }}
+      />
+      <Tab.Screen
+        name="Enquiries"
+        component={MyEnquiriesScreen}
+        options={{
+          title: t('spaces.enquiries.title', { defaultValue: 'My Enquiries' }),
+          tabBarLabel: ({ focused, color }) => (
+            <SpaceTabBarLabel label={enquiriesLabel} focused={focused} color={color} />
+          ),
+          tabBarBadge:
+            unreadEnquiries > 0
+              ? unreadEnquiries > 99
+                ? '99+'
+                : unreadEnquiries
+              : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: '#DC2626',
+            color: colors.white,
+            fontSize: 10,
+            fontWeight: '700',
+            minWidth: 16,
+            height: 16,
+            lineHeight: 14,
+          },
         }}
       />
       <Tab.Screen

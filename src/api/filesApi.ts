@@ -10,7 +10,15 @@ export type FilePurpose =
   | 'PAYMENT_PROOF'
   | 'MEAL_PAYMENT_PROOF'
   | 'SUBSCRIPTION_PAYMENT_PROOF'
-  | 'COMPLAINT_ATTACHMENT';
+  | 'COMPLAINT_ATTACHMENT'
+  | 'BUILDING_PHOTO'
+  | 'FLOOR_PHOTO'
+  | 'UNIT_PHOTO'
+  | 'ROOM_PHOTO'
+  | 'BED_PHOTO'
+  | 'MENU_ITEM_PHOTO'
+  | 'COMBO_PHOTO'
+  | 'SPACE_PHOTO';
 
 export type FileStatus = 'PENDING' | 'ACTIVE' | 'PENDING_DELETE' | 'DELETED' | 'FAILED';
 
@@ -50,6 +58,8 @@ export interface ContentUrlResponse {
   fileId: UUID;
   contentUrl: string;
   contentType: string;
+  originalFilename?: string | null;
+  downloadFilename?: string | null;
   expiresAt: string;
 }
 

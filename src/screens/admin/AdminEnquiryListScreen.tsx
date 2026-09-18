@@ -58,6 +58,11 @@ export function AdminEnquiryListScreen() {
                 day: '2-digit',
                 month: 'short',
               })} · ${t(`admin.enquiries.status.${item.status}`)}`}
+              actionLabel={
+                item.status === 'PENDING'
+                  ? t('admin.enquiries.review', { defaultValue: 'Review' })
+                  : t('admin.enquiries.view', { defaultValue: 'View' })
+              }
               onPress={() =>
                 navigation.navigate('AdminEnquiryDetail', { id: item.enquiryId })
               }

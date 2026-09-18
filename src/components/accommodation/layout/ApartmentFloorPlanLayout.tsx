@@ -7,6 +7,8 @@ import { matchesAccommodationSearch } from '../../../utils/accommodationLayoutSe
 import { chunkIntoRows } from './visual/planLayoutUtils';
 import { LayoutSummaryCard } from './cards/LayoutSummaryCard';
 import { UnitLayoutCard } from './cards/UnitLayoutCard';
+import { LayoutEntityPhoto } from './cards/LayoutEntityPhoto';
+import { LayoutIllustration } from './cards/LayoutIllustration';
 import { calcOccupancyPercent } from './cards/occupancyUtils';
 import { getFloorIllustration } from './illustrations/illustrationAssets';
 import { aggregateUnitStatusCounts } from './layoutSummaryStats';
@@ -14,6 +16,8 @@ const GRID_COLUMNS = 2;
 
 type ApartmentFloorPlanLayoutProps = {
   floorName?: string;
+  floorId?: string;
+  floorPhotoFileId?: string | null;
   units: UnitListItemResponse[];
   layoutMode?: string;
   searchQuery: string;
@@ -24,6 +28,8 @@ type ApartmentFloorPlanLayoutProps = {
 
 export function ApartmentFloorPlanLayout({
   floorName,
+  floorId,
+  floorPhotoFileId,
   units,
   searchQuery,
   onUnitPress,
@@ -52,6 +58,18 @@ export function ApartmentFloorPlanLayout({
         title={floorName ?? t('accommodation.apartments.onFloor')}
         illustration={getFloorIllustration()}
         illustrationSize="floor"
+        photo={
+          floorId ? (
+            <LayoutEntityPhoto
+              kind="floor"
+              entityId={floorId}
+              fileId={floorPhotoFileId}
+              title={floorName}
+              height={90}
+              fallback={<LayoutIllustration source={getFloorIllustration()} size="floor" />}
+            />
+          ) : undefined
+        }
         occupancyPercent={totals.occupancyPercent}
         statusCounts={statusCounts}
         metrics={[          {

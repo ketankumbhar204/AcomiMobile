@@ -93,7 +93,24 @@ export function navigateFromNotificationType(
     case 'CONTACT_ENQUIRY_SHARED':
     case 'CONTACT_ENQUIRY_REJECTED':
     case 'CONTACT_ENQUIRY_EXPIRED':
-      navigateMainStack('MyEnquiries', entityId ? { enquiryId: entityId } : undefined);
+      navigateMainStack('MemberTabs', {
+        screen: 'Enquiries',
+        params: entityId ? { enquiryId: entityId } : undefined,
+      });
+      return;
+    case 'INQUIRY_CREDIT_PAYMENT_APPROVED':
+    case 'INQUIRY_CREDIT_PAYMENT_REJECTED':
+      // Navigate to the user's inquiry credits screen so they can see the updated balance.
+      navigateMainStack('InquiryCredits', undefined);
+      return;
+    case 'INQUIRY_CREDIT_PAYMENT_PENDING':
+      // Admins reviewing a pending payment may use this; non-admins go to credits screen.
+      if (isOperator) {
+        // No dedicated admin screen yet — fall through to credits for now.
+        navigateMainStack('InquiryCredits', undefined);
+      } else {
+        navigateMainStack('InquiryCredits', undefined);
+      }
       return;
     case 'PAYMENT_REMINDER_SENT':
       if (entityId) {

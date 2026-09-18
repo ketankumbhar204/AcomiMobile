@@ -56,7 +56,9 @@ import { resolveProgressivePhase } from '../../utils/progressivePhase';
 import { colors, shadows, spacing, typography } from '../../theme';
 import { categoriesForSpaceType } from '../../utils/complaintPermissions';
 import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
-import { pickPaymentProofImage, paymentProofToLocalFile } from '../../utils/pickPaymentProofImage';
+import { pickOptimizedImage } from '../../utils/pickOptimizedImage';
+import { FileUploadUserError } from '../../utils/fileLimits';
+import { paymentProofToLocalFile } from '../../utils/pickPaymentProofImage';
 import type { PickedPaymentProof } from '../../utils/pickPaymentProofImage';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'RaiseComplaint'>;
@@ -140,9 +142,17 @@ export function RaiseComplaintScreen() {
       showToast(t('complaints.errors.maxPhotos'));
       return;
     }
-    const image = await pickPaymentProofImage();
-    if (image) {
-      setPhotos(prev => [...prev, image]);
+    try {
+      const image = await pickOptimizedImage('COMPLAINT_ATTACHMENT');
+      if (image) {
+        setPhotos(prev => [...prev, image]);
+      }
+    } catch (error) {
+      showToast(
+        error instanceof FileUploadUserError
+          ? error.message
+          : t('files.uploadFailed', { defaultValue: 'Unable to upload the file. Please try again.' }),
+      );
     }
   };
 

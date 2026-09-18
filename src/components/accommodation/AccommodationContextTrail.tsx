@@ -25,19 +25,21 @@ export function AccommodationContextTrail({
         {segments.map((segment, index) => (
           <React.Fragment key={`${segment.level}-${segment.label}`}>
             {index > 0 ? <Text style={styles.separator}> › </Text> : null}
-            {segment.navigable && onNavigate ? (
+            {onNavigate ? (
               <Pressable
                 onPress={() => onNavigate(segment.level)}
                 hitSlop={4}
                 accessibilityRole="link"
                 accessibilityLabel={segment.label}>
-                <Text style={styles.link} numberOfLines={2}>
+                <Text
+                  style={index === segments.length - 1 ? styles.currentLink : styles.link}
+                  numberOfLines={2}>
                   {segment.label}
                 </Text>
               </Pressable>
             ) : (
               <Text
-                style={segment.navigable ? styles.ancestor : styles.current}
+                style={index === segments.length - 1 ? styles.current : styles.ancestor}
                 numberOfLines={2}>
                 {segment.label}
               </Text>
@@ -70,8 +72,15 @@ const styles = StyleSheet.create({
   },
   link: {
     ...typography.caption,
-    color: colors.primary,
+    color: colors.info,
     fontWeight: '600',
+    lineHeight: 18,
+    textDecorationLine: 'underline',
+  },
+  currentLink: {
+    ...typography.caption,
+    color: colors.info,
+    fontWeight: '700',
     lineHeight: 18,
     textDecorationLine: 'underline',
   },

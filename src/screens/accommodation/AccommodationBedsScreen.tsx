@@ -39,13 +39,15 @@ import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useAccommodationOccupancyFlow } from '../../hooks/useAccommodationOccupancyFlow';
 import { useAccommodationViewMode } from '../../hooks/useAccommodationViewMode';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
+import { canEditEntityPhoto } from '../../files/entityPhoto';
+import { EntityPhotoProvider } from '../../files/EntityPhotoContext';
 import { useBeds } from '../../hooks/useBeds';
 import { useBulkBeds } from '../../hooks/useBulkBeds';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, spacing, typography } from '../../theme';
 import { buildAccommodationTrail } from '../../utils/accommodationContext';
-import { navigateToAccommodationTrailSegment } from '../../utils/accommodationNavigation';
+import { handleAccommodationTrailPress } from '../../utils/accommodationNavigation';
 import { invalidateAccommodationQueries } from '../../utils/accommodationQueryCache';
 import { renameBedNumber, renameRoomName, updateBedPricingField } from '../../utils/accommodationInlineRename';
 import { isAccommodationEntityActive } from '../../utils/accommodationEntityActive';
@@ -175,10 +177,10 @@ export function AccommodationBedsScreen() {
   );
 
   const onTrailNavigate = useCallback(
-    (level: Parameters<typeof navigateToAccommodationTrailSegment>[2]) => {
-      navigateToAccommodationTrailSegment(navigation, trailContext, level);
+    (level: Parameters<typeof handleAccommodationTrailPress>[2]) => {
+      handleAccommodationTrailPress(navigation, trailContext, level, canManage);
     },
-    [navigation, trailContext],
+    [canManage, navigation, trailContext],
   );
 
   const loadRoom = useCallback(async () => {
@@ -474,6 +476,8 @@ export function AccommodationBedsScreen() {
           beds={beds}
           roomType={room?.roomType}
           roomName={resolvedRoomName}
+          roomId={roomId}
+          roomPhotoFileId={room?.photoFileId}
           spaceId={spaceId}
           searchQuery={searchQuery}
           onBedPress={openBedDetail}
@@ -513,6 +517,9 @@ export function AccommodationBedsScreen() {
 
   return (
     <RequireAccommodationAccess spaceId={spaceId}>
+      <EntityPhotoProvider
+        spaceId={spaceId}
+        canEdit={canEditEntityPhoto(permissions.membershipRole)}>
     <View style={styles.root}>
       {isLayout && !hasBlockingError ? (
         <ScrollView
@@ -648,6 +655,7 @@ export function AccommodationBedsScreen() {
       />
 
     </View>
+      </EntityPhotoProvider>
     </RequireAccommodationAccess>
   );
 }

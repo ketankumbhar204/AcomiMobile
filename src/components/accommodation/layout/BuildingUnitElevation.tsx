@@ -7,6 +7,8 @@ import { matchesAccommodationSearch } from '../../../utils/accommodationLayoutSe
 import { chunkIntoRows } from './visual/planLayoutUtils';
 import { LayoutSummaryCard } from './cards/LayoutSummaryCard';
 import { UnitLayoutCard } from './cards/UnitLayoutCard';
+import { LayoutEntityPhoto } from './cards/LayoutEntityPhoto';
+import { LayoutIllustration } from './cards/LayoutIllustration';
 import { occupancyPercentFromStatus, calcOccupancyPercent } from './cards/occupancyUtils';
 import { getBuildingIllustration } from './illustrations/illustrationAssets';
 import {
@@ -67,6 +69,18 @@ export function BuildingUnitElevation({
         title={buildingName ?? t('accommodation.units.title')}
         illustration={getBuildingIllustration()}
         illustrationSize="building"
+        photo={
+          buildingSummary ? (
+            <LayoutEntityPhoto
+              kind="building"
+              entityId={buildingSummary.buildingId}
+              fileId={buildingSummary.photoFileId}
+              title={buildingSummary.name}
+              height={180}
+              fallback={<LayoutIllustration source={getBuildingIllustration()} size="building" />}
+            />
+          ) : undefined
+        }
         occupancyPercent={occupancyPercent}
         statusCounts={statusCounts}
         metrics={[

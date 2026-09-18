@@ -85,8 +85,42 @@ export function groupBedsByRoom(beds: BedSpaceListItemResponse[]): BedRoomGroup[
   return result;
 }
 
+export type RoomPathLevel = 'building' | 'floor' | 'unit' | 'room';
+
+export type RoomPathCrumb = {
+  level: RoomPathLevel;
+  label: string;
+};
+
 export function formatRoomGroupPath(group: BedRoomGroup): string {
   return roomGroupPathSegments(group).join(' > ');
+}
+
+/** Path crumbs for arrow-icon separators and edit links in inventory headers. */
+export function roomGroupPathCrumbs(
+  group: BedRoomGroup,
+  options?: { includeBuilding?: boolean; includeUnit?: boolean },
+): RoomPathCrumb[] {
+  const includeBuilding = options?.includeBuilding ?? false;
+  const includeUnit = options?.includeUnit ?? Boolean(group.unitId);
+  const crumbs: RoomPathCrumb[] = [];
+  const building = group.buildingName?.trim();
+  if (includeBuilding && building) {
+    crumbs.push({ level: 'building', label: building });
+  }
+  const floor = group.floorName?.trim();
+  if (group.floorId && floor) {
+    crumbs.push({ level: 'floor', label: floor });
+  }
+  const unit = group.unitName?.trim();
+  if (includeUnit && group.unitId && unit) {
+    crumbs.push({ level: 'unit', label: unit });
+  }
+  const room = group.roomName?.trim();
+  if (room) {
+    crumbs.push({ level: 'room', label: room });
+  }
+  return crumbs;
 }
 
 /** Path segments for arrow-icon separators in inventory headers. */
@@ -94,16 +128,7 @@ export function roomGroupPathSegments(
   group: BedRoomGroup,
   options?: { includeBuilding?: boolean; includeUnit?: boolean },
 ): string[] {
-  const includeBuilding = options?.includeBuilding ?? false;
-  const includeUnit = options?.includeUnit ?? Boolean(group.unitId);
-  return [
-    includeBuilding ? group.buildingName : null,
-    group.floorName,
-    includeUnit ? group.unitName : null,
-    group.roomName,
-  ]
-    .map(part => part?.trim())
-    .filter((part): part is string => Boolean(part));
+  return roomGroupPathCrumbs(group, options).map(crumb => crumb.label);
 }
 
 /** Corridor-style path without unit (Floor > Room). */

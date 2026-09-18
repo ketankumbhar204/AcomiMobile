@@ -3,8 +3,15 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <!-- Camera capture only (Take photo). Gallery selection uses Android Photo Picker — no READ_MEDIA_*. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- Explicitly strip broad media/storage permissions from merged manifests (Play Photo/Video policy). -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove" />
 
     <application
       android:name=".MainApplication"
@@ -22,6 +29,22 @@
       <meta-data
         android:name="com.google.firebase.messaging.default_notification_icon"
         android:resource="@mipmap/ic_launcher" />
+      <!--
+        Trigger Play services to install the AndroidX Photo Picker backport on older devices.
+        See https://developer.android.com/training/data-storage/shared/photo-picker
+      -->
+      <service
+          android:name="com.google.android.gms.metadata.ModuleDependencies"
+          android:enabled="false"
+          android:exported="false"
+          tools:ignore="MissingClass">
+        <intent-filter>
+          <action android:name="com.google.android.gms.metadata.MODULE_DEPENDENCIES" />
+        </intent-filter>
+        <meta-data
+            android:name="photopicker_activity:0:required"
+            android:value="" />
+      </service>
       <activity
         android:name=".MainActivity"
         android:label="@string/app_name"
@@ -32,6 +55,14 @@
         <intent-filter>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+        <!-- Custom scheme deep links (e.g. acomi://enquiries/{enquiryId}). No HTTPS App Links yet. -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="acomi" android:host="enquiries" />
+            <data android:scheme="acomi" android:host="enquiries" android:pathPrefix="/" />
         </intent-filter>
       </activity>
     </application>

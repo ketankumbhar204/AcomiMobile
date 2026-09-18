@@ -25,6 +25,7 @@ type ComboPickerCardProps = {
   editablePrice?: boolean;
   showMealPrices?: boolean;
   onPress: () => void;
+  photo?: React.ReactNode;
 };
 
 export function ComboPickerCard({
@@ -45,6 +46,7 @@ export function ComboPickerCard({
   editablePrice = false,
   showMealPrices = true,
   onPress,
+  photo,
 }: ComboPickerCardProps) {
   const { t } = useTranslation();
   const preview = itemNames.join(' · ');
@@ -128,7 +130,7 @@ export function ComboPickerCard({
           ) : null}
           <View style={styles.content}>
             <View style={styles.nameRow}>
-              <FoodTypeIcon foodType={foodType} size={14} />
+              {photo ?? <FoodTypeIcon foodType={foodType} size={14} />}
               <Text
                 style={[styles.name, selectable && selected && styles.nameSelected]}
                 numberOfLines={1}>

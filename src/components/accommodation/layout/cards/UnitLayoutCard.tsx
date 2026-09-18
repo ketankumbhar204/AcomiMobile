@@ -9,6 +9,7 @@ import { AccommodationStatusBadge } from '../../AccommodationStatusBadge';
 import { getUnitIllustration } from '../illustrations/illustrationAssets';
 import { CircularOccupancyIndicator } from './CircularOccupancyIndicator';
 import { LayoutCardShell } from './LayoutCardShell';
+import { LayoutEntityPhoto } from './LayoutEntityPhoto';
 import { LayoutIllustration } from './LayoutIllustration';
 import { calcOccupancyPercent } from './occupancyUtils';
 
@@ -50,7 +51,14 @@ export function UnitLayoutCard({
       shellStyle={styles.shell}
       cardStyle={[styles.card, highlighted && styles.highlighted]}
       pressedStyle={styles.pressed}>
-      <LayoutIllustration source={illustration} size="unit" />
+      <LayoutEntityPhoto
+        kind="unit"
+        entityId={unit.unitId}
+        fileId={unit.photoFileId}
+        title={unit.name}
+        height={100}
+        fallback={<LayoutIllustration source={illustration} size="unit" />}
+      />
       <Text style={styles.title} numberOfLines={2}>
         {unit.name}
       </Text>

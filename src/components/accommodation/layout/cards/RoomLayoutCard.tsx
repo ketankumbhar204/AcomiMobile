@@ -15,6 +15,7 @@ import { AccommodationStatusBadge } from '../../AccommodationStatusBadge';
 import { getRoomIllustration } from '../illustrations/illustrationAssets';
 import { CircularOccupancyIndicator } from './CircularOccupancyIndicator';
 import { LayoutCardShell } from './LayoutCardShell';
+import { LayoutEntityPhoto } from './LayoutEntityPhoto';
 import { LayoutIllustration } from './LayoutIllustration';
 import { OccupancyProgressBar } from './OccupancyProgressBar';
 import { calcOccupancyPercent } from './occupancyUtils';
@@ -58,10 +59,19 @@ export function RoomLayoutCard({
         inactive && accommodationInactiveCardStyle,
       ]}
       pressedStyle={styles.pressed}>
-      <LayoutIllustration
-        source={illustration}
-        size="room"
-        style={inactive ? accommodationInactiveIllustrationStyle : undefined}
+      <LayoutEntityPhoto
+        kind="room"
+        entityId={room.roomId}
+        fileId={room.photoFileId}
+        title={room.name}
+        height={110}
+        fallback={
+          <LayoutIllustration
+            source={illustration}
+            size="room"
+            style={inactive ? accommodationInactiveIllustrationStyle : undefined}
+          />
+        }
       />
       {editableName && onSaveName ? (
         <InlineEditableName value={room.name} editable onSave={onSaveName} />

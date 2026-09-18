@@ -2,6 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { FoodItemResponse, FoodType } from '../../../api/types';
+import { EntityPhoto } from '../../files/EntityPhoto';
+import { FoodTypeIcon } from '../../ui/FoodTypeIcon';
 import { FoodTypePicker } from '../../ui/FoodTypePicker';
 import { colors, spacing, typography } from '../../../theme';
 import { formatComboNameWithPrice } from '../../../utils/comboPrice';
@@ -25,6 +27,9 @@ type ItemChipGridProps = {
   onUpdateItem?: (itemId: string, name: string, foodType: FoodType) => void | Promise<void>;
   onRemoveItem?: (item: FoodItemResponse) => void;
   onRemoveCategory?: () => void;
+  spaceId?: string;
+  canEditPhoto?: boolean;
+  onPhotoChanged?: () => void;
 };
 
 export function ItemChipGrid({
@@ -42,6 +47,9 @@ export function ItemChipGrid({
   onUpdateItem,
   onRemoveItem,
   onRemoveCategory,
+  spaceId,
+  canEditPhoto = false,
+  onPhotoChanged,
 }: ItemChipGridProps) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
@@ -146,6 +154,21 @@ export function ItemChipGrid({
                 size="compact"
                 isCustom={item.isCustom}
                 foodType={item.foodType ?? 'VEG'}
+                leading={
+                  spaceId ? (
+                    <EntityPhoto
+                      spaceId={spaceId}
+                      entityId={item.itemId}
+                      kind="menuItem"
+                      fileId={item.photoFileId}
+                      canEdit={canEditPhoto}
+                      size={18}
+                      title={item.name}
+                      onChanged={onPhotoChanged}
+                      fallback={<FoodTypeIcon foodType={item.foodType ?? 'VEG'} size={12} />}
+                    />
+                  ) : undefined
+                }
                 onPress={canManage ? () => openItemActions(item) : undefined}
                 onLongPress={canManage ? () => openItemActions(item) : undefined}
               />

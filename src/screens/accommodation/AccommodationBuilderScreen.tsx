@@ -46,6 +46,8 @@ import { useHierarchyOccupancyPicker } from '../../hooks/useHierarchyOccupancyPi
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useAccommodationUiProfile } from '../../hooks/useAccommodationUiProfile';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
+import { canEditEntityPhoto } from '../../files/entityPhoto';
+import { EntityPhotoProvider } from '../../files/EntityPhotoContext';
 import { useAccommodationViewMode } from '../../hooks/useAccommodationViewMode';
 import { useAccommodationSearchScroll } from '../../hooks/useAccommodationSearchScroll';
 import { useBulkUnits } from '../../hooks/useBulkUnits';
@@ -59,7 +61,7 @@ import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, spacing, typography } from '../../theme';
 import { buildAccommodationTrail } from '../../utils/accommodationContext';
-import { navigateToAccommodationTrailSegment } from '../../utils/accommodationNavigation';
+import { handleAccommodationTrailPress, navigateToRoomGroupEntityEdit } from '../../utils/accommodationNavigation';
 import { invalidateAccommodationQueries } from '../../utils/accommodationQueryCache';
 import {
   renameBuildingName,
@@ -69,7 +71,7 @@ import {
 } from '../../utils/accommodationInlineRename';
 import { isAccommodationEntityActive } from '../../utils/accommodationEntityActive';
 import { applyAccommodationInactiveLifecycle } from '../../utils/accommodationInactiveLifecycle';
-import { groupBedsByRoom, roomGroupPathSegments, type BedRoomGroup } from '../../utils/groupBedsByRoom';
+import { groupBedsByRoom, roomGroupPathCrumbs, type BedRoomGroup } from '../../utils/groupBedsByRoom';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'AccommodationBuilder'>;
 type Route = NativeStackScreenProps<MainStackParamList, 'AccommodationBuilder'>['route'];
@@ -170,10 +172,10 @@ export function AccommodationBuilderScreen() {
   );
 
   const onTrailNavigate = useCallback(
-    (level: Parameters<typeof navigateToAccommodationTrailSegment>[2]) => {
-      navigateToAccommodationTrailSegment(navigation, trailContext, level);
+    (level: Parameters<typeof handleAccommodationTrailPress>[2]) => {
+      handleAccommodationTrailPress(navigation, trailContext, level, canManage);
     },
-    [navigation, trailContext],
+    [canManage, navigation, trailContext],
   );
 
   const duplicateBuildingHook = useDuplicateBuilding();
@@ -320,6 +322,9 @@ export function AccommodationBuilderScreen() {
         profile={profile!}
         loading={summaryLoading && !summary}
         editableName={showFab}
+        spaceId={spaceId}
+        canEditPhoto={canEditEntityPhoto(permissions.membershipRole)}
+        onPhotoChanged={fileId => patchSummary({ photoFileId: fileId })}
         onSaveName={async name => {
           await renameBuildingName(
             spaceId,
@@ -603,7 +608,7 @@ export function AccommodationBuilderScreen() {
           }),
       });
     }
-    if (group.unitId) {
+    if (group.unitId && (profile?.showUnits || profile?.showUnitsOnFloor)) {
       prependOptions.push({
         label: t('accommodation.builder.editUnit', { defaultValue: 'Edit unit' }),
         action: () =>
@@ -683,7 +688,7 @@ export function AccommodationBuilderScreen() {
   const renderInventoryItem = ({ item }: { item: BedRoomGroup }) => (
     <BuildingInventoryRoomSection
       group={item}
-      pathSegments={roomGroupPathSegments(item, {
+      pathCrumbs={roomGroupPathCrumbs(item, {
         includeBuilding: true,
         includeUnit: Boolean(profile?.showUnits || profile?.showUnitsOnFloor),
       })}
@@ -691,6 +696,11 @@ export function AccommodationBuilderScreen() {
       showAddBed={canManage}
       menu={renderRoomMenu(item)}
       renderBedMenu={renderBedMenu}
+      onPathCrumbPress={
+        canManage
+          ? crumb => navigateToRoomGroupEntityEdit(navigation, spaceId, item, crumb.level)
+          : undefined
+      }
       onRoomPress={() =>
         navigation.navigate('AccommodationBeds', {
           spaceId,
@@ -783,6 +793,9 @@ export function AccommodationBuilderScreen() {
 
   return (
     <RequireAccommodationAccess spaceId={spaceId}>
+      <EntityPhotoProvider
+        spaceId={spaceId}
+        canEdit={canEditEntityPhoto(permissions.membershipRole)}>
     <View style={styles.root}>
       <FlatList
         ref={listRef}
@@ -942,6 +955,7 @@ export function AccommodationBuilderScreen() {
       />
       {hierarchyPicker.pickerModal}
     </View>
+      </EntityPhotoProvider>
     </RequireAccommodationAccess>
   );
 }

@@ -199,6 +199,7 @@ export function resetToMySpaces(): void {
                   routes: [
                     { name: 'Home' },
                     { name: 'FindAPlace' },
+                    { name: 'Enquiries' },
                     { name: 'Profile' },
                   ],
                 },
@@ -258,6 +259,7 @@ export function resetToMemberHome(): void {
                   routes: [
                     { name: 'Home' },
                     { name: 'FindAPlace' },
+                    { name: 'Enquiries' },
                     { name: 'Profile' },
                   ],
                 },

@@ -100,6 +100,25 @@ type SetupRoomRow = {
 
 type InlineEditTarget = 'floor' | 'unit' | 'room' | null;
 
+type SetupPathCrumb = { level: 'building' | 'floor' | 'unit' | 'room'; label: string };
+
+function setupPathCrumbs(row: SetupRoomRow, buildingName: string): SetupPathCrumb[] {
+  const crumbs: SetupPathCrumb[] = [];
+  if (buildingName.trim()) {
+    crumbs.push({ level: 'building', label: buildingName.trim() });
+  }
+  if (row.floor?.name.trim()) {
+    crumbs.push({ level: 'floor', label: row.floor.name.trim() });
+  }
+  if (row.unit?.name.trim()) {
+    crumbs.push({ level: 'unit', label: row.unit.name.trim() });
+  }
+  if (row.room.name.trim()) {
+    crumbs.push({ level: 'room', label: row.room.name.trim() });
+  }
+  return crumbs;
+}
+
 function flattenSetupRooms(structure: EditableSetupStructure): SetupRoomRow[] {
   const buildingName = structure.building.name.trim();
   const rows: SetupRoomRow[] = [];
@@ -537,8 +556,8 @@ function SetupRoomInventoryCard({
             <DoorOpen size={16} color={pastels.purple.fg} strokeWidth={2.2} />
           </View>
           <View style={styles.pathRow}>
-            {row.pathSegments.map((segment, index) => (
-              <View key={`${segment}-${index}`} style={styles.pathPart}>
+            {setupPathCrumbs(row, structure.building.name).map((crumb, index) => (
+              <View key={`${crumb.level}-${crumb.label}`} style={styles.pathPart}>
                 {index > 0 ? (
                   <ChevronRight
                     size={14}
@@ -547,7 +566,21 @@ function SetupRoomInventoryCard({
                     style={styles.pathChevron}
                   />
                 ) : null}
-                <Text style={styles.path}>{segment}</Text>
+                {crumb.level === 'building' ? (
+                  <Text style={styles.path} numberOfLines={1}>
+                    {crumb.label}
+                  </Text>
+                ) : (
+                  <Pressable
+                    onPress={() => setInlineEdit(crumb.level)}
+                    hitSlop={4}
+                    accessibilityRole="link"
+                    accessibilityLabel={crumb.label}>
+                    <Text style={styles.pathLink} numberOfLines={1}>
+                      {crumb.label}
+                    </Text>
+                  </Pressable>
+                )}
               </View>
             ))}
           </View>
@@ -987,6 +1020,12 @@ const styles = StyleSheet.create({
     ...typography.bodyStrong,
     fontSize: 14,
     color: colors.textPrimary,
+  },
+  pathLink: {
+    ...typography.bodyStrong,
+    fontSize: 14,
+    color: colors.info,
+    textDecorationLine: 'underline',
   },
   metaRow: {
     flexDirection: 'row',

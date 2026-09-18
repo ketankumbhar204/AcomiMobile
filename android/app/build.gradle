@@ -80,6 +80,32 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
+// Single source of truth for Play/release versioning: android/version.properties
+// Debug/release builds read this file; only bumpVersionCode writes it.
+def versionPropertiesFile = rootProject.file("version.properties")
+def loadAcomiVersionProperties = {
+    if (!versionPropertiesFile.exists()) {
+        throw new GradleException(
+            "Missing android/version.properties (single source of truth for versionCode/versionName)."
+        )
+    }
+    def props = new Properties()
+    versionPropertiesFile.withInputStream { props.load(it) }
+    def codeRaw = props.getProperty("VERSION_CODE")
+    def nameRaw = props.getProperty("VERSION_NAME")
+    if (!codeRaw?.trim() || !nameRaw?.trim()) {
+        throw new GradleException(
+            "android/version.properties must define non-empty VERSION_CODE and VERSION_NAME."
+        )
+    }
+    def code = codeRaw.trim() as int
+    if (code < 1) {
+        throw new GradleException("VERSION_CODE must be >= 1 (got ${code}).")
+    }
+    return [code: code, name: nameRaw.trim()]
+}
+def acomiVersion = loadAcomiVersionProperties()
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -90,8 +116,8 @@ android {
         applicationId "com.acomi"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 3
-        versionName "1.0"
+        versionCode acomiVersion.code
+        versionName acomiVersion.name
     }
     signingConfigs {
         debug {
@@ -166,6 +192,55 @@ tasks.register("verifyReleaseSigningConfigured") {
     doLast { assertReleaseSigningConfigured() }
 }
 
+tasks.register("printVersion") {
+    group = "versioning"
+    description = "Print ACOMI Android versionCode and versionName from android/version.properties"
+    doLast {
+        def v = loadAcomiVersionProperties()
+        println "ACOMI Android version"
+        println "versionCode: ${v.code}"
+        println "versionName: ${v.name}"
+        println "source: ${versionPropertiesFile.canonicalPath}"
+    }
+}
+
+// Intentional bump only — never hooked to bundleRelease (avoids wasting Play versionCodes).
+// Usage:
+//   .\gradlew.bat bumpVersionCode
+//   .\gradlew.bat bumpVersionCode -PversionName=1.0.2
+tasks.register("bumpVersionCode") {
+    group = "versioning"
+    description = "Increment VERSION_CODE in android/version.properties (optional -PversionName=...)"
+    doLast {
+        def v = loadAcomiVersionProperties()
+        def nextCode = v.code + 1
+        def nextName = project.hasProperty("versionName")
+            ? project.property("versionName").toString().trim()
+            : v.name
+        if (!nextName) {
+            throw new GradleException("versionName must not be empty.")
+        }
+        versionPropertiesFile.setText(
+            "# ACOMI Android release version - single source of truth.\n" +
+            "# Gradle reads these values for every build (debug and release).\n" +
+            "# Do NOT bump VERSION_CODE automatically on bundleRelease.\n" +
+            "# Bump intentionally before a Play Store upload:\n" +
+            "#   .\\gradlew.bat printVersion\n" +
+            "#   .\\gradlew.bat bumpVersionCode\n" +
+            "#   .\\gradlew.bat bumpVersionCode -PversionName=1.0.2\n" +
+            "#   .\\gradlew.bat printVersion\n" +
+            "#   .\\gradlew.bat bundleRelease\n" +
+            "VERSION_CODE=${nextCode}\n" +
+            "VERSION_NAME=${nextName}\n",
+            "UTF-8"
+        )
+        println "ACOMI Android version bumped"
+        println "versionCode: ${v.code} -> ${nextCode}"
+        println "versionName: ${nextName}"
+        println "source: ${versionPropertiesFile.canonicalPath}"
+    }
+}
+
 gradle.taskGraph.whenReady { graph ->
     def releasePackageRequested = graph.allTasks.any { t ->
         t.name == "assembleRelease" || t.name == "bundleRelease"
@@ -178,6 +253,10 @@ gradle.taskGraph.whenReady { graph ->
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
+
+    // AndroidX Photo Picker / PickVisualMedia (used by react-native-image-picker 8.x).
+    // Ensures backport support on devices where the system Photo Picker is not built-in.
+    implementation("androidx.activity:activity:1.9.3")
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")

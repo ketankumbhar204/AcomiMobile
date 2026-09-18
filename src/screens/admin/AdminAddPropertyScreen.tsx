@@ -60,6 +60,9 @@ export function AdminAddPropertyScreen() {
   const [pincode, setPincode] = useState('');
   const [mapUrl, setMapUrl] = useState('');
   const [startingPrice, setStartingPrice] = useState('');
+  const [description, setDescription] = useState('');
+  const [capacityEstimate, setCapacityEstimate] = useState('');
+  const [amenitiesText, setAmenitiesText] = useState('');
   const [testLead, setTestLead] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -102,6 +105,32 @@ export function AdminAddPropertyScreen() {
       }
     }
 
+    let capacity: number | undefined;
+    if (capacityEstimate.trim()) {
+      capacity = Number(capacityEstimate);
+      if (!Number.isFinite(capacity) || capacity < 0 || !Number.isInteger(capacity)) {
+        setError(
+          t('admin.property.errors.capacity', {
+            defaultValue: 'Enter a valid capacity estimate, or leave it blank.',
+          }),
+        );
+        return;
+      }
+    }
+
+    const amenities = amenitiesText
+      .split(',')
+      .map(part => part.trim())
+      .filter(Boolean)
+      .map(label => ({
+        code: label
+          .toUpperCase()
+          .replace(/[^A-Z0-9]+/g, '_')
+          .replace(/^_|_$/g, ''),
+        label,
+      }))
+      .filter(item => item.code.length > 0);
+
     const payload: AdminCreatePropertyRegistrationRequest = {
       propertyType: (propertyType ?? 'PG') as Exclude<SpaceType, 'MESS'>,
     };
@@ -114,8 +143,10 @@ export function AdminAddPropertyScreen() {
     const stateValue = optionalText(state);
     const pincodeValue = optionalText(pincode);
     const map = optionalText(mapUrl);
+    const descriptionValue = optionalText(description);
     if (name) payload.propertyName = name;
     if (owner) payload.ownerName = owner;
+    if (descriptionValue) payload.description = descriptionValue;
     if (mobile) payload.mobileNumber = mobile;
     if (alternateMobile) payload.alternateMobileNumber = alternateMobile;
     if (address) payload.addressLine = address;
@@ -124,6 +155,8 @@ export function AdminAddPropertyScreen() {
     if (pincodeValue) payload.pincode = pincodeValue;
     if (map) payload.mapUrl = map;
     if (price !== undefined) payload.startingPrice = price;
+    if (capacity !== undefined) payload.capacityEstimate = capacity;
+    if (amenities.length > 0) payload.amenities = amenities;
     if (testLead) payload.testLead = true;
 
     setLoading(true);
@@ -174,6 +207,29 @@ export function AdminAddPropertyScreen() {
                   label={t('admin.property.name')}
                   value={propertyName}
                   onChangeText={setPropertyName}
+                />
+                <FormInput
+                  label={t('admin.common.description', { defaultValue: 'Description' })}
+                  value={description}
+                  onChangeText={setDescription}
+                  hint={t('admin.common.optionalHint', { defaultValue: 'Optional' })}
+                />
+                <FormInput
+                  label={t('admin.common.capacityEstimate', {
+                    defaultValue: 'Capacity estimate',
+                  })}
+                  value={capacityEstimate}
+                  onChangeText={setCapacityEstimate}
+                  keyboardType="number-pad"
+                  hint={t('admin.common.optionalHint', { defaultValue: 'Optional' })}
+                />
+                <FormInput
+                  label={t('admin.property.amenities', { defaultValue: 'Amenities' })}
+                  value={amenitiesText}
+                  onChangeText={setAmenitiesText}
+                  hint={t('admin.property.amenitiesHint', {
+                    defaultValue: 'Optional — comma-separated (e.g. WiFi, Parking)',
+                  })}
                 />
               </AdminFormSection>
 

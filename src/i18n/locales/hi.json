@@ -4057,7 +4057,7 @@
       "identityNumberRequired": "दस्तावेज़ संख्या दर्ज करें।",
       "identityProofRequired": "पहचान प्रमाण अपलोड करें।",
       "addressProofRequired": "पते का प्रमाण अपलोड करें।",
-      "pickFailed": "फोटो लाइब्रेरी नहीं खुल सकी। ऐप की अनुमतियां जांचें और पुनः प्रयास करें।",
+      "pickFailed": "फोटो पिकर नहीं खुल सका। कृपया पुनः प्रयास करें।",
       "submitFailed": "Could not save your profile. Please try again."
     }
   },
@@ -4806,5 +4806,25 @@
     "subheading": "Manage tenants, payments, meals, and daily operations from one premium workspace.",
     "summaryTitle": "आज",
     "wasteHint": "↓ पिछले सप्ताह की तुलना में 18% कम बर्बादी"
+  },
+  "files": {
+    "tooLarge": "File size must be {{maxMb}} MB or less.",
+    "tooLargeAbsolute": "File size must be 5 MB or less.",
+    "compressFailed": "This image is too large to upload. Please choose a smaller image.",
+    "unsupportedType": "This file type is not supported.",
+    "uploadFailed": "Unable to upload the file. Please try again.",
+    "downloadFailed": "Unable to download the file. Please try again.",
+    "previewUnavailable": "No photo to display.",
+    "viewerTitle": "Photo",
+    "download": "Download",
+    "share": "Share",
+    "view": "View photo",
+    "remove": "Remove photo",
+    "replace": "Replace photo",
+    "add": "Add photo",
+    "takePhoto": "Take photo",
+    "chooseGallery": "Choose from gallery",
+    "attached": "Attached",
+    "sizeHint": "JPEG, PNG, or WebP. Maximum {{maxMb}} MB after compression."
   }
 }

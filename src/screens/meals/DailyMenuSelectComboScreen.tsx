@@ -14,6 +14,9 @@ import { EmptyState, PermissionDeniedScreen } from '../../components/ui';
 import { StickyFormActions } from '../../components/progressive';
 import { useMealPricingPolicy } from '../../hooks/useMealPricingPolicy';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
+import { canEditEntityPhoto } from '../../files/entityPhoto';
+import { EntityPhoto } from '../../components/files/EntityPhoto';
+import { FoodTypeIcon } from '../../components/ui/FoodTypeIcon';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, spacing, typography } from '../../theme';
@@ -46,6 +49,7 @@ export function DailyMenuSelectComboScreen({
   const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const permissions = useSpacePermissions(spaceId);
+  const canEditPhoto = canEditEntityPhoto(permissions.membershipRole);
   const mealPricing = useMealPricingPolicy(spaceId);
   const showToast = useToastStore(state => state.showToast);
   const dateReadOnly = isPastMenuDate(menuDate);
@@ -325,6 +329,18 @@ export function DailyMenuSelectComboScreen({
               }
               priceInputError={errorKey ? comboPriceDraftErrorMessage(errorKey, t) : null}
               onPress={() => toggleCombo(combo.comboId)}
+              photo={
+                <EntityPhoto
+                  spaceId={spaceId}
+                  entityId={combo.comboId}
+                  kind="combo"
+                  fileId={combo.photoFileId}
+                  canEdit={canEditPhoto}
+                  size={28}
+                  title={combo.name}
+                  fallback={<FoodTypeIcon foodType={combo.foodType ?? 'VEG'} size={14} />}
+                />
+              }
             />
           );
         })}

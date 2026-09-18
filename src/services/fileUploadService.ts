@@ -6,6 +6,14 @@ import {
   type FilePurpose,
 } from '../api/filesApi';
 import { ApiError } from '../api/types';
+import {
+  ABSOLUTE_MAX_BYTES,
+  FileUploadUserError,
+  fileLimitMessage,
+  isSupportedImageMime,
+  purposeMaxBytes,
+  purposeMaxMb,
+} from '../utils/fileLimits';
 
 export type LocalFileInput = {
   uri: string;
@@ -59,6 +67,16 @@ export async function uploadLocalFile(
   file: LocalFileInput,
   options: UploadLocalFileOptions,
 ): Promise<string> {
+  if (!isSupportedImageMime(file.mime)) {
+    throw new FileUploadUserError('UNSUPPORTED', fileLimitMessage('UNSUPPORTED'));
+  }
+  if (file.size > purposeMaxBytes(options.purpose) || file.size > ABSOLUTE_MAX_BYTES) {
+    throw new FileUploadUserError(
+      'TOO_LARGE',
+      fileLimitMessage('TOO_LARGE', purposeMaxMb(options.purpose)),
+    );
+  }
+
   const session = await filesApi.createUploadSession({
     ...options,
     contentType: file.mime,
@@ -81,7 +99,7 @@ export async function uploadLocalFile(
       body,
     });
     if (!uploadResponse.ok) {
-      throw new ApiError('Direct file upload failed', uploadResponse.status);
+      throw new ApiError('Unable to upload the file. Please try again.', uploadResponse.status);
     }
   }
 

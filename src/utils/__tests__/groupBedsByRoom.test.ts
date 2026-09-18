@@ -3,6 +3,7 @@ import {
   dedupeBedsById,
   groupBedsByUnit,
   formatRoomGroupPath,
+  roomGroupPathCrumbs,
 } from '../groupBedsByRoom';
 import type { BedSpaceListItemResponse } from '../../api/types';
 
@@ -64,5 +65,23 @@ describe('groupBedsByRoom', () => {
       }),
     ]);
     expect(formatRoomGroupPath(group)).toBe('Floor 1 > Unit 1 > Room 1');
+  });
+
+  it('builds path crumbs with levels for edit links', () => {
+    const [group] = groupBedsByRoom([
+      bed({
+        bedId: '1',
+        roomId: 'r1',
+        floorName: 'Floor 1',
+        unitName: 'Unit 1',
+        roomName: 'Room 1',
+      }),
+    ]);
+    expect(roomGroupPathCrumbs(group, { includeBuilding: true })).toEqual([
+      { level: 'building', label: 'Building 1' },
+      { level: 'floor', label: 'Floor 1' },
+      { level: 'unit', label: 'Unit 1' },
+      { level: 'room', label: 'Room 1' },
+    ]);
   });
 });

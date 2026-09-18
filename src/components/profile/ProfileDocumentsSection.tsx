@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { FileText, Trash2 } from 'lucide-react-native';
 import { memberApi, PENDING_UPLOAD_FILE_URL } from '../../api/memberApi';
@@ -9,6 +9,7 @@ import { Button, EmptyState, SkeletonCard, useConfirmDialog } from '../ui';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { MemberDetailRow } from '../member/MemberDetailRow';
+import { ImagePreviewModal } from '../files/ImagePreviewModal';
 
 type ProfileDocumentsSectionProps = {
   spaceId: UUID;
@@ -49,6 +50,9 @@ export function ProfileDocumentsSection({
   const [documents, setDocuments] = useState<MemberDocumentResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [documentsLoading, setDocumentsLoading] = useState(true);
+  const [viewer, setViewer] = useState<{ url?: string | null; fileId?: string | null } | null>(
+    null,
+  );
 
   const loadDocuments = useCallback(async () => {
     setDocumentsLoading(true);
@@ -125,7 +129,11 @@ export function ProfileDocumentsSection({
           const preview = previewUriForFile(doc.fileUrl);
           return (
             <View key={doc.documentId} style={styles.card}>
-              {preview ? <Image source={{ uri: preview }} style={styles.previewImage} /> : null}
+              {preview ? (
+                <Pressable onPress={() => setViewer({ url: preview, fileId: doc.fileId })}>
+                  <Image source={{ uri: preview }} style={styles.previewImage} />
+                </Pressable>
+              ) : null}
               <MemberDetailRow
                 label={t('membership.documents.typeLabel')}
                 value={t(`membership.documents.types.${doc.documentType}`)}
@@ -163,6 +171,13 @@ export function ProfileDocumentsSection({
           );
         })
       )}
+      <ImagePreviewModal
+        visible={Boolean(viewer)}
+        imageUrl={viewer?.url}
+        fileId={viewer?.fileId}
+        title={t('settings.profile.documentsSection')}
+        onClose={() => setViewer(null)}
+      />
     </View>
   );
 }

@@ -67,6 +67,7 @@ export interface SpaceDetailsResponse {
   amenities?: AmenityAssignment[];
   createdAt: string;
   updatedAt: string;
+  photoFileId?: UUID | null;
 }
 
 export type MealBillingType = 'PAY_PER_MEAL' | 'PREPAID_BALANCE';
@@ -208,6 +209,7 @@ export interface FoodItemResponse {
   currencyCode?: string | null;
   /** Mess Menu Library: item can be enabled as a meal extra. */
   isExtra?: boolean;
+  photoFileId?: UUID | null;
 }
 
 export interface UpdateFoodItemDefaultPriceRequest {
@@ -269,6 +271,7 @@ export interface MealComboResponse {
   currencyCode?: string | null;
   foodType?: FoodType;
   items?: Array<{ itemId: UUID; name: string; foodType?: FoodType; quantity?: number }>;
+  photoFileId?: UUID | null;
 }
 
 /** Meal-specific planner history entry (combo or single item). */
@@ -736,6 +739,7 @@ export interface MemberMealActivityDayPayment {
    */
   paymentReference?: string | null;
   proofImageUrl?: string | null;
+  proofFileId?: UUID | null;
   /** Customer/UTR transaction reference entered with proof (not the system payment reference). */
   referenceNumber?: string | null;
   remarks?: string | null;
@@ -804,6 +808,7 @@ export interface MySpaceResponse {
   joinedAt: string;
   address?: string | null;
   permissions?: SpacePermissionsResponse;
+  photoFileId?: UUID | null;
 }
 
 /** Public discovery card — GET /spaces/discover */
@@ -832,6 +837,15 @@ export type SpaceEnquiryStatus = 'PENDING' | 'SHARED' | 'REJECTED' | 'EXPIRED' |
 
 export type EnquiryRequesterType = 'MEMBER' | 'OWNER';
 
+export interface OwnerContactResponse {
+  ownerName?: string | null;
+  mobileNumber?: string | null;
+  alternateMobileNumber?: string | null;
+  additionalMobileNumber?: string | null;
+  email?: string | null;
+  available: boolean;
+}
+
 export interface SpaceEnquiryResponse {
   enquiryId: UUID;
   spaceId: UUID;
@@ -848,20 +862,16 @@ export interface SpaceEnquiryResponse {
   sharedAt?: string | null;
   detailsShared: boolean;
   requesterEmail: string;
+  clientChannel?: 'WEB' | 'ANDROID' | null;
+  contactDelivery?: 'EMAIL' | 'IN_APP' | null;
+  contactEmailSentAt?: string | null;
+  contactEmailSent?: boolean;
+  ownerContact?: OwnerContactResponse | null;
   reusedExisting?: boolean;
 }
 
 export interface CreateSpaceEnquiryRequest {
   email?: string;
-}
-
-export interface OwnerContactResponse {
-  ownerName?: string | null;
-  mobileNumber?: string | null;
-  alternateMobileNumber?: string | null;
-  additionalMobileNumber?: string | null;
-  email?: string | null;
-  available: boolean;
 }
 
 export interface AdminSpaceEnquiryListItem {
@@ -1422,6 +1432,7 @@ export interface BuildingResponse {
   createdAt: string;
   updatedAt: string;
   actions?: AccommodationActionMetadata;
+  photoFileId?: UUID | null;
 }
 
 export interface FloorResponse {
@@ -1434,6 +1445,7 @@ export interface FloorResponse {
   createdAt: string;
   updatedAt: string;
   actions?: AccommodationActionMetadata;
+  photoFileId?: UUID | null;
 }
 
 export interface UnitResponse {
@@ -1451,6 +1463,7 @@ export interface UnitResponse {
   defaultRent?: number | null;
   defaultDeposit?: number | null;
   actions?: AccommodationActionMetadata;
+  photoFileId?: UUID | null;
 }
 
 export interface RoomResponse {
@@ -1469,6 +1482,7 @@ export interface RoomResponse {
   defaultRent?: number | null;
   defaultDeposit?: number | null;
   actions?: AccommodationActionMetadata;
+  photoFileId?: UUID | null;
 }
 
 export interface BedOccupantSummaryResponse {
@@ -1491,6 +1505,7 @@ export interface BedResponse {
   defaultDeposit?: number | null;
   actions?: AccommodationActionMetadata;
   occupant?: BedOccupantSummaryResponse | null;
+  photoFileId?: UUID | null;
 }
 
 // ─── Accommodation Phase 4.2 orchestration ────────────────────────────────
@@ -1669,6 +1684,7 @@ export interface BuildingSummaryResponse {
   availableUnits?: number;
   occupiedUnits?: number;
   reservedUnits?: number;
+  photoFileId?: UUID | null;
 }
 
 export interface FloorListItemResponse {
@@ -1679,6 +1695,7 @@ export interface FloorListItemResponse {
   available: number;
   occupied: number;
   active?: boolean;
+  photoFileId?: UUID | null;
 }
 
 export interface UnitListItemResponse {
@@ -1692,6 +1709,7 @@ export interface UnitListItemResponse {
   synthetic: boolean;
   unitKind?: UnitKind | null;
   active?: boolean;
+  photoFileId?: UUID | null;
 }
 
 export interface RoomListItemResponse {
@@ -1702,6 +1720,7 @@ export interface RoomListItemResponse {
   availableBeds: number;
   occupiedBeds: number;
   active?: boolean;
+  photoFileId?: UUID | null;
 }
 
 export interface BedListItemResponse {
@@ -1711,6 +1730,7 @@ export interface BedListItemResponse {
   active?: boolean;
   defaultRent?: number | null;
   defaultDeposit?: number | null;
+  photoFileId?: UUID | null;
 }
 
 export interface BedSpaceListItemResponse {
@@ -2157,7 +2177,10 @@ export type NotificationType =
   | 'CONTACT_ENQUIRY_SUBMITTED'
   | 'CONTACT_ENQUIRY_SHARED'
   | 'CONTACT_ENQUIRY_REJECTED'
-  | 'CONTACT_ENQUIRY_EXPIRED';
+  | 'CONTACT_ENQUIRY_EXPIRED'
+  | 'INQUIRY_CREDIT_PAYMENT_PENDING'
+  | 'INQUIRY_CREDIT_PAYMENT_APPROVED'
+  | 'INQUIRY_CREDIT_PAYMENT_REJECTED';
 
 export type NotificationCategory =
   | 'INFORMATION'

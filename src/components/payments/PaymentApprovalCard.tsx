@@ -323,6 +323,7 @@ export function PaymentApprovalCard({
       <PaymentProofPreviewModal
         visible={proofPreviewVisible}
         proofUrl={payment.proofUrl}
+        fileId={payment.proofFileId}
         onClose={() => setProofPreviewVisible(false)}
       />
 

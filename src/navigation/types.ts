@@ -1,5 +1,11 @@
 import type { NavigatorScreenParams } from '@react-navigation/native';
-import type { MembershipRole, OtpPurpose, UUID } from '../api/types';
+import type {
+  AdminActiveSpace,
+  AdminRegisteredUser,
+  MembershipRole,
+  OtpPurpose,
+  UUID,
+} from '../api/types';
 
 export type OtpVerificationParams = {
   mobileNumber: string;
@@ -37,10 +43,11 @@ export type SpaceTabParamList = {
   Complaints: { spaceId: UUID };
 };
 
-/** Member account tabs — Home/My Spaces · Find a place · Profile */
+/** Member account tabs — Home/My Spaces · Find a place · Enquiries · Profile */
 export type MemberTabParamList = {
   Home: undefined;
   FindAPlace: undefined;
+  Enquiries: { enquiryId?: UUID } | undefined;
   Profile: undefined;
 };
 
@@ -289,6 +296,8 @@ export type MainStackParamList = {
   };
   InventoryItemDetails: { spaceId: UUID; itemId: UUID };
   InventoryItemForm: { spaceId: UUID; mode: 'create' | 'edit'; itemId?: UUID };
+  /** User's inquiry-credit wallet + optional package purchase. */
+  InquiryCredits: undefined;
 };
 
 export type AdminListFilterParams = {
@@ -304,7 +313,9 @@ export type AdminStackParamList = {
   AdminMessList: AdminListFilterParams | undefined;
   AdminMessDetail: { id: string };
   AdminAddMess: undefined;
+  AdminActiveSpaceDetail: { space: AdminActiveSpace };
   AdminRegisteredUsers: undefined;
+  AdminRegisteredUserDetail: { user: AdminRegisteredUser };
   AdminSavedAddresses: undefined;
   AdminEnquiryList: undefined;
   AdminEnquiryDetail: { id: string };

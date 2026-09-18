@@ -337,7 +337,11 @@ export function CompleteProfileScreen() {
       }
     } catch (err) {
       console.warn('[CompleteProfile] image pick failed', err);
-      showToast(t('profileCompletion.errors.pickFailed'));
+      showToast(
+        t('files.pickerFailed', {
+          defaultValue: "Couldn't select the photo. Please try again.",
+        }),
+      );
     } finally {
       setPickingTarget(null);
     }

@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import {
   Building2,
+  CreditCard,
   FileText,
   Info,
   Languages,
@@ -58,7 +59,8 @@ import {
   profileDocumentsToFormState,
   type ProfileDocumentFormState,
 } from '../utils/profileDocuments';
-import { pickProfileImage, toLocalFileInput } from '../utils/pickProfileImage';
+import { pickOptimizedImage, toLocalFileInput } from '../utils/pickOptimizedImage';
+import { FileUploadUserError } from '../utils/fileLimits';
 import { uploadLocalFile } from '../services/fileUploadService';
 import {
   isProfileCorrectionNote,
@@ -215,7 +217,13 @@ export function ProfileScreen() {
 
     setUploadingAsset(asset);
     try {
-      const picked = await pickProfileImage();
+      const picked = await pickOptimizedImage(
+        asset === 'profilePhoto'
+          ? 'PROFILE_PHOTO'
+          : asset === 'identityProof'
+            ? 'IDENTITY_DOCUMENT'
+            : 'ADDRESS_PROOF',
+      );
       if (!picked) {
         return;
       }
@@ -250,8 +258,14 @@ export function ProfileScreen() {
       setDocumentsRefreshKey(key => key + 1);
       invalidateDashboardQueries();
       showToast(t('settings.profile.saveSuccess'));
-    } catch {
-      showToast(t('common.errors.generic'));
+    } catch (error) {
+      showToast(
+        error instanceof FileUploadUserError
+          ? error.message
+          : t('files.uploadFailed', {
+              defaultValue: 'Unable to upload the photo. Please try again.',
+            }),
+      );
     } finally {
       setUploadingAsset(null);
     }
@@ -386,16 +400,26 @@ export function ProfileScreen() {
             onPress={() => navigation.navigate('ChangeMobile')}
           />
           <DashboardActionRow
+            title={t('settings.profile.myEnquiries')}
+            subtitle={t('spaces.enquiries.profileSubtitle', {
+              defaultValue: 'View your contact requests',
+            })}
+            icon={MessageCircle}
+            onPress={() => navigation.navigate('MemberTabs', { screen: 'Enquiries' })}
+          />
+          <DashboardActionRow
             title={t('notifications.title')}
             subtitle={t('spaces.enquiries.notificationsEmpty')}
             icon={Bell}
             onPress={() => navigation.navigate('AccountNotifications')}
           />
           <DashboardActionRow
-            title={t('settings.profile.myEnquiries')}
-            subtitle={t('spaces.enquiries.subtitle')}
-            icon={MessageCircle}
-            onPress={() => navigation.navigate('MyEnquiries')}
+            title={t('inquiryCredits.title', { defaultValue: 'Inquiry Credits' })}
+            subtitle={t('inquiryCredits.profileSubtitle', {
+              defaultValue: 'Mobile enquiries are free · Web credits',
+            })}
+            icon={CreditCard}
+            onPress={() => navigation.navigate('InquiryCredits')}
           />
           <DashboardActionRow
             title={t('settings.profile.switchSpace', {
