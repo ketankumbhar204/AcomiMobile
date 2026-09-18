@@ -31,6 +31,8 @@ export type DashboardStatCardProps = {
   /** Pastel tile fill — used on dashboard KPI rows. */
   surface?: string;
   surfaceBorder?: string;
+  /** Active filter selection (Rooms Property operations). */
+  selected?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -49,6 +51,7 @@ export const DashboardStatCard = memo(function DashboardStatCard({
   compact = false,
   surface,
   surfaceBorder,
+  selected = false,
   style,
 }: DashboardStatCardProps) {
   const body = (
@@ -95,6 +98,7 @@ export const DashboardStatCard = memo(function DashboardStatCard({
     surface
       ? { backgroundColor: surface, borderColor: surfaceBorder ?? `${accent}33` }
       : null,
+    selected ? styles.selected : null,
     style,
   ];
 
@@ -118,6 +122,7 @@ export const DashboardStatCard = memo(function DashboardStatCard({
         pressed && styles.pressed,
       ]}
       accessibilityRole="button"
+      accessibilityState={{ selected }}
       accessibilityLabel={`${label}: ${value}`}>
       {body}
     </Pressable>
@@ -159,6 +164,10 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.9,
     borderColor: `${colors.primary}66`,
+  },
+  selected: {
+    borderColor: colors.primary,
+    borderWidth: 2,
   },
   iconWrap: {
     width: 32,
