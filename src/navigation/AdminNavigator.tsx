@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { AdminActiveSpaceDetailScreen } from '../screens/admin/AdminActiveSpaceDetailScreen';
 import { AdminAddMessScreen } from '../screens/admin/AdminAddMessScreen';
 import { AdminAddPropertyScreen } from '../screens/admin/AdminAddPropertyScreen';
+import { AdminCreateTestUserScreen } from '../screens/admin/AdminCreateTestUserScreen';
 import { AdminDashboardScreen } from '../screens/admin/AdminDashboardScreen';
 import { AdminEnquiryDetailScreen } from '../screens/admin/AdminEnquiryDetailScreen';
 import { AdminEnquiryListScreen } from '../screens/admin/AdminEnquiryListScreen';
@@ -73,6 +74,11 @@ export function AdminNavigator() {
         name="AdminRegisteredUsers"
         component={AdminRegisteredUsersScreen}
         options={{ title: t('admin.nav.users') }}
+      />
+      <Stack.Screen
+        name="AdminCreateTestUser"
+        component={AdminCreateTestUserScreen}
+        options={{ title: t('admin.nav.createTestUser') }}
       />
       <Stack.Screen
         name="AdminRegisteredUserDetail"

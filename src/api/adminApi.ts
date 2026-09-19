@@ -4,6 +4,7 @@ import type {
   AdminActiveSpace,
   AdminCreateMessRegistrationRequest,
   AdminCreatePropertyRegistrationRequest,
+  AdminCreateRegisteredUserRequest,
   AdminUpdateRegistrationContactRequest,
   AdminDashboardSummary,
   AdminRegisteredUser,
@@ -129,6 +130,13 @@ export const adminApi = {
       apiClient.get<ApiResponse<PagedResponse<AdminRegisteredUser>>>('/admin/registered-users', {
         params,
       }),
+    ),
+
+  createRegisteredUser: async (
+    payload: AdminCreateRegisteredUserRequest,
+  ): Promise<AdminRegisteredUser> =>
+    unwrapApiResponse(
+      apiClient.post<ApiResponse<AdminRegisteredUser>>('/admin/registered-users', payload),
     ),
 
   listSavedAddresses: async (params?: {
