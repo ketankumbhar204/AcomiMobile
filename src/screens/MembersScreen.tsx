@@ -19,7 +19,7 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { Mail, UserPlus, Users, X } from 'lucide-react-native';
+import { Mail, UserPlus, Users, X, CalendarDays, UserCheck } from 'lucide-react-native';
 import type { MemberResponse, MembershipRole, PendingInvitationResponse } from '../api/types';
 import { MemberListCard } from '../components/member/MemberListCard';
 import { MemberOccupancyStatusBadge, MemberStatusBadge } from '../components/member';
@@ -34,6 +34,7 @@ import {
 } from '../components/ui';
 import { MembersFilterDrawer } from '../components/member/MembersFilterDrawer';
 import { DashboardSectionTitle } from '../components/dashboard/DashboardSectionTitle';
+import { DashboardStatCard } from '../components/dashboard/shared/DashboardStatCard';
 import {
   DashboardRoleChip,
   type DashboardPersonRoleTone,
@@ -54,6 +55,7 @@ import {
   defaultMemberListFilters,
   filterAndSortMembers,
   filterPendingInvitations,
+  isJoinedThisMonth,
   memberFilterOptionCount,
   type MemberListFilterState,
 } from '../utils/memberListQuery';
@@ -72,6 +74,7 @@ type MembersRoute = NativeStackScreenProps<
 >['route'];
 
 type MembersTab = 'members' | 'pending';
+type MembersKpiFocus = 'total' | 'active' | 'pending' | 'joinedThisMonth';
 
 function formatRoleLabel(
   role: MembershipRole,
@@ -130,6 +133,7 @@ export function MembersScreen() {
   const openActionSheet = useAccommodationActionSheetStore(state => state.open);
 
   const [activeTab, setActiveTab] = useState<MembersTab>('members');
+  const [kpiFocus, setKpiFocus] = useState<MembersKpiFocus | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [listFilters, setListFilters] = useState<MemberListFilterState>(() =>
     defaultMemberListFilters(),
@@ -166,6 +170,51 @@ export function MembersScreen() {
       }),
     [listFilters.roles, pendingInvitations, permissions.spaceType, searchQuery],
   );
+
+  const kpi = useMemo(
+    () => ({
+      total: members.length,
+      active: members.filter(m => m.status === 'ACTIVE').length,
+      pending: pendingInvitations.length,
+      joinedThisMonth: members.filter(m => isJoinedThisMonth(m.createdAt)).length,
+    }),
+    [members, pendingInvitations.length],
+  );
+
+  const applyKpiFocus = useCallback((next: MembersKpiFocus) => {
+    const clearing = kpiFocus === next;
+    setKpiFocus(clearing ? null : next);
+    if (clearing || next === 'total') {
+      setActiveTab('members');
+      setListFilters(defaultMemberListFilters());
+      return;
+    }
+    if (next === 'pending') {
+      setActiveTab('pending');
+      setListFilters(defaultMemberListFilters());
+      return;
+    }
+    if (next === 'active') {
+      setActiveTab('members');
+      setListFilters({
+        ...defaultMemberListFilters(),
+        statuses: new Set(['ACTIVE']),
+      });
+      return;
+    }
+    setActiveTab('members');
+    setListFilters({
+      ...defaultMemberListFilters(),
+      joinedThisMonthOnly: true,
+    });
+  }, [kpiFocus]);
+
+  const handleTabChange = useCallback((value: MembersTab) => {
+    setActiveTab(value);
+    setKpiFocus(prev =>
+      value === 'pending' ? 'pending' : prev === 'pending' ? null : prev,
+    );
+  }, []);
 
   const activeFilterCount = countMemberListFilters(listFilters, permissions.spaceType);
   const useMembersFilterDrawer = shouldUseFilterDrawer(
@@ -258,7 +307,7 @@ export function MembersScreen() {
       <SegmentedTabs
         style={styles.tabs}
         value={activeTab}
-        onChange={setActiveTab}
+        onChange={handleTabChange}
         items={[
           { key: 'members', label: t('membership.tabs.members'), icon: Users },
           { key: 'pending', label: t('membership.tabs.pending'), icon: Mail },
@@ -283,6 +332,49 @@ export function MembersScreen() {
             <Text style={styles.errorBannerText}>{error}</Text>
           </View>
         ) : null}
+
+        <View style={styles.kpiGrid}>
+          <DashboardStatCard
+            label={t('membership.kpi.total', { defaultValue: 'Total Members' })}
+            value={String(kpi.total)}
+            icon={Users}
+            accent={colors.primaryDark}
+            compact
+            gridItem
+            selected={kpiFocus === 'total'}
+            onPress={() => applyKpiFocus('total')}
+          />
+          <DashboardStatCard
+            label={t('membership.kpi.active', { defaultValue: 'Active Members' })}
+            value={String(kpi.active)}
+            icon={UserCheck}
+            accent="#2563EB"
+            compact
+            gridItem
+            selected={kpiFocus === 'active'}
+            onPress={() => applyKpiFocus('active')}
+          />
+          <DashboardStatCard
+            label={t('membership.kpi.pending', { defaultValue: 'Pending Invitations' })}
+            value={String(kpi.pending)}
+            icon={Mail}
+            accent="#D97706"
+            compact
+            gridItem
+            selected={kpiFocus === 'pending'}
+            onPress={() => applyKpiFocus('pending')}
+          />
+          <DashboardStatCard
+            label={t('membership.kpi.joinedThisMonth', { defaultValue: 'Joined This Month' })}
+            value={String(kpi.joinedThisMonth)}
+            icon={CalendarDays}
+            accent="#7C3AED"
+            compact
+            gridItem
+            selected={kpiFocus === 'joinedThisMonth'}
+            onPress={() => applyKpiFocus('joinedThisMonth')}
+          />
+        </View>
 
         <DashboardSectionTitle
           title={
@@ -480,7 +572,10 @@ export function MembersScreen() {
         showStatusSection={activeTab === 'members'}
         showSortSection={activeTab === 'members'}
         onClose={() => setFilterDrawerOpen(false)}
-        onApply={setListFilters}
+        onApply={next => {
+          setKpiFocus(null);
+          setListFilters(next);
+        }}
       />
     </View>
   );
@@ -502,6 +597,12 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.xl,
     paddingBottom: 96,
+    gap: spacing.md,
+  },
+  kpiGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
   errorBanner: {
     backgroundColor: '#FEF2F2',
@@ -509,7 +610,6 @@ const styles = StyleSheet.create({
     borderColor: '#FECACA',
     borderRadius: radius.button,
     padding: spacing.md,
-    marginBottom: spacing.md,
   },
   errorBannerText: {
     ...typography.body,
