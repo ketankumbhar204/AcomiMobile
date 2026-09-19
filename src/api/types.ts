@@ -2860,6 +2860,7 @@ export interface AdminRegisteredUser {
   id: UUID;
   fullName?: string | null;
   mobileNumber: string;
+  email?: string | null;
   mobileVerified: boolean;
   mobileVerifiedAt?: string | null;
   registeredAt: string;
@@ -2867,6 +2868,21 @@ export interface AdminRegisteredUser {
   onboardingStatus: AdminUserOnboardingStatus;
   profileCompleted: boolean;
   spaces: AdminRegisteredUserSpace[];
+  systemRole?: string | null;
+  active?: boolean;
+  testUser?: boolean;
+}
+
+export interface AdminCreateRegisteredUserRequest {
+  fullName: string;
+  mobileNumber: string;
+  email?: string;
+  password: string;
+  confirmPassword: string;
+  spaceRole: MembershipRole;
+  spaceId?: string;
+  spaceName?: string;
+  spaceType?: SpaceType;
 }
 
 export interface SavedAddress {

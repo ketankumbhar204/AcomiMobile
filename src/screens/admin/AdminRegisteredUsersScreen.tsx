@@ -1,11 +1,11 @@
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { adminApi } from '../../api/adminApi';
 import type { AdminRegisteredUser } from '../../api/types';
-import { AdminLeadCard } from '../../components/admin';
+import { AdminLeadCard, adminList } from '../../components/admin';
 import type { AdminStackParamList } from '../../navigation/types';
 import {
   formatAdminAssociatedSpaces,
@@ -47,6 +47,13 @@ export function AdminRegisteredUsersScreen() {
   return (
     <View style={styles.root}>
       <Text style={styles.hint}>{t('admin.users.hint')}</Text>
+      <View style={styles.actions}>
+        <Pressable
+          style={adminList.addBtn}
+          onPress={() => navigation.navigate('AdminCreateTestUser')}>
+          <Text style={adminList.addBtnText}>{t('admin.users.createTestUser')}</Text>
+        </Pressable>
+      </View>
       {loading ? (
         <ActivityIndicator style={styles.loader} color={colors.primary} />
       ) : (
@@ -64,6 +71,7 @@ export function AdminRegisteredUsersScreen() {
                 item.onboardingStatus,
               )} · ${formatAdminDate(item.registeredAt)}`}
               sourceLabel={formatAdminAssociatedSpaces(item.spaces)}
+              testLead={item.testUser ? true : undefined}
               onPress={() => navigation.navigate('AdminRegisteredUserDetail', { user: item })}
             />
           )}
@@ -81,6 +89,11 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
+  },
+  actions: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    alignItems: 'flex-start',
   },
   loader: { marginTop: spacing.xl },
   list: { padding: spacing.md, paddingBottom: spacing.xxl },

@@ -4907,6 +4907,7 @@
     "nav": {
       "dashboard": "Admin",
       "users": "Registered Users",
+      "createTestUser": "Create Test User",
       "userDetail": "User",
       "properties": "Properties",
       "property": "Property",
@@ -4930,7 +4931,8 @@
       "notVerified": "Not verified",
       "emDash": "—",
       "testYes": "Test: Yes",
-      "testNo": "Test: No"
+      "testNo": "Test: No",
+      "testUser": "Test user"
     },
     "filters": {
       "activeSpaces": "Active spaces",
@@ -4943,6 +4945,46 @@
     "users": {
       "hint": "Phone-verified accounts. Owner/Member selection is not required.",
       "empty": "No registered users found.",
+      "createTestUser": "Create Test User",
+      "createTestUserTitle": "Create Test User",
+      "createTestUserHint": "Creates a real ACOMI test user (system role USER). Choose a space role so membership matches a real user. No OTP is required — log in with the mobile number and password you set.",
+      "createTestUserSuccess": "Test user created. They can log in with the mobile number and password you entered.",
+      "createTestUserFailed": "Could not create test user.",
+      "createTestUserEmptySpaces": "No active spaces found. Create an Owner test user first, or add a property.",
+      "createTestUserSections": {
+        "account": "Account",
+        "password": "Password",
+        "membership": "Space membership"
+      },
+      "createTestUserFields": {
+        "fullName": "Full name",
+        "mobile": "Mobile number",
+        "email": "Email (optional)",
+        "password": "Password",
+        "confirmPassword": "Confirm password",
+        "spaceRole": "Space role",
+        "spaceRoleHint": "Owner creates a new space. Other roles may optionally join an existing space, or leave Space empty.",
+        "space": "Space (optional)",
+        "spaceHint": "Optional — leave empty to create a user with no space membership.",
+        "spacePickRoleFirst": "Select a space role first (Manager, Tenant, Customer, or Staff).",
+        "spaceName": "Space name (optional)",
+        "spaceNameHint": "Defaults to “QA - {full name}” if left blank."
+      },
+      "createTestUserRoles": {
+        "OWNER": "Owner",
+        "MANAGER": "Manager",
+        "TENANT": "Tenant",
+        "CUSTOMER": "Customer",
+        "STAFF": "Staff"
+      },
+      "createTestUserErrors": {
+        "fullName": "Enter a full name.",
+        "mobile": "Enter a valid 10-digit Indian mobile number.",
+        "email": "Enter a valid email address, or leave it blank.",
+        "spaceRole": "Select a space role.",
+        "space": "Select a space for this role.",
+        "spaceType": "Select a space type for the owner."
+      },
       "profileSection": "Profile",
       "verificationSection": "Verification",
       "roleSection": "Role",

@@ -315,6 +315,7 @@ export type AdminStackParamList = {
   AdminAddMess: undefined;
   AdminActiveSpaceDetail: { space: AdminActiveSpace };
   AdminRegisteredUsers: undefined;
+  AdminCreateTestUser: undefined;
   AdminRegisteredUserDetail: { user: AdminRegisteredUser };
   AdminSavedAddresses: undefined;
   AdminEnquiryList: undefined;
