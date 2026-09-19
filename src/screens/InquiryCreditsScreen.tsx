@@ -1,9 +1,11 @@
 import React, { useCallback, useLayoutEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Platform,
+  Modal,
+  Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -19,11 +21,10 @@ import {
 import { ApiError } from '../api/types';
 import { Button, EmptyState, HeaderBackButton, Screen } from '../components/ui';
 import type { MainStackParamList } from '../navigation/types';
+import { useToastStore } from '../store/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'InquiryCredits'>;
-
-const MOBILE_PURCHASE_DISABLED = Platform.OS === 'android' || Platform.OS === 'ios';
 
 function formatAmount(amount: number, currencyCode: string): string {
   try {
@@ -82,8 +83,8 @@ function PackageRowDisabled({ pkg }: { pkg: InquiryCreditPackage }) {
         </Text>
         <View style={styles.disabledPill}>
           <Text style={styles.disabledPillText}>
-            {t('inquiryCredits.unavailableOnAndroid', {
-              defaultValue: 'Unavailable on Android',
+            {t('inquiryCredits.unavailableWhileFree', {
+              defaultValue: 'Not needed (mobile is free)',
             })}
           </Text>
         </View>
@@ -92,14 +93,51 @@ function PackageRowDisabled({ pkg }: { pkg: InquiryCreditPackage }) {
   );
 }
 
+function PackageRowBuy({
+  pkg,
+  onBuy,
+}: {
+  pkg: InquiryCreditPackage;
+  onBuy: (pkg: InquiryCreditPackage) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.packageRow, pressed && { opacity: 0.85 }]}
+      onPress={() => onBuy(pkg)}>
+      <View style={styles.packageInfo}>
+        <Text style={styles.packageLabel}>{pkg.name}</Text>
+        <Text style={styles.packageCredits}>
+          {t('inquiryCredits.creditsCount', {
+            count: pkg.credits,
+            defaultValue: '{{count}} credits',
+          })}
+        </Text>
+      </View>
+      <View style={styles.packageRight}>
+        <Text style={styles.packageAmount}>
+          {formatAmount(Number(pkg.priceAmount), pkg.currency)}
+        </Text>
+        <Text style={styles.buyHint}>
+          {t('inquiryCredits.buy', { defaultValue: 'Buy' })}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
 export function InquiryCreditsScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
+  const showToast = useToastStore(state => state.showToast);
 
   const [wallet, setWallet] = useState<InquiryCreditsWallet | null>(null);
   const [config, setConfig] = useState<InquiryCreditsPaymentConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [buyTarget, setBuyTarget] = useState<InquiryCreditPackage | null>(null);
+  const [utr, setUtr] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -137,6 +175,35 @@ export function InquiryCreditsScreen() {
     }, [loadData]),
   );
 
+  async function handleSubmitPurchase() {
+    if (!buyTarget) return;
+    setSubmitting(true);
+    try {
+      await inquiryCreditsApi.submitPurchase({
+        packageId: buyTarget.id,
+        utr: utr.trim() || undefined,
+      });
+      showToast(
+        t('inquiryCredits.purchaseSubmitted', {
+          defaultValue: 'Purchase request submitted. Credits appear after admin approval.',
+        }),
+      );
+      setBuyTarget(null);
+      setUtr('');
+      await loadData();
+    } catch (err) {
+      showToast(
+        err instanceof ApiError
+          ? err.message
+          : t('inquiryCredits.purchaseFailed', {
+              defaultValue: 'Could not submit purchase request.',
+            }),
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   if (loading) {
     return (
       <Screen contentStyle={styles.centered}>
@@ -168,6 +235,8 @@ export function InquiryCreditsScreen() {
   }
 
   const paymentEnabled = config?.enabled ?? false;
+  const creditsMode = config?.androidBillingMode === 'CREDITS';
+  const purchaseAllowed = paymentEnabled && creditsMode;
   const packages = (config?.packages ?? []).filter(p => p.enabled);
 
   return (
@@ -178,14 +247,24 @@ export function InquiryCreditsScreen() {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.mobileFreeTitle}>
-            {t('inquiryCredits.mobileFreeTitle', {
-              defaultValue: 'Mobile enquiries are free',
-            })}
+            {creditsMode
+              ? t('inquiryCredits.mobileCreditsTitle', {
+                  defaultValue: 'Mobile enquiries use credits',
+                })
+              : t('inquiryCredits.mobileFreeTitle', {
+                  defaultValue: 'Mobile enquiries are free',
+                })}
           </Text>
           <Text style={styles.mobileFreeBody}>
-            {t('inquiryCredits.mobileFreeBody', {
-              defaultValue: 'Unlimited enquiries are available in the ACOMI Android app.',
-            })}
+            {creditsMode
+              ? t('inquiryCredits.mobileCreditsBody', {
+                  free: config?.androidFreeDailyLimit ?? 0,
+                  defaultValue:
+                    'You get {{free}} free mobile enquiries per day, then paid credits apply.',
+                })
+              : t('inquiryCredits.mobileFreeBody', {
+                  defaultValue: 'Unlimited enquiries are available in the ACOMI Android app.',
+                })}
           </Text>
         </View>
       </View>
@@ -196,33 +275,46 @@ export function InquiryCreditsScreen() {
         {t('inquiryCredits.howItWorksTitle', { defaultValue: 'How it works' })}
       </Text>
       <Text style={styles.sectionBody}>
-        {t('inquiryCredits.howItWorksBodyMobile', {
-          defaultValue:
-            'Get unlimited enquiries on ACOMI Android. Credits are used for web enquiries after the daily free allowance. The mobile app does not require credits for enquiries.',
-        })}
+        {creditsMode
+          ? t('inquiryCredits.howItWorksBodyMobileCredits', {
+              defaultValue:
+                'After your daily free mobile enquiries, each new enquiry uses 1 credit. Buy a mobile credit package below after paying via UPI.',
+            })
+          : t('inquiryCredits.howItWorksBodyMobile', {
+              defaultValue:
+                'Get unlimited enquiries on ACOMI Android. Credits are used for email/web enquiries after the daily free allowance.',
+            })}
       </Text>
 
-      {paymentEnabled && packages.length > 0 ? (
+      {packages.length > 0 ? (
         <>
           <Text style={styles.sectionTitle}>
-            {t('inquiryCredits.buyCreditsTitleWeb', {
-              defaultValue: 'Credits for web enquiries',
-            })}
+            {purchaseAllowed
+              ? t('inquiryCredits.buyCreditsTitleMobile', {
+                  defaultValue: 'Buy mobile inquiry credits',
+                })
+              : t('inquiryCredits.buyCreditsTitleWeb', {
+                  defaultValue: 'Mobile credit packages',
+                })}
           </Text>
-          <Text style={styles.sectionBody}>
-            {t('inquiryCredits.purchaseDisabledHint', {
-              defaultValue:
-                'Purchase unavailable on Android. Mobile enquiries are unlimited and free.',
-            })}
-          </Text>
+          {!purchaseAllowed ? (
+            <Text style={styles.sectionBody}>
+              {t('inquiryCredits.purchaseDisabledHint', {
+                defaultValue:
+                  'Purchases are not required while mobile enquiries are free.',
+              })}
+            </Text>
+          ) : null}
 
           <View style={styles.packageList}>
-            {MOBILE_PURCHASE_DISABLED
-              ? packages.map(pkg => <PackageRowDisabled key={pkg.id} pkg={pkg} />)
-              : null}
+            {purchaseAllowed
+              ? packages.map(pkg => (
+                  <PackageRowBuy key={pkg.id} pkg={pkg} onBuy={setBuyTarget} />
+                ))
+              : packages.map(pkg => <PackageRowDisabled key={pkg.id} pkg={pkg} />)}
           </View>
         </>
-      ) : paymentEnabled && packages.length === 0 ? (
+      ) : paymentEnabled ? (
         <View style={styles.noPkgWrap}>
           <ShoppingBag size={32} color={colors.muted} />
           <Text style={styles.noPkgText}>
@@ -232,6 +324,64 @@ export function InquiryCreditsScreen() {
           </Text>
         </View>
       ) : null}
+
+      <Modal
+        visible={buyTarget != null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !submitting && setBuyTarget(null)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>
+              {buyTarget
+                ? `${buyTarget.name} · ${formatAmount(
+                    Number(buyTarget.priceAmount),
+                    buyTarget.currency,
+                  )}`
+                : ''}
+            </Text>
+            <Text style={styles.modalHint}>
+              {config?.instructions ||
+                t('inquiryCredits.payThenUtr', {
+                  defaultValue: 'Pay via UPI, then enter your UTR / transaction reference.',
+                })}
+            </Text>
+            {config?.upiId ? (
+              <Text style={styles.modalMeta}>UPI: {config.upiId}</Text>
+            ) : null}
+            <TextInput
+              style={styles.utrInput}
+              value={utr}
+              onChangeText={setUtr}
+              placeholder={t('inquiryCredits.utrPlaceholder', {
+                defaultValue: 'UTR / transaction ID (optional)',
+              })}
+              placeholderTextColor={colors.muted}
+              editable={!submitting}
+            />
+            <View style={styles.modalActions}>
+              <Button
+                label={t('common.cancel', { defaultValue: 'Cancel' })}
+                variant="secondary"
+                disabled={submitting}
+                onPress={() => {
+                  setBuyTarget(null);
+                  setUtr('');
+                }}
+              />
+              <Button
+                label={
+                  submitting
+                    ? t('common.saving', { defaultValue: 'Submitting…' })
+                    : t('inquiryCredits.submitPurchase', { defaultValue: 'Submit' })
+                }
+                disabled={submitting}
+                onPress={() => void handleSubmitPurchase()}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Screen>
   );
 }
@@ -299,14 +449,12 @@ const styles = StyleSheet.create({
   },
   walletLabel: {
     ...typography.caption,
-    color: colors.muted,
-    fontWeight: '600',
-    marginBottom: 2,
+    color: colors.textSecondary,
   },
   walletBalance: {
-    ...typography.h2,
+    ...typography.h3,
     color: colors.textPrimary,
-    lineHeight: 34,
+    fontWeight: '800',
   },
   walletMeta: {
     ...typography.caption,
@@ -365,6 +513,11 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 16,
   },
+  buyHint: {
+    ...typography.caption,
+    color: colors.primary,
+    fontWeight: '700',
+  },
   disabledText: {
     color: colors.muted,
   },
@@ -377,8 +530,8 @@ const styles = StyleSheet.create({
   disabledPillText: {
     ...typography.caption,
     fontSize: 10,
-    fontWeight: '700',
     color: colors.textSecondary,
+    fontWeight: '700',
   },
   noPkgWrap: {
     alignItems: 'center',
@@ -386,8 +539,48 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xl,
   },
   noPkgText: {
-    ...typography.body,
+    ...typography.caption,
     color: colors.muted,
     textAlign: 'center',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15,23,42,0.45)',
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  modalCard: {
+    backgroundColor: colors.white,
+    borderRadius: radius.card,
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
+  modalTitle: {
+    ...typography.bodyStrong,
+    color: colors.textPrimary,
+  },
+  modalHint: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    lineHeight: 18,
+  },
+  modalMeta: {
+    ...typography.caption,
+    color: colors.tealDark,
+    fontWeight: '700',
+  },
+  utrInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.button,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    ...typography.body,
+    color: colors.textPrimary,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
   },
 });

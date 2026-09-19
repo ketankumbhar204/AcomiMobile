@@ -2873,6 +2873,17 @@ export interface AdminRegisteredUser {
   testUser?: boolean;
 }
 
+export interface AdminRegisteredUsersSummary {
+  totalUsers: number;
+  verifiedUsers: number;
+  newUsersLast30Days: number;
+  withSpaceAssociation: number;
+  totalUsersDeltaPercent?: number | null;
+  verifiedUsersDeltaPercent?: number | null;
+  newUsersDeltaPercent?: number | null;
+  withSpaceDeltaPercent?: number | null;
+}
+
 export interface AdminCreateRegisteredUserRequest {
   fullName: string;
   mobileNumber: string;

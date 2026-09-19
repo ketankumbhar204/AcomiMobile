@@ -35,6 +35,7 @@ export interface InquiryCreditPackage {
   credits: number;
   enabled: boolean;
   displayOrder: number;
+  clientChannel?: 'WEB' | 'ANDROID';
 }
 
 export interface InquiryCreditsPaymentConfig {
@@ -47,6 +48,10 @@ export interface InquiryCreditsPaymentConfig {
   qrUrl?: string | null;
   whatsappNumber?: string | null;
   instructions?: string | null;
+  webFreeDailyLimit?: number;
+  androidBillingMode?: 'FREE' | 'CREDITS';
+  androidFreeDailyLimit?: number;
+  androidHourlyRateLimit?: number;
   packages: InquiryCreditPackage[];
 }
 

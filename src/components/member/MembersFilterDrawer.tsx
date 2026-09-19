@@ -46,6 +46,7 @@ export function MembersFilterDrawer({
         roles: new Set(applied.roles),
         statuses: new Set(applied.statuses),
         sort: applied.sort,
+        joinedThisMonthOnly: false,
       });
     }
   }, [applied, visible]);
@@ -70,6 +71,7 @@ export function MembersFilterDrawer({
           roles: new Set(draft.roles),
           statuses: new Set(draft.statuses),
           sort: draft.sort,
+          joinedThisMonthOnly: false,
         });
         onClose();
       }}>

@@ -8,6 +8,7 @@ import type {
   AdminUpdateRegistrationContactRequest,
   AdminDashboardSummary,
   AdminRegisteredUser,
+  AdminRegisteredUsersSummary,
   SavedAddress,
   SavedAddressRequest,
   ApiResponse,
@@ -123,6 +124,13 @@ export const adminApi = {
     unwrapVoidResponse(apiClient.delete(`/admin/mess-registrations/${id}`)),
 
   listRegisteredUsers: async (params?: {
+    q?: string;
+    role?: string;
+    onboarding?: string;
+    spaceAssociation?: string;
+    verified?: boolean;
+    from?: string;
+    to?: string;
     page?: number;
     size?: number;
   }): Promise<PagedResponse<AdminRegisteredUser>> =>
@@ -130,6 +138,11 @@ export const adminApi = {
       apiClient.get<ApiResponse<PagedResponse<AdminRegisteredUser>>>('/admin/registered-users', {
         params,
       }),
+    ),
+
+  getRegisteredUsersSummary: async (): Promise<AdminRegisteredUsersSummary> =>
+    unwrapApiResponse(
+      apiClient.get<ApiResponse<AdminRegisteredUsersSummary>>('/admin/registered-users/summary'),
     ),
 
   createRegisteredUser: async (
