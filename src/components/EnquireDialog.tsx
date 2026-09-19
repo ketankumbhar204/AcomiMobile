@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { enquiryApi } from '../api/enquiryApi';
 import { ApiError, type SpaceEnquiryResponse, type UserResponse } from '../api/types';
 import { CheckCircle2, Clock } from 'lucide-react-native';
-import { Button, FormInput } from './ui';
+import { Button } from './ui';
 import type { MainStackParamList } from '../navigation/types';
 import { useAuthStore } from '../store/authStore';
 import { colors, radius, shadows, spacing, typography } from '../theme';
@@ -19,7 +19,7 @@ type EnquireDialogProps = {
   onClose: () => void;
 };
 
-type Step = 'submitting' | 'request' | 'sent' | 'ready' | 'own' | 'already' | 'error';
+type Step = 'submitting' | 'sent' | 'ready' | 'own' | 'already' | 'error';
 
 function accountEmail(user: UserResponse | null | undefined): string {
   return (
@@ -42,7 +42,6 @@ export function EnquireDialog({
   const refreshUser = useAuthStore(state => state.refreshUser);
   const defaultEmail = useMemo(() => accountEmail(user), [user]);
   const [step, setStep] = useState<Step>('submitting');
-  const [email, setEmail] = useState(defaultEmail);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState<SpaceEnquiryResponse | null>(null);
@@ -51,12 +50,13 @@ export function EnquireDialog({
 
   async function submit(options?: { emailOverride?: string }) {
     if (submittingRef.current) return;
-    const enquiryEmail = (options?.emailOverride ?? email).trim();
+    const enquiryEmail = (options?.emailOverride ?? defaultEmail).trim();
     submittingRef.current = true;
     setSubmitting(true);
     setError(null);
     setStep('submitting');
     try {
+      // Email is optional on ANDROID — owner contact is delivered in-app.
       const created = await enquiryApi.create(
         spaceId,
         enquiryEmail ? { email: enquiryEmail } : {},
@@ -71,10 +71,7 @@ export function EnquireDialog({
       }
       void refreshUser();
     } catch (err) {
-      if (err instanceof ApiError && err.body?.errorCode === 'REQUESTER_EMAIL_REQUIRED') {
-        setStep('request');
-        setError(null);
-      } else if (err instanceof ApiError && err.body?.errorCode === 'SELF_ENQUIRY_NOT_ALLOWED') {
+      if (err instanceof ApiError && err.body?.errorCode === 'SELF_ENQUIRY_NOT_ALLOWED') {
         setStep('own');
       } else {
         setError(
@@ -99,7 +96,6 @@ export function EnquireDialog({
       autoKeyRef.current = null;
       return;
     }
-    setEmail(defaultEmail);
     if (ownedByCurrentUser) {
       setStep('own');
       return;
@@ -160,25 +156,6 @@ export function EnquireDialog({
                 style={styles.cta}
               />
               <Button label={t('common.close')} variant="ghost" onPress={close} style={styles.cta} />
-            </View>
-          ) : step === 'request' ? (
-            <View>
-              <Text style={styles.title}>{t('spaces.findPlace.enquire.emailRequiredTitle')}</Text>
-              <Text style={styles.body}>{t('spaces.findPlace.enquire.emailRequiredBody')}</Text>
-              <FormInput
-                label={t('spaces.findPlace.enquire.emailLabel')}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-              {error ? <Text style={styles.error}>{error}</Text> : null}
-              <Button
-                label={t('spaces.findPlace.enquire.send')}
-                onPress={() => void submit({ emailOverride: email })}
-                style={styles.cta}
-              />
-              <Button label={t('common.cancel')} variant="ghost" onPress={close} style={styles.cta} />
             </View>
           ) : (
             <View style={styles.center}>
