@@ -85,15 +85,16 @@ export function ComplaintsListScreen() {
   const raise = canRaiseComplaint(permissions.membershipRole, permissions.canRaiseComplaint);
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
+  const [highPriorityOnly, setHighPriorityOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
   const listParams = useMemo(
     () => ({
-      status: statusFilter === 'ALL' ? undefined : statusFilter,
+      status: highPriorityOnly || statusFilter === 'ALL' ? undefined : statusFilter,
       mine: manage ? undefined : true,
     }),
-    [manage, statusFilter],
+    [highPriorityOnly, manage, statusFilter],
   );
 
   const { data, loading, error, reload } = useComplaintsList(spaceId, listParams);
@@ -114,22 +115,41 @@ export function ComplaintsListScreen() {
   }, [reload]);
 
   const complaints = useMemo(() => data?.complaints ?? [], [data?.complaints]);
-  const filteredComplaints = useMemo(
-    () => complaints.filter(item => matchesSearch(item, searchQuery)),
-    [complaints, searchQuery],
-  );
+  const filteredComplaints = useMemo(() => {
+    let rows = complaints;
+    if (highPriorityOnly) {
+      rows = rows.filter(
+        item =>
+          (item.priority === 'URGENT' || item.priority === 'HIGH') &&
+          item.status !== 'CLOSED' &&
+          item.status !== 'CANCELLED' &&
+          item.status !== 'RESOLVED',
+      );
+    }
+    return rows.filter(item => matchesSearch(item, searchQuery));
+  }, [complaints, highPriorityOnly, searchQuery]);
 
   const urgentCount = useMemo(
     () =>
       complaints.filter(
         item =>
-          item.priority === 'URGENT' &&
+          (item.priority === 'URGENT' || item.priority === 'HIGH') &&
           item.status !== 'CLOSED' &&
           item.status !== 'CANCELLED' &&
           item.status !== 'RESOLVED',
       ).length,
     [complaints],
   );
+
+  const applyComplaintKpi = useCallback((next: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'HIGH_PRIORITY') => {
+    if (next === 'HIGH_PRIORITY') {
+      setHighPriorityOnly(prev => !prev);
+      setStatusFilter('ALL');
+      return;
+    }
+    setHighPriorityOnly(false);
+    setStatusFilter(prev => (prev === next ? 'ALL' : next));
+  }, []);
 
   const filterOptions = useMemo(
     () =>
@@ -199,8 +219,11 @@ export function ComplaintsListScreen() {
           />
           <ListFilterChips
             options={filterOptions}
-            value={statusFilter}
-            onChange={setStatusFilter}
+            value={highPriorityOnly ? 'ALL' : statusFilter}
+            onChange={value => {
+              setHighPriorityOnly(false);
+              setStatusFilter(value);
+            }}
           />
         </View>
 
@@ -217,7 +240,8 @@ export function ComplaintsListScreen() {
                 accent="#B45309"
                 compact
                 gridItem
-                onPress={() => setStatusFilter('OPEN')}
+                selected={!highPriorityOnly && statusFilter === 'OPEN'}
+                onPress={() => applyComplaintKpi('OPEN')}
               />
               <DashboardStatCard
                 label={t('complaints.status.IN_PROGRESS')}
@@ -226,7 +250,8 @@ export function ComplaintsListScreen() {
                 accent="#2563EB"
                 compact
                 gridItem
-                onPress={() => setStatusFilter('IN_PROGRESS')}
+                selected={!highPriorityOnly && statusFilter === 'IN_PROGRESS'}
+                onPress={() => applyComplaintKpi('IN_PROGRESS')}
               />
               <DashboardStatCard
                 label={t('complaints.status.RESOLVED')}
@@ -235,7 +260,8 @@ export function ComplaintsListScreen() {
                 accent="#059669"
                 compact
                 gridItem
-                onPress={() => setStatusFilter('RESOLVED')}
+                selected={!highPriorityOnly && statusFilter === 'RESOLVED'}
+                onPress={() => applyComplaintKpi('RESOLVED')}
               />
               <DashboardStatCard
                 label={t('complaints.priority.URGENT')}
@@ -244,6 +270,8 @@ export function ComplaintsListScreen() {
                 accent="#B91C1C"
                 compact
                 gridItem
+                selected={highPriorityOnly}
+                onPress={() => applyComplaintKpi('HIGH_PRIORITY')}
               />
             </View>
           </View>

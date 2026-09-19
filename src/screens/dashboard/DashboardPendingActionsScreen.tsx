@@ -1,10 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { CheckCircle2, Clock3, TriangleAlert } from 'lucide-react-native';
-import type { UUID } from '../../api/types';
+import type { PendingActionGroup, UUID } from '../../api/types';
 import { PendingActionsList } from '../../components/dashboard/PendingActionGroupCard';
 import { DashboardStatCard } from '../../components/dashboard/shared/DashboardStatCard';
 import { MealFormHero } from '../../components/meals/MealFormHero';
@@ -21,6 +21,16 @@ type DashboardPendingActionsScreenProps = {
   spaceId?: UUID;
 };
 
+type PendingKpiFocus = 'all' | 'critical' | 'today';
+
+function isTodayFocusedAction(actionType: PendingActionGroup['actionType']): boolean {
+  return (
+    actionType === 'MOVE_IN_SCHEDULED_TODAY' ||
+    actionType === 'MOVE_OUT_SCHEDULED_TODAY' ||
+    actionType === 'RESERVATION_STARTING_TODAY'
+  );
+}
+
 export function DashboardPendingActionsScreen({
   spaceId: spaceIdProp,
 }: DashboardPendingActionsScreenProps) {
@@ -29,6 +39,7 @@ export function DashboardPendingActionsScreen({
   const spaceId = spaceIdProp ?? route.params.spaceId;
   const permissions = useSpacePermissions(spaceId);
   const showOwnerDashboard = canManageNotifications(permissions);
+  const [kpiFocus, setKpiFocus] = useState<PendingKpiFocus | null>(null);
 
   // Always load from pending-actions API (syncs payments + meal ops) so the list
   // matches the dashboard badge. Owners must not use the tenant filter.
@@ -44,26 +55,35 @@ export function DashboardPendingActionsScreen({
     return (pendingActions?.totalCount ?? 0) === 0;
   }, [pendingActions?.totalCount, showInitialLoader]);
 
+  const allGroups = pendingActions?.groups ?? [];
+
   const criticalCount = useMemo(() => {
-    const groups = pendingActions?.groups ?? [];
-    return groups
+    return allGroups
       .filter(g => g.priority === 'CRITICAL' || g.priority === 'HIGH')
       .reduce((sum, g) => sum + g.count, 0);
-  }, [pendingActions?.groups]);
+  }, [allGroups]);
 
   const todayCount = useMemo(() => {
-    const groups = pendingActions?.groups ?? [];
-    return groups
-      .filter(
-        g =>
-          g.actionType === 'MOVE_IN_SCHEDULED_TODAY' ||
-          g.actionType === 'MOVE_OUT_SCHEDULED_TODAY' ||
-          g.actionType === 'RESERVATION_STARTING_TODAY',
-      )
+    return allGroups
+      .filter(g => isTodayFocusedAction(g.actionType))
       .reduce((sum, g) => sum + g.count, 0);
-  }, [pendingActions?.groups]);
+  }, [allGroups]);
 
   const totalCount = pendingActions?.totalCount ?? 0;
+
+  const filteredGroups = useMemo(() => {
+    if (kpiFocus === 'critical') {
+      return allGroups.filter(g => g.priority === 'CRITICAL' || g.priority === 'HIGH');
+    }
+    if (kpiFocus === 'today') {
+      return allGroups.filter(g => isTodayFocusedAction(g.actionType));
+    }
+    return allGroups;
+  }, [allGroups, kpiFocus]);
+
+  const applyPendingKpi = (next: PendingKpiFocus) => {
+    setKpiFocus(prev => (prev === next ? null : next));
+  };
 
   return (
     <Screen scrollable contentStyle={styles.content}>
@@ -112,6 +132,8 @@ export function DashboardPendingActionsScreen({
               icon={Clock3}
               accent={colors.primaryDark}
               compact
+              selected={kpiFocus === 'all'}
+              onPress={() => applyPendingKpi('all')}
             />
             <DashboardStatCard
               label={t('dashboard.pendingActions.kpi.critical', {
@@ -121,6 +143,8 @@ export function DashboardPendingActionsScreen({
               icon={TriangleAlert}
               accent={criticalCount > 0 ? '#DC2626' : colors.muted}
               compact
+              selected={kpiFocus === 'critical'}
+              onPress={() => applyPendingKpi('critical')}
             />
             <DashboardStatCard
               label={t('dashboard.pendingActions.kpi.today', {
@@ -130,9 +154,11 @@ export function DashboardPendingActionsScreen({
               icon={Clock3}
               accent={todayCount > 0 ? '#D97706' : colors.muted}
               compact
+              selected={kpiFocus === 'today'}
+              onPress={() => applyPendingKpi('today')}
             />
           </View>
-          <PendingActionsList spaceId={spaceId} groups={pendingActions?.groups ?? []} />
+          <PendingActionsList spaceId={spaceId} groups={filteredGroups} />
         </>
       )}
     </Screen>

@@ -4943,8 +4943,10 @@
       "add": "Add"
     },
     "users": {
-      "hint": "Phone-verified accounts. Owner/Member selection is not required.",
+      "hint": "Registered accounts. Tap a stat card to filter the list.",
       "empty": "No registered users found.",
+      "loadFailed": "Could not load registered users.",
+      "searchPlaceholder": "Search by name, phone number...",
       "createTestUser": "Create Test User",
       "createTestUserTitle": "Create Test User",
       "createTestUserHint": "Creates a real ACOMI test user (system role USER). Choose a space role so membership matches a real user. No OTP is required — log in with the mobile number and password you set.",
@@ -4984,6 +4986,15 @@
         "spaceRole": "Select a space role.",
         "space": "Select a space for this role.",
         "spaceType": "Select a space type for the owner."
+      },
+      "stats": {
+        "total": "Total Users",
+        "verified": "Verified",
+        "new30": "New (30 days)",
+        "withSpace": "With Space"
+      },
+      "filters": {
+        "clear": "Clear filters"
       },
       "profileSection": "Profile",
       "verificationSection": "Verification",
