@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { enquiryApi } from '../api/enquiryApi';
 import { ApiError, type SpaceEnquiryResponse, type UserResponse } from '../api/types';
+import { enquiryErrorMessage } from '../utils/enquiryErrors';
 import { CheckCircle2, Clock } from 'lucide-react-native';
 import { Button } from './ui';
 import type { MainStackParamList } from '../navigation/types';
@@ -75,9 +76,11 @@ export function EnquireDialog({
         setStep('own');
       } else {
         setError(
-          err instanceof ApiError
-            ? err.message
-            : t('spaces.findPlace.enquire.submitError'),
+          enquiryErrorMessage(
+            err,
+            t('spaces.findPlace.enquire.submitError'),
+            t('spaces.findPlace.enquire.listingUnavailable'),
+          ),
         );
         setStep('error');
       }
