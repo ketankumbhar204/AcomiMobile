@@ -31,9 +31,11 @@ import {
   RoomTypePicker,
   SetupStructureEditor,
   executeSetupStructure,
+  SetupCreateConfirmModal,
 } from '../../components/accommodation';
 import { expandToEditableStructure } from '../../components/accommodation/setup-preview/setupStructureModel';
 import type { EditableSetupStructure } from '../../components/accommodation/setup-preview/setupStructureTypes';
+import { summarizeSetupPricing } from '../../components/accommodation/setup-preview/summarizeSetupPricing';
 import { StickyFormActions } from '../../components/progressive';
 import { FormInput, HeaderBackButton } from '../../components/ui';
 import { useQuickSetup } from '../../hooks/useQuickSetup';
@@ -119,6 +121,7 @@ export function QuickSetupWizardScreen() {
   const [preview, setPreview] = useState<AccommodationSetupPreviewResponse | null>(null);
   const [editableStructure, setEditableStructure] = useState<EditableSetupStructure | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [createConfirmVisible, setCreateConfirmVisible] = useState(false);
   const [checkingBuilding, setCheckingBuilding] = useState(false);
   const generatingRef = useRef(false);
   const checkingBuildingRef = useRef(false);
@@ -422,6 +425,7 @@ export function QuickSetupWizardScreen() {
 
     if (!editableStructure.building.name.trim()) {
       setStepError(t('accommodation.buildings.nameRequired'));
+      setCreateConfirmVisible(false);
       return;
     }
 
@@ -432,6 +436,7 @@ export function QuickSetupWizardScreen() {
 
     try {
       const result = await executeSetupStructure(spaceId, editableStructure);
+      setCreateConfirmVisible(false);
       showToast(
         t('accommodation.setup.success', {
           beds: result.totals.beds,
@@ -464,6 +469,11 @@ export function QuickSetupWizardScreen() {
     }
     setStepIndex(index => Math.max(index - 1, 0));
   }
+
+  const createSummary = useMemo(
+    () => (editableStructure ? summarizeSetupPricing(editableStructure) : null),
+    [editableStructure],
+  );
 
   const estimatedBeds = useMemo(() => {
     if (!spaceType) {
@@ -746,7 +756,12 @@ export function QuickSetupWizardScreen() {
                     label: generating
                       ? t('accommodation.setup.creatingLayout')
                       : t('accommodation.setup.generateStructure'),
-                    onPress: handleGenerate,
+                    onPress: () => {
+                      if (generatingRef.current || !editableStructure) {
+                        return;
+                      }
+                      setCreateConfirmVisible(true);
+                    },
                     loading: generating,
                     disabled: generating,
                   }
@@ -757,6 +772,18 @@ export function QuickSetupWizardScreen() {
                     disabled: checkingBuilding,
                   }
             }
+          />
+          <SetupCreateConfirmModal
+            visible={createConfirmVisible}
+            summary={createSummary}
+            creating={generating}
+            error={error}
+            onConfirm={() => void handleGenerate()}
+            onClose={() => {
+              if (!generating) {
+                setCreateConfirmVisible(false);
+              }
+            }}
           />
       </View>
     </KeyboardAvoidingView>

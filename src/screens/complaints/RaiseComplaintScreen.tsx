@@ -19,7 +19,6 @@ import type {
 import { useTranslation } from 'react-i18next';
 import {
   AlignLeft,
-  CalendarDays,
   CirclePlus,
   ImagePlus,
   MessageSquareWarning,
@@ -42,7 +41,7 @@ import {
   ComplaintSelectionSummary,
 } from '../../components/complaints';
 import { MealFormHero } from '../../components/meals/MealFormHero';
-import { FormInput, HeaderBackButton, ListFilterChips } from '../../components/ui';
+import { DateField, FormInput, HeaderBackButton, ListFilterChips } from '../../components/ui';
 import {
   ProgressiveWorkflowFooter,
   StickyFormActions,
@@ -301,12 +300,11 @@ export function RaiseComplaintScreen() {
               <Text style={styles.cardTitle}>
                 {t('progressiveWorkflow.raiseComplaint.contextTitle')}
               </Text>
-              <FormInput
+              <DateField
                 label={t('complaints.fields.mealDate')}
                 value={mealDate}
-                onChangeText={setMealDate}
-                placeholder="YYYY-MM-DD"
-                leadingIcon={CalendarDays}
+                onChange={setMealDate}
+                allowPastDates
               />
               <View style={styles.fieldBlock}>
                 <View style={styles.fieldLabelRow}>

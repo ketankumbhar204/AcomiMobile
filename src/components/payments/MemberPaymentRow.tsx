@@ -12,6 +12,7 @@ type MemberPaymentRowProps = {
   /** When set to collected, trailing amount shows collected (matches Collected filter). */
   amountEmphasis?: 'default' | 'collected';
   onPress: () => void;
+  ownerActions?: React.ReactNode;
 };
 
 function memberInitial(name: string | null | undefined): string {
@@ -51,6 +52,7 @@ export function MemberPaymentRow({
   prepaidMode,
   amountEmphasis = 'default',
   onPress,
+  ownerActions,
 }: MemberPaymentRowProps) {
   const { t } = useTranslation();
   const currencyCode = row.currencyCode ?? 'INR';
@@ -122,33 +124,36 @@ export function MemberPaymentRow({
     : undefined;
 
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [styles.card, styles.cardWithAvatar, pressed && styles.cardPressed]}
-      accessibilityRole="button">
-      <MemberAvatar name={row.memberName} />
-      <View style={styles.content}>
-        <View style={styles.headerRow}>
-          <Text style={styles.name} numberOfLines={1}>
-            {row.memberName}
-          </Text>
-          <PaymentStatusBadge status={badgeStatus} label={badgeLabel} />
+    <View style={[styles.card, styles.cardWithAvatar]}>
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [styles.cardPress, pressed && styles.cardPressed]}
+        accessibilityRole="button">
+        <MemberAvatar name={row.memberName} />
+        <View style={styles.content}>
+          <View style={styles.headerRow}>
+            <Text style={styles.name} numberOfLines={1}>
+              {row.memberName}
+            </Text>
+            <PaymentStatusBadge status={badgeStatus} label={badgeLabel} />
+          </View>
+          <View style={styles.bodyRow}>
+            <Text style={styles.meta} numberOfLines={1}>
+              {collectedDisplay
+                ? t('payments.row.collectedOfExpected', {
+                    collected: collectedDisplay,
+                    expected: expectedDisplay,
+                  })
+                : t('payments.row.expected', {
+                    expected: expectedDisplay,
+                  })}
+            </Text>
+            <Text style={trailingStyle}>{trailingAmount}</Text>
+          </View>
         </View>
-        <View style={styles.bodyRow}>
-          <Text style={styles.meta} numberOfLines={1}>
-            {collectedDisplay
-              ? t('payments.row.collectedOfExpected', {
-                  collected: collectedDisplay,
-                  expected: expectedDisplay,
-                })
-              : t('payments.row.expected', {
-                  expected: expectedDisplay,
-                })}
-          </Text>
-          <Text style={trailingStyle}>{trailingAmount}</Text>
-        </View>
-      </View>
-    </Pressable>
+      </Pressable>
+      {ownerActions ? <View style={styles.actions}>{ownerActions}</View> : null}
+    </View>
   );
 }
 
@@ -164,6 +169,9 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   cardWithAvatar: {
+    gap: spacing.sm,
+  },
+  cardPress: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
@@ -251,5 +259,8 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.muted,
     fontWeight: '600',
+  },
+  actions: {
+    marginLeft: 44,
   },
 });

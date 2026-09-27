@@ -1,5 +1,6 @@
 import { accommodationApi } from '../api/accommodationApi';
 import type {
+  AccommodationStatus,
   BedResponse,
   BuildingResponse,
   UUID,
@@ -133,14 +134,35 @@ export async function updateBedPricingField(
   field: 'defaultRent' | 'defaultDeposit',
   value: number | null,
 ): Promise<BedResponse> {
+  return updateBedDetails(spaceId, roomId, bedId, {
+    defaultRent: field === 'defaultRent' ? value : undefined,
+    defaultDeposit: field === 'defaultDeposit' ? value : undefined,
+  });
+}
+
+/** One GET + one PUT. Omits keep the current persisted values. */
+export async function updateBedDetails(
+  spaceId: UUID,
+  roomId: UUID,
+  bedId: UUID,
+  patch: {
+    name?: string;
+    bedNumber?: string;
+    status?: AccommodationStatus;
+    defaultRent?: number | null;
+    defaultDeposit?: number | null;
+  },
+): Promise<BedResponse> {
   try {
     const bed = await accommodationApi.getBed(spaceId, roomId, bedId);
     return await accommodationApi.updateBed(spaceId, roomId, bedId, {
-      name: bed.name,
-      bedNumber: bed.bedNumber,
-      status: bed.status,
-      defaultRent: field === 'defaultRent' ? value : (bed.defaultRent ?? null),
-      defaultDeposit: field === 'defaultDeposit' ? value : (bed.defaultDeposit ?? null),
+      name: patch.name ?? bed.name,
+      bedNumber: patch.bedNumber ?? bed.bedNumber,
+      status: patch.status ?? bed.status,
+      defaultRent:
+        patch.defaultRent !== undefined ? patch.defaultRent : (bed.defaultRent ?? null),
+      defaultDeposit:
+        patch.defaultDeposit !== undefined ? patch.defaultDeposit : (bed.defaultDeposit ?? null),
     });
   } catch (err) {
     throw new Error(getAccommodationErrorMessage(err, 'accommodation.errors.saveBed'));

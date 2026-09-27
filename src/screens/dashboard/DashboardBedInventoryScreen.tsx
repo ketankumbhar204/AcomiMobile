@@ -1,18 +1,20 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { BedDouble, BedSingle } from 'lucide-react-native';
 import type { AccommodationStatus, BedSpaceListItemResponse, UUID } from '../../api/types';
+import { PersistedBedInteractionHost } from '../../components/accommodation/PersistedBedInteractionHost';
 import { BedInventoryBrowser } from '../../components/dashboard/BedInventoryBrowser';
 import { MealFormHero } from '../../components/meals/MealFormHero';
 import { Screen } from '../../components/ui/Screen';
-import { useAccommodationOccupancyFlow } from '../../hooks/useAccommodationOccupancyFlow';
+import { usePersistedBedInteraction } from '../../hooks/usePersistedBedInteraction';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../../navigation/types';
 import { spacing } from '../../theme';
-import { buildBedOccupancyTarget } from '../../utils/buildOccupancyTarget';
+import { persistedTargetFromSpaceBed } from '../../utils/persistedBedTarget';
+import { invalidateAccommodationQueries } from '../../utils/accommodationQueryCache';
 
 type Route = {
   key: string;
@@ -33,36 +35,21 @@ export function DashboardBedInventoryScreen() {
 
   const permissions = useSpacePermissions(spaceId);
   const canManageOccupancy = permissions.canManageOccupancy;
+  const canManage = permissions.canManageAccommodation;
   const spaceType = permissions.spaceType ?? 'PG';
 
   const [refreshToken, setRefreshToken] = useState(0);
 
-  const occupancyFlow = useAccommodationOccupancyFlow({
+  const bedInteraction = usePersistedBedInteraction({
     spaceId,
     spaceType,
-    canManage: canManageOccupancy,
-    onSuccess: () => setRefreshToken(token => token + 1),
+    canEditStructure: canManage,
+    canManageOccupancy,
+    onSuccess: async () => {
+      invalidateAccommodationQueries();
+      setRefreshToken(token => token + 1);
+    },
   });
-
-  const buildOccupancyContext = useCallback((bed: BedSpaceListItemResponse) => {
-    const target = buildBedOccupancyTarget({
-      buildingId: bed.buildingId,
-      buildingName: bed.buildingName,
-      floorId: bed.floorId ?? undefined,
-      floorName: bed.floorName ?? undefined,
-      unitId: bed.unitId ?? undefined,
-      unitName: bed.unitName ?? undefined,
-      roomId: bed.roomId,
-      roomName: bed.roomName,
-      bedId: bed.bedId,
-      bedName: bed.label,
-    });
-    return {
-      target,
-      accommodationStatus: bed.status,
-      occupancy: null,
-    };
-  }, []);
 
   const handleBedPress = useCallback(
     (bed: BedSpaceListItemResponse) => {
@@ -83,21 +70,14 @@ export function DashboardBedInventoryScreen() {
     [navigation, spaceId],
   );
 
-  const handleAllocate = useCallback(
-    (bed: BedSpaceListItemResponse) => {
-      occupancyFlow.startWalkIn(buildOccupancyContext(bed));
-    },
-    [buildOccupancyContext, occupancyFlow],
-  );
-
-  const handleReserve = useCallback(
-    (bed: BedSpaceListItemResponse) => {
-      occupancyFlow.startReserve(buildOccupancyContext(bed));
-    },
-    [buildOccupancyContext, occupancyFlow],
-  );
-
   const isVacant = status === 'AVAILABLE';
+  const screenTitle = isVacant
+    ? t('dashboard.drilldown.vacantBedsTitle')
+    : t('dashboard.drilldown.occupiedBedsTitle');
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ title: screenTitle });
+  }, [navigation, screenTitle]);
 
   return (
     <Screen style={styles.screen} contentStyle={styles.content}>
@@ -108,27 +88,20 @@ export function DashboardBedInventoryScreen() {
         flowAction="dashboard"
         canManageOccupancy={canManageOccupancy}
         onBedPress={handleBedPress}
-        onAllocate={handleAllocate}
-        onReserve={handleReserve}
+        onEditBed={canManage ? bed => bedInteraction.open(persistedTargetFromSpaceBed(bed)) : undefined}
         refreshTrigger={refreshToken}
         showSubtitle={false}
         headerAccessory={
           <MealFormHero
             icon={isVacant ? BedSingle : BedDouble}
-            eyebrow={t('dashboard.pendingActions.eyebrow', { defaultValue: 'Dashboard' })}
-            heading={
-              isVacant
-                ? t('dashboard.drilldown.vacantBedsTitle')
-                : t('dashboard.drilldown.occupiedBedsTitle')
-            }
-            subheading={
-              isVacant
-                ? t('dashboard.drilldown.vacantBedsSubtitle')
-                : t('dashboard.drilldown.occupiedBedsSubtitle')
-            }
-            compact
+            heading={screenTitle}
           />
         }
+      />
+      <PersistedBedInteractionHost
+        interaction={bedInteraction}
+        spaceId={spaceId}
+        spaceType={spaceType}
       />
     </Screen>
   );

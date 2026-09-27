@@ -9,7 +9,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { resetToMySpaces } from '../../navigation/navigationRef';
 import type { MainStackParamList } from '../../navigation/types';
 import { useTranslation } from 'react-i18next';
-import { spacing } from '../../theme';
+import { colors, spacing } from '../../theme';
 import { ChevronLeftIcon } from './icons/ChevronLeftIcon';
 import { devLog } from '../../utils/devLog';
 
@@ -62,7 +62,7 @@ export function SpaceTabBackButton() {
       hitSlop={8}
       accessibilityRole="button"
       accessibilityLabel={t('navigation.goBack')}>
-      <ChevronLeftIcon size={22} />
+      <ChevronLeftIcon size={22} color={colors.textPrimary} />
     </Pressable>
   );
 }

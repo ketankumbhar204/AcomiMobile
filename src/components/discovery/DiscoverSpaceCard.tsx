@@ -1,143 +1,133 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import {
-  Car,
-  Cctv,
-  Droplets,
-  Heart,
-  MapPin,
-  Refrigerator,
-  Shirt,
-  Sparkles,
-  SquareStack,
-  UtensilsCrossed,
-  Wifi,
-  Zap,
-  type LucideIcon,
-} from 'lucide-react-native';
+import { Heart, MapPin } from 'lucide-react-native';
 import { getSpaceTypeLabel } from '../../api';
-import type { DiscoverSpaceCardResponse } from '../../api/types';
+import type { DiscoverSpaceCardResponse, SpaceType } from '../../api/types';
+import { Button } from '../ui';
+import { listingAddress } from '../../utils/listingInfo';
+import { formatCurrency } from '../../utils/memberDeposit';
 import { colors, shadows, spacing, typography } from '../../theme';
-import { discoverDefaultImageUrl } from '../../utils/discoverDefaultImages';
-import { DiscoverListingImage } from './DiscoverListingImage';
-
-const MAX_AMENITIES = 4;
-
-const AMENITY_ICONS: Record<string, LucideIcon> = {
-  WIFI: Wifi,
-  FOOD_INCLUDED: UtensilsCrossed,
-  WASHING_MACHINE: Shirt,
-  PARKING: Car,
-  HOUSEKEEPING: Sparkles,
-  POWER_BACKUP: Zap,
-  RO_WATER: Droplets,
-  CCTV: Cctv,
-  HOT_WATER: Droplets,
-  REFRIGERATOR: Refrigerator,
-  WARDROBE: SquareStack,
-};
-
-function amenityIcon(code: string): LucideIcon {
-  return AMENITY_ICONS[code] ?? Wifi;
-}
+import { firstVerifiedListingImageUrl } from '../../utils/representativeImage';
+import { DiscoverListingCover } from './DiscoverListingCover';
+import { ListingInfoChips } from './ListingInfoChips';
 
 type DiscoverSpaceCardProps = {
   item: DiscoverSpaceCardResponse;
   onPress: () => void;
+  onEnquire: () => void;
 };
 
-/**
- * Matches AcomiPublicWebsite PropertyCard:
- * photo cover · type badge · heart · name · location · amenity icon rows.
- * No invented ratings/prices (not in discovery API).
- */
-export function DiscoverSpaceCard({ item, onPress }: DiscoverSpaceCardProps) {
+function toPositiveAmount(value?: number | string | null): number | null {
+  if (value == null || value === '') {
+    return null;
+  }
+  const amount = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(amount) && amount > 0 ? amount : null;
+}
+
+function priceAmount(item: DiscoverSpaceCardResponse): number | null {
+  return toPositiveAmount(item.startingPrice);
+}
+
+export function DiscoverSpaceCard({ item, onPress, onEnquire }: DiscoverSpaceCardProps) {
   const { t } = useTranslation();
   const typeLabel = getSpaceTypeLabel(item.type);
-  const address = item.address?.trim();
-  const coverUri = discoverDefaultImageUrl(item.type);
-
-  const amenityItems: { key: string; label: string; Icon: LucideIcon }[] = [];
-  if (item.foodIncludedInRent) {
-    amenityItems.push({
-      key: 'food',
-      label: t('spaces.findPlace.foodIncluded'),
-      Icon: UtensilsCrossed,
-    });
-  }
-  const codes = item.amenityCodes ?? [];
-  const labels = item.amenityLabels ?? [];
-  for (let i = 0; i < labels.length && amenityItems.length < MAX_AMENITIES; i += 1) {
-    const label = labels[i];
-    if (!label) continue;
-    amenityItems.push({
-      key: codes[i] ?? `label-${i}`,
-      label,
-      Icon: amenityIcon(codes[i] ?? ''),
-    });
-  }
+  const address = listingAddress(item);
+  const amount = priceAmount(item);
+  const monthlyAmount = toPositiveAmount(item.monthlyPrice);
+  const mealAmount = toPositiveAmount(item.mealPrice);
+  const isMess = item.type === 'MESS';
+  const cta = t('spaces.findPlace.getContactDetails');
 
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-      accessibilityRole="button"
-      accessibilityLabel={item.name}>
-      <View style={styles.media}>
-        <DiscoverListingImage
-          uri={coverUri}
-          style={styles.mediaFill}
-          accessibilityLabel={item.name}
-        />
-        <View style={styles.typeBadge}>
-          <Text style={styles.typeBadgeText} numberOfLines={1}>
-            {typeLabel}
-          </Text>
-        </View>
-        {item.testSpace ? (
-          <View style={styles.testBadge}>
-            <Text style={styles.testBadgeText}>{t('spaces.findPlace.testBadge')}</Text>
+    <View style={styles.card}>
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [styles.pressable, pressed && styles.cardPressed]}
+        accessibilityRole="button"
+        accessibilityLabel={item.name}>
+        <View style={styles.media}>
+          <DiscoverListingCover
+            listingId={item.spaceId}
+            spaceType={item.type}
+            listingImageUrl={firstVerifiedListingImageUrl(
+              item.listingImageUrl,
+              item.coverImageUrl,
+              item.imageUrl,
+            )}
+            style={styles.mediaFill}
+            accessibilityName={item.name}
+          />
+          <View style={styles.typeBadge}>
+            <Text style={styles.typeBadgeText} numberOfLines={1}>
+              {typeLabel}
+            </Text>
           </View>
-        ) : null}
-        <View
-          style={styles.heartWrap}
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants">
-          <Heart size={15} color={colors.textPrimary} strokeWidth={2} />
-        </View>
-        {item.alreadyMember ? (
-          <View style={styles.memberOverlay}>
-            <Text style={styles.memberOverlayText}>{t('spaces.findPlace.memberBadge')}</Text>
+          {item.testSpace ? (
+            <View style={styles.testBadge}>
+              <Text style={styles.testBadgeText}>{t('spaces.findPlace.testBadge')}</Text>
+            </View>
+          ) : null}
+          <View
+            style={styles.heartWrap}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants">
+            <Heart size={15} color={colors.textPrimary} strokeWidth={2} />
           </View>
-        ) : null}
-      </View>
-
-      <View style={styles.body}>
-        <Text style={styles.title} numberOfLines={2}>
-          {item.name}
-        </Text>
-        <View style={styles.addressRow}>
-          <MapPin size={14} color={colors.muted} strokeWidth={2.2} />
-          <Text style={styles.addressText} numberOfLines={2}>
-            {address || t('spaces.findPlace.addressMissing')}
-          </Text>
+          {item.alreadyMember ? (
+            <View style={styles.memberOverlay}>
+              <Text style={styles.memberOverlayText}>{t('spaces.findPlace.memberBadge')}</Text>
+            </View>
+          ) : null}
         </View>
 
-        {amenityItems.length > 0 ? (
-          <View style={styles.amenityRow}>
-            {amenityItems.map(({ key, label, Icon }) => (
-              <View key={key} style={styles.amenityItem}>
-                <Icon size={14} color={colors.muted} strokeWidth={2.2} />
-                <Text style={styles.amenityText} numberOfLines={1}>
-                  {label}
+        <View style={styles.body}>
+          <Text style={styles.title} numberOfLines={2}>
+            {item.name}
+          </Text>
+          <View style={styles.addressRow}>
+            <MapPin size={14} color={colors.muted} strokeWidth={2.2} />
+            <Text style={styles.addressText} numberOfLines={2}>
+              {address || t('spaces.findPlace.addressMissing')}
+            </Text>
+          </View>
+          {isMess ? (
+            <>
+              <Text style={styles.price}>
+                {monthlyAmount != null
+                  ? `${formatCurrency(monthlyAmount)} ${t('spaces.findPlace.priceSuffix.MESS')}`
+                  : t('spaces.findPlace.priceOnRequest')}
+              </Text>
+              {mealAmount != null ? (
+                <Text style={styles.mealPrice}>
+                  {`${formatCurrency(mealAmount)} ${t('spaces.findPlace.perMeal')}`}
                 </Text>
-              </View>
-            ))}
-          </View>
-        ) : null}
+              ) : null}
+            </>
+          ) : (
+            <Text style={styles.price}>
+              {amount != null
+                ? `${formatCurrency(amount)} ${t(`spaces.findPlace.priceSuffix.${item.type as SpaceType}`)}`
+                : t('spaces.findPlace.priceOnRequest')}
+            </Text>
+          )}
+          <ListingInfoChips
+            listing={item}
+            variant="card"
+            surface={isMess ? 'meals' : 'places'}
+          />
+        </View>
+      </Pressable>
+      <View style={styles.ctaWrap}>
+        <Button
+          label={cta}
+          onPress={onEnquire}
+          accessibilityLabel={`${cta}: ${item.name}`}
+          style={styles.cta}
+        />
       </View>
-    </Pressable>
+    </View>
   );
 }
 
@@ -149,6 +139,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(15, 23, 42, 0.06)',
     overflow: 'hidden',
     ...shadows.sm,
+  },
+  pressable: {
+    flexGrow: 1,
+    overflow: 'hidden',
   },
   cardPressed: {
     opacity: 0.96,
@@ -232,7 +226,10 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   body: {
-    padding: spacing.md,
+    flexGrow: 1,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
     gap: spacing.sm,
   },
   title: {
@@ -254,22 +251,24 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 18,
   },
-  amenityRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 2,
+  price: {
+    ...typography.bodyStrong,
+    fontSize: 15,
+    color: colors.textPrimary,
   },
-  amenityItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    maxWidth: '48%',
-  },
-  amenityText: {
+  mealPrice: {
     ...typography.caption,
-    fontSize: 11,
-    color: colors.muted,
-    flexShrink: 1,
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  ctaWrap: {
+    marginTop: 'auto',
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
+  },
+  cta: {
+    minHeight: 40,
+    paddingVertical: spacing.sm,
   },
 });

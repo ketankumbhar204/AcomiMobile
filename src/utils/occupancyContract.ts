@@ -138,6 +138,23 @@ export function computeMonthlyRentFoodTotal(
   return rent + food;
 }
 
+export function parseContractAmount(value: string): number | null {
+  return parseAmount(value);
+}
+
+/** First-month obligations created at move-in: rent (incl. food if billed with rent) + deposit. */
+export function computeMoveInTotalToPayThisMonth(
+  values: ContractTermsFormValues,
+  foodPolicy?: SpaceFoodPolicy,
+): { rent: number | null; deposit: number; total: number | null } {
+  const rent = computeMonthlyRentFoodTotal(values, foodPolicy);
+  const deposit = parseAmount(values.depositSnapshot) ?? 0;
+  if (rent == null) {
+    return { rent: null, deposit, total: null };
+  }
+  return { rent, deposit, total: rent + deposit };
+}
+
 /** True when the monthly total line should read "rent + food" (separate food charge is active). */
 export function monthlyTotalIncludesFoodFromForm(
   values: ContractTermsFormValues,

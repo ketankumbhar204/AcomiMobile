@@ -20,6 +20,11 @@ import type { MainStackParamList } from '../navigation/types';
 import { useMemberOccupancies } from '../hooks/useMemberOccupancies';
 import { colors, spacing, typography } from '../theme';
 import { formatOccupancyAllocatedDate } from '../utils/occupancyRules';
+import {
+  occupancyById,
+  occupancyLocationLabel,
+  resolveOccupancyHistoryEntries,
+} from '../utils/occupancyHistoryTimeline';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'MemberOccupancyHistory'>;
 type Route = NativeStackScreenProps<MainStackParamList, 'MemberOccupancyHistory'>['route'];
@@ -65,13 +70,11 @@ export function MemberOccupancyHistoryScreen() {
   const { spaceId, memberId, memberName } = route.params;
   const { data, loading, error, refresh } = useMemberOccupancies(spaceId, memberId);
 
-  const chronologicalHistory = useMemo(() => {
-    const entries = [...(data?.history ?? [])];
-    entries.sort(
-      (a, b) => new Date(a.performedAt).getTime() - new Date(b.performedAt).getTime(),
-    );
-    return entries;
-  }, [data?.history]);
+  const chronologicalHistory = useMemo(
+    () => resolveOccupancyHistoryEntries(data),
+    [data],
+  );
+  const occupancyMap = useMemo(() => occupancyById(data), [data]);
 
   const timelineGroups = useMemo<TimelineGroup[]>(() => {
     const groups: TimelineGroup[] = [];
@@ -86,12 +89,13 @@ export function MemberOccupancyHistoryScreen() {
         id: entry.historyId,
         title: t(`occupancy.history.${entry.eventType}`),
         meta: formatEventDate(entry.performedAt),
-        description: entry.remarks ?? undefined,
+        description:
+          entry.remarks ?? occupancyLocationLabel(occupancyMap.get(entry.occupancyId)),
         accent: EVENT_ACCENT[entry.eventType] ?? colors.primary,
       });
     });
     return groups;
-  }, [chronologicalHistory, t]);
+  }, [chronologicalHistory, occupancyMap, t]);
 
   React.useLayoutEffect(() => {
     navigation.setOptions({

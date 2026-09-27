@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { FormInput } from '../../../../components/ui';
+import { DateField, FormInput } from '../../../../components/ui';
 import { colors, spacing, typography } from '../../../../theme';
 
 type ReserveDatesStepProps = {
@@ -31,17 +31,18 @@ export function ReserveDatesStep({
       {displayPath ? <Text style={styles.path}>{displayPath}</Text> : null}
       <Text style={styles.hint}>{t('occupancyWizard.steps.reserveDatesHint')}</Text>
 
-      <FormInput
+      <DateField
         label={t('occupancy.section.moveInDate')}
         value={moveInDate}
-        onChangeText={onMoveInDateChange}
-        placeholder="YYYY-MM-DD"
+        onChange={onMoveInDateChange}
+        allowPastDates
       />
-      <FormInput
+      <DateField
         label={t('occupancy.fields.expectedExit')}
         value={expectedExitDate}
-        onChangeText={onExpectedExitDateChange}
-        placeholder="YYYY-MM-DD"
+        onChange={onExpectedExitDateChange}
+        optional
+        allowPastDates
       />
       <FormInput
         label={t('occupancy.fields.remarks')}

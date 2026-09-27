@@ -3,10 +3,10 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { BedListItemResponse, SpaceType } from '../../api/types';
 import { AccommodationStatusBadge } from '../accommodation/AccommodationStatusBadge';
-import { BedPricingFields } from '../accommodation/BedPricingFields';
+import { BedPricingDisplay } from '../accommodation/BedPricingDisplay';
+import { ChevronRight } from 'lucide-react-native';
 import { BuilderRowLifecycleMenu } from '../accommodation/BuilderRowLifecycleMenu';
 import type { BuilderRowLifecycleMenuProps } from '../accommodation/BuilderRowLifecycleMenu';
-import { InlineEditableName } from '../ui/InlineEditableName';
 import { useBedOccupantLabel } from '../../hooks/useBedOccupantLabel';
 import type { useAccommodationOccupancyFlow } from '../../hooks/useAccommodationOccupancyFlow';
 import { colors, radius, spacing, typography } from '../../theme';
@@ -37,13 +37,7 @@ type BedInventoryListRowProps = {
   currentRole?: BuilderRowLifecycleMenuProps['role'];
   canManageLifecycle?: boolean;
   canManageOccupancyActions?: boolean;
-  editableName?: boolean;
-  onSaveName?: (name: string) => Promise<void>;
-  pricingEditable?: boolean;
-  onCommitPricing?: (
-    field: 'defaultRent' | 'defaultDeposit',
-    value: number | null,
-  ) => Promise<void>;
+  onEdit?: () => void;
   onPress: () => void;
   lifecycleMenuProps: Omit<
     BuilderRowLifecycleMenuProps,
@@ -66,10 +60,7 @@ export function BedInventoryListRow({
   parentType,
   canManageLifecycle = false,
   canManageOccupancyActions = false,
-  editableName,
-  onSaveName,
-  pricingEditable = false,
-  onCommitPricing,
+  onEdit,
   onPress,
   lifecycleMenuProps,
 }: BedInventoryListRowProps) {
@@ -152,12 +143,9 @@ export function BedInventoryListRow({
             accessibilityLabel={displayLabel}>
             <View style={styles.titleRow}>
               <View style={styles.titleWrap}>
-                <InlineEditableName
-                  value={bed.label}
-                  displayValue={displayLabel}
-                  editable={editableName}
-                  onSave={onSaveName}
-                />
+                <Text style={styles.label} numberOfLines={1}>
+                  {displayLabel}
+                </Text>
               </View>
               {inactive ? (
                 <AccommodationInactiveBadge />
@@ -171,6 +159,18 @@ export function BedInventoryListRow({
               </Text>
             ) : null}
           </Pressable>
+          {onEdit && !inactive ? (
+            <Pressable
+              onPress={onEdit}
+              hitSlop={8}
+              style={styles.editBtn}
+              accessibilityRole="button"
+              accessibilityLabel={t('accommodation.builder.editBed', {
+                defaultValue: 'Edit bed',
+              })}>
+              <ChevronRight size={16} color={colors.info} strokeWidth={2.4} />
+            </Pressable>
+          ) : null}
           {showMenu ? (
             <View style={styles.menuSlot}>
               <BuilderRowLifecycleMenu
@@ -187,11 +187,10 @@ export function BedInventoryListRow({
           ) : null}
         </View>
         <View style={styles.pricing}>
-          <BedPricingFields
+          <BedPricingDisplay
             rent={bed.defaultRent}
             deposit={bed.defaultDeposit}
-            editable={pricingEditable && !inactive}
-            onCommit={onCommitPricing}
+            layout="row"
           />
         </View>
       </View>
@@ -234,6 +233,23 @@ const styles = StyleSheet.create({
   titleWrap: {
     flex: 1,
     minWidth: 0,
+  },
+  label: {
+    ...typography.bodyStrong,
+    fontSize: 15,
+    color: colors.textPrimary,
+  },
+  editBtn: {
+    width: 36,
+    height: 36,
+    marginTop: spacing.sm,
+    marginRight: spacing.xs,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
   },
   menuSlot: {
     width: 44,

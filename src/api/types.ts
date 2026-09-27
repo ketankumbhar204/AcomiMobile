@@ -816,7 +816,17 @@ export interface DiscoverSpaceCardResponse {
   spaceId: UUID;
   name: string;
   type: SpaceType;
+  /** Future verified listing photo. Never a representative/stock image. */
+  listingImageUrl?: string | null;
+  coverImageUrl?: string | null;
+  imageUrl?: string | null;
   address?: string | null;
+  startingPrice?: number | string | null;
+  monthlyPrice?: number | string | null;
+  mealPrice?: number | string | null;
+  mapUrl?: string | null;
+  /** True when at least one stored contact is usable. Never includes the raw contact. */
+  hasContact?: boolean;
   amenityCodes?: string[];
   amenityLabels?: string[];
   foodIncludedInRent: boolean;
@@ -831,6 +841,12 @@ export interface DiscoverSpaceCardResponse {
 /** Public discovery detail — GET /spaces/discover/{spaceId} */
 export interface DiscoverSpaceDetailResponse extends DiscoverSpaceCardResponse {
   amenities?: AmenityAssignment[];
+  addressLine?: string | null;
+  city?: string | null;
+  state?: string | null;
+  pincode?: string | null;
+  sharingNotes?: string | null;
+  description?: string | null;
 }
 
 export type SpaceEnquiryStatus = 'PENDING' | 'SHARED' | 'REJECTED' | 'EXPIRED' | 'CANCELLED';
@@ -900,10 +916,23 @@ export interface AdminSpaceEnquiryDetail extends AdminSpaceEnquiryListItem {
 
 export interface DiscoverSpacesParams {
   search?: string;
+  location?: string;
   type?: SpaceType;
+  types?: SpaceType[];
+  minRent?: number | null;
+  maxRent?: number | null;
+  amenities?: string[];
   page?: number;
   size?: number;
   sort?: 'newest' | string;
+}
+
+export interface LocationRecord {
+  location: string;
+  district: string;
+  state: string;
+  cityTaluka: string;
+  pincode: string;
 }
 
 export interface DefaultSpaceResponse {
@@ -1506,6 +1535,11 @@ export interface BedResponse {
   actions?: AccommodationActionMetadata;
   occupant?: BedOccupantSummaryResponse | null;
   photoFileId?: UUID | null;
+}
+
+export interface BedPricingPreviewResponse {
+  affectedBedCount: number;
+  affectedLocations: string[];
 }
 
 // ─── Accommodation Phase 4.2 orchestration ────────────────────────────────
@@ -2613,6 +2647,22 @@ export interface ReviewPaymentRequest {
   action: PaymentReviewAction;
   remarks?: string;
   rejectionCode?: PaymentRejectionReason;
+}
+
+export interface CreateSpacePaymentRequest {
+  memberId: UUID;
+  paymentType: UniversalPaymentType;
+  paymentCategory: PaymentCategory;
+  amount: number;
+  month?: string;
+  dueDate?: string;
+  title?: string;
+  remarks?: string;
+  confirmDuplicateDeposit?: boolean;
+}
+
+export interface MarkPaymentReceivedRequest {
+  remarks?: string;
 }
 
 /** @deprecated Use ReviewPaymentRequest via POST /review */

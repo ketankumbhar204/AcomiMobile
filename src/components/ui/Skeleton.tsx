@@ -61,6 +61,25 @@ export function SkeletonCard() {
   );
 }
 
+/** Room + bed placeholders for inventory lists (replaces a spinner). */
+export function InventoryListSkeleton({ cards = 2 }: { cards?: number }) {
+  return (
+    <View style={styles.inventoryStack}>
+      {Array.from({ length: cards }, (_, index) => (
+        <View key={index} style={styles.inventoryCard}>
+          <Skeleton width="42%" height={14} />
+          <Skeleton width="68%" height={12} style={styles.gap} />
+          <View style={styles.bedRow}>
+            <Skeleton width={72} height={72} borderRadius={radius.card} />
+            <Skeleton width={72} height={72} borderRadius={radius.card} />
+            <Skeleton width={72} height={72} borderRadius={radius.card} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   base: {
     backgroundColor: colors.border,
@@ -82,5 +101,20 @@ const styles = StyleSheet.create({
   },
   gap: {
     marginTop: spacing.sm,
+  },
+  inventoryStack: {
+    gap: spacing.md,
+  },
+  inventoryCard: {
+    backgroundColor: colors.white,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+  },
+  bedRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.md,
   },
 });

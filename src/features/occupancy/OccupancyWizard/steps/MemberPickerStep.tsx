@@ -41,6 +41,11 @@ type MemberPickerStepProps = {
   creatingMember?: boolean;
   selectedMemberId?: string | null;
   hideTitle?: boolean;
+  /**
+   * Render members in the parent page scroll instead of a nested FlatList.
+   * Use when the wizard already owns the only vertical ScrollView.
+   */
+  embedInParentScroll?: boolean;
   onSelect: (member: ResidentPickerItem) => void;
   onCreateNewPress?: () => void;
 };
@@ -105,6 +110,7 @@ export function MemberPickerStep({
   creatingMember = false,
   selectedMemberId,
   hideTitle = false,
+  embedInParentScroll = false,
   onSelect,
   onCreateNewPress,
 }: MemberPickerStepProps) {
@@ -132,8 +138,95 @@ export function MemberPickerStep({
     ? t('membership.add.createNewHint')
     : t('occupancyWizard.addMemberHint');
 
+  function renderMemberCard(item: ResidentPickerItem) {
+    const blocked =
+      preferredStatus === 'VACATED' &&
+      (item.occupancyStatus === 'ALLOCATED' || item.occupancyStatus === 'RESERVED');
+    const warn = preferredStatus === 'ALLOCATED' && item.occupancyStatus !== 'ALLOCATED';
+    const selected = selectedMemberId === item.memberId;
+    const customerMeta = isCustomer && crossSpaceReuse ? customerReuseMeta(item, t) : null;
+
+    return (
+      <Pressable
+        style={[styles.card, selected && styles.cardSelected, blocked && styles.cardDisabled]}
+        disabled={blocked || creatingMember}
+        onPress={() => onSelect(item)}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>
+            {(item.fullName.trim().charAt(0) || '?').toUpperCase()}
+          </Text>
+        </View>
+        <View style={styles.cardBody}>
+          {customerMeta ? (
+            <View style={styles.typeChipWrap}>
+              <Text style={styles.typeChip}>{customerMeta.typeLabel}</Text>
+            </View>
+          ) : null}
+          <Text style={styles.name}>{item.fullName}</Text>
+          <Text style={styles.mobile}>
+            {customerMeta
+              ? item.mobileNumber
+              : t('occupancyWizard.residentCard.mobile', {
+                  mobile: item.mobileNumber,
+                })}
+          </Text>
+          {customerMeta ? (
+            <>
+              <Text style={styles.meta}>{customerMeta.fromLine}</Text>
+              {customerMeta.statusLine ? (
+                <Text style={styles.available}>{customerMeta.statusLine}</Text>
+              ) : null}
+            </>
+          ) : crossSpaceReuse && item.sourceSpaceName ? (
+            <>
+              <Text style={styles.meta}>
+                {item.alreadyInTargetSpace
+                  ? t('occupancyWizard.residentCard.inThisSpace')
+                  : t('occupancyWizard.residentCard.previouslyIn', {
+                      space: item.sourceSpaceName,
+                    })}
+              </Text>
+              {item.availableForMoveIn !== false ? (
+                <Text style={styles.available}>{availableLabel}</Text>
+              ) : null}
+            </>
+          ) : (
+            <Text style={styles.role}>{memberRoleLabel(item.role, t)}</Text>
+          )}
+          {warn ? (
+            <Text style={styles.warn}>{t('occupancyWizard.memberNotAllocated')}</Text>
+          ) : null}
+        </View>
+        <View style={styles.cardAside}>
+          <View style={[styles.radioOuter, selected && styles.radioOuterSelected]}>
+            {selected ? <View style={styles.radioInner} /> : null}
+          </View>
+        </View>
+      </Pressable>
+    );
+  }
+
+  const emptyState =
+    !loading ? (
+      <View style={styles.emptyWrap}>
+        <Text style={styles.empty}>
+          {crossSpaceReuse ? emptyReuseLabel : t('occupancyWizard.noMembers')}
+        </Text>
+        {crossSpaceReuse && allowAddNew ? (
+          <Button
+            label={addNewModeLabel}
+            onPress={() => {
+              onPickerModeChange('new');
+              onCreateNewPress?.();
+            }}
+            style={styles.emptyCta}
+          />
+        ) : null}
+      </View>
+    ) : null;
+
   return (
-    <View style={styles.wrap}>
+    <View style={embedInParentScroll ? styles.embeddedWrap : styles.wrap}>
       {!hideTitle ? (
         <>
           <Text style={styles.title}>{t('occupancyWizard.steps.member')}</Text>
@@ -207,107 +300,34 @@ export function MemberPickerStep({
             </View>
           ) : null}
 
-          <FlatList
-            data={members}
-            keyExtractor={item =>
-              item.sourceSpaceId ? `${item.sourceSpaceId}:${item.memberId}` : item.memberId
-            }
-            keyboardShouldPersistTaps="handled"
-            style={styles.list}
-            contentContainerStyle={styles.listContent}
-            renderItem={({ item }) => {
-              const blocked =
-                preferredStatus === 'VACATED' &&
-                (item.occupancyStatus === 'ALLOCATED' || item.occupancyStatus === 'RESERVED');
-              const warn =
-                preferredStatus === 'ALLOCATED' && item.occupancyStatus !== 'ALLOCATED';
-              const selected = selectedMemberId === item.memberId;
-              const customerMeta =
-                isCustomer && crossSpaceReuse ? customerReuseMeta(item, t) : null;
-
-              return (
-                <Pressable
-                  style={[
-                    styles.card,
-                    selected && styles.cardSelected,
-                    blocked && styles.cardDisabled,
-                  ]}
-                  disabled={blocked || creatingMember}
-                  onPress={() => onSelect(item)}>
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>
-                      {(item.fullName.trim().charAt(0) || '?').toUpperCase()}
-                    </Text>
-                  </View>
-                  <View style={styles.cardBody}>
-                    {customerMeta ? (
-                      <View style={styles.typeChipWrap}>
-                        <Text style={styles.typeChip}>{customerMeta.typeLabel}</Text>
-                      </View>
-                    ) : null}
-                    <Text style={styles.name}>{item.fullName}</Text>
-                    <Text style={styles.mobile}>
-                      {customerMeta
-                        ? item.mobileNumber
-                        : t('occupancyWizard.residentCard.mobile', {
-                            mobile: item.mobileNumber,
-                          })}
-                    </Text>
-                    {customerMeta ? (
-                      <>
-                        <Text style={styles.meta}>{customerMeta.fromLine}</Text>
-                        {customerMeta.statusLine ? (
-                          <Text style={styles.available}>{customerMeta.statusLine}</Text>
-                        ) : null}
-                      </>
-                    ) : crossSpaceReuse && item.sourceSpaceName ? (
-                      <>
-                        <Text style={styles.meta}>
-                          {item.alreadyInTargetSpace
-                            ? t('occupancyWizard.residentCard.inThisSpace')
-                            : t('occupancyWizard.residentCard.previouslyIn', {
-                                space: item.sourceSpaceName,
-                              })}
-                        </Text>
-                        {item.availableForMoveIn !== false ? (
-                          <Text style={styles.available}>{availableLabel}</Text>
-                        ) : null}
-                      </>
-                    ) : (
-                      <Text style={styles.role}>{memberRoleLabel(item.role, t)}</Text>
-                    )}
-                    {warn ? (
-                      <Text style={styles.warn}>{t('occupancyWizard.memberNotAllocated')}</Text>
-                    ) : null}
-                  </View>
-                  <View style={styles.cardAside}>
-                    <View style={[styles.radioOuter, selected && styles.radioOuterSelected]}>
-                      {selected ? <View style={styles.radioInner} /> : null}
+          {embedInParentScroll ? (
+            <View style={styles.embeddedList}>
+              {members.length > 0
+                ? members.map(item => (
+                    <View
+                      key={
+                        item.sourceSpaceId
+                          ? `${item.sourceSpaceId}:${item.memberId}`
+                          : item.memberId
+                      }>
+                      {renderMemberCard(item)}
                     </View>
-                  </View>
-                </Pressable>
-              );
-            }}
-            ListEmptyComponent={
-              !loading ? (
-                <View style={styles.emptyWrap}>
-                  <Text style={styles.empty}>
-                    {crossSpaceReuse ? emptyReuseLabel : t('occupancyWizard.noMembers')}
-                  </Text>
-                  {crossSpaceReuse && allowAddNew ? (
-                    <Button
-                      label={addNewModeLabel}
-                      onPress={() => {
-                        onPickerModeChange('new');
-                        onCreateNewPress?.();
-                      }}
-                      style={styles.emptyCta}
-                    />
-                  ) : null}
-                </View>
-              ) : null
-            }
-          />
+                  ))
+                : emptyState}
+            </View>
+          ) : (
+            <FlatList
+              data={members}
+              keyExtractor={item =>
+                item.sourceSpaceId ? `${item.sourceSpaceId}:${item.memberId}` : item.memberId
+              }
+              keyboardShouldPersistTaps="handled"
+              style={styles.list}
+              contentContainerStyle={styles.listContent}
+              renderItem={({ item }) => renderMemberCard(item)}
+              ListEmptyComponent={emptyState}
+            />
+          )}
         </>
       )}
     </View>
@@ -316,8 +336,10 @@ export function MemberPickerStep({
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, minHeight: 360 },
+  embeddedWrap: {},
   list: { flex: 1 },
   listContent: { paddingBottom: spacing.md, gap: spacing.sm },
+  embeddedList: { gap: spacing.sm, paddingBottom: spacing.md },
   title: { ...typography.h3, fontSize: 18, lineHeight: 22, fontWeight: '600', marginBottom: spacing.xs },
   hint: { ...typography.caption, color: colors.muted, marginBottom: spacing.md },
   modeRow: {

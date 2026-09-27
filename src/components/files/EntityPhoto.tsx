@@ -1,5 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  StyleSheet,
+  View,
+  type ImageResizeMode,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { entityPhotoApi } from '../../api/entityPhotoApi';
 import { ENTITY_PHOTO_PURPOSE, type EntityPhotoKind } from '../../files/entityPhoto';
@@ -23,6 +30,7 @@ type EntityPhotoProps = {
   /** Rectangular frame for layout illustrations instead of a circular chip. */
   fill?: boolean;
   height?: number;
+  resizeMode?: ImageResizeMode;
 };
 
 export function EntityPhoto({
@@ -37,6 +45,7 @@ export function EntityPhoto({
   size = 44,
   fill = false,
   height,
+  resizeMode,
 }: EntityPhotoProps) {
   const { t } = useTranslation();
   const showToast = useToastStore(state => state.showToast);
@@ -157,7 +166,11 @@ export function EntityPhoto({
         }
         style={frameStyle}>
         {activeFileId && previewUrl ? (
-          <Image source={{ uri: previewUrl }} style={styles.image} />
+          <Image
+            source={{ uri: previewUrl }}
+            style={styles.image}
+            resizeMode={resizeMode ?? 'cover'}
+          />
         ) : (
           fallback
         )}
