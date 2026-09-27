@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   NativeScrollEvent,
   NativeSyntheticEvent,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -58,7 +57,7 @@ import {
 import { agentDebugLog } from '../../../utils/agentDebugLog';
 import type { OccupancyTargetSelection } from '../../../utils/occupancyRules';
 import { hierarchyContextFromTarget, resolveOccupancySpaceTypeLabel, withSpaceHierarchyContext } from '../../../utils/occupancyHierarchyContext';
-import { ChevronLeftIcon } from '../../../components/ui/icons/ChevronLeftIcon';
+import { HeaderBackButton } from '../../../components/ui/HeaderBackButton';
 import { useBuildings } from '../../../hooks/useBuildings';
 import { OccupancyWizardStepHeader } from '../../../components/occupancy/OccupancyWizardStepHeader';
 import { getWizardSteps, getWizardStepTitleKey, getWizardTitleKey } from './occupancyWizardSteps';
@@ -444,16 +443,7 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
     navigation.setOptions({
       headerBackVisible: false,
       title: t(getWizardTitleKey(mode)),
-      headerLeft: () => (
-        <Pressable
-          onPress={goBack}
-          style={({ pressed }) => [{ opacity: pressed ? 0.5 : 1, marginLeft: spacing.sm, padding: spacing.sm }]}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel={t('common.back')}>
-          <ChevronLeftIcon size={22} />
-        </Pressable>
-      ),
+      headerLeft: () => <HeaderBackButton onPress={goBack} />,
     });
   }, [goBack, mode, navigation, t]);
 
@@ -879,35 +869,40 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
         </View>
       ) : usesListStep ? (
         <View style={styles.listStepRoot}>
-          <View style={styles.hero}>
-            <View style={styles.decorBlob} pointerEvents="none" />
-            <View style={styles.decorRing} pointerEvents="none" />
-            <View style={styles.heroIconWrap} accessibilityElementsHidden>
-              <ModeIcon size={18} color={colors.primaryDark} strokeWidth={2.2} />
+          <ScrollView
+            style={styles.listStepScroll}
+            contentContainerStyle={styles.listStepScrollContent}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            showsVerticalScrollIndicator={false}>
+            <View style={styles.hero}>
+              <View style={styles.decorBlob} pointerEvents="none" />
+              <View style={styles.decorRing} pointerEvents="none" />
+              <View style={styles.heroIconWrap} accessibilityElementsHidden>
+                <ModeIcon size={18} color={colors.primaryDark} strokeWidth={2.2} />
+              </View>
+              <Text style={styles.heading}>{wizardTitle}</Text>
             </View>
-            <Text style={styles.heading}>{wizardTitle}</Text>
-          </View>
 
-          {showMemberContext && member ? (
-            <View style={styles.memberContext}>
-              <Text style={styles.memberLabel}>{t('occupancyWizard.context.member')}</Text>
-              <Text style={styles.memberValue}>
-                {member.fullName}
-                {member.mobileNumber ? ` · ${member.mobileNumber}` : ''}
-              </Text>
-            </View>
-          ) : null}
+            {showMemberContext && member ? (
+              <View style={styles.memberContext}>
+                <Text style={styles.memberLabel}>{t('occupancyWizard.context.member')}</Text>
+                <Text style={styles.memberValue}>
+                  {member.fullName}
+                  {member.mobileNumber ? ` · ${member.mobileNumber}` : ''}
+                </Text>
+              </View>
+            ) : null}
 
-          {showStepHeader ? (
-            <OccupancyWizardStepHeader
-              stepProgress={{ current: stepIndex + 1, total: steps.length }}
-              stepTitle={stepTitle}
-              Icon={StepIcon}
-              hierarchyContext={hierarchyContext}
-            />
-          ) : null}
+            {showStepHeader ? (
+              <OccupancyWizardStepHeader
+                stepProgress={{ current: stepIndex + 1, total: steps.length }}
+                stepTitle={stepTitle}
+                Icon={StepIcon}
+                hierarchyContext={hierarchyContext}
+              />
+            ) : null}
 
-          <View style={styles.listStepBody}>
             {currentStep === 'member' ? (
               <MemberPickerStep
                 query={memberQuery}
@@ -919,6 +914,7 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
                 allowAddNew={allowAddNewMember}
                 crossSpaceReuse={allowAddNewMember}
                 hideTitle
+                embedInParentScroll
                 pickerMode={memberPickerMode}
                 onPickerModeChange={mode => {
                   setMemberPickerMode(mode);
@@ -945,13 +941,13 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
                 onSelect={handleMemberSelect}
               />
             ) : null}
-          </View>
 
-          {formError ? (
-            <View style={styles.errorBanner}>
-              <Text style={styles.errorBannerText}>{formError}</Text>
-            </View>
-          ) : null}
+            {formError ? (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorBannerText}>{formError}</Text>
+              </View>
+            ) : null}
+          </ScrollView>
 
           {showPrimaryButton ? (
             <StickyFormActions
@@ -1167,9 +1163,12 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 0,
   },
-  listStepBody: {
+  listStepScroll: {
     flex: 1,
-    minHeight: 0,
+  },
+  listStepScrollContent: {
+    flexGrow: 1,
+    paddingBottom: spacing.md,
   },
   listScreenContent: {
     flex: 1,

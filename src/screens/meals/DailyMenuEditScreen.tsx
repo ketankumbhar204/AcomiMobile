@@ -123,6 +123,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
   const [panelHasSelection, setPanelHasSelection] = useState(false);
   const [copyMenuOpen, setCopyMenuOpen] = useState(false);
   const [catalogItems, setCatalogItems] = useState<FoodItemResponse[]>([]);
+  const [hasPersistedMenu, setHasPersistedMenu] = useState(false);
   const latestSelectionRef = useRef<MenuSelectionSaveResult | null>(null);
   const baselineRef = useRef<DraftSnapshot | null>(null);
   const allowLeaveRef = useRef(false);
@@ -176,6 +177,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     loadHadMealsRef.current = false;
     baselineRef.current = null;
     allowLeaveRef.current = false;
+    setHasPersistedMenu(false);
   }, [mealType, menuDate, mealPricing.requiresMealPrices, spaceId]);
 
   useFocusEffect(
@@ -198,6 +200,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
           setOptions(comboOptions);
           setNotes(draft.notes);
           setStatus(draft.menu?.status ?? 'DRAFT');
+          setHasPersistedMenu(Boolean(draft.menu));
           const hadMeals = comboOptions.some(
             option =>
               option.isExtra !== true &&
@@ -685,6 +688,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
         prepared.draftPrices,
       );
       await saveMenuDraft(spaceId, menuDate, mealType, nextOptions, notes.trim() || null);
+      setHasPersistedMenu(true);
       showToast(t('meals.success.saved'));
       allowLeaveRef.current = true;
       navigation.goBack();
@@ -715,6 +719,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
         prepared.draftPrices,
       );
       await saveMenuDraft(spaceId, menuDate, mealType, nextOptions, notes.trim() || null);
+      setHasPersistedMenu(true);
       allowLeaveRef.current = true;
       navigateMainStack('MenuSharePreview', { spaceId, menuDate, mealType });
     } catch {
@@ -730,7 +735,9 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     }
     setSaving(true);
     try {
-      await mealsApi.deleteDailyMenu(spaceId, menuDate, mealType);
+      if (hasPersistedMenu) {
+        await mealsApi.deleteDailyMenu(spaceId, menuDate, mealType);
+      }
       showToast(t('meals.success.draftDeleted'));
       allowLeaveRef.current = true;
       navigation.goBack();

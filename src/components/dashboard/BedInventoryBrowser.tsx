@@ -14,7 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BedDouble, BedSingle } from 'lucide-react-native';
 import type { AccommodationStatus, BedSpaceListItemResponse, SpaceType, UUID } from '../../api/types';
-import { EmptyState, ListSearchBar, SkeletonCard } from '../ui';
+import { EmptyState, InventoryListSkeleton, ListSearchBar } from '../ui';
 import { useBuildings } from '../../hooks/useBuildings';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { navigateToRoomGroupEntityEdit } from '../../utils/accommodationNavigation';
@@ -48,6 +48,7 @@ export type BedInventoryBrowserProps = {
   onFlowAction?: (bed: BedSpaceListItemResponse) => void;
   canManageOccupancy?: boolean;
   onBedPress?: (bed: BedSpaceListItemResponse) => void;
+  onEditBed?: (bed: BedSpaceListItemResponse) => void;
   onAllocate?: (bed: BedSpaceListItemResponse) => void;
   onReserve?: (bed: BedSpaceListItemResponse) => void;
   subtitle?: string;
@@ -70,6 +71,7 @@ export function BedInventoryBrowser({
   onFlowAction,
   canManageOccupancy = false,
   onBedPress,
+  onEditBed,
   onAllocate,
   onReserve,
   subtitle,
@@ -157,6 +159,7 @@ export function BedInventoryBrowser({
         onFlowAction,
         canManageOccupancy,
         onBedPress: onBedPress ?? (() => {}),
+        onEditBed: flowAction === 'dashboard' ? onEditBed : undefined,
         onAllocate,
         onReserve,
       };
@@ -196,6 +199,7 @@ export function BedInventoryBrowser({
       navigation,
       onAllocate,
       onBedPress,
+      onEditBed,
       onFlowAction,
       onReserve,
       spaceId,
@@ -274,7 +278,7 @@ export function BedInventoryBrowser({
 
   const emptyComponent = useMemo(() => {
     if (beds.loading && beds.items.length === 0) {
-      return <SkeletonCard />;
+      return <InventoryListSkeleton cards={3} />;
     }
     if (beds.error) {
       return (
@@ -340,7 +344,7 @@ export function BedInventoryBrowser({
     <View ref={overlayHostRef} style={[styles.body, contentStyle]}>
       {fixedHeader}
       {beds.loading && beds.items.length === 0 ? (
-        <SkeletonCard />
+        <InventoryListSkeleton cards={3} />
       ) : beds.error ? (
         <EmptyState
           Icon={BedDouble}

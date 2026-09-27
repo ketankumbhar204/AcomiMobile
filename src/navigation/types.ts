@@ -43,10 +43,20 @@ export type SpaceTabParamList = {
   Complaints: { spaceId: UUID };
 };
 
+export type FindAPlaceParams = {
+  location?: string;
+  district?: string;
+  state?: string;
+  cityTaluka?: string;
+  pincode?: string;
+  search?: string;
+  category?: 'places' | 'mess';
+};
+
 /** Member account tabs — Home/My Spaces · Find a place · Enquiries · Profile */
 export type MemberTabParamList = {
   Home: undefined;
-  FindAPlace: undefined;
+  FindAPlace: FindAPlaceParams | undefined;
   Enquiries: { enquiryId?: UUID } | undefined;
   Profile: undefined;
 };
@@ -57,7 +67,7 @@ export type MainStackParamList = {
   /** Primary member shell (bottom tabs). */
   MemberTabs: NavigatorScreenParams<MemberTabParamList> | undefined;
   MySpaces: undefined;
-  FindAPlace: undefined;
+  FindAPlace: FindAPlaceParams | undefined;
   FindAPlaceDetail: { spaceId: UUID };
   MyEnquiries: { enquiryId?: UUID } | undefined;
   AccountNotifications: undefined;
@@ -258,6 +268,10 @@ export type MainStackParamList = {
     paymentId: UUID;
     memberId?: UUID;
     memberName?: string;
+  };
+  CreatePayment: {
+    spaceId: UUID;
+    month?: string;
   };
   DayMealPaymentDetail: {
     spaceId: UUID;

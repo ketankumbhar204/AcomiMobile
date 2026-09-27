@@ -12,6 +12,7 @@ import {
   BedListItemResponse,
   BedSpaceListItemResponse,
   BedResponse,
+  BedPricingPreviewResponse,
   BuildingAvailabilityResponse,
   BuildingResponse,
   BuildingSummaryResponse,
@@ -725,6 +726,25 @@ export const accommodationApi = {
     );
 
     devLog(`${LOG_TAG} updateBed response`, response.bedId);
+    return response;
+  },
+
+  previewBedPricing: async (
+    spaceId: UUID,
+    roomId: UUID,
+    bedId: UUID,
+    body: { defaultRent: number | null; defaultDeposit: number | null },
+  ): Promise<BedPricingPreviewResponse> => {
+    devLog(
+      `${LOG_TAG} POST /spaces/${spaceId}/rooms/${roomId}/beds/${bedId}/pricing-preview`,
+      body,
+    );
+    const response = await unwrapApiResponse(
+      apiClient.post<ApiResponse<BedPricingPreviewResponse>>(
+        `/spaces/${spaceId}/rooms/${roomId}/beds/${bedId}/pricing-preview`,
+        body,
+      ),
+    );
     return response;
   },
 

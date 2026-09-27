@@ -1,5 +1,6 @@
 import {
   buildContractSnapshotPayload,
+  computeMoveInTotalToPayThisMonth,
   emptyContractTermsFormValues,
   isFoodBundledWithRent,
   resolveSubmitFoodChargeSnapshot,
@@ -67,6 +68,38 @@ describe('occupancyContract food toggle', () => {
       foodEnabled: true,
       foodIncludedInRent: false,
       foodChargeSnapshot: 2500,
+    });
+  });
+});
+
+describe('computeMoveInTotalToPayThisMonth', () => {
+  it('adds rent and one-time security deposit', () => {
+    const values = {
+      ...emptyContractTermsFormValues(),
+      rentSnapshot: '3400',
+      depositSnapshot: '3000',
+      foodEnabled: false,
+    };
+
+    expect(computeMoveInTotalToPayThisMonth(values)).toEqual({
+      rent: 3400,
+      deposit: 3000,
+      total: 6400,
+    });
+  });
+
+  it('keeps rent-only total when deposit is empty', () => {
+    const values = {
+      ...emptyContractTermsFormValues(),
+      rentSnapshot: '3400',
+      depositSnapshot: '',
+      foodEnabled: false,
+    };
+
+    expect(computeMoveInTotalToPayThisMonth(values)).toEqual({
+      rent: 3400,
+      deposit: 0,
+      total: 3400,
     });
   });
 });

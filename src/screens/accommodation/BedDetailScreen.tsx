@@ -15,12 +15,12 @@ import type { BedResponse } from '../../api/types';
 import {
   AccommodationContextTrail,
   AccommodationDetailRow,
-  AccommodationEntityHero,
-  AccommodationStatusBadge,
   BedDetailHero,
+  BedPricingDisplay,
   BuilderRowLifecycleMenu,
   formatAccommodationDate,
   HeaderMenuSlot,
+  PersistedBedInteractionHost,
 } from '../../components/accommodation';
 import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
 import {
@@ -35,18 +35,20 @@ import {
   SkeletonCard,
 } from '../../components/ui';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
+import { usePersistedBedInteraction } from '../../hooks/usePersistedBedInteraction';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { canEditEntityPhoto } from '../../files/entityPhoto';
 import { EntityPhotoProvider } from '../../files/EntityPhotoContext';
 import { useTargetOccupancy } from '../../hooks/useTargetOccupancy';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
-import { spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { buildAccommodationTrail } from '../../utils/accommodationContext';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
 import { buildBedOccupancyTarget } from '../../utils/buildOccupancyTarget';
 import { formatBedDisplayLabel } from '../../utils/formatBedDisplayLabel';
 import { handleAccommodationTrailPress } from '../../utils/accommodationNavigation';
+import { persistedTargetFromRoomBed } from '../../utils/persistedBedTarget';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'BedDetail'>;
 type Route = NativeStackScreenProps<MainStackParamList, 'BedDetail'>['route'];
@@ -186,6 +188,52 @@ export function BedDetailScreen() {
     }
   }, [bedId, spaceId]);
 
+  const bedInteraction = usePersistedBedInteraction({
+    spaceId,
+    spaceType,
+    canEditStructure: canManage,
+    canManageOccupancy: canManageOccupancyActions,
+    onSuccess: async () => {
+      await loadBed();
+      await refreshOccupancy();
+    },
+  });
+
+  const openBedEditor = useCallback(() => {
+    if (!bed || !canManage) {
+      return;
+    }
+    bedInteraction.open(
+      persistedTargetFromRoomBed({
+        bedId: bed.bedId,
+        roomId,
+        label: bed.bedNumber || bed.name,
+        status: bed.status,
+        rent: bed.defaultRent,
+        deposit: bed.defaultDeposit,
+        buildingId,
+        buildingName,
+        roomName: roomName ?? parentName ?? '',
+        floorId,
+        unitId,
+        parentName,
+        parentType,
+      }),
+    );
+  }, [
+    bed,
+    bedInteraction,
+    buildingId,
+    buildingName,
+    canManage,
+    floorId,
+    parentName,
+    parentType,
+    roomId,
+    roomName,
+    unitId,
+  ]);
+
   useLayoutEffect(() => {
     navigation.setOptions({
       title: displayBedLabel || t('accommodation.beds.detailTitle'),
@@ -202,15 +250,7 @@ export function BedDetailScreen() {
                   entityId={bedId}
                   roomId={roomId}
                   role={permissions.membershipRole}
-                  onEdit={() =>
-                    navigation.navigate('BedForm', {
-                      spaceId,
-                      buildingId: route.params.buildingId,
-                      roomId,
-                      mode: 'edit',
-                      bedId,
-                    })
-                  }
+                  onEdit={openBedEditor}
                   onSuccess={action => {
                     if (action === 'delete' || action === 'deactivate') {
                       showToast(
@@ -238,6 +278,7 @@ export function BedDetailScreen() {
     displayBedLabel,
     loadBed,
     navigation,
+    openBedEditor,
     permissions.canManageAccommodation,
     permissions.membershipRole,
     roomId,
@@ -284,18 +325,11 @@ export function BedDetailScreen() {
               segments={trailSegments}
               onNavigate={onTrailNavigate}
             />
-            <AccommodationEntityHero
-              level="bed"
-              title={displayBedLabel}
-              subtitle={roomName ?? parentName}
-              meta={`${t('accommodation.beds.bedNumberLabel')}: ${
-                bed.bedNumber
-              }`}
-              badge={<AccommodationStatusBadge status={bed.status} />}
-            />
             <BedDetailHero
               label={displayBedLabel}
               status={bed.status}
+              bedNumber={bed.bedNumber}
+              roomName={roomName ?? parentName}
               bedId={bed.bedId}
               photoFileId={bed.photoFileId}
               occupantName={
@@ -308,33 +342,16 @@ export function BedDetailScreen() {
                     formatAccommodationDate(occupancy.moveInDate)
                   : null
               }
+              onEdit={canManage ? openBedEditor : undefined}
             />
 
-            <DashboardSectionTitle
-              title={t('accommodation.setup.propertyOverview')}
-            />
-            <Card style={styles.infoCard}>
-              <AccommodationDetailRow
-                label={t('accommodation.fields.name')}
-                value={bed.name}
+            <View style={styles.pricingCard}>
+              <BedPricingDisplay
+                rent={bed.defaultRent}
+                deposit={bed.defaultDeposit}
+                layout="row"
               />
-              <AccommodationDetailRow
-                label={t('accommodation.beds.bedNumberLabel')}
-                value={bed.bedNumber}
-              />
-              <AccommodationDetailRow
-                label={t('accommodation.status.label')}
-                value={t(`accommodation.status.${bed.status}`)}
-              />
-              <AccommodationDetailRow
-                label={t('accommodation.fields.created')}
-                value={formatAccommodationDate(bed.createdAt)}
-              />
-              <AccommodationDetailRow
-                label={t('accommodation.fields.updated')}
-                value={formatAccommodationDate(bed.updatedAt)}
-              />
-            </Card>
+            </View>
 
             {showsOccupant && canViewOccupant ? (
               <AccommodationOccupantSection
@@ -356,14 +373,70 @@ export function BedDetailScreen() {
                 accommodationStatus={bed.status}
                 target={occupancyTarget}
                 occupancy={occupancy}
+                layout="stack"
                 onSuccess={() => {
                   void loadBed();
                   void refreshOccupancy();
                 }}
               />
             ) : null}
+
+            <DashboardSectionTitle
+              title={t('accommodation.setup.propertyOverview')}
+            />
+            <Card style={styles.infoCard}>
+              <AccommodationDetailRow
+                label={t('accommodation.fields.name')}
+                value={bed.name}
+              />
+              <AccommodationDetailRow
+                label={t('accommodation.beds.bedNumberLabel')}
+                value={bed.bedNumber}
+              />
+              <AccommodationDetailRow
+                label={t('accommodation.status.label')}
+                value={t(`accommodation.status.${bed.status}`)}
+              />
+              {roomName ? (
+                <AccommodationDetailRow
+                  label={t('occupancy.section.room')}
+                  value={roomName}
+                />
+              ) : null}
+              {trailContext.unitName ? (
+                <AccommodationDetailRow
+                  label={t('occupancy.section.unit')}
+                  value={trailContext.unitName}
+                />
+              ) : null}
+              {trailContext.floorName ? (
+                <AccommodationDetailRow
+                  label={t('occupancy.section.floor')}
+                  value={trailContext.floorName}
+                />
+              ) : null}
+              {buildingName ? (
+                <AccommodationDetailRow
+                  label={t('occupancy.section.building')}
+                  value={buildingName}
+                />
+              ) : null}
+              <AccommodationDetailRow
+                label={t('accommodation.fields.created')}
+                value={formatAccommodationDate(bed.createdAt)}
+              />
+              <AccommodationDetailRow
+                label={t('accommodation.fields.updated')}
+                value={formatAccommodationDate(bed.updatedAt)}
+              />
+            </Card>
           </>
         ) : null}
+        <PersistedBedInteractionHost
+          interaction={bedInteraction}
+          spaceId={spaceId}
+          spaceType={spaceType}
+        />
       </Screen>
       </EntityPhotoProvider>
     </RequireAccommodationAccess>
@@ -374,6 +447,53 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: spacing.xxxl },
   infoCard: { borderRadius: 18, marginBottom: spacing.xl },
   gap: { height: spacing.md },
+  pricingCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.md,
+    ...shadows.sm,
+  },
+  pricingCol: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacing.xs,
+  },
+  pricingDivider: {
+    width: StyleSheet.hairlineWidth,
+    alignSelf: 'stretch',
+    backgroundColor: colors.border,
+    marginHorizontal: spacing.md,
+  },
+  pricingLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  pricingIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pricingLabel: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+  pricingValue: {
+    ...typography.h3,
+    fontSize: 20,
+    lineHeight: 26,
+    color: colors.textPrimary,
+    paddingLeft: 36,
+  },
   errorBanner: {
     backgroundColor: '#FEF2F2',
     borderWidth: 1,

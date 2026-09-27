@@ -1,4 +1,5 @@
 import React from 'react';
+import type { ImageResizeMode } from 'react-native';
 import { EntityPhoto } from '../../../files/EntityPhoto';
 import { useEntityPhotoContext } from '../../../../files/EntityPhotoContext';
 import type { EntityPhotoKind } from '../../../../files/entityPhoto';
@@ -10,6 +11,7 @@ type LayoutEntityPhotoProps = {
   title?: string;
   fallback: React.ReactNode;
   height: number;
+  resizeMode?: ImageResizeMode;
 };
 
 export function LayoutEntityPhoto({
@@ -19,6 +21,7 @@ export function LayoutEntityPhoto({
   title,
   fallback,
   height,
+  resizeMode,
 }: LayoutEntityPhotoProps) {
   const ctx = useEntityPhotoContext();
   if (!ctx || !entityId) {
@@ -34,6 +37,7 @@ export function LayoutEntityPhoto({
       title={title}
       fill
       height={height}
+      resizeMode={resizeMode}
       fallback={fallback}
     />
   );

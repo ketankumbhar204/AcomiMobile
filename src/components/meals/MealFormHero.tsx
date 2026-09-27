@@ -5,18 +5,16 @@ import { colors, radius, shadows, spacing, typography } from '../../theme';
 
 type MealFormHeroProps = {
   icon: LucideIcon;
-  eyebrow: string;
+  eyebrow?: string;
   heading: string;
-  subheading: string;
-  /** Accent color for icon and heading (default primaryDark) */
+  subheading?: string;
   accent?: string;
   soft?: string;
   border?: string;
-  /** Dense single-row hero for form-heavy screens. */
   compact?: boolean;
 };
 
-/** CreateSpace-style hero for Meals forms and hubs. */
+/** Compact horizontal hero: icon + title on one row. */
 export function MealFormHero({
   icon: Icon,
   eyebrow,
@@ -25,181 +23,94 @@ export function MealFormHero({
   accent = colors.primaryDark,
   soft = colors.successTint,
   border = `${colors.primary}33`,
-  compact = false,
+  compact = true,
 }: MealFormHeroProps) {
   return (
     <View
-      style={[
-        styles.hero,
-        compact && styles.heroCompact,
-        { backgroundColor: soft, borderColor: border },
-      ]}
+      style={[styles.hero, compact && styles.heroCompact, { backgroundColor: soft, borderColor: border }]}
       accessibilityRole="header">
       <View
-        style={[
-          styles.decorBlob,
-          compact && styles.decorBlobCompact,
-          { backgroundColor: `${accent}1F` },
-        ]}
+        style={[styles.decorBlob, { backgroundColor: `${accent}1F` }]}
         pointerEvents="none"
       />
-      {compact ? null : (
-        <View
-          style={[styles.decorRing, { borderColor: `${accent}14` }]}
-          pointerEvents="none"
-        />
-      )}
       <View
-        style={[
-          styles.heroIconWrap,
-          compact && styles.heroIconWrapCompact,
-          { borderColor: border },
-        ]}
+        style={[styles.heroIconWrap, { borderColor: border }]}
         accessibilityElementsHidden>
-        <Icon size={compact ? 16 : 18} color={accent} strokeWidth={2.2} />
+        <Icon size={16} color={accent} strokeWidth={2.2} />
       </View>
-      {compact ? (
-        <View style={styles.compactTextRow}>
-          <Text style={[styles.eyebrow, styles.eyebrowCompact, { color: accent }]} numberOfLines={1}>
+      <View style={styles.textCol}>
+        {eyebrow ? (
+          <Text style={[styles.eyebrow, { color: accent }]} numberOfLines={1}>
             {eyebrow}
           </Text>
-          <Text style={styles.compactDot} accessibilityElementsHidden>
-            ·
+        ) : null}
+        <Text style={[styles.heading, { color: accent }]} numberOfLines={1}>
+          {heading}
+        </Text>
+        {subheading ? (
+          <Text style={styles.subheading} numberOfLines={1}>
+            {subheading}
           </Text>
-          <Text
-            style={[styles.heading, styles.headingCompact, { color: accent }]}
-            numberOfLines={1}>
-            {heading}
-          </Text>
-          {subheading ? (
-            <>
-              <Text style={styles.compactDot} accessibilityElementsHidden>
-                ·
-              </Text>
-              <Text style={[styles.subheading, styles.subheadingCompact]} numberOfLines={1}>
-                {subheading}
-              </Text>
-            </>
-          ) : null}
-        </View>
-      ) : (
-        <View>
-          <Text style={[styles.eyebrow, { color: accent }]}>{eyebrow}</Text>
-          <Text style={[styles.heading, { color: accent }]} numberOfLines={1}>
-            {heading}
-          </Text>
-          <Text style={styles.subheading}>{subheading}</Text>
-        </View>
-      )}
+        ) : null}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   hero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
     marginBottom: spacing.md,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
-    borderRadius: radius.section,
+    borderRadius: 18,
     borderWidth: 1,
     overflow: 'hidden',
     position: 'relative',
     ...shadows.sm,
   },
   heroCompact: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
     marginBottom: spacing.sm,
-    borderRadius: 18,
   },
   decorBlob: {
     position: 'absolute',
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    top: -48,
-    right: -28,
-  },
-  decorBlobCompact: {
     width: 84,
     height: 84,
     borderRadius: 42,
     top: -40,
     right: -22,
   },
-  compactTextRow: {
-    flex: 1,
-    minWidth: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    zIndex: 1,
-  },
-  compactDot: {
-    ...typography.caption,
-    fontSize: 12,
-    color: colors.muted,
-    flexShrink: 0,
-  },
-  decorRing: {
-    position: 'absolute',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 8,
-    bottom: -16,
-    right: 40,
-  },
   heroIconWrap: {
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
     borderRadius: radius.sm,
     backgroundColor: colors.white,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.sm,
     zIndex: 1,
   },
-  heroIconWrapCompact: {
-    width: 32,
-    height: 32,
-    marginBottom: 0,
+  textCol: {
+    flex: 1,
+    minWidth: 0,
+    zIndex: 1,
+    gap: 1,
   },
   eyebrow: {
     ...typography.eyebrow,
-    marginBottom: 2,
-    zIndex: 1,
-  },
-  eyebrowCompact: {
-    marginBottom: 0,
-    flexShrink: 0,
+    fontSize: 10,
   },
   heading: {
-    ...typography.h2,
-    fontSize: 22,
-    lineHeight: 28,
-    fontWeight: '600',
-    marginBottom: 2,
-    zIndex: 1,
-  },
-  headingCompact: {
+    ...typography.bodyStrong,
     fontSize: 16,
     lineHeight: 20,
     fontWeight: '700',
-    marginBottom: 0,
-    flexShrink: 1,
   },
   subheading: {
     ...typography.caption,
     fontSize: 12,
     color: colors.muted,
-    zIndex: 1,
-  },
-  subheadingCompact: {
-    flexShrink: 1,
-    minWidth: 0,
   },
 });

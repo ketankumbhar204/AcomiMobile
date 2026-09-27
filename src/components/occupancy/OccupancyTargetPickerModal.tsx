@@ -21,7 +21,7 @@ import type {
 } from '../../api/types';
 import { AccommodationSearchBar } from '../accommodation/AccommodationSearchBar';
 import { AccommodationStatusBadge } from '../accommodation/AccommodationStatusBadge';
-import { Button, Card, FormInput } from '../ui';
+import { Button, Card, DateField, FormInput } from '../ui';
 import { useOccupancyTargetSearch } from '../../hooks/useOccupancyTargetSearch';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
@@ -1082,11 +1082,11 @@ export function OccupancyTargetPickerModal({
                 />
 
                 {mode === 'RESERVE' ? (
-                  <FormInput
+                  <DateField
                     label={t('occupancy.section.moveInDate')}
                     value={moveInDate}
-                    onChangeText={setMoveInDate}
-                    placeholder="YYYY-MM-DD"
+                    onChange={setMoveInDate}
+                    allowPastDates
                   />
                 ) : (
                   <View style={styles.readonlyField}>
@@ -1098,11 +1098,12 @@ export function OccupancyTargetPickerModal({
                 )}
 
                 {(showCheckoutDate || mode === 'RESERVE' || mode === 'WALK_IN') ? (
-                  <FormInput
+                  <DateField
                     label={t('occupancy.fields.expectedExit')}
                     value={expectedCheckoutDate}
-                    onChangeText={setExpectedCheckoutDate}
-                    placeholder="YYYY-MM-DD"
+                    onChange={setExpectedCheckoutDate}
+                    optional
+                    allowPastDates
                   />
                 ) : null}
 

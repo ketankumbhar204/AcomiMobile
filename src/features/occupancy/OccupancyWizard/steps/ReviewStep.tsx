@@ -9,6 +9,7 @@ import type { OccupancyHierarchyContext } from '../../../../components/occupancy
 import { colors, spacing, typography } from '../../../../theme';
 import {
   computeMonthlyRentFoodTotal,
+  computeMoveInTotalToPayThisMonth,
   formatContractAmount,
   monthlyTotalIncludesFoodFromForm,
   monthlyTotalLabelKey,
@@ -143,6 +144,10 @@ export function ReviewStep({
         </Card>
       ) : null}
 
+      {contractValues && mode !== 'RESERVE' ? (
+        <PaymentSummaryCard values={contractValues} foodPolicy={foodPolicy} />
+      ) : null}
+
       <Card style={styles.card}>
         <SectionHeader title={t('occupancyWizard.review.member')} onEdit={onEditMember} />
         <Text style={styles.value}>
@@ -174,6 +179,43 @@ export function ReviewStep({
         </Card>
       ) : null}
     </View>
+  );
+}
+
+function PaymentSummaryCard({
+  values,
+  foodPolicy,
+}: {
+  values: ContractTermsFormValues;
+  foodPolicy?: SpaceFoodPolicy;
+}) {
+  const { t } = useTranslation();
+  const breakdown = computeMoveInTotalToPayThisMonth(values, foodPolicy);
+  if (breakdown.total == null) {
+    return null;
+  }
+  const rentLabel = monthlyTotalIncludesFoodFromForm(values, foodPolicy)
+    ? t('occupancy.contract.paymentSummary.rentWithFood')
+    : t('occupancy.contract.paymentSummary.rent');
+
+  return (
+    <Card style={styles.card}>
+      <Text style={styles.sectionTitle}>{t('occupancy.contract.paymentSummary.title')}</Text>
+      <View style={styles.lineRow}>
+        <Text style={styles.lineLabel}>{rentLabel}</Text>
+        <Text style={styles.lineValue}>{formatContractAmount(breakdown.rent ?? 0)}</Text>
+      </View>
+      {breakdown.deposit > 0 ? (
+        <View style={styles.lineRow}>
+          <Text style={styles.lineLabel}>{t('occupancy.contract.paymentSummary.deposit')}</Text>
+          <Text style={styles.lineValue}>{formatContractAmount(breakdown.deposit)}</Text>
+        </View>
+      ) : null}
+      <View style={[styles.lineRow, styles.totalRow]}>
+        <Text style={styles.totalLabel}>{t('occupancy.contract.paymentSummary.totalThisMonth')}</Text>
+        <Text style={styles.totalValue}>{formatContractAmount(breakdown.total)}</Text>
+      </View>
+    </Card>
   );
 }
 

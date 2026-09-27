@@ -26,6 +26,7 @@ import { MealSelectionSummary } from '../../components/meals/MealSelectionSummar
 import { PaymentHistoryTimeline } from '../../components/payments/PaymentHistoryTimeline';
 import { PaymentNeedsUpdatePanel } from '../../components/payments/PaymentNeedsUpdatePanel';
 import { PaymentProofPreviewModal } from '../../components/payments/PaymentProofPreviewModal';
+import { PaymentReceivedConfirmModal } from '../../components/payments/PaymentReceivedConfirmModal';
 import { PaymentReferenceLabel } from '../../components/payments/PaymentReferenceLabel';
 import { PaymentRequestUpdateModal } from '../../components/payments/PaymentRequestUpdateModal';
 import { PaymentStatusBadge } from '../../components/payments/PaymentStatusBadge';
@@ -38,6 +39,11 @@ import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { canManagePayments } from '../../utils/dashboardFinancial';
+import { canOwnerMarkPaymentReceived } from '../../utils/ownerPaymentCardActions';
+import {
+  paymentReminderToastKey,
+  resolvePaymentReminderToastKind,
+} from '../../utils/paymentReminderFeedback';
 import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
 import { invalidatePaymentsMonthCaches } from '../../utils/paymentsMonthCache';
 import {
@@ -90,6 +96,8 @@ export function PaymentDetailScreen() {
   const [rejectVisible, setRejectVisible] = useState(false);
   const [requestUpdateVisible, setRequestUpdateVisible] = useState(false);
   const [selectedReason, setSelectedReason] = useState<PaymentRejectionReason | null>(null);
+  const [receivedVisible, setReceivedVisible] = useState(false);
+  const [markingReceived, setMarkingReceived] = useState(false);
   const hasPaymentRef = React.useRef(false);
 
   const load = useCallback(async () => {
@@ -134,6 +142,8 @@ export function PaymentDetailScreen() {
         return;
       }
       if (!keepExisting) {
+        setPayment(null);
+        hasPaymentRef.current = false;
         showToast(t('paymentCollection.errors.loadPayment'));
       }
     } finally {
@@ -239,26 +249,35 @@ export function PaymentDetailScreen() {
     [paymentId, showToast, spaceId, t],
   );
 
+  const handleMarkReceived = useCallback(async () => {
+    setMarkingReceived(true);
+    try {
+      const updated = await paymentsApi.markPaymentReceived(spaceId, paymentId);
+      setPayment(updated);
+      const timelineResponse = await paymentsApi.getPaymentTimeline(spaceId, paymentId);
+      setTimeline(timelineResponse.events);
+      invalidateDashboardQueries();
+      if (updated.month) {
+        invalidatePaymentsMonthCaches(spaceId, updated.month);
+      }
+      setReceivedVisible(false);
+      showToast(t('paymentCollection.received.success'));
+    } catch (err) {
+      if (err instanceof PaymentServiceUnavailableError) {
+        showToast(t('paymentCollection.serviceUnavailable.title'));
+      } else {
+        showToast(t('paymentCollection.received.failed'));
+      }
+    } finally {
+      setMarkingReceived(false);
+    }
+  }, [paymentId, showToast, spaceId, t]);
+
   const handleSendReminder = useCallback(async () => {
     setSendingReminder(true);
     try {
       const result = await paymentsApi.sendPaymentReminder(spaceId, paymentId);
-      const code = `${result.failureCode || ''} ${result.failureReason || ''}`;
-      if (result.deliveryStatus === 'SENT') {
-        showToast(t('paymentCollection.reminder.sent'));
-      } else if (
-        !result.providerConfigured ||
-        code.includes('WHATSAPP_PROVIDER_NOT_CONFIGURED') ||
-        code.includes('PROVIDER_NOT_CONFIGURED')
-      ) {
-        showToast(t('paymentCollection.reminder.providerUnavailable'));
-      } else if (result.deliveryStatus === 'SKIPPED' || code.includes('already')) {
-        showToast(t('paymentCollection.reminder.alreadySentToday'));
-      } else if (code.includes('INVALID_RECIPIENT') || code.includes('RECIPIENT_MOBILE_MISSING')) {
-        showToast(t('paymentCollection.reminder.invalidRecipient'));
-      } else {
-        showToast(t('paymentCollection.reminder.failed'));
-      }
+      showToast(t(paymentReminderToastKey(resolvePaymentReminderToastKind(result))));
       const timelineResponse = await paymentsApi.getPaymentTimeline(spaceId, paymentId);
       setTimeline(timelineResponse.events);
     } catch (err) {
@@ -365,7 +384,13 @@ export function PaymentDetailScreen() {
         <EmptyState
           Icon={WalletCards}
           title={t('paymentCollection.errors.loadPayment')}
-          description={t('common.retry')}
+          description={t('paymentCollection.errors.loadPaymentRetry')}
+        />
+        <Button
+          label={t('common.retry')}
+          variant="secondary"
+          onPress={() => void load()}
+          style={styles.action}
         />
       </Screen>
     );
@@ -378,6 +403,8 @@ export function PaymentDetailScreen() {
   const canOwnerReview =
     isOwnerOperator && isOwnerReviewActionable(payment.paymentStatus);
   const canSendReminder = isOwnerOperator && Boolean(payment.reminderEligible);
+  const canMarkReceived =
+    isOwnerOperator && canOwnerMarkPaymentReceived(payment.paymentStatus);
   const canViewProof = Boolean(payment.proofUrl);
   const remarks = payment.remarks?.trim() || '';
   const ownerNotes =
@@ -388,7 +415,8 @@ export function PaymentDetailScreen() {
       ? payment.rejectionReason.trim()
       : null;
 
-  const hasStickyActions = canOwnerReview || canPay || canEditProof || canSendReminder;
+  const hasStickyActions =
+    canOwnerReview || canPay || canEditProof || canSendReminder || canMarkReceived;
 
   return (
     <Screen scrollable={false} contentStyle={styles.screen}>
@@ -567,13 +595,21 @@ export function PaymentDetailScreen() {
               />
             </View>
           ) : null}
+          {canMarkReceived ? (
+            <Button
+              label={t('paymentCollection.received.action')}
+              onPress={() => setReceivedVisible(true)}
+              loading={markingReceived}
+              disabled={reviewing || sendingReminder}
+            />
+          ) : null}
           {canSendReminder ? (
             <Button
               label={t('paymentCollection.reminder.send')}
               variant="secondary"
               onPress={() => void handleSendReminder()}
               loading={sendingReminder}
-              disabled={reviewing}
+              disabled={reviewing || markingReceived}
             />
           ) : null}
           {canPay && payment.paymentStatus !== 'UPDATE_REQUESTED' ? (
@@ -628,6 +664,14 @@ export function PaymentDetailScreen() {
           await handleReview('REQUEST_UPDATE', message);
           setRequestUpdateVisible(false);
         }}
+      />
+
+      <PaymentReceivedConfirmModal
+        visible={receivedVisible}
+        payments={[payment]}
+        loading={markingReceived}
+        onClose={() => setReceivedVisible(false)}
+        onConfirm={() => void handleMarkReceived()}
       />
 
       <Modal visible={rejectVisible} transparent animationType="fade">
@@ -843,6 +887,11 @@ const styles = StyleSheet.create({
   },
   rejectTitle: {
     ...typography.h3,
+    marginBottom: spacing.md,
+  },
+  receivedBody: {
+    ...typography.body,
+    color: colors.textSecondary,
     marginBottom: spacing.md,
   },
   rejectReason: {

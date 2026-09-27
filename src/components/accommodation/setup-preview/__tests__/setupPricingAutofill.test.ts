@@ -1,5 +1,10 @@
 import type { EditableBed, EditableSetupStructure } from '../setupStructureTypes';
-import { parseOptionalMoney, propagateBedPricing } from '../setupPricingAutofill';
+import {
+  applySetupBedPricing,
+  parseOptionalMoney,
+  previewSetupPricingImpact,
+  propagateBedPricing,
+} from '../setupPricingAutofill';
 
 function bed(id: string, rent?: number, deposit?: number): EditableBed {
   return { id, label: id, number: id, defaultRent: rent, defaultDeposit: deposit };
@@ -170,5 +175,57 @@ describe('propagateBedPricing', () => {
     const structure = corridorStructure([[bed('r1b1')], [bed('r2b1')]]);
     const next = propagateBedPricing(structure, 'r1b1', 'defaultRent');
     expect(rents(next)).toEqual([undefined, undefined]);
+  });
+});
+
+describe('previewSetupPricingImpact', () => {
+  it('counts the source plus matching empty beds and lists locations', () => {
+    const structure = corridorStructure([
+      [bed('r1b1', 5000, 10000), bed('r1b2')],
+      [bed('r2b1'), bed('r2b2')],
+      [bed('r3b1'), bed('r3b2')],
+    ]);
+
+    const impact = previewSetupPricingImpact(structure, 'r1b1', 5000, 10000);
+    expect(impact.affectedBedCount).toBe(3);
+    expect(impact.affectedLocations).toContain('B1');
+    expect(impact.affectedLocations).toContain('Floor 1');
+  });
+
+  it('does not count beds that already have a price', () => {
+    const structure = apartmentStructure([
+      [bed('u1b1', 5000)],
+      [bed('u2b1')],
+      [bed('u3b1', 6000)],
+    ]);
+
+    const impact = previewSetupPricingImpact(structure, 'u1b1', 5000, null);
+    expect(impact.affectedBedCount).toBe(2);
+  });
+
+  it('excludes the source from fill candidates', () => {
+    const structure = corridorStructure([[bed('r1b1', 5000)], [bed('r2b1')]]);
+    const impact = previewSetupPricingImpact(structure, 'r1b1', 5000, null);
+    expect(impact.affectedBedCount).toBe(2);
+  });
+});
+
+describe('applySetupBedPricing', () => {
+  it('applies both fields and fills matching empty beds without overwrite', () => {
+    const structure = corridorStructure([
+      [bed('r1b1'), bed('r1b2')],
+      [bed('r2b1'), bed('r2b2')],
+    ]);
+
+    const next = applySetupBedPricing(structure, 'r1b1', {
+      label: 'C',
+      defaultRent: 6000,
+      defaultDeposit: 3000,
+    });
+
+    expect(next.floors[0].rooms[0].beds[0].label).toBe('C');
+    expect(rents(next)).toEqual([6000, 6000]);
+    expect(deposits(next)).toEqual([3000, 3000]);
+    expect(next.floors[0].rooms[0].beds[1].defaultRent).toBeUndefined();
   });
 });

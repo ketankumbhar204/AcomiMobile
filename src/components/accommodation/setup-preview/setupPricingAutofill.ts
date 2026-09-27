@@ -110,6 +110,101 @@ function mapBeds(
   };
 }
 
+export type SetupPricingImpact = {
+  affectedBedCount: number;
+  affectedLocations: string[];
+};
+
+function locationFor(structure: EditableSetupStructure, ref: BedRef): string | null {
+  if (ref.floorIndex != null && structure.kind !== 'building_units') {
+    return structure.floors[ref.floorIndex]?.name ?? null;
+  }
+  if (ref.unitIndex != null && structure.kind === 'building_units') {
+    return structure.units[ref.unitIndex]?.name ?? null;
+  }
+  return structure.building.name || null;
+}
+
+/** Count beds that would receive a fill, excluding the source. Never overwrites. */
+export function previewSetupPricingImpact(
+  structure: EditableSetupStructure,
+  sourceBedId: string,
+  nextRent: number | null | undefined,
+  nextDeposit: number | null | undefined,
+): SetupPricingImpact {
+  const refs = collectBeds(structure);
+  const source = refs.find(ref => ref.bed.id === sourceBedId);
+  if (!source) {
+    return { affectedBedCount: 0, affectedLocations: [] };
+  }
+  const rent = nextRent ?? null;
+  const deposit = nextDeposit ?? null;
+  const locations = new Set<string>();
+  const buildingName = structure.building.name?.trim();
+  if (buildingName) {
+    locations.add(buildingName);
+  }
+  let filled = 0;
+  for (const candidate of refs) {
+    if (!isEquivalent(structure, source, candidate)) {
+      continue;
+    }
+    const fillRent = !isEmptyMoney(rent) && isEmptyMoney(candidate.bed.defaultRent);
+    const fillDeposit = !isEmptyMoney(deposit) && isEmptyMoney(candidate.bed.defaultDeposit);
+    if (!fillRent && !fillDeposit) {
+      continue;
+    }
+    filled += 1;
+    const location = locationFor(structure, candidate);
+    if (location) {
+      locations.add(location);
+    }
+  }
+  const sourceLocation = locationFor(structure, source);
+  if (sourceLocation) {
+    locations.add(sourceLocation);
+  }
+  return {
+    affectedBedCount: filled + 1,
+    affectedLocations: Array.from(locations),
+  };
+}
+
+export function renameSetupBed(
+  structure: EditableSetupStructure,
+  sourceBedId: string,
+  label: string,
+): EditableSetupStructure {
+  return mapBeds(structure, bed =>
+    bed.id === sourceBedId ? { ...bed, label, number: label } : bed,
+  );
+}
+
+export function applySetupBedPricing(
+  structure: EditableSetupStructure,
+  sourceBedId: string,
+  next: { label?: string; defaultRent: number | null; defaultDeposit: number | null },
+): EditableSetupStructure {
+  let nextStructure = mapBeds(structure, bed =>
+    bed.id === sourceBedId
+      ? {
+          ...bed,
+          label: next.label ?? bed.label,
+          number: next.label ?? bed.number,
+          defaultRent: next.defaultRent,
+          defaultDeposit: next.defaultDeposit,
+        }
+      : bed,
+  );
+  if (!isEmptyMoney(next.defaultRent)) {
+    nextStructure = propagateBedPricing(nextStructure, sourceBedId, 'defaultRent');
+  }
+  if (!isEmptyMoney(next.defaultDeposit)) {
+    nextStructure = propagateBedPricing(nextStructure, sourceBedId, 'defaultDeposit');
+  }
+  return nextStructure;
+}
+
 /** One-shot copy of a valid rent/deposit into equivalent empty beds. Does not overwrite. */
 export function propagateBedPricing(
   structure: EditableSetupStructure,

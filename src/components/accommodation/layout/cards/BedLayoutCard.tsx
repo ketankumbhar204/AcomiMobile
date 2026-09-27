@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ChevronRight } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import type { AccommodationStatus, BedListItemResponse, UUID } from '../../../../api/types';
 import { InlineEditableName } from '../../../ui/InlineEditableName';
@@ -9,7 +10,7 @@ import { isAccommodationEntityActive } from '../../../../utils/accommodationEnti
 import { formatBedDisplayLabel } from '../../../../utils/formatBedDisplayLabel';
 import { AccommodationInactiveBadge, accommodationInactiveCardStyle, accommodationInactiveIllustrationStyle } from '../../AccommodationInactiveBadge';
 import { AccommodationStatusBadge } from '../../AccommodationStatusBadge';
-import { BedPricingFields } from '../../BedPricingFields';
+import { BedPricingDisplay } from '../../BedPricingDisplay';
 import { getBedIllustration } from '../illustrations/illustrationAssets';
 import { LayoutCardShell } from './LayoutCardShell';
 import { LayoutEntityPhoto } from './LayoutEntityPhoto';
@@ -22,13 +23,9 @@ type BedLayoutCardProps = {
   onPress: () => void;
   onLongPress?: () => void;
   menu?: React.ReactNode;
+  onEdit?: () => void;
   editableName?: boolean;
   onSaveName?: (name: string) => Promise<void>;
-  pricingEditable?: boolean;
-  onCommitPricing?: (
-    field: 'defaultRent' | 'defaultDeposit',
-    value: number | null,
-  ) => Promise<void>;
 };
 
 function BedOccupantLine({
@@ -75,10 +72,9 @@ export function BedLayoutCard({
   onPress,
   onLongPress,
   menu,
+  onEdit,
   editableName = false,
   onSaveName,
-  pricingEditable = false,
-  onCommitPricing,
 }: BedLayoutCardProps) {
   const { t } = useTranslation();
   const inactive = !isAccommodationEntityActive(bed);
@@ -129,6 +125,19 @@ export function BedLayoutCard({
             </Text>
           )}
         </View>
+        {onEdit && !inactive ? (
+          <Pressable
+            onPress={event => {
+              event.stopPropagation?.();
+              onEdit();
+            }}
+            hitSlop={8}
+            style={styles.editBtn}
+            accessibilityRole="button"
+            accessibilityLabel={t('accommodation.builder.editBed', { defaultValue: 'Edit bed' })}>
+            <ChevronRight size={16} color={colors.info} strokeWidth={2.4} />
+          </Pressable>
+        ) : null}
         {inactive ? (
           <AccommodationInactiveBadge />
         ) : (
@@ -141,12 +150,7 @@ export function BedLayoutCard({
         status={bed.status}
         inactive={inactive}
       />
-      <BedPricingFields
-        rent={bed.defaultRent}
-        deposit={bed.defaultDeposit}
-        editable={pricingEditable && !inactive}
-        onCommit={onCommitPricing}
-      />
+      <BedPricingDisplay rent={bed.defaultRent} deposit={bed.defaultDeposit} layout="stack" />
     </LayoutCardShell>
   );
 }
@@ -188,6 +192,16 @@ const styles = StyleSheet.create({
   titleWrap: {
     flex: 1,
     minWidth: 0,
+  },
+  editBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
   },
   label: {
     ...typography.bodyStrong,

@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { MemberDetailsResponse } from '../../api/types';
-import { Button, Card, EmptyState, FormInput } from '../ui';
+import { OccupancyContractSnapshotCard } from '../occupancy';
+import { Button, Card, EmptyState, FormInput, SkeletonCard } from '../ui';
+import { useMemberOccupancies } from '../../hooks/useMemberOccupancies';
 import { useMemberStore } from '../../store/memberStore';
 import { useToastStore } from '../../store/toastStore';
 import { spacing, typography } from '../../theme';
@@ -10,15 +12,21 @@ import { formatCurrency, parseDepositAmount, validateDeposit } from '../../utils
 import { MemberDetailRow } from './MemberDetailRow';
 
 type MemberDepositTabProps = {
+  spaceId: string;
   member: MemberDetailsResponse;
   canEdit: boolean;
 };
 
-export function MemberDepositTab({ member, canEdit }: MemberDepositTabProps) {
+export function MemberDepositTab({ spaceId, member, canEdit }: MemberDepositTabProps) {
   const { t } = useTranslation();
   const showToast = useToastStore(state => state.showToast);
   const loading = useMemberStore(state => state.loading);
   const updateDeposit = useMemberStore(state => state.updateDeposit);
+  const { data: occupancyData, loading: occupancyLoading } = useMemberOccupancies(
+    spaceId,
+    member.memberId,
+  );
+  const stayOccupancy = occupancyData?.currentOccupancy ?? occupancyData?.reservedOccupancy;
 
   const [editing, setEditing] = useState(false);
   const [depositAmount, setDepositAmount] = useState(String(member.depositAmount ?? 0));
@@ -59,7 +67,8 @@ export function MemberDepositTab({ member, canEdit }: MemberDepositTabProps) {
     !canEdit &&
     (member.depositAmount ?? 0) === 0 &&
     (member.depositPaid ?? 0) === 0 &&
-    (member.depositRefunded ?? 0) === 0
+    (member.depositRefunded ?? 0) === 0 &&
+    !stayOccupancy
   ) {
     return (
       <EmptyState
@@ -116,6 +125,12 @@ export function MemberDepositTab({ member, canEdit }: MemberDepositTabProps) {
 
   return (
     <View>
+      {occupancyLoading && !stayOccupancy ? <SkeletonCard /> : null}
+      {stayOccupancy ? (
+        <View style={styles.stayDeposit}>
+          <OccupancyContractSnapshotCard occupancy={stayOccupancy} />
+        </View>
+      ) : null}
       <Card style={styles.card}>
         <MemberDetailRow
           label={t('membership.deposit.amount')}
@@ -148,6 +163,9 @@ export function MemberDepositTab({ member, canEdit }: MemberDepositTabProps) {
 }
 
 const styles = StyleSheet.create({
+  stayDeposit: {
+    marginBottom: spacing.md,
+  },
   card: {
     marginBottom: spacing.lg,
   },

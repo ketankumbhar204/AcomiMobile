@@ -15,6 +15,8 @@ import { formatOccupancyAllocatedDate } from '../../utils/occupancyRules';
 
 type OccupancyContractSnapshotCardProps = {
   occupancy: OccupancyResponse;
+  /** Render rows without an extra card (for nesting inside Current Stay). */
+  embedded?: boolean;
 };
 
 function foodDisplay(
@@ -35,10 +37,11 @@ function foodDisplay(
 
 export function OccupancyContractSnapshotCard({
   occupancy,
+  embedded = false,
 }: OccupancyContractSnapshotCardProps) {
   const { t } = useTranslation();
 
-  if (occupancy.status !== 'ACTIVE') {
+  if (occupancy.status !== 'ACTIVE' && occupancy.status !== 'RESERVED') {
     return null;
   }
 
@@ -48,8 +51,8 @@ export function OccupancyContractSnapshotCard({
     monthlyTotalIncludesFoodFromOccupancy(occupancy),
   );
 
-  return (
-    <Card style={styles.card}>
+  const body = (
+    <>
       <Text style={styles.title}>{t('occupancy.contract.snapshotTitle')}</Text>
       {occupancy.pricingLockedAt ? (
         <Text style={styles.locked}>
@@ -101,17 +104,29 @@ export function OccupancyContractSnapshotCard({
         </View>
       ) : null}
 
-      {!hasContractSnapshot(occupancy) ? (
+      {!hasContractSnapshot(occupancy) && occupancy.status === 'ACTIVE' ? (
         <Text style={styles.legacyHint}>{t('occupancy.contract.legacyNoSnapshot')}</Text>
       ) : null}
-    </Card>
+    </>
   );
+
+  if (embedded) {
+    return <View style={styles.embedded}>{body}</View>;
+  }
+
+  return <Card style={styles.card}>{body}</Card>;
 }
 
 const styles = StyleSheet.create({
   card: {
     gap: spacing.sm,
     borderRadius: 18,
+  },
+  embedded: {
+    gap: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
   },
   title: {
     ...typography.bodyStrong,

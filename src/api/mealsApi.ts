@@ -49,6 +49,8 @@ import type { LocalFileInput } from '../services/fileUploadService';
 
 const LOG_TAG = '[MealsApi]';
 
+const okOrMissing = (status: number) => status === 200 || status === 204 || status === 404;
+
 type ProofInput = string | (SubmitPaymentProofRequest & { localFile?: LocalFileInput });
 
 async function resolveMealProofBody(
@@ -416,10 +418,16 @@ export const mealsApi = {
     spaceId: UUID,
     menuDate: string,
     mealType: MealType,
-  ): Promise<DailyMenuResponse> => {
+  ): Promise<DailyMenuResponse | null> => {
     const path = `/spaces/${spaceId}/daily-menus/${menuDate}/${mealType}`;
     devLog(`${LOG_TAG} GET ${path}`);
-    return unwrapApiResponse(apiClient.get<ApiResponse<DailyMenuResponse>>(path));
+    const response = await apiClient.get<ApiResponse<DailyMenuResponse>>(path, {
+      validateStatus: okOrMissing,
+    });
+    if (response.status === 404) {
+      return null;
+    }
+    return unwrapApiResponse(Promise.resolve(response));
   },
 
   upsertDailyMenu: async (
@@ -454,7 +462,11 @@ export const mealsApi = {
   ): Promise<void> => {
     const path = `/spaces/${spaceId}/daily-menus/${menuDate}/${mealType}`;
     devLog(`${LOG_TAG} DELETE ${path}`);
-    await unwrapVoidResponse(apiClient.delete(path));
+    const response = await apiClient.delete(path, { validateStatus: okOrMissing });
+    if (response.status === 404) {
+      return;
+    }
+    await unwrapVoidResponse(Promise.resolve(response));
   },
 
   copyDailyMenu: async (

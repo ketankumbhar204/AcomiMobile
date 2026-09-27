@@ -10,6 +10,8 @@ import type {
   PaymentsReviewQueueParam,
   PaymentsSummaryResponse,
   ReviewPaymentRequest,
+  CreateSpacePaymentRequest,
+  MarkPaymentReceivedRequest,
   SpacePaymentListResponse,
   SpacePaymentResponse,
   SpaceType,
@@ -150,6 +152,37 @@ export const paymentsApi = {
     try {
       return await unwrapApiResponse(
         apiClient.post<ApiResponse<SpacePaymentResponse>>(path, body),
+      );
+    } catch (error) {
+      rethrowUnlessUnavailable(error);
+    }
+  },
+
+  createPayment: async (
+    spaceId: UUID,
+    body: CreateSpacePaymentRequest,
+  ): Promise<SpacePaymentResponse> => {
+    const path = `/spaces/${spaceId}/payments`;
+    devLog(`${LOG_TAG} POST ${path}`, body);
+    try {
+      return await unwrapApiResponse(
+        apiClient.post<ApiResponse<SpacePaymentResponse>>(path, body),
+      );
+    } catch (error) {
+      rethrowUnlessUnavailable(error);
+    }
+  },
+
+  markPaymentReceived: async (
+    spaceId: UUID,
+    paymentId: UUID,
+    body?: MarkPaymentReceivedRequest,
+  ): Promise<SpacePaymentResponse> => {
+    const path = `/spaces/${spaceId}/payments/${paymentId}/received`;
+    devLog(`${LOG_TAG} POST ${path}`, body);
+    try {
+      return await unwrapApiResponse(
+        apiClient.post<ApiResponse<SpacePaymentResponse>>(path, body ?? {}),
       );
     } catch (error) {
       rethrowUnlessUnavailable(error);

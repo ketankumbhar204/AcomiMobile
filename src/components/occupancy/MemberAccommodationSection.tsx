@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { ArrowLeftRight, History, LogOut } from 'lucide-react-native';
 import type {
   CurrentOccupancySummaryResponse,
   MemberDetailsResponse,
@@ -12,6 +13,7 @@ import type {
 } from '../../api/types';
 import { Button, Card, useConfirmDialog } from '../ui';
 import { MemberOccupancyStatusBadge } from '../member/MemberOccupancyStatusBadge';
+import { occupancyActionTint } from './occupancyActionTints';
 import type { MainStackParamList } from '../../navigation/types';
 import { openOccupancyWizardFromRef } from '../../features/occupancy/OccupancyWizard';
 import { useMemberOccupancies } from '../../hooks/useMemberOccupancies';
@@ -293,6 +295,9 @@ export function MemberAccommodationSection({
               exitLabel={t('occupancy.section.expectedMoveOut')}
               exitValue={formatOccupancyAllocatedDate(exitRaw)}
             />
+            {activeOccupancy ? (
+              <OccupancyContractSnapshotCard occupancy={activeOccupancy} embedded />
+            ) : null}
             {supportsSpaceAmenities(spaceType) ? (
               <AssignedAmenityChips amenities={assignedAmenities} />
             ) : null}
@@ -314,6 +319,9 @@ export function MemberAccommodationSection({
               exitLabel={t('occupancy.section.expectedMoveOut')}
               exitValue={formatOccupancyAllocatedDate(getOccupancyExitDate(reservedOccupancy))}
             />
+            {reservedOccupancy ? (
+              <OccupancyContractSnapshotCard occupancy={reservedOccupancy} embedded />
+            ) : null}
             {supportsSpaceAmenities(spaceType) ? (
               <AssignedAmenityChips amenities={assignedAmenities} />
             ) : null}
@@ -336,14 +344,16 @@ export function MemberAccommodationSection({
               <>
                 <Button
                   label={t('occupancy.actions.transfer')}
-                  variant="secondary"
+                  tint={occupancyActionTint.transfer}
+                  icon={ArrowLeftRight}
                   onPress={() => openWizard('TRANSFER')}
                   disabled={loading}
                   style={styles.actionBtn}
                 />
                 <Button
                   label={t('occupancy.actions.vacate')}
-                  variant="ghost"
+                  tint={occupancyActionTint.vacate}
+                  icon={LogOut}
                   onPress={() => openWizard('VACATE')}
                   disabled={loading}
                   style={styles.actionBtn}
@@ -353,13 +363,14 @@ export function MemberAccommodationSection({
               <>
                 <Button
                   label={t('occupancy.actions.moveIn')}
+                  tint={occupancyActionTint.moveIn}
                   onPress={() => openWizard('MOVE_IN')}
                   disabled={loading}
                   style={styles.actionBtn}
                 />
                 <Button
                   label={t('occupancy.actions.cancelReservation')}
-                  variant="ghost"
+                  tint={occupancyActionTint.cancel}
                   onPress={confirmCancelReservation}
                   disabled={loading}
                   style={styles.actionBtn}
@@ -369,13 +380,14 @@ export function MemberAccommodationSection({
               <>
                 <Button
                   label={t('occupancy.actions.reserve')}
+                  tint={occupancyActionTint.reserve}
                   onPress={() => openWizard('RESERVE')}
                   disabled={loading}
                   style={styles.actionBtn}
                 />
                 <Button
                   label={t('occupancy.actions.walkInAllocate')}
-                  variant="secondary"
+                  tint={occupancyActionTint.allocate}
                   onPress={() => openWizard('ALLOCATE')}
                   disabled={loading}
                   style={styles.actionBtn}
@@ -387,7 +399,8 @@ export function MemberAccommodationSection({
 
         <Button
           label={t('occupancy.actions.viewHistoryShort')}
-          variant="ghost"
+          tint={occupancyActionTint.viewHistory}
+          icon={History}
           onPress={() =>
             navigation.navigate('MemberOccupancyHistory', {
               spaceId,
@@ -398,10 +411,6 @@ export function MemberAccommodationSection({
           style={styles.historyBtn}
         />
       </Card>
-
-      {isAllocated && activeOccupancy ? (
-        <OccupancyContractSnapshotCard occupancy={activeOccupancy} />
-      ) : null}
     </View>
   );
 }

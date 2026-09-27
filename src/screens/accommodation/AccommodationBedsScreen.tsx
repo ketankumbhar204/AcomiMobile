@@ -28,6 +28,7 @@ import {
   BedStatusLegend,
   BuilderRowLifecycleMenu,
   BulkBedsModal,
+  PersistedBedInteractionHost,
 } from '../../components/accommodation';
 import {
   AccommodationOccupancyFlowModals,
@@ -43,13 +44,15 @@ import { canEditEntityPhoto } from '../../files/entityPhoto';
 import { EntityPhotoProvider } from '../../files/EntityPhotoContext';
 import { useBeds } from '../../hooks/useBeds';
 import { useBulkBeds } from '../../hooks/useBulkBeds';
+import { usePersistedBedInteraction } from '../../hooks/usePersistedBedInteraction';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, spacing, typography } from '../../theme';
 import { buildAccommodationTrail } from '../../utils/accommodationContext';
 import { handleAccommodationTrailPress } from '../../utils/accommodationNavigation';
 import { invalidateAccommodationQueries } from '../../utils/accommodationQueryCache';
-import { renameBedNumber, renameRoomName, updateBedPricingField } from '../../utils/accommodationInlineRename';
+import { renameRoomName } from '../../utils/accommodationInlineRename';
+import { persistedTargetFromRoomBed } from '../../utils/persistedBedTarget';
 import { isAccommodationEntityActive } from '../../utils/accommodationEntityActive';
 import { accommodationInactiveScopeKey } from '../../utils/accommodationInactiveRegistry';
 import { applyAccommodationInactiveLifecycle } from '../../utils/accommodationInactiveLifecycle';
@@ -117,6 +120,17 @@ export function AccommodationBedsScreen() {
     bedsContext,
     { searchQuery, status: statusFilter },
   );
+
+  const bedInteraction = usePersistedBedInteraction({
+    spaceId,
+    spaceType,
+    canEditStructure: canManage,
+    canManageOccupancy: canManageOccupancyActions,
+    onSuccess: async () => {
+      invalidateAccommodationQueries();
+      await refresh();
+    },
+  });
 
   const resolvedRoomName = room?.name ?? roomName;
   const roomInactive = room != null && !isAccommodationEntityActive(room);
@@ -250,20 +264,42 @@ export function AccommodationBedsScreen() {
     [refresh],
   );
 
-  const commitBedPricing = useCallback(
-    async (
-      bed: BedListItemResponse,
-      field: 'defaultRent' | 'defaultDeposit',
-      value: number | null,
-    ) => {
-      const updated = await updateBedPricingField(spaceId, roomId, bed.bedId, field, value);
-      patchBed(bed.bedId, {
-        defaultRent: updated.defaultRent,
-        defaultDeposit: updated.defaultDeposit,
-      });
-      await refresh();
+  const openBedEditor = useCallback(
+    (bed: BedListItemResponse) => {
+      if (!canManage || !isAccommodationEntityActive(bed)) {
+        return;
+      }
+      bedInteraction.open(
+        persistedTargetFromRoomBed({
+          bedId: bed.bedId,
+          roomId,
+          label: bed.label,
+          status: bed.status,
+          rent: bed.defaultRent,
+          deposit: bed.defaultDeposit,
+          inactive: !isAccommodationEntityActive(bed),
+          buildingId,
+          buildingName,
+          roomName: resolvedRoomName,
+          floorId,
+          unitId,
+          parentName,
+          parentType,
+        }),
+      );
     },
-    [patchBed, refresh, roomId, spaceId],
+    [
+      bedInteraction,
+      buildingId,
+      buildingName,
+      canManage,
+      floorId,
+      parentName,
+      parentType,
+      resolvedRoomName,
+      roomId,
+      unitId,
+    ],
   );
 
   const handleRoomLifecycleSuccess = useCallback(() => {
@@ -374,15 +410,7 @@ export function AccommodationBedsScreen() {
             bed: bed.label,
             defaultValue: `Bed ${bed.label}`,
           })}
-          onEdit={() =>
-            navigation.navigate('BedForm', {
-              spaceId,
-              buildingId,
-              roomId,
-              mode: 'edit',
-              bedId: bed.bedId,
-            })
-          }
+          onEdit={() => openBedEditor(bed)}
           onSuccess={(action, entityType) => {
             applyBedLifecycle(action, bed);
             handleLifecycleSuccess(action, entityType);
@@ -398,6 +426,7 @@ export function AccommodationBedsScreen() {
       canManageOccupancyActions,
       floorId,
       handleLifecycleSuccess,
+      openBedEditor,
       navigation,
       occupancyFlow,
       parentName,
@@ -492,20 +521,7 @@ export function AccommodationBedsScreen() {
             setRoom(prev => (prev ? { ...prev, name } : prev));
             showToast(t('accommodation.rooms.updateSuccess'));
           }}
-          renderBedNameEditor={bed =>
-            canManage
-              ? {
-                  editableName: true,
-                  onSaveName: async bedNumber => {
-                    await renameBedNumber(spaceId, buildingId, roomId, bed.bedId, bedNumber);
-                    patchBed(bed.bedId, { label: bedNumber });
-                    showToast(t('accommodation.beds.updateSuccess'));
-                  },
-                }
-              : {}
-          }
-          pricingEditable={canManage}
-          onCommitBedPricing={commitBedPricing}
+          onEditBed={canManage ? openBedEditor : undefined}
         />
         {loadingMore ? (
           <ActivityIndicator color={colors.primary} style={styles.loadMore} />
@@ -574,14 +590,7 @@ export function AccommodationBedsScreen() {
               parentType={parentType}
               canManageLifecycle={canManage}
               canManageOccupancyActions={canManageOccupancyActions}
-              editableName={canManage}
-              onSaveName={async bedNumber => {
-                await renameBedNumber(spaceId, buildingId, roomId, bed.bedId, bedNumber);
-                patchBed(bed.bedId, { label: bedNumber });
-                showToast(t('accommodation.beds.updateSuccess'));
-              }}
-              pricingEditable={canManage}
-              onCommitPricing={(field, value) => commitBedPricing(bed, field, value)}
+              onEdit={canManage ? () => openBedEditor(bed) : undefined}
               onPress={() => openBedDetail(bed)}
               lifecycleMenuProps={{
                 spaceId,
@@ -590,14 +599,7 @@ export function AccommodationBedsScreen() {
                 entityId: bed.bedId,
                 roomId,
                 role: permissions.membershipRole,
-                onEdit: () =>
-                  navigation.navigate('BedForm', {
-                    spaceId,
-                    buildingId,
-                    roomId,
-                    mode: 'edit',
-                    bedId: bed.bedId,
-                  }),
+                onEdit: () => openBedEditor(bed),
                 onSuccess: (action, entityType) => {
                   applyBedLifecycle(action, bed);
                   handleLifecycleSuccess(action, entityType);
@@ -652,6 +654,12 @@ export function AccommodationBedsScreen() {
           invalidateAccommodationQueries();
           void refresh();
         }}
+      />
+
+      <PersistedBedInteractionHost
+        interaction={bedInteraction}
+        spaceId={spaceId}
+        spaceType={spaceType}
       />
 
     </View>

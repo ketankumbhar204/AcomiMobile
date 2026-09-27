@@ -13,6 +13,11 @@ export {
 } from './BedsFilterDrawer';
 export type { BedStatusFilterState } from './BedsFilterDrawer';
 export { BedPricingFields } from './BedPricingFields';
+export { BedPricingDisplay } from './BedPricingDisplay';
+export { BedInteractionSheet } from './BedInteractionSheet';
+export { PersistedBedInteractionHost } from './PersistedBedInteractionHost';
+export { BedPricingConfirmModal } from './BedPricingConfirmModal';
+export { SetupCreateConfirmModal } from './SetupCreateConfirmModal';
 export { BuildingInventoryBedCard, BuildingInventoryAddBedCard } from './BuildingInventoryBedCard';
 export { BuildingInventoryRoomSection } from './BuildingInventoryRoomSection';
 export { BuildingInventoryFloorSection } from './BuildingInventoryFloorSection';

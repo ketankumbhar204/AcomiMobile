@@ -62,6 +62,7 @@ import { DashboardSpaceHealthScreen } from '../screens/dashboard/DashboardSpaceH
 import { MemberPaymentsScreen } from '../screens/payments/MemberPaymentsScreen';
 import { PaymentReviewScreen } from '../screens/payments/PaymentReviewScreen';
 import { PaymentDetailScreen } from '../screens/payments/PaymentDetailScreen';
+import { CreatePaymentScreen } from '../screens/payments/CreatePaymentScreen';
 import { DayMealBulkPayScreen } from '../screens/payments/DayMealBulkPayScreen';
 import { DayMealPaymentDetailScreen } from '../screens/payments/DayMealPaymentDetailScreen';
 import { PaymentHistoryScreen } from '../screens/payments/PaymentHistoryScreen';
@@ -77,6 +78,7 @@ import { InventoryItemFormScreen } from '../screens/inventory/InventoryItemFormS
 import { InquiryCreditsScreen } from '../screens/InquiryCreditsScreen';
 import { CapabilityStackGate } from '../components/ui/CapabilityStackGate';
 import { stackHeaderOptions } from '../theme';
+import { HeaderBackButton } from '../components/ui/HeaderBackButton';
 import { useTranslation } from 'react-i18next';
 import { useSpaceStore } from '../store/spaceStore';
 import { useProfileCompletionGate } from '../hooks/useProfileCompletionGate';
@@ -87,6 +89,11 @@ import type { MainStackParamList } from './types';
 import type { CapabilityId } from '../spaceLifecycle';
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
+
+const mainStackScreenOptions = {
+  ...stackHeaderOptions,
+  headerLeft: () => <HeaderBackButton />,
+};
 
 function SpaceTabsScreen({
   route,
@@ -106,8 +113,10 @@ function MySpacesRedirect() {
   return <MemberTabsRedirect screen="Home" />;
 }
 
-function FindAPlaceRedirect() {
-  return <MemberTabsRedirect screen="FindAPlace" />;
+function FindAPlaceRedirect({
+  route,
+}: NativeStackScreenProps<MainStackParamList, 'FindAPlace'>) {
+  return <MemberTabsRedirect screen="FindAPlace" findAPlaceParams={route.params} />;
 }
 
 /** Progressive Guided Access — stack/deep-link gate (central; screens stay unaware). */
@@ -213,7 +222,7 @@ export function MainNavigator() {
     return (
       <Stack.Navigator
         initialRouteName="CompleteProfile"
-        screenOptions={stackHeaderOptions}>
+        screenOptions={mainStackScreenOptions}>
         <Stack.Screen
           name="CompleteProfile"
           component={CompleteProfileScreen}
@@ -251,7 +260,7 @@ export function MainNavigator() {
   return (
     <Stack.Navigator
       initialRouteName={initialRouteName}
-      screenOptions={stackHeaderOptions}>
+      screenOptions={mainStackScreenOptions}>
       <Stack.Screen
         name="MemberTabs"
         component={MemberTabNavigator}
@@ -633,6 +642,7 @@ export function MainNavigator() {
       />
       <Stack.Screen name="MemberPayments" component={MemberPaymentsScreen} />
       <Stack.Screen name="PaymentDetail" component={PaymentDetailScreen} />
+      <Stack.Screen name="CreatePayment" component={CreatePaymentScreen} />
       <Stack.Screen
         name="DayMealPaymentDetail"
         component={DayMealPaymentDetailScreen}

@@ -26,13 +26,26 @@ import {
   DashboardStatCard,
 } from '../../dashboard';
 import { Button } from '../../ui';
-import { BedPricingFields } from '../BedPricingFields';
+import { BedPricingDisplay } from '../BedPricingDisplay';
+import { BedInteractionSheet } from '../BedInteractionSheet';
+import { BedPricingConfirmModal } from '../BedPricingConfirmModal';
 import { useAccommodationActionSheetStore } from '../../../store/accommodationActionSheetStore';
 import { colors, pastels, radius, shadows, spacing, typography } from '../../../theme';
 import { formatBedDisplayLabel } from '../../../utils/formatBedDisplayLabel';
 import { executeSetupStructure } from './executeSetupStructure';
 import { InlineEditableField, InlineEditableTitle } from './InlineEditableTitle';
-import { propagateBedPricing, setBedPricingField, type PricingField } from './setupPricingAutofill';
+import {
+  applySetupBedPricing,
+  previewSetupPricingImpact,
+  renameSetupBed,
+} from './setupPricingAutofill';
+import { changedPricingFields } from '../../../utils/commitBedPricing';
+import {
+  hasBedPricingChange,
+  isBedDraftUnchanged,
+  type BedInteractionDraft,
+} from '../../../utils/bedInteractionDraft';
+import type { PendingBedPricing } from '../../../utils/bedPricingCommitController';
 import { computeStructureTotals } from './setupStructureModel';
 import {
   addBed,
@@ -221,19 +234,16 @@ function HeaderIconButton({
 
 function SetupBedCard({
   bed,
-  onChangeLabel,
-  onCommitPricing,
+  onEdit,
   onDelete,
 }: {
   bed: EditableBed;
-  onChangeLabel: (label: string) => void;
-  onCommitPricing: (field: PricingField, value: number | null) => void;
+  onEdit: () => void;
   onDelete: () => void;
 }) {
   const { t } = useTranslation();
   const openSheet = useAccommodationActionSheetStore(state => state.open);
   const displayLabel = formatBedDisplayLabel(bed.label, t);
-  const [editingLabel, setEditingLabel] = useState(false);
 
   return (
     <View style={styles.setupBedCard}>
@@ -242,31 +252,18 @@ function SetupBedCard({
           <BedSingle size={16} color={colors.success} strokeWidth={2.2} />
         </View>
         <View style={styles.setupBedTitleWrap}>
-          {editingLabel ? (
-            <InlineEditableField
-              label={t('accommodation.setup.editor.bedLabel', { defaultValue: 'Bed label' })}
-              value={bed.label}
-              onSave={label => {
-                onChangeLabel(label);
-                setEditingLabel(false);
-              }}
-            />
-          ) : (
-            <>
-              <Text style={styles.setupBedLabel} numberOfLines={2}>
-                {displayLabel}
-              </Text>
-              <View style={styles.setupBedStatusPill}>
-                <View style={styles.setupBedStatusDot} />
-                <Text style={styles.setupBedStatusText}>
-                  {t('accommodation.status.AVAILABLE', { defaultValue: 'Available' })}
-                </Text>
-              </View>
-            </>
-          )}
+          <Text style={styles.setupBedLabel} numberOfLines={2}>
+            {displayLabel}
+          </Text>
+          <View style={styles.setupBedStatusPill}>
+            <View style={styles.setupBedStatusDot} />
+            <Text style={styles.setupBedStatusText}>
+              {t('accommodation.status.AVAILABLE', { defaultValue: 'Available' })}
+            </Text>
+          </View>
         </View>
         <Pressable
-          onPress={() => setEditingLabel(true)}
+          onPress={onEdit}
           onLongPress={() =>
             openSheet(displayLabel, [
               {
@@ -279,19 +276,11 @@ function SetupBedCard({
           style={({ pressed }) => [styles.setupBedEditBtn, pressed && styles.headerIconBtnPressed]}
           accessibilityRole="button"
           accessibilityLabel={t('accommodation.builder.editBed', { defaultValue: 'Edit bed' })}>
-          <Pencil size={16} color={colors.info} strokeWidth={2.4} />
+          <ChevronRight size={18} color={colors.info} strokeWidth={2.4} />
         </Pressable>
       </View>
       <View style={styles.setupBedPricingWell}>
-        <BedPricingFields
-          rent={bed.defaultRent}
-          deposit={bed.defaultDeposit}
-          editable
-          layout="stack"
-          onCommit={async (field, value) => {
-            onCommitPricing(field, value);
-          }}
-        />
+        <BedPricingDisplay rent={bed.defaultRent} deposit={bed.defaultDeposit} layout="stack" />
       </View>
     </View>
   );
@@ -422,11 +411,13 @@ function SetupRoomInventoryCard({
   structure,
   expandConfig,
   onChangeStructure,
+  onEditBed,
 }: {
   row: SetupRoomRow;
   structure: EditableSetupStructure;
   expandConfig: SetupStructureEditorProps['expandConfig'];
   onChangeStructure: (next: EditableSetupStructure) => void;
+  onEditBed: (bed: EditableBed) => void;
 }) {
   const { t } = useTranslation();
   const openSheet = useAccommodationActionSheetStore(state => state.open);
@@ -702,25 +693,7 @@ function SetupRoomInventoryCard({
           <SetupBedCard
             key={bed.id}
             bed={bed}
-            onChangeLabel={label =>
-              onChangeStructure(
-                patchRoomInStructure(structure, row.floorId, row.unitId, row.room.id, room => ({
-                  ...room,
-                  beds: room.beds.map(item =>
-                    item.id === bed.id ? { ...item, label, number: label } : item,
-                  ),
-                })),
-              )
-            }
-            onCommitPricing={(field, value) => {
-              onChangeStructure(
-                propagateBedPricing(
-                  setBedPricingField(structure, bed.id, field, value),
-                  bed.id,
-                  field,
-                ),
-              );
-            }}
+            onEdit={() => onEditBed(bed)}
             onDelete={() =>
               onChangeStructure(
                 deleteBed(structure, row.floorId, row.unitId, row.room.id, bed.id),
@@ -748,6 +721,10 @@ export function SetupStructureEditor({
   const { t } = useTranslation();
   const [showAllRooms, setShowAllRooms] = useState(false);
   const [buildingEditing, setBuildingEditing] = useState(false);
+  const [editingBed, setEditingBed] = useState<EditableBed | null>(null);
+  const [setupPending, setSetupPending] = useState<PendingBedPricing | null>(null);
+  const [setupDraft, setSetupDraft] = useState<BedInteractionDraft | null>(null);
+  const [setupConfirming, setSetupConfirming] = useState(false);
   const totals = useMemo(() => computeStructureTotals(structure), [structure]);
   const roomRows = useMemo(() => flattenSetupRooms(structure), [structure]);
   const visibleRooms = showAllRooms ? roomRows : roomRows.slice(0, INITIAL_VISIBLE_ROOMS);
@@ -889,6 +866,7 @@ export function SetupStructureEditor({
             structure={structure}
             expandConfig={expandConfig}
             onChangeStructure={onChange}
+            onEditBed={setEditingBed}
           />
         ))}
         {hasHiddenRooms && !showAllRooms ? (
@@ -901,6 +879,109 @@ export function SetupStructureEditor({
       </View>
 
       <Text style={styles.editHint}>{t('accommodation.setup.previewEditHint')}</Text>
+
+      <BedInteractionSheet
+        visible={editingBed != null}
+        mode="preview"
+        label={
+          editingBed
+            ? formatBedDisplayLabel(editingBed.label, t)
+            : t('occupancy.section.bed')
+        }
+        bedNumber={editingBed?.label ?? ''}
+        status="AVAILABLE"
+        rent={editingBed?.defaultRent}
+        deposit={editingBed?.defaultDeposit}
+        canEditStructure
+        onClose={() => {
+          if (!setupConfirming) {
+            setEditingBed(null);
+          }
+        }}
+        onSave={draft => {
+          if (!editingBed || isBedDraftUnchanged(
+            {
+              bedNumber: editingBed.label,
+              rent: editingBed.defaultRent ?? null,
+              deposit: editingBed.defaultDeposit ?? null,
+            },
+            draft,
+          )) {
+            return;
+          }
+          if (!hasBedPricingChange(
+            {
+              rent: editingBed.defaultRent ?? null,
+              deposit: editingBed.defaultDeposit ?? null,
+            },
+            draft,
+          )) {
+            onChange(
+              renameSetupBed(
+                structure,
+                editingBed.id,
+                draft.bedNumber.trim() || editingBed.label,
+              ),
+            );
+            setEditingBed(null);
+            return;
+          }
+          const impact = previewSetupPricingImpact(
+            structure,
+            editingBed.id,
+            draft.rent,
+            draft.deposit,
+          );
+          setSetupDraft(draft);
+          const changed = changedPricingFields(
+            editingBed.defaultRent,
+            editingBed.defaultDeposit,
+            draft.rent,
+            draft.deposit,
+          );
+          setSetupPending({
+            spaceId: 'preview',
+            roomId: 'preview',
+            bedId: editingBed.id,
+            bedLabel: formatBedDisplayLabel(draft.bedNumber || editingBed.label, t),
+            changedFields: changed,
+            field: changed[0] ?? 'defaultRent',
+            currentRent: editingBed.defaultRent ?? null,
+            currentDeposit: editingBed.defaultDeposit ?? null,
+            defaultRent: draft.rent,
+            defaultDeposit: draft.deposit,
+            affectedBedCount: impact.affectedBedCount,
+            affectedLocations: impact.affectedLocations,
+          });
+        }}
+      />
+      <BedPricingConfirmModal
+        pending={setupPending}
+        confirming={setupConfirming}
+        onConfirm={() => {
+          if (!editingBed || !setupDraft) {
+            return;
+          }
+          setSetupConfirming(true);
+          onChange(
+            applySetupBedPricing(structure, editingBed.id, {
+              label: setupDraft.bedNumber.trim() || editingBed.label,
+              defaultRent: setupDraft.rent,
+              defaultDeposit: setupDraft.deposit,
+            }),
+          );
+          setSetupConfirming(false);
+          setSetupPending(null);
+          setSetupDraft(null);
+          setEditingBed(null);
+        }}
+        onClose={() => {
+          if (!setupConfirming) {
+            setSetupPending(null);
+            setSetupDraft(null);
+          }
+        }}
+      />
     </View>
   );
 }
