@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CompositeNavigationProp,
   useFocusEffect,
@@ -36,7 +36,7 @@ import { DashboardSectionTitle } from '../../components/dashboard/DashboardSecti
 import { DashboardActionRow } from '../../components/dashboard/shared/DashboardActionRow';
 import { SetupActionCard } from '../../components/accommodation/SetupActionCard';
 import { CoachmarkAnchor, CoachmarkSequence } from '../../components/coachmarks';
-import { RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
+import { InventoryListSkeleton, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
 import { ENABLE_SETUP_COACHMARKS } from '../../coachmarks';
 import { paymentsApi } from '../../api/paymentsApi';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
@@ -52,6 +52,10 @@ import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { matchesSearch } from '../../utils/accommodationSearch';
+import {
+  isInlineOpsResultsFocus,
+  shouldAutoScrollToOpsResults,
+} from '../../utils/accommodationOpsFocusScroll';
 import { renameBuildingName } from '../../utils/accommodationInlineRename';
 import { isAccommodationApplicable } from '../../utils/accommodationProfile';
 import { currentMonthKey } from '../../utils/dashboardFinancial';
@@ -139,6 +143,10 @@ export function AccommodationHomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [opsFocus, setOpsFocus] = useState<RoomsOpsFocus | null>(null);
+  const pageScrollRef = useRef<ScrollView>(null);
+  const resultsSectionYRef = useRef(0);
+  const resultsSectionMeasuredRef = useRef(false);
+  const pendingOpsResultsScrollRef = useRef(false);
   const [pendingMemberIds, setPendingMemberIds] = useState<Set<string>>(new Set());
   const [summaries, setSummaries] = useState<Record<string, BuildingSummaryResponse>>({});
   const [summaryGeneration, setSummaryGeneration] = useState(
@@ -222,8 +230,41 @@ export function AccommodationHomeScreen() {
   }, [opsFocus]);
 
   const toggleOpsFocus = useCallback((next: RoomsOpsFocus) => {
-    setOpsFocus(prev => (prev === next ? null : next));
+    setOpsFocus(prev => {
+      const resolved = prev === next ? null : next;
+      pendingOpsResultsScrollRef.current = shouldAutoScrollToOpsResults(
+        prev,
+        resolved,
+      );
+      return resolved;
+    });
   }, []);
+
+  const flushPendingOpsResultsScroll = useCallback(() => {
+    if (!pendingOpsResultsScrollRef.current || !resultsSectionMeasuredRef.current) {
+      return;
+    }
+    pendingOpsResultsScrollRef.current = false;
+    pageScrollRef.current?.scrollTo({
+      y: Math.max(0, resultsSectionYRef.current),
+      animated: true,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!opsFocus) {
+      resultsSectionMeasuredRef.current = false;
+      resultsSectionYRef.current = 0;
+      return;
+    }
+    if (!pendingOpsResultsScrollRef.current || !isInlineOpsResultsFocus(opsFocus)) {
+      return;
+    }
+    const frame = requestAnimationFrame(() => {
+      flushPendingOpsResultsScroll();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [flushPendingOpsResultsScroll, opsFocus]);
 
   useEffect(() => {
     return subscribeAccommodationInvalidation(() => {
@@ -372,6 +413,7 @@ export function AccommodationHomeScreen() {
         enabled={coachmarksEnabled}>
         <View style={styles.root}>
           <ScrollView
+            ref={pageScrollRef}
             style={styles.scroll}
             contentContainerStyle={styles.content}
             showsVerticalScrollIndicator={false}
@@ -404,19 +446,18 @@ export function AccommodationHomeScreen() {
               <View style={styles.hero}>
                 <View style={styles.decorBlob} pointerEvents="none" />
                 <View style={styles.heroIconWrap} accessibilityElementsHidden>
-                  <Building2 size={18} color="#2563EB" strokeWidth={2.2} />
+                  <Building2 size={16} color="#2563EB" strokeWidth={2.2} />
                 </View>
-                <Text style={styles.eyebrow}>
-                  {t('accommodation.home.eyebrow', { defaultValue: 'Property' })}
-                </Text>
-                <Text style={styles.heading}>
-                  {t('accommodation.home.title', { defaultValue: 'Rooms' })}
-                </Text>
-                <Text style={styles.subheading}>
-                  {t('accommodation.home.subtitle', {
-                    defaultValue: 'Buildings, floors, rooms, and beds in one place',
-                  })}
-                </Text>
+                <View style={styles.heroText}>
+                  <Text style={styles.heading} numberOfLines={1}>
+                    {t('accommodation.home.title', { defaultValue: 'Rooms' })}
+                  </Text>
+                  <Text style={styles.subheading} numberOfLines={1}>
+                    {t('accommodation.home.subtitle', {
+                      defaultValue: 'Buildings, floors, rooms, and beds in one place',
+                    })}
+                  </Text>
+                </View>
               </View>
             )}
 
@@ -484,12 +525,20 @@ export function AccommodationHomeScreen() {
             ) : null}
 
             {opsFocus ? (
-              <AccommodationOpsFocusInventory
-                spaceId={spaceId}
-                opsFocus={opsFocus}
-                focusedBedIds={focusedBedIds}
-                onClear={() => setOpsFocus(null)}
-              />
+              <View
+                onLayout={event => {
+                  resultsSectionYRef.current = event.nativeEvent.layout.y;
+                  resultsSectionMeasuredRef.current = true;
+                  flushPendingOpsResultsScroll();
+                }}>
+                <AccommodationOpsFocusInventory
+                  spaceId={spaceId}
+                  opsFocus={opsFocus}
+                  focusedBedIds={focusedBedIds}
+                  onClear={() => setOpsFocus(null)}
+                  canManage={canManage}
+                />
+              </View>
             ) : !isEmpty ? (
               <>
                 <DashboardSectionTitle
@@ -508,11 +557,7 @@ export function AccommodationHomeScreen() {
             ) : null}
 
             {opsFocus ? null : showLoading ? (
-              <>
-                <SkeletonCard />
-                <View style={styles.gap} />
-                <SkeletonCard />
-              </>
+              <InventoryListSkeleton cards={3} />
             ) : isEmpty ? (
               <CoachmarkAnchor id="propertyLayout" active={coachmarksEnabled}>
                 <View style={styles.emptyWrap}>
@@ -626,10 +671,13 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
   },
   hero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
     marginBottom: spacing.md,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
-    borderRadius: radius.section,
+    borderRadius: 18,
     backgroundColor: '#EFF6FF',
     borderWidth: 1,
     borderColor: '#BFDBFE',
@@ -647,36 +695,33 @@ const styles = StyleSheet.create({
     right: -28,
   },
   heroIconWrap: {
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
     borderRadius: radius.sm,
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: '#BFDBFE',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.sm,
     zIndex: 1,
   },
-  eyebrow: {
-    ...typography.eyebrow,
-    marginBottom: 2,
+  heroText: {
+    flex: 1,
+    minWidth: 0,
     zIndex: 1,
+    gap: 1,
   },
   heading: {
-    ...typography.h2,
-    fontSize: 22,
-    lineHeight: 28,
-    fontWeight: '600',
+    ...typography.bodyStrong,
+    fontSize: 16,
+    lineHeight: 20,
+    fontWeight: '700',
     color: '#1D4ED8',
-    marginBottom: 2,
-    zIndex: 1,
   },
   subheading: {
     ...typography.caption,
     fontSize: 12,
     color: colors.muted,
-    zIndex: 1,
   },
   errorBanner: {
     backgroundColor: '#FEF2F2',

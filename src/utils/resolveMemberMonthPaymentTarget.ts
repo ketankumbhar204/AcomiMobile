@@ -13,6 +13,7 @@ export type MemberMonthPaymentNavTarget =
       memberId: UUID;
       memberName: string;
       month: string;
+      paymentCount: number;
     };
 
 /**
@@ -24,7 +25,11 @@ export async function resolveMemberMonthPaymentTarget(
   memberId: UUID,
   memberName: string,
   month: string,
+  options?: { sync?: boolean },
 ): Promise<MemberMonthPaymentNavTarget> {
+  if (options?.sync) {
+    await paymentsApi.syncPaymentsMonth(spaceId, month);
+  }
   const response = await paymentsApi.listPayments(spaceId, {
     memberId,
     month,
@@ -46,5 +51,6 @@ export async function resolveMemberMonthPaymentTarget(
     memberId,
     memberName,
     month,
+    paymentCount: payments.length,
   };
 }

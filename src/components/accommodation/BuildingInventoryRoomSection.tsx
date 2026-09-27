@@ -23,7 +23,6 @@ type BuildingInventoryRoomSectionProps = {
   pathSegments?: string[];
   /** @deprecated Prefer pathSegments. */
   title?: string;
-  pricingEditable?: boolean;
   showAddBed?: boolean;
   menu?: React.ReactNode;
   onRoomPress?: () => void;
@@ -31,12 +30,8 @@ type BuildingInventoryRoomSectionProps = {
   /** @deprecated Prefer consolidating hierarchy edits into `menu` (pencil trigger). */
   onEditRoom?: () => void;
   onBedPress?: (bed: BedSpaceListItemResponse) => void;
+  onEditBed?: (bed: BedSpaceListItemResponse) => void;
   onAddBed?: () => void;
-  onCommitPricing?: (
-    bed: BedSpaceListItemResponse,
-    field: 'defaultRent' | 'defaultDeposit',
-    value: number | null,
-  ) => Promise<void>;
   renderBedMenu?: (bed: BedSpaceListItemResponse) => React.ReactNode;
   renderBedFooter?: (bed: BedSpaceListItemResponse) => React.ReactNode;
 };
@@ -46,15 +41,14 @@ function BuildingInventoryRoomSectionComponent({
   pathCrumbs: pathCrumbsProp,
   pathSegments: pathSegmentsProp,
   title,
-  pricingEditable = false,
   showAddBed = false,
   menu,
   onRoomPress,
   onPathCrumbPress,
   onEditRoom,
   onBedPress,
+  onEditBed,
   onAddBed,
-  onCommitPricing,
   renderBedMenu,
   renderBedFooter,
 }: BuildingInventoryRoomSectionProps) {
@@ -199,13 +193,8 @@ function BuildingInventoryRoomSectionComponent({
           <BuildingInventoryBedCard
             key={bed.bedId}
             bed={bed}
-            pricingEditable={pricingEditable}
             onPress={onBedPress ? () => onBedPress(bed) : undefined}
-            onCommitPricing={
-              onCommitPricing
-                ? (field, value) => onCommitPricing(bed, field, value)
-                : undefined
-            }
+            onEdit={onEditBed ? () => onEditBed(bed) : undefined}
             menu={renderBedMenu?.(bed)}
             footer={renderBedFooter?.(bed)}
           />

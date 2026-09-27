@@ -6,6 +6,8 @@ import { colors, radius, spacing, typography } from '../../theme';
 import { isOccupancyTargetSupported } from '../../utils/buildOccupancyTarget';
 import type { OccupancyFlowContext } from '../../hooks/useAccommodationOccupancyFlow';
 import type { useAccommodationOccupancyFlow } from '../../hooks/useAccommodationOccupancyFlow';
+import type { ButtonTint } from '../ui/Button';
+import { occupancyActionTint } from './occupancyActionTints';
 
 type FlowController = ReturnType<typeof useAccommodationOccupancyFlow>;
 
@@ -23,12 +25,14 @@ type AccommodationOccupancyQuickActionsProps = {
 function QuickButton({
   label,
   variant = 'primary',
+  tint,
   onPress,
   disabled,
   compact,
 }: {
   label: string;
   variant?: 'primary' | 'secondary' | 'ghost';
+  tint?: ButtonTint;
   onPress: () => void;
   disabled?: boolean;
   compact?: boolean;
@@ -40,6 +44,11 @@ function QuickButton({
         compact && styles.quickBtnCompact,
         variant === 'secondary' && styles.quickBtnSecondary,
         variant === 'ghost' && styles.quickBtnGhost,
+        tint && {
+          backgroundColor: tint.bg,
+          borderWidth: 1,
+          borderColor: tint.border,
+        },
         disabled && styles.quickBtnDisabled,
       ]}
       onPress={onPress}
@@ -49,6 +58,7 @@ function QuickButton({
           styles.quickBtnText,
           variant === 'secondary' && styles.quickBtnTextSecondary,
           variant === 'ghost' && styles.quickBtnTextGhost,
+          tint && { color: tint.fg },
         ]}
         numberOfLines={1}>
         {label}
@@ -117,13 +127,14 @@ export function AccommodationOccupancyQuickActions({
           <>
             <QuickButton
               label={t('occupancy.actions.reserve')}
+              tint={occupancyActionTint.reserve}
               onPress={() => flow.startReserve(context)}
               disabled={disabled}
               compact={compact}
             />
             <QuickButton
               label={t('occupancy.actions.walkInAllocate')}
-              variant="secondary"
+              tint={occupancyActionTint.allocate}
               onPress={() => flow.startWalkIn(context)}
               disabled={disabled}
               compact={compact}
@@ -135,6 +146,7 @@ export function AccommodationOccupancyQuickActions({
           <>
             <QuickButton
               label={t('occupancy.actions.moveIn')}
+              tint={occupancyActionTint.moveIn}
               onPress={() => void flow.startMoveIn(context)}
               disabled={disabled}
               compact={compact}
@@ -145,7 +157,7 @@ export function AccommodationOccupancyQuickActions({
                   ? t('occupancy.actions.cancelShort')
                   : t('occupancy.actions.cancelReservation')
               }
-              variant="ghost"
+              tint={occupancyActionTint.cancel}
               onPress={() => void flow.startCancelReservation(context)}
               disabled={disabled}
               compact={compact}
@@ -157,14 +169,14 @@ export function AccommodationOccupancyQuickActions({
           <>
             <QuickButton
               label={t('occupancy.actions.transfer')}
-              variant="secondary"
+              tint={occupancyActionTint.transfer}
               onPress={() => void flow.startTransfer(context)}
               disabled={disabled}
               compact={compact}
             />
             <QuickButton
               label={t('occupancy.actions.vacate')}
-              variant="ghost"
+              tint={occupancyActionTint.vacate}
               onPress={() => void flow.startVacate(context)}
               disabled={disabled}
               compact={compact}

@@ -133,9 +133,9 @@ export function MemberDetailsScreen() {
           />
         );
       case 'deposit':
-        return <MemberDepositTab member={member} canEdit={canEdit} />;
+        return <MemberDepositTab spaceId={spaceId} member={member} canEdit={canEdit} />;
       case 'history':
-        return <MemberHistoryTab memberId={member.memberId} />;
+        return <MemberHistoryTab spaceId={spaceId} memberId={member.memberId} />;
       default:
         return null;
     }

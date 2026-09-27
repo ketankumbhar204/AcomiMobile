@@ -1,9 +1,17 @@
 import React, { useState } from 'react';
-import { Image, StyleSheet, View, type ImageStyle, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  Image,
+  StyleSheet,
+  View,
+  type ImageSourcePropType,
+  type ImageStyle,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import { colors } from '../../theme';
 
 type DiscoverListingImageProps = {
-  uri: string;
+  source: ImageSourcePropType;
   style?: StyleProp<ViewStyle>;
   imageStyle?: StyleProp<ImageStyle>;
   accessibilityLabel?: string;
@@ -13,14 +21,14 @@ type DiscoverListingImageProps = {
  * Cover image with mint fallback — mirrors public website ListingImage.
  */
 export function DiscoverListingImage({
-  uri,
+  source,
   style,
   imageStyle,
   accessibilityLabel,
 }: DiscoverListingImageProps) {
   const [failed, setFailed] = useState(false);
 
-  if (!uri || failed) {
+  if (!source || failed) {
     return (
       <View
         style={[styles.fallback, style]}
@@ -33,7 +41,7 @@ export function DiscoverListingImage({
   return (
     <View style={[styles.wrap, style]}>
       <Image
-        source={{ uri }}
+        source={source}
         style={[styles.image, imageStyle]}
         resizeMode="cover"
         accessibilityLabel={accessibilityLabel}

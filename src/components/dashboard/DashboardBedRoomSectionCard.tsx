@@ -1,7 +1,6 @@
 import React, { memo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Bookmark, UserPlus } from 'lucide-react-native';
 import type { BedSpaceListItemResponse } from '../../api/types';
 import { BuildingInventoryRoomSection } from '../accommodation/BuildingInventoryRoomSection';
 import { Button } from '../ui';
@@ -19,6 +18,7 @@ type DashboardBedRoomSectionCardProps = BedSectionFlowProps & {
   group: BedRoomGroup;
   canManageOccupancy: boolean;
   onBedPress: (bed: BedSpaceListItemResponse) => void;
+  onEditBed?: (bed: BedSpaceListItemResponse) => void;
   onAllocate?: (bed: BedSpaceListItemResponse) => void;
   onReserve?: (bed: BedSpaceListItemResponse) => void;
   onPathCrumbPress?: (crumb: RoomPathCrumb) => void;
@@ -26,10 +26,11 @@ type DashboardBedRoomSectionCardProps = BedSectionFlowProps & {
 
 function DashboardBedRoomSectionCardComponent({
   group,
-  canManageOccupancy,
+  canManageOccupancy: _canManageOccupancy,
   onBedPress,
-  onAllocate,
-  onReserve,
+  onEditBed,
+  onAllocate: _onAllocate,
+  onReserve: _onReserve,
   flowAction = 'dashboard',
   onFlowAction,
   onPathCrumbPress,
@@ -48,27 +49,9 @@ function DashboardBedRoomSectionCardComponent({
         }
         onBedPress(bed);
       }}
+      onEditBed={flowAction === 'dashboard' ? onEditBed : undefined}
       renderBedFooter={bed => {
         const isAvailable = bed.status === 'AVAILABLE';
-        if (flowAction === 'dashboard' && canManageOccupancy && isAvailable && onAllocate && onReserve) {
-          return (
-            <View style={styles.actions}>
-              <Button
-                label={t('occupancy.actions.allocate')}
-                onPress={() => onAllocate(bed)}
-                icon={UserPlus}
-                style={styles.actionBtn}
-              />
-              <Button
-                label={t('occupancy.actions.reserve')}
-                variant="secondary"
-                onPress={() => onReserve(bed)}
-                icon={Bookmark}
-                style={styles.actionBtn}
-              />
-            </View>
-          );
-        }
         if (flowAction !== 'dashboard' && isAvailable && onFlowAction) {
           const label =
             flowAction === 'allocate'
@@ -89,12 +72,6 @@ function DashboardBedRoomSectionCardComponent({
 export const DashboardBedRoomSectionCard = memo(DashboardBedRoomSectionCardComponent);
 
 const styles = StyleSheet.create({
-  actions: {
-    gap: spacing.xs,
-  },
-  actionBtn: {
-    minHeight: 36,
-  },
   singleAction: {
     minHeight: 36,
   },

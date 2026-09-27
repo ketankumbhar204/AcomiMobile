@@ -23,6 +23,7 @@ type UniversalPaymentCardProps = {
   showMember?: boolean;
   /** Optional meal breakdown meta from existing meal activity API. */
   mealSummary?: MealSelectionSummaryModel | null;
+  ownerActions?: React.ReactNode;
 };
 
 export function UniversalPaymentCard({
@@ -31,6 +32,7 @@ export function UniversalPaymentCard({
   onUpdatePress,
   showMember = false,
   mealSummary = null,
+  ownerActions,
 }: UniversalPaymentCardProps) {
   const { t, i18n } = useTranslation();
   const needsUpdate = payment.paymentStatus === 'UPDATE_REQUESTED';
@@ -133,7 +135,7 @@ export function UniversalPaymentCard({
           </View>
         ) : null}
 
-        {canUpdate ? (
+        {ownerActions ? ownerActions : canUpdate ? (
           onUpdatePress ? (
             <Pressable
               onPress={e => {

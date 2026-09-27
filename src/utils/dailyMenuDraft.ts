@@ -122,7 +122,7 @@ export async function loadMenuDraft(
   menuDate: string,
   mealType: MealType,
 ): Promise<{ menu: DailyMenuResponse | null; options: MenuDraftOption[]; notes: string }> {
-  const menu = await mealsApi.getDailyMenu(spaceId, menuDate, mealType).catch(() => null);
+  const menu = await mealsApi.getDailyMenu(spaceId, menuDate, mealType);
   return {
     menu,
     options: menu?.options.map(toMenuDraftOption) ?? [],

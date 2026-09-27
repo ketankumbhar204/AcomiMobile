@@ -1,5 +1,6 @@
 import { unwrapApiResponse } from './apiRequest';
 import apiClient from './client';
+import { DISCOVER_PAGE_SIZE, buildDiscoverSearchParams } from './discoverQuery';
 import type {
   ApiResponse,
   DiscoverSpaceCardResponse,
@@ -16,29 +17,16 @@ export const spaceDiscoverApi = {
   discoverSpaces: async (
     params: DiscoverSpacesParams = {},
   ): Promise<PagedResponse<DiscoverSpaceCardResponse>> => {
-    const { search, type, page = 0, size = 20, sort = 'newest' } = params;
-    const trimmedSearch = search?.trim();
-
-    devLog(`${LOG_TAG} GET /spaces/discover`, {
-      search: trimmedSearch,
-      type,
-      page,
-      size,
-      sort,
+    const query = buildDiscoverSearchParams({
+      ...params,
+      size: params.size ?? DISCOVER_PAGE_SIZE,
     });
+
+    devLog(`${LOG_TAG} GET /spaces/discover`, Object.fromEntries(query.entries()));
 
     const response = await unwrapApiResponse(
       apiClient.get<ApiResponse<PagedResponse<DiscoverSpaceCardResponse>>>(
-        '/spaces/discover',
-        {
-          params: {
-            ...(trimmedSearch ? { search: trimmedSearch } : {}),
-            ...(type ? { type } : {}),
-            page,
-            size,
-            sort,
-          },
-        },
+        `/spaces/discover?${query.toString()}`,
       ),
     );
 

@@ -13,7 +13,7 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { Copy, Grid2x2, Layers, Pencil } from 'lucide-react-native';
+import { Copy, Grid2x2, Layers } from 'lucide-react-native';
 import type {
   BedSpaceListItemResponse,
   FloorListItemResponse,
@@ -36,6 +36,7 @@ import {
   DuplicateBuildingModal,
   DuplicateFloorModal,
   HeaderMenuSlot,
+  PersistedBedInteractionHost,
   UNIT_GRID_NUM_COLUMNS,
 } from '../../components/accommodation';
 import type { MenuOption } from '../../components/accommodation/BuilderRowLifecycleMenu';
@@ -56,6 +57,7 @@ import { useDuplicateFloor } from '../../hooks/useDuplicateFloor';
 import { useFloors } from '../../hooks/useFloors';
 import { useUnits } from '../../hooks/useUnits';
 import { useSpaceBedSearch } from '../../hooks/useSpaceBedSearch';
+import { usePersistedBedInteraction } from '../../hooks/usePersistedBedInteraction';
 import { resetToAccommodationHome } from '../../navigation/navigationRef';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
@@ -67,8 +69,8 @@ import {
   renameBuildingName,
   renameFloorName,
   renameUnitName,
-  updateBedPricingField,
 } from '../../utils/accommodationInlineRename';
+import { persistedTargetFromSpaceBed } from '../../utils/persistedBedTarget';
 import { isAccommodationEntityActive } from '../../utils/accommodationEntityActive';
 import { applyAccommodationInactiveLifecycle } from '../../utils/accommodationInactiveLifecycle';
 import { groupBedsByRoom, roomGroupPathCrumbs, type BedRoomGroup } from '../../utils/groupBedsByRoom';
@@ -130,6 +132,16 @@ export function AccommodationBuilderScreen() {
     query: searchQuery,
     enabled: inventoryEnabled,
     loadAll: true,
+  });
+  const bedInteraction = usePersistedBedInteraction({
+    spaceId,
+    spaceType,
+    canEditStructure: canManage,
+    canManageOccupancy: canManageOccupancyActions,
+    onSuccess: async () => {
+      invalidateAccommodationQueries();
+      await bedsHook.refresh();
+    },
   });
   const roomGroups = useMemo(
     () => groupBedsByRoom(bedsHook.items),
@@ -661,30 +673,6 @@ export function AccommodationBuilderScreen() {
     );
   };
 
-  const renderBedMenu = (bed: BedSpaceListItemResponse) => {
-    if (!canManage) {
-      return undefined;
-    }
-    return (
-      <Pressable
-        onPress={() =>
-          navigation.navigate('BedForm', {
-            spaceId,
-            buildingId,
-            roomId: bed.roomId,
-            bedId: bed.bedId,
-            mode: 'edit',
-          })
-        }
-        hitSlop={8}
-        style={({ pressed }) => [styles.bedEditBtn, pressed && styles.bedEditBtnPressed]}
-        accessibilityRole="button"
-        accessibilityLabel={t('accommodation.builder.editBed', { defaultValue: 'Edit bed' })}>
-        <Pencil size={16} color={colors.info} strokeWidth={2.4} />
-      </Pressable>
-    );
-  };
-
   const renderInventoryItem = ({ item }: { item: BedRoomGroup }) => (
     <BuildingInventoryRoomSection
       group={item}
@@ -692,10 +680,8 @@ export function AccommodationBuilderScreen() {
         includeBuilding: true,
         includeUnit: Boolean(profile?.showUnits || profile?.showUnitsOnFloor),
       })}
-      pricingEditable={canManage}
       showAddBed={canManage}
       menu={renderRoomMenu(item)}
-      renderBedMenu={renderBedMenu}
       onPathCrumbPress={
         canManage
           ? crumb => navigateToRoomGroupEntityEdit(navigation, spaceId, item, crumb.level)
@@ -715,6 +701,7 @@ export function AccommodationBuilderScreen() {
         })
       }
       onBedPress={openBedDetail}
+      onEditBed={canManage ? bed => bedInteraction.open(persistedTargetFromSpaceBed(bed)) : undefined}
       onAddBed={() =>
         navigation.navigate('BedForm', {
           spaceId,
@@ -723,10 +710,6 @@ export function AccommodationBuilderScreen() {
           mode: 'create',
         })
       }
-      onCommitPricing={async (bed, field, value) => {
-        await updateBedPricingField(spaceId, bed.roomId, bed.bedId, field, value);
-        await bedsHook.refresh();
-      }}
     />
   );
 
@@ -952,6 +935,11 @@ export function AccommodationBuilderScreen() {
           invalidateAccommodationQueries();
           void refreshAll();
         }}
+      />
+      <PersistedBedInteractionHost
+        interaction={bedInteraction}
+        spaceId={spaceId}
+        spaceType={spaceType}
       />
       {hierarchyPicker.pickerModal}
     </View>

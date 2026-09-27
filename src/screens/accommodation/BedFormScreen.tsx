@@ -21,6 +21,7 @@ import { accommodationApi } from '../../api/accommodationApi';
 import {
   AccommodationFormHero,
   AccommodationStatusPicker,
+  BedPricingConfirmModal,
 } from '../../components/accommodation';
 import { FormInput, HeaderBackButton } from '../../components/ui';
 import { StickyFormActions } from '../../components/progressive';
@@ -28,6 +29,9 @@ import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
+import { hasBedPricingChange, parseBedMoneyText } from '../../utils/bedInteractionDraft';
+import { useConfirmBedPricingCommit } from '../../hooks/useConfirmBedPricingCommit';
+import { formatBedDisplayLabel } from '../../utils/formatBedDisplayLabel';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'BedForm'>;
 type Route = NativeStackScreenProps<MainStackParamList, 'BedForm'>['route'];
@@ -45,8 +49,16 @@ export function BedFormScreen() {
   const [status, setStatus] = useState<AccommodationStatus | null>(isEdit ? null : 'AVAILABLE');
   const [defaultRent, setDefaultRent] = useState('');
   const [defaultDeposit, setDefaultDeposit] = useState('');
+  const [loadedRent, setLoadedRent] = useState<number | null>(null);
+  const [loadedDeposit, setLoadedDeposit] = useState<number | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const pricingCommit = useConfirmBedPricingCommit({
+    spaceId,
+    onSuccess: () => {
+      navigation.goBack();
+    },
+  });
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -65,6 +77,8 @@ export function BedFormScreen() {
         setStatus(bed.status);
         setDefaultRent(bed.defaultRent != null ? String(bed.defaultRent) : '');
         setDefaultDeposit(bed.defaultDeposit != null ? String(bed.defaultDeposit) : '');
+        setLoadedRent(bed.defaultRent ?? null);
+        setLoadedDeposit(bed.defaultDeposit ?? null);
       }).catch(err => setSubmitError(getAccommodationErrorMessage(err)));
     }, [bedId, isEdit, roomId, spaceId]),
   );
@@ -84,15 +98,35 @@ export function BedFormScreen() {
     setSubmitError(null);
 
     try {
-      const parsedRent = defaultRent.trim() ? Number(defaultRent.trim()) : null;
-      const parsedDeposit = defaultDeposit.trim() ? Number(defaultDeposit.trim()) : null;
+      const parsedRent = parseBedMoneyText(defaultRent);
+      const parsedDeposit = parseBedMoneyText(defaultDeposit);
       const catalogFields = {
-        defaultRent: parsedRent != null && Number.isFinite(parsedRent) ? parsedRent : null,
-        defaultDeposit:
-          parsedDeposit != null && Number.isFinite(parsedDeposit) ? parsedDeposit : null,
+        defaultRent: parsedRent,
+        defaultDeposit: parsedDeposit,
       };
 
       if (isEdit && bedId && status) {
+        if (
+          hasBedPricingChange(
+            { rent: loadedRent, deposit: loadedDeposit },
+            { rent: parsedRent, deposit: parsedDeposit },
+          )
+        ) {
+          setSubmitting(false);
+          pricingCommit.request({
+            roomId,
+            bedId,
+            bedLabel: formatBedDisplayLabel(bedNumber.trim() || name.trim(), t),
+            currentRent: loadedRent,
+            currentDeposit: loadedDeposit,
+            nextRent: parsedRent,
+            nextDeposit: parsedDeposit,
+            name: name.trim(),
+            bedNumber: bedNumber.trim(),
+            status,
+          });
+          return;
+        }
         await accommodationApi.updateBed(spaceId, roomId, bedId, {
           name: name.trim(),
           bedNumber: bedNumber.trim(),
@@ -183,8 +217,15 @@ export function BedFormScreen() {
             primary={{
               label: t('common.save'),
               onPress: handleSubmit,
-              loading: submitting,
+              loading: submitting || pricingCommit.busy,
             }}
+          />
+          <BedPricingConfirmModal
+            pending={pricingCommit.pending}
+            confirming={pricingCommit.confirming}
+            error={pricingCommit.error}
+            onConfirm={() => void pricingCommit.confirm()}
+            onClose={pricingCommit.close}
           />
         </View>
       </TouchableWithoutFeedback>

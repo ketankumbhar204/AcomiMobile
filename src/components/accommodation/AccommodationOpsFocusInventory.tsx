@@ -1,15 +1,20 @@
 import React, { useMemo } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react-native';
 import type { BedSpaceListItemResponse, UUID } from '../../api/types';
 import { BuildingInventoryRoomSection } from './BuildingInventoryRoomSection';
-import { EmptyState } from '../ui';
+import { PersistedBedInteractionHost } from './PersistedBedInteractionHost';
+import { EmptyState, InventoryListSkeleton, Skeleton } from '../ui';
 import { useSpaceBedSearch } from '../../hooks/useSpaceBedSearch';
+import { usePersistedBedInteraction } from '../../hooks/usePersistedBedInteraction';
+import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../../navigation/types';
 import { colors, radius, spacing, typography } from '../../theme';
+import { persistedTargetFromSpaceBed } from '../../utils/persistedBedTarget';
+import { invalidateAccommodationQueries } from '../../utils/accommodationQueryCache';
 import {
   groupBedsByRoom,
   roomGroupPathCrumbs,
@@ -28,6 +33,7 @@ type AccommodationOpsFocusInventoryProps = {
   focusedBedIds: ReadonlySet<string>;
   onClear: () => void;
   includeUnits?: boolean;
+  canManage?: boolean;
 };
 
 function filterBedsByOpsFocus(
@@ -67,13 +73,28 @@ export function AccommodationOpsFocusInventory({
   focusedBedIds,
   onClear,
   includeUnits = false,
+  canManage: canManageProp,
 }: AccommodationOpsFocusInventoryProps) {
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const permissions = useSpacePermissions(spaceId);
+  const canManage = canManageProp ?? permissions.canManageAccommodation;
   const bedsHook = useSpaceBedSearch({
     spaceId,
     enabled: Boolean(spaceId),
     loadAll: true,
+    status:
+      opsFocus === 'VACANT' ? 'AVAILABLE' : opsFocus === 'OCCUPIED' ? 'OCCUPIED' : undefined,
+  });
+  const bedInteraction = usePersistedBedInteraction({
+    spaceId,
+    spaceType: permissions.spaceType,
+    canEditStructure: canManage,
+    canManageOccupancy: permissions.canManageOccupancy,
+    onSuccess: async () => {
+      invalidateAccommodationQueries();
+      await bedsHook.refresh();
+    },
   });
 
   const roomGroups = useMemo(() => {
@@ -130,17 +151,21 @@ export function AccommodationOpsFocusInventory({
             <X size={14} color={colors.primaryDark} strokeWidth={2.4} />
           </Pressable>
         </View>
-        <Text style={styles.count}>
-          {t('accommodation.workspace.roomsBedsCount', {
-            defaultValue: '{{rooms}} Rooms • {{beds}} Beds',
-            rooms: roomGroups.length,
-            beds: roomGroups.reduce((sum, group) => sum + group.beds.length, 0),
-          })}
-        </Text>
+        {bedsHook.loading && bedsHook.items.length === 0 ? (
+          <Skeleton width={140} height={12} />
+        ) : (
+          <Text style={styles.count}>
+            {t('accommodation.workspace.roomsBedsCount', {
+              defaultValue: '{{rooms}} Rooms • {{beds}} Beds',
+              rooms: roomGroups.length,
+              beds: roomGroups.reduce((sum, group) => sum + group.beds.length, 0),
+            })}
+          </Text>
+        )}
       </View>
 
       {bedsHook.loading && bedsHook.items.length === 0 ? (
-        <ActivityIndicator color={colors.primary} style={styles.loader} />
+        <InventoryListSkeleton cards={3} />
       ) : roomGroups.length === 0 ? (
         <EmptyState
           title={t('accommodation.rooms.emptyOpsFocusTitle', {
@@ -163,9 +188,15 @@ export function AccommodationOpsFocusInventory({
             showAddBed={false}
             onRoomPress={() => openRoom(group)}
             onBedPress={openBedDetail}
+            onEditBed={canManage ? bed => bedInteraction.open(persistedTargetFromSpaceBed(bed)) : undefined}
           />
         ))
       )}
+      <PersistedBedInteractionHost
+        interaction={bedInteraction}
+        spaceId={spaceId}
+        spaceType={permissions.spaceType}
+      />
     </View>
   );
 }
@@ -209,8 +240,5 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.muted,
     fontWeight: '600',
-  },
-  loader: {
-    marginVertical: spacing.xl,
   },
 });

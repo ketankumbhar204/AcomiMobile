@@ -9,6 +9,7 @@ import type { AccommodationUiProfile } from '../../utils/accommodationProfile';
 import { getAccommodationHierarchyAccent } from '../../utils/accommodationHierarchy';
 import { getLayoutModeLabelKey } from '../../utils/propertyLayoutMode';
 import { EntityPhoto } from '../files/EntityPhoto';
+import { CircularOccupancyIndicator } from './layout/cards/CircularOccupancyIndicator';
 import { calcOccupancyPercent } from './layout/cards/occupancyUtils';
 
 type BuildingSummaryHeaderProps = {

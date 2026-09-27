@@ -11,10 +11,13 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { ChevronRight, Info, Users } from 'lucide-react-native';
 import { MemberPaymentRow } from '../../components/payments/MemberPaymentRow';
+import { OwnerPaymentCardActions } from '../../components/payments/OwnerPaymentCardActions';
+import { PaymentReceivedConfirmModal } from '../../components/payments/PaymentReceivedConfirmModal';
 import { PaymentsFilterDrawer } from '../../components/payments/PaymentsFilterDrawer';
 import { PaymentsSummaryFilters } from '../../components/payments/PaymentsSummaryFilters';
 import {
   EmptyState,
+  FAB,
   ListSearchFilterBar,
   MonthlySummaryHeader,
   SkeletonCard,
@@ -22,6 +25,7 @@ import {
 import { DashboardTipCard } from '../../components/dashboard/shared/DashboardGuidedCards';
 import { usePaymentsMembers } from '../../hooks/usePaymentsMembers';
 import { usePaymentsSummary } from '../../hooks/usePaymentsSummary';
+import { useOwnerPaymentCardActions } from '../../hooks/useOwnerPaymentCardActions';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useSpaceProgressiveAccess } from '../../hooks/useSpaceProgressiveAccess';
@@ -40,6 +44,11 @@ import { shouldUseFilterDrawer } from '../../utils/filterUx';
 import { invalidatePaymentsMonthCaches } from '../../utils/paymentsMonthCache';
 import { paymentsApi } from '../../api/paymentsApi';
 import { resolveMemberMonthPaymentTarget } from '../../utils/resolveMemberMonthPaymentTarget';
+import {
+  memberRowShowsOwnerPaymentActions,
+  memberRowShowsReceived,
+  memberRowShowsReminder,
+} from '../../utils/ownerPaymentCardActions';
 import { NotificationBellButton } from '../../components/notifications/NotificationBellButton';
 
 type PaymentsRoute = RouteProp<SpaceTabParamList, 'Payments'>;
@@ -115,6 +124,13 @@ export function PaymentsScreen() {
   const summary = usePaymentsSummary(spaceId, canManage);
   const summarySettled = summary.hasData || Boolean(summary.error) || !summary.loading;
   const members = usePaymentsMembers(spaceId, summary.month, canManage && summarySettled);
+  const cardActions = useOwnerPaymentCardActions({
+    spaceId,
+    month: summary.month,
+    onSettled: async () => {
+      await Promise.all([summary.reload(), members.reload()]);
+    },
+  });
 
   const isCurrentMonth = summary.month >= currentMonthKey();
   const submittedCount = summary.counts.submitted ?? 0;
@@ -231,7 +247,9 @@ export function PaymentsScreen() {
           memberId,
           memberName,
           summary.month,
+          { sync: true },
         );
+        invalidatePaymentsMonthCaches(spaceId, summary.month);
         if (target.kind === 'detail') {
           navigation.navigate('PaymentDetail', {
             spaceId,
@@ -239,6 +257,10 @@ export function PaymentsScreen() {
             memberId: target.memberId,
             memberName: target.memberName,
           });
+          return;
+        }
+        if (target.paymentCount === 0) {
+          showToast(t('paymentCollection.memberPayments.emptyDescription'));
           return;
         }
         navigation.navigate('MemberPayments', {
@@ -408,6 +430,34 @@ export function PaymentsScreen() {
                       members.filters.preset === 'collected' ? 'collected' : 'default'
                     }
                     onPress={() => void handleMemberPress(row.memberId, row.memberName)}
+                    ownerActions={
+                      members.filters.preset !== 'collected' &&
+                      memberRowShowsOwnerPaymentActions(row.status)
+                        ? (
+                            <OwnerPaymentCardActions
+                              showReceived={memberRowShowsReceived(row.status)}
+                              showReminder={memberRowShowsReminder(row.status)}
+                              receivedLoading={cardActions.isProcessing(
+                                `member:${row.memberId}`,
+                                'received',
+                              )}
+                              reminderLoading={cardActions.isProcessing(
+                                `member:${row.memberId}`,
+                                'reminder',
+                              )}
+                              onReceived={() =>
+                                void cardActions.requestReceivedForMember(
+                                  row.memberId,
+                                  row.memberName,
+                                )
+                              }
+                              onReminder={() =>
+                                void cardActions.sendReminderForMember(row.memberId)
+                              }
+                            />
+                          )
+                        : undefined
+                    }
                   />
                 ))}
                 {members.hasMore ? (
@@ -426,6 +476,19 @@ export function PaymentsScreen() {
         applied={members.filters}
         onClose={() => setFilterDrawerOpen(false)}
         onApply={members.setFilters}
+      />
+      <PaymentReceivedConfirmModal
+        visible={cardActions.confirmPayments.length > 0}
+        payments={cardActions.confirmPayments}
+        loading={cardActions.receivedConfirmLoading}
+        onClose={cardActions.cancelConfirm}
+        onConfirm={cardActions.confirmReceived}
+      />
+      <FAB
+        onPress={() =>
+          navigation.navigate('CreatePayment', { spaceId, month: summary.month })
+        }
+        accessibilityLabel={t('paymentCollection.create.title')}
       />
     </View>
   );

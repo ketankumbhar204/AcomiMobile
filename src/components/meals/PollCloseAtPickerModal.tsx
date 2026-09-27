@@ -8,7 +8,8 @@ import {
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Button } from '../ui';
+import { Button } from '../ui/Button';
+import { DateField } from '../ui/DateField';
 import { colors, radius, spacing, typography } from '../../theme';
 import {
   parseSpaceLocalDateTime,
@@ -68,15 +69,11 @@ export function PollCloseAtPickerModal({
           <Text style={styles.title}>{t('meals.poll.editCloseAtTitle')}</Text>
           <Text style={styles.hint}>{t('meals.poll.editCloseAtHint')}</Text>
 
-          <Text style={styles.label}>{t('meals.poll.closeAtDate')}</Text>
-          <TextInput
-            style={styles.input}
+          <DateField
+            label={t('meals.poll.closeAtDate')}
             value={dateIso}
-            onChangeText={setDateIso}
-            placeholder="YYYY-MM-DD"
-            autoCapitalize="none"
-            autoCorrect={false}
-            editable={!saving}
+            onChange={setDateIso}
+            allowPastDates
           />
 
           <Text style={styles.label}>{t('meals.poll.closeAtTime')}</Text>

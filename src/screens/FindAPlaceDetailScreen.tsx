@@ -1,5 +1,5 @@
 import React, { useCallback, useLayoutEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Linking, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
@@ -7,10 +7,11 @@ import { useTranslation } from 'react-i18next';
 import { Info, MapPin, Sparkles, UtensilsCrossed } from 'lucide-react-native';
 import { getSpaceTypeLabel } from '../api';
 import { spaceDiscoverApi } from '../api/spaceDiscoverApi';
-import type { DiscoverSpaceDetailResponse } from '../api/types';
+import type { DiscoverSpaceDetailResponse, SpaceType } from '../api/types';
 import { ApiError } from '../api/types';
 import { EnquireDialog } from '../components/EnquireDialog';
-import { DiscoverListingImage } from '../components/discovery/DiscoverListingImage';
+import { DiscoverListingCover } from '../components/discovery/DiscoverListingCover';
+import { ListingInfoChips } from '../components/discovery/ListingInfoChips';
 import { StickyFormActions } from '../components/progressive';
 import {
   Badge,
@@ -22,7 +23,9 @@ import type { MainStackParamList } from '../navigation/types';
 import { useSpaceStore } from '../store/spaceStore';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 import { invalidateAccommodationQueries } from '../utils/accommodationQueryCache';
-import { discoverDefaultImageUrl } from '../utils/discoverDefaultImages';
+import { listingAddress } from '../utils/listingInfo';
+import { firstVerifiedListingImageUrl } from '../utils/representativeImage';
+import { formatCurrency } from '../utils/memberDeposit';
 import {
   propertyCategoryLabelKey,
   supportsSpacePropertyCategory,
@@ -110,6 +113,30 @@ export function FindAPlaceDetailScreen() {
           code: detail?.amenityCodes?.[index] ?? `amenity-${index}`,
           label,
         }));
+  const address = detail ? listingAddress(detail) : '';
+  const mapUrl = detail?.mapUrl?.trim();
+  const startingPrice =
+    detail?.startingPrice == null || detail.startingPrice === ''
+      ? null
+      : Number(detail.startingPrice);
+  const monthlyPrice =
+    detail?.monthlyPrice == null || detail.monthlyPrice === ''
+      ? null
+      : Number(detail.monthlyPrice);
+  const mealPrice =
+    detail?.mealPrice == null || detail.mealPrice === '' ? null : Number(detail.mealPrice);
+  const isMess = detail?.type === 'MESS';
+  const hasMonthly = monthlyPrice != null && Number.isFinite(monthlyPrice) && monthlyPrice > 0;
+  const hasMeal = mealPrice != null && Number.isFinite(mealPrice) && mealPrice > 0;
+  const hasStarting = startingPrice != null && Number.isFinite(startingPrice) && startingPrice > 0;
+  const cta = t('spaces.findPlace.getContactDetails');
+
+  const openMap = useCallback(() => {
+    if (!mapUrl) {
+      return;
+    }
+    void Linking.openURL(mapUrl);
+  }, [mapUrl]);
 
   const categoryLabel =
     detail?.genderPolicy && supportsSpacePropertyCategory(detail.type)
@@ -137,10 +164,16 @@ export function FindAPlaceDetailScreen() {
         ) : detail ? (
           <>
             <View style={styles.heroVisual}>
-              <DiscoverListingImage
-                uri={discoverDefaultImageUrl(detail.type)}
+              <DiscoverListingCover
+                listingId={detail.spaceId}
+                spaceType={detail.type}
+                listingImageUrl={firstVerifiedListingImageUrl(
+                  detail.listingImageUrl,
+                  detail.coverImageUrl,
+                  detail.imageUrl,
+                )}
                 style={styles.heroImage}
-                accessibilityLabel={detail.name}
+                accessibilityName={detail.name}
               />
               <View style={styles.heroTypeBadge}>
                 <Text style={styles.heroTypeBadgeText}>{getSpaceTypeLabel(detail.type)}</Text>
@@ -152,9 +185,29 @@ export function FindAPlaceDetailScreen() {
               <View style={styles.addressRow}>
                 <MapPin size={16} color={colors.primaryDark} strokeWidth={2.2} />
                 <Text style={styles.addressText}>
-                  {detail.address?.trim() || t('spaces.findPlace.addressMissing')}
+                  {address || t('spaces.findPlace.addressMissing')}
                 </Text>
               </View>
+              {isMess ? (
+                <>
+                  <Text style={styles.price}>
+                    {hasMonthly && monthlyPrice != null
+                      ? `${formatCurrency(monthlyPrice)} ${t('spaces.findPlace.priceSuffix.MESS')}`
+                      : t('spaces.findPlace.priceOnRequest')}
+                  </Text>
+                  {hasMeal && mealPrice != null ? (
+                    <Text style={styles.price}>
+                      {`${formatCurrency(mealPrice)} ${t('spaces.findPlace.perMeal')}`}
+                    </Text>
+                  ) : null}
+                </>
+              ) : (
+                <Text style={styles.price}>
+                  {hasStarting && startingPrice != null
+                    ? `${formatCurrency(startingPrice)} ${t(`spaces.findPlace.priceSuffix.${detail.type as SpaceType}`)}`
+                    : t('spaces.findPlace.priceOnRequest')}
+                </Text>
+              )}
 
               <View style={styles.metaRow}>
                 {detail.alreadyMember ? (
@@ -173,6 +226,28 @@ export function FindAPlaceDetailScreen() {
                 ) : null}
               </View>
             </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{t('spaces.findPlace.infoAvailable')}</Text>
+              <ListingInfoChips
+                listing={detail}
+                variant="detail"
+                surface={detail.type === 'MESS' ? 'meals' : 'places'}
+              />
+            </View>
+
+            {mapUrl ? (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>{t('spaces.findPlace.locationSection')}</Text>
+                <Text
+                  onPress={openMap}
+                  style={styles.mapLink}
+                  accessibilityRole="link"
+                  accessibilityLabel={t('spaces.findPlace.openMaps')}>
+                  {t('spaces.findPlace.openMaps')}
+                </Text>
+              </View>
+            ) : null}
 
             {amenities.length > 0 ? (
               <View style={styles.section}>
@@ -219,7 +294,7 @@ export function FindAPlaceDetailScreen() {
               ? t('spaces.findPlace.openSpaceCta')
               : detail.ownedByCurrentUser
                 ? t('spaces.findPlace.enquire.ownCta')
-                : t('spaces.findPlace.enquire.cta'),
+                : cta,
             onPress: onPrimaryCta,
             loading: opening,
             disabled: opening,
@@ -299,6 +374,17 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textSecondary,
     flex: 1,
+  },
+  price: {
+    ...typography.h3,
+    fontSize: 20,
+    color: colors.textPrimary,
+    marginTop: spacing.xs,
+  },
+  mapLink: {
+    ...typography.bodyStrong,
+    color: colors.primaryDark,
+    fontWeight: '700',
   },
   metaRow: {
     flexDirection: 'row',

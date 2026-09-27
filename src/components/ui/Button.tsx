@@ -16,50 +16,86 @@ type IconProps = {
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost';
 
+export type ButtonTint = {
+  bg: string;
+  border: string;
+  fg: string;
+};
+
 type ButtonProps = {
   label: string;
   onPress?: () => void;
   variant?: ButtonVariant;
+  /** Soft pastel fill + matching label. Overrides variant colors. */
+  tint?: ButtonTint;
   loading?: boolean;
   disabled?: boolean;
   style?: ViewStyle;
   /** Optional Lucide leading icon. */
   icon?: ComponentType<IconProps>;
+  accessibilityLabel?: string;
 };
 
 export function Button({
   label,
   onPress,
   variant = 'primary',
+  tint,
   loading = false,
   disabled = false,
   style,
   icon: Icon,
+  accessibilityLabel,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
-  const iconColor = variant === 'primary' ? colors.white : colors.primaryDark;
+  const iconColor =
+    tint?.fg ?? (variant === 'primary' ? colors.white : colors.primaryDark);
+  const spinnerColor =
+    tint?.fg ?? (variant === 'primary' ? colors.white : colors.primary);
 
   return (
     <Pressable
       onPress={onPress}
       disabled={isDisabled}
       hitSlop={8}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? label}
       android_ripple={{ color: 'rgba(0,0,0,0.08)' }}
       style={({ pressed }) => [
         styles.base,
         styles[variant],
+        tint && {
+          backgroundColor: tint.bg,
+          borderWidth: 1,
+          borderColor: tint.border,
+        },
         pressed && !isDisabled && styles.pressed,
         isDisabled && styles.disabled,
         style,
       ]}>
       {loading ? (
-        <ActivityIndicator
-          color={variant === 'primary' ? colors.white : colors.primary}
-        />
+        <>
+          <ActivityIndicator color={spinnerColor} />
+          <Text
+            style={[
+              styles.label,
+              styles[`${variant}Label`],
+              tint && { color: tint.fg },
+            ]}>
+            {label}
+          </Text>
+        </>
       ) : (
         <>
           {Icon ? <Icon size={18} color={iconColor} strokeWidth={2.3} /> : null}
-          <Text style={[styles.label, styles[`${variant}Label`]]}>{label}</Text>
+          <Text
+            style={[
+              styles.label,
+              styles[`${variant}Label`],
+              tint && { color: tint.fg },
+            ]}>
+            {label}
+          </Text>
         </>
       )}
     </Pressable>

@@ -10,11 +10,15 @@ import { AlertTriangle, CreditCard } from 'lucide-react-native';
 import { PaymentServiceUnavailableError, paymentsApi } from '../../api/paymentsApi';
 import type { SpacePaymentResponse } from '../../api/types';
 import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
+import { OwnerPaymentCardActions } from '../../components/payments/OwnerPaymentCardActions';
+import { PaymentReceivedConfirmModal } from '../../components/payments/PaymentReceivedConfirmModal';
 import { UniversalPaymentCard } from '../../components/payments/UniversalPaymentCard';
 import { UniversalPaymentProofModal } from '../../components/payments/UniversalPaymentProofModal';
 import { EmptyState, HeaderBackButton, ListFilterChips, Screen, SkeletonCard } from '../../components/ui';
 import { useToastStore } from '../../store/toastStore';
 import { useMealPaymentActivitySummaries } from '../../hooks/useMealPaymentActivitySummaries';
+import { useOwnerPaymentCardActions } from '../../hooks/useOwnerPaymentCardActions';
+import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useUniversalPayments } from '../../hooks/useUniversalPayments';
 import type { MainStackParamList } from '../../navigation/types';
 import { spacing, typography } from '../../theme';
@@ -25,7 +29,11 @@ import {
 } from '../../utils/tenantPaymentFilters';
 import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
 import { invalidatePaymentsMonthCaches } from '../../utils/paymentsMonthCache';
-import { currentMonthKey } from '../../utils/dashboardFinancial';
+import { currentMonthKey, canManagePayments } from '../../utils/dashboardFinancial';
+import {
+  canOwnerMarkPaymentReceived,
+  canOwnerSendPaymentReminder,
+} from '../../utils/ownerPaymentCardActions';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'MemberPayments'>;
 type Route = NativeStackScreenProps<MainStackParamList, 'MemberPayments'>['route'];
@@ -36,6 +44,8 @@ export function MemberPaymentsScreen() {
   const route = useRoute<Route>();
   const { spaceId, memberId, memberName, month: routeMonth } = route.params;
   const showToast = useToastStore(state => state.showToast);
+  const permissions = useSpacePermissions(spaceId);
+  const canManage = canManagePayments(permissions.membershipRole);
 
   const { payments, loading, error, serviceUnavailable, reload } = useUniversalPayments(spaceId, {
     memberId,
@@ -46,6 +56,14 @@ export function MemberPaymentsScreen() {
     memberId,
     payments,
   );
+  const cardActions = useOwnerPaymentCardActions({
+    spaceId,
+    month: routeMonth ?? currentMonthKey(),
+    onSettled: async () => {
+      await reload();
+      await reloadMealSummaries();
+    },
+  });
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<TenantPaymentFilter>('ALL');
   const [updatePayment, setUpdatePayment] = useState<SpacePaymentResponse | null>(null);
@@ -177,7 +195,25 @@ export function MemberPaymentsScreen() {
                 payment={payment}
                 mealSummary={summaryByPaymentId[payment.paymentId] ?? null}
                 onPress={() => openPayment(payment.paymentId)}
-                onUpdatePress={() => setUpdatePayment(payment)}
+                onUpdatePress={canManage ? undefined : () => setUpdatePayment(payment)}
+                ownerActions={
+                  canManage ? (
+                    <OwnerPaymentCardActions
+                      showReceived={canOwnerMarkPaymentReceived(payment.paymentStatus)}
+                      showReminder={canOwnerSendPaymentReminder(payment.reminderEligible)}
+                      receivedLoading={cardActions.isProcessing(
+                        payment.paymentId,
+                        'received',
+                      )}
+                      reminderLoading={cardActions.isProcessing(
+                        payment.paymentId,
+                        'reminder',
+                      )}
+                      onReceived={() => cardActions.requestReceivedForPayment(payment)}
+                      onReminder={() => cardActions.sendReminderForPayment(payment)}
+                    />
+                  ) : undefined
+                }
               />
             ))
           : null}
@@ -190,6 +226,13 @@ export function MemberPaymentsScreen() {
         submitting={submitting}
         onClose={() => setUpdatePayment(null)}
         onSubmit={payload => void handleSubmitProof(payload)}
+      />
+      <PaymentReceivedConfirmModal
+        visible={cardActions.confirmPayments.length > 0}
+        payments={cardActions.confirmPayments}
+        loading={cardActions.receivedConfirmLoading}
+        onClose={cardActions.cancelConfirm}
+        onConfirm={cardActions.confirmReceived}
       />
     </Screen>
   );

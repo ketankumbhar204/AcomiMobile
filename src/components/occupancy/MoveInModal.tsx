@@ -26,7 +26,7 @@ import {
 import { agentDebugLog } from '../../utils/agentDebugLog';
 import { isMoveInDateInFuture } from '../../utils/occupancyRules';
 import { ContractTermsForm } from './ContractTermsForm';
-import { Button, FormInput } from '../ui';
+import { Button, DateField, FormInput } from '../ui';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 
 export type MoveInFormValues = {
@@ -187,11 +187,12 @@ export function MoveInModal({
                   </View>
                 ) : null}
 
-                <FormInput
+                <DateField
                   label={t('occupancy.fields.expectedExit')}
                   value={expectedExitDate}
-                  onChangeText={setExpectedExitDate}
-                  placeholder="YYYY-MM-DD"
+                  onChange={setExpectedExitDate}
+                  optional
+                  allowPastDates
                 />
 
                 <View style={styles.switchRow}>

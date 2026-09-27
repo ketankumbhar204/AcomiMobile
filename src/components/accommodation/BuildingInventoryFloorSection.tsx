@@ -15,19 +15,14 @@ import { BuildingInventoryRoomSection } from './BuildingInventoryRoomSection';
 type BuildingInventoryFloorSectionProps = {
   group: BedFloorGroup;
   defaultExpanded?: boolean;
-  pricingEditable?: boolean;
   showAddBed?: boolean;
   floorMenu?: React.ReactNode;
   renderRoomMenu?: (room: BedRoomGroup) => React.ReactNode;
   onRoomPress?: (room: BedRoomGroup) => void;
   onPathCrumbPress?: (room: BedRoomGroup, crumb: RoomPathCrumb) => void;
   onBedPress?: (bed: BedSpaceListItemResponse) => void;
+  onEditBed?: (bed: BedSpaceListItemResponse) => void;
   onAddBed?: (room: BedRoomGroup) => void;
-  onCommitPricing?: (
-    bed: BedSpaceListItemResponse,
-    field: 'defaultRent' | 'defaultDeposit',
-    value: number | null,
-  ) => Promise<void>;
   renderBedMenu?: (bed: BedSpaceListItemResponse) => React.ReactNode;
   renderBedFooter?: (bed: BedSpaceListItemResponse) => React.ReactNode;
 };
@@ -35,15 +30,14 @@ type BuildingInventoryFloorSectionProps = {
 function BuildingInventoryFloorSectionComponent({
   group,
   defaultExpanded = true,
-  pricingEditable = false,
   showAddBed = false,
   floorMenu,
   renderRoomMenu,
   onRoomPress,
   onPathCrumbPress,
   onBedPress,
+  onEditBed,
   onAddBed,
-  onCommitPricing,
   renderBedMenu,
   renderBedFooter,
 }: BuildingInventoryFloorSectionProps) {
@@ -88,7 +82,6 @@ function BuildingInventoryFloorSectionComponent({
             <BuildingInventoryRoomSection
               key={room.key}
               group={room}
-              pricingEditable={pricingEditable}
               showAddBed={showAddBed}
               menu={renderRoomMenu?.(room)}
               onRoomPress={onRoomPress ? () => onRoomPress(room) : undefined}
@@ -96,8 +89,8 @@ function BuildingInventoryFloorSectionComponent({
                 onPathCrumbPress ? crumb => onPathCrumbPress(room, crumb) : undefined
               }
               onBedPress={onBedPress}
+              onEditBed={onEditBed}
               onAddBed={onAddBed ? () => onAddBed(room) : undefined}
-              onCommitPricing={onCommitPricing}
               renderBedMenu={renderBedMenu}
               renderBedFooter={renderBedFooter}
             />
