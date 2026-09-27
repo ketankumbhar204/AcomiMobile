@@ -576,6 +576,7 @@
         "submittingShort": "Sending…",
         "submittingHint": "Please wait…",
         "submitError": "Could not send your enquiry. Please try again.",
+        "listingUnavailable": "We could not start an enquiry for this listing. Please try again or pick another listing.",
         "sentTitleShort": "Enquiry sent!",
         "sentBodyShort": "We'll notify you when details are available.",
         "readyTitleShort": "Contact details available",

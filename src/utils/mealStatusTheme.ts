@@ -20,8 +20,8 @@ export const MENU_PLANNING_POLL_OPEN_COLOR = '#2563EB';
 
 export const MEAL_STATUS_THEME: Record<MealStatusKind, MealStatusTheme> = {
   empty: {
-    color: colors.muted,
-    background: colors.surfaceSecondary,
+    color: '#C2410C',
+    background: colors.warningTint,
     icon: '○',
     labelKey: 'meals.status.empty',
   },

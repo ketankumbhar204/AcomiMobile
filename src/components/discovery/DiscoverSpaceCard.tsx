@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Heart, MapPin } from 'lucide-react-native';
+import { BadgeCheck, Heart, Map } from 'lucide-react-native';
 import { getSpaceTypeLabel } from '../../api';
 import type { DiscoverSpaceCardResponse, SpaceType } from '../../api/types';
 import { Button } from '../ui';
@@ -39,7 +39,7 @@ export function DiscoverSpaceCard({ item, onPress, onEnquire }: DiscoverSpaceCar
   const mealAmount = toPositiveAmount(item.mealPrice);
   const isMess = item.type === 'MESS';
   const cta = t('spaces.findPlace.getContactDetails');
-
+  const viewDetails = t('spaces.findPlace.viewDetails');
   return (
     <View style={styles.card}>
       <Pressable
@@ -86,12 +86,9 @@ export function DiscoverSpaceCard({ item, onPress, onEnquire }: DiscoverSpaceCar
           <Text style={styles.title} numberOfLines={2}>
             {item.name}
           </Text>
-          <View style={styles.addressRow}>
-            <MapPin size={14} color={colors.muted} strokeWidth={2.2} />
-            <Text style={styles.addressText} numberOfLines={2}>
-              {address || t('spaces.findPlace.addressMissing')}
-            </Text>
-          </View>
+          <Text style={styles.addressText} numberOfLines={2}>
+            {address || t('spaces.findPlace.addressMissing')}
+          </Text>
           {isMess ? (
             <>
               <Text style={styles.price}>
@@ -112,19 +109,48 @@ export function DiscoverSpaceCard({ item, onPress, onEnquire }: DiscoverSpaceCar
                 : t('spaces.findPlace.priceOnRequest')}
             </Text>
           )}
-          <ListingInfoChips
-            listing={item}
-            variant="card"
-            surface={isMess ? 'meals' : 'places'}
-          />
+          <View style={styles.infoPanel}>
+            <Pressable
+              onPress={onEnquire}
+              style={styles.mapsRow}
+              accessibilityRole="button"
+              accessibilityLabel={`${t('spaces.findPlace.openMaps')}. ${cta}`}>
+              <View style={styles.mapsPress}>
+                <View style={styles.mapsIcon}>
+                  <Map size={16} color="#0F6B4C" strokeWidth={2.2} />
+                </View>
+                <View style={styles.mapsCopy}>
+                  <Text style={styles.mapsEyebrow}>{t('spaces.findPlace.locationSection')}</Text>
+                  <Text style={styles.mapsLink}>{t('spaces.findPlace.openMaps')}</Text>
+                </View>
+              </View>
+            </Pressable>
+            <View style={styles.infoHeadingRow}>
+              <BadgeCheck size={14} color="#0F6B4C" strokeWidth={2.2} />
+              <Text style={styles.infoHeading}>{t('spaces.findPlace.infoAvailable')}</Text>
+            </View>
+            <ListingInfoChips
+              listing={item}
+              variant="card"
+              surface={isMess ? 'meals' : 'places'}
+              onEnquire={onEnquire}
+            />
+          </View>
         </View>
       </Pressable>
       <View style={styles.ctaWrap}>
         <Button
+          label={viewDetails}
+          variant="secondary"
+          onPress={onPress}
+          accessibilityLabel={`${viewDetails}: ${item.name}`}
+          style={styles.ctaHalf}
+        />
+        <Button
           label={cta}
           onPress={onEnquire}
           accessibilityLabel={`${cta}: ${item.name}`}
-          style={styles.cta}
+          style={styles.ctaHalf}
         />
       </View>
     </View>
@@ -239,17 +265,98 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
   },
-  addressRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 6,
-  },
   addressText: {
     ...typography.caption,
     fontSize: 13,
     color: colors.textSecondary,
-    flex: 1,
     lineHeight: 18,
+  },
+  infoPanel: {
+    backgroundColor: colors.mintSubtle,
+    borderRadius: 16,
+    padding: 10,
+    gap: 8,
+  },
+  mapsRow: {
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  mapsRowMuted: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+  },
+  mapsPress: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+  },
+  mapsIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: colors.lightGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mapsIconMuted: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: 'rgba(15, 23, 42, 0.04)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mapsCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  mapsEyebrow: {
+    ...typography.caption,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: colors.muted,
+  },
+  mapsLinkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  mapsLink: {
+    ...typography.caption,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F6B4C',
+  },
+  mapsMuted: {
+    ...typography.caption,
+    fontSize: 12,
+    color: colors.muted,
+    marginTop: 2,
+  },
+  infoHeadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  infoHeading: {
+    ...typography.caption,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: '#0F6B4C',
   },
   price: {
     ...typography.bodyStrong,
@@ -264,10 +371,11 @@ const styles = StyleSheet.create({
   },
   ctaWrap: {
     marginTop: 'auto',
+    gap: 8,
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.md,
   },
-  cta: {
+  ctaHalf: {
     minHeight: 40,
     paddingVertical: spacing.sm,
   },

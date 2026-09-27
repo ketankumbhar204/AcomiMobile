@@ -5,6 +5,20 @@ import { colors, typography } from '../../theme';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
+/** Compact dashboard rings are 46px — "100%" must stay inside the track. */
+function compactFontSize(size: number, score: number): number {
+  if (size >= 88) {
+    return 22;
+  }
+  if (score >= 100) {
+    return 10;
+  }
+  if (score >= 10) {
+    return 11;
+  }
+  return 12;
+}
+
 export type HealthScoreRingProps = {
   score: number;
   color: string;
@@ -70,9 +84,13 @@ export function HealthScoreRing({
       </Svg>
       <View style={[StyleSheet.absoluteFill, styles.center]} pointerEvents="none">
         <Text
-          style={[styles.score, { color, fontSize: size >= 88 ? 22 : 12 }]}
-          allowFontScaling={false}>
-          {`${clamped}%`}
+          style={[styles.score, { color, fontSize: compactFontSize(size, clamped) }]}
+          allowFontScaling={false}
+          numberOfLines={1}>
+          {clamped}
+          <Text style={{ color, fontSize: compactFontSize(size, clamped) * 0.68, fontWeight: '800' }}>
+            %
+          </Text>
         </Text>
         {footer}
       </View>
@@ -90,5 +108,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textAlign: 'center',
     includeFontPadding: false,
+    letterSpacing: -0.4,
   },
 });
