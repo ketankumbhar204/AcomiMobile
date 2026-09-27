@@ -1,6 +1,19 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import {
+  CalendarDays,
+  ClipboardList,
+  Clock3,
+  IndianRupee,
+  Leaf,
+  Map,
+  MapPin,
+  Phone,
+  Sparkles,
+  UtensilsCrossed,
+  type LucideIcon,
+} from 'lucide-react-native';
 import {
   CARD_INFO_KEYS,
   EXTRA_INFO_KEYS,
@@ -11,12 +24,13 @@ import {
   type ListingInfoSource,
   type MealInfoFlags,
 } from '../../utils/listingInfo';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, spacing, typography } from '../../theme';
 
 type ListingInfoChipsProps = {
   listing: ListingInfoSource;
   variant: 'card' | 'detail';
   surface?: 'places' | 'meals';
+  onEnquire?: () => void;
 };
 
 const PLACE_LABEL_KEYS: Record<keyof ListingInfoFlags, string> = {
@@ -41,7 +55,20 @@ const MEAL_LABEL_KEYS: Record<keyof MealInfoFlags, string> = {
   subscription: 'spaces.findPlace.infoSubscription',
 };
 
-export function ListingInfoChips({ listing, variant, surface = 'places' }: ListingInfoChipsProps) {
+const CHIP_ICONS: Record<string, LucideIcon> = {
+  contact: Phone,
+  address: MapPin,
+  map: Map,
+  rent: IndianRupee,
+  amenities: Sparkles,
+  food: UtensilsCrossed,
+  menu: ClipboardList,
+  mealTiming: Clock3,
+  foodType: Leaf,
+  subscription: CalendarDays,
+};
+
+export function ListingInfoChips({ listing, variant, surface = 'places', onEnquire }: ListingInfoChipsProps) {
   const { t } = useTranslation();
   const mealFlags = surface === 'meals' ? listingMealInfoFlags(listing) : null;
   const placeFlags = surface === 'meals' ? null : listingInfoFlags(listing);
@@ -91,24 +118,41 @@ export function ListingInfoChips({ listing, variant, surface = 'places' }: Listi
             : 'spaces.findPlace.infoUnavailableState',
           { field: label },
         );
+        const Icon = CHIP_ICONS[chip.key] ?? Sparkles;
+        const iconSize = compact ? 12 : 14;
+        const ChipWrap = onEnquire ? Pressable : View;
         return (
-          <View
+          <ChipWrap
             key={chip.key}
+            onPress={onEnquire}
             style={[
               styles.chip,
               compact && styles.chipCompact,
               chip.available ? styles.chipAvailable : styles.chipMuted,
             ]}
+            accessibilityRole={onEnquire ? 'button' : undefined}
             accessibilityLabel={state}>
+            <View
+              style={[
+                styles.iconWell,
+                compact && styles.iconWellCompact,
+                chip.available ? styles.iconWellAvailable : styles.iconWellMuted,
+              ]}>
+              <Icon
+                size={iconSize}
+                color={chip.available ? colors.success : colors.muted}
+                strokeWidth={2.2}
+              />
+            </View>
             <Text
               style={[
                 styles.chipText,
                 compact && styles.chipTextCompact,
                 chip.available ? styles.chipTextAvailable : styles.chipTextMuted,
               ]}>
-              {chip.available ? '✓' : '—'} {label}
+              {label}
             </Text>
-          </View>
+          </ChipWrap>
         );
       })}
     </View>
@@ -122,19 +166,44 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   chip: {
-    borderRadius: radius.full,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 12,
+    borderWidth: 1,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+    paddingVertical: 6,
   },
   chipCompact: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    gap: 5,
   },
   chipAvailable: {
-    backgroundColor: colors.lightGreen,
+    backgroundColor: colors.white,
+    borderColor: '#C6EBD7',
   },
   chipMuted: {
-    backgroundColor: colors.surfaceSecondary,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+    borderColor: 'transparent',
+  },
+  iconWell: {
+    width: 24,
+    height: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconWellCompact: {
+    width: 20,
+    height: 20,
+    borderRadius: 7,
+  },
+  iconWellAvailable: {
+    backgroundColor: colors.lightGreen,
+  },
+  iconWellMuted: {
+    backgroundColor: 'rgba(15, 23, 42, 0.04)',
   },
   chipText: {
     ...typography.caption,
@@ -142,7 +211,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   chipTextCompact: {
-    fontSize: 10,
+    fontSize: 11,
     lineHeight: 14,
   },
   chipTextAvailable: {

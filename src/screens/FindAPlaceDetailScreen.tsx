@@ -1,10 +1,10 @@
 import React, { useCallback, useLayoutEffect, useState } from 'react';
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { Info, MapPin, Sparkles, UtensilsCrossed } from 'lucide-react-native';
+import { BadgeCheck, Info, Map, MapPin, Sparkles, UtensilsCrossed } from 'lucide-react-native';
 import { getSpaceTypeLabel } from '../api';
 import { spaceDiscoverApi } from '../api/spaceDiscoverApi';
 import type { DiscoverSpaceDetailResponse, SpaceType } from '../api/types';
@@ -114,7 +114,6 @@ export function FindAPlaceDetailScreen() {
           label,
         }));
   const address = detail ? listingAddress(detail) : '';
-  const mapUrl = detail?.mapUrl?.trim();
   const startingPrice =
     detail?.startingPrice == null || detail.startingPrice === ''
       ? null
@@ -132,11 +131,8 @@ export function FindAPlaceDetailScreen() {
   const cta = t('spaces.findPlace.getContactDetails');
 
   const openMap = useCallback(() => {
-    if (!mapUrl) {
-      return;
-    }
-    void Linking.openURL(mapUrl);
-  }, [mapUrl]);
+    setEnquireOpen(true);
+  }, []);
 
   const categoryLabel =
     detail?.genderPolicy && supportsSpacePropertyCategory(detail.type)
@@ -227,27 +223,31 @@ export function FindAPlaceDetailScreen() {
               </View>
             </View>
 
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t('spaces.findPlace.infoAvailable')}</Text>
+            <View style={styles.infoPanel}>
+              <Pressable
+                onPress={openMap}
+                style={styles.mapsPress}
+                accessibilityRole="button"
+                accessibilityLabel={`${t('spaces.findPlace.openMaps')}. ${cta}`}>
+                <View style={styles.mapsIcon}>
+                  <Map size={16} color="#0F6B4C" strokeWidth={2.2} />
+                </View>
+                <View style={styles.mapsCopy}>
+                  <Text style={styles.mapsEyebrow}>{t('spaces.findPlace.locationSection')}</Text>
+                  <Text style={styles.mapsLink}>{t('spaces.findPlace.openMaps')}</Text>
+                </View>
+              </Pressable>
+              <View style={styles.infoHeadingRow}>
+                <BadgeCheck size={14} color="#0F6B4C" strokeWidth={2.2} />
+                <Text style={styles.infoHeading}>{t('spaces.findPlace.infoAvailable')}</Text>
+              </View>
               <ListingInfoChips
                 listing={detail}
                 variant="detail"
                 surface={detail.type === 'MESS' ? 'meals' : 'places'}
+                onEnquire={() => setEnquireOpen(true)}
               />
             </View>
-
-            {mapUrl ? (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>{t('spaces.findPlace.locationSection')}</Text>
-                <Text
-                  onPress={openMap}
-                  style={styles.mapLink}
-                  accessibilityRole="link"
-                  accessibilityLabel={t('spaces.findPlace.openMaps')}>
-                  {t('spaces.findPlace.openMaps')}
-                </Text>
-              </View>
-            ) : null}
 
             {amenities.length > 0 ? (
               <View style={styles.section}>
@@ -381,10 +381,67 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginTop: spacing.xs,
   },
-  mapLink: {
-    ...typography.bodyStrong,
-    color: colors.primaryDark,
+  infoPanel: {
+    backgroundColor: colors.mintSubtle,
+    borderRadius: 16,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  mapsPress: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+  },
+  mapsIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: colors.lightGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mapsCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  mapsEyebrow: {
+    ...typography.caption,
+    fontSize: 10,
     fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: colors.muted,
+  },
+  mapsLinkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  mapsLink: {
+    ...typography.caption,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0F6B4C',
+  },
+  infoHeadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  infoHeading: {
+    ...typography.caption,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: '#0F6B4C',
   },
   metaRow: {
     flexDirection: 'row',
