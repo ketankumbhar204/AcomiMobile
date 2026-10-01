@@ -36,6 +36,7 @@ const PURPOSE_MAX_BYTES: Record<FilePurpose, number> = {
   MENU_ITEM_PHOTO: ABSOLUTE_MAX_BYTES,
   COMBO_PHOTO: ABSOLUTE_MAX_BYTES,
   SPACE_PHOTO: ABSOLUTE_MAX_BYTES,
+  INQUIRY_PAYMENT_QR: ABSOLUTE_MAX_BYTES,
 };
 
 export function purposeMaxBytes(purpose: FilePurpose): number {

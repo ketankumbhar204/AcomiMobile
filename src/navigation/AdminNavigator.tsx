@@ -15,6 +15,8 @@ import { AdminPropertyListScreen } from '../screens/admin/AdminPropertyListScree
 import { AdminRegisteredUserDetailScreen } from '../screens/admin/AdminRegisteredUserDetailScreen';
 import { AdminRegisteredUsersScreen } from '../screens/admin/AdminRegisteredUsersScreen';
 import { AdminSavedAddressesScreen } from '../screens/admin/AdminSavedAddressesScreen';
+import { AdminInquiryCreditsConfigScreen } from '../screens/admin/AdminInquiryCreditsConfigScreen';
+import { AdminInquiryPurchaseListScreen } from '../screens/admin/AdminInquiryPurchaseListScreen';
 import { stackHeaderOptions } from '../theme';
 import type { AdminStackParamList } from './types';
 
@@ -94,6 +96,18 @@ export function AdminNavigator() {
         name="AdminSavedAddresses"
         component={AdminSavedAddressesScreen}
         options={{ title: t('admin.nav.addresses') }}
+      />
+      <Stack.Screen
+        name="AdminInquiryCreditsConfig"
+        component={AdminInquiryCreditsConfigScreen}
+        options={{ title: t('admin.nav.creditsConfig', { defaultValue: 'Credits config' }) }}
+      />
+      <Stack.Screen
+        name="AdminInquiryCreditRequests"
+        component={AdminInquiryPurchaseListScreen}
+        options={{
+          title: t('admin.nav.creditPayments', { defaultValue: 'Credit payments' }),
+        }}
       />
     </Stack.Navigator>
   );

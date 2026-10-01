@@ -1,4 +1,4 @@
-import { listingInfoFlags, listingMealInfoFlags } from '../listingInfo';
+import { INFO_GRID_KEYS, listingInfoFlags, listingMealInfoFlags } from '../listingInfo';
 
 describe('listingInfoFlags', () => {
   it('marks contact, address, map, rent, amenities and food when present', () => {
@@ -68,6 +68,23 @@ describe('listingInfoFlags', () => {
         addressLine: 'Kothrud, Pune',
       }).address,
     ).toBe(true);
+  });
+
+  it('keeps a fixed six-item grid even when fields are missing', () => {
+    expect(INFO_GRID_KEYS).toEqual(['contact', 'address', 'map', 'rent', 'amenities', 'food']);
+    const flags = listingInfoFlags({});
+    expect(INFO_GRID_KEYS.every((key) => key in flags)).toBe(true);
+    expect(Object.values(flags).every((value) => value === false)).toBe(true);
+  });
+
+  it('does not treat email-only contact as a mobile contact', () => {
+    expect(
+      listingInfoFlags({
+        hasContact: true,
+        hasMobileContact: false,
+        address: 'Hinjewadi',
+      }).contact,
+    ).toBe(false);
   });
 
   it('treats mess monthly and meal prices as price information', () => {

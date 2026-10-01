@@ -10,6 +10,7 @@ import { spaceDiscoverApi } from '../api/spaceDiscoverApi';
 import type { DiscoverSpaceDetailResponse, SpaceType } from '../api/types';
 import { ApiError } from '../api/types';
 import { EnquireDialog } from '../components/EnquireDialog';
+import { InquirySent } from '../components/discovery/InquirySent';
 import { DiscoverListingCover } from '../components/discovery/DiscoverListingCover';
 import { ListingInfoChips } from '../components/discovery/ListingInfoChips';
 import { StickyFormActions } from '../components/progressive';
@@ -20,6 +21,7 @@ import {
   SkeletonCard,
 } from '../components/ui';
 import type { MainStackParamList } from '../navigation/types';
+import { useAlreadyInquired, useInquirySentVia } from '../hooks/useAlreadyInquired';
 import { useSpaceStore } from '../store/spaceStore';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 import { invalidateAccommodationQueries } from '../utils/accommodationQueryCache';
@@ -46,6 +48,8 @@ export function FindAPlaceDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [opening, setOpening] = useState(false);
   const [enquireOpen, setEnquireOpen] = useState(false);
+  const alreadyInquired = useAlreadyInquired(spaceId);
+  const sentVia = useInquirySentVia(spaceId);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -103,8 +107,11 @@ export function FindAPlaceDetailScreen() {
       void openSpace();
       return;
     }
+    if (alreadyInquired) {
+      return;
+    }
     setEnquireOpen(true);
-  }, [detail, openSpace]);
+  }, [alreadyInquired, detail, openSpace]);
 
   const amenities =
     detail?.amenities && detail.amenities.length > 0
@@ -131,8 +138,9 @@ export function FindAPlaceDetailScreen() {
   const cta = t('spaces.findPlace.getContactDetails');
 
   const openMap = useCallback(() => {
+    if (alreadyInquired) return;
     setEnquireOpen(true);
-  }, []);
+  }, [alreadyInquired]);
 
   const categoryLabel =
     detail?.genderPolicy && supportsSpacePropertyCategory(detail.type)
@@ -171,19 +179,23 @@ export function FindAPlaceDetailScreen() {
                 style={styles.heroImage}
                 accessibilityName={detail.name}
               />
-              <View style={styles.heroTypeBadge}>
-                <Text style={styles.heroTypeBadgeText}>{getSpaceTypeLabel(detail.type)}</Text>
+              <View style={styles.heroBadgeRow}>
+                <View style={styles.heroTypeBadge}>
+                  <Text style={styles.heroTypeBadgeText}>{getSpaceTypeLabel(detail.type)}</Text>
+                </View>
+                {alreadyInquired ? <InquirySent /> : null}
               </View>
             </View>
 
             <View style={styles.infoBlock}>
               <Text style={styles.name}>{detail.name}</Text>
-              <View style={styles.addressRow}>
-                <MapPin size={16} color={colors.primaryDark} strokeWidth={2.2} />
-                <Text style={styles.addressText}>
-                  {address || t('spaces.findPlace.addressMissing')}
-                </Text>
-              </View>
+              {alreadyInquired ? <InquirySent variant="inline" sentVia={sentVia} /> : null}
+              {address ? (
+                <View style={styles.addressRow}>
+                  <MapPin size={16} color={colors.primaryDark} strokeWidth={2.2} />
+                  <Text style={styles.addressText}>{address}</Text>
+                </View>
+              ) : null}
               {isMess ? (
                 <>
                   <Text style={styles.price}>
@@ -224,19 +236,21 @@ export function FindAPlaceDetailScreen() {
             </View>
 
             <View style={styles.infoPanel}>
-              <Pressable
-                onPress={openMap}
-                style={styles.mapsPress}
-                accessibilityRole="button"
-                accessibilityLabel={`${t('spaces.findPlace.openMaps')}. ${cta}`}>
-                <View style={styles.mapsIcon}>
-                  <Map size={16} color="#0F6B4C" strokeWidth={2.2} />
-                </View>
-                <View style={styles.mapsCopy}>
-                  <Text style={styles.mapsEyebrow}>{t('spaces.findPlace.locationSection')}</Text>
-                  <Text style={styles.mapsLink}>{t('spaces.findPlace.openMaps')}</Text>
-                </View>
-              </Pressable>
+              {detail.mapUrl && !alreadyInquired ? (
+                <Pressable
+                  onPress={openMap}
+                  style={styles.mapsPress}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t('spaces.findPlace.openMaps')}. ${cta}`}>
+                  <View style={styles.mapsIcon}>
+                    <Map size={16} color="#0F6B4C" strokeWidth={2.2} />
+                  </View>
+                  <View style={styles.mapsCopy}>
+                    <Text style={styles.mapsEyebrow}>{t('spaces.findPlace.locationSection')}</Text>
+                    <Text style={styles.mapsLink}>{t('spaces.findPlace.openMaps')}</Text>
+                  </View>
+                </Pressable>
+              ) : null}
               <View style={styles.infoHeadingRow}>
                 <BadgeCheck size={14} color="#0F6B4C" strokeWidth={2.2} />
                 <Text style={styles.infoHeading}>{t('spaces.findPlace.infoAvailable')}</Text>
@@ -245,7 +259,7 @@ export function FindAPlaceDetailScreen() {
                 listing={detail}
                 variant="detail"
                 surface={detail.type === 'MESS' ? 'meals' : 'places'}
-                onEnquire={() => setEnquireOpen(true)}
+                onEnquire={alreadyInquired ? undefined : () => setEnquireOpen(true)}
               />
             </View>
 
@@ -264,6 +278,23 @@ export function FindAPlaceDetailScreen() {
                 </View>
               </View>
             ) : null}
+
+            <View style={styles.section}>
+              <Text style={styles.availabilityLine}>
+                <Text style={styles.availabilityLabel}>
+                  {t('spaces.findPlace.reviewsRatings', { defaultValue: 'Review & Ratings' })}
+                  {': '}
+                </Text>
+                {t('spaces.findPlace.notAvailable', { defaultValue: 'Not available' })}
+              </Text>
+              <Text style={styles.availabilityLine}>
+                <Text style={styles.availabilityLabel}>
+                  {t('spaces.findPlace.photos', { defaultValue: 'Photos' })}
+                  {': '}
+                </Text>
+                {t('spaces.findPlace.notAvailable', { defaultValue: 'Not available' })}
+              </Text>
+            </View>
 
             {!detail.alreadyMember && !detail.ownedByCurrentUser ? (
               <View style={styles.inviteNotice}>
@@ -288,18 +319,24 @@ export function FindAPlaceDetailScreen() {
       ) : null}
 
       {detail ? (
-        <StickyFormActions
-          primary={{
-            label: detail.alreadyMember
-              ? t('spaces.findPlace.openSpaceCta')
-              : detail.ownedByCurrentUser
-                ? t('spaces.findPlace.enquire.ownCta')
-                : cta,
-            onPress: onPrimaryCta,
-            loading: opening,
-            disabled: opening,
-          }}
-        />
+        alreadyInquired && !detail.alreadyMember && !detail.ownedByCurrentUser ? (
+          <StickyFormActions>
+            <InquirySent variant="button" sentVia={sentVia} />
+          </StickyFormActions>
+        ) : (
+          <StickyFormActions
+            primary={{
+              label: detail.alreadyMember
+                ? t('spaces.findPlace.openSpaceCta')
+                : detail.ownedByCurrentUser
+                  ? t('spaces.findPlace.enquire.ownCta')
+                  : cta,
+              onPress: onPrimaryCta,
+              loading: opening,
+              disabled: opening,
+            }}
+          />
+        )
       ) : error && !loading ? (
         <StickyFormActions
           primary={{
@@ -338,14 +375,22 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  heroTypeBadge: {
+  heroBadgeRow: {
     position: 'absolute',
     top: 14,
     left: 14,
+    right: 14,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'flex-start',
+    gap: 6,
+  },
+  heroTypeBadge: {
     backgroundColor: 'rgba(255,255,255,0.95)',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 4,
+    maxWidth: '100%',
   },
   heroTypeBadgeText: {
     ...typography.caption,
@@ -482,6 +527,17 @@ const styles = StyleSheet.create({
     ...typography.label,
     color: colors.textPrimary,
     marginBottom: spacing.sm,
+  },
+  availabilityLine: {
+    ...typography.body,
+    color: colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 22,
+  },
+  availabilityLabel: {
+    ...typography.bodyStrong,
+    color: colors.textPrimary,
+    fontSize: 14,
   },
   amenityWrap: {
     flexDirection: 'row',

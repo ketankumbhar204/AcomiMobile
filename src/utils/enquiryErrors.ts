@@ -14,6 +14,14 @@ export function isListingUnavailableError(error: unknown): boolean {
   return false;
 }
 
+export function isInquiryCreditsRequiredError(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    (error.body?.errorCode === 'WEB_FREE_LIMIT_REACHED' ||
+      error.body?.errorCode === 'INQUIRY_CREDITS_REQUIRED')
+  );
+}
+
 export function enquiryErrorMessage(
   error: unknown,
   fallback: string,
@@ -22,8 +30,22 @@ export function enquiryErrorMessage(
   if (isListingUnavailableError(error)) {
     return listingUnavailable;
   }
-  if (error instanceof ApiError && error.message.trim()) {
-    return error.message;
+  if (error instanceof ApiError) {
+    if (isInquiryCreditsRequiredError(error)) {
+      return (
+        error.message.trim() ||
+        'Your free enquiries are used. Buy credits or wait until tomorrow.'
+      );
+    }
+    if (error.body?.errorCode === 'INQUIRY_PAYMENT_DISABLED') {
+      return error.message.trim() || 'Credit purchases are temporarily unavailable.';
+    }
+    if (error.body?.errorCode === 'RATE_LIMITED') {
+      return error.message.trim() || 'Too many enquiries recently. Please try again later.';
+    }
+    if (error.message.trim()) {
+      return error.message;
+    }
   }
   return fallback;
 }

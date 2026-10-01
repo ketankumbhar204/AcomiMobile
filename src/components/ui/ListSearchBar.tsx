@@ -8,9 +8,10 @@ type ListSearchBarProps = {
   value: string;
   onChangeText: (text: string) => void;
   placeholder?: string;
+  editable?: boolean;
 };
 
-export function ListSearchBar({ value, onChangeText, placeholder }: ListSearchBarProps) {
+export function ListSearchBar({ value, onChangeText, placeholder, editable = true }: ListSearchBarProps) {
   const { t } = useTranslation();
   const [focused, setFocused] = useState(false);
   const label = placeholder ?? t('list.search.placeholder');
@@ -26,6 +27,7 @@ export function ListSearchBar({ value, onChangeText, placeholder }: ListSearchBa
         <TextInput
           style={styles.input}
           value={value}
+          editable={editable}
           onChangeText={onChangeText}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
