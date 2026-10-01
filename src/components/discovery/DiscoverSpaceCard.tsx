@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { BadgeCheck, Heart, Map } from 'lucide-react-native';
+import { BadgeCheck, Heart } from 'lucide-react-native';
+import { useAlreadyInquired, useInquirySentVia } from '../../hooks/useAlreadyInquired';
+import { InquirySent } from './InquirySent';
 import { getSpaceTypeLabel } from '../../api';
 import type { DiscoverSpaceCardResponse, SpaceType } from '../../api/types';
 import { Button } from '../ui';
@@ -39,7 +41,11 @@ export function DiscoverSpaceCard({ item, onPress, onEnquire }: DiscoverSpaceCar
   const mealAmount = toPositiveAmount(item.mealPrice);
   const isMess = item.type === 'MESS';
   const cta = t('spaces.findPlace.getContactDetails');
+  const viewLabel = t('spaces.findPlace.view', { defaultValue: 'View' });
   const viewDetails = t('spaces.findPlace.viewDetails');
+  const [stackActions, setStackActions] = useState(false);
+  const alreadyInquired = useAlreadyInquired(item.spaceId);
+  const sentVia = useInquirySentVia(item.spaceId);
   return (
     <View style={styles.card}>
       <Pressable
@@ -59,10 +65,13 @@ export function DiscoverSpaceCard({ item, onPress, onEnquire }: DiscoverSpaceCar
             style={styles.mediaFill}
             accessibilityName={item.name}
           />
-          <View style={styles.typeBadge}>
-            <Text style={styles.typeBadgeText} numberOfLines={1}>
-              {typeLabel}
-            </Text>
+          <View style={styles.badgeRow}>
+            <View style={styles.typeBadge}>
+              <Text style={styles.typeBadgeText} numberOfLines={1}>
+                {typeLabel}
+              </Text>
+            </View>
+            {alreadyInquired ? <InquirySent /> : null}
           </View>
           {item.testSpace ? (
             <View style={styles.testBadge}>
@@ -86,9 +95,12 @@ export function DiscoverSpaceCard({ item, onPress, onEnquire }: DiscoverSpaceCar
           <Text style={styles.title} numberOfLines={2}>
             {item.name}
           </Text>
-          <Text style={styles.addressText} numberOfLines={2}>
-            {address || t('spaces.findPlace.addressMissing')}
-          </Text>
+          {alreadyInquired ? <InquirySent variant="inline" sentVia={sentVia} /> : null}
+          {address ? (
+            <Text style={styles.addressText} numberOfLines={2}>
+              {address}
+            </Text>
+          ) : null}
           {isMess ? (
             <>
               <Text style={styles.price}>
@@ -110,21 +122,6 @@ export function DiscoverSpaceCard({ item, onPress, onEnquire }: DiscoverSpaceCar
             </Text>
           )}
           <View style={styles.infoPanel}>
-            <Pressable
-              onPress={onEnquire}
-              style={styles.mapsRow}
-              accessibilityRole="button"
-              accessibilityLabel={`${t('spaces.findPlace.openMaps')}. ${cta}`}>
-              <View style={styles.mapsPress}>
-                <View style={styles.mapsIcon}>
-                  <Map size={16} color="#0F6B4C" strokeWidth={2.2} />
-                </View>
-                <View style={styles.mapsCopy}>
-                  <Text style={styles.mapsEyebrow}>{t('spaces.findPlace.locationSection')}</Text>
-                  <Text style={styles.mapsLink}>{t('spaces.findPlace.openMaps')}</Text>
-                </View>
-              </View>
-            </Pressable>
             <View style={styles.infoHeadingRow}>
               <BadgeCheck size={14} color="#0F6B4C" strokeWidth={2.2} />
               <Text style={styles.infoHeading}>{t('spaces.findPlace.infoAvailable')}</Text>
@@ -133,25 +130,40 @@ export function DiscoverSpaceCard({ item, onPress, onEnquire }: DiscoverSpaceCar
               listing={item}
               variant="card"
               surface={isMess ? 'meals' : 'places'}
-              onEnquire={onEnquire}
+              onEnquire={alreadyInquired ? undefined : onEnquire}
             />
           </View>
         </View>
       </Pressable>
-      <View style={styles.ctaWrap}>
+      <View
+        style={[styles.ctaWrap, stackActions ? styles.ctaStack : styles.ctaRow]}
+        onLayout={event => {
+          const next = event.nativeEvent.layout.width < 260;
+          setStackActions(current => (current === next ? current : next));
+        }}>
         <Button
-          label={viewDetails}
+          label={viewLabel}
           variant="secondary"
           onPress={onPress}
+          numberOfLines={1}
           accessibilityLabel={`${viewDetails}: ${item.name}`}
-          style={styles.ctaHalf}
+          style={stackActions ? styles.ctaFull : styles.ctaView}
         />
-        <Button
-          label={cta}
-          onPress={onEnquire}
-          accessibilityLabel={`${cta}: ${item.name}`}
-          style={styles.ctaHalf}
-        />
+        {alreadyInquired ? (
+          <InquirySent
+            variant="button"
+            sentVia={sentVia}
+            style={stackActions ? styles.ctaFull : styles.ctaContact}
+          />
+        ) : (
+          <Button
+            label={cta}
+            onPress={onEnquire}
+            numberOfLines={1}
+            accessibilityLabel={`${cta}: ${item.name}`}
+            style={stackActions ? styles.ctaFull : styles.ctaContact}
+          />
+        )}
       </View>
     </View>
   );
@@ -187,15 +199,22 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
   },
-  typeBadge: {
+  badgeRow: {
     position: 'absolute',
     top: 12,
     left: 12,
+    right: 52,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'flex-start',
+    gap: 6,
+  },
+  typeBadge: {
     backgroundColor: 'rgba(255,255,255,0.95)',
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    maxWidth: '70%',
+    maxWidth: '100%',
   },
   typeBadgeText: {
     ...typography.caption,
@@ -375,7 +394,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.md,
   },
-  ctaHalf: {
+  ctaRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+  },
+  ctaStack: {
+    flexDirection: 'column',
+  },
+  ctaView: {
+    flexGrow: 0,
+    flexShrink: 0,
+    minHeight: 40,
+    paddingHorizontal: 16,
+    paddingVertical: spacing.sm,
+  },
+  ctaContact: {
+    flexGrow: 1,
+    flexShrink: 0,
+    minHeight: 40,
+    paddingHorizontal: 12,
+    paddingVertical: spacing.sm,
+  },
+  ctaFull: {
+    width: '100%',
     minHeight: 40,
     paddingVertical: spacing.sm,
   },

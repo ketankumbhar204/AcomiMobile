@@ -1,5 +1,7 @@
 export type ListingInfoSource = {
   hasContact?: boolean;
+  /** Usable Indian mobile. Email-only contact does not count. */
+  hasMobileContact?: boolean;
   address?: string | null;
   addressLine?: string | null;
   mapUrl?: string | null;
@@ -31,6 +33,13 @@ export type MealInfoFlags = ListingInfoFlags & {
   subscription: boolean;
 };
 
+function hasMobileContact(listing: ListingInfoSource): boolean {
+  if (typeof listing.hasMobileContact === 'boolean') {
+    return listing.hasMobileContact;
+  }
+  return listing.hasContact === true;
+}
+
 function hasText(value?: string | null): boolean {
   return Boolean(value?.trim());
 }
@@ -52,7 +61,7 @@ export function listingInfoFlags(listing: ListingInfoSource): ListingInfoFlags {
   const foodFromAmenity = amenityCodes.includes('FOOD_INCLUDED');
   const amenityOnly = amenityCodes.filter(code => code !== 'FOOD_INCLUDED');
   return {
-    contact: listing.hasContact === true,
+    contact: hasMobileContact(listing),
     address: hasText(listingAddress(listing)),
     map: hasText(listing.mapUrl),
     rent:
@@ -74,6 +83,7 @@ export function listingMealInfoFlags(listing: ListingInfoSource): MealInfoFlags 
   };
 }
 
+export const INFO_GRID_KEYS = ['contact', 'address', 'map', 'rent', 'amenities', 'food'] as const;
 export const CARD_INFO_KEYS = ['contact', 'address', 'map'] as const;
 export const EXTRA_INFO_KEYS = ['rent', 'amenities', 'food'] as const;
 export const MEAL_EXTRA_INFO_KEYS = ['rent', 'menu', 'mealTiming', 'foodType', 'subscription'] as const;

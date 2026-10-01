@@ -45,6 +45,7 @@ export function useDashboardAccommodationOperationsQuick(
       setOperations({
         occupiedBeds: occupiedPage?.totalElements ?? 0,
         vacantBeds: availablePage?.totalElements ?? 0,
+        reservedBeds: 0,
         moveInsThisMonth: 0,
         pendingPaymentsCount: 0,
       });

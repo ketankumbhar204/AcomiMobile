@@ -177,6 +177,7 @@ describe('normalizeDashboardSummary', () => {
     expect(result.accommodationOperations).toEqual({
       occupiedBeds: 1,
       vacantBeds: 669,
+      reservedBeds: 0,
       moveInsThisMonth: 1,
       pendingPaymentsCount: 1,
     });

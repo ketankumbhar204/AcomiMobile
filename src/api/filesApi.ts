@@ -18,7 +18,8 @@ export type FilePurpose =
   | 'BED_PHOTO'
   | 'MENU_ITEM_PHOTO'
   | 'COMBO_PHOTO'
-  | 'SPACE_PHOTO';
+  | 'SPACE_PHOTO'
+  | 'INQUIRY_PAYMENT_QR';
 
 export type FileStatus = 'PENDING' | 'ACTIVE' | 'PENDING_DELETE' | 'DELETED' | 'FAILED';
 

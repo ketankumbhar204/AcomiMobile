@@ -55,6 +55,22 @@ export interface InquiryCreditsPaymentConfig {
   packages: InquiryCreditPackage[];
 }
 
+export type InquiryQuota = {
+  channel?: string;
+  dailyFreeLimit: number;
+  freeUsedToday: number;
+  freeRemainingToday: number;
+  availableCredits: number;
+  androidBillingMode?: 'FREE' | 'CREDITS' | string | null;
+  purchasesEnabled?: boolean;
+  unlimited?: boolean;
+};
+
+export function isUnlimitedQuota(quota: InquiryQuota | null | undefined): boolean {
+  if (!quota) return false;
+  return quota.unlimited === true || quota.purchasesEnabled === false;
+}
+
 export type InquiryCreditPurchaseStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
 export interface SubmitInquiryCreditPurchaseRequest {
@@ -95,6 +111,9 @@ export const inquiryCreditsApi = {
         '/inquiry-credits/payment-config',
       ),
     ),
+
+  getQuota: (): Promise<InquiryQuota> =>
+    unwrapApiResponse(apiClient.get<ApiResponse<InquiryQuota>>('/inquiry-credits/quota')),
 
   submitPurchase: (
     payload: SubmitInquiryCreditPurchaseRequest,

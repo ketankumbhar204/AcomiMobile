@@ -27,6 +27,25 @@ export const enquiryApi = {
       ),
     ),
 
+  listInquiredListingIds: async (): Promise<Array<{ id: string; sentVia: 'EMAIL' | 'APP' | 'BOTH' | null }>> => {
+    const data = await unwrapApiResponse(
+      apiClient.get<ApiResponse<{
+        inquiredListingIds?: string[];
+        inquiries?: { listingId?: string; sentVia?: string }[];
+      }>>('/enquiries/me/listing-ids'),
+    );
+    const asVia = (value: string | undefined): 'EMAIL' | 'APP' | 'BOTH' | null =>
+      value === 'EMAIL' || value === 'APP' || value === 'BOTH' ? value : null;
+    if (data.inquiries?.length) {
+      return data.inquiries.flatMap(row => {
+        const id = row.listingId?.trim();
+        if (!id) return [];
+        return [{ id, sentVia: asVia(row.sentVia) }];
+      });
+    }
+    return (data.inquiredListingIds ?? []).map(id => ({ id, sentVia: null }));
+  },
+
   listMine: async (params?: {
     page?: number;
     size?: number;

@@ -1,6 +1,8 @@
 import React, { useCallback, useLayoutEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
+  Linking,
   Modal,
   Pressable,
   StyleSheet,
@@ -11,7 +13,7 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { CreditCard, ShoppingBag, Smartphone, Wallet } from 'lucide-react-native';
+import { CreditCard, MessageCircle, ShoppingBag, Smartphone, Wallet } from 'lucide-react-native';
 import {
   inquiryCreditsApi,
   type InquiryCreditPackage,
@@ -235,7 +237,7 @@ export function InquiryCreditsScreen() {
   }
 
   const paymentEnabled = config?.enabled ?? false;
-  const creditsMode = config?.androidBillingMode === 'CREDITS';
+  const creditsMode = paymentEnabled && config?.androidBillingMode === 'CREDITS';
   const purchaseAllowed = paymentEnabled && creditsMode;
   const packages = (config?.packages ?? []).filter(p => p.enabled);
 
@@ -348,6 +350,29 @@ export function InquiryCreditsScreen() {
             </Text>
             {config?.upiId ? (
               <Text style={styles.modalMeta}>UPI: {config.upiId}</Text>
+            ) : null}
+            {config?.qrUrl ? (
+              <Image source={{ uri: config.qrUrl }} style={styles.qr} />
+            ) : null}
+            {config?.whatsappNumber ? (
+              <Pressable
+                onPress={() => {
+                  const digits = config.whatsappNumber!.replace(/\D/g, '');
+                  const full = digits.length === 10 ? `91${digits}` : digits;
+                  void Linking.openURL(
+                    `https://wa.me/${full}?text=${encodeURIComponent(
+                      'Hi, I paid for ACOMI inquiry credits. Sharing the payment screenshot.',
+                    )}`,
+                  );
+                }}
+                style={styles.waBtn}>
+                <MessageCircle size={16} color="#fff" />
+                <Text style={styles.waText}>
+                  {t('inquiryCredits.whatsappCta', {
+                    defaultValue: 'Send payment screenshot on WhatsApp',
+                  })}
+                </Text>
+              </Pressable>
             ) : null}
             <TextInput
               style={styles.utrInput}
@@ -568,6 +593,27 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.tealDark,
     fontWeight: '700',
+  },
+  qr: {
+    width: 160,
+    height: 160,
+    alignSelf: 'center',
+    borderRadius: radius.card,
+    backgroundColor: colors.white,
+  },
+  waBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: '#25D366',
+    borderRadius: radius.button,
+    paddingVertical: 10,
+  },
+  waText: {
+    ...typography.caption,
+    color: '#fff',
+    fontWeight: '800',
   },
   utrInput: {
     borderWidth: 1,
