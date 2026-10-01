@@ -5,11 +5,15 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { enquiryApi } from '../api/enquiryApi';
 import { ApiError, type SpaceEnquiryResponse, type UserResponse } from '../api/types';
-import { enquiryErrorMessage } from '../utils/enquiryErrors';
+import {
+  enquiryErrorMessage,
+  isInquiryCreditsRequiredError,
+} from '../utils/enquiryErrors';
 import { CheckCircle2, Clock } from 'lucide-react-native';
 import { Button } from './ui';
 import type { MainStackParamList } from '../navigation/types';
 import { useAuthStore } from '../store/authStore';
+import { markInquired } from '../state/inquiredListings';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 
 type EnquireDialogProps = {
@@ -20,7 +24,7 @@ type EnquireDialogProps = {
   onClose: () => void;
 };
 
-type Step = 'submitting' | 'sent' | 'ready' | 'own' | 'already' | 'error';
+type Step = 'submitting' | 'sent' | 'ready' | 'own' | 'already' | 'error' | 'credits';
 
 function accountEmail(user: UserResponse | null | undefined): string {
   return (
@@ -63,6 +67,7 @@ export function EnquireDialog({
         enquiryEmail ? { email: enquiryEmail } : {},
       );
       setSubmitted(created);
+      markInquired(created.spaceId || spaceId, created.clientChannel === 'ANDROID' ? 'APP' : 'EMAIL');
       if (created.reusedExisting) {
         setStep('already');
       } else if (created.status === 'SHARED') {
@@ -74,6 +79,18 @@ export function EnquireDialog({
     } catch (err) {
       if (err instanceof ApiError && err.body?.errorCode === 'SELF_ENQUIRY_NOT_ALLOWED') {
         setStep('own');
+      } else if (isInquiryCreditsRequiredError(err)) {
+        setError(
+          enquiryErrorMessage(
+            err,
+            t('spaces.findPlace.enquire.creditsRequiredBody', {
+              defaultValue:
+                'Free enquiries are used. Buy credits or wait until tomorrow.',
+            }),
+            t('spaces.findPlace.enquire.listingUnavailable'),
+          ),
+        );
+        setStep('credits');
       } else {
         setError(
           enquiryErrorMessage(
@@ -146,12 +163,33 @@ export function EnquireDialog({
               <Text style={styles.body}>{t('spaces.findPlace.enquire.ownBody')}</Text>
               <Button label={t('common.close')} onPress={close} style={styles.cta} />
             </View>
+          ) : step === 'credits' ? (
+            <View style={styles.center}>
+              <Text style={styles.title}>
+                {t('spaces.findPlace.enquire.creditsRequiredTitle', {
+                  defaultValue: 'Your free enquiries are used',
+                })}
+              </Text>
+              {error ? <Text style={styles.body}>{error}</Text> : null}
+              <Button
+                label={t('inquiryCredits.buyCta', {
+                  defaultValue: 'Buy inquiry credits',
+                })}
+                onPress={() => {
+                  close();
+                  navigation.navigate('InquiryCredits');
+                }}
+                style={styles.cta}
+              />
+              <Button label={t('common.close')} variant="ghost" onPress={close} style={styles.cta} />
+            </View>
           ) : step === 'error' ? (
             <View style={styles.center}>
               <Text style={styles.title}>{t('spaces.findPlace.enquire.submitError')}</Text>
               {error ? <Text style={styles.error}>{error}</Text> : null}
               <Button
                 label={t('common.retry')}
+                variant="ghost"
                 onPress={() => {
                   autoKeyRef.current = null;
                   void submit({ emailOverride: defaultEmail });

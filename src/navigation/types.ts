@@ -334,6 +334,8 @@ export type AdminStackParamList = {
   AdminSavedAddresses: undefined;
   AdminEnquiryList: undefined;
   AdminEnquiryDetail: { id: string };
+  AdminInquiryCreditsConfig: undefined;
+  AdminInquiryCreditRequests: undefined;
 };
 
 export type RootStackParamList = {

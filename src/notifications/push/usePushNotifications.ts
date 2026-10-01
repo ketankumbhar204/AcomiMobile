@@ -122,11 +122,15 @@ export function usePushNotifications(options: {
     }
     if (inAdminApp) {
       const pending = consumePendingPushPayload();
-      if (pending?.type === 'CONTACT_ENQUIRY' && pending.entityId && navigationRef.isReady()) {
-        navigationRef.navigate('Admin', {
-          screen: 'AdminEnquiryDetail',
-          params: { id: pending.entityId },
-        });
+      if (pending && navigationRef.isReady()) {
+        if (pending.type === 'CONTACT_ENQUIRY' && pending.entityId) {
+          navigationRef.navigate('Admin', {
+            screen: 'AdminEnquiryDetail',
+            params: { id: pending.entityId },
+          });
+        } else if (pending.type === 'INQUIRY_CREDIT_PAYMENT_PENDING') {
+          navigationRef.navigate('Admin', { screen: 'AdminInquiryCreditRequests' });
+        }
       }
       return;
     }

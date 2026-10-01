@@ -15,10 +15,12 @@ import {
   Building2,
   ChefHat,
   ChevronRight,
+  CreditCard,
   LogOut,
   MapPin,
   MessageCircle,
   Users,
+  Wallet,
 } from 'lucide-react-native';
 import { adminApi } from '../../api/adminApi';
 import { adminEnquiryApi } from '../../api/enquiryApi';
@@ -138,9 +140,11 @@ export function AdminDashboardScreen() {
       navigation.navigate('AdminEnquiryDetail', { id: item.entityId });
       return;
     }
-    if (isPaymentNotification(item)) {
-      // No dedicated admin payment-review screen — surface via notifications / enquiries hub.
-      navigation.navigate('AdminEnquiryList');
+    if (
+      item.actionRoute === 'AdminInquiryCreditRequests' ||
+      isPaymentNotification(item)
+    ) {
+      navigation.navigate('AdminInquiryCreditRequests');
       return;
     }
     navigation.navigate('AdminEnquiryList');
@@ -214,7 +218,11 @@ export function AdminDashboardScreen() {
           ) : null}
           <Pressable
             style={styles.attentionCta}
-            onPress={() => navigation.navigate('AdminEnquiryList')}
+            onPress={() =>
+              navigation.navigate(
+                paymentAttention > 0 ? 'AdminInquiryCreditRequests' : 'AdminEnquiryList',
+              )
+            }
             accessibilityRole="button">
             <MessageCircle size={16} color={colors.tealDark} />
             <Text style={styles.attentionCtaText}>
@@ -309,6 +317,14 @@ export function AdminDashboardScreen() {
               {t('admin.dashboard.stats.websiteLeads', { defaultValue: 'Website leads' })}
             </Text>
           </View>
+          <View style={styles.overviewCard}>
+            <Text style={styles.overviewValue}>{paymentAttention}</Text>
+            <Text style={styles.overviewLabel}>
+              {t('admin.dashboard.stats.creditPayments', {
+                defaultValue: 'Credit payments',
+              })}
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -316,6 +332,13 @@ export function AdminDashboardScreen() {
         <Text style={styles.sectionLabel}>
           {t('admin.dashboard.manage', { defaultValue: 'Manage' })}
         </Text>
+        <ManageCard
+          icon={MessageCircle}
+          title={t('admin.dashboard.nav.enquiriesTitle')}
+          hint={t('admin.dashboard.nav.enquiriesHint')}
+          count={enquiryAttention || undefined}
+          onPress={() => navigation.navigate('AdminEnquiryList')}
+        />
         <ManageCard
           icon={Users}
           title={t('admin.dashboard.nav.registeredUsersTitle')}
@@ -338,17 +361,31 @@ export function AdminDashboardScreen() {
           onPress={() => navigation.navigate('AdminMessList', { tab: 'leads' })}
         />
         <ManageCard
-          icon={MessageCircle}
-          title={t('admin.dashboard.nav.enquiriesTitle')}
-          hint={t('admin.dashboard.nav.enquiriesHint')}
-          count={enquiryAttention || undefined}
-          onPress={() => navigation.navigate('AdminEnquiryList')}
-        />
-        <ManageCard
           icon={MapPin}
           title={t('admin.dashboard.nav.savedAddressesTitle')}
           hint={t('admin.dashboard.nav.savedAddressesHint')}
           onPress={() => navigation.navigate('AdminSavedAddresses')}
+        />
+        <ManageCard
+          icon={Wallet}
+          title={t('admin.dashboard.nav.creditsConfigTitle', {
+            defaultValue: 'Credits config',
+          })}
+          hint={t('admin.dashboard.nav.creditsConfigHint', {
+            defaultValue: 'UPI, QR, WhatsApp, limits, and packages',
+          })}
+          onPress={() => navigation.navigate('AdminInquiryCreditsConfig')}
+        />
+        <ManageCard
+          icon={CreditCard}
+          title={t('admin.dashboard.nav.creditPaymentsTitle', {
+            defaultValue: 'Credit payments',
+          })}
+          hint={t('admin.dashboard.nav.creditPaymentsHint', {
+            defaultValue: 'Review UPI screenshots and add enquiry credits',
+          })}
+          count={paymentAttention || undefined}
+          onPress={() => navigation.navigate('AdminInquiryCreditRequests')}
         />
       </View>
     </ScrollView>
@@ -446,9 +483,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   overviewCard: {
-    width: '31%',
+    width: '47%',
     flexGrow: 1,
-    minWidth: 96,
+    minWidth: 140,
     backgroundColor: colors.surface,
     borderRadius: radius.card,
     padding: spacing.md,

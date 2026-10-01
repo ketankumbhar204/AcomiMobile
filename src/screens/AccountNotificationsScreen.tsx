@@ -55,6 +55,15 @@ export function AccountNotificationsScreen() {
     }
     const enquiryId = item.enquiryId && UUID_RE.test(item.enquiryId) ? item.enquiryId : undefined;
     void refreshAccountEnquiryUnread();
+    const type = (item.notificationType ?? '').toUpperCase();
+    if (
+      type === 'INQUIRY_CREDIT_PAYMENT_APPROVED' ||
+      type === 'INQUIRY_CREDIT_PAYMENT_REJECTED' ||
+      item.actionRoute === 'InquiryCredits'
+    ) {
+      navigation.navigate('InquiryCredits');
+      return;
+    }
     navigation.navigate('MemberTabs', {
       screen: 'Enquiries',
       params: enquiryId ? { enquiryId } : undefined,

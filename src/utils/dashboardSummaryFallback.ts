@@ -107,6 +107,7 @@ async function loadAccommodationOperations(
   return {
     occupiedBeds: occupiedPage?.totalElements ?? 0,
     vacantBeds: availablePage?.totalElements ?? 0,
+    reservedBeds: 0,
     moveInsThisMonth: countMoveInsThisMonth(occupancies, month),
     pendingPaymentsCount,
   };

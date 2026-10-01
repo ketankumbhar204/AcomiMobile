@@ -34,6 +34,7 @@ type ButtonProps = {
   /** Optional Lucide leading icon. */
   icon?: ComponentType<IconProps>;
   accessibilityLabel?: string;
+  numberOfLines?: number;
 };
 
 export function Button({
@@ -46,6 +47,7 @@ export function Button({
   style,
   icon: Icon,
   accessibilityLabel,
+  numberOfLines,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
   const iconColor =
@@ -77,6 +79,7 @@ export function Button({
         <>
           <ActivityIndicator color={spinnerColor} />
           <Text
+            numberOfLines={numberOfLines}
             style={[
               styles.label,
               styles[`${variant}Label`],
@@ -89,6 +92,7 @@ export function Button({
         <>
           {Icon ? <Icon size={18} color={iconColor} strokeWidth={2.3} /> : null}
           <Text
+            numberOfLines={numberOfLines}
             style={[
               styles.label,
               styles[`${variant}Label`],

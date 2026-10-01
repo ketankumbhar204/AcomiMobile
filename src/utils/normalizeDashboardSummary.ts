@@ -100,6 +100,7 @@ function normalizeAccommodationOperations(
   return {
     occupiedBeds: toNumber(row.occupiedBeds) ?? 0,
     vacantBeds: toNumber(row.vacantBeds) ?? 0,
+    reservedBeds: toNumber(row.reservedBeds) ?? 0,
     moveInsThisMonth: toNumber(row.moveInsThisMonth) ?? 0,
     pendingPaymentsCount: toNumber(row.pendingPaymentsCount) ?? 0,
   };

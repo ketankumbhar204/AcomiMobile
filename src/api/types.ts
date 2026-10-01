@@ -827,6 +827,8 @@ export interface DiscoverSpaceCardResponse {
   mapUrl?: string | null;
   /** True when at least one stored contact is usable. Never includes the raw contact. */
   hasContact?: boolean;
+  /** True when a usable Indian mobile is stored. Never includes the number. */
+  hasMobileContact?: boolean;
   amenityCodes?: string[];
   amenityLabels?: string[];
   foodIncludedInRent: boolean;
@@ -2122,6 +2124,7 @@ export interface DashboardMessOperations {
 export interface DashboardAccommodationOperations {
   occupiedBeds: number;
   vacantBeds: number;
+  reservedBeds?: number;
   moveInsThisMonth: number;
   pendingPaymentsCount: number;
 }

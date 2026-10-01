@@ -5,6 +5,7 @@ import {
   buildLocationSearchParams,
   type LocationSearchQuery,
 } from './locationSearchQuery';
+import type { LocationAutocompleteSuggestion } from '../utils/locationAutocomplete';
 import type { ApiResponse, LocationRecord } from './types';
 import { devLog } from '../utils/devLog';
 
@@ -61,6 +62,27 @@ export const locationsApi = {
     devLog(`${LOG_TAG} GET /locations/search`, params);
     return unwrapApiResponse(
       apiClient.get<ApiResponse<LocationRecord[]>>('/locations/search', {
+        params,
+      }),
+    );
+  },
+
+  autocomplete: async (
+    q: string,
+    options: Pick<LocationSearchQuery, 'state' | 'district'> = {},
+  ): Promise<LocationAutocompleteSuggestion[]> => {
+    const params: Record<string, string> = { q: q.trim() };
+    const state = options.state?.trim();
+    const district = options.district?.trim();
+    if (state) {
+      params.state = state;
+    }
+    if (district) {
+      params.district = district;
+    }
+    devLog(`${LOG_TAG} GET /locations/autocomplete`, { queryLength: q.trim().length });
+    return unwrapApiResponse(
+      apiClient.get<ApiResponse<LocationAutocompleteSuggestion[]>>('/locations/autocomplete', {
         params,
       }),
     );

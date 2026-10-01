@@ -1,5 +1,9 @@
 import { ApiError } from '../../api/types';
-import { enquiryErrorMessage, isListingUnavailableError } from '../enquiryErrors';
+import {
+  enquiryErrorMessage,
+  isInquiryCreditsRequiredError,
+  isListingUnavailableError,
+} from '../enquiryErrors';
 
 describe('enquiryErrors', () => {
   it('maps raw space-not-found UUID messages to the listing copy', () => {
@@ -18,6 +22,14 @@ describe('enquiryErrors', () => {
     expect(isListingUnavailableError(error)).toBe(false);
     expect(enquiryErrorMessage(error, 'fallback', 'unavailable')).toBe(
       'Enter a valid email address.',
+    );
+  });
+
+  it('maps credit-limit errors to a clear fallback when message is empty', () => {
+    const error = new ApiError('  ', 402, { errorCode: 'WEB_FREE_LIMIT_REACHED' });
+    expect(isInquiryCreditsRequiredError(error)).toBe(true);
+    expect(enquiryErrorMessage(error, 'fallback', 'unavailable')).toBe(
+      'Your free enquiries are used. Buy credits or wait until tomorrow.',
     );
   });
 });

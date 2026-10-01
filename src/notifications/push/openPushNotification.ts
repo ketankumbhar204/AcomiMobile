@@ -66,6 +66,22 @@ export async function openPushNotification(
     return;
   }
 
+  if (payload.type === 'INQUIRY_CREDIT_PAYMENT_PENDING' && isPlatformAdmin(auth.user?.systemRole)) {
+    setPendingPushPayload(payload);
+    useAdminStore.getState().setAdminMode(true);
+    markReadBestEffort(payload);
+    return;
+  }
+
+  if (
+    payload.type === 'INQUIRY_CREDIT_PAYMENT_APPROVED' ||
+    payload.type === 'INQUIRY_CREDIT_PAYMENT_REJECTED'
+  ) {
+    markReadBestEffort(payload);
+    navigateMainStack('InquiryCredits', undefined);
+    return;
+  }
+
   if (
     payload.type === 'CONTACT_ENQUIRY_SUBMITTED' ||
     payload.type === 'CONTACT_ENQUIRY_SHARED' ||
