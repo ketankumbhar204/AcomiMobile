@@ -2,8 +2,8 @@
 
     <!-- Base application theme. -->
     <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
-        <!-- Mint splash so reloads never flash the system black window. -->
-        <item name="android:windowBackground">@color/app_background</item>
+        <!-- Branded flash while the process starts, before the JS splash. -->
+        <item name="android:windowBackground">@drawable/splash_background</item>
         <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
     </style>
 

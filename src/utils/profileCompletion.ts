@@ -35,6 +35,10 @@ export function isUserProfileComplete(user: UserResponse | null | undefined): bo
     return true;
   }
 
+  if (user.profileCompleted === false) {
+    return false;
+  }
+
   if (isProfileStatusComplete(user.profileStatus)) {
     return true;
   }

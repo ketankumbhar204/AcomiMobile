@@ -12,9 +12,11 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { ChefHat, IndianRupee, MapPin, UserRound } from 'lucide-react-native';
+import { ChefHat, IndianRupee, UserRound } from 'lucide-react-native';
 import { adminApi } from '../../api/adminApi';
 import type { AdminCreateMessRegistrationRequest } from '../../api/types';
+import { PriceBasisPicker } from '../../components/ui/PriceBasisPicker';
+import type { ListingPriceBasis } from '../../utils/priceBasis';
 import {
   AdminFormHero,
   AdminFormSection,
@@ -22,7 +24,13 @@ import {
   AdminTestLeadToggle,
   adminErrorBanner,
 } from '../../components/admin';
+import { AddressLocationFields } from '../../components/location/AddressLocationFields';
 import { FormInput } from '../../components/ui';
+import {
+  EMPTY_ADDRESS_CAPTURE,
+  addressCaptureIssue,
+  captureFromParts,
+} from '../../utils/locationAutocomplete';
 import { StickyFormActions } from '../../components/progressive';
 import type { AdminStackParamList } from '../../navigation/types';
 import { colors, spacing } from '../../theme';
@@ -51,12 +59,9 @@ export function AdminAddMessScreen() {
   const [ownerName, setOwnerName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
   const [alternateMobileNumber, setAlternateMobileNumber] = useState('');
-  const [addressLine, setAddressLine] = useState('');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
-  const [pincode, setPincode] = useState('');
-  const [mapUrl, setMapUrl] = useState('');
+  const [location, setLocation] = useState(EMPTY_ADDRESS_CAPTURE);
   const [monthlyPrice, setMonthlyPrice] = useState('');
+  const [monthlyPriceBasis, setMonthlyPriceBasis] = useState<ListingPriceBasis>('PER_UNIT');
   const [mealPrice, setMealPrice] = useState('');
   const [description, setDescription] = useState('');
   const [capacityEstimate, setCapacityEstimate] = useState('');
@@ -84,11 +89,16 @@ export function AdminAddMessScreen() {
       setError(t('admin.mess.errors.alternateDifferent'));
       return;
     }
-    if (pincode.trim() && !isValidPincode(pincode.trim())) {
+    const locationIssue = addressCaptureIssue(location, { allowManual: true });
+    if (locationIssue === 'selection') {
+      setError(t('locationCapture.selectionRequired', { defaultValue: 'Select a location from the suggestions.' }));
+      return;
+    }
+    if (locationIssue === 'pincode' || (location.pincode.trim() && !isValidPincode(location.pincode.trim()))) {
       setError(t('admin.mess.errors.pincode'));
       return;
     }
-    if (mapUrl.trim() && !isValidMapUrl(mapUrl)) {
+    if (location.mapUrl.trim() && !isValidMapUrl(location.mapUrl)) {
       setError(t('admin.mess.errors.mapUrl'));
       return;
     }
@@ -128,11 +138,11 @@ export function AdminAddMessScreen() {
     const owner = optionalText(ownerName);
     const mobile = optionalText(mobileNumber);
     const alternateMobile = optionalText(alternateMobileNumber);
-    const address = optionalText(addressLine);
-    const cityValue = optionalText(city);
-    const stateValue = optionalText(state);
-    const pincodeValue = optionalText(pincode);
-    const map = optionalText(mapUrl);
+    const address = optionalText(location.selected ? location.address : location.query);
+    const cityValue = optionalText(location.city);
+    const stateValue = optionalText(location.state);
+    const pincodeValue = optionalText(location.pincode);
+    const map = optionalText(location.mapUrl);
     const descriptionValue = optionalText(description);
     if (name) payload.messName = name;
     if (owner) payload.ownerName = owner;
@@ -144,7 +154,12 @@ export function AdminAddMessScreen() {
     if (stateValue) payload.state = stateValue;
     if (pincodeValue) payload.pincode = pincodeValue;
     if (map) payload.mapUrl = map;
+    if (location.latitude != null && location.longitude != null) {
+      payload.latitude = location.latitude;
+      payload.longitude = location.longitude;
+    }
     if (monthly !== undefined) payload.monthlyPrice = monthly;
+    payload.monthlyPriceBasis = monthlyPriceBasis;
     if (meal !== undefined) payload.mealPrice = meal;
     if (capacity !== undefined) payload.capacityEstimate = capacity;
     if (testLead) payload.testLead = true;
@@ -239,38 +254,16 @@ export function AdminAddMessScreen() {
                 title={t('admin.common.location')}
                 description={t('admin.common.locationHint')}>
                 <AdminSavedAddressPicker
-                  value={{ addressLine, city, state, pincode, mapUrl }}
-                  onChange={next => {
-                    setAddressLine(next.addressLine);
-                    setCity(next.city);
-                    setState(next.state);
-                    setPincode(next.pincode);
-                    setMapUrl(next.mapUrl);
+                  value={{
+                    addressLine: location.address,
+                    city: location.city,
+                    state: location.state,
+                    pincode: location.pincode,
+                    mapUrl: location.mapUrl,
                   }}
+                  onChange={next => setLocation(captureFromParts(next))}
                 />
-                <FormInput
-                  label={t('admin.common.address')}
-                  value={addressLine}
-                  onChangeText={setAddressLine}
-                  leadingIcon={MapPin}
-                />
-                <FormInput label={t('admin.common.city')} value={city} onChangeText={setCity} />
-                <FormInput label={t('admin.common.state')} value={state} onChangeText={setState} />
-                <FormInput
-                  label={t('admin.common.pincode')}
-                  value={pincode}
-                  onChangeText={setPincode}
-                  keyboardType="number-pad"
-                  maxLength={6}
-                />
-                <FormInput
-                  label={t('admin.common.mapLink')}
-                  value={mapUrl}
-                  onChangeText={setMapUrl}
-                  placeholder={t('admin.common.mapLinkPlaceholder')}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
+                <AddressLocationFields value={location} onChange={setLocation} showBuildingName={false} allowManual />
               </AdminFormSection>
 
               <AdminFormSection title={t('admin.common.pricingOptions')}>
@@ -281,6 +274,7 @@ export function AdminAddMessScreen() {
                   keyboardType="numeric"
                   leadingIcon={IndianRupee}
                 />
+                <PriceBasisPicker value={monthlyPriceBasis} onChange={setMonthlyPriceBasis} />
                 <FormInput
                   label={t('admin.mess.mealPriceLabel')}
                   value={mealPrice}

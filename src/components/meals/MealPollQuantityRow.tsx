@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Check } from 'lucide-react-native';
 import type { MealPollOption } from '../../api/types';
 import { FoodTypeIcon } from '../ui/FoodTypeIcon';
 import { colors, radius, spacing, typography } from '../../theme';
@@ -102,14 +103,13 @@ export function MealPollQuantityRow({
           selected && !readOnly && styles.checkboxSelected,
           selected && readOnly && styles.checkboxSelectedReadOnly,
         ]}>
-        <Text
-          style={[
-            styles.checkboxMark,
-            selected && !readOnly && styles.checkboxMarkSelected,
-            selected && readOnly && styles.checkboxMarkSelectedReadOnly,
-          ]}>
-          {selected ? '✓' : ''}
-        </Text>
+        {selected ? (
+          <Check
+            size={12}
+            color={readOnly ? colors.primaryDark : colors.white}
+            strokeWidth={3}
+          />
+        ) : null}
       </View>
 
       <View style={styles.body}>

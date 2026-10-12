@@ -9,11 +9,17 @@ type MemberListCardProps = {
   iconLabel?: string;
   onPress: () => void;
   roleChip?: React.ReactNode;
+  contactLabel?: string;
   statusChip?: React.ReactNode;
   statusLabel?: string;
   acomiLabel?: string;
   acomiActive?: boolean;
   footerLine?: string;
+  paymentLine?: {
+    text: string;
+    tone: 'due' | 'clear' | 'review';
+  };
+  onPaymentPress?: () => void;
   foodLine?: {
     label: string;
     manageControl?: React.ReactNode;
@@ -25,11 +31,14 @@ export function MemberListCard({
   iconLabel,
   onPress,
   roleChip,
+  contactLabel,
   statusChip,
   statusLabel,
   acomiLabel,
   acomiActive = false,
   footerLine,
+  paymentLine,
+  onPaymentPress,
   foodLine,
 }: MemberListCardProps) {
   const hasStatusLine = Boolean(statusLabel || acomiLabel);
@@ -40,7 +49,7 @@ export function MemberListCard({
       android_ripple={{ color: 'rgba(18, 140, 126, 0.08)' }}
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
       accessibilityRole="button"
-      accessibilityLabel={title}>
+      accessibilityLabel={contactLabel ? `${title}, ${contactLabel}` : title}>
       <DashboardAvatar label={iconLabel ?? title} />
       <View style={styles.body}>
         <View style={styles.titleRow}>
@@ -48,7 +57,14 @@ export function MemberListCard({
             <Text style={styles.title} numberOfLines={1}>
               {title}
             </Text>
-            {roleChip ? <View style={styles.roleSlot}>{roleChip}</View> : null}
+            {roleChip || contactLabel ? (
+              <View style={styles.roleRow}>
+                {roleChip ? <View style={styles.roleSlot}>{roleChip}</View> : null}
+                {contactLabel ? (
+                  <Text style={styles.contactNumber}>{`·  ${contactLabel}`}</Text>
+                ) : null}
+              </View>
+            ) : null}
           </View>
           <View style={styles.trailing}>
             {statusChip}
@@ -87,6 +103,26 @@ export function MemberListCard({
               </View>
             ) : null}
           </View>
+        ) : null}
+
+        {paymentLine ? (
+          <Pressable
+            onPress={onPaymentPress}
+            disabled={!onPaymentPress}
+            hitSlop={6}
+            accessibilityRole={onPaymentPress ? 'button' : 'text'}
+            accessibilityLabel={paymentLine.text}>
+            <Text
+              style={[
+                styles.paymentLine,
+                paymentLine.tone === 'due' && styles.paymentDue,
+                paymentLine.tone === 'clear' && styles.paymentClear,
+                paymentLine.tone === 'review' && styles.paymentReview,
+              ]}
+              numberOfLines={1}>
+              {paymentLine.text}
+            </Text>
+          </Pressable>
         ) : null}
 
         {footerLine ? (
@@ -142,8 +178,24 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textPrimary,
   },
+  roleRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: spacing.xs,
+    maxWidth: '100%',
+  },
   roleSlot: {
     flexShrink: 0,
+  },
+  contactNumber: {
+    ...typography.caption,
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textSecondary,
+    flexShrink: 1,
+    flexGrow: 1,
+    minWidth: 96,
   },
   trailing: {
     flexDirection: 'row',
@@ -202,6 +254,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
+  },
+  paymentLine: {
+    ...typography.caption,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  paymentDue: {
+    color: '#D97706',
+  },
+  paymentClear: {
+    color: colors.primaryDark,
+  },
+  paymentReview: {
+    color: '#2563EB',
   },
   footerLine: {
     ...typography.caption,

@@ -10,14 +10,24 @@ import { Button } from '../ui';
 type PaymentReceivedConfirmModalProps = {
   visible: boolean;
   payments: SpacePaymentResponse[];
+  spaceName?: string | null;
   loading?: boolean;
   onClose: () => void;
   onConfirm: () => void;
 };
 
+function periodLabel(month?: string | null): string | null {
+  if (!month) return null;
+  const match = /^(\d{4})-(\d{2})$/.exec(month);
+  if (!match) return month;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, 1);
+  return date.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+}
+
 export function PaymentReceivedConfirmModal({
   visible,
   payments,
+  spaceName,
   loading = false,
   onClose,
   onConfirm,
@@ -26,7 +36,13 @@ export function PaymentReceivedConfirmModal({
   const primary = payments[0];
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      presentationStyle="overFullScreen"
+      onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.card}>
           <View style={styles.header}>
@@ -44,16 +60,23 @@ export function PaymentReceivedConfirmModal({
           {primary ? (
             <View style={styles.summary}>
               <Text style={styles.member}>{primary.memberName}</Text>
-              {payments.map(payment => (
-                <Text key={payment.paymentId} style={styles.line}>
-                  {payment.title}
-                  {' · '}
-                  {formatPaymentAmount(payment.amount, payment.currencyCode)}
-                </Text>
-              ))}
-              {primary.targetLabel ? (
-                <Text style={styles.target}>{primary.targetLabel}</Text>
-              ) : null}
+              {spaceName ? <Text style={styles.line}>{spaceName}</Text> : null}
+              {payments.map(payment => {
+                const outstanding = payment.outstandingAmount ?? payment.amount;
+                const period = periodLabel(payment.month);
+                return (
+                  <View key={payment.paymentId}>
+                    <Text style={styles.line}>{payment.title}</Text>
+                    {payment.targetLabel ? (
+                      <Text style={styles.line}>{payment.targetLabel}</Text>
+                    ) : null}
+                    {period ? <Text style={styles.line}>{period}</Text> : null}
+                    <Text style={styles.line}>
+                      {formatPaymentAmount(outstanding, payment.currencyCode)}
+                    </Text>
+                  </View>
+                );
+              })}
             </View>
           ) : null}
 

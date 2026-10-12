@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { X } from 'lucide-react-native';
 import { colors, radius, spacing, typography } from '../../theme';
 import { formatComboNameWithPrice } from '../../utils/comboPrice';
 
@@ -57,7 +58,7 @@ export function ComboItemsPopup({
               {formatComboNameWithPrice(comboName, price, currencyCode)}
             </Text>
             <Pressable onPress={onClose} hitSlop={12}>
-              <Text style={styles.closeBtn}>✕</Text>
+              <X size={18} color={colors.textPrimary} strokeWidth={2.2} />
             </Pressable>
           </View>
 

@@ -1,11 +1,12 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ChevronDown, ChevronRight, type LucideIcon } from 'lucide-react-native';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 
 type ModuleActionCardProps = {
   title: string;
   subtitle?: string;
-  icon?: string;
+  Icon?: LucideIcon;
   onPress?: () => void;
   disabled?: boolean;
   comingSoonLabel?: string;
@@ -18,7 +19,7 @@ type ModuleActionCardProps = {
 export function ModuleActionCard({
   title,
   subtitle,
-  icon,
+  Icon,
   onPress,
   disabled = false,
   comingSoonLabel,
@@ -40,9 +41,9 @@ export function ModuleActionCard({
       ]}
       accessibilityRole="button"
       accessibilityState={{ disabled }}>
-      {icon ? (
+      {Icon ? (
         <View style={[styles.iconWrap, disabled && styles.iconWrapDisabled, highlight && styles.iconWrapHighlight]}>
-          <Text style={styles.icon}>{icon}</Text>
+          <Icon size={18} color={highlight ? '#D97706' : colors.primaryDark} strokeWidth={2.2} />
         </View>
       ) : null}
       <View style={styles.body}>
@@ -62,7 +63,11 @@ export function ModuleActionCard({
         </View>
       ) : null}
       {!disabled ? (
-        <Text style={styles.chevron}>{trailing === 'forward' ? '›' : '▾'}</Text>
+        trailing === 'forward' ? (
+          <ChevronRight size={18} color={colors.muted} strokeWidth={2.4} />
+        ) : (
+          <ChevronDown size={18} color={colors.muted} strokeWidth={2.4} />
+        )
       ) : null}
     </TouchableOpacity>
   );
@@ -113,9 +118,6 @@ const styles = StyleSheet.create({
   iconWrapHighlight: {
     backgroundColor: '#FEF3C7',
   },
-  icon: {
-    fontSize: 18,
-  },
   body: {
     flex: 1,
     minWidth: 0,
@@ -157,10 +159,5 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontWeight: '700',
     fontSize: 12,
-  },
-  chevron: {
-    fontSize: 14,
-    color: colors.muted,
-    marginTop: 4,
   },
 });

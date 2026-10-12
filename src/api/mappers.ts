@@ -44,6 +44,8 @@ export function spaceDetailsResponseToSpace(
     name: response.name,
     type: response.type,
     address: response.address ?? null,
+    latitude: response.latitude ?? null,
+    longitude: response.longitude ?? null,
     contactNumber: response.contactNumber ?? null,
     isActive: true,
     foodIncludedInRent: response.foodIncludedInRent,

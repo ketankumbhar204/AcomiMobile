@@ -51,6 +51,43 @@ export function platesForSingleSelectOption(option?: { optionType?: string } | n
   return isMenuEntryOption(option) ? 1 : 0;
 }
 
+export type MealPollChoice = 'unanswered' | 'selected' | 'unavailable';
+
+type PollChoiceInput = {
+  mySelectedOptionId?: string | null;
+  mySelections?: { optionId?: string; quantity: number }[];
+  options: { id: string; optionType?: string }[];
+};
+
+/** Published menu options are not a tenant selection. Not available is its own saved choice. */
+export function resolveMealPollChoice(
+  poll: PollChoiceInput | null | undefined,
+  multiQuantity: boolean,
+): MealPollChoice {
+  if (!poll) {
+    return 'unanswered';
+  }
+  if (multiQuantity) {
+    const active = (poll.mySelections ?? []).filter(row => row.quantity > 0);
+    if (active.length === 0) {
+      return 'unanswered';
+    }
+    const chosen = active.map(row => poll.options.find(option => option.id === row.optionId));
+    if (chosen.length > 0 && chosen.every(option => option?.optionType === 'NOT_AVAILABLE')) {
+      return 'unavailable';
+    }
+    return 'selected';
+  }
+  if (!poll.mySelectedOptionId) {
+    return 'unanswered';
+  }
+  const option = poll.options.find(row => row.id === poll.mySelectedOptionId);
+  if (!option) {
+    return 'unanswered';
+  }
+  return option.optionType === 'NOT_AVAILABLE' ? 'unavailable' : 'selected';
+}
+
 function sumLineAmounts(items: MealSummaryLineItem[]): number {
   return items.reduce((sum, item) => {
     if (item.lineAmount != null) {

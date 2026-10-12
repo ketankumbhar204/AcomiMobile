@@ -125,14 +125,15 @@ export function formatSlotLine(
 ): { prefix: string; detail: string; amount: string | null } {
   const prefix = mealSlotPrefix(slot.mealType);
   const amount = formatComboPrice(slot.slotAmount, slot.currencyCode);
+  const label = slot.selectionLabel?.trim();
 
-  if (slot.status === 'ACCEPTED' && slot.selectionLabel) {
+  if (label && (slot.status === 'ACCEPTED' || slot.status === 'PENDING')) {
     const qtySuffix =
       slot.quantity != null && slot.quantity > 1 ? ` ×${slot.quantity}` : slot.quantity === 1 ? ' ×1' : '';
     return {
       prefix,
-      detail: `${slot.selectionLabel}${qtySuffix}`,
-      amount,
+      detail: `${label}${qtySuffix}`,
+      amount: slot.status === 'ACCEPTED' ? amount : null,
     };
   }
 

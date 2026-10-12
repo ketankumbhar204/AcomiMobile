@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Check } from 'lucide-react-native';
 import { memberApi } from '../../api/memberApi';
 import { accommodationApi } from '../../api/accommodationApi';
 import type {
@@ -175,7 +176,7 @@ function SelectRow({
         ]}>
         {selected && !disabled ? (
           multi ? (
-            <Text style={styles.checkboxMark}>✓</Text>
+            <Check size={14} color={colors.white} strokeWidth={3} />
           ) : (
             <View style={styles.radioInner} />
           )
@@ -1396,6 +1397,8 @@ export function HierarchyOccupancyPickerModal({
                 current: contractFooterPhase === 'continue' ? 1 : 2,
                 total: 2,
               })}
+              stepCurrent={contractFooterPhase === 'continue' ? 1 : 2}
+              stepTotal={2}
               progressLine={
                 contractFooterPhase === 'continue'
                   ? t('progressiveWorkflow.occupancy.progressRentNext')

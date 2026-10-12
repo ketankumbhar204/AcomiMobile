@@ -1,5 +1,6 @@
 import {
   filterActivityDays,
+  formatSlotLine,
   resolveActivityPaymentDisplay,
 } from '../memberMealActivityHistory';
 import type { MemberMealActivityDay } from '../../api/types';
@@ -47,6 +48,48 @@ describe('resolveActivityPaymentDisplay', () => {
     expect(
       resolveActivityPaymentDisplay(day('2026-07-13', { paymentStatus: 'PENDING' }), '2026-07-19'),
     ).toBe('OVERDUE');
+  });
+});
+
+describe('formatSlotLine', () => {
+  const labels: Record<string, string> = {
+    ACCEPTED: 'Accepted',
+    PENDING: 'Pending response',
+    SKIPPED: 'Skipped',
+    NO_MENU: 'No menu published',
+    INACTIVE: 'Inactive',
+  };
+
+  it('shows the saved selection instead of a pending label', () => {
+    expect(
+      formatSlotLine(
+        {
+          mealType: 'BREAKFAST',
+          status: 'ACCEPTED',
+          selectionLabel: 'Idli',
+          quantity: 1,
+        },
+        status => labels[status],
+      ).detail,
+    ).toBe('Idli ×1');
+  });
+
+  it('labels a published menu with no response as pending', () => {
+    expect(
+      formatSlotLine(
+        { mealType: 'LUNCH', status: 'PENDING' },
+        status => labels[status],
+      ).detail,
+    ).toBe('Pending response');
+  });
+
+  it('labels a skip separately from an unanswered meal', () => {
+    expect(
+      formatSlotLine(
+        { mealType: 'DINNER', status: 'SKIPPED' },
+        status => labels[status],
+      ).detail,
+    ).toBe('Skipped');
   });
 });
 

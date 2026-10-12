@@ -6,13 +6,7 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import {
-  ChevronRight,
-  History,
-  TriangleAlert,
-  UserRound,
-  WalletCards,
-} from 'lucide-react-native';
+import { History, TriangleAlert, WalletCards } from 'lucide-react-native';
 import { PaymentServiceUnavailableError, paymentsApi } from '../../api/paymentsApi';
 import { mealsApi } from '../../api/mealsApi';
 import type {
@@ -21,9 +15,9 @@ import type {
   PaymentTimelineEventResponse,
   SpacePaymentResponse,
 } from '../../api/types';
-import { MealFormHero } from '../../components/meals/MealFormHero';
 import { MealSelectionSummary } from '../../components/meals/MealSelectionSummary';
 import { PaymentHistoryTimeline } from '../../components/payments/PaymentHistoryTimeline';
+import { PaymentRecordDetails } from '../../components/payments/PaymentRecordDetails';
 import { PaymentNeedsUpdatePanel } from '../../components/payments/PaymentNeedsUpdatePanel';
 import { PaymentProofPreviewModal } from '../../components/payments/PaymentProofPreviewModal';
 import { PaymentReceivedConfirmModal } from '../../components/payments/PaymentReceivedConfirmModal';
@@ -35,15 +29,14 @@ import { UniversalPaymentProofModal } from '../../components/payments/UniversalP
 import { StickyFormActions } from '../../components/progressive';
 import { Button, EmptyState, HeaderBackButton, Screen, Skeleton, SkeletonCard } from '../../components/ui';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
+import { useSpaceStore } from '../../store/spaceStore';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { canManagePayments } from '../../utils/dashboardFinancial';
 import { canOwnerMarkPaymentReceived } from '../../utils/ownerPaymentCardActions';
-import {
-  paymentReminderToastKey,
-  resolvePaymentReminderToastKind,
-} from '../../utils/paymentReminderFeedback';
+import { paymentReminderToastKey } from '../../utils/paymentReminderFeedback';
+import { openReminderWhatsApp } from '../../utils/paymentReminderLaunch';
 import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
 import { invalidatePaymentsMonthCaches } from '../../utils/paymentsMonthCache';
 import {
@@ -52,6 +45,10 @@ import {
   displayMealPaymentTitle,
 } from '../../utils/mealSelectionSummary';
 import { buildPaymentDetailMetaRows } from '../../utils/paymentDetailMeta';
+import {
+  paymentDetailContentGutter,
+  paymentDetailScreenPadding,
+} from './paymentDetailLayout';
 import { resolvePaymentMealDetailDates } from '../../utils/paymentMealDayScope';
 import { formatBillingPeriod } from '../../utils/paymentProofPolicy';
 import { formatPaymentAmount } from '../../utils/paymentHistory';
@@ -80,6 +77,13 @@ export function PaymentDetailScreen() {
     route.params;
   const showToast = useToastStore(state => state.showToast);
   const permissions = useSpacePermissions(spaceId);
+  const spaceName = useSpaceStore(state =>
+    state.currentSpace?.spaceId === spaceId
+      ? state.currentSpace.spaceName
+      : state.selectedSpace?.id === spaceId
+        ? state.selectedSpace.name
+        : null,
+  );
   const isOwnerOperator = canManagePayments(permissions.membershipRole);
 
   const [payment, setPayment] = useState<SpacePaymentResponse | null>(null);
@@ -277,7 +281,29 @@ export function PaymentDetailScreen() {
     setSendingReminder(true);
     try {
       const result = await paymentsApi.sendPaymentReminder(spaceId, paymentId);
-      showToast(t(paymentReminderToastKey(resolvePaymentReminderToastKind(result))));
+      const launch = await openReminderWhatsApp(result);
+      if (result.inAppFailureCode === 'NOTIFICATION_FAILED') {
+        showToast(t('paymentCollection.reminder.notificationFailed'));
+      } else if (result.inAppFailureCode === 'MEMBER_NOT_ON_ACOMI') {
+        showToast(t('paymentCollection.reminder.memberNotOnAcomi'));
+      } else if (result.inAppRecorded && launch !== 'opened') {
+        showToast(t('paymentCollection.reminder.inAppSaved'));
+      }
+      if (launch === 'opened') {
+        showToast(
+          t(
+            result.inAppRecorded
+              ? 'paymentCollection.reminder.openedWhatsApp'
+              : 'paymentCollection.reminder.whatsAppReady',
+          ),
+        );
+      } else if (launch === 'copied') {
+        showToast(t('paymentCollection.reminder.copied'));
+      } else if (launch === 'invalid') {
+        showToast(t(paymentReminderToastKey('invalidRecipient')));
+      } else {
+        showToast(t('paymentCollection.reminder.whatsAppFailed'));
+      }
       const timelineResponse = await paymentsApi.getPaymentTimeline(spaceId, paymentId);
       setTimeline(timelineResponse.events);
     } catch (err) {
@@ -425,34 +451,18 @@ export function PaymentDetailScreen() {
         style={styles.flex}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-        <MealFormHero
-          icon={WalletCards}
-          eyebrow={t('paymentCollection.detail.eyebrow', { defaultValue: 'Payment' })}
-          heading={displayTitle}
-          subheading={formatPaymentAmount(payment.amount, payment.currencyCode)}
-          compact
+        <PaymentRecordDetails
+          payment={payment}
+          memberName={memberName}
+          spaceName={spaceName}
         />
 
         {isOwnerOperator && memberId ? (
           <Pressable
             onPress={openMemberProfile}
-            style={({ pressed }) => [styles.memberCard, pressed && styles.memberCardPressed]}
             accessibilityRole="button"
             accessibilityLabel={t('paymentCollection.detail.viewMember')}>
-            <View style={styles.memberAvatar}>
-              <UserRound size={18} color={colors.primaryDark} strokeWidth={2.2} />
-            </View>
-            <View style={styles.memberMain}>
-              <Text style={styles.memberName} numberOfLines={1}>
-                {memberName || t('paymentCollection.memberPayments.title')}
-              </Text>
-              <Text style={styles.memberRole} numberOfLines={1}>
-                {permissions.spaceType === 'MESS'
-                  ? t('spaces.roles.CUSTOMER')
-                  : t('spaces.roles.TENANT')}
-              </Text>
-            </View>
-            <ChevronRight size={18} color={colors.muted} strokeWidth={2.4} />
+            <Text style={styles.memberLink}>{t('paymentCollection.detail.viewMember')}</Text>
           </Pressable>
         ) : null}
 
@@ -510,6 +520,13 @@ export function PaymentDetailScreen() {
             <Text style={styles.rejectionText}>
               {t('paymentCollection.rejectedReason', { reason: ownerNotes })}
             </Text>
+          ) : null}
+
+          {payment.description?.trim() ? (
+            <View style={styles.messageBox}>
+              <Text style={styles.messageLabel}>{t('paymentCollection.addRecord.description')}</Text>
+              <Text style={styles.messageText}>{payment.description.trim()}</Text>
+            </View>
           ) : null}
 
           {remarks ? (
@@ -728,17 +745,21 @@ export function PaymentDetailScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+    padding: paymentDetailScreenPadding,
   },
   loadingPad: {
     flex: 1,
-    padding: spacing.lg,
+    padding: paymentDetailScreenPadding,
+    paddingTop: spacing.md,
+    paddingHorizontal: paymentDetailContentGutter,
   },
   skeletonWrap: {
     gap: spacing.md,
   },
   scrollContent: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xl,
+    paddingTop: spacing.md,
+    paddingHorizontal: paymentDetailContentGutter,
+    paddingBottom: spacing.lg,
     gap: spacing.md,
   },
   flex: {
@@ -746,6 +767,10 @@ const styles = StyleSheet.create({
   },
   stickyStack: {
     gap: spacing.sm,
+  },
+  memberLink: {
+    ...typography.bodyStrong,
+    color: colors.primaryDark,
   },
   memberCard: {
     flexDirection: 'row',

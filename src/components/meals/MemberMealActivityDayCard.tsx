@@ -47,10 +47,12 @@ export function MemberMealActivityDayCard({
   const slotLabel = useMemo(
     () => (status: string) => {
       switch (status) {
+        case 'ACCEPTED':
+          return t('meals.activity.statusAccepted');
         case 'PENDING':
-          return t('meals.activity.history.notSelected');
+          return t('meals.activity.daySheet.statusPending');
         case 'SKIPPED':
-          return t('meals.activity.history.notSelected');
+          return t('meals.activity.daySheet.statusSkipped');
         case 'NO_MENU':
           return t('meals.activity.statusNoMenu');
         case 'INACTIVE':

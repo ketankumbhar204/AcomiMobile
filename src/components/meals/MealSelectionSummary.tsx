@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { ChevronRight } from 'lucide-react-native';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { formatComboPrice } from '../../utils/comboPrice';
 import { formatMenuDate } from '../../utils/mealDates';
@@ -72,7 +73,7 @@ export function MealSelectionSummary({
             </Text>
             <View style={styles.dayHeaderTrailing}>
               {dayTotalLabel ? <Text style={styles.dayTotal}>{dayTotalLabel}</Text> : null}
-              {dayPressable ? <Text style={styles.dayChevron}>›</Text> : null}
+              {dayPressable ? <ChevronRight size={18} color={colors.muted} strokeWidth={2.4} /> : null}
             </View>
           </View>
         ) : null;

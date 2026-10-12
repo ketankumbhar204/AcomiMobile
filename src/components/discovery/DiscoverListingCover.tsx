@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { resolveListingCover } from '../../utils/representativeImage';
@@ -10,6 +10,8 @@ type DiscoverListingCoverProps = {
   listingImageUrl?: string | null;
   style?: StyleProp<ViewStyle>;
   accessibilityName?: string;
+  /** Listing cards keep the image clean. Detail screens can still show the label. */
+  showRepresentativeLabel?: boolean;
 };
 
 export function DiscoverListingCover({
@@ -18,9 +20,20 @@ export function DiscoverListingCover({
   listingImageUrl,
   style,
   accessibilityName,
+  showRepresentativeLabel = true,
 }: DiscoverListingCoverProps) {
   const { t } = useTranslation();
-  const cover = resolveListingCover({ listingId, spaceType, listingImageUrl });
+  const [photoFailed, setPhotoFailed] = useState(false);
+
+  useEffect(() => {
+    setPhotoFailed(false);
+  }, [listingId, listingImageUrl, spaceType]);
+
+  const cover = resolveListingCover({
+    listingId,
+    spaceType,
+    listingImageUrl: photoFailed ? undefined : listingImageUrl,
+  });
   const categoryLabel = t(`spaces.findPlace.representativeCategory.${cover.category}`);
   const accessibilityLabel =
     cover.kind === 'representative'
@@ -33,8 +46,13 @@ export function DiscoverListingCover({
         source={cover.source}
         style={styles.fill}
         accessibilityLabel={accessibilityLabel}
+        onError={() => {
+          if (cover.kind === 'listing') {
+            setPhotoFailed(true);
+          }
+        }}
       />
-      {cover.kind === 'representative' ? (
+      {showRepresentativeLabel && cover.kind === 'representative' ? (
         <View style={styles.badge} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
           <Text style={styles.badgeText}>{t('spaces.findPlace.representativeImage')}</Text>
         </View>

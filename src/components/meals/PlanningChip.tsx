@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { X } from 'lucide-react-native';
 import { colors, radius, spacing, typography } from '../../theme';
 
 export type PlanningChipVariant = 'COMBO' | 'ITEM';
@@ -30,7 +31,7 @@ export function PlanningChip({ label, variant, onPress, onRemove }: PlanningChip
       </Pressable>
       {onRemove ? (
         <Pressable onPress={onRemove} hitSlop={8} style={styles.chipRemove}>
-          <Text style={styles.chipRemoveText}>✕</Text>
+          <X size={12} color={colors.muted} strokeWidth={2.4} />
         </Pressable>
       ) : null}
     </View>

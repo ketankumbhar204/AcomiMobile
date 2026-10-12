@@ -402,6 +402,8 @@ export function RaiseComplaintScreen() {
               current: progressivePhase === 'continue' ? 1 : 2,
               total: 2,
             })}
+            stepCurrent={progressivePhase === 'continue' ? 1 : 2}
+            stepTotal={2}
             progressLine={
               progressivePhase === 'continue'
                 ? t('progressiveWorkflow.raiseComplaint.progressDetailsNext')

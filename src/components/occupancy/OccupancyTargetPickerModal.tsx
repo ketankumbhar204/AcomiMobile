@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { ChevronRight } from 'lucide-react-native';
 import { accommodationApi } from '../../api/accommodationApi';
 import type {
   BuildingResponse,
@@ -832,7 +833,7 @@ export function OccupancyTargetPickerModal({
                                     {formatOccupancySearchResultSubtitle(result)}
                                   </Text>
                                 </View>
-                                <Text style={styles.pickMark}>›</Text>
+                                <ChevronRight size={18} color={colors.muted} strokeWidth={2.4} />
                               </Pressable>
                             ))}
                           </View>
@@ -1010,7 +1011,7 @@ export function OccupancyTargetPickerModal({
                               <Text style={styles.rowTitle}>{unit.unitName}</Text>
                               <AccommodationStatusBadge status={unit.status} />
                             </View>
-                            <Text style={styles.pickMark}>›</Text>
+                            <ChevronRight size={18} color={colors.muted} strokeWidth={2.4} />
                           </Pressable>
                         ))}
                         {browseUnits.length === 0 ? (

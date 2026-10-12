@@ -2138,6 +2138,7 @@
       "statusPastPartial": "Past selection incomplete",
       "selectedTitle": "Your Meals Are Selected",
       "youHaveSelected": "You have selected",
+      "notAvailable": "Not available",
       "pendingTitle": "Meal Selection Pending",
       "menusReady": "{{meals}} ready",
       "menusPast": "{{meals}} menus",
@@ -2444,6 +2445,11 @@
     "dayMeals": {
       "detailTitle": "Meals",
       "totalAmount": "Total amount",
+      "amountDueLabel": "Amount due",
+      "amountDue": "Amount due {{amount}}",
+      "amountPaid": "Paid {{amount}}",
+      "amountRemaining": "Remaining {{amount}}",
+      "amountUnavailable": "Meal price not set",
       "mealsFallback": "Meals",
       "batchId": "Batch {{id}}",
       "paymentReference": "Ref {{id}}",
@@ -2901,7 +2907,9 @@
         "shared": "Shared",
         "updated": "Updated since last share",
         "action": "Share today's menu",
-        "subtitle": "Share Breakfast, Lunch and Dinner together"
+        "subtitle": "Share Breakfast, Lunch and Dinner together",
+        "reshare": "Reshare today's menu",
+        "emptyHint": "Plan at least one meal before sharing."
       },
       "selector": {
         "notPlanned": "Not planned",
@@ -3108,6 +3116,8 @@
       "shareSelectAtLeastOne": "Select at least one meal to share.",
       "sharePublishedSlots": "{{count}} meal(s) ready",
       "shareHint": "Sharing opens in-app polls automatically. Members pick the same numbered options in the app.",
+      "reviewSaveTitle": "Review meal",
+      "reviewSaveHint": "Confirm to save this meal and open the poll. Members can respond in the app. WhatsApp is not opened.",
       "copyMessage": "Share menu",
       "shareEmpty": "No menus planned for this date yet.",
       "tapToPlan": "Tap to plan {{meal}}",
@@ -3946,6 +3956,8 @@
       "changePlan": "Change plan",
       "savePlan": "Save plan",
       "saveDraft": "Save draft",
+      "save": "Save",
+      "share": "Share",
       "shareMeal": "Share meal",
       "deleteDraft": "Delete draft",
       "publish": "Publish menu"

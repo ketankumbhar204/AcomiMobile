@@ -5,7 +5,7 @@ import type { CompositeNavigationProp } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
-import { Plus, Search } from "lucide-react-native";
+import { Home, Plus, Search } from "lucide-react-native";
 import { formatSpaceType, getSpaceTypeLabel, spaceTypeIconLabel } from "../api";
 import type {
   MembershipRole,
@@ -41,6 +41,8 @@ import { useToastStore } from "../store/toastStore";
 import { colors, radius, spacing, typography } from "../theme";
 import { formatSpaceDisplayName } from "../utils/spaceLabels";
 import { isConsumerMembershipRole } from "../utils/profileCompletion";
+import { membershipRoleLabelKey } from "../utils/memberRoles";
+import { canCreateSpace } from "../utils/spaceCreationAccess";
 
 type MySpacesNavigation = CompositeNavigationProp<
   BottomTabNavigationProp<MemberTabParamList, "Home">,
@@ -49,8 +51,12 @@ type MySpacesNavigation = CompositeNavigationProp<
 
 const SEARCH_DEBOUNCE_MS = 300;
 
-function formatRoleLabel(role: MembershipRole, t: (key: string) => string): string {
-  return t(`spaces.roles.${role}`);
+function formatRoleLabel(
+  role: MembershipRole,
+  spaceType: MySpaceResponse["spaceType"],
+  t: (key: string) => string,
+): string {
+  return t(membershipRoleLabelKey(role, spaceType));
 }
 
 function formatInviteDate(value: string): string {
@@ -85,6 +91,7 @@ export function MySpacesScreen() {
   const loadMySpaces = useSpaceStore(state => state.loadMySpaces);
   const searchSpaces = useSpaceStore(state => state.searchSpaces);
   const searchQuery = useSpaceStore(state => state.searchQuery);
+  const [allowCreateSpace, setAllowCreateSpace] = useState(false);
   const setSearchQuery = useSpaceStore(state => state.setSearchQuery);
   const switchSpace = useSpaceStore(state => state.switchSpace);
   const refresh = useSpaceStore(state => state.refresh);
@@ -95,6 +102,16 @@ export function MySpacesScreen() {
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
   const showToast = useToastStore(state => state.showToast);
   const { acceptInvitation, isSubmitting } = useAcceptInvitationFlow();
+
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      return;
+    }
+    if (loading && mySpaces.length === 0) {
+      return;
+    }
+    setAllowCreateSpace(canCreateSpace(mySpaces));
+  }, [loading, mySpaces, searchQuery]);
 
   const hasOperatorSpace = useMemo(
     () => mySpaces.some(s => s.membershipRole === "OWNER" || s.membershipRole === "MANAGER"),
@@ -235,7 +252,7 @@ export function MySpacesScreen() {
 
   const buildSubtitle = (space: MySpaceResponse) => {
     const typeLabel = getSpaceTypeLabel(space.spaceType);
-    const roleLabel = formatRoleLabel(space.membershipRole, t);
+    const roleLabel = formatRoleLabel(space.membershipRole, space.spaceType, t);
     return `${typeLabel} · ${roleLabel}`;
   };
 
@@ -296,7 +313,7 @@ export function MySpacesScreen() {
                   key={invitation.invitationId}
                   spaceName={invitation.spaceName}
                   spaceTypeLabel={formatSpaceType(invitation.spaceType)}
-                  roleLabel={t(`spaces.roles.${invitation.role}`)}
+                  roleLabel={t(membershipRoleLabelKey(invitation.role, invitation.spaceType))}
                   invitedBy={t("membership.incoming.invitedBy", {
                     name: invitation.invitedBy,
                   })}
@@ -364,7 +381,7 @@ export function MySpacesScreen() {
                   ? t("spaces.mySpaces.searchEmptyDescription")
                   : t("spaces.mySpaces.emptyDescription")
               }
-              icon="🏠"
+              Icon={Home}
             />
             {!isSearching ? (
               <DashboardActionRow
@@ -427,20 +444,24 @@ export function MySpacesScreen() {
             subtitle={t("spaces.mySpaces.findPlaceSubtitle")}
             onPress={() => navigation.navigate("FindAPlace")}
           />
-          <DashboardActionRow
-            icon={Plus}
-            accent={colors.primaryDark}
-            title={t("spaces.mySpaces.addSpace")}
-            subtitle={t("spaces.mySpaces.addSpaceSubtitle")}
-            onPress={() => navigation.navigate("CreateSpace")}
-          />
+          {allowCreateSpace ? (
+            <DashboardActionRow
+              icon={Plus}
+              accent={colors.primaryDark}
+              title={t("spaces.mySpaces.addSpace")}
+              subtitle={t("spaces.mySpaces.addSpaceSubtitle")}
+              onPress={() => navigation.navigate("CreateSpace")}
+            />
+          ) : null}
         </View>
       </ScrollView>
 
-      <FAB
-        onPress={() => navigation.navigate("CreateSpace")}
-        accessibilityLabel={t("spaces.mySpaces.createFab")}
-      />
+      {allowCreateSpace ? (
+        <FAB
+          onPress={() => navigation.navigate("CreateSpace")}
+          accessibilityLabel={t("spaces.mySpaces.createFab")}
+        />
+      ) : null}
     </View>
   );
 }

@@ -9,6 +9,8 @@ export type ProgressiveMealPlanningPhase = 'select' | 'review_extras' | 'ready';
 
 type ProgressiveMealPlanningFooterProps = {
   phase: ProgressiveMealPlanningPhase;
+  /** Non-extra meals currently selected. Shown on step 1. */
+  selectedCount?: number;
   saving?: boolean;
   canDeleteDraft?: boolean;
   saveDisabled?: boolean;
@@ -34,6 +36,7 @@ function toWorkflowPhase(phase: ProgressiveMealPlanningPhase): ProgressiveWorkfl
  */
 export function ProgressiveMealPlanningFooter({
   phase,
+  selectedCount = 0,
   saving = false,
   canDeleteDraft = false,
   saveDisabled = false,
@@ -57,16 +60,15 @@ export function ProgressiveMealPlanningFooter({
             ? t('meals.planning.progressive.stepOf', { current: 2, total: 2 })
             : undefined
       }
+      stepCurrent={phase === 'review_extras' ? 1 : phase === 'ready' ? 2 : undefined}
+      stepTotal={phase === 'select' ? undefined : 2}
       progressLine={
         phase === 'review_extras'
-          ? t('meals.planning.progressive.mealsSelectedNextExtras')
+          ? t('meals.planning.progressive.selectedMealsNextExtras', { count: selectedCount })
           : phase === 'ready'
             ? t('meals.planning.progressive.readyToSave')
             : undefined
       }
-      continueEyebrow={t('meals.planning.progressive.nextStep')}
-      continueTitle={t('meals.planning.progressive.reviewExtrasTitle')}
-      continueHint={t('meals.planning.progressive.reviewExtrasHint')}
       continueLabel={t('meals.planning.progressive.continueToExtras')}
       continueA11yLabel={t('meals.planning.progressive.nextStepA11y')}
       onContinue={onContinueToExtras}
@@ -80,17 +82,18 @@ export function ProgressiveMealPlanningFooter({
           : undefined
       }
       secondaryAction={{
-        label: t('meals.actions.saveDraft'),
+        label: t('meals.actions.save'),
         onPress: onSaveDraft,
         loading: saving,
         disabled: saveDisabled,
       }}
       primaryAction={{
-        label: t('meals.actions.shareMeal'),
+        label: t('meals.actions.share'),
         onPress: onShareMeal,
         loading: saving,
         disabled: shareDisabled,
       }}
+      compact
     />
   );
 }

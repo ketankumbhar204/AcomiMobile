@@ -2,9 +2,10 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { SpacePaymentResponse } from '../../api/types';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, shadows, spacing, typography } from '../../theme';
 import { formatBillingPeriod } from '../../utils/paymentProofPolicy';
-import { formatPaymentAmount, formatPaymentDueDate } from '../../utils/paymentHistory';
+import { formatPaymentDueDate } from '../../utils/paymentHistory';
+import { formatPaymentAmount } from '../../utils/paymentAmount';
 import {
   displayMealPaymentTitle,
   mealPaymentListSubtitle,
@@ -63,87 +64,106 @@ export function UniversalPaymentCard({
         )
       : null;
 
-  const content = (
-    <PaymentStatusCardFrame status={payment.paymentStatus} style={styles.card}>
-      <View style={styles.cardInner}>
-        <View style={styles.headerRow}>
-          {showMember ? (
-            <Text style={styles.memberName} numberOfLines={1}>
-              {payment.memberName}
-            </Text>
-          ) : (
-            <Text style={styles.titleInline} numberOfLines={2}>
-              {displayTitle}
-            </Text>
-          )}
+  const periodLabel = payment.month ? shortBillingPeriod(payment.month, i18n.language) : null;
+  const heading =
+    periodLabel && !displayTitle.toLowerCase().includes(periodLabel.toLowerCase())
+      ? `${displayTitle} · ${periodLabel}`
+      : displayTitle;
+  const nameForAvatar = (showMember ? payment.memberName : displayTitle).trim();
+  const initial = nameForAvatar.charAt(0).toUpperCase() || '?';
+  const avatar = avatarTint(nameForAvatar);
+  const overdueLabel = payment.isOverdue
+    ? t('paymentCollection.overdue.compact', { count: payment.daysOverdue ?? 0 })
+    : null;
+  const amountLabel = formatPaymentAmount(payment.amount, payment.currencyCode);
+
+  const summary = (
+    <View style={styles.summary}>
+      <View style={styles.identityRow}>
+        <View style={[styles.avatar, { backgroundColor: avatar.bg }]}>
+          <Text style={[styles.avatarText, { color: avatar.fg }]}>{initial}</Text>
         </View>
-        {payment.targetLabel ? <Text style={styles.target}>{payment.targetLabel}</Text> : null}
-        {showMember ? <Text style={styles.title}>{displayTitle}</Text> : null}
-        {mealSubtitle ? <Text style={styles.mealSubtitle}>{mealSubtitle}</Text> : null}
-        <View style={styles.amountMetaRow}>
-          <Text style={styles.amount}>
-            {formatPaymentAmount(payment.amount, payment.currencyCode)}
-          </Text>
-          <PaymentStatusBadge status={payment.paymentStatus} style={styles.statusBadge} />
-        </View>
-        {payment.isOverdue ? (
-          <View style={styles.overdueBox}>
-            <Text style={styles.overdueTitle}>{t('paymentCollection.overdue.badge')}</Text>
-            <Text style={styles.overdueText}>
-              {t('paymentCollection.overdue.days', { days: payment.daysOverdue ?? 0 })}
+        <View style={styles.identityText}>
+          <View style={styles.nameRow}>
+            <Text style={styles.memberName} numberOfLines={2}>
+              {showMember ? payment.memberName : heading}
             </Text>
-            {payment.outstandingAmount != null ? (
-              <Text style={styles.overdueText}>
-                {t('paymentCollection.overdue.outstanding', {
-                  amount: formatPaymentAmount(
-                    payment.outstandingAmount,
-                    payment.currencyCode,
-                  ),
-                })}
-              </Text>
-            ) : null}
+            <PaymentStatusBadge
+              status={payment.isOverdue ? 'OVERDUE' : payment.paymentStatus}
+              style={styles.statusBadge}
+            />
           </View>
+          {showMember && payment.memberMobile ? (
+            <Text style={styles.meta} numberOfLines={1}>
+              {payment.memberMobile}
+            </Text>
+          ) : null}
+          {payment.targetLabel ? (
+            <Text style={styles.meta} numberOfLines={2}>
+              {payment.targetLabel}
+            </Text>
+          ) : null}
+        </View>
+      </View>
+
+      <View style={styles.payRow}>
+        <Text style={styles.title} numberOfLines={2}>
+          {showMember ? heading : t(`paymentCollection.type.${payment.paymentType}`)}
+        </Text>
+        {amountLabel ? (
+          <Text style={styles.amount} adjustsFontSizeToFit minimumFontScale={0.7} numberOfLines={1}>
+            {amountLabel}
+          </Text>
         ) : null}
-        <PaymentReferenceLabel source={payment} style={styles.paymentReference} />
-        <Text style={styles.due}>
+      </View>
+      <View style={styles.dueRow}>
+        <Text style={styles.due} numberOfLines={1}>
           {t('paymentCollection.dueDate', { date: formatPaymentDueDate(payment.dueDate) })}
         </Text>
-        {payment.billingPeriodStart && payment.billingPeriodEnd ? (
-          <Text style={styles.period}>
-            {t('paymentCollection.billingPeriodRange', {
-              start: payment.billingPeriodStart,
-              end: payment.billingPeriodEnd,
-            })}
+        {overdueLabel ? (
+          <Text style={styles.overdue} numberOfLines={1}>
+            {overdueLabel}
+          </Text>
+        ) : null}
+      </View>
+      {mealSubtitle ? (
+        <Text style={styles.mealSubtitle} numberOfLines={1}>
+          {mealSubtitle}
+        </Text>
+      ) : null}
+      {!showMember ? <PaymentReferenceLabel source={payment} style={styles.paymentReference} /> : null}
+    </View>
+  );
+
+  return (
+    <PaymentStatusCardFrame status={payment.paymentStatus} style={styles.card}>
+      <View style={styles.cardInner}>
+        {onPress ? (
+          <Pressable
+            onPress={onPress}
+            accessibilityRole="button"
+            style={({ pressed }) => pressed && styles.pressed}>
+            {summary}
+          </Pressable>
+        ) : (
+          summary
+        )}
+
+        {payment.paymentStatus === 'REJECTED' && payment.rejectionReason ? (
+          <Text style={styles.note} numberOfLines={2}>
+            {payment.rejectionReason}
+          </Text>
+        ) : null}
+        {needsUpdate && payment.rejectionReason ? (
+          <Text style={styles.note} numberOfLines={2}>
+            {payment.rejectionReason}
           </Text>
         ) : null}
 
-        {payment.paymentStatus === 'REJECTED' && payment.rejectionReason ? (
-          <View style={styles.messageBox}>
-            <Text style={styles.messageLabel}>{t('paymentCollection.rejectedTitle')}</Text>
-            <Text style={styles.messageText} numberOfLines={3}>
-              {payment.rejectionReason}
-            </Text>
-          </View>
-        ) : null}
-
-        {needsUpdate && payment.rejectionReason ? (
-          <View style={styles.messageBox}>
-            <Text style={styles.messageLabel}>{t('paymentCollection.ownerRequest')}</Text>
-            <Text style={styles.messageText} numberOfLines={3}>
-              {payment.rejectionReason}
-            </Text>
-          </View>
-        ) : null}
-
-        {ownerActions ? ownerActions : canUpdate ? (
+        {ownerActions}
+        {!ownerActions && canUpdate ? (
           onUpdatePress ? (
-            <Pressable
-              onPress={e => {
-                e.stopPropagation?.();
-                onUpdatePress();
-              }}
-              hitSlop={8}
-              style={styles.ctaPressable}>
+            <Pressable onPress={onUpdatePress} hitSlop={8} style={styles.ctaPressable}>
               <Text style={styles.cta}>{updateLabel}</Text>
             </Pressable>
           ) : (
@@ -153,125 +173,143 @@ export function UniversalPaymentCard({
       </View>
     </PaymentStatusCardFrame>
   );
+}
 
-  if (!onPress) {
-    return content;
+function shortBillingPeriod(monthIso: string, locale?: string): string {
+  const [yearPart, monthPart] = monthIso.split('-');
+  const year = Number(yearPart);
+  const month = Number(monthPart);
+  if (!year || !month) {
+    return monthIso;
   }
+  return new Date(year, month - 1, 1).toLocaleDateString(locale, {
+    month: 'short',
+    year: 'numeric',
+  });
+}
 
-  return (
-    <Pressable onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
-      {content}
-    </Pressable>
-  );
+const AVATAR_TINTS = [
+  { bg: '#ECFDF5', fg: '#047857' },
+  { bg: '#EFF6FF', fg: '#1D4ED8' },
+  { bg: '#FFF7ED', fg: '#C2410C' },
+  { bg: '#F5F3FF', fg: '#6D28D9' },
+] as const;
+
+function avatarTint(name: string): { bg: string; fg: string } {
+  const code = name.charCodeAt(0) || 0;
+  return AVATAR_TINTS[code % AVATAR_TINTS.length];
 }
 
 const styles = StyleSheet.create({
   card: {
     marginBottom: spacing.sm,
+    ...shadows.sm,
   },
   cardInner: {
-    padding: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.xs,
   },
   pressed: {
     opacity: 0.92,
   },
-  headerRow: {
+  summary: {
+    gap: 6,
+  },
+  identityRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#ECFDF5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    ...typography.bodyStrong,
+    color: colors.primaryDark,
+    fontSize: 16,
+  },
+  identityText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 1,
+  },
+  nameRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: spacing.sm,
-    marginBottom: spacing.xs,
   },
   memberName: {
     ...typography.bodyStrong,
     flex: 1,
     minWidth: 0,
+    fontSize: 15,
+    lineHeight: 20,
   },
-  titleInline: {
-    ...typography.h3,
-    flex: 1,
-    minWidth: 0,
+  statusBadge: {
+    flexShrink: 0,
+    marginTop: 1,
   },
-  target: {
-    ...typography.caption,
-    color: colors.muted,
-    marginBottom: spacing.xs,
-  },
-  title: {
-    ...typography.h3,
-    marginBottom: spacing.xs,
-  },
-  mealSubtitle: {
+  meta: {
     ...typography.caption,
     color: colors.textSecondary,
-    marginBottom: spacing.xs,
+  },
+  payRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  title: {
+    ...typography.body,
+    flex: 1,
+    minWidth: 0,
+    color: colors.textPrimary,
+    fontWeight: '600',
   },
   amount: {
     ...typography.bodyStrong,
     fontSize: 18,
+    lineHeight: 22,
+    flexShrink: 1,
+    textAlign: 'right',
   },
-  amountMetaRow: {
+  dueRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  statusBadge: {
-    flexShrink: 0,
-  },
-  paymentReference: {
-    marginBottom: spacing.xs,
   },
   due: {
     ...typography.caption,
-    color: colors.muted,
+    color: colors.textSecondary,
+    flexShrink: 1,
   },
-  period: {
+  overdue: {
     ...typography.caption,
-    color: colors.muted,
-    marginTop: 2,
-  },
-  overdueBox: {
-    marginTop: spacing.sm,
-    backgroundColor: '#FEF2F2',
-    borderRadius: radius.button,
-    borderWidth: 1,
-    borderColor: '#FECACA',
-    padding: spacing.sm,
-    gap: 2,
-  },
-  overdueTitle: {
-    ...typography.bodyStrong,
     color: '#B91C1C',
     fontWeight: '700',
+    flexShrink: 0,
   },
-  overdueText: {
+  mealSubtitle: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  paymentReference: {
+    marginTop: 2,
+  },
+  note: {
     ...typography.caption,
     color: '#991B1B',
   },
-  messageBox: {
-    marginTop: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: radius.button,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.sm,
-  },
-  messageLabel: {
-    ...typography.caption,
-    color: colors.muted,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  messageText: {
-    ...typography.caption,
-    color: colors.textPrimary,
-    lineHeight: 16,
-  },
   ctaPressable: {
     alignSelf: 'flex-start',
-    marginTop: spacing.sm,
   },
   cta: {
     ...typography.bodyStrong,

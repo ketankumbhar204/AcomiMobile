@@ -22,6 +22,10 @@ import { ApiError } from '../../api/types';
 import type { AdminStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, spacing, typography } from '../../theme';
+import {
+  filterInquiryPurchases,
+  nextInquiryPurchaseStatus,
+} from '../../utils/inquiryPurchaseFilters';
 
 function statusStyle(status: InquiryCreditPurchaseStatus): { bg: string; fg: string } {
   if (status === 'APPROVED') return { bg: '#DCFCE7', fg: '#15803D' };
@@ -50,7 +54,7 @@ export function AdminInquiryPurchaseListScreen() {
   const showToast = useToastStore(state => state.showToast);
   const [rows, setRows] = useState<AdminInquiryPurchaseRow[]>([]);
   const [summary, setSummary] = useState<AdminInquiryPurchaseSummary | null>(null);
-  const [filter, setFilter] = useState<InquiryCreditPurchaseStatus | ''>('PENDING');
+  const [statusFilter, setStatusFilter] = useState<InquiryCreditPurchaseStatus | null>('PENDING');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -66,10 +70,7 @@ export function AdminInquiryPurchaseListScreen() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const page = await inquiryCreditsAdminApi.listPurchases({
-        status: filter,
-        size: 50,
-      });
+      const page = await inquiryCreditsAdminApi.listPurchases({ size: 100 });
       setRows(page.content ?? []);
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : t('common.errors.generic'));
@@ -77,7 +78,7 @@ export function AdminInquiryPurchaseListScreen() {
     } finally {
       setLoading(false);
     }
-  }, [filter, showToast, t]);
+  }, [showToast, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -86,19 +87,10 @@ export function AdminInquiryPurchaseListScreen() {
     }, [load, loadSummary]),
   );
 
-  const visibleRows = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter(
-      row =>
-        row.id.toLowerCase().includes(q) ||
-        row.userId.toLowerCase().includes(q) ||
-        (row.userFullName ?? '').toLowerCase().includes(q) ||
-        (row.userMobileNumber ?? '').toLowerCase().includes(q) ||
-        row.packageId.toLowerCase().includes(q) ||
-        (row.utr ?? '').toLowerCase().includes(q),
-    );
-  }, [rows, search]);
+  const visibleRows = useMemo(
+    () => filterInquiryPurchases(rows, statusFilter, search),
+    [rows, search, statusFilter],
+  );
 
   function confirmApprove(item: AdminInquiryPurchaseRow) {
     Alert.alert(
@@ -173,32 +165,40 @@ export function AdminInquiryPurchaseListScreen() {
     );
   }
 
-  const filters: Array<{ id: InquiryCreditPurchaseStatus | ''; label: string }> = [
-    { id: 'PENDING', label: t('admin.credits.pending', { defaultValue: 'Pending' }) },
-    { id: 'APPROVED', label: t('admin.credits.approvedFilter', { defaultValue: 'Approved' }) },
-    { id: 'REJECTED', label: t('admin.credits.rejectedFilter', { defaultValue: 'Rejected' }) },
-    { id: '', label: t('admin.credits.all', { defaultValue: 'All' }) },
-  ];
+  const localCounts = useMemo(
+    () => ({
+      pending: rows.filter(row => row.status === 'PENDING').length,
+      approved: rows.filter(row => row.status === 'APPROVED').length,
+      rejected: rows.filter(row => row.status === 'REJECTED').length,
+    }),
+    [rows],
+  );
 
-  const stats = [
+  const stats: Array<{
+    key: InquiryCreditPurchaseStatus;
+    label: string;
+    value: number;
+    fg: string;
+    bg: string;
+  }> = [
     {
-      key: 'pending',
+      key: 'PENDING',
       label: t('admin.credits.pending', { defaultValue: 'Pending' }),
-      value: summary?.pendingCount ?? 0,
+      value: summary?.pendingCount ?? localCounts.pending,
       fg: '#C2410C',
       bg: '#FFEDD5',
     },
     {
-      key: 'approved',
+      key: 'APPROVED',
       label: t('admin.credits.approvedFilter', { defaultValue: 'Approved' }),
-      value: summary?.approvedCount ?? 0,
+      value: summary?.approvedCount ?? localCounts.approved,
       fg: '#15803D',
       bg: '#DCFCE7',
     },
     {
-      key: 'rejected',
+      key: 'REJECTED',
       label: t('admin.credits.rejectedFilter', { defaultValue: 'Rejected' }),
-      value: summary?.rejectedCount ?? 0,
+      value: summary?.rejectedCount ?? localCounts.rejected,
       fg: '#B91C1C',
       bg: '#FEE2E2',
     },
@@ -220,12 +220,33 @@ export function AdminInquiryPurchaseListScreen() {
           </Text>
         </Pressable>
         <View style={styles.stats}>
-          {stats.map(stat => (
-            <View key={stat.key} style={[styles.statCard, { backgroundColor: stat.bg }]}>
-              <Text style={styles.statLabel}>{stat.label}</Text>
-              <Text style={[styles.statValue, { color: stat.fg }]}>{stat.value}</Text>
-            </View>
-          ))}
+          {stats.map(stat => {
+            const selected = statusFilter === stat.key;
+            return (
+              <Pressable
+                key={stat.key}
+                onPress={() =>
+                  setStatusFilter(current => nextInquiryPurchaseStatus(current, stat.key))
+                }
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                accessibilityLabel={t('admin.credits.filterByStatus', {
+                  defaultValue: 'Show {{status}} requests, {{count}}',
+                  status: stat.label,
+                  count: stat.value,
+                })}
+                style={[
+                  styles.statCard,
+                  { backgroundColor: stat.bg },
+                  selected && { borderColor: stat.fg, borderWidth: 2 },
+                ]}>
+                <Text style={styles.statLabel} numberOfLines={1}>
+                  {stat.label}
+                </Text>
+                <Text style={[styles.statValue, { color: stat.fg }]}>{stat.value}</Text>
+              </Pressable>
+            );
+          })}
         </View>
         <TextInput
           style={styles.search}
@@ -238,18 +259,6 @@ export function AdminInquiryPurchaseListScreen() {
           autoCapitalize="none"
           autoCorrect={false}
         />
-        <View style={styles.filters}>
-          {filters.map(item => (
-            <Pressable
-              key={item.id || 'all'}
-              onPress={() => setFilter(item.id)}
-              style={[styles.chip, filter === item.id && styles.chipOn]}>
-              <Text style={[styles.chipText, filter === item.id && styles.chipTextOn]}>
-                {item.label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
       </View>
 
       {loading ? (
@@ -333,6 +342,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     padding: spacing.sm,
     minWidth: 0,
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
   statLabel: { ...typography.caption, fontWeight: '600', color: colors.textSecondary },
   statValue: { ...typography.h3, fontWeight: '800', marginTop: 2 },
@@ -345,18 +356,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     color: colors.textPrimary,
   },
-  filters: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chip: {
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    backgroundColor: colors.white,
-  },
-  chipOn: { backgroundColor: colors.mintSubtle, borderColor: colors.primary },
-  chipText: { ...typography.caption, color: colors.textSecondary, fontWeight: '700' },
-  chipTextOn: { color: colors.tealDark },
   loader: { marginTop: spacing.xl },
   list: { paddingHorizontal: spacing.md, paddingBottom: spacing.xxl, gap: spacing.sm },
   empty: { ...typography.body, color: colors.muted, textAlign: 'center', marginTop: spacing.xl },

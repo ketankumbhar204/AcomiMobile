@@ -2,6 +2,7 @@ import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,9 +17,12 @@ import { useTranslation } from 'react-i18next';
 import { inquiryCreditsAdminApi } from '../../api/inquiryCreditsAdminApi';
 import type { InquiryCreditPackage, InquiryCreditsPaymentConfig } from '../../api/inquiryCreditsApi';
 import { ApiError } from '../../api/types';
-import { HeaderBackButton } from '../../components/ui';
 import type { AdminStackParamList } from '../../navigation/types';
-import { uploadLocalFile } from '../../services/fileUploadService';
+import {
+  loadPaymentQrImage,
+  uploadLocalFile,
+  type AuthorizedImageSource,
+} from '../../services/fileUploadService';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, spacing, typography } from '../../theme';
 import { pickOptimizedImage } from '../../utils/pickOptimizedImage';
@@ -129,16 +133,20 @@ export function AdminInquiryCreditsConfigScreen() {
   const [whatsapp, setWhatsapp] = useState('');
   const [instructions, setInstructions] = useState('');
   const [webFree, setWebFree] = useState('5');
+  const [webViewHereEnabled, setWebViewHereEnabled] = useState(true);
+  const [webViewHere, setWebViewHere] = useState('5');
+  const [androidViewHereEnabled, setAndroidViewHereEnabled] = useState(true);
+  const [androidViewHere, setAndroidViewHere] = useState('5');
   const [androidMode, setAndroidMode] = useState<'FREE' | 'CREDITS'>('FREE');
   const [androidFree, setAndroidFree] = useState('5');
   const [hourly, setHourly] = useState('20');
-  const [qrUrl, setQrUrl] = useState<string | null>(null);
+  const [qrSource, setQrSource] = useState<AuthorizedImageSource | null>(null);
+  const [qrOpen, setQrOpen] = useState(false);
   const [qrFileId, setQrFileId] = useState<string | null>(null);
 
   useLayoutEffect(() => {
     navigation.setOptions({
       title: t('admin.credits.configTitle', { defaultValue: 'Inquiry credits — payment config' }),
-      headerLeft: () => <HeaderBackButton />,
     });
   }, [navigation, t]);
 
@@ -156,11 +164,26 @@ export function AdminInquiryCreditsConfigScreen() {
       setWhatsapp(nextConfig.whatsappNumber ?? '');
       setInstructions(nextConfig.instructions ?? '');
       setWebFree(String(nextConfig.webFreeDailyLimit ?? 5));
+      setWebViewHereEnabled(nextConfig.webViewHereEnabled !== false);
+      setWebViewHere(String(nextConfig.viewHereDailyLimit ?? 5));
+      setAndroidViewHereEnabled(nextConfig.androidViewHereEnabled !== false);
+      setAndroidViewHere(String(nextConfig.androidViewHereDailyLimit ?? 5));
       setAndroidMode(nextConfig.androidBillingMode === 'CREDITS' ? 'CREDITS' : 'FREE');
       setAndroidFree(String(nextConfig.androidFreeDailyLimit ?? 5));
       setHourly(String(nextConfig.androidHourlyRateLimit ?? 20));
-      setQrUrl(nextConfig.qrUrl ?? null);
       setQrFileId(nextConfig.qrFileId ?? null);
+      try {
+        setQrSource(await loadPaymentQrImage(nextConfig.qrFileId, nextConfig.qrUrl));
+      } catch {
+        setQrSource(null);
+        if (nextConfig.qrFileId) {
+          showToast(
+            t('admin.credits.qrLoadFailed', {
+              defaultValue: 'Unable to load the payment QR.',
+            }),
+          );
+        }
+      }
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : t('common.errors.generic'));
     } finally {
@@ -197,6 +220,10 @@ export function AdminInquiryCreditsConfigScreen() {
         instructions: instructions.trim() || null,
         qrFileId,
         webFreeDailyLimit: Number(webFree) || 0,
+        viewHereDailyLimit: Math.max(0, Math.trunc(Number(webViewHere) || 0)),
+        webViewHereEnabled,
+        androidViewHereEnabled,
+        androidViewHereDailyLimit: Math.max(0, Math.trunc(Number(androidViewHere) || 0)),
         androidBillingMode: androidMode,
         androidFreeDailyLimit: Number(androidFree) || 0,
         androidHourlyRateLimit: Math.max(1, Number(hourly) || 20),
@@ -229,7 +256,7 @@ export function AdminInquiryCreditsConfigScreen() {
         { purpose: 'INQUIRY_PAYMENT_QR' },
       );
       setQrFileId(fileId);
-      setQrUrl(picked.previewUri);
+      setQrSource({ uri: picked.previewUri });
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : t('common.errors.generic'));
     }
@@ -244,6 +271,7 @@ export function AdminInquiryCreditsConfigScreen() {
   }
 
   return (
+    <>
     <ScrollView
       style={styles.root}
       contentContainerStyle={styles.content}
@@ -318,11 +346,18 @@ export function AdminInquiryCreditsConfigScreen() {
       </Section>
 
       <Section title={t('admin.credits.qr', { defaultValue: 'Payment QR code' })}>
-        {qrUrl ? <Image source={{ uri: qrUrl }} style={styles.qr} /> : null}
+        {qrSource ? (
+          <Pressable
+            onPress={() => setQrOpen(true)}
+            accessibilityRole="imagebutton"
+            accessibilityLabel={t('admin.credits.openQr', { defaultValue: 'Open payment QR' })}>
+            <Image source={qrSource} style={styles.qr} resizeMode="contain" />
+          </Pressable>
+        ) : null}
         <View style={styles.qrActions}>
           <Pressable onPress={() => void pickQr()} style={styles.secondaryBtn}>
             <Text style={styles.secondaryText}>
-              {qrUrl
+              {qrSource
                 ? t('admin.credits.replaceQr', { defaultValue: 'Replace QR' })
                 : t('admin.credits.uploadQr', { defaultValue: 'Upload QR' })}
             </Text>
@@ -331,7 +366,8 @@ export function AdminInquiryCreditsConfigScreen() {
             <Pressable
               onPress={() => {
                 setQrFileId(null);
-                setQrUrl(null);
+                setQrSource(null);
+                setQrOpen(false);
               }}
               style={styles.dangerBtn}>
               <Text style={styles.dangerText}>
@@ -359,6 +395,32 @@ export function AdminInquiryCreditsConfigScreen() {
           value={webFree}
           onChangeText={setWebFree}
           keyboardType="number-pad"
+        />
+        <View style={styles.row}>
+          <Text style={styles.labelInline}>
+            {t('admin.credits.webViewHere', {
+              defaultValue: 'Free contact viewing on the website',
+            })}
+          </Text>
+          <Switch value={webViewHereEnabled} onValueChange={setWebViewHereEnabled} />
+        </View>
+        <Text style={styles.fieldHint}>
+          {t('admin.credits.webViewHereHint', {
+            defaultValue:
+              'Shows owner or vendor contact on the listing. Separate from email enquiries and paid credits.',
+          })}
+        </Text>
+        <Text style={styles.label}>
+          {t('admin.credits.webViewHereLimit', {
+            defaultValue: 'Free contact views on the website per day',
+          })}
+        </Text>
+        <TextInput
+          style={[styles.input, !webViewHereEnabled && styles.inputDisabled]}
+          value={webViewHere}
+          onChangeText={setWebViewHere}
+          keyboardType="number-pad"
+          editable={webViewHereEnabled}
         />
       </Section>
 
@@ -423,6 +485,32 @@ export function AdminInquiryCreditsConfigScreen() {
           onChangeText={setHourly}
           keyboardType="number-pad"
         />
+        <View style={styles.row}>
+          <Text style={styles.labelInline}>
+            {t('admin.credits.androidViewHere', {
+              defaultValue: 'Free contact viewing in the mobile app',
+            })}
+          </Text>
+          <Switch value={androidViewHereEnabled} onValueChange={setAndroidViewHereEnabled} />
+        </View>
+        <Text style={styles.fieldHint}>
+          {t('admin.credits.androidViewHereHint', {
+            defaultValue:
+              'Shows owner or vendor contact on the listing. Separate from in-app enquiries, the hourly limit, and paid credits.',
+          })}
+        </Text>
+        <Text style={styles.label}>
+          {t('admin.credits.androidViewHereLimit', {
+            defaultValue: 'Free contact views in the mobile app per day',
+          })}
+        </Text>
+        <TextInput
+          style={[styles.input, !androidViewHereEnabled && styles.inputDisabled]}
+          value={androidViewHere}
+          onChangeText={setAndroidViewHere}
+          keyboardType="number-pad"
+          editable={androidViewHereEnabled}
+        />
       </Section>
 
       <PackageEditor
@@ -443,6 +531,15 @@ export function AdminInquiryCreditsConfigScreen() {
         </Text>
       </Pressable>
     </ScrollView>
+    <Modal visible={qrOpen} transparent animationType="fade" onRequestClose={() => setQrOpen(false)}>
+      <View style={styles.qrBackdrop}>
+        <Pressable style={styles.qrBackdropTap} onPress={() => setQrOpen(false)} />
+        {qrSource ? (
+          <Image source={qrSource} style={styles.qrFull} resizeMode="contain" />
+        ) : null}
+      </View>
+    </Modal>
+    </>
   );
 }
 
@@ -494,8 +591,24 @@ const styles = StyleSheet.create({
     width: 160,
     height: 160,
     borderRadius: radius.card,
-    backgroundColor: colors.surfaceSecondary,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignSelf: 'flex-start',
+  },
+  qrBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.72)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  qrBackdropTap: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  qrFull: {
+    width: '100%',
+    height: '70%',
   },
   qrActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
   secondaryBtn: {

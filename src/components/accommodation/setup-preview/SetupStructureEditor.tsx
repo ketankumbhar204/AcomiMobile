@@ -524,7 +524,7 @@ function SetupRoomInventoryCard({
       },
       {
         label: t('accommodation.setup.editor.applyBedsAll'),
-        action: () => onChangeStructure(applyBedNamingPresetToAll(structure, 'letters')),
+        action: () => onChangeStructure(applyBedNamingPresetToAll(structure, 'numbered')),
       },
       {
         label: t('accommodation.setup.editor.applyFloorsAll'),

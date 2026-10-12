@@ -17,6 +17,7 @@ import {
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Check, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { accommodationApi } from '../../api/accommodationApi';
 import type { FloorListItemResponse, SpaceType, UnitListItemResponse, UUID } from '../../api/types';
 import { useBuildings } from '../../hooks/useBuildings';
@@ -100,9 +101,11 @@ function FilterTrigger({
           numberOfLines={1}>
           {valueLabel}
         </Text>
-        <Text style={[styles.chevron, active && styles.chevronActive]}>
-          {active ? '▴' : '▾'}
-        </Text>
+        {active ? (
+          <ChevronUp size={14} color={colors.primaryDark} strokeWidth={2.4} />
+        ) : (
+          <ChevronDown size={14} color={colors.muted} strokeWidth={2.4} />
+        )}
       </Pressable>
     </View>
   );
@@ -171,7 +174,7 @@ export function DashboardBedInventoryFilterDropdownOverlay({
                   numberOfLines={1}>
                   {item.label}
                 </Text>
-                {selected ? <Text style={styles.optionCheck}>✓</Text> : null}
+                {selected ? <Check size={16} color={colors.primaryDark} strokeWidth={2.4} /> : null}
               </Pressable>
             );
           }}

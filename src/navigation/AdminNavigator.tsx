@@ -1,6 +1,10 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { HeaderBackButton } from '../components/ui/HeaderBackButton';
+import { adminParentRoute } from './adminBackTarget';
 import { AdminActiveSpaceDetailScreen } from '../screens/admin/AdminActiveSpaceDetailScreen';
 import { AdminAddMessScreen } from '../screens/admin/AdminAddMessScreen';
 import { AdminAddPropertyScreen } from '../screens/admin/AdminAddPropertyScreen';
@@ -22,11 +26,35 @@ import type { AdminStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<AdminStackParamList>();
 
+function AdminStackBackButton({
+  routeName,
+}: {
+  routeName: keyof AdminStackParamList;
+}) {
+  const navigation = useNavigation<NativeStackNavigationProp<AdminStackParamList>>();
+  const parent = adminParentRoute(routeName);
+  return (
+    <HeaderBackButton
+      fallback={
+        parent
+          ? () => {
+              navigation.navigate(parent as 'AdminDashboard');
+            }
+          : undefined
+      }
+    />
+  );
+}
+
 export function AdminNavigator() {
   const { t } = useTranslation();
 
   return (
-    <Stack.Navigator screenOptions={stackHeaderOptions}>
+    <Stack.Navigator
+      screenOptions={({ route }) => ({
+        ...stackHeaderOptions,
+        headerLeft: () => <AdminStackBackButton routeName={route.name} />,
+      })}>
       <Stack.Screen
         name="AdminDashboard"
         component={AdminDashboardScreen}

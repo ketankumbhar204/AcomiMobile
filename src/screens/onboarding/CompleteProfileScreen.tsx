@@ -14,9 +14,7 @@ import { useTranslation } from 'react-i18next';
 import {
   CalendarDays,
   FileText,
-  Hash,
   Mail,
-  MapPin,
   Phone,
   Smartphone,
   TriangleAlert,
@@ -36,10 +34,16 @@ import {
   Screen,
 } from '../../components/ui';
 import { useAuthenticatedUser } from '../../hooks/useAuth';
+import { AddressLocationFields } from '../../components/location/AddressLocationFields';
 import { useCompleteProfile } from '../../hooks/useCompleteProfile';
+import {
+  addressCaptureIssue,
+  captureFromParts,
+  composeStoredAddress,
+} from '../../utils/locationAutocomplete';
 import { useLogout } from '../../hooks/useLogout';
 import type { MainStackParamList } from '../../navigation/types';
-import { resetToDashboard, resetToMySpaces } from '../../navigation/navigationRef';
+import { resetAfterProfileCompletion } from '../../navigation/navigationRef';
 import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
 import { colors, shadows, spacing, typography } from '../../theme';
@@ -82,6 +86,14 @@ export function CompleteProfileScreen() {
   );
 
   const [permanentAddress, setPermanentAddress] = useState(user?.permanentAddress ?? '');
+  const [location, setLocation] = useState(() =>
+    captureFromParts({
+      addressLine: user?.permanentAddress,
+      city: user?.city,
+      state: user?.state,
+      pincode: user?.pincode,
+    }),
+  );
   const [city, setCity] = useState(user?.city ?? '');
   const [stateName, setStateName] = useState(user?.state ?? '');
   const [pincode, setPincode] = useState(user?.pincode ?? '');
@@ -147,6 +159,14 @@ export function CompleteProfileScreen() {
           setCity(profileUser.city ?? '');
           setStateName(profileUser.state ?? '');
           setPincode(profileUser.pincode ?? '');
+          setLocation(
+            captureFromParts({
+              addressLine: profileUser.permanentAddress,
+              city: profileUser.city,
+              state: profileUser.state,
+              pincode: profileUser.pincode,
+            }),
+          );
 
           const linked = await memberApi.getMyLinkedMember(spaceId);
           const details = await memberApi.getMember(spaceId, linked.memberId);
@@ -234,6 +254,14 @@ export function CompleteProfileScreen() {
         setFieldError(t('profileCompletion.errors.pincodeRequired'));
         return false;
       }
+      if (addressCaptureIssue(location, { required: true, pincodeRequired: true })) {
+        setFieldError(
+          t('locationCapture.selectionRequired', {
+            defaultValue: 'Select a location from the suggestions.',
+          }),
+        );
+        return false;
+      }
     }
 
     return true;
@@ -287,13 +315,7 @@ export function CompleteProfileScreen() {
         return;
       }
 
-      const spaceId =
-        selectedSpaceId ?? useSpaceStore.getState().mySpaces[0]?.spaceId ?? null;
-      if (spaceId) {
-        resetToDashboard(spaceId);
-      } else {
-        resetToMySpaces();
-      }
+      resetAfterProfileCompletion();
     }
   }
 
@@ -468,31 +490,17 @@ export function CompleteProfileScreen() {
 
           {step === 'address' ? (
             <>
-              <FormInput
-                label={`${t('profileCompletion.fields.permanentAddress')} *`}
-                value={permanentAddress}
-                onChangeText={setPermanentAddress}
-                multiline
-                leadingIcon={MapPin}
-              />
-              <FormInput
-                label={`${t('profileCompletion.fields.city')} *`}
-                value={city}
-                onChangeText={setCity}
-                leadingIcon={MapPin}
-              />
-              <FormInput
-                label={`${t('profileCompletion.fields.state')} *`}
-                value={stateName}
-                onChangeText={setStateName}
-                leadingIcon={MapPin}
-              />
-              <FormInput
-                label={`${t('profileCompletion.fields.pincode')} *`}
-                value={pincode}
-                onChangeText={setPincode}
-                keyboardType="number-pad"
-                leadingIcon={Hash}
+              <AddressLocationFields
+                value={location}
+                required
+                pincodeRequired
+                onChange={next => {
+                  setLocation(next);
+                  setPermanentAddress(composeStoredAddress(next));
+                  setCity(next.city);
+                  setStateName(next.state);
+                  setPincode(next.pincode);
+                }}
               />
             </>
           ) : null}

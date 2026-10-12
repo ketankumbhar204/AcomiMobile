@@ -27,13 +27,13 @@ export function BulkBedsModal({
 }: BulkBedsModalProps) {
   const { t } = useTranslation();
   const [count, setCount] = useState('3');
-  const [labelStyle, setLabelStyle] = useState<BedLabelStyle>('ALPHA');
+  const [labelStyle, setLabelStyle] = useState<BedLabelStyle>('NUMERIC');
   const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
     if (visible) {
       setCount('3');
-      setLabelStyle('ALPHA');
+      setLabelStyle('NUMERIC');
       setValidationError(null);
     }
   }, [visible]);

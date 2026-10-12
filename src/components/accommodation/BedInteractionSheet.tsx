@@ -7,14 +7,17 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { BedSingle, X } from 'lucide-react-native';
 import type { AccommodationStatus, OccupancyResponse, SpaceType } from '../../api/types';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, pastels, radius, shadows, spacing, typography } from '../../theme';
 import { Button, FormInput, useConfirmDialog } from '../ui';
 import { AccommodationOccupancyActions } from '../occupancy/AccommodationOccupancyActions';
+import { OccupiedBedStaySection } from './OccupiedBedStaySection';
 import { AccommodationStatusBadge } from './AccommodationStatusBadge';
 import {
   hasBedPricingChange,
@@ -33,6 +36,8 @@ export type BedInteractionSheetProps = {
   visible: boolean;
   mode: BedInteractionMode;
   label: string;
+  bedId?: string;
+  spaceId?: string;
   bedNumber: string;
   status?: AccommodationStatus;
   locationLine?: string;
@@ -57,6 +62,8 @@ export function BedInteractionSheet({
   visible,
   mode,
   label,
+  bedId,
+  spaceId,
   bedNumber,
   status,
   locationLine,
@@ -71,6 +78,9 @@ export function BedInteractionSheet({
   onSave,
 }: BedInteractionSheetProps) {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
+  const scrollMaxHeight = Math.max(240, windowHeight * 0.88 - insets.bottom - 148);
   const { showConfirm } = useConfirmDialog();
   const [numberText, setNumberText] = useState(bedNumber);
   const [rentText, setRentText] = useState(moneyToDraftText(rent));
@@ -107,7 +117,8 @@ export function BedInteractionSheet({
   );
 
   const unchanged = isBedDraftUnchanged(current, draft);
-  const editable = canEditStructure && !inactive;
+  const occupiedStay = mode === 'persisted' && status === 'OCCUPIED' && Boolean(spaceId && bedId);
+  const editable = canEditStructure && !inactive && !occupiedStay;
   const occupancySet = occupancyActionsForBedStatus(status, inactive);
   const showOccupancy =
     mode === 'persisted' &&
@@ -162,7 +173,7 @@ export function BedInteractionSheet({
     <Modal
       visible={visible}
       transparent
-      animationType="fade"
+      animationType="none"
       onRequestClose={saving ? undefined : requestClose}
       statusBarTranslucent
       presentationStyle="overFullScreen">
@@ -174,7 +185,7 @@ export function BedInteractionSheet({
           onPress={saving ? undefined : requestClose}
           accessibilityRole="button"
         />
-        <View style={styles.card}>
+        <View style={[styles.card, { paddingBottom: spacing.lg + insets.bottom }]}>
           <View style={styles.header}>
             <View style={styles.iconWrap}>
               <BedSingle size={18} color={pastels.green.fg} strokeWidth={2.2} />
@@ -204,8 +215,17 @@ export function BedInteractionSheet({
           <ScrollView
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
-            style={styles.scroll}
+            style={[styles.scroll, { maxHeight: scrollMaxHeight }]}
             contentContainerStyle={styles.scrollContent}>
+            {occupiedStay && spaceId && bedId ? (
+              <OccupiedBedStaySection
+                spaceId={spaceId}
+                bedId={bedId}
+                bedNumber={bedNumber}
+                locationLine={locationLine}
+              />
+            ) : (
+              <>
             <Text style={styles.section}>
               {t('accommodation.beds.detailsSection', { defaultValue: 'Bed details' })}
             </Text>
@@ -263,6 +283,8 @@ export function BedInteractionSheet({
                 style={styles.saveButton}
               />
             ) : null}
+              </>
+            )}
 
             {showOccupancy && occupancy ? (
               <AccommodationOccupancyActions
@@ -272,10 +294,15 @@ export function BedInteractionSheet({
                 accommodationStatus={status ?? 'AVAILABLE'}
                 target={occupancy.target}
                 occupancy={occupancy.occupancy}
+                catalogRent={rent}
+                catalogDeposit={deposit}
+                catalogKnown
                 layout="stack"
+                interactionEnabled={visible && !saving}
                 onSuccess={occupancy.onSuccess}
                 onBeforeAllocate={validateOccupancyPricing}
                 onBeforeReserve={validateOccupancyPricing}
+                onDismissBeforeFlow={onClose}
               />
             ) : null}
           </ScrollView>
@@ -353,6 +380,7 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flexGrow: 0,
+    flexShrink: 1,
   },
   scrollContent: {
     paddingBottom: spacing.sm,

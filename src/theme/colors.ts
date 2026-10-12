@@ -51,6 +51,22 @@ export const colors = {
   danger: '#DC2626',
   warning: '#D97706',
   info: '#2563EB',
+
+  /**
+   * Workflow guidance panel — dark green-tinted surface, separate from form cards.
+   * Primary CTA stays ACOMI green on top of this surface.
+   */
+  guidance: {
+    surface: '#16332C',
+    border: 'rgba(37, 211, 102, 0.28)',
+    text: '#F8FAFC',
+    textMuted: '#C9D4D0',
+    label: '#A8B8B2',
+    track: 'rgba(255, 255, 255, 0.22)',
+    divider: 'rgba(255, 255, 255, 0.14)',
+    outline: 'rgba(248, 250, 252, 0.38)',
+    ctaText: '#0F172A',
+  },
 } as const;
 
 /** Soft semantic fills for KPI / action tiles (not page chrome). */

@@ -1,10 +1,15 @@
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { adminApi } from '../../api/adminApi';
+import { ApiError } from '../../api/types';
 import { AdminDetailField, AdminDetailSection } from '../../components/admin';
+import { PasswordField } from '../../components/auth/PasswordField';
 import { Card } from '../../components/ui';
 import type { AdminStackParamList } from '../../navigation/types';
+import { useAuthStore } from '../../store/authStore';
+import { useToastStore } from '../../store/toastStore';
 import {
   formatAdminDate,
   formatAdminOnboardingStatus,
@@ -12,7 +17,9 @@ import {
   formatAdminUserName,
   formatAdminUserRole,
 } from '../../utils/adminLabels';
-import { colors, spacing, typography } from '../../theme';
+import { maskIndianMobile } from '../../utils/indianMobile';
+import { confirmPasswordError, newPasswordError } from '../../utils/passwordMessages';
+import { colors, radius, spacing, typography } from '../../theme';
 
 type Props = NativeStackScreenProps<AdminStackParamList, 'AdminRegisteredUserDetail'>;
 
@@ -24,6 +31,64 @@ export function AdminRegisteredUserDetailScreen({ route }: Props) {
   const { t } = useTranslation();
   const user = route.params.user;
   const displayName = formatAdminUserName(user.fullName);
+  const currentUserId = useAuthStore(state => state.user?.id);
+  const showToast = useToastStore(state => state.showToast);
+  const isSelf = currentUserId != null && currentUserId === user.id;
+  const [resetOpen, setResetOpen] = useState(false);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  function submitReset() {
+    const nextPasswordError = newPasswordError(t, password);
+    const nextConfirmError = confirmPasswordError(t, password, confirmPassword);
+    setPasswordError(nextPasswordError);
+    setConfirmError(nextConfirmError);
+    if (nextPasswordError || nextConfirmError) {
+      return;
+    }
+    Alert.alert(
+      t('admin.users.resetPasswordConfirmTitle', { defaultValue: 'Reset this password?' }),
+      t('admin.users.resetPasswordConfirmBody', {
+        defaultValue:
+          'This sets a new password for {{name}} ({{mobile}}). Their current sessions will stop working. The existing password is not shown.',
+        name: displayName,
+        mobile: maskIndianMobile(user.mobileNumber),
+      }),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('admin.users.resetPassword', { defaultValue: 'Reset password' }),
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              setSaving(true);
+              try {
+                await adminApi.resetRegisteredUserPassword(user.id, {
+                  password,
+                  confirmPassword,
+                });
+                setPassword('');
+                setConfirmPassword('');
+                setResetOpen(false);
+                showToast(
+                  t('admin.users.resetPasswordSuccess', {
+                    defaultValue: 'Password updated. The user can sign in with the new password.',
+                  }),
+                );
+              } catch (err) {
+                showToast(err instanceof ApiError ? err.message : t('common.errors.generic'));
+              } finally {
+                setSaving(false);
+              }
+            })();
+          },
+        },
+      ],
+    );
+  }
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
@@ -104,6 +169,67 @@ export function AdminRegisteredUserDetailScreen({ route }: Props) {
               </Text>
             </View>
           ))
+        )}
+      </AdminDetailSection>
+
+      <SectionLabel>
+        {t('admin.users.securitySection', { defaultValue: 'Security' })}
+      </SectionLabel>
+      <AdminDetailSection>
+        <Text style={styles.spaceName}>{displayName}</Text>
+        <Text style={styles.spaceMeta}>{maskIndianMobile(user.mobileNumber)}</Text>
+        {isSelf ? (
+          <Text style={styles.emptySpaces}>
+            {t('admin.users.resetPasswordSelf', {
+              defaultValue: 'Use account recovery to change your own password.',
+            })}
+          </Text>
+        ) : (
+          <>
+            <Pressable
+              onPress={() => setResetOpen(open => !open)}
+              style={styles.resetButton}
+              accessibilityRole="button">
+              <Text style={styles.resetButtonText}>
+                {t('admin.users.resetPassword', { defaultValue: 'Reset password' })}
+              </Text>
+            </Pressable>
+            {resetOpen ? (
+              <View style={styles.resetForm}>
+                <PasswordField
+                  label={t('admin.users.resetPasswordNew', { defaultValue: 'New password' })}
+                  value={password}
+                  onChangeText={setPassword}
+                  error={passwordError}
+                  editable={!saving}
+                  textContentType="newPassword"
+                  autoComplete="password-new"
+                />
+                <PasswordField
+                  label={t('admin.users.resetPasswordConfirm', {
+                    defaultValue: 'Confirm password',
+                  })}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  error={confirmError}
+                  editable={!saving}
+                  textContentType="newPassword"
+                  autoComplete="password-new"
+                />
+                <Pressable
+                  onPress={submitReset}
+                  disabled={saving}
+                  style={[styles.resetSubmit, saving && styles.resetSubmitDisabled]}
+                  accessibilityRole="button">
+                  <Text style={styles.resetSubmitText}>
+                    {saving
+                      ? t('common.saving')
+                      : t('admin.users.resetPassword', { defaultValue: 'Reset password' })}
+                  </Text>
+                </Pressable>
+              </View>
+            ) : null}
+          </>
         )}
       </AdminDetailSection>
 

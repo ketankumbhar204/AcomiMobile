@@ -4,13 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { BedSingle, ChevronRight, Plus } from 'lucide-react-native';
 import type { AccommodationStatus, BedSpaceListItemResponse } from '../../api/types';
 import { BedPricingDisplay } from './BedPricingDisplay';
+import { OccupiedBedPaymentFace } from './OccupiedBedPaymentFace';
 import { colors, spacing, typography } from '../../theme';
 import { formatBedDisplayLabel } from '../../utils/formatBedDisplayLabel';
 import { getAccommodationStatusColor } from '../../utils/accommodationStatus';
 
-/** Wide enough for labeled Rent / Deposit while still showing ~2 cards. */
-const BED_CARD_WIDTH = 188;
-const ADD_CARD_WIDTH = 128;
+/** Half the row, with the gutter applied outside the bordered card. */
 
 function bedSurface(status: AccommodationStatus): {
   bg: string;
@@ -55,6 +54,7 @@ function bedSurface(status: AccommodationStatus): {
 
 type BuildingInventoryBedCardProps = {
   bed: BedSpaceListItemResponse;
+  spaceId?: string;
   onPress?: () => void;
   onEdit?: () => void;
   menu?: React.ReactNode;
@@ -63,6 +63,7 @@ type BuildingInventoryBedCardProps = {
 
 function BuildingInventoryBedCardComponent({
   bed,
+  spaceId,
   onPress,
   onEdit,
   menu,
@@ -73,6 +74,7 @@ function BuildingInventoryBedCardComponent({
   const surface = useMemo(() => bedSurface(bed.status), [bed.status]);
 
   return (
+    <View style={styles.slot}>
     <Pressable
       onPress={onPress}
       disabled={!onPress}
@@ -124,11 +126,16 @@ function BuildingInventoryBedCardComponent({
           <View style={styles.menuSlot}>{menu}</View>
         ) : null}
       </View>
-      <View style={styles.pricingWell}>
-        <BedPricingDisplay rent={bed.defaultRent} deposit={bed.defaultDeposit} layout="stack" />
+      <View style={styles.pricing}>
+        {bed.status === 'OCCUPIED' ? (
+          <OccupiedBedPaymentFace spaceId={spaceId} bedId={bed.bedId} />
+        ) : (
+          <BedPricingDisplay rent={bed.defaultRent} deposit={bed.defaultDeposit} layout="stack" />
+        )}
       </View>
       {footer}
     </Pressable>
+    </View>
   );
 }
 
@@ -139,6 +146,7 @@ type BuildingInventoryAddBedCardProps = {
 export function BuildingInventoryAddBedCard({ onPress }: BuildingInventoryAddBedCardProps) {
   const { t } = useTranslation();
   return (
+    <View style={styles.slot}>
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [styles.addCard, pressed && styles.cardPressed]}
@@ -151,18 +159,24 @@ export function BuildingInventoryAddBedCard({ onPress }: BuildingInventoryAddBed
         {t('accommodation.builder.addBed', { defaultValue: 'Add Bed' })}
       </Text>
     </Pressable>
+    </View>
   );
 }
 
 export const BuildingInventoryBedCard = memo(BuildingInventoryBedCardComponent);
 
 const styles = StyleSheet.create({
+  slot: {
+    width: '50%',
+    padding: 4,
+  },
   card: {
-    width: BED_CARD_WIDTH,
+    flex: 1,
     borderRadius: 14,
-    borderWidth: 1.5,
-    padding: spacing.sm,
-    gap: spacing.sm,
+    borderWidth: 1,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    gap: 6,
   },
   cardPressed: {
     opacity: 0.92,
@@ -226,17 +240,14 @@ const styles = StyleSheet.create({
     marginTop: -6,
     marginRight: -6,
   },
-  pricingWell: {
-    backgroundColor: colors.white,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(15, 23, 42, 0.06)',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
+  pricing: {
+    minWidth: 0,
+    width: '100%',
+    marginTop: 2,
   },
   addCard: {
-    width: ADD_CARD_WIDTH,
-    minHeight: 148,
+    flex: 1,
+    minHeight: 112,
     borderRadius: 14,
     borderWidth: 1.5,
     borderStyle: 'dashed',

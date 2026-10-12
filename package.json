@@ -22,7 +22,7 @@
 
     "start": "react-native start",
 
-    "test": "jest",
+    "test": "jest && node scripts/check-add-person-choice.mjs && node scripts/check-guided-step-panel.mjs && node scripts/check-role-onboarding-guard.mjs",
 
     "generate-accommodation-sprites": "node scripts/generate-accommodation-sprites.mjs",
 

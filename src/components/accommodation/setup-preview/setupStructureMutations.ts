@@ -45,17 +45,20 @@ function renumberUnitsForFloor(floor: EditableFloor, floorIndex: number): Editab
 
 function createRooms(count: number, bedsPerRoom: number, capacity: number): EditableRoom[] {
   return Array.from({ length: count }, (_, index) => {
-    const letter = String.fromCharCode(65 + (index % 26));
+    const label = String(index + 1);
     return {
       id: createStructureId(),
-      name: `Room ${letter}`,
-      number: letter,
+      name: `Room ${label}`,
+      number: label,
       capacity,
-      beds: Array.from({ length: bedsPerRoom }, (_, bedIndex) => ({
-        id: createStructureId(),
-        label: String.fromCharCode(65 + bedIndex),
-        number: String.fromCharCode(65 + bedIndex),
-      })),
+      beds: Array.from({ length: bedsPerRoom }, (_, bedIndex) => {
+        const bedLabel = String(bedIndex + 1);
+        return {
+          id: createStructureId(),
+          label: bedLabel,
+          number: bedLabel,
+        };
+      }),
     };
   });
 }
@@ -379,13 +382,34 @@ export function deleteRoom(
   return structure;
 }
 
+function roomCountAt(
+  structure: EditableSetupStructure,
+  floorId: string | null,
+  unitId: string | null,
+): number {
+  if (structure.kind === 'building_units' && unitId) {
+    return structure.units.find(unit => unit.id === unitId)?.rooms.length ?? 0;
+  }
+  const floor = floorId ? structure.floors.find(item => item.id === floorId) : undefined;
+  if (structure.kind === 'floors_with_units' && floor && unitId) {
+    return floor.units.find(unit => unit.id === unitId)?.rooms.length ?? 0;
+  }
+  return floor?.rooms.length ?? 0;
+}
+
 export function addRoom(
   structure: EditableSetupStructure,
   floorId: string | null,
   unitId: string | null,
   config: Pick<ExpandStructureConfig, 'bedsPerRoom' | 'capacityPerRoom'>,
 ): EditableSetupStructure {
+  const nextNumber = String(roomCountAt(structure, floorId, unitId) + 1);
   const newRoom = createRooms(1, config.bedsPerRoom, config.capacityPerRoom)[0];
+  if (!newRoom) {
+    return structure;
+  }
+  newRoom.name = `Room ${nextNumber}`;
+  newRoom.number = nextNumber;
 
   if (structure.kind === 'building_units' && unitId) {
     return {
@@ -434,7 +458,7 @@ export function addBed(
     if (room.id !== roomId) {
       return room;
     }
-    const label = String.fromCharCode(65 + room.beds.length);
+    const label = String(room.beds.length + 1);
     return {
       ...room,
       beds: [...room.beds, { id: createStructureId(), label, number: label }],

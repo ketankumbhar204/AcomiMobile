@@ -3,8 +3,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { SpaceTabBackButton } from '../components/ui';
-import { NotificationBellButton } from '../components/notifications/NotificationBellButton';
+import { SpaceTabHeaderLeading } from '../components/ui';
 import { useSpaceTabHeader } from '../hooks/useSpaceTabHeader';
 import { useActiveSpaceId } from '../hooks/useActiveSpaceId';
 import { useSpacePermissions } from '../hooks/useSpacePermissions';
@@ -52,15 +51,7 @@ type SpaceTabNavigatorProps = {
 function DashboardTabScreen() {
   const route = useRoute<RouteProp<SpaceTabParamList, 'Dashboard'>>();
   const spaceId = useActiveSpaceId(route.params.spaceId);
-  // Stable element — a fresh JSX node each render retriggers setOptions forever.
-  const notificationBell = useMemo(
-    () => <NotificationBellButton spaceId={spaceId} />,
-    [spaceId],
-  );
-  useSpaceTabHeader(spaceId, {
-    showProfileAndMenu: true,
-    headerRightExtra: notificationBell,
-  });
+  useSpaceTabHeader(spaceId);
   return <DashboardScreen />;
 }
 
@@ -163,7 +154,7 @@ const tabScreenOptions = {
   ...tabHeaderOptions,
   ...tabBarOptions,
   headerBackVisible: false as const,
-  headerLeft: () => <SpaceTabBackButton />,
+  headerLeft: () => <SpaceTabHeaderLeading />,
 };
 
 export function SpaceTabNavigator({ spaceId }: SpaceTabNavigatorProps) {

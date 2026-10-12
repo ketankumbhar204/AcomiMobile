@@ -3,6 +3,7 @@ import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { CreditCard } from 'lucide-react-native';
 import { PaymentsSectionTabBar } from './PaymentsSectionTabBar';
 import { DayMealPaymentBulkFooter } from './DayMealPaymentBulkFooter';
 import { DayMealPaymentCard } from './DayMealPaymentCard';
@@ -11,7 +12,7 @@ import type { MonthlySummaryCardItem } from '../ui/MonthlySummaryCards';
 import { useDayMealPaymentsMonth } from '../../hooks/useDayMealPayments';
 import type { MainStackParamList } from '../../navigation/types';
 import { colors, spacing, typography } from '../../theme';
-import { formatComboPrice } from '../../utils/comboPrice';
+import { formatPaymentAmount } from '../../utils/paymentAmount';
 import {
   countDayMealPaymentsInSection,
   filterDayMealPaymentsInSection,
@@ -86,24 +87,39 @@ export function DayMealPaymentsPanel({
     () => selectable.filter(item => selectedDates.includes(item.date)),
     [selectable, selectedDates],
   );
-  const selectedTotal = selectedItems.reduce((sum, item) => sum + item.amount, 0);
+  const selectedAmountsKnown = selectedItems.every(
+    item => item.amountKnown && item.amount != null,
+  );
+  const selectedTotal = selectedAmountsKnown
+    ? selectedItems.reduce((sum, item) => sum + (item.amount ?? 0), 0)
+    : null;
   const currencyCode = selectedItems[0]?.currencyCode ?? summary.currencyCode;
+
+  const formatSummaryMoney = useCallback(
+    (amount: number | null) => {
+      if (amount == null) {
+        return t('paymentCollection.dayMeals.amountUnavailable');
+      }
+      return formatPaymentAmount(amount, summary.currencyCode) ?? t('paymentCollection.dayMeals.amountUnavailable');
+    },
+    [summary.currencyCode, t],
+  );
 
   const summaryCards = useMemo((): MonthlySummaryCardItem[] => {
     // Standard order: Total → Collected → Pending amount → Pending count
     return [
       {
         label: t('paymentCollection.dayMeals.summary.total'),
-        value: formatComboPrice(summary.totalAmount, summary.currencyCode) ?? '—',
+        value: formatSummaryMoney(summary.totalAmount),
       },
       {
         label: t('paymentCollection.dayMeals.summary.collected'),
-        value: formatComboPrice(summary.collectedAmount, summary.currencyCode) ?? '—',
+        value: formatSummaryMoney(summary.collectedAmount),
         tone: 'success',
       },
       {
         label: t('paymentCollection.dayMeals.summary.pending'),
-        value: formatComboPrice(summary.pendingAmount, summary.currencyCode) ?? '—',
+        value: formatSummaryMoney(summary.pendingAmount),
         tone: 'pending',
       },
       {
@@ -111,7 +127,7 @@ export function DayMealPaymentsPanel({
         value: String(summary.pendingCount),
       },
     ];
-  }, [summary, t]);
+  }, [formatSummaryMoney, summary.pendingCount, summary.collectedAmount, summary.pendingAmount, summary.totalAmount, t]);
 
   const sectionTabs = useMemo(
     () => [
@@ -156,7 +172,7 @@ export function DayMealPaymentsPanel({
   );
 
   const openBulkPay = useCallback(() => {
-    if (selectedItems.length === 0) {
+    if (selectedItems.length === 0 || selectedTotal == null) {
       return;
     }
     navigation.navigate('DayMealBulkPay', {
@@ -222,7 +238,7 @@ export function DayMealPaymentsPanel({
           <EmptyState
             title={t('paymentCollection.memberPayments.emptyTitle')}
             description={t(`paymentCollection.tenantSections.empty.${section}`)}
-            icon="💳"
+            Icon={CreditCard}
           />
         ) : null}
 

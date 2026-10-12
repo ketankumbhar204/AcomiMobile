@@ -6,6 +6,8 @@ export type MemberMealActivityDaySheetContext = {
   memberId: UUID;
   memberName: string;
   canManage: boolean;
+  /** Member-only: open the meal response flow for this date. */
+  onRespond?: (date: string) => void;
 };
 
 type MemberMealActivityDaySheetState = {

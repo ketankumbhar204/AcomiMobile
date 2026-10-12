@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -25,9 +25,11 @@ import { mealsApi } from '../../api/mealsApi';
 import type {
   DailyMenuResponse,
   MealEligibilitySummaryResponse,
+  MealPollSlot,
   MealType,
   UUID,
 } from '../../api/types';
+import { ApiError } from '../../api/types';
 import {
   CopyPreviousMenuSheet,
   MenuPlanningDayOverview,
@@ -53,8 +55,13 @@ import {
   todayIsoDate,
   tomorrowIsoDate,
 } from '../../utils/mealDates';
-import { summarizeDailyMenuDay } from '../../utils/dailyMenuDayStatus';
-import { MEAL_TYPES } from '../../utils/mealLabels';
+import {
+  resolveDayPollControl,
+  resolveDayShareAction,
+  resolveDayShareVisual,
+  summarizeDailyMenuDay,
+} from '../../utils/dailyMenuDayStatus';
+import { clearDayShareFailed, isDayShareFailed } from '../../utils/dayShareFailure';
 import { findMySpaceEntry } from '../../utils/spacePermissions';
 
 type MenuPlanningScreenProps = {
@@ -68,10 +75,6 @@ function menusByType(menus: DailyMenuResponse[]): Partial<Record<MealType, Daily
     acc[menu.mealType] = menu;
     return acc;
   }, {});
-}
-
-function hasPlannedMenu(menu?: DailyMenuResponse | null): boolean {
-  return (menu?.options?.filter(option => option.isAvailable) ?? []).length > 0;
 }
 
 export function MenuPlanningScreen({
@@ -98,10 +101,16 @@ export function MenuPlanningScreen({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [menus, setMenus] = useState<DailyMenuResponse[]>([]);
+  const [polls, setPolls] = useState<MealPollSlot[]>([]);
+  const [closingPoll, setClosingPoll] = useState(false);
+  const [shareFailed, setShareFailed] = useState(false);
+  const closingPollRef = useRef(false);
   const [eligibility, setEligibility] = useState<MealEligibilitySummaryResponse | null>(null);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [copyMenuOpen, setCopyMenuOpen] = useState(false);
   const [dismissCustomersHint, setDismissCustomersHint] = useState(false);
+  const [openingShare, setOpeningShare] = useState(false);
+  const openingShareRef = useRef(false);
   /** Remembers the active meal while this screen stays mounted. */
   const [selectedMealType, setSelectedMealType] = useState<MealType>(
     initialMealType ?? 'BREAKFAST',
@@ -117,15 +126,26 @@ export function MenuPlanningScreen({
     setLoading(true);
     setError(null);
     try {
-      const [menuList, summary] = await Promise.all([
+      const [menuList, summary, pollDay] = await Promise.all([
         mealsApi.getDailyMenusByDate(spaceId, menuDate),
         mealsApi.getEligibilitySummary(spaceId, menuDate),
+        mealsApi.getMealPolls(spaceId, menuDate),
       ]);
       setMenus(menuList);
       setEligibility(summary);
+      setPolls(pollDay.polls ?? []);
+      const failed = isDayShareFailed(spaceId, menuDate);
+      const visual = resolveDayShareVisual(summarizeDailyMenuDay(menuList), { shareFailed: failed });
+      if (visual === 'shared') {
+        clearDayShareFailed(spaceId, menuDate);
+        setShareFailed(false);
+      } else {
+        setShareFailed(failed && visual === 'failed');
+      }
     } catch {
       setError(t('meals.errors.loadFailed'));
       setMenus([]);
+      setPolls([]);
       setEligibility(null);
     } finally {
       setLoading(false);
@@ -134,6 +154,8 @@ export function MenuPlanningScreen({
 
   useFocusEffect(
     useCallback(() => {
+      openingShareRef.current = false;
+      setOpeningShare(false);
       load().catch(() => undefined);
     }, [load]),
   );
@@ -141,7 +163,8 @@ export function MenuPlanningScreen({
   const menuMap = useMemo(() => menusByType(menus), [menus]);
   const statusSummary = useMemo(() => summarizeDailyMenuDay(menus), [menus]);
   const dateReadOnly = isPastMenuDate(menuDate);
-  const canShareMenu = !dateReadOnly && MEAL_TYPES.some(type => hasPlannedMenu(menuMap[type]));
+  const shareAction = dateReadOnly ? 'hidden' : resolveDayShareAction(statusSummary);
+  const pollControl = resolveDayPollControl(polls.map(poll => poll.status));
   const distinctEligible = useMemo(() => {
     if (!eligibility) {
       return 0;
@@ -173,11 +196,71 @@ export function MenuPlanningScreen({
     [guardEditable, menuDate, navigateMain, spaceId],
   );
 
-  const openShare = useCallback(
-    (mealType?: MealType) => {
-      if (!guardEditable()) {
+  const closeOpenPolls = useCallback(async () => {
+    if (closingPollRef.current) {
+      return;
+    }
+    const openPolls = polls.filter(poll => poll.status === 'OPEN');
+    if (openPolls.length === 0) {
+      return;
+    }
+    closingPollRef.current = true;
+    setClosingPoll(true);
+    try {
+      for (const poll of openPolls) {
+        await mealsApi.closeMealPoll(spaceId, menuDate, poll.mealType);
+      }
+      showToast(
+        t('meals.planning.dayShare.closePollSuccess', {
+          defaultValue: 'Meal poll closed successfully.',
+        }),
+      );
+      await load();
+    } catch (error) {
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : t('meals.planning.dayShare.closePollFailed', {
+              defaultValue: 'Could not close the meal poll. Try again.',
+            });
+      showToast(message);
+      await load();
+    } finally {
+      closingPollRef.current = false;
+      setClosingPoll(false);
+    }
+  }, [load, menuDate, polls, showToast, spaceId, t]);
+
+  const confirmClosePoll = useCallback(() => {
+    if (closingPollRef.current) {
+      return;
+    }
+    Alert.alert(
+      t('meals.planning.dayShare.closePollTitle', {
+        defaultValue: "Close today's meal poll?",
+      }),
+      t('meals.planning.dayShare.closePollMessage', {
+        defaultValue:
+          'Members will no longer be able to submit or change their meal selections for this poll.',
+      }),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('meals.planning.dayShare.closePollConfirm', { defaultValue: 'Close poll' }),
+          onPress: () => {
+            void closeOpenPolls();
+          },
+        },
+      ],
+    );
+  }, [closeOpenPolls, t]);
+
+  const openDayShare = useCallback(
+    (action: 'share' | 'reshare') => {
+      if (openingShareRef.current || !guardEditable()) {
         return;
       }
+      openingShareRef.current = true;
       if (permissions.spaceType === 'MESS' && distinctEligible === 0) {
         Alert.alert(
           t('meals.planning.shareBlockedNoCustomersTitle'),
@@ -190,12 +273,14 @@ export function MenuPlanningScreen({
             },
           ],
         );
+        openingShareRef.current = false;
         return;
       }
+      setOpeningShare(true);
       navigateMain('MenuSharePreview', {
         spaceId,
         menuDate,
-        ...(mealType ? { mealType } : {}),
+        intent: action === 'reshare' ? 'reshare' : 'save',
       });
     },
     [
@@ -373,12 +458,18 @@ export function MenuPlanningScreen({
               selectedMealType={selectedMealType}
               onSelectMealType={selectMealType}
               onShareDay={
-                permissions.canManageMeals && canShareMenu
-                  ? () => openShare()
+                permissions.canManageMeals &&
+                (shareAction === 'share' || shareAction === 'reshare')
+                  ? () => openDayShare(shareAction)
                   : undefined
               }
-              shareDisabled={!canShareMenu}
+              shareAction={shareAction}
+              shareDisabled={openingShare}
               dateReadOnly={dateReadOnly}
+              shareFailed={shareFailed}
+              pollControl={canManage ? pollControl : 'hidden'}
+              closingPoll={closingPoll}
+              onClosePoll={canManage && pollControl === 'open' ? confirmClosePoll : undefined}
             />
           ) : null}
         </View>

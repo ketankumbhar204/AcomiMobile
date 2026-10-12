@@ -122,19 +122,22 @@ export function MealPollMealTypeTabs({
 const styles = StyleSheet.create({
   strip: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    flexWrap: 'nowrap',
+    alignItems: 'stretch',
+    gap: spacing.xs,
     marginBottom: spacing.md,
   },
   cell: {
     flex: 1,
+    flexBasis: 0,
     minWidth: 0,
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.card,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
-    gap: 2,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs,
+    gap: 1,
   },
   cellPressed: {
     opacity: 0.92,
@@ -142,8 +145,8 @@ const styles = StyleSheet.create({
   name: {
     ...typography.bodyStrong,
     fontWeight: '700',
-    fontSize: 15,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 16,
   },
   meta: {
     ...typography.caption,

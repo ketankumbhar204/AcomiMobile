@@ -12,6 +12,8 @@ jest.mock('../../api/filesApi', () => ({
 }));
 
 jest.mock('../../api/client', () => ({
+  __esModule: true,
+  default: { get: jest.fn() },
   getAuthToken: () => 'token',
 }));
 

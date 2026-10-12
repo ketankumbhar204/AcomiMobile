@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Camera } from 'lucide-react-native';
 import type { SpacePaymentResponse, UniversalPaymentMethod } from '../../api/types';
 import { useToastStore } from '../../store/toastStore';
 import {
@@ -230,7 +231,7 @@ export function UniversalPaymentProofModal({
             <ActivityIndicator color={colors.primary} />
           ) : (
             <>
-              <Text style={styles.pickIcon}>📷</Text>
+              <Camera size={22} color={colors.primaryDark} strokeWidth={2.2} />
               <Text style={styles.pickLabel}>{t('paymentCollection.proof.uploadScreenshot')}</Text>
               <Text style={styles.pickOptional}>{t('paymentCollection.proof.uploadOptional')}</Text>
             </>

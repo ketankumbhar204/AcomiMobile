@@ -61,6 +61,12 @@ describe('profileCompletion', () => {
 
   it('treats profileCompleted flag as authoritative', () => {
     expect(isUserProfileComplete(completeUser)).toBe(true);
+    expect(
+      isUserProfileComplete({
+        ...completeUser,
+        profileCompleted: false,
+      }),
+    ).toBe(false);
   });
 
   it('identifies consumer memberships', () => {

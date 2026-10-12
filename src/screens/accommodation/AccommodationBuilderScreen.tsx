@@ -675,6 +675,7 @@ export function AccommodationBuilderScreen() {
 
   const renderInventoryItem = ({ item }: { item: BedRoomGroup }) => (
     <BuildingInventoryRoomSection
+      spaceId={spaceId}
       group={item}
       pathCrumbs={roomGroupPathCrumbs(item, {
         includeBuilding: true,

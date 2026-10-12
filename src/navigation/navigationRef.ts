@@ -7,6 +7,8 @@ import { findMySpaceEntry, resolveSpacePermissions } from '../utils/spacePermiss
 import type { RootStackParamList, SpaceTabParamList } from './types';
 import type { SpaceBootstrapResult } from '../store/spaceStore';
 import { devLog } from '../utils/devLog';
+import { profileCompletionExitStack } from './profileCompletionExit';
+import { resolveRoleOnboardingAccess } from '../utils/roleOnboardingAccess';
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
@@ -79,6 +81,32 @@ export function resetToCompleteProfile(): void {
 /** @deprecated Use resetToCompleteProfile */
 export function resetToProfileCompletionGate(): void {
   resetToCompleteProfile();
+}
+
+/** Replace onboarding with Profile over home. Runs after the gate navigator swaps. */
+export function resetAfterProfileCompletion(): void {
+  const dispatchReset = () => {
+    if (!navigationRef.isReady()) {
+      return;
+    }
+    const exit = profileCompletionExitStack();
+    navigationRef.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [
+          {
+            name: 'Main',
+            state: {
+              index: exit.index,
+              routes: exit.routes,
+            },
+          },
+        ],
+      }),
+    );
+  };
+
+  setTimeout(dispatchReset, 0);
 }
 
 export function resetToDashboard(spaceId: string): void {
@@ -214,6 +242,20 @@ export function resetToMySpaces(): void {
 
 export function resetToOnboardingChoice(): void {
   if (!navigationRef.isReady()) {
+    return;
+  }
+
+  const { mySpaces, selectedSpaceId } = useSpaceStore.getState();
+  const access = resolveRoleOnboardingAccess(
+    mySpaces.map(space => space.spaceId),
+    selectedSpaceId,
+  );
+  if (access.status === 'space') {
+    resetToDashboard(access.spaceId);
+    return;
+  }
+  if (access.status === 'picker') {
+    resetToMySpaces();
     return;
   }
 

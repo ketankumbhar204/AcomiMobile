@@ -7,6 +7,7 @@ import {
 } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { resetToMySpaces } from '../../navigation/navigationRef';
+import { spaceDashboardHeaderDestination } from '../../navigation/spaceHeaderNav';
 import type { MainStackParamList } from '../../navigation/types';
 import { useTranslation } from 'react-i18next';
 import { colors, spacing } from '../../theme';
@@ -38,7 +39,8 @@ export function SpaceTabBackButton() {
   const { t } = useTranslation();
 
   const handlePress = () => {
-    if (goBackInStack(navigation)) {
+    const wentBack = goBackInStack(navigation);
+    if (spaceDashboardHeaderDestination('back', wentBack) === 'previous') {
       return;
     }
 
@@ -69,12 +71,12 @@ export function SpaceTabBackButton() {
 
 const styles = StyleSheet.create({
   button: {
-    marginLeft: spacing.sm,
-    minWidth: 44,
+    marginLeft: spacing.xs,
+    minWidth: 36,
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.xs,
   },
   pressed: {
     opacity: 0.5,

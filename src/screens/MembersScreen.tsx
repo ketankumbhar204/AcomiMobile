@@ -19,8 +19,15 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { Mail, UserPlus, Users, X, CalendarDays, UserCheck } from 'lucide-react-native';
-import type { MemberResponse, MembershipRole, PendingInvitationResponse } from '../api/types';
+import { Mail, UserPlus, Users, X, CalendarDays, UserCheck, IndianRupee } from 'lucide-react-native';
+import type {
+  MemberResponse,
+  MembershipRole,
+  PendingInvitationResponse,
+  SpaceType,
+} from '../api/types';
+import { paymentsApi } from '../api/paymentsApi';
+import { formatMemberContactNumber } from '../utils/indianMobile';
 import { MemberListCard } from '../components/member/MemberListCard';
 import { MemberOccupancyStatusBadge, MemberStatusBadge } from '../components/member';
 import { MemberListMealAccessSwitch } from '../components/meals/MemberListMealAccessRow';
@@ -61,6 +68,17 @@ import {
 } from '../utils/memberListQuery';
 import { shouldUseFilterDrawer } from '../utils/filterUx';
 import { isAccommodationApplicable } from '../utils/accommodationProfile';
+import { canManagePayments, currentMonthKey } from '../utils/dashboardFinancial';
+import {
+  formatDuesAmount,
+  memberDuesCue,
+  type MemberDuesSnapshot,
+} from '../utils/memberDues';
+import {
+  contextualMembershipRole,
+  membershipRoleLabelKey,
+  type DisplayMembershipRole,
+} from '../utils/memberRoles';
 import { devLog } from '../utils/devLog';
 
 type MembersNavigation = CompositeNavigationProp<
@@ -74,28 +92,31 @@ type MembersRoute = NativeStackScreenProps<
 >['route'];
 
 type MembersTab = 'members' | 'pending';
-type MembersKpiFocus = 'total' | 'active' | 'pending' | 'joinedThisMonth';
+type MembersKpiFocus = 'total' | 'active' | 'pending' | 'joinedThisMonth' | 'pendingPayments';
 
 function formatRoleLabel(
   role: MembershipRole,
+  spaceType: SpaceType | undefined,
   t: (key: string) => string,
 ): string {
-  return t(`spaces.roles.${role}`);
+  return t(membershipRoleLabelKey(role, spaceType));
 }
 
 function formatDate(value: string): string {
   return new Date(value).toLocaleDateString();
 }
 
-function memberRoleTone(role: MembershipRole): DashboardPersonRoleTone {
+function memberRoleTone(role: DisplayMembershipRole): DashboardPersonRoleTone {
   switch (role) {
     case 'OWNER':
       return 'owner';
-    case 'MANAGER':
     case 'CUSTOMER':
       return 'customer';
     case 'TENANT':
       return 'resident';
+    case 'MEMBER':
+      return 'neutral';
+    case 'MANAGER':
     default:
       return 'staff';
   }
@@ -139,6 +160,11 @@ export function MembersScreen() {
     defaultMemberListFilters(),
   );
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  const [duesByMemberId, setDuesByMemberId] = useState<Map<string, MemberDuesSnapshot>>(
+    () => new Map(),
+  );
+  const [spacePending, setSpacePending] = useState<number | null>(null);
+  const [duesState, setDuesState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
 
   const permissions = useSpacePermissions(spaceId);
   const showMealAccess = permissions.canViewMeals === true;
@@ -146,6 +172,8 @@ export function MembersScreen() {
   const isMess = permissions.spaceType === 'MESS';
   const showTenantOccupancyStatus =
     permissions.spaceType != null && isAccommodationApplicable(permissions.spaceType);
+  const canSeeDues = canManagePayments(permissions.membershipRole);
+  const duesMonth = currentMonthKey();
   const { participationByMemberId, reloadParticipations } = useMealParticipationMap(
     spaceId,
     showMealAccess,
@@ -157,8 +185,9 @@ export function MembersScreen() {
         search: searchQuery,
         filters: listFilters,
         spaceType: permissions.spaceType,
+        duesByMemberId,
       }),
-    [listFilters, members, permissions.spaceType, searchQuery],
+    [duesByMemberId, listFilters, members, permissions.spaceType, searchQuery],
   );
 
   const filteredPendingInvitations = useMemo(
@@ -199,6 +228,14 @@ export function MembersScreen() {
       setListFilters({
         ...defaultMemberListFilters(),
         statuses: new Set(['ACTIVE']),
+      });
+      return;
+    }
+    if (next === 'pendingPayments') {
+      setActiveTab('members');
+      setListFilters({
+        ...defaultMemberListFilters(),
+        paymentDues: 'pending',
       });
       return;
     }
@@ -248,7 +285,53 @@ export function MembersScreen() {
 
   useSpaceTabHeader(spaceId, {
     headerRightExtra: inviteHeaderAction,
+    showLanguage: false,
   });
+
+  const loadDues = useCallback(async () => {
+    if (!canSeeDues) {
+      setDuesByMemberId(new Map());
+      setSpacePending(null);
+      setDuesState('idle');
+      return;
+    }
+    setDuesState(current => (current === 'ready' ? current : 'loading'));
+    try {
+      const [summary, firstPage] = await Promise.all([
+        paymentsApi.getPaymentsSummary(spaceId, duesMonth),
+        paymentsApi.getPaymentsMembers(spaceId, { month: duesMonth, page: 0, size: 100 }),
+      ]);
+      const rows = [...firstPage.page.content];
+      const extraPages = Math.min(firstPage.page.totalPages, 10) - 1;
+      if (extraPages > 0) {
+        const rest = await Promise.all(
+          Array.from({ length: extraPages }, (_, index) =>
+            paymentsApi.getPaymentsMembers(spaceId, {
+              month: duesMonth,
+              page: index + 1,
+              size: 100,
+            }),
+          ),
+        );
+        rest.forEach(page => rows.push(...page.page.content));
+      }
+      const next = new Map<string, MemberDuesSnapshot>();
+      rows.forEach(item => {
+        next.set(item.memberId, {
+          pending: item.pending,
+          underReview: item.underReview,
+          expectedCharges: item.expectedCharges,
+          currencyCode: item.currencyCode,
+        });
+      });
+      setDuesByMemberId(next);
+      setSpacePending(summary.financial?.pending ?? null);
+      setDuesState('ready');
+    } catch (loadError) {
+      devLog('[MembersScreen] dues load failed', loadError);
+      setDuesState('error');
+    }
+  }, [canSeeDues, duesMonth, spaceId]);
 
   const openMemberFabMenu = useCallback(() => {
     openActionSheet(t('membership.add.fabMenuTitle'), [
@@ -269,22 +352,66 @@ export function MembersScreen() {
       loadMembers();
       loadPendingInvitations();
       void reloadParticipations();
-    }, [loadMembers, loadPendingInvitations, reloadParticipations, spaceId]),
+      void loadDues();
+    }, [loadDues, loadMembers, loadPendingInvitations, reloadParticipations, spaceId]),
   );
 
   const onRefresh = useCallback(async () => {
     devLog('[MembersScreen] pull to refresh');
     await refresh();
     await reloadParticipations();
-  }, [refresh, reloadParticipations]);
+    await loadDues();
+  }, [loadDues, refresh, reloadParticipations]);
 
-  const openMemberDetails = (member: MemberResponse) => {
+  const openMemberDetails = (member: MemberResponse, initialTab?: 'payments') => {
     devLog('[MembersScreen] open member details', member.memberId);
     navigation.navigate('MemberDetails', {
       spaceId,
       memberId: member.memberId,
+      initialTab,
     });
   };
+
+  const paymentLineFor = (memberId: string) => {
+    if (!canSeeDues || duesState !== 'ready') {
+      return undefined;
+    }
+    const snapshot = duesByMemberId.get(memberId);
+    const cue = memberDuesCue(snapshot);
+    if (!cue) {
+      return undefined;
+    }
+    const currency = snapshot?.currencyCode || 'INR';
+    if (cue.kind === 'due') {
+      return {
+        text: t('membership.dues.pending', {
+          amount: formatDuesAmount(cue.amount, currency),
+          defaultValue: 'Pending: {{amount}}',
+        }),
+        tone: 'due' as const,
+      };
+    }
+    if (cue.kind === 'review') {
+      return {
+        text: t('membership.dues.review', {
+          amount: formatDuesAmount(cue.amount, currency),
+          defaultValue: 'Under review: {{amount}}',
+        }),
+        tone: 'review' as const,
+      };
+    }
+    return {
+      text: t('membership.dues.clear', { defaultValue: 'No pending dues' }),
+      tone: 'clear' as const,
+    };
+  };
+
+  const pendingPaymentsValue =
+    duesState === 'ready' && spacePending != null
+      ? formatDuesAmount(spacePending)
+      : duesState === 'loading' || duesState === 'idle'
+        ? '…'
+        : '—';
 
   const confirmCancelInvitation = (invitation: PendingInvitationResponse) => {
     showConfirm({
@@ -340,7 +467,7 @@ export function MembersScreen() {
             icon={Users}
             accent={colors.primaryDark}
             compact
-            gridItem
+            style={styles.kpiCard}
             selected={kpiFocus === 'total'}
             onPress={() => applyKpiFocus('total')}
           />
@@ -350,7 +477,7 @@ export function MembersScreen() {
             icon={UserCheck}
             accent="#2563EB"
             compact
-            gridItem
+            style={styles.kpiCard}
             selected={kpiFocus === 'active'}
             onPress={() => applyKpiFocus('active')}
           />
@@ -360,7 +487,7 @@ export function MembersScreen() {
             icon={Mail}
             accent="#D97706"
             compact
-            gridItem
+            style={styles.kpiCard}
             selected={kpiFocus === 'pending'}
             onPress={() => applyKpiFocus('pending')}
           />
@@ -370,10 +497,22 @@ export function MembersScreen() {
             icon={CalendarDays}
             accent="#7C3AED"
             compact
-            gridItem
+            style={styles.kpiCard}
             selected={kpiFocus === 'joinedThisMonth'}
             onPress={() => applyKpiFocus('joinedThisMonth')}
           />
+          {canSeeDues ? (
+            <DashboardStatCard
+              label={t('membership.dues.summary', { defaultValue: 'Pending Payments' })}
+              value={pendingPaymentsValue}
+              icon={IndianRupee}
+              accent="#D97706"
+              compact
+              style={styles.kpiCard}
+              selected={kpiFocus === 'pendingPayments'}
+              onPress={() => applyKpiFocus('pendingPayments')}
+            />
+          ) : null}
         </View>
 
         <DashboardSectionTitle
@@ -446,14 +585,22 @@ export function MembersScreen() {
                     onPress={() => openMemberDetails(member)}
                     roleChip={
                       <DashboardRoleChip
-                        label={formatRoleLabel(member.role, t)}
-                        tone={memberRoleTone(member.role)}
+                        label={formatRoleLabel(member.role, permissions.spaceType, t)}
+                        tone={memberRoleTone(
+                          contextualMembershipRole(member.role, permissions.spaceType),
+                        )}
                       />
+                    }
+                    contactLabel={
+                      formatMemberContactNumber(member.mobileNumber) ??
+                      t('membership.members.mobileNotAvailable')
                     }
                     statusChip={buildMemberStatusChip(member, showTenantOccupancyStatus)}
                     statusLabel={t(getMemberStatusLabelKey(member.status ?? 'ACTIVE'))}
                     acomiLabel={memberAcomiBadgeLabel(member, t)}
                     acomiActive={member.membershipId != null}
+                    paymentLine={paymentLineFor(member.memberId)}
+                    onPaymentPress={() => openMemberDetails(member, 'payments')}
                     footerLine={t('membership.members.created', {
                       date: formatDate(member.createdAt),
                     })}
@@ -519,8 +666,10 @@ export function MembersScreen() {
                     </Text>
                     <View style={styles.inviteChipRow}>
                       <DashboardRoleChip
-                        label={formatRoleLabel(invitation.role, t)}
-                        tone={memberRoleTone(invitation.role)}
+                        label={formatRoleLabel(invitation.role, permissions.spaceType, t)}
+                        tone={memberRoleTone(
+                          contextualMembershipRole(invitation.role, permissions.spaceType),
+                        )}
                       />
                       <Text style={styles.inviteSubtitle} numberOfLines={1}>
                         {t('membership.pending.invitedBy', { name: invitation.invitedBy })}
@@ -571,6 +720,7 @@ export function MembersScreen() {
         applied={listFilters}
         showStatusSection={activeTab === 'members'}
         showSortSection={activeTab === 'members'}
+        showPaymentFilter={canSeeDues && activeTab === 'members'}
         onClose={() => setFilterDrawerOpen(false)}
         onApply={next => {
           setKpiFocus(null);
@@ -603,6 +753,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
+  },
+  kpiCard: {
+    width: '48%',
+    flexGrow: 0,
+    flexBasis: '48%',
   },
   errorBanner: {
     backgroundColor: '#FEF2F2',

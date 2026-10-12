@@ -62,6 +62,7 @@ export function Button({
       hitSlop={8}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityState={{ disabled: isDisabled, busy: loading }}
       android_ripple={{ color: 'rgba(0,0,0,0.08)' }}
       style={({ pressed }) => [
         styles.base,

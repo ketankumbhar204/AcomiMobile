@@ -9,6 +9,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Check } from 'lucide-react-native';
 import { colors, radius, spacing, typography } from '../../../theme';
 
 type InlineChipEditorProps = {
@@ -86,7 +87,7 @@ export function InlineChipEditor({
           onPress={() => void handleSave()}
           hitSlop={6}
           accessibilityLabel={t('common.save')}>
-          <Text style={styles.saveLabel}>✓</Text>
+          <Check size={14} color={colors.primaryDark} strokeWidth={2.6} />
         </Pressable>
       )}
       <Pressable

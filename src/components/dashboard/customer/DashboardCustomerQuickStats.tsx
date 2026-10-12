@@ -26,6 +26,8 @@ type DashboardCustomerQuickStatsProps = {
   currencyCode?: string;
   upcomingPayments: number;
   loading?: boolean;
+  /** Menu-item and order counts are mess-only. */
+  showMessStats?: boolean;
 };
 
 function formatMoney(amount: number, currencyCode: string, locale: string): string {
@@ -67,27 +69,14 @@ export function DashboardCustomerQuickStats({
   currencyCode = 'INR',
   upcomingPayments,
   loading = false,
+  showMessStats = true,
 }: DashboardCustomerQuickStatsProps) {
   const { t, i18n } = useTranslation();
   const { width } = useWindowDimensions();
   const compact = width < 360;
 
-  const stats = useMemo<CustomerQuickStat[]>(
-    () => [
-      {
-        id: 'menuItems',
-        label: t('dashboard.customer.stats.menuItems'),
-        value: loading ? '—' : String(totalMenuItems),
-        icon: UtensilsCrossed,
-        accent: colors.primaryDark,
-      },
-      {
-        id: 'orders',
-        label: t('dashboard.customer.stats.yourOrders'),
-        value: loading ? '—' : String(yourOrders),
-        icon: ClipboardList,
-        accent: '#2563EB',
-      },
+  const stats = useMemo<CustomerQuickStat[]>(() => {
+    const shared: CustomerQuickStat[] = [
       {
         id: 'due',
         label: t('dashboard.customer.stats.dueAmount'),
@@ -105,12 +94,33 @@ export function DashboardCustomerQuickStats({
         icon: CalendarDays,
         accent: '#7C3AED',
       },
-    ],
-    [
+    ];
+    if (!showMessStats) {
+      return shared;
+    }
+    return [
+      {
+        id: 'menuItems',
+        label: t('dashboard.customer.stats.menuItems'),
+        value: loading ? '—' : String(totalMenuItems),
+        icon: UtensilsCrossed,
+        accent: colors.primaryDark,
+      },
+      {
+        id: 'orders',
+        label: t('dashboard.customer.stats.yourOrders'),
+        value: loading ? '—' : String(yourOrders),
+        icon: ClipboardList,
+        accent: '#2563EB',
+      },
+      ...shared,
+    ];
+  }, [
       currencyCode,
       dueAmount,
       i18n.language,
       loading,
+      showMessStats,
       t,
       totalMenuItems,
       upcomingPayments,

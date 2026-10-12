@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Check, Pencil, X } from 'lucide-react-native';
 import { colors, radius, spacing, typography } from '../../../theme';
 
 type InlineEditableTitleProps = {
@@ -45,10 +46,10 @@ export function InlineEditableTitle({
           placeholderTextColor={colors.muted}
         />
         <Pressable onPress={save} style={styles.iconBtn} accessibilityRole="button">
-          <Text style={styles.saveIcon}>✓</Text>
+          <Check size={16} color={colors.primaryDark} strokeWidth={2.4} />
         </Pressable>
         <Pressable onPress={cancel} style={styles.iconBtn} accessibilityRole="button">
-          <Text style={styles.cancelIcon}>✕</Text>
+          <X size={16} color={colors.muted} strokeWidth={2.4} />
         </Pressable>
       </View>
     );
@@ -60,7 +61,7 @@ export function InlineEditableTitle({
         {value}
       </Text>
       <Pressable onPress={startEdit} style={styles.iconBtn} accessibilityRole="button">
-        <Text style={styles.editIcon}>✏️</Text>
+        <Pencil size={16} color={colors.primaryDark} strokeWidth={2.2} />
       </Pressable>
     </View>
   );
@@ -95,7 +96,7 @@ export function InlineEditableField({ label, value, onSave, keyboardType = 'defa
               setEditing(false);
             }}
             style={styles.iconBtn}>
-            <Text style={styles.saveIcon}>✓</Text>
+            <Check size={16} color={colors.primaryDark} strokeWidth={2.4} />
           </Pressable>
           <Pressable
             onPress={() => {
@@ -103,7 +104,7 @@ export function InlineEditableField({ label, value, onSave, keyboardType = 'defa
               setEditing(false);
             }}
             style={styles.iconBtn}>
-            <Text style={styles.cancelIcon}>✕</Text>
+            <X size={16} color={colors.muted} strokeWidth={2.4} />
           </Pressable>
         </View>
       ) : (
@@ -115,7 +116,7 @@ export function InlineEditableField({ label, value, onSave, keyboardType = 'defa
               setEditing(true);
             }}
             style={styles.iconBtn}>
-            <Text style={styles.editIcon}>✏️</Text>
+            <Pencil size={16} color={colors.primaryDark} strokeWidth={2.2} />
           </Pressable>
         </View>
       )}
@@ -157,18 +158,6 @@ const styles = StyleSheet.create({
     height: 32,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  editIcon: {
-    fontSize: 14,
-  },
-  saveIcon: {
-    fontSize: 16,
-    color: colors.primary,
-    fontWeight: '700',
-  },
-  cancelIcon: {
-    fontSize: 14,
-    color: colors.muted,
   },
   fieldWrap: {
     gap: 4,

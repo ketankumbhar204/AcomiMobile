@@ -91,8 +91,14 @@ function logError(error: AxiosError<ApiErrorBody>): void {
   const url = `${error.config?.baseURL ?? ''}${error.config?.url ?? ''}`;
 
   if (error.response) {
-    console.error(`${LOG_TAG} ✗ ${error.response.status} ${method} ${url}`);
-    console.error(
+    const status = error.response.status;
+    const expected =
+      (status === 401 && url.includes('/auth/login')) ||
+      (status === 403 && url.includes('/auth/login')) ||
+      (status === 409 && url.includes('/admin/registered-users'));
+    const write = expected ? console.log : console.error;
+    write(`${LOG_TAG} ${expected ? '!' : '✗'} ${status} ${method} ${url}`);
+    write(
       `${LOG_TAG}   Error body:`,
       JSON.stringify(error.response.data, null, 2),
     );

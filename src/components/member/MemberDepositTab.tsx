@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Landmark } from 'lucide-react-native';
 import type { MemberDetailsResponse } from '../../api/types';
 import { OccupancyContractSnapshotCard } from '../occupancy';
 import { Button, Card, EmptyState, FormInput, SkeletonCard } from '../ui';
@@ -72,7 +73,7 @@ export function MemberDepositTab({ spaceId, member, canEdit }: MemberDepositTabP
   ) {
     return (
       <EmptyState
-        icon="🏦"
+        Icon={Landmark}
         title={t('membership.deposit.emptyTitle')}
         description={t('membership.deposit.emptyDescription')}
       />

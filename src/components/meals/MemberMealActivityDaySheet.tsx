@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Coffee, Moon, UtensilsCrossed, X, type LucideIcon } from 'lucide-react-native';
 import { mealsApi } from '../../api/mealsApi';
 import type {
   MemberMealActivityDayDetail,
@@ -38,21 +39,21 @@ const BACKDROP_DELAY_MS = 450;
 const SHEET_MIN_RATIO = 0.88;
 const SHEET_MAX_RATIO = 0.96;
 
-const MEAL_EMOJI: Record<MealType, string> = {
-  BREAKFAST: '🍳',
-  LUNCH: '🍱',
-  DINNER: '🌙',
+const MEAL_ICON: Record<MealType, LucideIcon> = {
+  BREAKFAST: Coffee,
+  LUNCH: UtensilsCrossed,
+  DINNER: Moon,
 };
 
 const STATUS_CHIP: Record<
   MemberMealActivitySlotStatus,
   { bg: string; text: string; dot: string }
 > = {
-  ACCEPTED: { bg: colors.successTint, text: colors.success, dot: '🟢' },
-  PENDING: { bg: '#FEFCE8', text: '#CA8A04', dot: '🟡' },
-  SKIPPED: { bg: '#FEF2F2', text: '#DC2626', dot: '🔴' },
-  NO_MENU: { bg: '#F3F4F6', text: colors.muted, dot: '⚪' },
-  INACTIVE: { bg: '#F9FAFB', text: colors.muted, dot: '⚪' },
+  ACCEPTED: { bg: colors.successTint, text: colors.success, dot: colors.success },
+  PENDING: { bg: '#FEFCE8', text: '#CA8A04', dot: '#CA8A04' },
+  SKIPPED: { bg: '#FEF2F2', text: '#DC2626', dot: '#DC2626' },
+  NO_MENU: { bg: '#F3F4F6', text: colors.muted, dot: colors.muted },
+  INACTIVE: { bg: '#F9FAFB', text: colors.muted, dot: colors.muted },
 };
 
 type MemberMealActivityDaySheetProps = {
@@ -62,6 +63,7 @@ type MemberMealActivityDaySheetProps = {
   memberId: UUID;
   memberName: string;
   canManage: boolean;
+  onRespond?: (date: string) => void;
   onClose: () => void;
   onPaymentReviewed?: () => void;
 };
@@ -137,9 +139,8 @@ function StatusChip({ status, label }: { status: MemberMealActivitySlotStatus; l
   const chip = STATUS_CHIP[status];
   return (
     <View style={[styles.statusChip, { backgroundColor: chip.bg }]}>
-      <Text style={styles.statusChipText}>
-        {chip.dot} {label}
-      </Text>
+      <View style={[styles.statusDot, { backgroundColor: chip.dot }]} />
+      <Text style={[styles.statusChipText, { color: chip.text }]}>{label}</Text>
     </View>
   );
 }
@@ -157,15 +158,15 @@ function MealCard({
   const comboLabels = slot.selections.map(row => row.label).join(', ');
   const statusText = dayStatusLabel(slot.status, t);
   const amount = formatComboPrice(slot.slotTotal, slot.selections[0]?.currencyCode ?? currencyCode);
-  const showChipOnly =
-    slot.status !== 'ACCEPTED' ||
-    (!comboLabels && totalQuantity === 0);
+  const showChipOnly = !comboLabels && totalQuantity === 0;
+  const MealIcon = MEAL_ICON[slot.mealType];
 
   return (
     <View style={styles.mealCard}>
-      <Text style={styles.mealTitle}>
-        {MEAL_EMOJI[slot.mealType]} {t(mealTypeLabelKey(slot.mealType))}
-      </Text>
+      <View style={styles.mealTitleRow}>
+        <MealIcon size={16} color={colors.primaryDark} strokeWidth={2.2} />
+        <Text style={styles.mealTitle}>{t(mealTypeLabelKey(slot.mealType))}</Text>
+      </View>
 
       {showChipOnly ? (
         <StatusChip status={slot.status} label={statusText} />
@@ -460,6 +461,7 @@ export function MemberMealActivityDaySheet({
   memberId,
   memberName,
   canManage,
+  onRespond,
   onClose,
   onPaymentReviewed,
 }: MemberMealActivityDaySheetProps) {
@@ -694,7 +696,7 @@ export function MemberMealActivityDaySheet({
                   ) : null}
                 </View>
                 <Pressable onPress={onClose} hitSlop={12} style={styles.headerSide}>
-                  <Text style={styles.closeBtn}>✕</Text>
+                  <X size={18} color={colors.textPrimary} strokeWidth={2.2} />
                 </Pressable>
               </View>
 
@@ -723,6 +725,19 @@ export function MemberMealActivityDaySheet({
                           />
                         ))}
                       </View>
+                      {!canManage &&
+                      onRespond &&
+                      date &&
+                      slotsToShow.some(slot => slot.status === 'PENDING') ? (
+                        <Pressable
+                          style={styles.reviewBtn}
+                          onPress={() => onRespond(date)}
+                          accessibilityRole="button">
+                          <Text style={styles.reviewBtnText}>
+                            {t('dashboard.pollCard.chooseMyMeals')}
+                          </Text>
+                        </Pressable>
+                      ) : null}
                     </Section>
 
                     <PaymentSummarySection
@@ -929,6 +944,11 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     gap: spacing.xs,
   },
+  mealTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
   mealTitle: {
     ...typography.bodyStrong,
     color: colors.primaryDark,
@@ -939,9 +959,17 @@ const styles = StyleSheet.create({
   },
   statusChip: {
     alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     borderRadius: 6,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   statusChipText: {
     ...typography.caption,

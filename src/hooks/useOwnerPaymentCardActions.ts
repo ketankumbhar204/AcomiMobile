@@ -7,10 +7,8 @@ import {
   receivablePayments,
   reminderEligiblePayments,
 } from '../utils/ownerPaymentCardActions';
-import {
-  paymentReminderToastKey,
-  resolvePaymentReminderToastKind,
-} from '../utils/paymentReminderFeedback';
+import { paymentReminderToastKey } from '../utils/paymentReminderFeedback';
+import { openReminderWhatsApp } from '../utils/paymentReminderLaunch';
 import { invalidatePaymentsMonthCaches } from '../utils/paymentsMonthCache';
 import { useTranslation } from 'react-i18next';
 
@@ -86,12 +84,32 @@ export function useOwnerPaymentCardActions({
       setProcessingKey(key);
       setProcessingAction('reminder');
       try {
-        let lastKind: ReturnType<typeof resolvePaymentReminderToastKind> = 'failed';
         for (const payment of payments) {
           const result = await paymentsApi.sendPaymentReminder(spaceId, payment.paymentId);
-          lastKind = resolvePaymentReminderToastKind(result);
+          const launch = await openReminderWhatsApp(result);
+          if (result.inAppFailureCode === 'NOTIFICATION_FAILED') {
+            showToast(t('paymentCollection.reminder.notificationFailed'));
+          } else if (result.inAppFailureCode === 'MEMBER_NOT_ON_ACOMI') {
+            showToast(t('paymentCollection.reminder.memberNotOnAcomi'));
+          } else if (result.inAppRecorded && launch !== 'opened') {
+            showToast(t('paymentCollection.reminder.inAppSaved'));
+          }
+          if (launch === 'opened') {
+            showToast(
+              t(
+                result.inAppRecorded
+                  ? 'paymentCollection.reminder.openedWhatsApp'
+                  : 'paymentCollection.reminder.whatsAppReady',
+              ),
+            );
+          } else if (launch === 'copied') {
+            showToast(t('paymentCollection.reminder.copied'));
+          } else if (launch === 'invalid') {
+            showToast(t(paymentReminderToastKey('invalidRecipient')));
+          } else {
+            showToast(t('paymentCollection.reminder.whatsAppFailed'));
+          }
         }
-        showToast(t(paymentReminderToastKey(lastKind)));
       } catch (err) {
         if (err instanceof PaymentServiceUnavailableError) {
           showToast(t('paymentCollection.serviceUnavailable.title'));

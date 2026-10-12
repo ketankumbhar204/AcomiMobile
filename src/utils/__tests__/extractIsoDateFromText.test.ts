@@ -1,4 +1,4 @@
-import { extractIsoDateFromText } from '../extractIsoDateFromText';
+import { extractIsoDateFromText, extractMealTypeFromText } from '../extractIsoDateFromText';
 
 describe('extractIsoDateFromText', () => {
   it('extracts YYYY-MM-DD from meal poll messages', () => {
@@ -14,5 +14,16 @@ describe('extractIsoDateFromText', () => {
 
   it('returns null when no ISO date is present', () => {
     expect(extractIsoDateFromText('No date here', 'Jul 14')).toBeNull();
+  });
+});
+
+describe('extractMealTypeFromText', () => {
+  it('reads the meal token from a poll message', () => {
+    expect(extractMealTypeFromText('DINNER · 2026-10-09 · Sunrise PG')).toBe('DINNER');
+    expect(extractMealTypeFromText('Check today', 'BREAKFAST · 2026-10-09')).toBe('BREAKFAST');
+  });
+
+  it('returns null when the text has no meal type', () => {
+    expect(extractMealTypeFromText("Check today's menu for Sunrise PG.")).toBeNull();
   });
 });

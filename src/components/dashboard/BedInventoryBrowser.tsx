@@ -155,6 +155,7 @@ export function BedInventoryBrowser({
   const renderInventoryGroup = useCallback(
     ({ item }: { item: BedInventoryListGroup }) => {
       const sharedProps = {
+        spaceId,
         flowAction,
         onFlowAction,
         canManageOccupancy,

@@ -493,6 +493,8 @@
       "locationEmptyDescription": "दुसरे स्थान निवडा किंवा फिल्टर बदला.",
       "getContactDetails": "संपर्क तपशील मिळवा",
       "infoAvailable": "उपलब्ध माहिती",
+      "availableInformation": "उपलब्ध माहिती",
+      "viewAllInfo": "सर्व पहा",
       "infoContact": "संपर्क",
       "infoAddress": "पत्ता",
       "infoMap": "नकाशा",
@@ -641,7 +643,9 @@
       "nameRequired": "स्पेसचे नाव आवश्यक आहे.",
       "typeRequired": "कृपया स्पेस प्रकार निवडा.",
       "successTitle": "स्पेस तयार झाला",
-      "successMessage": "\"{{name}}\" was created successfully."
+      "successMessage": "\"{{name}}\" was created successfully.",
+      "notAllowedTitle": "स्पेस तयार करता येत नाही",
+      "notAllowed": "स्पेस फक्त मालक तयार करू शकतो. भाडेकरू किंवा ग्राहक प्रवेशात हे नाही."
     },
     "types": {
       "label": "स्पेस प्रकार",
@@ -714,7 +718,9 @@
       "MANAGER": "व्यवस्थापक",
       "TENANT": "भाडेकरू",
       "CUSTOMER": "ग्राहक",
-      "STAFF": "कर्मचारी"
+      "STAFF": "कर्मचारी",
+      "MEMBER": "सदस्य",
+      "ADMIN": "अ‍ॅडमिन"
     },
     "details": {
       "eyebrow": "स्पेस",
@@ -804,6 +810,19 @@
       "members": "सदस्य",
       "pending": "प्रलंबित आमंत्रणे"
     },
+    "dues": {
+      "summary": "प्रलंबित पेमेंट",
+      "pending": "थकबाकी: {{amount}}",
+      "review": "पडताळणीत: {{amount}}",
+      "clear": "थकबाकी नाही",
+      "overdue": "मुदत संपलेली: {{amount}}",
+      "nextDue": "पुढील देय: {{date}}",
+      "filterTitle": "पेमेंट",
+      "filterAll": "सर्व सदस्य",
+      "filterPending": "प्रलंबित पेमेंट",
+      "filterClear": "थकबाकी नाही",
+      "loadFailed": "पेमेंट एकूण लोड होऊ शकले नाही."
+    },
     "members": {
       "emptyTitle": "अद्याप सदस्य नाहीत",
       "emptyDescription": "Add your first tenant, customer, or staff member to this space.",
@@ -840,6 +859,20 @@
       "memberMode": {
         "search": "इतर स्पेसमधून",
         "addNew": "नवा ग्राहक"
+      },
+      "choice": {
+        "titleCustomer": "ग्राहक जोडा",
+        "titleMember": "सदस्य जोडा",
+        "subtitle": "तुम्ही त्यांना कसे जोडू इच्छिता?",
+        "addNewCustomer": "नवा ग्राहक जोडा",
+        "addNewMember": "नवा सदस्य जोडा",
+        "addNewDescription": "त्यांचे तपशील भरा आणि त्यांना या स्पेसमध्ये जोडा.",
+        "import": "दुसऱ्या स्पेसमधून आयात करा",
+        "importDescription": "अशी व्यक्ती निवडा जी आधीच दुसऱ्या ACOMI स्पेसमध्ये जोडलेली आहे.",
+        "importAvailable_one": "{{count}} सदस्य उपलब्ध",
+        "importAvailable_other": "{{count}} सदस्य उपलब्ध",
+        "importAvailableCustomer_one": "{{count}} ग्राहक उपलब्ध",
+        "importAvailableCustomer_other": "{{count}} ग्राहक उपलब्ध"
       },
       "searchCustomerPlaceholder": "Search people from your other spaces",
       "createNewHint": "या मेससाठी नाव आणि मोबाइल नंबर प्रविष्ट करा।",
@@ -927,6 +960,7 @@
       "mealBilling": "जेवण बिलिंग",
       "editMealBilling": "जेवण बिलिंग बदला",
       "actionsHeading": "क्रिया",
+      "notProvided": "दिलेले नाही",
       "editSubtitle": "Update name, role, and profile details"
     },
     "gender": {
@@ -999,6 +1033,7 @@
     "detailTabs": {
       "profile": "प्रोफाइल",
       "meals": "जेवणे",
+      "payments": "पेमेंट",
       "deposit": "डिपॉझिट",
       "documents": "कागदपत्रे",
       "notes": "नोट्स",
@@ -1804,6 +1839,7 @@
       "reservedOn": "Reserved on",
       "reservedOnShort": "राखीव",
       "timelineEmpty": "—",
+      "notSet": "सेट नाही",
       "status": "अधिभोग स्थिती",
       "location": "Current location",
       "notAllocated": "Not allocated to any bed, room, or unit."
@@ -2309,6 +2345,7 @@
       "statusPastPartial": "जुनी निवड अपूर्ण",
       "selectedTitle": "Your Meals Are Selected",
       "youHaveSelected": "You have selected",
+      "notAvailable": "उपलब्ध नाही",
       "pendingTitle": "Meal Selection Pending",
       "menusReady": "{{meals}} ready",
       "menusPast": "{{meals}} menus",
@@ -2608,6 +2645,85 @@
   },
   "paymentCollection": {
     "payNow": "आत्ता पैसे द्या",
+    "addRecord": {
+      "action": "पेमेंट जोडा",
+      "createAction": "पेमेंट तयार करा",
+      "createTitle": "पेमेंट रेकॉर्ड तयार करा",
+      "createSubmit": "पेमेंट तयार करा",
+      "searchPlaceholder": "नाव, मोबाइल किंवा सदस्य आयडीने शोधा",
+      "title": "पेमेंट रेकॉर्ड जोडा",
+      "member": "सदस्य",
+      "category": "शुल्क वर्ग",
+      "type": "शुल्क प्रकार",
+      "amount": "रक्कम",
+      "dueDate": "देय तारीख",
+      "description": "वर्णन",
+      "notes": "नोट्स",
+      "customType": "कस्टम शुल्क प्रकार",
+      "cancel": "रद्द करा",
+      "submit": "पेमेंट जोडा",
+      "success": "पेमेंट रेकॉर्ड जोडले.",
+      "historyTitle": "पेमेंट इतिहास",
+      "historyEmptyTitle": "या सदस्यासाठी पेमेंट नाहीत.",
+      "historyEmptyDescription": "या सदस्याशी जोडलेली पेमेंट येथे दिसतील.",
+      "depositExists": "या सदस्याची सुरक्षा ठेव आधीच आहे. दुसरी ठेव नोंदवण्यासाठी पुन्हा पेमेंट जोडा.",
+      "errors": {
+        "member": "सदस्य निवडा.",
+        "category": "शुल्क वर्ग निवडा.",
+        "type": "शुल्क प्रकार निवडा.",
+        "customType": "शुल्क प्रकार लिहा.",
+        "amount": "वैध रक्कम टाका.",
+        "failed": "हे पेमेंट रेकॉर्ड जोडता आले नाही."
+      }
+    },
+    "chargeCatalog": {
+      "categories": {
+        "RENT": "भाडे",
+        "DEPOSIT": "डिपॉझिट",
+        "MAINTENANCE": "देखभाल",
+        "UTILITY": "उपयोगिता",
+        "MEALS": "जेवण",
+        "SERVICE": "सेवा",
+        "PENALTY": "दंड",
+        "OTHER": "इतर"
+      },
+      "types": {
+        "RENT": "भाडे",
+        "ADVANCE_RENT": "आगाऊ भाडे",
+        "NOTICE_PERIOD": "नोटीस कालावधी शुल्क",
+        "SECURITY_DEPOSIT": "सुरक्षा ठेव",
+        "DEPOSIT_ADJUSTMENT": "ठेव समायोजन",
+        "MAINTENANCE": "देखभाल",
+        "REPAIR": "दुरुस्ती",
+        "DAMAGE": "नुकसान",
+        "FURNITURE_DAMAGE": "फर्निचर नुकसान",
+        "EQUIPMENT_DAMAGE": "उपकरण नुकसान",
+        "ELECTRICITY": "वीज",
+        "WATER": "पाणी",
+        "GAS": "गॅस",
+        "INTERNET": "इंटरनेट/वाय-फाय",
+        "OTHER_UTILITY": "इतर उपयोगिता",
+        "MEAL_PLAN": "जेवण योजना",
+        "EXTRA_MEALS": "अतिरिक्त जेवण",
+        "MEAL_ADJUSTMENT": "जेवण समायोजन",
+        "OTHER_MEAL": "इतर जेवण शुल्क",
+        "LAUNDRY": "लॉन्ड्री",
+        "CLEANING": "सफाई",
+        "PARKING": "पार्किंग",
+        "KEY_REPLACEMENT": "चावी बदल",
+        "ACCESS_CARD": "अॅक्सेस कार्ड बदल",
+        "APPLIANCE": "उपकरण वापर",
+        "MOVE_IN": "मूव्ह-इन शुल्क",
+        "MOVE_OUT": "मूव्ह-आउट शुल्क",
+        "ROOM_CHANGE": "खोली/बेड बदल शुल्क",
+        "OTHER_SERVICE": "इतर सेवा",
+        "LATE_FEE": "उशीर शुल्क",
+        "FINE": "दंड",
+        "OTHER_PENALTY": "इतर दंड",
+        "MISCELLANEOUS": "किरकोळ",
+        "OTHER": "इतर"
+      }
+    },
     "uploadAgain": "Update Payment",
     "updatePayment": "Update Payment",
     "dueDate": "Due: {{date}}",
@@ -2615,6 +2731,11 @@
     "dayMeals": {
       "detailTitle": "जेवणे",
       "totalAmount": "एकूण रक्कम",
+      "amountDueLabel": "देय रक्कम",
+      "amountDue": "देय रक्कम {{amount}}",
+      "amountPaid": "भरलेले {{amount}}",
+      "amountRemaining": "शिल्लक {{amount}}",
+      "amountUnavailable": "जेवणाची किंमत सेट नाही",
       "mealsFallback": "जेवणे",
       "batchId": "बॅच {{id}}",
       "paymentReference": "संदर्भ {{id}}",
@@ -2673,6 +2794,9 @@
       "RENT": "भाडे",
       "DEPOSIT": "डिपॉझिट",
       "MAINTENANCE": "देखभाल",
+      "UTILITY": "उपयोगिता",
+      "SERVICE": "सेवा",
+      "PENALTY": "दंड",
       "OTHER": "इतर"
     },
     "category": {
@@ -2684,6 +2808,7 @@
       "REFUND": "परतावा",
       "ELECTRICITY": "वीज",
       "WATER": "पाणी",
+      "GAS": "गॅस",
       "INTERNET": "इंटरनेट",
       "OTHER": "इतर"
     },
@@ -2706,7 +2831,13 @@
       "emptyTitle": "No payments available",
       "emptyDescription": "You have no pending or submitted payments for this month.",
       "noLinkedMember": "Your member profile is not linked yet. Contact the property manager if this persists.",
-      "eyebrow": "बिलिंग"
+      "eyebrow": "बिलिंग",
+      "summary": {
+        "due": "देय रक्कम",
+        "paid": "भरलेले",
+        "outstanding": "थकबाकी",
+        "nextDue": "पुढील देय तारीख"
+      }
     },
     "tenantFilters": {
       "all": "सर्व ({{count}})",
@@ -2894,6 +3025,12 @@
   "payments": {
     "title": "पेमेंट्स",
     "subtitle": "या महिन्यातील अपेक्षित रक्कम, वसुली आणि थकबाकी.",
+    "records": {
+      "heading": "पेमेंट्स",
+      "search": "सदस्य, मोबाइल, शीर्षक किंवा प्रकार शोधा",
+      "emptyTitle": "पेमेंट सापडले नाहीत",
+      "emptyDescription": "निवडलेल्या महिन्याशी किंवा फिल्टरशी पेमेंट जुळत नाहीत."
+    },
     "tabs": {
       "members": "सदस्य",
       "submitted": "Submitted ({{count}})",
@@ -3073,7 +3210,9 @@
         "shared": "शेअर केले",
         "updated": "Updated since last share",
         "action": "आजचा मेनू शेअर करा",
-        "subtitle": "नाश्ता, दुपार आणि रात्रीचे जेवण एकत्र शेअर करा"
+        "subtitle": "नाश्ता, दुपार आणि रात्रीचे जेवण एकत्र शेअर करा",
+        "reshare": "आजचा मेनू पुन्हा शेअर करा",
+        "emptyHint": "शेअर करण्यापूर्वी किमान एक जेवण नियोजित करा."
       },
       "selector": {
         "notPlanned": "प्लान नाही",
@@ -3280,6 +3419,8 @@
       "shareSelectAtLeastOne": "Select at least one meal to share.",
       "sharePublishedSlots": "{{count}} meal(s) ready",
       "shareHint": "Sharing opens in-app polls automatically. Members pick the same numbered options in the app.",
+      "reviewSaveTitle": "जेवणाचे पुनरावलोकन",
+      "reviewSaveHint": "पुष्टी केल्यावर हे जेवण जतन होईल आणि पोल उघडेल. सदस्य अ‍ॅपमध्ये उत्तर देऊ शकतात. WhatsApp उघडणार नाही.",
       "copyMessage": "मेनू शेअर करा",
       "shareEmpty": "या तारखेसाठी अजून कोणताही मेनू प्लान केला नाही.",
       "tapToPlan": "Tap to plan {{meal}}",
@@ -4118,6 +4259,8 @@
       "changePlan": "योजना बदला",
       "savePlan": "Save plan",
       "saveDraft": "Save draft",
+      "save": "जतन करा",
+      "share": "शेअर",
       "shareMeal": "जेवण शेअर करा",
       "deleteDraft": "Delete draft",
       "publish": "Publish menu"

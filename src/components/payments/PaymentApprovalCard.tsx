@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Check, Pencil, CircleX } from 'lucide-react-native';
+import { Check, ChevronDown, ChevronRight, CircleX, Pencil } from 'lucide-react-native';
 import type { PaymentRejectionReason, SpacePaymentResponse, SpaceType } from '../../api/types';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
@@ -179,12 +179,18 @@ export function PaymentApprovalCard({
             ? t('paymentCollection.approval.hideDetails')
             : t('paymentCollection.approval.viewDetails')
         }>
-        <Text style={styles.detailsToggleLabel}>
-          {detailsOpen
-            ? t('paymentCollection.approval.hideDetails')
-            : t('paymentCollection.approval.viewDetails')}
-          {detailsOpen ? '' : ' ›'}
-        </Text>
+        <View style={styles.detailsToggleRow}>
+          <Text style={styles.detailsToggleLabel}>
+            {detailsOpen
+              ? t('paymentCollection.approval.hideDetails')
+              : t('paymentCollection.approval.viewDetails')}
+          </Text>
+          {detailsOpen ? (
+            <ChevronDown size={14} color={colors.primaryDark} strokeWidth={2.4} />
+          ) : (
+            <ChevronRight size={14} color={colors.primaryDark} strokeWidth={2.4} />
+          )}
+        </View>
       </Pressable>
 
       {detailsOpen ? (
@@ -264,9 +270,12 @@ export function PaymentApprovalCard({
           style={({ pressed }) => [styles.openDetailLink, pressed && styles.detailsTogglePressed]}
           accessibilityRole="button"
           accessibilityLabel={t('paymentCollection.detail.openFromReview')}>
-          <Text style={styles.openDetailLinkText}>
-            {t('paymentCollection.detail.openFromReview')} ›
-          </Text>
+          <View style={styles.detailsToggleRow}>
+            <Text style={styles.openDetailLinkText}>
+              {t('paymentCollection.detail.openFromReview')}
+            </Text>
+            <ChevronRight size={14} color={colors.primaryDark} strokeWidth={2.4} />
+          </View>
         </Pressable>
       ) : null}
 
@@ -432,6 +441,11 @@ const styles = StyleSheet.create({
   },
   detailsTogglePressed: {
     opacity: 0.7,
+  },
+  detailsToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   detailsToggleLabel: {
     ...typography.caption,

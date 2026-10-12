@@ -6,27 +6,25 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { CalendarDays, CircleDollarSign, UserRound, WalletCards } from 'lucide-react-native';
+import { CalendarDays, ChevronDown, CircleDollarSign, Search, UserRound, WalletCards, X } from 'lucide-react-native';
 import { PaymentServiceUnavailableError, paymentsApi } from '../../api/paymentsApi';
 import { ApiError } from '../../api/types';
 import type {
   CreateSpacePaymentRequest,
   MemberResponse,
-  PaymentCategory,
   SpacePaymentResponse,
   UniversalPaymentStatus,
-  UniversalPaymentType,
 } from '../../api/types';
 import { OccupancyMemberPickerModal } from '../../components/occupancy/OccupancyMemberPickerModal';
 import { MealFormHero } from '../../components/meals/MealFormHero';
 import { MenuDatePickerModal } from '../../components/meals/MenuDatePickerModal';
 import { StickyFormActions } from '../../components/progressive';
+import { ChargeTypePickerModal } from '../../components/payments/ChargeTypePickerModal';
 import {
   Button,
   EmptyState,
   FormInput,
   HeaderBackButton,
-  ListFilterChips,
   Screen,
 } from '../../components/ui';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
@@ -35,64 +33,24 @@ import { useToastStore } from '../../store/toastStore';
 import { colors, radius, spacing, typography } from '../../theme';
 import { canManagePayments } from '../../utils/dashboardFinancial';
 import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
+import {
+  buildManualCharge,
+  findCatalogChargeType,
+  isChargeablePaymentMember,
+  parsePositiveAmount,
+} from '../../utils/chargeCatalog';
+import { getChargeTypeIcon } from '../../utils/chargeTypeIcons';
+import { rememberChargeType } from '../../utils/recentChargeTypes';
 import { isoDateToMonthKey, todayIsoDate } from '../../utils/mealDates';
 import { formatPaymentAmount } from '../../utils/paymentHistory';
 import { invalidatePaymentsMonthCaches } from '../../utils/paymentsMonthCache';
+import {
+  paymentDetailContentGutter,
+  paymentDetailScreenPadding,
+} from './paymentDetailLayout';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'CreatePayment'>;
 type Route = NativeStackScreenProps<MainStackParamList, 'CreatePayment'>['route'];
-
-type ManualKind =
-  | 'DEPOSIT'
-  | 'MAINTENANCE'
-  | 'ELECTRICITY'
-  | 'WATER'
-  | 'UTILITY'
-  | 'EXTRA'
-  | 'OTHER';
-
-const MANUAL_KINDS: ManualKind[] = [
-  'DEPOSIT',
-  'MAINTENANCE',
-  'ELECTRICITY',
-  'WATER',
-  'UTILITY',
-  'EXTRA',
-  'OTHER',
-];
-
-function kindToTypeCategory(
-  kind: ManualKind,
-): { paymentType: UniversalPaymentType; paymentCategory: PaymentCategory } {
-  switch (kind) {
-    case 'DEPOSIT':
-      return { paymentType: 'DEPOSIT', paymentCategory: 'SECURITY' };
-    case 'MAINTENANCE':
-      return { paymentType: 'MAINTENANCE', paymentCategory: 'EXTRA' };
-    case 'ELECTRICITY':
-      return { paymentType: 'OTHER', paymentCategory: 'ELECTRICITY' };
-    case 'WATER':
-      return { paymentType: 'OTHER', paymentCategory: 'WATER' };
-    case 'UTILITY':
-      return { paymentType: 'OTHER', paymentCategory: 'INTERNET' };
-    case 'EXTRA':
-      return { paymentType: 'OTHER', paymentCategory: 'EXTRA' };
-    default:
-      return { paymentType: 'OTHER', paymentCategory: 'OTHER' };
-  }
-}
-
-function parsePositiveAmount(value: string): number | null {
-  const normalized = value.replace(/,/g, '').trim();
-  if (!normalized) {
-    return null;
-  }
-  const amount = Number(normalized);
-  if (!Number.isFinite(amount) || amount <= 0) {
-    return null;
-  }
-  return Math.round(amount * 100) / 100;
-}
 
 function isDepositConflict(error: unknown): boolean {
   return (
@@ -108,14 +66,32 @@ export function CreatePaymentScreen() {
   const { t, i18n } = useTranslation();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
-  const { spaceId, month: routeMonth } = route.params;
+  const {
+    spaceId,
+    month: routeMonth,
+    memberId: routeMemberId,
+    memberName: routeMemberName,
+    memberMobile: routeMemberMobile,
+  } = route.params;
+  const memberLocked = Boolean(routeMemberId);
   const showToast = useToastStore(state => state.showToast);
   const permissions = useSpacePermissions(spaceId);
   const canManage = canManagePayments(permissions.membershipRole);
 
-  const [member, setMember] = useState<MemberResponse | null>(null);
+  const [member, setMember] = useState<MemberResponse | null>(
+    routeMemberId
+      ? ({
+          memberId: routeMemberId,
+          fullName: routeMemberName?.trim() || routeMemberId,
+          mobileNumber: routeMemberMobile ?? '',
+        } as MemberResponse)
+      : null,
+  );
   const [memberPickerVisible, setMemberPickerVisible] = useState(false);
-  const [kind, setKind] = useState<ManualKind>('ELECTRICITY');
+  const [typeId, setTypeId] = useState('');
+  const [typePickerVisible, setTypePickerVisible] = useState(false);
+  const [customLabel, setCustomLabel] = useState('');
+  const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [dueDate, setDueDate] = useState(todayIsoDate());
   const [datePickerVisible, setDatePickerVisible] = useState(false);
@@ -128,22 +104,21 @@ export function CreatePaymentScreen() {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: t('paymentCollection.create.title'),
+      title: t(
+        memberLocked
+          ? 'paymentCollection.addRecord.title'
+          : 'paymentCollection.addRecord.createTitle',
+      ),
       headerBackVisible: false,
       headerLeft: () => <HeaderBackButton />,
     });
-  }, [i18n.language, navigation, t]);
+  }, [i18n.language, memberLocked, navigation, t]);
 
   const month = useMemo(() => isoDateToMonthKey(dueDate) || routeMonth, [dueDate, routeMonth]);
 
-  const kindOptions = useMemo(
-    () =>
-      MANUAL_KINDS.map(id => ({
-        id,
-        label: t(`paymentCollection.create.kinds.${id}`),
-      })),
-    [t],
-  );
+  const selectedType = typeId ? findCatalogChargeType(typeId) : undefined;
+  const category = selectedType?.category ?? '';
+  const selectedTypeIcon = selectedType ? getChargeTypeIcon(selectedType.id) : Search;
 
   const loadExistingDeposit = useCallback(async (): Promise<SpacePaymentResponse | null> => {
     if (!member) {
@@ -170,27 +145,49 @@ export function CreatePaymentScreen() {
       }
       Keyboard.dismiss();
       if (!member) {
-        setFormError(t('paymentCollection.create.errors.memberRequired'));
+        setFormError(t('paymentCollection.addRecord.errors.member'));
         return;
       }
       const parsedAmount = parsePositiveAmount(amount);
       if (parsedAmount == null) {
-        setFormError(t('paymentCollection.create.errors.amountRequired'));
+        setFormError(t('paymentCollection.addRecord.errors.amount'));
         return;
       }
-      if (!dueDate) {
-        setFormError(t('paymentCollection.create.errors.dueDateRequired'));
+      if (!selectedType?.category) {
+        setFormError(
+          t(
+            selectedType
+              ? 'paymentCollection.addRecord.errors.category'
+              : 'paymentCollection.addRecord.errors.type',
+          ),
+        );
+        return;
+      }
+      const draft = buildManualCharge({
+        category,
+        typeId: selectedType.id,
+        typeLabel: t(`paymentCollection.chargeCatalog.types.${selectedType.id}`),
+        customLabel,
+        description,
+      });
+      if (!draft) {
+        setFormError(
+          selectedType.custom
+            ? t('paymentCollection.addRecord.errors.customType')
+            : t('paymentCollection.addRecord.errors.type'),
+        );
         return;
       }
 
-      const { paymentType, paymentCategory } = kindToTypeCategory(kind);
       const body: CreateSpacePaymentRequest = {
         memberId: member.memberId,
-        paymentType,
-        paymentCategory,
+        paymentType: draft.paymentType,
+        paymentCategory: draft.paymentCategory,
         amount: parsedAmount,
         month,
         dueDate,
+        title: draft.title,
+        description: draft.description,
         remarks: note.trim() || undefined,
         confirmDuplicateDeposit,
       };
@@ -200,14 +197,20 @@ export function CreatePaymentScreen() {
       setFormError(null);
       try {
         const created = await paymentsApi.createPayment(spaceId, body);
+        rememberChargeType(spaceId, selectedType.id).catch(() => undefined);
         invalidateDashboardQueries();
         invalidatePaymentsMonthCaches(spaceId, created.month || month);
-        showToast(t('paymentCollection.create.success'));
+        showToast(t('paymentCollection.addRecord.success'));
         navigation.goBack();
       } catch (error) {
         if (error instanceof PaymentServiceUnavailableError) {
           setFormError(t('paymentCollection.serviceUnavailable.title'));
-        } else if (!confirmDuplicateDeposit && kind === 'DEPOSIT' && isDepositConflict(error)) {
+        } else if (
+          !confirmDuplicateDeposit &&
+          draft.paymentType === 'DEPOSIT' &&
+          draft.paymentCategory === 'SECURITY' &&
+          isDepositConflict(error)
+        ) {
           const existing = await loadExistingDeposit();
           setExistingDeposit(existing);
           setDepositConfirmVisible(true);
@@ -225,13 +228,16 @@ export function CreatePaymentScreen() {
     },
     [
       amount,
+      customLabel,
+      description,
       dueDate,
-      kind,
       loadExistingDeposit,
       member,
       month,
       navigation,
       note,
+      category,
+      selectedType,
       showToast,
       spaceId,
       t,
@@ -239,7 +245,12 @@ export function CreatePaymentScreen() {
   );
 
   const handleSubmit = useCallback(async () => {
-    if (kind === 'DEPOSIT' && member && !depositConfirmVisible) {
+    if (
+      selectedType?.paymentType === 'DEPOSIT' &&
+      selectedType.paymentCategory === 'SECURITY' &&
+      member &&
+      !depositConfirmVisible
+    ) {
       const existing = await loadExistingDeposit();
       if (existing) {
         setExistingDeposit(existing);
@@ -248,7 +259,7 @@ export function CreatePaymentScreen() {
       }
     }
     await submitPayment(false);
-  }, [depositConfirmVisible, kind, loadExistingDeposit, member, submitPayment]);
+  }, [depositConfirmVisible, loadExistingDeposit, member, selectedType, submitPayment]);
 
   const depositDetail = useMemo(() => {
     if (!existingDeposit) {
@@ -285,35 +296,102 @@ export function CreatePaymentScreen() {
         <MealFormHero
           icon={WalletCards}
           eyebrow={t('paymentCollection.create.eyebrow')}
-          heading={t('paymentCollection.create.heading')}
+          heading={t(
+            memberLocked
+              ? 'paymentCollection.addRecord.title'
+              : 'paymentCollection.addRecord.createTitle',
+          )}
           subheading={t('paymentCollection.create.subheading')}
           compact
         />
 
-        <Text style={styles.label}>{t('paymentCollection.create.member')}</Text>
+        <Text style={styles.label}>{t('paymentCollection.addRecord.member')}</Text>
         <Pressable
-          onPress={() => setMemberPickerVisible(true)}
-          style={({ pressed }) => [styles.memberRow, pressed && styles.memberRowPressed]}
+          onPress={() => {
+            if (!memberLocked) {
+              setMemberPickerVisible(true);
+            }
+          }}
+          disabled={memberLocked}
+          style={({ pressed }) => [styles.memberRow, pressed && !memberLocked && styles.memberRowPressed]}
           accessibilityRole="button"
           accessibilityLabel={t('paymentCollection.create.selectMember')}>
           <View style={styles.memberAvatar}>
             <UserRound size={18} color={colors.primaryDark} strokeWidth={2.2} />
           </View>
           <View style={styles.flex}>
-            <Text style={styles.memberName} numberOfLines={1}>
-              {member?.fullName || t('paymentCollection.create.selectMember')}
+            <Text
+              style={[styles.memberName, !member && styles.typePlaceholder]}
+              numberOfLines={1}>
+              {member?.fullName || t('paymentCollection.addRecord.searchPlaceholder')}
             </Text>
             {member?.mobileNumber ? (
               <Text style={styles.memberMeta}>{member.mobileNumber}</Text>
             ) : null}
           </View>
+          {memberLocked ? null : (
+            <ChevronDown size={18} color={colors.muted} strokeWidth={2.2} />
+          )}
         </Pressable>
 
-        <Text style={styles.label}>{t('paymentCollection.create.type')}</Text>
-        <ListFilterChips options={kindOptions} value={kind} onChange={setKind} />
+        <Text style={styles.label}>{t('paymentCollection.addRecord.type')}</Text>
+        <View style={styles.typeRow}>
+          <Pressable
+            onPress={() => setTypePickerVisible(true)}
+            style={({ pressed }) => [styles.typeMain, pressed && styles.memberRowPressed]}
+            accessibilityRole="button"
+            accessibilityLabel={t('paymentCollection.addRecord.searchChargeType')}>
+            {React.createElement(selectedTypeIcon, {
+              size: 18,
+              color: colors.primaryDark,
+              strokeWidth: 2.2,
+            })}
+            <Text
+              style={[styles.typeValue, !selectedType && styles.typePlaceholder]}
+              numberOfLines={1}>
+              {selectedType
+                ? t(`paymentCollection.chargeCatalog.types.${selectedType.id}`)
+                : t('paymentCollection.addRecord.searchChargeType')}
+            </Text>
+          </Pressable>
+          {selectedType ? (
+            <Pressable
+              onPress={() => {
+                setTypeId('');
+                setCustomLabel('');
+              }}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t('paymentCollection.addRecord.clearChargeType')}>
+              <X size={16} color={colors.muted} strokeWidth={2.2} />
+            </Pressable>
+          ) : (
+            <ChevronDown size={18} color={colors.muted} strokeWidth={2.2} />
+          )}
+        </View>
+
+        <Text style={styles.label}>{t('paymentCollection.addRecord.categoryDerived')}</Text>
+        <View style={styles.categoryRow}>
+          <Text style={[styles.typeValue, !category && styles.typePlaceholder]} numberOfLines={1}>
+            {category
+              ? t(`paymentCollection.chargeCatalog.categories.${category}`)
+              : t('paymentCollection.addRecord.categoryDerived')}
+          </Text>
+          {category ? (
+            <Text style={styles.autoSelected}>{t('paymentCollection.addRecord.autoSelected')}</Text>
+          ) : null}
+        </View>
+
+        {selectedType?.custom ? (
+          <FormInput
+            label={t('paymentCollection.addRecord.customType')}
+            value={customLabel}
+            onChangeText={setCustomLabel}
+          />
+        ) : null}
 
         <FormInput
-          label={t('paymentCollection.create.amount')}
+          label={t('paymentCollection.addRecord.amount')}
           value={amount}
           onChangeText={setAmount}
           keyboardType="decimal-pad"
@@ -321,7 +399,7 @@ export function CreatePaymentScreen() {
           leadingIcon={CircleDollarSign}
         />
 
-        <Text style={styles.label}>{t('paymentCollection.create.dueDate')}</Text>
+        <Text style={styles.label}>{t('paymentCollection.addRecord.dueDate')}</Text>
         <Pressable
           onPress={() => setDatePickerVisible(true)}
           style={({ pressed }) => [styles.dateRow, pressed && styles.memberRowPressed]}
@@ -331,7 +409,13 @@ export function CreatePaymentScreen() {
         </Pressable>
 
         <FormInput
-          label={t('paymentCollection.create.note')}
+          label={t('paymentCollection.addRecord.description')}
+          value={description}
+          onChangeText={setDescription}
+        />
+
+        <FormInput
+          label={t('paymentCollection.addRecord.notes')}
           value={note}
           onChangeText={setNote}
           multiline
@@ -342,17 +426,43 @@ export function CreatePaymentScreen() {
 
       <StickyFormActions>
         <Button
-          label={t('paymentCollection.create.submit')}
+          label={t('paymentCollection.addRecord.cancel')}
+          variant="secondary"
+          onPress={() => navigation.goBack()}
+          disabled={submitting}
+          style={styles.actionBtn}
+        />
+        <Button
+          label={t(
+            memberLocked
+              ? 'paymentCollection.addRecord.submit'
+              : 'paymentCollection.addRecord.createSubmit',
+          )}
           onPress={() => void handleSubmit()}
           loading={submitting}
           disabled={submitting}
+          style={styles.actionBtn}
         />
       </StickyFormActions>
+
+      <ChargeTypePickerModal
+        visible={typePickerVisible}
+        spaceId={spaceId}
+        selectedId={typeId}
+        onClose={() => setTypePickerVisible(false)}
+        onSelect={type => {
+          setTypeId(type.id);
+          setCustomLabel('');
+          setTypePickerVisible(false);
+        }}
+      />
 
       <OccupancyMemberPickerModal
         visible={memberPickerVisible}
         spaceId={spaceId}
-        title={t('paymentCollection.create.selectMember')}
+        title={t('paymentCollection.addRecord.member')}
+        searchPlaceholder={t('paymentCollection.addRecord.searchPlaceholder')}
+        includeMember={isChargeablePaymentMember}
         onClose={() => setMemberPickerVisible(false)}
         onSelect={selected => {
           setMember(selected);
@@ -405,12 +515,19 @@ export function CreatePaymentScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
+  screen: {
+    flex: 1,
+    padding: paymentDetailScreenPadding,
+  },
   flex: { flex: 1 },
   content: {
-    padding: spacing.lg,
-    paddingBottom: spacing.section,
+    paddingTop: spacing.md,
+    paddingHorizontal: paymentDetailContentGutter,
+    paddingBottom: 140,
     gap: spacing.md,
+  },
+  actionBtn: {
+    width: '100%',
   },
   label: {
     ...typography.caption,
@@ -438,6 +555,43 @@ const styles = StyleSheet.create({
   },
   memberName: { ...typography.bodyStrong },
   memberMeta: { ...typography.caption, color: colors.textSecondary },
+  typeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.card,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.white,
+  },
+  typeMain: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: 48,
+  },
+  typeValue: { ...typography.bodyStrong, flex: 1 },
+  typePlaceholder: { color: colors.muted, fontWeight: '500' },
+  categoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.card,
+    paddingHorizontal: spacing.md,
+    backgroundColor: '#F8FAFC',
+  },
+  autoSelected: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    flexShrink: 1,
+    textAlign: 'right',
+  },
   dateRow: {
     flexDirection: 'row',
     alignItems: 'center',

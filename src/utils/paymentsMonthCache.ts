@@ -1,4 +1,5 @@
 import { createMonthCache } from '../modules/orchestrator';
+import { invalidateStayPaymentCache } from './stayChargeIndex';
 import type { OwnerPaymentsMonthSnapshot } from '../hooks/ownerPaymentsTypes';
 import type { SpacePaymentResponse } from '../api/types';
 import type { DayMealPaymentsMonthSnapshot } from '../hooks/dayMealPaymentsTypes';
@@ -57,4 +58,5 @@ export function invalidatePaymentsMonthCaches(spaceId: string, month?: string): 
   invalidateOwnerPaymentsMonth(spaceId, month);
   invalidateTenantPaymentsMonth(spaceId, month);
   dayMealPaymentsMonthCache.invalidate(spaceId);
+  invalidateStayPaymentCache();
 }

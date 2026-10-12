@@ -284,7 +284,7 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
     } catch (err) {
       const message = getSpaceErrorMessage(err, 'common.errors.loadSpaces');
       console.error(`${LOG_TAG} loadMySpaces failed`, err);
-      set({ mySpaces: [], loading: false, error: message });
+      set({ loading: false, error: message });
     }
   },
 

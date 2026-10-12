@@ -1,10 +1,20 @@
+import type { LucideIcon } from 'lucide-react-native';
+import {
+  Bell,
+  Clock,
+  CreditCard,
+  Mail,
+  UserRound,
+  UtensilsCrossed,
+  Wrench,
+} from 'lucide-react-native';
 import type { NotificationType, PendingActionGroup, PendingActionsSummary } from '../api/types';
 
 export type SpaceAttentionItem = {
   actionType: NotificationType;
   title: string;
   detail?: string | null;
-  emoji: string;
+  Icon: LucideIcon;
 };
 
 export type SpaceAttentionSummary = {
@@ -39,20 +49,20 @@ const TENANT_ATTENTION_PRIORITY: Partial<Record<NotificationType, number>> = {
   INVITATION_ACCEPTED: 90,
 };
 
-const ATTENTION_EMOJI: Partial<Record<NotificationType, string>> = {
-  PAYMENT_UPDATE_REQUESTED: '💳',
-  PAYMENT_OVERDUE: '💳',
-  PAYMENT_NEEDS_UPDATE: '💳',
-  PAYMENT_REJECTED: '💳',
-  PAYMENT_APPROVED: '💳',
-  MEAL_POLL_PUBLISHED: '🍽',
-  MEAL_POLL_REMINDER: '⏰',
-  TENANT_PROFILE_INCOMPLETE: '👤',
-  MISSING_KYC_DOCUMENTS: '👤',
-  MISSING_ADDRESS_PROOF: '👤',
-  COMPLAINT_COMMENTED: '🛠',
-  COMPLAINT_RESOLVED: '🛠',
-  PENDING_INVITATION: '✉️',
+const ATTENTION_ICON: Partial<Record<NotificationType, LucideIcon>> = {
+  PAYMENT_UPDATE_REQUESTED: CreditCard,
+  PAYMENT_OVERDUE: CreditCard,
+  PAYMENT_NEEDS_UPDATE: CreditCard,
+  PAYMENT_REJECTED: CreditCard,
+  PAYMENT_APPROVED: CreditCard,
+  MEAL_POLL_PUBLISHED: UtensilsCrossed,
+  MEAL_POLL_REMINDER: Clock,
+  TENANT_PROFILE_INCOMPLETE: UserRound,
+  MISSING_KYC_DOCUMENTS: UserRound,
+  MISSING_ADDRESS_PROOF: UserRound,
+  COMPLAINT_COMMENTED: Wrench,
+  COMPLAINT_RESOLVED: Wrench,
+  PENDING_INVITATION: Mail,
 };
 
 const MEAL_ATTENTION_TYPES = new Set<NotificationType>([
@@ -64,8 +74,8 @@ function priorityFor(type: NotificationType): number {
   return TENANT_ATTENTION_PRIORITY[type] ?? 500;
 }
 
-function emojiFor(type: NotificationType): string {
-  return ATTENTION_EMOJI[type] ?? '🔔';
+function iconFor(type: NotificationType): LucideIcon {
+  return ATTENTION_ICON[type] ?? Bell;
 }
 
 function isMealAttention(type: NotificationType): boolean {
@@ -87,7 +97,7 @@ function toItem(group: PendingActionGroup): SpaceAttentionItem {
     actionType: group.actionType,
     title: group.title,
     detail: itemDetail(group),
-    emoji: emojiFor(group.actionType),
+    Icon: iconFor(group.actionType),
   };
 }
 

@@ -1,17 +1,21 @@
-import React, { useCallback, useLayoutEffect, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { BadgeCheck, Info, Map, MapPin, Sparkles, UtensilsCrossed } from 'lucide-react-native';
+import { BadgeCheck, Info, Map, MapPin, Sparkles } from 'lucide-react-native';
 import { getSpaceTypeLabel } from '../api';
+import { enquiryApi } from '../api/enquiryApi';
 import { spaceDiscoverApi } from '../api/spaceDiscoverApi';
-import type { DiscoverSpaceDetailResponse, SpaceType } from '../api/types';
+import type { DiscoverSpaceDetailResponse, OwnerContactResponse } from '../api/types';
 import { ApiError } from '../api/types';
 import { EnquireDialog } from '../components/EnquireDialog';
-import { InquirySent } from '../components/discovery/InquirySent';
+import { InquirySent, InquirySentDetails } from '../components/discovery/InquirySent';
 import { DiscoverListingCover } from '../components/discovery/DiscoverListingCover';
+import { FavoriteHeartButton } from '../components/discovery/FavoriteHeartButton';
+import { OwnerContactCard } from '../components/discovery/OwnerContactCard';
+import { ListingFacts, TypeChip } from '../components/discovery/ListingFacts';
 import { ListingInfoChips } from '../components/discovery/ListingInfoChips';
 import { StickyFormActions } from '../components/progressive';
 import {
@@ -21,17 +25,16 @@ import {
   SkeletonCard,
 } from '../components/ui';
 import type { MainStackParamList } from '../navigation/types';
-import { useAlreadyInquired, useInquirySentVia } from '../hooks/useAlreadyInquired';
+import { useAlreadyInquired, useInquiryRecord, useInquirySentVia } from '../hooks/useAlreadyInquired';
 import { useSpaceStore } from '../store/spaceStore';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 import { invalidateAccommodationQueries } from '../utils/accommodationQueryCache';
 import { listingAddress } from '../utils/listingInfo';
 import { firstVerifiedListingImageUrl } from '../utils/representativeImage';
+import { hasActualListingPhotos } from '../utils/photoRequest';
+import { PhotoRequestAction } from '../components/discovery/PhotoRequestAction';
 import { formatCurrency } from '../utils/memberDeposit';
-import {
-  propertyCategoryLabelKey,
-  supportsSpacePropertyCategory,
-} from '../utils/spacePropertyCategory';
+import { listingPriceSuffix } from '../utils/priceBasis';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'FindAPlaceDetail'>;
 type Route = RouteProp<MainStackParamList, 'FindAPlaceDetail'>;
@@ -49,13 +52,33 @@ export function FindAPlaceDetailScreen() {
   const [opening, setOpening] = useState(false);
   const [enquireOpen, setEnquireOpen] = useState(false);
   const alreadyInquired = useAlreadyInquired(spaceId);
+  const inquiry = useInquiryRecord(spaceId);
+  const contactViewed = inquiry?.contactViewed === true;
   const sentVia = useInquirySentVia(spaceId);
+  const [revealed, setRevealed] = useState<OwnerContactResponse | null>(null);
+
+  useEffect(() => {
+    if (!contactViewed) {
+      setRevealed(null);
+      return;
+    }
+    let cancelled = false;
+    enquiryApi.revealedContact(spaceId).then(contact => {
+      if (!cancelled && contact) setRevealed(contact);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [contactViewed, spaceId]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
       title: detail?.name ?? t('navigation.findAPlaceDetail'),
+      headerRight: () => (
+        <FavoriteHeartButton spaceId={spaceId} listingName={detail?.name} />
+      ),
     });
-  }, [detail?.name, navigation, t, i18n.language]);
+  }, [detail?.name, i18n.language, navigation, spaceId, t]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -142,11 +165,6 @@ export function FindAPlaceDetailScreen() {
     setEnquireOpen(true);
   }, [alreadyInquired]);
 
-  const categoryLabel =
-    detail?.genderPolicy && supportsSpacePropertyCategory(detail.type)
-      ? t(propertyCategoryLabelKey(detail.type, detail.genderPolicy))
-      : null;
-
   return (
     <View style={styles.root}>
       <Screen
@@ -179,17 +197,23 @@ export function FindAPlaceDetailScreen() {
                 style={styles.heroImage}
                 accessibilityName={detail.name}
               />
-              <View style={styles.heroBadgeRow}>
-                <View style={styles.heroTypeBadge}>
-                  <Text style={styles.heroTypeBadgeText}>{getSpaceTypeLabel(detail.type)}</Text>
+              {alreadyInquired ? (
+                <View style={styles.heroBadgeRow}>
+                  <InquirySent />
                 </View>
-                {alreadyInquired ? <InquirySent /> : null}
-              </View>
+              ) : null}
             </View>
 
             <View style={styles.infoBlock}>
+              <ListingFacts
+                leading={<TypeChip label={getSpaceTypeLabel(detail.type)} />}
+                genderPolicy={detail.genderPolicy}
+                sharingNotes={detail.sharingNotes}
+                foodAvailability={detail.foodAvailability}
+                foodIncludedInRent={detail.foodIncludedInRent}
+              />
               <Text style={styles.name}>{detail.name}</Text>
-              {alreadyInquired ? <InquirySent variant="inline" sentVia={sentVia} /> : null}
+              {alreadyInquired ? <InquirySentDetails listingId={detail.spaceId} /> : null}
               {address ? (
                 <View style={styles.addressRow}>
                   <MapPin size={16} color={colors.primaryDark} strokeWidth={2.2} />
@@ -200,7 +224,7 @@ export function FindAPlaceDetailScreen() {
                 <>
                   <Text style={styles.price}>
                     {hasMonthly && monthlyPrice != null
-                      ? `${formatCurrency(monthlyPrice)} ${t('spaces.findPlace.priceSuffix.MESS')}`
+                      ? `${formatCurrency(monthlyPrice)} ${listingPriceSuffix(t, detail.type, detail.priceBasis)}`
                       : t('spaces.findPlace.priceOnRequest')}
                   </Text>
                   {hasMeal && mealPrice != null ? (
@@ -212,27 +236,16 @@ export function FindAPlaceDetailScreen() {
               ) : (
                 <Text style={styles.price}>
                   {hasStarting && startingPrice != null
-                    ? `${formatCurrency(startingPrice)} ${t(`spaces.findPlace.priceSuffix.${detail.type as SpaceType}`)}`
+                    ? `${formatCurrency(startingPrice)} ${listingPriceSuffix(t, detail.type, detail.priceBasis)}`
                     : t('spaces.findPlace.priceOnRequest')}
                 </Text>
               )}
 
-              <View style={styles.metaRow}>
-                {detail.alreadyMember ? (
+              {detail.alreadyMember ? (
+                <View style={styles.metaRow}>
                   <Badge label={t('spaces.findPlace.memberBadge')} />
-                ) : null}
-                {categoryLabel ? (
-                  <View style={styles.metaChip}>
-                    <Text style={styles.metaChipText}>{categoryLabel}</Text>
-                  </View>
-                ) : null}
-                {detail.foodIncludedInRent ? (
-                  <View style={[styles.metaChip, styles.foodChip]}>
-                    <UtensilsCrossed size={12} color={colors.primaryDark} strokeWidth={2.2} />
-                    <Text style={styles.metaChipText}>{t('spaces.findPlace.foodIncluded')}</Text>
-                  </View>
-                ) : null}
-              </View>
+                </View>
+              ) : null}
             </View>
 
             <View style={styles.infoPanel}>
@@ -287,16 +300,43 @@ export function FindAPlaceDetailScreen() {
                 </Text>
                 {t('spaces.findPlace.notAvailable', { defaultValue: 'Not available' })}
               </Text>
-              <Text style={styles.availabilityLine}>
-                <Text style={styles.availabilityLabel}>
-                  {t('spaces.findPlace.photos', { defaultValue: 'Photos' })}
-                  {': '}
+              {hasActualListingPhotos([detail.listingImageUrl, detail.coverImageUrl, detail.imageUrl]) ? null : (
+                <Text style={styles.availabilityLine}>
+                  <Text style={styles.availabilityLabel}>
+                    {t('spaces.findPlace.photos', { defaultValue: 'Photos' })}
+                    {': '}
+                  </Text>
+                  {t('spaces.findPlace.notAvailable', { defaultValue: 'Not available' })}
                 </Text>
-                {t('spaces.findPlace.notAvailable', { defaultValue: 'Not available' })}
-              </Text>
+              )}
+              {!detail.alreadyMember && !detail.ownedByCurrentUser ? (
+                <PhotoRequestAction
+                  kind={detail.type === 'MESS' ? 'mess' : 'property'}
+                  name={detail.name}
+                  spaceType={detail.type}
+                  location={listingAddress(detail)}
+                  photoUrls={[detail.listingImageUrl, detail.coverImageUrl, detail.imageUrl]}
+                  phones={
+                    revealed
+                      ? [revealed.mobileNumber, revealed.alternateMobileNumber, revealed.additionalMobileNumber]
+                      : []
+                  }
+                  contactAuthorized={Boolean(revealed)}
+                  onNeedContact={revealed || contactViewed ? undefined : () => setEnquireOpen(true)}
+                />
+              ) : null}
             </View>
 
-            {!detail.alreadyMember && !detail.ownedByCurrentUser ? (
+            {contactViewed && !detail.alreadyMember && !detail.ownedByCurrentUser ? (
+              <View style={styles.section}>
+                <Text style={styles.viewedLabel}>
+                  {t('spaces.findPlace.contactDetailsViewed', { defaultValue: 'Contact details viewed' })}
+                </Text>
+                <OwnerContactCard contact={revealed} mapUrl={detail.mapUrl} />
+              </View>
+            ) : null}
+
+            {!detail.alreadyMember && !detail.ownedByCurrentUser && !contactViewed ? (
               <View style={styles.inviteNotice}>
                 <Info size={18} color={colors.primaryDark} strokeWidth={2.2} />
                 <Text style={styles.inviteNoticeText}>
@@ -315,11 +355,15 @@ export function FindAPlaceDetailScreen() {
           spaceName={detail.name}
           ownedByCurrentUser={Boolean(detail.ownedByCurrentUser)}
           onClose={() => setEnquireOpen(false)}
+          onViewedHere={contact => {
+            setRevealed(contact);
+            setEnquireOpen(false);
+          }}
         />
       ) : null}
 
       {detail ? (
-        alreadyInquired && !detail.alreadyMember && !detail.ownedByCurrentUser ? (
+        contactViewed && !alreadyInquired && !detail.alreadyMember && !detail.ownedByCurrentUser ? null : alreadyInquired && !detail.alreadyMember && !detail.ownedByCurrentUser ? (
           <StickyFormActions>
             <InquirySent variant="button" sentVia={sentVia} />
           </StickyFormActions>
@@ -494,26 +538,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.xs,
   },
-  metaChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderRadius: radius.full,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  foodChip: {
-    backgroundColor: colors.lightGreen,
-    borderColor: `${colors.primary}33`,
-  },
-  metaChipText: {
-    ...typography.caption,
-    color: colors.primaryDark,
-    fontWeight: '600',
-  },
   section: {
     backgroundColor: colors.white,
     borderRadius: 16,
@@ -561,6 +585,12 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     fontWeight: '600',
     maxWidth: 160,
+  },
+  viewedLabel: {
+    ...typography.caption,
+    fontWeight: '700',
+    color: '#0369A1',
+    marginBottom: spacing.xs,
   },
   inviteNotice: {
     flexDirection: 'row',

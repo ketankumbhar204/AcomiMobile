@@ -9,32 +9,32 @@ import {
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { ChevronRight } from 'lucide-react-native';
 import { memberApi } from '../../api/memberApi';
 import type { MemberResponse } from '../../api/types';
 import { AccommodationSearchBar } from '../accommodation/AccommodationSearchBar';
 import { Button } from '../ui';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { getMembershipErrorMessage } from '../../utils/membershipErrors';
+import { memberMatchesPaymentSearch } from '../../utils/chargeCatalog';
 import { shouldShowOccupancySection } from '../../utils/occupancyPermissions';
+import { membershipRoleLabelKey } from '../../utils/memberRoles';
+import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 
 type OccupancyMemberPickerModalProps = {
   visible: boolean;
   spaceId: string;
   title?: string;
   subtitle?: string;
+  searchPlaceholder?: string;
+  /** Defaults to occupancy members. Payment create passes chargeable members. */
+  includeMember?: (member: MemberResponse) => boolean;
   onClose: () => void;
   onSelect: (member: MemberResponse) => void;
 };
 
 function matchesSearch(member: MemberResponse, query: string): boolean {
-  const normalized = query.trim().toLowerCase();
-  if (!normalized) {
-    return true;
-  }
-  return (
-    member.fullName.toLowerCase().includes(normalized) ||
-    member.mobileNumber.includes(normalized)
-  );
+  return memberMatchesPaymentSearch(member, query);
 }
 
 export function OccupancyMemberPickerModal({
@@ -42,9 +42,12 @@ export function OccupancyMemberPickerModal({
   spaceId,
   title,
   subtitle,
+  searchPlaceholder,
+  includeMember,
   onClose,
   onSelect,
 }: OccupancyMemberPickerModalProps) {
+  const permissions = useSpacePermissions(spaceId);
   const { t } = useTranslation();
   const [members, setMembers] = useState<MemberResponse[]>([]);
   const [loading, setLoading] = useState(false);
@@ -57,9 +60,10 @@ export function OccupancyMemberPickerModal({
     try {
       const data = await memberApi.getMembers(spaceId);
       setMembers(
-        data.filter(
-          member =>
-            member.status === 'ACTIVE' && shouldShowOccupancySection(member.role),
+        data.filter(member =>
+          includeMember
+            ? includeMember(member)
+            : member.status === 'ACTIVE' && shouldShowOccupancySection(member.role),
         ),
       );
     } catch (err) {
@@ -67,7 +71,7 @@ export function OccupancyMemberPickerModal({
     } finally {
       setLoading(false);
     }
-  }, [spaceId]);
+  }, [includeMember, spaceId]);
 
   useEffect(() => {
     if (!visible) {
@@ -108,7 +112,7 @@ export function OccupancyMemberPickerModal({
           <AccommodationSearchBar
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder={t('occupancy.memberPicker.searchPlaceholder')}
+            placeholder={searchPlaceholder ?? t('occupancy.memberPicker.searchPlaceholder')}
           />
         </View>
 
@@ -126,10 +130,11 @@ export function OccupancyMemberPickerModal({
                 <View style={styles.rowBody}>
                   <Text style={styles.rowTitle}>{member.fullName}</Text>
                   <Text style={styles.rowSub}>
-                    {member.mobileNumber} · {t(`spaces.roles.${member.role}`)}
+                    {member.mobileNumber} ·{' '}
+                    {t(membershipRoleLabelKey(member.role, permissions.spaceType))}
                   </Text>
                 </View>
-                <Text style={styles.pickMark}>›</Text>
+                <ChevronRight size={18} color={colors.muted} strokeWidth={2.4} />
               </Pressable>
             ))
           ) : !loading ? (

@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { ChevronRight, DoorOpen, Pencil, Users } from 'lucide-react-native';
 import type { BedSpaceListItemResponse } from '../../api/types';
@@ -17,6 +17,7 @@ import {
 
 type BuildingInventoryRoomSectionProps = {
   group: BedRoomGroup;
+  spaceId?: string;
   /** Override path crumbs (defaults to Floor / Unit / Room). */
   pathCrumbs?: RoomPathCrumb[];
   /** Override path segments (defaults to Floor / Unit / Room). */
@@ -38,6 +39,7 @@ type BuildingInventoryRoomSectionProps = {
 
 function BuildingInventoryRoomSectionComponent({
   group,
+  spaceId,
   pathCrumbs: pathCrumbsProp,
   pathSegments: pathSegmentsProp,
   title,
@@ -183,15 +185,11 @@ function BuildingInventoryRoomSectionComponent({
         </View>
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.bedsRow}
-        decelerationRate="fast"
-        nestedScrollEnabled>
+      <View style={styles.bedsGrid}>
         {group.beds.map(bed => (
           <BuildingInventoryBedCard
             key={bed.bedId}
+            spaceId={spaceId}
             bed={bed}
             onPress={onBedPress ? () => onBedPress(bed) : undefined}
             onEdit={onEditBed ? () => onEditBed(bed) : undefined}
@@ -200,7 +198,7 @@ function BuildingInventoryRoomSectionComponent({
           />
         ))}
         {showAddBed && onAddBed ? <BuildingInventoryAddBedCard onPress={onAddBed} /> : null}
-      </ScrollView>
+      </View>
     </View>
   );
 }
@@ -326,10 +324,10 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontWeight: '600',
   },
-  bedsRow: {
+  bedsGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'stretch',
-    gap: spacing.sm,
-    paddingRight: spacing.sm,
+    margin: -4,
   },
 });

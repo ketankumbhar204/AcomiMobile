@@ -1,19 +1,20 @@
 import React, { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { History, User, UtensilsCrossed, Wallet } from 'lucide-react-native';
+import { CreditCard, History, User, UtensilsCrossed, Wallet } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { SegmentedTabs, type SegmentedTabItem } from '../ui';
 import { spacing } from '../../theme';
 
-export type MemberDetailTab = 'profile' | 'meals' | 'deposit' | 'history';
+export type MemberDetailTab = 'profile' | 'meals' | 'payments' | 'deposit' | 'history';
 
-const BASE_TABS: MemberDetailTab[] = ['profile', 'deposit', 'history'];
-const ALL_TABS: MemberDetailTab[] = ['profile', 'meals', 'deposit', 'history'];
+const BASE_TABS: MemberDetailTab[] = ['profile', 'payments', 'deposit', 'history'];
+const ALL_TABS: MemberDetailTab[] = ['profile', 'meals', 'payments', 'deposit', 'history'];
 
 const TAB_ICONS: Record<MemberDetailTab, LucideIcon> = {
   profile: User,
   meals: UtensilsCrossed,
+  payments: CreditCard,
   deposit: Wallet,
   history: History,
 };

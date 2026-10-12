@@ -1,4 +1,5 @@
-import { StyleSheet } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Keyboard, Platform, StyleSheet, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing } from '../../theme';
 
@@ -21,6 +22,49 @@ export function useStickyBarPaddingBottom(): number {
   const insets = useSafeAreaInsets();
   return STICKY_BAR_PADDING_BOTTOM_BASE + Math.max(insets.bottom, spacing.sm);
 }
+
+/**
+ * Height of the software keyboard. Used so sticky bars stay on the screen's
+ * bottom edge instead of riding up and covering the form.
+ */
+export function useKeyboardScreenLift(): number {
+  const [lift, setLift] = useState(0);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, event => {
+      setLift(event.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setLift(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  return lift;
+}
+
+/** Keeps a sticky bar in normal flow, and docks it under the keyboard while typing. */
+export function stickyBarKeyboardDock(keyboardLift: number): ViewStyle | undefined {
+  if (keyboardLift <= 0) {
+    return undefined;
+  }
+  return {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: -keyboardLift,
+  };
+}
+
+export const stickyBarKeyboardSlot: ViewStyle = {
+  height: 0,
+  overflow: 'visible',
+};
 
 export const stickyBarStackStyle = StyleSheet.create({
   stack: {

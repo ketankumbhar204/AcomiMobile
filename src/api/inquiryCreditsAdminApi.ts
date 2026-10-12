@@ -26,6 +26,10 @@ export type UpdateInquiryPaymentConfigRequest = {
   qrFileId?: string | null;
   instructions?: string | null;
   webFreeDailyLimit?: number;
+  viewHereDailyLimit?: number;
+  webViewHereEnabled?: boolean;
+  androidViewHereEnabled?: boolean;
+  androidViewHereDailyLimit?: number;
   androidBillingMode?: 'FREE' | 'CREDITS';
   androidFreeDailyLimit?: number;
   androidHourlyRateLimit?: number;

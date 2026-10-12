@@ -19,6 +19,7 @@ import { useOtpCooldown } from '../../hooks/useOtpCooldown';
 import type { MainStackParamList } from '../../navigation/types';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import {
+  INDIAN_MOBILE_INPUT_MAX_LENGTH,
   isValidIndianMobile,
   maskIndianMobile,
   normalizeIndianMobileDigits,
@@ -134,7 +135,7 @@ export function ChangeMobileScreen() {
                 }
               }}
               keyboardType="phone-pad"
-              maxLength={10}
+              maxLength={INDIAN_MOBILE_INPUT_MAX_LENGTH}
               autoCorrect={false}
               editable={!isLoading}
               accessibilityLabel={t('auth.login.mobileLabel')}

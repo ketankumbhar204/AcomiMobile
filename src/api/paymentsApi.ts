@@ -85,6 +85,22 @@ function buildQuery(params?: ListSpacePaymentsParams): string {
 const ownerMonthInflight = new Map<string, Promise<OwnerPaymentsMonthResponse>>();
 
 export const paymentsApi = {
+  listStayCharges: async (
+    spaceId: UUID,
+    month?: string,
+  ): Promise<SpacePaymentListResponse> => {
+    const query = month ? `?month=${encodeURIComponent(month)}` : '';
+    const path = `/spaces/${spaceId}/payments/stay-charges${query}`;
+    devLog(`${LOG_TAG} GET ${path}`);
+    try {
+      return await unwrapApiResponse(
+        apiClient.get<ApiResponse<SpacePaymentListResponse>>(path),
+      );
+    } catch (error) {
+      rethrowUnlessUnavailable(error);
+    }
+  },
+
   listPayments: async (
     spaceId: UUID,
     params?: ListSpacePaymentsParams,
@@ -480,6 +496,11 @@ export type PaymentReminderDeliveryResult = {
   sentAt?: string | null;
   lastAttemptAt?: string | null;
   attemptCount?: number;
+  messageText?: string | null;
+  whatsAppUrl?: string | null;
+  internationalPhone?: string | null;
+  inAppRecorded?: boolean;
+  inAppFailureCode?: string | null;
 };
 
 export type PaymentReminderProcessResult = {

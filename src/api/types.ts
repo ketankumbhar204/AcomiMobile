@@ -53,6 +53,8 @@ export interface SpaceDetailsResponse {
   name: string;
   type: SpaceType;
   address?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   contactNumber?: string;
   ownerId: UUID;
   /** When true, food is mandatory and bundled in rent — no separate food charge. */
@@ -631,6 +633,8 @@ export interface MemberMealActivityDay {
   date: string;
   hasActivity?: boolean;
   dayTotal?: number | null;
+  /** False when an accepted meal has no price, so the day total must not be shown as zero. */
+  amountKnown?: boolean | null;
   currencyCode?: string | null;
   paymentStatus?: MealPollPaymentStatus | null;
   /** Immutable human payment reference when available (e.g. PAY-20260720-000123). */
@@ -822,6 +826,7 @@ export interface DiscoverSpaceCardResponse {
   imageUrl?: string | null;
   address?: string | null;
   startingPrice?: number | string | null;
+  priceBasis?: string | null;
   monthlyPrice?: number | string | null;
   mealPrice?: number | string | null;
   mapUrl?: string | null;
@@ -832,6 +837,8 @@ export interface DiscoverSpaceCardResponse {
   amenityCodes?: string[];
   amenityLabels?: string[];
   foodIncludedInRent: boolean;
+  foodAvailability?: 'INCLUDED' | 'AVAILABLE' | 'NONE' | null;
+  sharingNotes?: string | null;
   genderPolicy?: GenderPolicy | null;
   alreadyMember: boolean;
   /** True when the signed-in user owns this Space. Contact enquiry is blocked. */
@@ -864,6 +871,33 @@ export interface OwnerContactResponse {
   available: boolean;
 }
 
+export type EnquiryInboxMode = 'MINE' | 'RECEIVED';
+
+export interface EnquiryInboxListing {
+  spaceId: UUID;
+  name: string;
+  spaceType?: string | null;
+}
+
+export interface EnquiryInboxResponse {
+  mode: EnquiryInboxMode;
+  listings: EnquiryInboxListing[];
+}
+
+export interface ReceivedEnquiry {
+  enquiryId: UUID;
+  spaceId: UUID;
+  spaceName: string;
+  spaceType?: string | null;
+  locationLabel?: string | null;
+  requesterName?: string | null;
+  requesterEmail?: string | null;
+  requesterMobile?: string | null;
+  status: SpaceEnquiryStatus;
+  requestedAt: string;
+  expiresAt?: string | null;
+}
+
 export interface SpaceEnquiryResponse {
   enquiryId: UUID;
   spaceId: UUID;
@@ -886,10 +920,14 @@ export interface SpaceEnquiryResponse {
   contactEmailSent?: boolean;
   ownerContact?: OwnerContactResponse | null;
   reusedExisting?: boolean;
+  deliveredAt?: string | null;
+  emailDeliveredAt?: string | null;
+  alreadyDelivered?: boolean;
 }
 
 export interface CreateSpaceEnquiryRequest {
   email?: string;
+  deliveryChannel?: 'APP' | 'EMAIL' | 'VIEW_HERE';
 }
 
 export interface AdminSpaceEnquiryListItem {
@@ -924,6 +962,14 @@ export interface DiscoverSpacesParams {
   minRent?: number | null;
   maxRent?: number | null;
   amenities?: string[];
+  genders?: string[];
+  sharings?: string[];
+  foods?: string[];
+  furnishings?: string[];
+  contactAvailable?: boolean;
+  servicedApartment?: boolean;
+  mealTypes?: string[];
+  foodTypes?: string[];
   page?: number;
   size?: number;
   sort?: 'newest' | string;
@@ -952,6 +998,8 @@ export interface SetDefaultSpaceResponse {
 export interface UpdateSpaceRequest {
   name: string;
   address?: string;
+  latitude?: number;
+  longitude?: number;
   contactNumber?: string;
   foodIncludedInRent?: boolean;
   defaultFoodCharge?: number | null;
@@ -1168,6 +1216,8 @@ export interface Space {
   name: string;
   type: SpaceType;
   address: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   contactNumber: string | null;
   isActive: boolean;
   foodIncludedInRent?: boolean;
@@ -1189,6 +1239,8 @@ export interface CreateSpaceRequest {
   name: string;
   type: SpaceType;
   address?: string;
+  latitude?: number;
+  longitude?: number;
   contactNumber?: string;
   ownerId: UUID;
   genderPolicy?: GenderPolicy | null;
@@ -2458,7 +2510,15 @@ export interface CreateSubscriptionActivationRequest {
 
 // ─── Universal payment collection (SpacePayment) ────────────────────────────
 
-export type UniversalPaymentType = 'MEAL' | 'RENT' | 'DEPOSIT' | 'MAINTENANCE' | 'OTHER';
+export type UniversalPaymentType =
+  | 'MEAL'
+  | 'RENT'
+  | 'DEPOSIT'
+  | 'MAINTENANCE'
+  | 'UTILITY'
+  | 'SERVICE'
+  | 'PENALTY'
+  | 'OTHER';
 
 export type UniversalPaymentMethod = 'UPI' | 'BANK_TRANSFER' | 'CASH' | 'CHEQUE' | 'OTHER';
 
@@ -2485,6 +2545,7 @@ export type PaymentCategory =
   | 'REFUND'
   | 'ELECTRICITY'
   | 'WATER'
+  | 'GAS'
   | 'INTERNET'
   | 'OTHER';
 
@@ -2510,10 +2571,12 @@ export interface SpacePaymentResponse {
   spaceId: UUID;
   memberId: UUID;
   memberName: string;
+  memberMobile?: string | null;
   occupancyId?: UUID | null;
   paymentType: UniversalPaymentType;
   paymentCategory: PaymentCategory;
   title: string;
+  description?: string | null;
   amount: number;
   currencyCode: string;
   dueDate: string;
@@ -2660,6 +2723,7 @@ export interface CreateSpacePaymentRequest {
   month?: string;
   dueDate?: string;
   title?: string;
+  description?: string;
   remarks?: string;
   confirmDuplicateDeposit?: boolean;
 }
@@ -2896,6 +2960,8 @@ export interface AdminActiveSpace {
   ownerName: string;
   ownerMobile: string;
   createdAt: string;
+  /** True when the converted registration is a test lead. */
+  testLead?: boolean;
 }
 
 export type AdminUserSelectedRole = 'NOT_SELECTED' | 'OWNER' | 'MEMBER' | 'OWNER_AND_MEMBER';
@@ -3024,6 +3090,7 @@ export interface MessRegistrationDetail extends MessRegistrationListItem {
   addressLine: string;
   mapUrl?: string | null;
   monthlyPrice: number;
+  monthlyPriceBasis?: string | null;
   mealPrice: number;
   capacityEstimate?: number | null;
   convertedSpaceId?: UUID | null;
@@ -3043,7 +3110,10 @@ export interface AdminCreatePropertyRegistrationRequest {
   state?: string;
   pincode?: string;
   mapUrl?: string;
+  latitude?: number;
+  longitude?: number;
   startingPrice?: number;
+  priceBasis?: 'PER_BED' | 'PER_ROOM' | 'PER_UNIT';
   capacityEstimate?: number;
   amenities?: Array<{ code: string; label?: string }>;
   testLead?: boolean;
@@ -3060,7 +3130,10 @@ export interface AdminCreateMessRegistrationRequest {
   state?: string;
   pincode?: string;
   mapUrl?: string;
+  latitude?: number;
+  longitude?: number;
   monthlyPrice?: number;
+  monthlyPriceBasis?: 'PER_BED' | 'PER_ROOM' | 'PER_UNIT';
   mealPrice?: number;
   capacityEstimate?: number;
   testLead?: boolean;

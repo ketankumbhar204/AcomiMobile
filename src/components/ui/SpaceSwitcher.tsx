@@ -7,7 +7,9 @@ import {
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Check, MapPin } from 'lucide-react-native';
 import { resetToDashboard } from '../../navigation/navigationRef';
+import { spaceHeaderLines } from '../../navigation/spaceHeaderNav';
 import { useSpaceStore } from '../../store/spaceStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { invalidateAccommodationQueries } from '../../utils/accommodationQueryCache';
@@ -23,17 +25,21 @@ export function SpaceSwitcher({ spaceId }: SpaceSwitcherProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const currentSpace = useSpaceStore(state => state.currentSpace);
+  const selectedSpace = useSpaceStore(state => state.selectedSpace);
   const mySpaces = useSpaceStore(state => state.mySpaces);
   const loading = useSpaceStore(state => state.loading);
   const switchSpace = useSpaceStore(state => state.switchSpace);
   const loadMySpaces = useSpaceStore(state => state.loadMySpaces);
 
-  const activeSpace = mySpaces.find(
-    item => item.spaceId === (currentSpace?.spaceId ?? spaceId),
+  const activeId = currentSpace?.spaceId ?? spaceId;
+  const activeSpace = mySpaces.find(item => item.spaceId === activeId);
+  const address =
+    activeSpace?.address ??
+    (selectedSpace?.id === activeId ? selectedSpace.address : null);
+  const { title, location } = spaceHeaderLines(
+    activeSpace?.spaceName ?? currentSpace?.spaceName ?? t('navigation.dashboard'),
+    address,
   );
-  const title = activeSpace
-    ? formatSpaceDisplayName(activeSpace)
-    : currentSpace?.spaceName ?? t('navigation.dashboard');
 
   const sortedSpaces = useMemo(
     () =>
@@ -87,7 +93,14 @@ export function SpaceSwitcher({ spaceId }: SpaceSwitcherProps) {
         <Text style={styles.triggerText} numberOfLines={1}>
           {title}
         </Text>
-        <Text style={styles.chevron}>▼</Text>
+        {location ? (
+          <View style={styles.locationRow}>
+            <MapPin size={12} color={colors.teal} strokeWidth={2.2} />
+            <Text style={styles.locationText} numberOfLines={1}>
+              {location}
+            </Text>
+          </View>
+        ) : null}
       </Pressable>
 
       <Modal
@@ -136,7 +149,7 @@ export function SpaceSwitcher({ spaceId }: SpaceSwitcherProps) {
                     </Text>
                     <View style={styles.menuItemTrailing}>
                       {isSelected ? (
-                        <Text style={styles.checkmark}>✓</Text>
+                        <Check size={16} color={colors.primaryDark} strokeWidth={2.4} />
                       ) : space.isDefault ? (
                         <Text style={styles.defaultHint}>
                           {t('spaces.mySpaces.defaultBadge')}
@@ -156,11 +169,12 @@ export function SpaceSwitcher({ spaceId }: SpaceSwitcherProps) {
 
 const styles = StyleSheet.create({
   trigger: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    maxWidth: 200,
-    gap: spacing.xs,
-    paddingVertical: spacing.xs,
+    width: '100%',
+    minWidth: 0,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    paddingVertical: spacing.xxs,
+    paddingRight: spacing.xs,
   },
   triggerPressed: {
     opacity: 0.6,
@@ -168,13 +182,22 @@ const styles = StyleSheet.create({
   triggerText: {
     ...typography.bodyStrong,
     fontSize: 16,
+    lineHeight: 20,
     color: colors.textPrimary,
-    flexShrink: 1,
+    width: '100%',
   },
-  chevron: {
-    fontSize: 10,
-    color: colors.muted,
-    marginTop: 2,
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    width: '100%',
+    minWidth: 0,
+  },
+  locationText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    flex: 1,
+    minWidth: 0,
   },
   backdrop: {
     flex: 1,

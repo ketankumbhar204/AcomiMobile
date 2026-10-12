@@ -11,6 +11,7 @@ import {
   Languages,
   LogOut,
   Bell,
+  Heart,
   MessageCircle,
   SquarePen,
   Smartphone,
@@ -20,7 +21,12 @@ import {
 } from 'lucide-react-native';
 import { authApi } from '../api/authApi';
 import { memberApi } from '../api/memberApi';
-import type { MemberDetailsResponse, MemberDocumentType, MembershipRole } from '../api/types';
+import type {
+  MemberDetailsResponse,
+  MemberDocumentType,
+  MembershipRole,
+  SpaceType,
+} from '../api/types';
 import { LanguagePicker } from '../components/settings/LanguagePicker';
 import { ProfileDocumentsSection } from '../components/profile/ProfileDocumentsSection';
 import { ProfileDocumentUploadModal } from '../components/profile/ProfileDocumentUploadModal';
@@ -55,6 +61,10 @@ import {
   profileCompletionPercentage,
 } from '../utils/profileCompletion';
 import {
+  contextualMembershipRole,
+  membershipRoleLabelKey,
+} from '../utils/memberRoles';
+import {
   findPrimaryIdentityDocument,
   profileDocumentsToFormState,
   type ProfileDocumentFormState,
@@ -71,12 +81,12 @@ type ProfileNav = NativeStackNavigationProp<MainStackParamList, 'Profile'>;
 
 function roleToneLabel(
   role: MembershipRole | undefined,
+  spaceType: SpaceType | undefined,
   t: (key: string, opts?: { defaultValue?: string }) => string,
-): string | null {
-  if (!role) {
-    return null;
-  }
-  return t(`spaces.roles.${role}`, { defaultValue: role });
+): string {
+  return t(membershipRoleLabelKey(role, spaceType), {
+    defaultValue: contextualMembershipRole(role, spaceType),
+  });
 }
 
 export function ProfileScreen() {
@@ -364,7 +374,11 @@ export function ProfileScreen() {
           fullName={user.fullName ?? ''}
           mobile={user.mobileNumber}
           photoUrl={user.profilePhotoUrl}
-          roleLabel={roleToneLabel(currentSpace?.membershipRole, t)}
+          roleLabel={
+            !currentSpace && user.systemRole === 'ADMIN'
+              ? t('spaces.roles.ADMIN', { defaultValue: 'Admin' })
+              : roleToneLabel(currentSpace?.membershipRole, currentSpace?.spaceType, t)
+          }
           spaceName={currentSpace?.spaceName ?? null}
           statusLabel={profileStatusLabel}
           statusTone={profileStatusTone}
@@ -398,6 +412,14 @@ export function ProfileScreen() {
             subtitle={t('settings.profile.mobileHint')}
             icon={Smartphone}
             onPress={() => navigation.navigate('ChangeMobile')}
+          />
+          <DashboardActionRow
+            title={t('navigation.favorites', { defaultValue: 'Favorites' })}
+            subtitle={t('spaces.favorites.profileSubtitle', {
+              defaultValue: 'PG, hostel, co-living, rental, and mess listings you saved',
+            })}
+            icon={Heart}
+            onPress={() => navigation.navigate('Favorites')}
           />
           <DashboardActionRow
             title={t('settings.profile.myEnquiries')}

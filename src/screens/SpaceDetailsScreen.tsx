@@ -311,7 +311,7 @@ export function SpaceDetailsScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
         {/* Hero */}
-        <View style={[styles.hero, { backgroundColor: `${accent}0F`, borderColor: `${accent}33` }]}>
+        <View style={[styles.hero, { backgroundColor: `${accent}0F` }]}>
           <View style={styles.heroTop}>
             <View style={[styles.heroIcon, { borderColor: `${accent}33` }]}>
               <EntityPhoto
@@ -524,9 +524,10 @@ const styles = StyleSheet.create({
   hero: {
     borderRadius: 20,
     borderWidth: 1,
+    borderColor: colors.border,
     padding: spacing.lg,
     gap: spacing.md,
-    ...shadows.sm,
+    overflow: 'hidden',
   },
   heroTop: {
     flexDirection: 'row',

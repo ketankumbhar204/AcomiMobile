@@ -10,6 +10,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Check, ChevronDown } from 'lucide-react-native';
 import { colors, radius, spacing, typography } from '../../theme';
 
 export type FilterDropdownOption = {
@@ -72,7 +73,7 @@ export function FilterDropdownField({
             numberOfLines={1}>
             {valueLabel}
           </Text>
-          <Text style={styles.chevron}>▾</Text>
+          <ChevronDown size={14} color={colors.muted} strokeWidth={2.4} />
         </Pressable>
       </View>
 
@@ -111,7 +112,7 @@ export function FilterDropdownField({
                     numberOfLines={1}>
                     {item.label}
                   </Text>
-                  {selected ? <Text style={styles.optionCheck}>✓</Text> : null}
+                  {selected ? <Check size={16} color={colors.primaryDark} strokeWidth={2.4} /> : null}
                 </Pressable>
               );
             }}

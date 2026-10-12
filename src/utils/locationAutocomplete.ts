@@ -91,6 +91,154 @@ export function suggestionDetail(suggestion: LocationAutocompleteSuggestion): st
   return unique.join(', ');
 }
 
+export function googleMapsLink(latitude: number, longitude: number): string {
+  const format = (value: number) => String(Math.round(value * 10_000_000) / 10_000_000);
+  return `https://www.google.com/maps?q=${format(latitude)},${format(longitude)}`;
+}
+
+export type AddressCapture = {
+  buildingName: string;
+  query: string;
+  selected: boolean;
+  address: string;
+  locality: string;
+  city: string;
+  district: string;
+  state: string;
+  pincode: string;
+  latitude: number | null;
+  longitude: number | null;
+  mapUrl: string;
+};
+
+export const EMPTY_ADDRESS_CAPTURE: AddressCapture = {
+  buildingName: '',
+  query: '',
+  selected: false,
+  address: '',
+  locality: '',
+  city: '',
+  district: '',
+  state: '',
+  pincode: '',
+  latitude: null,
+  longitude: null,
+  mapUrl: '',
+};
+
+function finiteCoordinate(value: number | string | null | undefined): number | null {
+  if (value == null || value === '') return null;
+  const numeric = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+export function composeStoredAddress(
+  value: Pick<AddressCapture, 'buildingName' | 'address'>,
+  maxLength = 255,
+): string {
+  const building = value.buildingName.trim();
+  const line = value.address.trim();
+  if (!building) return line.slice(0, maxLength);
+  if (!line) return building.slice(0, maxLength);
+  if (line.toLowerCase().startsWith(building.toLowerCase())) return line.slice(0, maxLength);
+  return `${building}, ${line}`.slice(0, maxLength);
+}
+
+export function captureFromSuggestion(
+  current: AddressCapture,
+  suggestion: LocationAutocompleteSuggestion,
+): AddressCapture | null {
+  const latitude = finiteCoordinate(suggestion.latitude);
+  const longitude = finiteCoordinate(suggestion.longitude);
+  const city = clean(suggestion.city);
+  const state = clean(suggestion.state);
+  if (latitude == null || longitude == null || !city || !state) return null;
+  const locality = clean(suggestion.area);
+  const formatted = clean(suggestion.formattedAddress) || clean(suggestion.displayName);
+  const address = (formatted || [locality, city, state].filter(Boolean).join(', ')).slice(0, 255);
+  return {
+    ...current,
+    query: formatted || address,
+    selected: true,
+    address,
+    locality,
+    city,
+    district: clean(suggestion.district),
+    state,
+    pincode: clean(suggestion.pincode),
+    latitude,
+    longitude,
+    mapUrl: googleMapsLink(latitude, longitude),
+  };
+}
+
+export function captureFromParts(parts: {
+  addressLine?: string | null;
+  city?: string | null;
+  state?: string | null;
+  pincode?: string | null;
+  mapUrl?: string | null;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
+  buildingName?: string | null;
+}): AddressCapture {
+  const address = clean(parts.addressLine);
+  const latitude = finiteCoordinate(parts.latitude);
+  const longitude = finiteCoordinate(parts.longitude);
+  return {
+    buildingName: clean(parts.buildingName),
+    query: address,
+    selected: Boolean(address && clean(parts.city) && clean(parts.state)),
+    address,
+    locality: '',
+    city: clean(parts.city),
+    district: '',
+    state: clean(parts.state),
+    pincode: clean(parts.pincode),
+    latitude,
+    longitude,
+    mapUrl:
+      clean(parts.mapUrl) ||
+      (latitude != null && longitude != null ? googleMapsLink(latitude, longitude) : ''),
+  };
+}
+
+export function captureFromFreeText(address: string | null | undefined): AddressCapture {
+  const line = clean(address);
+  return { ...EMPTY_ADDRESS_CAPTURE, query: line, address: line, selected: Boolean(line) };
+}
+
+export function withAddressQuery(current: AddressCapture, query: string): AddressCapture {
+  if (!current.selected) return { ...current, query };
+  return { ...EMPTY_ADDRESS_CAPTURE, buildingName: current.buildingName, query };
+}
+
+export type AddressCaptureIssue = 'building' | 'selection' | 'pincode' | null;
+
+export function addressCaptureIssue(
+  value: AddressCapture,
+  options: { required?: boolean; requireBuilding?: boolean; pincodeRequired?: boolean; allowManual?: boolean } = {},
+): AddressCaptureIssue {
+  const started = Boolean(value.query.trim() || value.buildingName.trim() || value.selected);
+  if (options.requireBuilding && !value.buildingName.trim() && (options.required || value.selected)) {
+    return 'building';
+  }
+  if (
+    !options.allowManual &&
+    !value.selected &&
+    (options.required || (started && value.query.trim() && value.query.trim() !== value.address.trim()))
+  ) {
+    return 'selection';
+  }
+  if (value.selected && options.pincodeRequired && !/^[1-9]\d{5}$/.test(value.pincode.trim())) {
+    return 'pincode';
+  }
+  if (value.pincode.trim() && !/^[1-9]\d{5}$/.test(value.pincode.trim())) {
+    return 'pincode';
+  }
+  return null;
+}
+
 export function suggestionKey(
   suggestion: LocationAutocompleteSuggestion,
   index: number,

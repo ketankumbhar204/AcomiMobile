@@ -13,7 +13,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ClipboardList, Vote } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import type { MealPollPaymentStatus, UUID } from '../../api/types';
+import type { MealPollPaymentStatus, MealType, UUID } from '../../api/types';
 import { MealPollDayContent } from '../../components/meals/MealPollDayContent';
 import { PollClosesInHint } from '../../components/meals/PollClosesInHint';
 import { MealFormHero } from '../../components/meals';
@@ -33,12 +33,14 @@ import { colors, radius, spacing, typography } from '../../theme';
 import { formatMenuDate, isPastMenuDate } from '../../utils/mealDates';
 import { formatComboPrice } from '../../utils/comboPrice';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
+import { mealTypeTheme } from '../../utils/mealTypeTheme';
 import { buildMealSummaryFromDraftSelections, platesForSingleSelectOption } from '../../utils/mealSelectionSummary';
 import { validatePaymentProofSubmission } from '../../utils/paymentProofPolicy';
 
 type MealPollResponseScreenProps = {
   spaceId: UUID;
   menuDate: string;
+  mealType?: MealType;
 };
 
 type Nav = NativeStackNavigationProp<MainStackParamList>;
@@ -56,7 +58,11 @@ function paymentStatusLabel(status: MealPollPaymentStatus, t: (key: string) => s
   }
 }
 
-export function MealPollResponseScreen({ spaceId, menuDate }: MealPollResponseScreenProps) {
+export function MealPollResponseScreen({
+  spaceId,
+  menuDate,
+  mealType,
+}: MealPollResponseScreenProps) {
   const { t, i18n } = useTranslation();
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
@@ -354,6 +360,7 @@ export function MealPollResponseScreen({ spaceId, menuDate }: MealPollResponseSc
               ) : null}
               <MealPollDayContent
                 menuDate={menuDate}
+                initialMealType={mealType}
                 loading={poll.loading}
                 saving={poll.saving}
                 openPolls={visiblePolls}
@@ -409,26 +416,34 @@ export function MealPollResponseScreen({ spaceId, menuDate }: MealPollResponseSc
                   })}
                 </Text>
                 <View style={styles.progressCards}>
-                  {mealProgress.map(row => (
-                    <View key={row.mealType} style={styles.progressCard}>
-                      <Text style={styles.progressMealTitle}>
-                        {t(mealTypeLabelKey(row.mealType))}
-                      </Text>
-                      {row.items.length > 0 ? (
-                        row.items.map(item => (
-                          <Text key={item.optionId} style={styles.progressItem} numberOfLines={1}>
-                            {item.quantity > 1
-                              ? `${item.label} ×${item.quantity}`
-                              : item.label}
-                          </Text>
-                        ))
-                      ) : (
-                        <Text style={styles.progressEmpty}>
-                          {t('meals.poll.notSelected')}
+                  {mealProgress.map(row => {
+                    const theme = mealTypeTheme(row.mealType);
+                    const statusLabel = row.selected
+                      ? t('meals.poll.tabSelected')
+                      : t('meals.poll.tabNotSelected');
+                    return (
+                      <View
+                        key={row.mealType}
+                        style={[
+                          styles.progressCard,
+                          { backgroundColor: theme.soft, borderColor: theme.border },
+                        ]}>
+                        <Text
+                          style={[styles.progressMealTitle, { color: theme.accent }]}
+                          numberOfLines={1}>
+                          {t(mealTypeLabelKey(row.mealType))}
                         </Text>
-                      )}
-                    </View>
-                  ))}
+                        <Text style={[styles.progressCount, { color: theme.accent }]}>
+                          {row.plates}
+                        </Text>
+                        <Text
+                          style={[styles.progressStatus, row.selected && styles.progressStatusActive]}
+                          numberOfLines={1}>
+                          {statusLabel}
+                        </Text>
+                      </View>
+                    );
+                  })}
                 </View>
               </View>
             ) : null}
@@ -497,33 +512,41 @@ const styles = StyleSheet.create({
   },
   progressCards: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexWrap: 'nowrap',
+    alignItems: 'stretch',
     gap: spacing.xs,
   },
   progressCard: {
-    minWidth: 96,
-    maxWidth: 140,
-    flexGrow: 1,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs + 2,
+    flex: 1,
+    flexBasis: 0,
+    minWidth: 0,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs,
     borderRadius: radius.button,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.white,
-    gap: 2,
+    gap: 1,
   },
   progressMealTitle: {
     ...typography.caption,
     fontWeight: '700',
-    color: colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 16,
   },
-  progressItem: {
-    ...typography.caption,
-    color: colors.textPrimary,
+  progressCount: {
+    ...typography.bodyStrong,
+    fontSize: 16,
+    lineHeight: 20,
+    fontWeight: '700',
   },
-  progressEmpty: {
+  progressStatus: {
     ...typography.caption,
+    fontSize: 10,
+    lineHeight: 13,
     color: colors.muted,
+  },
+  progressStatusActive: {
+    color: colors.success,
+    fontWeight: '600',
   },
   stickySummary: {
     ...typography.bodyStrong,

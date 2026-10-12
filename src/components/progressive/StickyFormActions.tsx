@@ -4,7 +4,10 @@ import { Button } from '../ui';
 import type { ProgressiveWorkflowAction } from './ProgressiveWorkflowFooter';
 import {
   stickyBarChrome,
+  stickyBarKeyboardDock,
+  stickyBarKeyboardSlot,
   stickyBarStackStyle,
+  useKeyboardScreenLift,
   useStickyBarPaddingBottom,
 } from './stickyBarStyles';
 
@@ -21,6 +24,11 @@ type StickyFormActionsProps = {
   footerExtra?: React.ReactNode;
   style?: ViewStyle;
   accessibilityLabel?: string;
+  /**
+   * Keep the bar in the screen column. The form scrolls above it, and the
+   * keyboard resizes the window instead of lifting the buttons over the fields.
+   */
+  anchorToScreen?: boolean;
 };
 
 /**
@@ -35,12 +43,16 @@ export function StickyFormActions({
   footerExtra,
   style,
   accessibilityLabel,
+  anchorToScreen = false,
 }: StickyFormActionsProps) {
   const paddingBottom = useStickyBarPaddingBottom();
+  const keyboardLift = useKeyboardScreenLift();
+  const keyboardOpen = !anchorToScreen && keyboardLift > 0;
 
   return (
+    <View pointerEvents={keyboardOpen ? 'none' : 'auto'} style={keyboardOpen ? stickyBarKeyboardSlot : undefined}>
     <View
-      style={[styles.bar, { paddingBottom }, style]}
+      style={[styles.bar, { paddingBottom }, stickyBarKeyboardDock(keyboardLift), style]}
       accessibilityRole="summary"
       accessibilityLabel={accessibilityLabel}>
       {children ? (
@@ -90,6 +102,7 @@ export function StickyFormActions({
         </View>
       )}
       {footerExtra}
+    </View>
     </View>
   );
 }

@@ -17,16 +17,29 @@ import { DayMealPaymentsPanel } from '../../components/payments/DayMealPaymentsP
 import { PaymentsSectionTabBar } from '../../components/payments/PaymentsSectionTabBar';
 import { UniversalPaymentCard } from '../../components/payments/UniversalPaymentCard';
 import { UniversalPaymentProofModal } from '../../components/payments/UniversalPaymentProofModal';
-import { Button, EmptyState, ListFilterChips, Skeleton, SkeletonCard } from '../../components/ui';
+import {
+  Button,
+  EmptyState,
+  ListFilterChips,
+  MonthlySummaryHeader,
+  Skeleton,
+  SkeletonCard,
+} from '../../components/ui';
 import { useCustomerSubscriptionStatus } from '../../hooks/useCustomerSubscriptionStatus';
 import { useLinkedMember } from '../../hooks/useLinkedMember';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useMealPaymentActivitySummaries } from '../../hooks/useMealPaymentActivitySummaries';
+import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useSpaceTabHeader } from '../../hooks/useSpaceTabHeader';
 import { useToastStore } from '../../store/toastStore';
 import { useTenantPaymentsMonth } from '../../hooks/useTenantPaymentsMonth';
 import type { MainStackParamList, SpaceTabParamList } from '../../navigation/types';
 import { colors, spacing, typography } from '../../theme';
+import { currentMonthKey, isFutureMonth, shiftMonthKey } from '../../utils/dashboardFinancial';
+import {
+  summarizePersonalPayments,
+  usesDayMealPayments,
+} from '../../utils/personalPaymentSummary';
 import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
 import { invalidatePaymentsMonthCaches } from '../../utils/paymentsMonthCache';
 import {
@@ -55,6 +68,7 @@ export function TenantPaymentsTabScreen() {
   const route = useRoute<Route>();
   const spaceId = useActiveSpaceId(route.params.spaceId);
   useSpaceTabHeader(spaceId);
+  const permissions = useSpacePermissions(spaceId);
   const showToast = useToastStore(state => state.showToast);
 
   const { memberId, member, loading: memberLoading } = useLinkedMember(spaceId);
@@ -63,10 +77,11 @@ export function TenantPaymentsTabScreen() {
     memberId,
   );
 
-  const isPayPerMeal =
-    !subscriptionStatus?.prepaidBilling &&
-    (subscriptionStatus?.mealBillingType == null ||
-      subscriptionStatus.mealBillingType === 'PAY_PER_MEAL');
+  const isPayPerMeal = usesDayMealPayments({
+    spaceType: permissions.spaceType,
+    prepaidBilling: subscriptionStatus?.prepaidBilling,
+    mealBillingType: subscriptionStatus?.mealBillingType,
+  });
 
   const {
     payments,
@@ -78,6 +93,7 @@ export function TenantPaymentsTabScreen() {
     reload,
     replacePayment,
     month,
+    setMonth,
   } = useTenantPaymentsMonth(spaceId, {
     memberId: memberId ?? undefined,
     enabled: Boolean(memberId) && !isPayPerMeal,
@@ -179,6 +195,49 @@ export function TenantPaymentsTabScreen() {
     [activeFilter, payments, section],
   );
 
+  const personalSummary = useMemo(() => summarizePersonalPayments(payments), [payments]);
+  const summaryCurrency = payments.find(payment => payment.currencyCode)?.currencyCode ?? 'INR';
+
+  const formatSummaryMoney = useCallback(
+    (amount: number | null) => {
+      if (amount == null) {
+        return '—';
+      }
+      return new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: summaryCurrency,
+        maximumFractionDigits: 0,
+      }).format(amount);
+    },
+    [summaryCurrency],
+  );
+
+  const summaryCards = useMemo(
+    () => [
+      {
+        label: t('paymentCollection.memberPayments.summary.due', { defaultValue: 'Amount due' }),
+        value: loading ? '…' : formatSummaryMoney(personalSummary.totalDue),
+      },
+      {
+        label: t('paymentCollection.memberPayments.summary.paid', { defaultValue: 'Paid' }),
+        value: loading ? '…' : formatSummaryMoney(personalSummary.amountPaid),
+        tone: 'success' as const,
+      },
+      {
+        label: t('paymentCollection.memberPayments.summary.outstanding', {
+          defaultValue: 'Outstanding',
+        }),
+        value: loading ? '…' : formatSummaryMoney(personalSummary.outstanding),
+        tone: 'pending' as const,
+      },
+      {
+        label: t('paymentCollection.memberPayments.summary.nextDue', { defaultValue: 'Next due' }),
+        value: loading ? '…' : (personalSummary.nextDueDate ?? '—'),
+      },
+    ],
+    [formatSummaryMoney, loading, personalSummary, t],
+  );
+
   const openPayment = useCallback(
     (paymentId: string) => {
       if (!memberId) {
@@ -274,6 +333,15 @@ export function TenantPaymentsTabScreen() {
             })
           }
           compact
+        />
+
+        <MonthlySummaryHeader
+          month={month}
+          onPreviousMonth={() => setMonth(shiftMonthKey(month, -1))}
+          onNextMonth={() => setMonth(shiftMonthKey(month, 1))}
+          disableNext={isFutureMonth(shiftMonthKey(month, 1))}
+          maxMonth={currentMonthKey()}
+          cards={summaryCards}
         />
 
         <PaymentsSectionTabBar

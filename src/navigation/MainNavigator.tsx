@@ -35,6 +35,7 @@ import { InviteMemberScreen } from '../screens/InviteMemberScreen';
 import { MemberDetailsScreen } from '../screens/MemberDetailsScreen';
 import { MemberOccupancyHistoryScreen } from '../screens/MemberOccupancyHistoryScreen';
 import { FindAPlaceDetailScreen } from '../screens/FindAPlaceDetailScreen';
+import { FavoritesScreen } from '../screens/FavoritesScreen';
 import { MyEnquiriesScreen } from '../screens/MyEnquiriesScreen';
 import { AccountNotificationsScreen } from '../screens/AccountNotificationsScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
@@ -221,6 +222,7 @@ export function MainNavigator() {
   if (profileBlocked) {
     return (
       <Stack.Navigator
+        key="profile-onboarding"
         initialRouteName="CompleteProfile"
         screenOptions={mainStackScreenOptions}>
         <Stack.Screen
@@ -259,6 +261,7 @@ export function MainNavigator() {
 
   return (
     <Stack.Navigator
+      key="main-app"
       initialRouteName={initialRouteName}
       screenOptions={mainStackScreenOptions}>
       <Stack.Screen
@@ -310,6 +313,11 @@ export function MainNavigator() {
         name="AccountNotifications"
         component={AccountNotificationsScreen}
         options={{ title: t('notifications.title') }}
+      />
+      <Stack.Screen
+        name="Favorites"
+        component={FavoritesScreen}
+        options={{ title: t('navigation.favorites', { defaultValue: 'Favorites' }) }}
       />
       <Stack.Screen
         name="Profile"
@@ -453,6 +461,7 @@ export function MainNavigator() {
             <DailyMenuTodayScreen
               spaceId={route.params.spaceId}
               menuDate={route.params.menuDate}
+              mealType={route.params.mealType}
             />
           </GatedStackScreen>
         )}
@@ -573,6 +582,7 @@ export function MainNavigator() {
               spaceId={route.params.spaceId}
               menuDate={route.params.menuDate}
               mealType={route.params.mealType}
+              intent={route.params.intent}
             />
           </GatedStackScreen>
         )}
@@ -592,6 +602,7 @@ export function MainNavigator() {
             <MealPollResponseScreen
               spaceId={route.params.spaceId}
               menuDate={route.params.menuDate}
+              mealType={route.params.mealType}
             />
           </GatedStackScreen>
         )}

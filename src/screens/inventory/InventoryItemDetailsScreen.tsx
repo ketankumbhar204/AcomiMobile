@@ -31,6 +31,7 @@ import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { formatInventoryUnit } from '../../utils/inventoryCatalog';
+import { supplierDisplayName } from '../../utils/inventorySupplier';
 import {
   availableStock,
   deriveInventoryStockStatus,
@@ -103,12 +104,10 @@ export function InventoryItemDetailsScreen() {
     [t],
   );
 
-  const supplierName = useMemo(() => {
-    if (!item?.supplierId) {
-      return null;
-    }
-    return suppliers.find(s => s.supplierId === item.supplierId)?.name ?? null;
-  }, [item, suppliers]);
+  const supplierName = useMemo(
+    () => (item ? supplierDisplayName(item, suppliers) : null),
+    [item, suppliers],
+  );
 
   const openMove = (kind: StockMoveKind) => {
     setMoveKind(kind);
@@ -202,12 +201,13 @@ export function InventoryItemDetailsScreen() {
                   value={item.location}
                 />
               ) : null}
-              {supplierName ? (
-                <Fact
-                  label={t('inventory.form.supplier', { defaultValue: 'Supplier' })}
-                  value={supplierName}
-                />
-              ) : null}
+              <Fact
+                label={t('inventory.form.supplier', { defaultValue: 'Supplier' })}
+                value={
+                  supplierName ??
+                  t('inventory.form.noSupplier', { defaultValue: 'No supplier' })
+                }
+              />
             </View>
 
             {canManage ? (

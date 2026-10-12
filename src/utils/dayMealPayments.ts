@@ -16,7 +16,9 @@ export type DayMealPaymentDisplayStatus =
 
 export type DayMealPaymentListItem = {
   date: string;
-  amount: number;
+  /** Outstanding currency for the day. Null when meal prices are not configured. */
+  amount: number | null;
+  amountKnown: boolean;
   currencyCode: string;
   paymentStatus: MealPollPaymentStatus | null;
   displayStatus: DayMealPaymentDisplayStatus;
@@ -30,12 +32,51 @@ export type DayMealPaymentsSection = 'actionNeeded' | 'underReview' | 'history';
 
 export type DayMealPaymentMonthSummary = {
   month: string;
-  pendingAmount: number;
-  collectedAmount: number;
-  totalAmount: number;
+  pendingAmount: number | null;
+  collectedAmount: number | null;
+  totalAmount: number | null;
   pendingCount: number;
   currencyCode: string;
 };
+
+function positiveAmount(value: number | null | undefined): number | null {
+  if (value == null || Number.isNaN(Number(value))) {
+    return null;
+  }
+  const amount = Number(value);
+  return amount > 0 ? amount : null;
+}
+
+/** Payable amount for one activity day. A missing meal price stays unknown instead of becoming zero. */
+export function resolveDayMealPayableAmount(day: MemberMealActivityDay): {
+  amount: number | null;
+  amountKnown: boolean;
+} {
+  if (day.amountKnown === false) {
+    return { amount: null, amountKnown: false };
+  }
+  const live = positiveAmount(day.dayTotal);
+  if (live != null) {
+    return { amount: live, amountKnown: true };
+  }
+  const accepted = day.slots.filter(slot => slot.status === 'ACCEPTED');
+  if (accepted.length === 0) {
+    return { amount: 0, amountKnown: true };
+  }
+  const missingSlotPrice = accepted.some(slot => positiveAmount(slot.slotAmount) == null);
+  if (!missingSlotPrice) {
+    const slotSum = accepted.reduce((sum, slot) => sum + (positiveAmount(slot.slotAmount) ?? 0), 0);
+    return { amount: slotSum, amountKnown: true };
+  }
+  return { amount: null, amountKnown: false };
+}
+
+function sumKnownAmounts(items: DayMealPaymentListItem[]): number | null {
+  if (items.some(item => !item.amountKnown || item.amount == null)) {
+    return null;
+  }
+  return items.reduce((sum, item) => sum + (item.amount ?? 0), 0);
+}
 
 function acceptedMealTypes(day: MemberMealActivityDay): MealType[] {
   return MEAL_TYPES.filter(mealType =>
@@ -73,9 +114,10 @@ export function buildDayMealPaymentListItems(
 
   return activity.days
     .map(day => {
-      const amount = day.dayTotal != null ? Number(day.dayTotal) : 0;
+      const payable = resolveDayMealPayableAmount(day);
+      const amount = payable.amount;
       const mealTypes = acceptedMealTypes(day);
-      const hasCharge = amount > 0 || mealTypes.length > 0;
+      const hasCharge = (amount != null && amount > 0) || mealTypes.length > 0 || !payable.amountKnown;
       if (!hasCharge && day.paymentStatus == null) {
         return null;
       }
@@ -83,14 +125,15 @@ export function buildDayMealPaymentListItems(
         // Keep paid zero rows out of list noise
         return null;
       }
-      if (amount <= 0 && mealTypes.length === 0) {
+      if ((amount == null || amount <= 0) && mealTypes.length === 0 && payable.amountKnown) {
         return null;
       }
 
       const paymentStatus = day.paymentStatus ?? null;
       return {
         date: day.date,
-        amount: amount > 0 ? amount : 0,
+        amount: payable.amountKnown ? amount : null,
+        amountKnown: payable.amountKnown,
         currencyCode: day.currencyCode ?? activity.summary.currencyCode ?? 'INR',
         paymentStatus,
         displayStatus: resolveDayMealPaymentDisplayStatus(paymentStatus, day.date, todayIso),
@@ -174,15 +217,18 @@ export function buildDayMealPaymentMonthSummary(
   const underReview = items.filter(item => item.displayStatus === 'PENDING_APPROVAL');
   const paid = items.filter(item => item.displayStatus === 'PAID');
 
-  const pendingAmount = actionNeeded.reduce((sum, item) => sum + item.amount, 0);
-  const collectedAmount = paid.reduce((sum, item) => sum + item.amount, 0);
-  const reviewAmount = underReview.reduce((sum, item) => sum + item.amount, 0);
+  const pendingAmount = sumKnownAmounts(actionNeeded);
+  const collectedAmount = sumKnownAmounts(paid);
+  const reviewAmount = sumKnownAmounts(underReview);
 
   return {
     month,
     pendingAmount,
     collectedAmount,
-    totalAmount: pendingAmount + collectedAmount + reviewAmount,
+    totalAmount:
+      pendingAmount == null || collectedAmount == null || reviewAmount == null
+        ? null
+        : pendingAmount + collectedAmount + reviewAmount,
     pendingCount: actionNeeded.length,
     currencyCode,
   };

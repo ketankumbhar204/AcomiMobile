@@ -1,5 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Keyboard,
   KeyboardAvoidingView,
   NativeScrollEvent,
@@ -41,7 +42,14 @@ import {
   StickyFormActions,
   progressiveSectionHighlightStyle,
 } from '../components/progressive';
+import { AddPersonChoiceSheet } from '../components/membership/AddPersonChoiceSheet';
 import { FormInput, GenderPicker, HeaderBackButton, RolePicker } from '../components/ui';
+import {
+  addPersonNoun,
+  countImportableCandidates,
+  destinationForAddPersonChoice,
+  shouldOfferImportChoice,
+} from '../features/membership/addPersonChoice';
 import {
   MemberPickerStep,
   type MemberPickerMode,
@@ -96,8 +104,13 @@ export function AddMemberScreen() {
   const showToast = useToastStore(state => state.showToast);
 
   const isMess = spaceType === 'MESS';
-  const [pickerMode, setPickerMode] = useState<MemberPickerMode>(() =>
-    initialMode === 'new' ? 'new' : 'search',
+  const skipImportChoice = initialMode != null;
+  const chosenMode = useRef<MemberPickerMode>(initialMode === 'search' ? 'search' : 'new');
+  const [entryResolved, setEntryResolved] = useState(skipImportChoice);
+  const [choiceVisible, setChoiceVisible] = useState(false);
+  const [importableCount, setImportableCount] = useState(0);
+  const [pickerMode, setPickerMode] = useState<MemberPickerMode>(
+    initialMode === 'search' ? 'search' : 'new',
   );
   const [memberQuery, setMemberQuery] = useState('');
   const [selectedImport, setSelectedImport] = useState<ResidentPickerItem | null>(null);
@@ -187,14 +200,43 @@ export function AddMemberScreen() {
   }, [isMess, navigation, t, i18n.language]);
 
   useEffect(() => {
+    if (skipImportChoice) {
+      return;
+    }
+    let active = true;
+    void memberApi
+      .searchImportCandidates(spaceId)
+      .then(candidates => {
+        if (!active) {
+          return;
+        }
+        const count = countImportableCandidates(candidates);
+        setImportableCount(count);
+        setChoiceVisible(shouldOfferImportChoice(count));
+        setEntryResolved(true);
+      })
+      .catch(() => {
+        if (!active) {
+          return;
+        }
+        setImportableCount(0);
+        setChoiceVisible(false);
+        setEntryResolved(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, [skipImportChoice, spaceId]);
+
+  useEffect(() => {
     if (!showCustomerReuse) {
       setPickerMode('new');
       setSelectedImport(null);
       setMemberQuery('');
-    } else if (role === 'CUSTOMER') {
-      setPickerMode('search');
+      return;
     }
-  }, [role, showCustomerReuse]);
+    setPickerMode(chosenMode.current);
+  }, [showCustomerReuse]);
 
   function validateCreate(): boolean {
     const errors: FieldErrors = {};
@@ -346,6 +388,26 @@ export function AddMemberScreen() {
     }
   }
 
+  const applyChosenMode = (mode: MemberPickerMode) => {
+    chosenMode.current = mode;
+    setPickerMode(mode);
+    setSelectedImport(null);
+    setChoiceVisible(false);
+  };
+
+  const chooseAddNew = () => {
+    applyChosenMode('new');
+  };
+
+  const chooseImport = () => {
+    const destination = destinationForAddPersonChoice(spaceType, 'import');
+    if (destination.type === 'import-screen') {
+      navigation.replace('ImportExistingPeople', { spaceId });
+      return;
+    }
+    applyChosenMode(destination.pickerMode);
+  };
+
   const busy = loading || importing;
   const saveLabel = usingImport
     ? t('membership.add.saveImport')
@@ -354,7 +416,25 @@ export function AddMemberScreen() {
       : t('membership.add.save');
   const saveDisabled = busy || (showCustomerReuse && pickerMode === 'search' && !selectedImport);
 
+  if (!entryResolved) {
+    return (
+      <View style={styles.pending}>
+        <ActivityIndicator color={colors.primary} />
+      </View>
+    );
+  }
+
   return (
+    <>
+    <AddPersonChoiceSheet
+      visible={choiceVisible}
+      noun={addPersonNoun(spaceType)}
+      importableCount={importableCount}
+      onAddNew={chooseAddNew}
+      onImportFromAnotherSpace={chooseImport}
+      onClose={() => navigation.goBack()}
+    />
+    {choiceVisible ? <View style={styles.flex} /> : (
     <KeyboardAvoidingView
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -427,11 +507,13 @@ export function AddMemberScreen() {
                   allowAddNew
                   crossSpaceReuse
                   audience="customer"
+                  embedInParentScroll
                   query={memberQuery}
                   onQueryChange={setMemberQuery}
                   members={importSearch.members}
                   loading={importSearch.loading}
                   error={importSearch.error}
+                  hideModeToggle
                   pickerMode={pickerMode}
                   onPickerModeChange={mode => {
                     setPickerMode(mode);
@@ -639,6 +721,8 @@ export function AddMemberScreen() {
                 current: progressivePhase === 'continue' ? 1 : 2,
                 total: 2,
               })}
+              stepCurrent={progressivePhase === 'continue' ? 1 : 2}
+              stepTotal={2}
               progressLine={
                 progressivePhase === 'continue'
                   ? t('progressiveWorkflow.member.progressIdentityNext')
@@ -679,10 +763,18 @@ export function AddMemberScreen() {
         </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
+    )}
+    </>
   );
 }
 
 const styles = StyleSheet.create({
+  pending: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+  },
   flex: {
     flex: 1,
     backgroundColor: colors.background,

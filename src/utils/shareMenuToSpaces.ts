@@ -185,8 +185,37 @@ function validatedOptionsCount(options?: MappedOption[]): number {
   return options?.length ?? 0;
 }
 
+/** Keep the device and API from opening dozens of spaces at once. */
+export const SHARE_SPACE_CONCURRENCY = 4;
+
+export async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  concurrency: number,
+  worker: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  if (items.length === 0) {
+    return [];
+  }
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+  const workers = Math.max(1, Math.min(concurrency, items.length));
+
+  async function run(): Promise<void> {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await worker(items[index], index);
+    }
+  }
+
+  await Promise.all(Array.from({ length: workers }, () => run()));
+  return results;
+}
+
 /**
  * Copy selected meal menus into a target space, publish, and open polls.
+ * Meals for one space run together. Meals already opened in this attempt are skipped
+ * so a retry does not publish again or rebuild an open poll.
  * Does not copy poll responses, headcount, delivery, or payments.
  */
 export async function shareMenusToSpace(
@@ -194,19 +223,35 @@ export async function shareMenusToSpace(
   menuDate: string,
   mealTypes: MealType[],
   validated: Extract<ShareToSpaceValidation, { ok: true }>,
-): Promise<number> {
-  const appliedTypes: MealType[] = [];
-  for (const mealType of mealTypes) {
+  alreadyOpen: readonly MealType[] = [],
+): Promise<{ opened: MealType[]; failed: MealType[] }> {
+  const open = new Set(alreadyOpen);
+  const pending = mealTypes.filter(mealType => {
     const options = validated.optionsByMeal[mealType];
-    if (!options || options.length === 0) {
-      continue;
-    }
-    await mealsApi.upsertDailyMenu(targetSpaceId, menuDate, mealType, {
-      options,
-      notes: validated.notesByMeal[mealType] ?? null,
-    });
-    await mealsApi.publishDailyMenu(targetSpaceId, menuDate, mealType);
-    appliedTypes.push(mealType);
-  }
-  return openPollsForMealTypes(targetSpaceId, menuDate, appliedTypes);
+    return Boolean(options && options.length > 0) && !open.has(mealType);
+  });
+
+  await Promise.all(
+    pending.map(async mealType => {
+      const options = validated.optionsByMeal[mealType];
+      if (!options || options.length === 0) {
+        return;
+      }
+      await mealsApi.upsertDailyMenu(targetSpaceId, menuDate, mealType, {
+        options,
+        notes: validated.notesByMeal[mealType] ?? null,
+      });
+      await mealsApi.publishDailyMenu(targetSpaceId, menuDate, mealType);
+    }),
+  );
+
+  const polls =
+    pending.length === 0
+      ? { opened: [] as MealType[], failed: [] as MealType[] }
+      : await openPollsForMealTypes(targetSpaceId, menuDate, pending);
+
+  return {
+    opened: mealTypes.filter(mealType => open.has(mealType) || polls.opened.includes(mealType)),
+    failed: polls.failed,
+  };
 }

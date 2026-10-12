@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Check } from 'lucide-react-native';
 import type { FoodType } from '../../api/types';
 import { FoodTypeIcon } from '../ui/FoodTypeIcon';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
@@ -123,9 +124,7 @@ export function ComboPickerCard({
           style={({ pressed }) => [styles.selectablePressable, pressed && styles.cardPressed]}>
           {selectable ? (
             <View style={[styles.checkbox, selected && styles.checkboxSelected]}>
-              <Text style={[styles.checkboxMark, selected && styles.checkboxMarkSelected]}>
-                {selected ? '✓' : ''}
-              </Text>
+              {selected ? <Check size={12} color={colors.white} strokeWidth={3} /> : null}
             </View>
           ) : null}
           <View style={styles.content}>

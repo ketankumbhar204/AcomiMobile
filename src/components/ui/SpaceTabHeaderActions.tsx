@@ -1,44 +1,25 @@
-import React from 'react';
+import React, { type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { HeaderLanguageButton } from '../settings/HeaderLanguageButton';
-import { ProfileHeaderButton } from './ProfileHeaderButton';
-import { SpaceHeaderMenu } from './SpaceHeaderMenu';
+import { NotificationBellButton } from '../notifications/NotificationBellButton';
 import { spacing } from '../../theme';
+import { SpaceHeaderMenu } from './SpaceHeaderMenu';
 
 type SpaceTabHeaderActionsProps = {
   spaceId: string;
-  extra?: React.ReactNode;
-  /** Profile avatar — typically Dashboard only */
-  showProfile?: boolean;
-  /** Header ⋮ overflow with secondary navigation */
+  extra?: ReactNode;
   showOverflowMenu?: boolean;
-  /** Compact language control (default on) */
-  showLanguage?: boolean;
-  /** @deprecated Prefer showProfile + showOverflowMenu */
-  showProfileAndMenu?: boolean;
 };
 
 export function SpaceTabHeaderActions({
   spaceId,
   extra,
-  showProfile,
-  showOverflowMenu,
-  showLanguage = true,
-  showProfileAndMenu = false,
+  showOverflowMenu = true,
 }: SpaceTabHeaderActionsProps) {
-  const profile = showProfile ?? showProfileAndMenu;
-  const overflow = showOverflowMenu ?? showProfileAndMenu;
-
-  if (!profile && !overflow && !extra && !showLanguage) {
-    return null;
-  }
-
   return (
     <View style={styles.row}>
       {extra}
-      {showLanguage ? <HeaderLanguageButton /> : null}
-      {profile ? <ProfileHeaderButton /> : null}
-      {overflow ? <SpaceHeaderMenu spaceId={spaceId} /> : null}
+      <NotificationBellButton spaceId={spaceId} />
+      {showOverflowMenu ? <SpaceHeaderMenu spaceId={spaceId} /> : null}
     </View>
   );
 }
@@ -47,7 +28,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 0,
     gap: spacing.xs,
-    marginRight: spacing.md,
   },
 });

@@ -41,17 +41,35 @@ function goBack(navigation: NavigationProp<ParamListBase>) {
   }
 }
 
-export function HeaderBackButton({ onPress }: { onPress?: () => void }) {
+export function HeaderBackButton({
+  onPress,
+  fallback,
+}: {
+  onPress?: () => void;
+  /** Used when this screen was opened with no previous entry. */
+  fallback?: () => void;
+}) {
   const navigation = useNavigation();
   const { t } = useTranslation();
+  const canBack = canNavigateBack(navigation);
 
-  if (!onPress && !canNavigateBack(navigation)) {
+  if (!onPress && !canBack && !fallback) {
     return null;
   }
 
   return (
     <Pressable
-      onPress={() => (onPress ? onPress() : goBack(navigation))}
+      onPress={() => {
+        if (onPress) {
+          onPress();
+          return;
+        }
+        if (canBack) {
+          goBack(navigation);
+          return;
+        }
+        fallback?.();
+      }}
       style={({ pressed }) => [styles.button, pressed && styles.pressed]}
       hitSlop={8}
       accessibilityRole="button"

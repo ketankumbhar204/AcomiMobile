@@ -15,7 +15,7 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { Hash, Tag, Type } from 'lucide-react-native';
+import { AlertTriangle, Hash, Tag, Type } from 'lucide-react-native';
 import type {
   AccommodationSetupPreviewResponse,
   AccommodationSetupRequest,
@@ -716,9 +716,10 @@ export function QuickSetupWizardScreen() {
               {preview.warnings.length > 0 ? (
                 <View style={styles.warnings}>
                   {preview.warnings.map((warning, index) => (
-                    <Text key={`${warning}-${index}`} style={styles.warningText}>
-                      ⚠ {warning}
-                    </Text>
+                    <View key={`${warning}-${index}`} style={styles.warningRow}>
+                      <AlertTriangle size={14} color={colors.warning} strokeWidth={2.2} />
+                      <Text style={styles.warningText}>{warning}</Text>
+                    </View>
                   ))}
                 </View>
               ) : null}
@@ -867,6 +868,11 @@ const styles = StyleSheet.create({
   warnings: {
     marginTop: spacing.lg,
     marginBottom: spacing.lg,
+    gap: spacing.xs,
+  },
+  warningRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     gap: spacing.xs,
   },
   warningText: {

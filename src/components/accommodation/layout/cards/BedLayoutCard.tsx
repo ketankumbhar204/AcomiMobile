@@ -11,6 +11,7 @@ import { formatBedDisplayLabel } from '../../../../utils/formatBedDisplayLabel';
 import { AccommodationInactiveBadge, accommodationInactiveCardStyle, accommodationInactiveIllustrationStyle } from '../../AccommodationInactiveBadge';
 import { AccommodationStatusBadge } from '../../AccommodationStatusBadge';
 import { BedPricingDisplay } from '../../BedPricingDisplay';
+import { OccupiedBedPaymentFace } from '../../OccupiedBedPaymentFace';
 import { getBedIllustration } from '../illustrations/illustrationAssets';
 import { LayoutCardShell } from './LayoutCardShell';
 import { LayoutEntityPhoto } from './LayoutEntityPhoto';
@@ -150,7 +151,11 @@ export function BedLayoutCard({
         status={bed.status}
         inactive={inactive}
       />
-      <BedPricingDisplay rent={bed.defaultRent} deposit={bed.defaultDeposit} layout="stack" />
+      {bed.status === 'OCCUPIED' ? (
+        <OccupiedBedPaymentFace spaceId={spaceId} bedId={bed.bedId} />
+      ) : (
+        <BedPricingDisplay rent={bed.defaultRent} deposit={bed.defaultDeposit} layout="stack" />
+      )}
     </LayoutCardShell>
   );
 }

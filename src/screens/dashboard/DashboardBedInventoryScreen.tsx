@@ -1,6 +1,6 @@
-import React, { useCallback, useLayoutEffect, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { BedDouble, BedSingle } from 'lucide-react-native';
@@ -13,6 +13,7 @@ import { usePersistedBedInteraction } from '../../hooks/usePersistedBedInteracti
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../../navigation/types';
 import { spacing } from '../../theme';
+import { bedIsSelectableForMoveIn } from '../../utils/moveInEntry';
 import { persistedTargetFromSpaceBed } from '../../utils/persistedBedTarget';
 import { invalidateAccommodationQueries } from '../../utils/accommodationQueryCache';
 
@@ -22,6 +23,7 @@ type Route = {
   params: {
     spaceId: UUID;
     status: AccommodationStatus;
+    intent?: 'allocate';
   };
 };
 
@@ -31,7 +33,8 @@ export function DashboardBedInventoryScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
-  const { spaceId, status } = route.params;
+  const { spaceId, status, intent } = route.params;
+  const selectingForAllocate = intent === 'allocate' && status === 'AVAILABLE';
 
   const permissions = useSpacePermissions(spaceId);
   const canManageOccupancy = permissions.canManageOccupancy;
@@ -50,6 +53,34 @@ export function DashboardBedInventoryScreen() {
       setRefreshToken(token => token + 1);
     },
   });
+
+  const skipFocusRefresh = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (skipFocusRefresh.current) {
+        skipFocusRefresh.current = false;
+        return;
+      }
+      setRefreshToken(token => token + 1);
+    }, []),
+  );
+
+  const handleAllocateBed = useCallback(
+    (bed: BedSpaceListItemResponse) => {
+      if (!canManageOccupancy || !bedIsSelectableForMoveIn(bed.status)) {
+        return;
+      }
+      navigation.navigate('OccupancyWizard', {
+        spaceId,
+        mode: 'ALLOCATE',
+        bedId: bed.bedId,
+        roomId: bed.roomId,
+        unitId: bed.unitId ?? undefined,
+        buildingId: bed.buildingId,
+      });
+    },
+    [canManageOccupancy, navigation, spaceId],
+  );
 
   const handleBedPress = useCallback(
     (bed: BedSpaceListItemResponse) => {
@@ -85,9 +116,10 @@ export function DashboardBedInventoryScreen() {
         spaceId={spaceId}
         spaceType={spaceType}
         status={status}
-        flowAction="dashboard"
+        flowAction={selectingForAllocate && canManageOccupancy ? 'allocate' : 'dashboard'}
+        onFlowAction={selectingForAllocate && canManageOccupancy ? handleAllocateBed : undefined}
         canManageOccupancy={canManageOccupancy}
-        onBedPress={handleBedPress}
+        onBedPress={selectingForAllocate ? () => undefined : handleBedPress}
         onEditBed={canManage ? bed => bedInteraction.open(persistedTargetFromSpaceBed(bed)) : undefined}
         refreshTrigger={refreshToken}
         showSubtitle={false}

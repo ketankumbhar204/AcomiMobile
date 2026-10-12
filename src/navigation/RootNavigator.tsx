@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import {
   DefaultTheme,
   NavigationContainer,
@@ -9,6 +9,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuthStore } from '../store/authStore';
 import { isPlatformAdmin, useAdminStore } from '../store/adminStore';
 import { useSpaceStore } from '../store/spaceStore';
+import { BrandSplash } from '../components/brand/BrandSplash';
 import { colors } from '../theme';
 import { AuthNavigator } from './AuthNavigator';
 import { AdminNavigator } from './AdminNavigator';
@@ -174,7 +175,7 @@ export function RootNavigator() {
       </NavigationContainer>
       {showBootstrap ? (
         <View style={styles.splashOverlay} pointerEvents="auto">
-          <ActivityIndicator size="large" color={colors.primary} />
+          <BrandSplash />
         </View>
       ) : null}
     </View>

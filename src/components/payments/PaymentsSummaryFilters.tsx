@@ -10,7 +10,7 @@ import {
 } from 'lucide-react-native';
 import type { DashboardFinancialSummary } from '../../api/types';
 import { colors, spacing, typography } from '../../theme';
-import { formatComboPrice } from '../../utils/comboPrice';
+import { formatPaymentAmount } from '../../utils/paymentAmount';
 import type { PaymentLedgerFilter } from '../../utils/paymentLedger';
 
 type IconProps = {
@@ -107,7 +107,11 @@ const SummaryCard = memo(function SummaryCard({
         <Text style={[styles.label, { color: theme.accent }]} numberOfLines={1}>
           {label}
         </Text>
-        <Text style={styles.value} numberOfLines={1}>
+        <Text
+          style={styles.value}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.65}>
           {value}
         </Text>
       </View>
@@ -169,7 +173,7 @@ export function PaymentsSummaryFilters({
             <SummaryCard
               key={filter.id}
               label={t(filter.labelKey)}
-              value={formatComboPrice(filter.amount ?? null, currencyCode) ?? '—'}
+              value={formatPaymentAmount(filter.amount, currencyCode) ?? '—'}
               icon={filter.icon}
               theme={filter.theme}
               selected={activeFilter === filter.id}

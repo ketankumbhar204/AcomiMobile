@@ -11,6 +11,8 @@ type DashboardCustomerQuickActionsProps = {
   onOrders: () => void;
   onPayments: () => void;
   onComplaints: () => void;
+  /** My Orders is a mess-only shortcut. */
+  showOrders?: boolean;
 };
 
 const ACTIONS: {
@@ -43,6 +45,7 @@ export const DashboardCustomerQuickActions = memo(function DashboardCustomerQuic
   onOrders,
   onPayments,
   onComplaints,
+  showOrders = true,
 }: DashboardCustomerQuickActionsProps) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
@@ -56,7 +59,7 @@ export const DashboardCustomerQuickActions = memo(function DashboardCustomerQuic
     <View style={styles.section}>
       <DashboardSectionTitle title={t('dashboard.customer.quickActions.title')} />
       <View style={[styles.row, width < 340 && styles.rowWrap]}>
-        {ACTIONS.map(action => {
+        {ACTIONS.filter(action => showOrders || action.id !== 'orders').map(action => {
           const Icon = action.icon;
           return (
             <Pressable

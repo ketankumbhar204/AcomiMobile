@@ -3,6 +3,7 @@ import {
   buildShareMessageForSelection,
   buildShareOptionsBody,
   defaultSelectedMealTypes,
+  openPollsForMealTypes,
   publishDraftMenusForTypes,
 } from '../shareMenuSelection';
 
@@ -12,6 +13,7 @@ jest.mock('../../api/mealsApi', () => ({
     getDailyMenusByDate: jest.fn(),
     getMealCombos: jest.fn(),
     publishDailyMenu: jest.fn(),
+    openMealPoll: jest.fn(),
   },
 }));
 
@@ -160,6 +162,41 @@ describe('publishDraftMenusForTypes', () => {
       'BREAKFAST',
     );
   });
+
+  it('does not publish an already published meal again', async () => {
+    (mealsApi.publishDailyMenu as jest.Mock).mockClear();
+    await publishDraftMenusForTypes('space-1', '2026-07-18', ['BREAKFAST'], {
+      BREAKFAST: {
+        mealType: 'BREAKFAST',
+        status: 'PUBLISHED',
+        menuDate: '2026-07-18',
+        options: [{ isAvailable: true, label: 'A', sortOrder: 1 }],
+      } as never,
+    });
+    expect(mealsApi.publishDailyMenu).not.toHaveBeenCalled();
+  });
+});
+
+describe('openPollsForMealTypes', () => {
+  it('counts opened polls and ignores failures so a retry can use the same poll', async () => {
+    (mealsApi.openMealPoll as jest.Mock)
+      .mockResolvedValueOnce({ status: 'OPEN' })
+      .mockRejectedValueOnce(new Error('network'));
+
+    const opened = await openPollsForMealTypes('space-1', '2026-07-18', [
+      'BREAKFAST',
+      'LUNCH',
+    ]);
+
+    expect(opened.opened).toEqual(['BREAKFAST']);
+    expect(opened.failed).toEqual(['LUNCH']);
+    expect(mealsApi.openMealPoll).toHaveBeenCalledTimes(2);
+    expect(mealsApi.openMealPoll).toHaveBeenCalledWith(
+      'space-1',
+      '2026-07-18',
+      'BREAKFAST',
+    );
+  });
 });
 
 describe('defaultSelectedMealTypes', () => {
@@ -183,6 +220,45 @@ describe('defaultSelectedMealTypes', () => {
     } as never;
 
     expect(defaultSelectedMealTypes(menuMap)).toEqual(['BREAKFAST', 'DINNER']);
+  });
+
+  it('preselects published meals only when resharing', () => {
+    const menuMap = {
+      BREAKFAST: {
+        mealType: 'BREAKFAST',
+        status: 'PUBLISHED',
+        options: [{ isAvailable: true }],
+      },
+      LUNCH: {
+        mealType: 'LUNCH',
+        status: 'DRAFT',
+        options: [{ isAvailable: true }],
+      },
+    } as never;
+
+    expect(defaultSelectedMealTypes(menuMap, undefined, { includePublished: true })).toEqual([
+      'BREAKFAST',
+      'LUNCH',
+    ]);
+  });
+
+  it('leaves empty meals out so one planned meal can still be shared', () => {
+    const menuMap = {
+      BREAKFAST: {
+        mealType: 'BREAKFAST',
+        status: 'DRAFT',
+        options: [{ isAvailable: true }],
+      },
+      LUNCH: {
+        mealType: 'LUNCH',
+        status: 'DRAFT',
+        options: [],
+      },
+    } as never;
+
+    expect(defaultSelectedMealTypes(menuMap)).toEqual(['BREAKFAST']);
+    expect(defaultSelectedMealTypes(menuMap, 'BREAKFAST')).toEqual(['BREAKFAST']);
+    expect(defaultSelectedMealTypes(menuMap, 'DINNER')).toEqual([]);
   });
 
   it('does not preselect published initial meal — user selects explicitly', () => {

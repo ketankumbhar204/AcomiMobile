@@ -1,4 +1,5 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp } from '@react-navigation/native';
@@ -20,6 +21,7 @@ import type { MainStackParamList, SpaceTabParamList } from '../../navigation/typ
 import { navigateMainStack } from '../../navigation/mainStackNavigation';
 import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
+import { spacing } from '../../theme';
 import {
   canShiftCustomerMealDate,
   customerMealDateBounds,
@@ -33,6 +35,10 @@ import {
 import { addDaysIsoDate, isPastMenuDate, todayIsoDate } from '../../utils/mealDates';
 import { buildMealSummaryFromPolls } from '../../utils/mealSelectionSummary';
 import { findMySpaceEntry } from '../../utils/spacePermissions';
+import {
+  showsMemberMealSelectionCard,
+  showsMessDashboardWidgets,
+} from '../../utils/accommodationProfile';
 import {
   DashboardCustomerPollCard,
   type DashboardPollCardState,
@@ -49,6 +55,8 @@ type DashboardCustomerMealsSectionProps = {
   spaceId: UUID;
   /** When true, Design A quick actions replace the dashboard "My payments" card. */
   showCustomerChrome?: boolean;
+  /** Member Pending Actions row. Hidden by the parent when there are genuinely none. */
+  pendingActions?: ReactNode;
 };
 
 function resolveCardState(
@@ -88,6 +96,7 @@ function canUploadMealPaymentProof(status: MealPollPaymentStatus | null | undefi
 export function DashboardCustomerMealsSection({
   spaceId,
   showCustomerChrome = true,
+  pendingActions = null,
 }: DashboardCustomerMealsSectionProps) {
   const { t, i18n } = useTranslation();
   const [menuDate, setMenuDate] = useState(todayIsoDate);
@@ -102,6 +111,9 @@ export function DashboardCustomerMealsSection({
   const showToast = useToastStore(state => state.showToast);
   const mySpaces = useSpaceStore(state => state.mySpaces);
   const spaceEntry = findMySpaceEntry(mySpaces, spaceId);
+  const spaceType = permissions.spaceType ?? spaceEntry?.spaceType;
+  const showMessWidgets = showsMessDashboardWidgets(spaceType);
+  const showMealCard = showsMemberMealSelectionCard(spaceType);
   const { memberId: linkedMemberId, member: linkedMember } = useLinkedMember(spaceId);
   const { status: subscriptionStatus, reload: reloadSubscriptionStatus } =
     useCustomerSubscriptionStatus(spaceId);
@@ -366,13 +378,11 @@ export function DashboardCustomerMealsSection({
       {showCustomerChrome && spaceEntry ? (
         <DashboardCustomerHero
           spaceName={spaceEntry.spaceName}
-          spaceTypeLabel={
-            permissions.spaceType ? formatSpaceType(permissions.spaceType) : undefined
-          }
+          spaceTypeLabel={spaceType ? formatSpaceType(spaceType) : undefined}
         />
       ) : null}
 
-      {subscriptionStatus?.prepaidBilling ? (
+      {showMessWidgets && subscriptionStatus?.prepaidBilling ? (
         <DashboardCustomerSubscriptionBanner
           status={subscriptionStatus}
           locale={i18n.language}
@@ -380,6 +390,7 @@ export function DashboardCustomerMealsSection({
         />
       ) : null}
 
+      {showMealCard ? (
       <DashboardCustomerPollCard
         menuDate={menuDate}
         loading={poll.loading}
@@ -405,10 +416,12 @@ export function DashboardCustomerMealsSection({
           canUploadMealPaymentProof(poll.myPaymentStatus) ? handleUploadProof : undefined
         }
       />
+      ) : null}
 
       {showCustomerChrome ? (
         <>
           <DashboardCustomerQuickStats
+            showMessStats={showMessWidgets}
             totalMenuItems={totalMenuItems}
             yourOrders={yourOrders}
             dueAmount={dueAmount}
@@ -419,14 +432,19 @@ export function DashboardCustomerMealsSection({
             loading={poll.loading && activity.loading}
           />
 
-          <DashboardCustomerRecentOrders
-            orders={recentOrders}
-            loading={activity.loading}
-            onPressOrder={date => handleOpenPoll(date)}
-            onViewAll={handleMyOrders}
-          />
+          {showMessWidgets ? (
+            <DashboardCustomerRecentOrders
+              orders={recentOrders}
+              loading={activity.loading}
+              onPressOrder={date => handleOpenPoll(date)}
+              onViewAll={handleMyOrders}
+            />
+          ) : null}
+
+          {pendingActions ? <View style={styles.pendingActions}>{pendingActions}</View> : null}
 
           <DashboardCustomerQuickActions
+            showOrders={showMessWidgets}
             onOrders={handleMyOrders}
             onPayments={handlePayments}
             onComplaints={handleComplaints}
@@ -434,6 +452,7 @@ export function DashboardCustomerMealsSection({
         </>
       ) : null}
 
+      {showMealCard ? (
       <MenuDatePickerModal
         visible={datePickerOpen}
         value={menuDate}
@@ -441,6 +460,13 @@ export function DashboardCustomerMealsSection({
         onClose={() => setDatePickerOpen(false)}
         onConfirm={handlePickDate}
       />
+      ) : null}
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  pendingActions: {
+    marginBottom: spacing.lg,
+  },
+});

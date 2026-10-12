@@ -7,6 +7,7 @@ import {
   displayMealPaymentTitle,
   ensureDayMealSections,
   mealPaymentListSubtitle,
+  resolveMealPollChoice,
   sumMealDaySections,
 } from '../mealSelectionSummary';
 import type { MealPollSlot, MemberMealActivityMonth } from '../../api/types';
@@ -338,5 +339,31 @@ describe('mealSelectionSummary', () => {
     }, {});
     expect(fromDraft.totalPlates).toBe(1);
     expect(fromDraft.sections.find(s => s.mealType === 'BREAKFAST')?.items).toHaveLength(0);
+  });
+
+  it('keeps Not available distinct from an unanswered meal and from other meals', () => {
+    const lunch = {
+      mySelectedOptionId: 'skip-lunch',
+      options: [
+        { id: 'item-1', optionType: 'MENU_ENTRY' },
+        { id: 'item-2', optionType: 'MENU_ENTRY' },
+        { id: 'item-3', optionType: 'MENU_ENTRY' },
+        { id: 'item-4', optionType: 'MENU_ENTRY' },
+        { id: 'skip-lunch', optionType: 'NOT_AVAILABLE' },
+      ],
+    };
+    const breakfast = {
+      mySelectedOptionId: 'egg',
+      options: [{ id: 'egg', optionType: 'MENU_ENTRY' }],
+    };
+    const dinner = {
+      mySelectedOptionId: null,
+      options: [{ id: 'rice', optionType: 'MENU_ENTRY' }],
+    };
+
+    expect(resolveMealPollChoice(lunch, false)).toBe('unavailable');
+    expect(resolveMealPollChoice(breakfast, false)).toBe('selected');
+    expect(resolveMealPollChoice(dinner, false)).toBe('unanswered');
+    expect(resolveMealPollChoice(lunch, false)).not.toBe('selected');
   });
 });

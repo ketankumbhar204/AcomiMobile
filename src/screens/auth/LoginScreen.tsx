@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Keyboard,
+  KeyboardAvoidingView,
   Linking,
   Platform,
   Pressable,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -25,7 +27,11 @@ import { useLogin, useSendOtp } from '../../hooks/useAuth';
 import { useOtpCooldown } from '../../hooks/useOtpCooldown';
 import type { AuthStackParamList } from '../../navigation/types';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
-import { isValidIndianMobile, normalizeIndianMobileDigits } from '../../utils/indianMobile';
+import {
+  INDIAN_MOBILE_INPUT_MAX_LENGTH,
+  isValidIndianMobile,
+  normalizeIndianMobileDigits,
+} from '../../utils/indianMobile';
 import { formatCountdown } from '../../utils/otpAuthErrors';
 import { loginPasswordError } from '../../utils/passwordMessages';
 
@@ -48,6 +54,17 @@ export function LoginScreen() {
   const [mobileError, setMobileError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [focusedField, setFocusedField] = useState<'mobile' | 'password' | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  const formOffset = useRef(0);
+  const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (revealTimer.current) {
+        clearTimeout(revealTimer.current);
+      }
+    };
+  }, []);
 
   const otpCooldown = useOtpCooldown(mobileNumber, 'LOGIN');
   const isValidOtp = isValidIndianMobile(mobileNumber) && otpCooldown === 0;
@@ -108,16 +125,34 @@ export function LoginScreen() {
     setAuthMethod(current => (current === 'otp' ? 'password' : 'otp'));
   }
 
+  function revealField(field: 'mobile' | 'password') {
+    if (revealTimer.current) {
+      clearTimeout(revealTimer.current);
+    }
+    revealTimer.current = setTimeout(() => {
+      if (field === 'password') {
+        scrollRef.current?.scrollToEnd({ animated: true });
+        return;
+      }
+      scrollRef.current?.scrollTo({
+        y: Math.max(formOffset.current - spacing.sm, 0),
+        animated: true,
+      });
+    }, 80);
+  }
+
   return (
-    <View
+    <KeyboardAvoidingView
       style={[
         styles.flex,
         {
           paddingTop: insets.top,
         },
       ]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       collapsable={false}>
       <ScrollView
+        ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
@@ -125,10 +160,13 @@ export function LoginScreen() {
         showsVerticalScrollIndicator={false}
         collapsable={false}>
         <View style={styles.brandSection} collapsable={false}>
-          <View style={styles.logoWrap} collapsable={false}>
-            <Text style={styles.logoText}>C</Text>
-          </View>
+          <Image
+            source={require('../../assets/brand/icon-light.png')}
+            style={styles.logo}
+            accessibilityIgnoresInvertColors
+          />
           <Text style={styles.appName}>{t('common.appName')}</Text>
+          <Text style={styles.tagline}>Spaces · Meals · People belong</Text>
         </View>
 
         <AuthHero
@@ -152,7 +190,11 @@ export function LoginScreen() {
           </View>
         ) : null}
 
-        <View style={styles.phoneCard}>
+        <View
+          style={styles.phoneCard}
+          onLayout={event => {
+            formOffset.current = event.nativeEvent.layout.y;
+          }}>
           <View style={styles.fieldLabelRow}>
             <Smartphone size={14} color={colors.primaryDark} strokeWidth={2.2} />
             <Text style={styles.fieldLabel}>
@@ -172,7 +214,10 @@ export function LoginScreen() {
               placeholder={t('auth.login.mobilePlaceholder')}
               placeholderTextColor={colors.muted}
               value={mobileNumber}
-              onFocus={() => setFocusedField('mobile')}
+              onFocus={() => {
+                setFocusedField('mobile');
+                revealField('mobile');
+              }}
               onBlur={() => setFocusedField(null)}
               onChangeText={text => {
                 const digits = normalizeIndianMobileDigits(text);
@@ -189,7 +234,7 @@ export function LoginScreen() {
               }}
               keyboardType="phone-pad"
               returnKeyType="next"
-              maxLength={10}
+              maxLength={INDIAN_MOBILE_INPUT_MAX_LENGTH}
               autoCorrect={false}
               accessibilityLabel={t('auth.login.mobileLabel', {
                 defaultValue: 'Mobile number',
@@ -205,7 +250,10 @@ export function LoginScreen() {
               value={password}
               focused={focusedField === 'password'}
               error={passwordError}
-              onFocus={() => setFocusedField('password')}
+              onFocus={() => {
+                setFocusedField('password');
+                revealField('password');
+              }}
               onBlur={() => {
                 setFocusedField(null);
                 setPasswordError(loginPasswordError(t, password));
@@ -251,6 +299,7 @@ export function LoginScreen() {
       </ScrollView>
 
       <StickyFormActions
+        anchorToScreen
         primary={{
           label:
             authMethod === 'otp'
@@ -293,7 +342,7 @@ export function LoginScreen() {
           </View>
         }
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -316,25 +365,23 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     marginTop: spacing.md,
   },
-  logoWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 20,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+  logo: {
+    width: 88,
+    height: 88,
+    borderRadius: 22,
     marginBottom: spacing.md,
-    ...shadows.md,
-  },
-  logoText: {
-    fontSize: 36,
-    fontWeight: '800',
-    color: colors.white,
   },
   appName: {
     fontSize: 24,
     fontWeight: '700',
     color: colors.textPrimary,
+  },
+  tagline: {
+    marginTop: 4,
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.4,
+    color: colors.textSecondary,
   },
   errorBanner: {
     flexDirection: 'row',

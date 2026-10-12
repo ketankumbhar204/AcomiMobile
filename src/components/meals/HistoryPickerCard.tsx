@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Check } from 'lucide-react-native';
 import type { MenuHistoryItemResponse } from '../../api/types';
 import { FoodTypeIcon } from '../ui/FoodTypeIcon';
 import { colors, radius, spacing, typography } from '../../theme';
@@ -56,9 +57,7 @@ export function HistoryPickerCard({
         pressed && styles.cardPressed,
       ]}>
       <View style={[styles.checkbox, selected && styles.checkboxSelected]}>
-        <Text style={[styles.checkboxMark, selected && styles.checkboxMarkSelected]}>
-          {selected ? '✓' : ''}
-        </Text>
+        {selected ? <Check size={12} color={colors.white} strokeWidth={3} /> : null}
       </View>
 
       <View style={styles.thumb}>
