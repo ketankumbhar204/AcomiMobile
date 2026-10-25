@@ -1,5 +1,6 @@
 import { unwrapApiResponse } from './apiRequest';
 import apiClient from './client';
+import { ApiError } from './types';
 import type {
   AdminSpaceEnquiryDetail,
   AdminSpaceEnquiryListItem,
@@ -47,8 +48,9 @@ export const enquiryApi = {
       return await unwrapApiResponse(
         apiClient.get<ApiResponse<OwnerContactResponse>>(`/spaces/${spaceId}/revealed-contact`),
       );
-    } catch {
-      return null;
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) return null;
+      throw err;
     }
   },
 

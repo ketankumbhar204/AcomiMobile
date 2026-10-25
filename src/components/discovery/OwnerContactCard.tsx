@@ -1,5 +1,5 @@
 import React from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Mail, MapPin, Phone } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import type { OwnerContactResponse } from '../../api/types';
@@ -10,14 +10,18 @@ import { openableMapsUrl } from '../../utils/mapsLink';
 type OwnerContactCardProps = {
   contact: OwnerContactResponse | null | undefined;
   mapUrl?: string | null;
+  loading?: boolean;
+  error?: boolean;
+  onRetry?: () => void;
 };
 
 function dialable(value: string | null | undefined): string {
   return (value ?? '').replace(/[^\d+]/g, '');
 }
 
-export function OwnerContactCard({ contact, mapUrl }: OwnerContactCardProps) {
+export function OwnerContactCard({ contact, mapUrl, loading = false, error = false, onRetry }: OwnerContactCardProps) {
   const { t } = useTranslation();
+  if (!contact && !loading && !error) return null;
   const phones = [contact?.mobileNumber, contact?.alternateMobileNumber, contact?.additionalMobileNumber]
     .map(value => value?.trim() ?? '')
     .filter(value => value.length > 0);
@@ -31,7 +35,29 @@ export function OwnerContactCard({ contact, mapUrl }: OwnerContactCardProps) {
       <Text style={styles.kicker}>
         {t('spaces.findPlace.enquire.contactTitle', { defaultValue: 'Contact details' })}
       </Text>
-      {hasDetails ? (
+      {loading ? (
+        <View style={styles.statusRow} accessibilityRole="progressbar">
+          <ActivityIndicator size="small" color="#0369A1" />
+          <Text style={styles.status}>
+            {t('spaces.findPlace.enquire.contactLoading', { defaultValue: 'Loading contact details…' })}
+          </Text>
+        </View>
+      ) : error ? (
+        <View accessibilityRole="alert">
+          <Text style={styles.missing}>
+            {t('spaces.findPlace.enquire.contactFailed', {
+              defaultValue: 'Contact details could not be loaded. Try again.',
+            })}
+          </Text>
+          {onRetry ? (
+            <Pressable onPress={onRetry} accessibilityRole="button">
+              <Text style={styles.retry}>
+                {t('spaces.findPlace.enquire.contactRetry', { defaultValue: 'Try again' })}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : hasDetails ? (
         <View style={styles.list}>
           {name ? (
             <View>
@@ -177,5 +203,22 @@ const styles = StyleSheet.create({
     ...typography.body,
     marginTop: spacing.sm,
     color: colors.textSecondary,
+  },
+  statusRow: {
+    marginTop: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  status: {
+    ...typography.body,
+    color: '#075985',
+  },
+  retry: {
+    ...typography.body,
+    marginTop: spacing.xs,
+    fontWeight: '700',
+    color: colors.primaryDark,
+    textDecorationLine: 'underline',
   },
 });
