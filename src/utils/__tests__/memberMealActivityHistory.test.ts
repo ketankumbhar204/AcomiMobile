@@ -1,4 +1,6 @@
 import {
+  activityDayPollClosed,
+  canChooseActivityMeals,
   filterActivityDays,
   formatSlotLine,
   resolveActivityPaymentDisplay,
@@ -90,6 +92,69 @@ describe('formatSlotLine', () => {
         status => labels[status],
       ).detail,
     ).toBe('Skipped');
+  });
+
+  it('shows Not selected for a planned menu with no choice on a closed poll', () => {
+    expect(
+      formatSlotLine(
+        { mealType: 'BREAKFAST', status: 'PENDING', pollStatus: 'CLOSED' },
+        status => labels[status],
+        'Not selected',
+      ).detail,
+    ).toBe('Not selected');
+  });
+
+  it('keeps a saved selection when the poll is closed', () => {
+    expect(
+      formatSlotLine(
+        {
+          mealType: 'LUNCH',
+          status: 'ACCEPTED',
+          pollStatus: 'CLOSED',
+          selectionLabel: 'Thali',
+          quantity: 1,
+        },
+        status => labels[status],
+        'Poll Closed',
+      ).detail,
+    ).toBe('Thali ×1');
+  });
+});
+
+describe('meal poll choice availability', () => {
+  it('hides meal choice for a past closed day', () => {
+    const slots = [
+      { status: 'PENDING' as const, pollStatus: 'CLOSED' as const },
+      { status: 'PENDING' as const, pollStatus: 'CLOSED' as const },
+    ];
+    expect(canChooseActivityMeals(slots)).toBe(false);
+    expect(activityDayPollClosed(slots)).toBe(true);
+  });
+
+  it('allows choice while the current poll is still open', () => {
+    const slots = [{ status: 'PENDING' as const, pollStatus: 'OPEN' as const }];
+    expect(canChooseActivityMeals(slots)).toBe(true);
+    expect(activityDayPollClosed(slots)).toBe(false);
+  });
+
+  it('blocks choice after the current poll deadline', () => {
+    const slots = [{ status: 'PENDING' as const, pollStatus: 'CLOSED' as const }];
+    expect(canChooseActivityMeals(slots)).toBe(false);
+    expect(activityDayPollClosed(slots)).toBe(true);
+  });
+
+  it('keeps future open polls choosable', () => {
+    const slots = [{ status: 'PENDING' as const, pollStatus: 'OPEN' as const }];
+    expect(canChooseActivityMeals(slots)).toBe(true);
+  });
+
+  it('still allows choice when only some meals are closed', () => {
+    const slots = [
+      { status: 'PENDING' as const, pollStatus: 'CLOSED' as const },
+      { status: 'PENDING' as const, pollStatus: 'OPEN' as const },
+    ];
+    expect(canChooseActivityMeals(slots)).toBe(true);
+    expect(activityDayPollClosed(slots)).toBe(false);
   });
 });
 

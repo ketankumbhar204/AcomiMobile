@@ -1,6 +1,7 @@
 import type {
   MealPollPaymentChoice,
   MealPollPaymentStatus,
+  MealPollStatus,
   MemberMealActivityDayDetail,
   MemberMealActivityDayPayment,
   MemberMealActivitySlotDetail,
@@ -31,6 +32,14 @@ function normalizeMealType(value: unknown): MealType {
   return 'BREAKFAST';
 }
 
+function normalizePollStatus(value: unknown): MealPollStatus | null {
+  const raw = String(value ?? '').toUpperCase();
+  if (raw === 'OPEN' || raw === 'CLOSED') {
+    return raw;
+  }
+  return null;
+}
+
 function normalizeSlotStatus(value: unknown): MemberMealActivitySlotStatus {
   const raw = String(value ?? 'INACTIVE').toUpperCase();
   switch (raw) {
@@ -50,7 +59,7 @@ function normalizeSlot(raw: Record<string, unknown>): MemberMealActivitySlotDeta
     mealType: normalizeMealType(raw.mealType ?? raw.meal_type),
     status: normalizeSlotStatus(raw.status),
     menuPublished: Boolean(raw.menuPublished ?? raw.menu_published),
-    pollStatus: (raw.pollStatus ?? raw.poll_status) as MemberMealActivitySlotDetail['pollStatus'],
+    pollStatus: normalizePollStatus(raw.pollStatus ?? raw.poll_status),
     deliveryLocationName:
       (raw.deliveryLocationName as string | null | undefined) ??
       (raw.delivery_location_name as string | null | undefined) ??

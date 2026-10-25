@@ -13,6 +13,10 @@ type DashboardCustomerQuickActionsProps = {
   onComplaints: () => void;
   /** My Orders is a mess-only shortcut. */
   showOrders?: boolean;
+  /** Unpaid payment count. `null` while that count is loading. */
+  paymentsCount?: number | null;
+  /** Open and in-progress complaints. `null` while that count is loading. */
+  complaintsCount?: number | null;
 };
 
 const ACTIONS: {
@@ -46,6 +50,8 @@ export const DashboardCustomerQuickActions = memo(function DashboardCustomerQuic
   onPayments,
   onComplaints,
   showOrders = true,
+  paymentsCount,
+  complaintsCount,
 }: DashboardCustomerQuickActionsProps) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
@@ -54,6 +60,10 @@ export const DashboardCustomerQuickActions = memo(function DashboardCustomerQuic
     payments: onPayments,
     complaints: onComplaints,
   };
+  const counts: Partial<Record<ActionId, number | null | undefined>> = {
+    payments: paymentsCount,
+    complaints: complaintsCount,
+  };
 
   return (
     <View style={styles.section}>
@@ -61,6 +71,8 @@ export const DashboardCustomerQuickActions = memo(function DashboardCustomerQuic
       <View style={[styles.row, width < 340 && styles.rowWrap]}>
         {ACTIONS.filter(action => showOrders || action.id !== 'orders').map(action => {
           const Icon = action.icon;
+          const count = counts[action.id];
+          const countLabel = count == null ? null : String(count);
           return (
             <Pressable
               key={action.id}
@@ -71,10 +83,17 @@ export const DashboardCustomerQuickActions = memo(function DashboardCustomerQuic
                 pressed && styles.cardPressed,
               ]}
               accessibilityRole="button"
-              accessibilityLabel={t(action.labelKey)}>
+              accessibilityLabel={
+                countLabel == null ? t(action.labelKey) : `${t(action.labelKey)}: ${countLabel}`
+              }>
               <View style={[styles.iconWrap, { backgroundColor: `${action.accent}18` }]}>
                 <Icon size={22} color={action.accent} strokeWidth={2.2} />
               </View>
+              {count !== undefined ? (
+                <Text style={styles.count} numberOfLines={1}>
+                  {count == null ? '…' : countLabel}
+                </Text>
+              ) : null}
               <Text style={styles.label} numberOfLines={2}>
                 {t(action.labelKey)}
               </Text>
@@ -123,6 +142,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.button,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  count: {
+    ...typography.h3,
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    textAlign: 'center',
   },
   label: {
     ...typography.caption,

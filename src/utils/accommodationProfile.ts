@@ -60,6 +60,8 @@ export function defaultLayoutModeForSpaceType(spaceType: SpaceType): PropertyLay
 
     case 'RENTAL':
 
+    case 'CORPORATE_STAY':
+
       return 'RENTAL';
 
     default:

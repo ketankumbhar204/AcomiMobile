@@ -1,139 +1,161 @@
-import React, { useState } from 'react';
-import { Linking, Modal, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { colors, radius, spacing, typography } from '../../theme';
+import { enquiryApi } from '../../api/enquiryApi';
+import { Button } from '../ui/Button';
+import { FormInput } from '../ui/FormInput';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { androidModalNavigationInset } from '../../utils/modalSafeInsets';
 import {
   buildPhotoRequestMessage,
-  firstWhatsAppPhone,
+  confirmPhotoRequest,
   hasActualListingPhotos,
   photoRequestActionLabel,
   photoRequestTitle,
-  whatsAppChatUrl,
   type PhotoRequestKind,
 } from '../../utils/photoRequest';
 
 type PhotoRequestActionProps = {
+  spaceId: string;
   kind: PhotoRequestKind;
   name: string;
   spaceType?: string | null;
   location?: string | null;
   photoUrls?: ReadonlyArray<string | null | undefined> | null;
-  phones?: ReadonlyArray<string | null | undefined> | null;
-  contactAuthorized: boolean;
-  onNeedContact?: () => void;
 };
 
 export function PhotoRequestAction({
+  spaceId,
   kind,
   name,
   spaceType,
   location,
   photoUrls,
-  phones,
-  contactAuthorized,
-  onNeedContact,
 }: PhotoRequestActionProps) {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const hasPhotos = hasActualListingPhotos(photoUrls);
-  const phone = contactAuthorized ? firstWhatsAppPhone(phones) : null;
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [notice, setNotice] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const label = photoRequestActionLabel(hasPhotos);
-  const title = photoRequestTitle(hasPhotos);
+  const title = photoRequestTitle(kind, hasPhotos);
+  const bottomInset = Math.max(insets.bottom, androidModalNavigationInset());
 
   function openRequest() {
-    if (!contactAuthorized) {
-      onNeedContact?.();
-      return;
-    }
     setMessage(buildPhotoRequestMessage({ kind, hasPhotos, name, spaceType, location }));
     setNotice('');
     setOpen(true);
   }
 
-  async function openWhatsApp() {
-    const url = phone ? whatsAppChatUrl(phone, message) : null;
-    if (!url) {
-      setNotice(
-        t('spaces.findPlace.photoRequestUnavailable', {
-          defaultValue: 'This contact number can’t be opened in WhatsApp.',
-        }),
-      );
-      return;
-    }
+  function closeRequest() {
+    if (submittingRef.current) return;
+    setOpen(false);
+  }
+
+  async function confirm() {
+    if (submittingRef.current || !message.trim()) return;
+    submittingRef.current = true;
+    setSubmitting(true);
+    setNotice('');
     try {
-      await Linking.openURL(url);
-      setOpen(false);
-    } catch {
-      try {
-        await Share.share({ message: `${message}\n+${phone}` });
-        setNotice(
-          t('spaces.findPlace.photoRequestShare', {
-            defaultValue: 'WhatsApp didn’t open. Share or copy the message and number instead.',
-          }),
-        );
-      } catch {
-        setNotice(
-          t('spaces.findPlace.photoRequestBlocked', {
-            defaultValue: 'WhatsApp didn’t open. Copy the message and contact number from this screen.',
-          }),
-        );
+      const result = await confirmPhotoRequest({
+        message,
+        request: () => enquiryApi.requestPhotos(spaceId),
+        openUrl: url => Linking.openURL(url),
+      });
+      if (result.whatsApp === 'opened') {
+        setOpen(false);
+        return;
       }
+      setNotice(
+        result.whatsApp === 'unavailable'
+          ? result.notificationPersisted
+            ? t('spaces.findPlace.photoRequestUnavailableSaved', {
+                defaultValue:
+                  'This listing doesn’t have a WhatsApp number we can open. The photo request was saved in ACOMI.',
+              })
+            : t('spaces.findPlace.photoRequestUnavailable', {
+                defaultValue: 'This listing doesn’t have a WhatsApp number we can open.',
+              })
+          : result.notificationPersisted
+            ? t('spaces.findPlace.photoRequestBlockedSaved', {
+                defaultValue:
+                  'WhatsApp didn’t open. The photo request was saved in ACOMI. You can try again.',
+              })
+            : t('spaces.findPlace.photoRequestBlocked', {
+                defaultValue: 'WhatsApp didn’t open. You can try again.',
+              }),
+      );
+    } catch (error) {
+      const text = error instanceof Error ? error.message.trim() : '';
+      setNotice(
+        text ||
+          t('spaces.findPlace.photoRequestFailed', {
+            defaultValue: 'Couldn’t request photos. WhatsApp was not opened.',
+          }),
+      );
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
     }
   }
 
   return (
     <>
-      <Pressable
+      <Button
+        label={label}
+        variant="secondary"
         onPress={openRequest}
-        accessibilityRole="button"
+        testID="photo-request-open"
         accessibilityLabel={label}
-        style={styles.button}>
-        <Text style={styles.buttonText}>{label}</Text>
-      </Pressable>
-      <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
-          <Pressable style={styles.sheet} onPress={event => event.stopPropagation()}>
+        style={styles.launch}
+      />
+      <Modal visible={open} transparent animationType="slide" onRequestClose={closeRequest}>
+        <Pressable style={styles.backdrop} onPress={closeRequest}>
+          <Pressable
+            style={[styles.sheet, { paddingBottom: spacing.lg + bottomInset }]}
+            onPress={event => event.stopPropagation()}>
             <Text style={styles.title}>{title}</Text>
             <Text style={styles.name}>{name}</Text>
-            {phone ? (
-              <TextInput
-                value={message}
-                onChangeText={setMessage}
-                multiline
-                textAlignVertical="top"
-                accessibilityLabel={t('spaces.findPlace.photoRequestMessage', { defaultValue: 'Message' })}
-                style={styles.input}
-              />
-            ) : (
-              <Text style={styles.notice}>
-                {t('spaces.findPlace.photoRequestUnavailable', {
-                  defaultValue: 'This contact number can’t be opened in WhatsApp.',
-                })}
-              </Text>
-            )}
-            {notice ? <Text style={styles.notice}>{notice}</Text> : null}
-            {phone ? (
-              <Text selectable style={styles.phone}>
-                +{phone}
+            <Text style={styles.hint}>
+              {t('spaces.findPlace.photoRequestHint', {
+                defaultValue: 'You send this message yourself in WhatsApp. Opening WhatsApp does not send it.',
+              })}
+            </Text>
+            <FormInput
+              label={t('spaces.findPlace.photoRequestMessage', { defaultValue: 'Message' })}
+              value={message}
+              onChangeText={setMessage}
+              multiline
+              editable={!submitting}
+              textAlignVertical="top"
+              testID="photo-request-message"
+              style={styles.input}
+            />
+            {notice ? (
+              <Text testID="photo-request-notice" style={styles.notice}>
+                {notice}
               </Text>
             ) : null}
             <View style={styles.actions}>
-              <Pressable onPress={() => setOpen(false)} style={styles.cancel} accessibilityRole="button">
-                <Text style={styles.cancelText}>{t('common.cancel', { defaultValue: 'Cancel' })}</Text>
-              </Pressable>
-              {phone ? (
-                <Pressable
-                  onPress={() => void openWhatsApp()}
-                  disabled={!message.trim()}
-                  style={[styles.confirm, !message.trim() && styles.confirmDisabled]}
-                  accessibilityRole="button">
-                  <Text style={styles.confirmText}>
-                    {t('spaces.findPlace.openWhatsApp', { defaultValue: 'Open WhatsApp' })}
-                  </Text>
-                </Pressable>
-              ) : null}
+              <Button
+                label={t('common.cancel', { defaultValue: 'Cancel' })}
+                variant="ghost"
+                onPress={closeRequest}
+                disabled={submitting}
+                testID="photo-request-cancel"
+              />
+              <Button
+                label={t('spaces.findPlace.continueWhatsApp', { defaultValue: 'Continue to WhatsApp' })}
+                onPress={() => void confirm()}
+                loading={submitting}
+                disabled={!message.trim()}
+                testID="photo-request-confirm"
+              />
             </View>
           </Pressable>
         </Pressable>
@@ -143,19 +165,15 @@ export function PhotoRequestAction({
 }
 
 const styles = StyleSheet.create({
-  button: {
+  launch: {
     alignSelf: 'flex-start',
     marginTop: spacing.sm,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: 'rgba(37, 211, 102, 0.45)',
     backgroundColor: '#E7F6EE',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    borderColor: 'rgba(37, 211, 102, 0.45)',
   },
-  buttonText: { ...typography.caption, fontWeight: '700', color: colors.primaryDark },
-  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(11, 28, 22, 0.45)' },
+  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: colors.overlayScrim },
   sheet: {
+    ...shadows.raised,
     backgroundColor: colors.white,
     borderTopLeftRadius: radius.card,
     borderTopRightRadius: radius.card,
@@ -164,27 +182,17 @@ const styles = StyleSheet.create({
   },
   title: { ...typography.h3, color: colors.textPrimary },
   name: { ...typography.body, fontWeight: '600', color: colors.textPrimary },
+  hint: { ...typography.caption, color: colors.textSecondary },
   input: {
     minHeight: 140,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.input,
-    padding: spacing.md,
-    color: colors.textPrimary,
-    fontSize: 15,
-    lineHeight: 22,
+    textAlignVertical: 'top',
   },
   notice: { ...typography.caption, color: colors.textSecondary },
-  phone: { ...typography.caption, color: colors.textSecondary },
-  actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm, marginTop: spacing.sm },
-  cancel: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  cancelText: { ...typography.body, fontWeight: '600', color: colors.textSecondary },
-  confirm: {
-    borderRadius: radius.full,
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
+  actions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
   },
-  confirmDisabled: { opacity: 0.5 },
-  confirmText: { ...typography.body, fontWeight: '700', color: colors.white },
 });

@@ -8,7 +8,7 @@ import { InquirySent } from './InquirySent';
 import { getSpaceTypeLabel } from '../../api';
 import type { DiscoverSpaceCardResponse } from '../../api/types';
 import { Button } from '../ui';
-import { listingAddress } from '../../utils/listingInfo';
+import { listingAddress, type ListingSection } from '../../utils/listingInfo';
 import { formatCurrency } from '../../utils/memberDeposit';
 import { listingPriceSuffix } from '../../utils/priceBasis';
 import { colors, shadows, spacing, typography } from '../../theme';
@@ -20,7 +20,7 @@ import { ListingInfoChips } from './ListingInfoChips';
 type DiscoverSpaceCardProps = {
   item: DiscoverSpaceCardResponse;
   onPress: () => void;
-  onEnquire: () => void;
+  onViewSection: (section: ListingSection) => void;
 };
 
 function toPositiveAmount(value?: number | string | null): number | null {
@@ -35,7 +35,7 @@ function priceAmount(item: DiscoverSpaceCardResponse): number | null {
   return toPositiveAmount(item.startingPrice);
 }
 
-export function DiscoverSpaceCard({ item, onPress, onEnquire }: DiscoverSpaceCardProps) {
+export function DiscoverSpaceCard({ item, onPress, onViewSection }: DiscoverSpaceCardProps) {
   const { t } = useTranslation();
   const typeLabel = getSpaceTypeLabel(item.type);
   const address = listingAddress(item);
@@ -58,7 +58,8 @@ export function DiscoverSpaceCard({ item, onPress, onEnquire }: DiscoverSpaceCar
   const inquiry = useInquiryRecord(item.spaceId);
   const contactViewed = inquiry?.contactViewed === true;
   const sentVia = useInquirySentVia(item.spaceId);
-  const viewedLabel = t('spaces.findPlace.contactDetailsViewed', {
+  const viewedLabel = t('spaces.findPlace.viewed', { defaultValue: 'Viewed' });
+  const viewedHint = t('spaces.findPlace.contactDetailsViewed', {
     defaultValue: 'Contact details viewed',
   });
   return (
@@ -117,10 +118,9 @@ export function DiscoverSpaceCard({ item, onPress, onEnquire }: DiscoverSpaceCar
         </Pressable>
         {address ? (
           <Pressable
-            onPress={alreadyInquired ? undefined : onEnquire}
-            disabled={alreadyInquired}
-            accessibilityRole={alreadyInquired ? 'text' : 'button'}
-            accessibilityLabel={alreadyInquired ? address : `${cta}: ${item.name}`}
+            onPress={() => onViewSection('address')}
+            accessibilityRole="button"
+            accessibilityLabel={`${t('spaces.findPlace.infoAddress', { defaultValue: 'Address' })}: ${item.name}`}
             style={styles.addressRow}>
             <MapPin size={14} color={colors.textSecondary} strokeWidth={2.2} />
             <Text style={styles.addressText} numberOfLines={1}>
@@ -129,9 +129,9 @@ export function DiscoverSpaceCard({ item, onPress, onEnquire }: DiscoverSpaceCar
           </Pressable>
         ) : null}
         <Pressable
-          onPress={alreadyInquired ? onPress : onEnquire}
+          onPress={() => onViewSection('rent')}
           accessibilityRole="button"
-          accessibilityLabel={alreadyInquired ? `${viewDetails}: ${item.name}` : `${cta}: ${item.name}`}>
+          accessibilityLabel={`${t('spaces.findPlace.infoRent', { defaultValue: 'Rent' })}: ${item.name}`}>
           <Text style={styles.price} numberOfLines={2}>
             {displayAmount != null ? (
               <>
@@ -156,7 +156,7 @@ export function DiscoverSpaceCard({ item, onPress, onEnquire }: DiscoverSpaceCar
             variant="card"
             surface={isMess ? 'meals' : 'places'}
             onViewAll={onPress}
-            onEnquire={alreadyInquired ? undefined : onEnquire}
+            onSelect={onViewSection}
           />
         </View>
         <View style={styles.ctaRow}>
@@ -174,9 +174,9 @@ export function DiscoverSpaceCard({ item, onPress, onEnquire }: DiscoverSpaceCar
               variant="secondary"
               tint={{ bg: '#E7F6EE', border: '#8FCBAB', fg: '#0F6B4C' }}
               icon={Eye}
-              onPress={onPress}
-              numberOfLines={2}
-              accessibilityLabel={`${viewedLabel}: ${item.name}`}
+              onPress={() => onViewSection('contact')}
+              numberOfLines={1}
+              accessibilityLabel={`${viewedHint}: ${item.name}`}
               style={styles.ctaContact}
             />
           ) : alreadyInquired ? (
@@ -190,7 +190,7 @@ export function DiscoverSpaceCard({ item, onPress, onEnquire }: DiscoverSpaceCar
             <Button
               label={cta}
               icon={Phone}
-              onPress={onEnquire}
+              onPress={() => onViewSection('contact')}
               numberOfLines={1}
               accessibilityLabel={`${cta}: ${item.name}`}
               style={styles.ctaContact}

@@ -2,7 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { MealPollSlot, MealType, UUID } from '../../api/types';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { MEAL_TYPES, mealTypeLabelKey } from '../../utils/mealLabels';
 import { mealTypeTheme } from '../../utils/mealTypeTheme';
 import { platesForSingleSelectOption } from '../../utils/mealSelectionSummary';
@@ -86,23 +86,29 @@ export function MealPollMealTypeTabs({
             onPress={() => onSelectMealType(mealType)}
             style={({ pressed }) => [
               styles.cell,
-              {
-                borderColor: selected ? theme.borderStrong : theme.border,
-                backgroundColor: theme.soft,
-                borderWidth: selected ? 2 : 1,
-              },
+              selected
+                ? {
+                    borderColor: theme.accent,
+                    backgroundColor: theme.soft,
+                  }
+                : styles.cellIdle,
+              selected && styles.cellSelected,
               pressed && styles.cellPressed,
             ]}
             accessibilityRole="tab"
             accessibilityState={{ selected }}
             accessibilityLabel={`${t(mealTypeLabelKey(mealType))}, ${statusLabel}`}>
-            <Text style={[styles.name, { color: theme.accent }]} numberOfLines={1}>
+            <Text
+              style={[styles.name, { color: selected ? theme.accent : colors.textSecondary }]}
+              numberOfLines={1}>
               {t(mealTypeLabelKey(mealType))}
             </Text>
             <Text
               style={[
                 styles.meta,
-                hasAnswer ? { color: theme.accent, fontWeight: '600' } : styles.metaEmpty,
+                hasAnswer
+                  ? { color: selected ? theme.accent : colors.textPrimary, fontWeight: '600' }
+                  : styles.metaEmpty,
               ]}
               numberOfLines={1}>
               {countLabel}
@@ -132,12 +138,19 @@ const styles = StyleSheet.create({
     flexBasis: 0,
     minWidth: 0,
     backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
     borderRadius: radius.card,
     paddingHorizontal: spacing.xs,
     paddingVertical: spacing.xs,
     gap: 1,
+  },
+  cellIdle: {
+    backgroundColor: colors.white,
+    borderColor: '#E5E7EB',
+  },
+  cellSelected: {
+    ...shadows.sm,
   },
   cellPressed: {
     opacity: 0.92,

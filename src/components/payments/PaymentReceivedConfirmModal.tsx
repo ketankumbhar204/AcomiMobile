@@ -5,6 +5,8 @@ import { X } from 'lucide-react-native';
 import type { SpacePaymentResponse } from '../../api/types';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { formatPaymentAmount } from '../../utils/paymentHistory';
+import { usePaymentStayTrail } from '../../hooks/usePaymentStayTrail';
+import { StayTrailLine } from '../member/ContactAndStayMeta';
 import { Button } from '../ui';
 
 type PaymentReceivedConfirmModalProps = {
@@ -22,6 +24,11 @@ function periodLabel(month?: string | null): string | null {
   if (!match) return month;
   const date = new Date(Number(match[1]), Number(match[2]) - 1, 1);
   return date.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+}
+
+function ConfirmStayLine({ payment }: { payment: SpacePaymentResponse }) {
+  const trail = usePaymentStayTrail(payment.spaceId, payment);
+  return <StayTrailLine label={trail} textStyle={styles.line} />;
 }
 
 export function PaymentReceivedConfirmModal({
@@ -67,9 +74,7 @@ export function PaymentReceivedConfirmModal({
                 return (
                   <View key={payment.paymentId}>
                     <Text style={styles.line}>{payment.title}</Text>
-                    {payment.targetLabel ? (
-                      <Text style={styles.line}>{payment.targetLabel}</Text>
-                    ) : null}
+                    <ConfirmStayLine payment={payment} textStyle={styles.line} />
                     {period ? <Text style={styles.line}>{period}</Text> : null}
                     <Text style={styles.line}>
                       {formatPaymentAmount(outstanding, payment.currencyCode)}
@@ -106,7 +111,7 @@ export function PaymentReceivedConfirmModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'center',
     padding: spacing.xl,
   },
@@ -114,7 +119,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: radius.card,
     padding: spacing.lg,
-    ...shadows.md,
+    ...shadows.raised,
   },
   header: {
     flexDirection: 'row',

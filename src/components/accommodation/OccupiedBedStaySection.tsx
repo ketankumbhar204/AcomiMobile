@@ -20,7 +20,9 @@ import {
   WalletCards,
 } from 'lucide-react-native';
 import { memberApi } from '../../api/memberApi';
+import { formatMemberContactNumber } from '../../utils/indianMobile';
 import { Button } from '../ui';
+import { ReferenceCode } from '../ui/ReferenceCode';
 import { useOccupiedBedStay } from '../../hooks/useOccupiedBedStay';
 import type { MainStackParamList } from '../../navigation/types';
 import { colors, pastels, radius, spacing, typography } from '../../theme';
@@ -195,7 +197,7 @@ export function OccupiedBedStaySection({
       .getMember(spaceId, memberId)
       .then(member => {
         if (!cancelled) {
-          setMobile(member.mobileNumber?.trim() || null);
+          setMobile(formatMemberContactNumber(member.mobileNumber));
         }
       })
       .catch(() => {
@@ -240,6 +242,7 @@ export function OccupiedBedStaySection({
           label={t('accommodation.stayPayment.bedNumber', { defaultValue: 'Bed number' })}
           value={bedNumber || '—'}
         />
+        <ReferenceCode value={stay.occupancy?.referenceCode} />
         {locationLine ? (
           <DetailRow
             icon={<MapPin size={14} color={mutedIcon} strokeWidth={2.2} />}

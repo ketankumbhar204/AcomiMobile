@@ -4,4 +4,4 @@
  *
  * Not needed when using USB + `adb reverse tcp:8080 tcp:8080` (localhost is used instead).
  */
-export const ANDROID_PHYSICAL_LAN_HOST = '192.168.1.108';
+export const ANDROID_PHYSICAL_LAN_HOST = '192.168.1.105';

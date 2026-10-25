@@ -75,21 +75,15 @@ export function useConsumerSpacesAttention(spaces: SpaceRef[], enabled: boolean)
               summary: buildSpaceAttentionSummary(filtered),
             };
           } catch {
-            return {
-              spaceId,
-              summary: {
-                totalCount: 0,
-                items: [],
-                primary: null,
-                moreCount: 0,
-              } satisfies SpaceAttentionSummary,
-            };
+            return { spaceId, summary: null };
           }
         });
 
         const next: Record<string, SpaceAttentionSummary> = {};
         for (const row of rows) {
-          next[row.spaceId] = row.summary;
+          if (row.summary) {
+            next[row.spaceId] = row.summary;
+          }
         }
         setBySpaceId(next);
       } finally {

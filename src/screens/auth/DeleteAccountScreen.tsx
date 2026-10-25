@@ -21,6 +21,7 @@ import { resetToLogin } from '../../navigation/navigationRef';
 import { useRegistrationDraftStore } from '../../store/registrationDraftStore';
 import { useToastStore } from '../../store/toastStore';
 import { colors, shadows, spacing, typography } from '../../theme';
+import { canStartAccountDeletion } from '../../utils/accountDeletion';
 import { maskIndianMobile, normalizeIndianMobileDigits } from '../../utils/indianMobile';
 import { formatCountdown } from '../../utils/otpAuthErrors';
 import { loginPasswordError } from '../../utils/passwordMessages';
@@ -47,7 +48,11 @@ export function DeleteAccountScreen() {
   );
   const bannerError = localError || otpSendError;
   const busy = sendingOtp || isDeleting;
-  const canDeletePassword = Boolean(mobileNumber) && confirmed && !busy;
+  const canDeletePassword =
+    canStartAccountDeletion({
+      acknowledged: confirmed,
+      reauthenticated: Boolean(mobileNumber),
+    }) && !busy;
   const otpCooldown = useOtpCooldown(mobileNumber, 'ACCOUNT_DELETION');
   const canSendOtp = Boolean(mobileNumber) && confirmed && !busy && otpCooldown === 0;
 
@@ -65,13 +70,29 @@ export function DeleteAccountScreen() {
     setAuthMethod(current => (current === 'otp' ? 'password' : 'otp'));
   }
 
+  function handleCancel() {
+    if (busy) {
+      return;
+    }
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    navigation.navigate('Profile');
+  }
+
   async function handleDeletePassword() {
     Keyboard.dismiss();
     clearError();
     setLocalError(null);
     const nextPasswordError = loginPasswordError(t, password);
     setPasswordError(nextPasswordError);
-    if (!confirmed || !mobileNumber || nextPasswordError) {
+    if (
+      !canStartAccountDeletion({
+        acknowledged: confirmed,
+        reauthenticated: Boolean(mobileNumber) && !nextPasswordError,
+      })
+    ) {
       return;
     }
     const result = await deleteAccountByPassword(mobileNumber, password);
@@ -211,6 +232,11 @@ export function DeleteAccountScreen() {
           loading: busy,
           disabled: authMethod === 'otp' ? !canSendOtp : !canDeletePassword,
           style: authMethod === 'password' ? styles.destructiveButton : undefined,
+        }}
+        secondary={{
+          label: t('common.cancel'),
+          onPress: handleCancel,
+          disabled: busy,
         }}
         footerExtra={
           <Pressable

@@ -11,17 +11,26 @@ import {
 
 type MemberOccupancyStatusBadgeProps = {
   status?: MemberOccupancyStatus | null;
+  compact?: boolean;
 };
 
-export function MemberOccupancyStatusBadge({ status }: MemberOccupancyStatusBadgeProps) {
+export function MemberOccupancyStatusBadge({
+  status,
+  compact = false,
+}: MemberOccupancyStatusBadgeProps) {
   const { t } = useTranslation();
   const resolved = resolveMemberOccupancyStatus(status);
   const color = getMemberOccupancyStatusColor(resolved);
 
   return (
-    <View style={[styles.badge, { borderColor: `${color}44`, backgroundColor: `${color}14` }]}>
-      <View style={[styles.dot, { backgroundColor: color }]} />
-      <Text style={[styles.label, { color }]}>
+    <View
+      style={[
+        styles.badge,
+        compact && styles.badgeCompact,
+        { borderColor: `${color}44`, backgroundColor: `${color}14` },
+      ]}>
+      <View style={[styles.dot, compact && styles.dotCompact, { backgroundColor: color }]} />
+      <Text style={[styles.label, compact && styles.labelCompact, { color }]}>
         {t(getMemberOccupancyStatusLabelKey(resolved))}
       </Text>
     </View>
@@ -39,13 +48,27 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     borderRadius: radius.full,
   },
+  badgeCompact: {
+    gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
   dot: {
     width: 8,
     height: 8,
     borderRadius: 4,
   },
+  dotCompact: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
   label: {
     ...typography.caption,
     fontWeight: '600',
+  },
+  labelCompact: {
+    fontSize: 11,
+    lineHeight: 14,
   },
 });

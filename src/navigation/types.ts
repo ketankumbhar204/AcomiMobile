@@ -6,6 +6,7 @@ import type {
   OtpPurpose,
   UUID,
 } from '../api/types';
+import type { ListingSection } from '../utils/listingInfo';
 
 export type OtpVerificationParams = {
   mobileNumber: string;
@@ -27,7 +28,7 @@ export type SpaceTabParamList = {
   Dashboard: { spaceId: UUID };
   Members: { spaceId: UUID };
   Accommodation: { spaceId: UUID };
-  Meals: { spaceId: UUID };
+  Meals: { spaceId: UUID; menuDate?: string; menuDateRequest?: number };
   Payments: {
     spaceId: UUID;
     initialFilter?: 'all' | 'pending' | 'collected' | 'underReview';
@@ -68,7 +69,7 @@ export type MainStackParamList = {
   MemberTabs: NavigatorScreenParams<MemberTabParamList> | undefined;
   MySpaces: undefined;
   FindAPlace: FindAPlaceParams | undefined;
-  FindAPlaceDetail: { spaceId: UUID };
+  FindAPlaceDetail: { spaceId: UUID; focusSection?: ListingSection | null };
   MyEnquiries: { enquiryId?: UUID } | undefined;
   AccountNotifications: undefined;
   Favorites: undefined;
@@ -84,6 +85,9 @@ export type MainStackParamList = {
   ChangeMobile: undefined;
   ChangeMobileOtp: OtpVerificationParams;
   CreateSpace: undefined;
+  ServiceContacts: undefined;
+  ServiceContactForm: { contactId?: UUID } | undefined;
+  ServiceContactDetails: { contactId: UUID };
   SpaceDetails: { spaceId: UUID };
   EditSpace: { spaceId: UUID };
   /** Parent space id + optional nested tab target (soft navigate; avoid CommonActions.reset). */
@@ -237,6 +241,11 @@ export type MainStackParamList = {
     menuDate: string;
     mealType: 'BREAKFAST' | 'LUNCH' | 'DINNER';
   };
+  MealResponseMembers: {
+    spaceId: UUID;
+    menuDate: string;
+    mealType: 'BREAKFAST' | 'LUNCH' | 'DINNER';
+  };
   DailyMenuSelectCombo: {
     spaceId: UUID;
     menuDate: string;
@@ -261,8 +270,8 @@ export type MainStackParamList = {
     menuDate: string;
     mealType?: 'BREAKFAST' | 'LUNCH' | 'DINNER';
     /**
-     * save publishes through the poll.
-     * share does that, then opens the share sheet.
+     * save publishes through the poll, then opens the share sheet.
+     * share does that as well.
      * reshare opens the share sheet for an already published day.
      */
     intent?: 'save' | 'share' | 'reshare';
@@ -284,6 +293,8 @@ export type MainStackParamList = {
   DashboardBedInventory: {
     spaceId: UUID;
     status: 'AVAILABLE' | 'OCCUPIED';
+    /** Property-operations card that opened this screen. */
+    focus?: 'occupied' | 'vacant' | 'moveIns';
     /** Choosing an available bed continues into the Allocate wizard. */
     intent?: 'allocate';
   };
@@ -370,6 +381,7 @@ export type AdminStackParamList = {
   AdminEnquiryDetail: { id: string };
   AdminInquiryCreditsConfig: undefined;
   AdminInquiryCreditRequests: undefined;
+  AdminNotificationTesting: { notificationType?: string } | undefined;
 };
 
 export type RootStackParamList = {

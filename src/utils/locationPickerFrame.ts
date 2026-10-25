@@ -11,11 +11,15 @@ export function keyboardOverlap(input: {
   return Math.max(0, input.keyboardHeight - shrink);
 }
 
+/** Resting location sheet. Tall enough for search + actions, short of a full page. */
+const RESTING_SHEET_RATIO = 0.5;
+const RESTING_SHEET_MIN = 300;
+
 /**
  * Bottom-sheet frame for the location picker.
- * The sheet sits on the bottom of the visible area. When the keyboard is
- * open, the sheet fills the space above it so the suggestion list can scroll
- * and the actions stay reachable.
+ * Closed keyboard: a half-height sheet so the page stays visible behind it.
+ * Open keyboard: the sheet fills the space above the keyboard so suggestions
+ * can scroll and the actions stay reachable.
  */
 export function locationPickerFrame(input: {
   windowHeight: number;
@@ -27,8 +31,11 @@ export function locationPickerFrame(input: {
   const bottomGap =
     input.keyboardHeight > 0 ? input.keyboardHeight : Math.max(input.bottomInset, 0);
   const available = Math.max(0, input.windowHeight - topGap - bottomGap);
-  const cap =
-    input.keyboardHeight > 0 ? available : Math.round(input.windowHeight * 0.86);
+  const restingCap = Math.min(
+    available,
+    Math.max(RESTING_SHEET_MIN, Math.round(input.windowHeight * RESTING_SHEET_RATIO)),
+  );
+  const cap = input.keyboardHeight > 0 ? available : restingCap;
   const maxHeight = Math.min(available, cap);
   const marginTop = Math.max(topGap, input.windowHeight - bottomGap - maxHeight);
   return { marginTop, maxHeight };

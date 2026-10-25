@@ -3,10 +3,12 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Building2, SquarePen, UserRound } from 'lucide-react-native';
 import { SpaceStatusChip, type SpaceStatusTone } from '../spaces/SpaceStatusChip';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { ReferenceCode } from '../ui/ReferenceCode';
 
 type ProfileHeroProps = {
   fullName: string;
   mobile?: string | null;
+  referenceCode?: string | null;
   photoUrl?: string | null;
   roleLabel?: string | null;
   spaceName?: string | null;
@@ -37,6 +39,7 @@ function previewUri(stored?: string | null): string {
 export function ProfileHero({
   fullName,
   mobile,
+  referenceCode,
   photoUrl,
   roleLabel,
   spaceName,
@@ -75,6 +78,7 @@ export function ProfileHero({
               {mobile.startsWith('+') ? mobile : `+91 ${mobile}`}
             </Text>
           ) : null}
+          <ReferenceCode value={referenceCode} />
           <View style={styles.chipRow}>
             {roleLabel ? (
               <SpaceStatusChip label={roleLabel} tone="premium" icon={UserRound} />

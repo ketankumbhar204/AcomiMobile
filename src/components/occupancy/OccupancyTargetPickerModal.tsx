@@ -1368,7 +1368,7 @@ export function OccupancyTargetPickerModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'flex-end',
   },
   sheet: {
@@ -1377,7 +1377,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radius.card,
     maxHeight: '92%',
     minHeight: '55%',
-    ...shadows.md,
+    ...shadows.raised,
   },
   header: {
     padding: spacing.xl,

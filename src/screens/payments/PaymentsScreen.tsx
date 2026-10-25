@@ -16,6 +16,7 @@ import { OwnerPaymentCardActions } from '../../components/payments/OwnerPaymentC
 import { PaymentDetailsSheet } from '../../components/payments/PaymentDetailsSheet';
 import { UniversalPaymentCard } from '../../components/payments/UniversalPaymentCard';
 import { PaymentReceivedConfirmModal } from '../../components/payments/PaymentReceivedConfirmModal';
+import { PaymentReminderComposer } from '../../components/payments/PaymentReminderComposer';
 import { PaymentsFilterDrawer } from '../../components/payments/PaymentsFilterDrawer';
 import { PaymentsSummaryFilters } from '../../components/payments/PaymentsSummaryFilters';
 import {
@@ -480,7 +481,7 @@ export function PaymentsScreen() {
                   ownerActions={
                     <OwnerPaymentCardActions
                       showReceived={canOwnerMarkPaymentReceived(payment.paymentStatus)}
-                      showReminder={canOwnerSendPaymentReminder(payment.reminderEligible)}
+                      showReminder={canOwnerSendPaymentReminder(payment)}
                       receivedLoading={cardActions.isProcessing(payment.paymentId, 'received')}
                       reminderLoading={cardActions.isProcessing(payment.paymentId, 'reminder')}
                       onReceived={() => cardActions.requestReceivedForPayment(payment)}
@@ -507,6 +508,7 @@ export function PaymentsScreen() {
               detailsPayment
             : null
         }
+        spaceId={spaceId}
         spaceName={spaceName}
         receivedLoading={
           detailsPayment != null &&
@@ -517,6 +519,7 @@ export function PaymentsScreen() {
           cardActions.isProcessing(detailsPayment.paymentId, 'reminder')
         }
         onClose={() => setDetailsPayment(null)}
+        showOwnerActions={canManage}
         onReceived={payment => cardActions.requestReceivedForPayment(payment)}
         onReminder={payment => cardActions.sendReminderForPayment(payment)}
         onOpenFull={payment => {
@@ -528,6 +531,20 @@ export function PaymentsScreen() {
             memberName: payment.memberName,
           });
         }}
+      />
+      <PaymentReminderComposer
+        visible={cardActions.reminderDraft != null}
+        memberName={cardActions.reminderDraft?.memberName ?? ''}
+        phone={cardActions.reminderPhone}
+        message={cardActions.reminderMessage}
+        notice={cardActions.reminderNotice}
+        submitting={
+          cardActions.reminderDraft != null &&
+          cardActions.isProcessing(cardActions.reminderDraft.paymentId, 'reminder')
+        }
+        onChangeMessage={cardActions.setReminderMessage}
+        onCancel={cardActions.cancelReminder}
+        onConfirm={cardActions.confirmReminder}
       />
       <PaymentReceivedConfirmModal
         visible={cardActions.confirmPayments.length > 0}
@@ -556,18 +573,24 @@ const styles = StyleSheet.create({
   },
   headingRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   heading: {
     ...typography.h2,
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: '52%',
   },
   createButton: {
     flexGrow: 0,
+    flexShrink: 0,
+    minHeight: 40,
     paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
   },
   softTip: {
     marginBottom: spacing.sm,

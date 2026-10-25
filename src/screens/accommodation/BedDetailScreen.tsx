@@ -34,6 +34,7 @@ import {
   Screen,
   SkeletonCard,
 } from '../../components/ui';
+import { ReferenceCode } from '../../components/ui/ReferenceCode';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { usePersistedBedInteraction } from '../../hooks/usePersistedBedInteraction';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
@@ -332,6 +333,9 @@ export function BedDetailScreen() {
               roomName={roomName ?? parentName}
               bedId={bed.bedId}
               photoFileId={bed.photoFileId}
+              onPhotoChanged={fileId =>
+                setBed(prev => (prev ? { ...prev, photoFileId: fileId } : prev))
+              }
               occupantName={
                 bed.occupant?.memberName ?? occupancy?.memberName ?? null
               }
@@ -393,6 +397,7 @@ export function BedDetailScreen() {
                 label={t('accommodation.beds.bedNumberLabel')}
                 value={bed.bedNumber}
               />
+              <ReferenceCode value={bed.referenceCode} />
               <AccommodationDetailRow
                 label={t('accommodation.status.label')}
                 value={t(`accommodation.status.${bed.status}`)}

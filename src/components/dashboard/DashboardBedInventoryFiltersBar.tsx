@@ -125,12 +125,14 @@ export function DashboardBedInventoryFilterDropdownOverlay({
 
   return (
     <>
-      <Pressable
-        style={styles.backdrop}
-        onPress={onClose}
-        accessibilityRole="button"
-        accessibilityLabel={t('navigation.closeFilterDropdown')}
-      />
+      <View style={styles.backdrop}>
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel={t('navigation.closeFilterDropdown')}
+        />
+      </View>
       <View
         style={[styles.dropdownOverlay, { top: anchorBottom }]}
         onLayout={event => {
@@ -722,7 +724,7 @@ const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 998,
-    elevation: 18,
+    backgroundColor: colors.overlayScrim,
   },
   dropdownOverlay: {
     position: 'absolute',
@@ -735,8 +737,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     overflow: 'hidden',
     zIndex: 999,
-    elevation: 20,
-    ...shadows.md,
+    ...shadows.raised,
   },
   dropdownList: {
     flexGrow: 0,

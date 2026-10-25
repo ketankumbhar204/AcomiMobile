@@ -65,6 +65,8 @@ type ProgressiveWorkflowFooterProps = {
    * Omits the continue title, hint, and stacked full-width buttons.
    */
   compact?: boolean;
+  /** Completed work while a long action is running, such as sharing to many spaces. */
+  meter?: { completed: number; total: number };
 };
 
 /**
@@ -91,6 +93,7 @@ export function ProgressiveWorkflowFooter({
   style,
   minHeight = 148,
   compact = false,
+  meter,
 }: ProgressiveWorkflowFooterProps) {
   const fade = useRef(new Animated.Value(1)).current;
   const prevPhase = useRef(phase);
@@ -154,6 +157,20 @@ export function ProgressiveWorkflowFooter({
               {progressLine}
             </Text>
           ) : null}
+        </View>
+      ) : null}
+
+      {meter && meter.total > 0 ? (
+        <View
+          style={styles.meterTrack}
+          accessibilityRole="progressbar"
+          accessibilityValue={{ min: 0, max: meter.total, now: meter.completed }}>
+          <View
+            style={[
+              styles.meterFill,
+              { width: `${Math.min(100, Math.round((meter.completed / meter.total) * 100))}%` },
+            ]}
+          />
         </View>
       ) : null}
 
@@ -224,7 +241,9 @@ export function ProgressiveWorkflowFooter({
                     loading={primaryAction.loading}
                     disabled={primaryAction.disabled}
                     onPress={primaryAction.onPress}
-                    tint={primaryOnGuidanceTint}
+                    tint={
+                      primaryAction.loading ? loadingOnGuidanceTint : primaryOnGuidanceTint
+                    }
                     style={compact ? styles.rowButtonPrimary : styles.fullButton}
                   />
                 ) : null}
@@ -283,6 +302,13 @@ const primaryOnGuidanceTint: ButtonTint = {
   fg: guidance.ctaText,
 };
 
+/** Solid deep green so loader copy stays light on the dark guidance panel. */
+const loadingOnGuidanceTint: ButtonTint = {
+  bg: colors.tealDark,
+  border: colors.tealDark,
+  fg: colors.white,
+};
+
 const secondaryOnGuidanceTint: ButtonTint = {
   bg: 'transparent',
   border: guidance.outline,
@@ -334,6 +360,17 @@ const styles = StyleSheet.create({
   progressLine: {
     ...typography.caption,
     color: guidance.text,
+  },
+  meterTrack: {
+    height: 8,
+    borderRadius: radius.full,
+    backgroundColor: guidance.track,
+    overflow: 'hidden',
+  },
+  meterFill: {
+    height: '100%',
+    borderRadius: radius.full,
+    backgroundColor: colors.primary,
   },
   dots: { flexDirection: 'row', alignItems: 'center' },
   dotSlot: { flexDirection: 'row', alignItems: 'center' },

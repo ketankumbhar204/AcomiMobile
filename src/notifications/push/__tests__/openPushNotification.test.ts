@@ -1,8 +1,10 @@
+import { navigateMainStack } from '../../../navigation/mainStackNavigation';
 import { openPushNotification } from '../openPushNotification';
 
 const mockMarkRead = jest.fn().mockResolvedValue({});
 const mockNavigateFromNotificationType = jest.fn();
 const mockSwitchSpace = jest.fn();
+const mockShowToast = jest.fn();
 
 jest.mock('../../../api/notificationsApi', () => ({
   notificationsApi: {
@@ -39,11 +41,15 @@ jest.mock('../../../store/adminStore', () => ({
 }));
 
 jest.mock('../../../store/toastStore', () => ({
-  useToastStore: { getState: () => ({ showToast: jest.fn() }) },
+  useToastStore: { getState: () => ({ showToast: mockShowToast }) },
 }));
 
 jest.mock('../../../navigation/mainStackNavigation', () => ({
   navigateMainStack: jest.fn(),
+}));
+
+jest.mock('../../../navigation/navigationRef', () => ({
+  navigationRef: { isReady: () => false, navigate: jest.fn() },
 }));
 
 jest.mock('../../../utils/spacePermissions', () => ({
@@ -85,6 +91,37 @@ describe('openPushNotification', () => {
       }),
       false,
     );
+  });
+
+  it('opens the listing for a photo-request push without the contact chooser', async () => {
+    await openPushNotification({
+      type: 'PHOTO_REQUEST_RECEIVED',
+      spaceId: 'space-1',
+      entityId: 'space-1',
+      actionRoute: 'FindAPlaceDetail',
+      notificationId: 'n-photo',
+      title: 'Photo request received',
+      body: 'Someone interested in Green PG has requested photos.',
+    });
+
+    expect(mockSwitchSpace).not.toHaveBeenCalled();
+    expect(navigateMainStack).toHaveBeenCalledWith('FindAPlaceDetail', { spaceId: 'space-1' });
+    expect(mockNavigateFromNotificationType).not.toHaveBeenCalled();
+  });
+
+  it('opens a test payload without a live payment or enquiry', async () => {
+    await openPushNotification({
+      type: 'PAYMENT_REMINDER_SENT',
+      test: 'true',
+      actionRoute: 'NotificationTest',
+      title: 'ACOMI Test: Payment reminder sent',
+      body: 'No records were changed.',
+    });
+
+    expect(mockNavigateFromNotificationType).not.toHaveBeenCalled();
+    expect(navigateMainStack).not.toHaveBeenCalled();
+    expect(mockSwitchSpace).not.toHaveBeenCalled();
+    expect(mockShowToast).not.toHaveBeenCalled();
   });
 
   it('does not switch space for SPACE_DEACTIVATED', async () => {

@@ -24,8 +24,18 @@ export async function openReminderWhatsApp(
     PaymentReminderDeliveryResult,
     'messageText' | 'whatsAppUrl' | 'internationalPhone'
   >,
+  editedMessage?: string | null,
 ): Promise<ReminderLaunchResult> {
-  const { url, message } = reminderWhatsAppTarget(result);
+  const edited = editedMessage?.trim();
+  const target = edited
+    ? {
+        url: result.internationalPhone
+          ? whatsAppChatUrl(result.internationalPhone, edited)
+          : null,
+        message: edited,
+      }
+    : reminderWhatsAppTarget(result);
+  const { url, message } = target;
   if (!url) {
     if (!message) {
       return 'invalid';

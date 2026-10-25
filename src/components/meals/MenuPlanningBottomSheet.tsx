@@ -18,7 +18,7 @@ import {
   stickyBarKeyboardSlot,
   useKeyboardScreenLift,
 } from '../progressive/stickyBarStyles';
-import { colors, spacing, typography } from '../../theme';
+import { colors, shadows, spacing, typography } from '../../theme';
 
 const DEFAULT_MIN_SHEET_RATIO = 0.5;
 const DEFAULT_MAX_SHEET_RATIO = 0.85;
@@ -312,7 +312,7 @@ export function SheetSecondaryButton({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'flex-end',
   },
   /**
@@ -329,16 +329,12 @@ const styles = StyleSheet.create({
     elevation: 24,
   },
   sheet: {
+    ...shadows.raised,
     backgroundColor: colors.white,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    elevation: 24,
     zIndex: 2,
     width: '100%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
     flexDirection: 'column',
   },
   handle: {

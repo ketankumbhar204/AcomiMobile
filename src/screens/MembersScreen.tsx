@@ -23,11 +23,17 @@ import { Mail, UserPlus, Users, X, CalendarDays, UserCheck, IndianRupee } from '
 import type {
   MemberResponse,
   MembershipRole,
+  OccupancyResponse,
+  OccupancyStatus,
   PendingInvitationResponse,
   SpaceType,
+  UUID,
 } from '../api/types';
+import { accommodationApi } from '../api/accommodationApi';
+import { occupancyApi } from '../api/occupancyApi';
 import { paymentsApi } from '../api/paymentsApi';
 import { formatMemberContactNumber } from '../utils/indianMobile';
+import { ContactNumberLine } from '../components/member/ContactAndStayMeta';
 import { MemberListCard } from '../components/member/MemberListCard';
 import { MemberOccupancyStatusBadge, MemberStatusBadge } from '../components/member';
 import { MemberListMealAccessSwitch } from '../components/meals/MemberListMealAccessRow';
@@ -56,7 +62,9 @@ import { useMemberStore } from '../store/memberStore';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 import { memberAcomiBadgeLabel } from '../utils/memberAppStatus';
 import { getMemberListFoodLabel, isReceivingMealsForMember } from '../utils/mealAccess';
-import { getMemberStatusLabelKey } from '../utils/memberStatus';
+import { getMemberStatusColor, getMemberStatusLabelKey } from '../utils/memberStatus';
+import { memberListStayLabel, stayLabelForMember } from '../utils/memberListStay';
+import type { StayLayoutMode } from '../utils/stayTrail';
 import {
   countMemberListFilters,
   defaultMemberListFilters,
@@ -102,8 +110,38 @@ function formatRoleLabel(
   return t(membershipRoleLabelKey(role, spaceType));
 }
 
+async function loadOccupancyPages(
+  spaceId: UUID,
+  status: OccupancyStatus,
+): Promise<OccupancyResponse[]> {
+  const first = await occupancyApi.listOccupancies(spaceId, { status, page: 0, size: 200 });
+  const rows = [...(first.content ?? [])];
+  const pages = Math.min(first.totalPages ?? 1, 5);
+  if (pages > 1) {
+    const rest = await Promise.all(
+      Array.from({ length: pages - 1 }, (_, index) =>
+        occupancyApi.listOccupancies(spaceId, { status, page: index + 1, size: 200 }),
+      ),
+    );
+    rest.forEach(page => rows.push(...(page.content ?? [])));
+  }
+  return rows;
+}
+
 function formatDate(value: string): string {
   return new Date(value).toLocaleDateString();
+}
+
+function formatAddedDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  return date.toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 
 function memberRoleTone(role: DisplayMembershipRole): DashboardPersonRoleTone {
@@ -127,7 +165,7 @@ function buildMemberStatusChip(
   showTenantOccupancyStatus: boolean,
 ): React.ReactNode | undefined {
   if (showTenantOccupancyStatus && member.role === 'TENANT') {
-    return <MemberOccupancyStatusBadge status={member.occupancyStatus} />;
+    return <MemberOccupancyStatusBadge compact status={member.occupancyStatus} />;
   }
   if (member.status !== 'ACTIVE') {
     return <MemberStatusBadge status={member.status} />;
@@ -165,6 +203,7 @@ export function MembersScreen() {
   );
   const [spacePending, setSpacePending] = useState<number | null>(null);
   const [duesState, setDuesState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [stayByMemberId, setStayByMemberId] = useState<Map<string, string>>(() => new Map());
 
   const permissions = useSpacePermissions(spaceId);
   const showMealAccess = permissions.canViewMeals === true;
@@ -173,6 +212,40 @@ export function MembersScreen() {
   const showTenantOccupancyStatus =
     permissions.spaceType != null && isAccommodationApplicable(permissions.spaceType);
   const canSeeDues = canManagePayments(permissions.membershipRole);
+
+  const loadStays = useCallback(async () => {
+    if (!showTenantOccupancyStatus) {
+      setStayByMemberId(new Map());
+      return;
+    }
+    try {
+      const [rows, vacatedRows, buildings] = await Promise.all([
+        loadOccupancyPages(spaceId, 'ACTIVE'),
+        loadOccupancyPages(spaceId, 'VACATED'),
+        accommodationApi.getBuildings(spaceId).catch(() => []),
+      ]);
+      const occupancies = [...rows, ...vacatedRows];
+      const activeBuildings = buildings.filter(building => building.active);
+      const layoutByBuildingId = new Map<string, StayLayoutMode>(
+        activeBuildings.map(building => [building.buildingId, building.layoutMode]),
+      );
+      const stayOptions = {
+        multipleBuildings: activeBuildings.length > 1,
+        layoutByBuildingId,
+      };
+      const next = new Map<string, string>();
+      const memberIds = new Set(occupancies.map(row => row.memberId));
+      memberIds.forEach(memberId => {
+        const label = stayLabelForMember(memberId, occupancies, stayOptions);
+        if (label) {
+          next.set(memberId, label);
+        }
+      });
+      setStayByMemberId(next);
+    } catch (loadError) {
+      devLog('[MembersScreen] stay load failed', loadError);
+    }
+  }, [showTenantOccupancyStatus, spaceId]);
   const duesMonth = currentMonthKey();
   const { participationByMemberId, reloadParticipations } = useMealParticipationMap(
     spaceId,
@@ -353,7 +426,8 @@ export function MembersScreen() {
       loadPendingInvitations();
       void reloadParticipations();
       void loadDues();
-    }, [loadDues, loadMembers, loadPendingInvitations, reloadParticipations, spaceId]),
+      void loadStays();
+    }, [loadDues, loadMembers, loadPendingInvitations, loadStays, reloadParticipations, spaceId]),
   );
 
   const onRefresh = useCallback(async () => {
@@ -361,7 +435,8 @@ export function MembersScreen() {
     await refresh();
     await reloadParticipations();
     await loadDues();
-  }, [loadDues, refresh, reloadParticipations]);
+    await loadStays();
+  }, [loadDues, loadStays, refresh, reloadParticipations]);
 
   const openMemberDetails = (member: MemberResponse, initialTab?: 'payments') => {
     devLog('[MembersScreen] open member details', member.memberId);
@@ -462,53 +537,53 @@ export function MembersScreen() {
 
         <View style={styles.kpiGrid}>
           <DashboardStatCard
+            horizontal
             label={t('membership.kpi.total', { defaultValue: 'Total Members' })}
             value={String(kpi.total)}
             icon={Users}
             accent={colors.primaryDark}
-            compact
             style={styles.kpiCard}
             selected={kpiFocus === 'total'}
             onPress={() => applyKpiFocus('total')}
           />
           <DashboardStatCard
+            horizontal
             label={t('membership.kpi.active', { defaultValue: 'Active Members' })}
             value={String(kpi.active)}
             icon={UserCheck}
             accent="#2563EB"
-            compact
             style={styles.kpiCard}
             selected={kpiFocus === 'active'}
             onPress={() => applyKpiFocus('active')}
           />
           <DashboardStatCard
+            horizontal
             label={t('membership.kpi.pending', { defaultValue: 'Pending Invitations' })}
             value={String(kpi.pending)}
             icon={Mail}
             accent="#D97706"
-            compact
             style={styles.kpiCard}
             selected={kpiFocus === 'pending'}
             onPress={() => applyKpiFocus('pending')}
           />
           <DashboardStatCard
+            horizontal
             label={t('membership.kpi.joinedThisMonth', { defaultValue: 'Joined This Month' })}
             value={String(kpi.joinedThisMonth)}
             icon={CalendarDays}
             accent="#7C3AED"
-            compact
             style={styles.kpiCard}
             selected={kpiFocus === 'joinedThisMonth'}
             onPress={() => applyKpiFocus('joinedThisMonth')}
           />
           {canSeeDues ? (
             <DashboardStatCard
+              horizontal
               label={t('membership.dues.summary', { defaultValue: 'Pending Payments' })}
               value={pendingPaymentsValue}
               icon={IndianRupee}
               accent="#D97706"
-              compact
-              style={styles.kpiCard}
+              style={styles.kpiCardWide}
               selected={kpiFocus === 'pendingPayments'}
               onPress={() => applyKpiFocus('pendingPayments')}
             />
@@ -585,6 +660,7 @@ export function MembersScreen() {
                     onPress={() => openMemberDetails(member)}
                     roleChip={
                       <DashboardRoleChip
+                        compact
                         label={formatRoleLabel(member.role, permissions.spaceType, t)}
                         tone={memberRoleTone(
                           contextualMembershipRole(member.role, permissions.spaceType),
@@ -597,13 +673,16 @@ export function MembersScreen() {
                     }
                     statusChip={buildMemberStatusChip(member, showTenantOccupancyStatus)}
                     statusLabel={t(getMemberStatusLabelKey(member.status ?? 'ACTIVE'))}
+                    statusColor={getMemberStatusColor(member.status ?? 'ACTIVE')}
                     acomiLabel={memberAcomiBadgeLabel(member, t)}
                     acomiActive={member.membershipId != null}
+                    stayLabel={memberListStayLabel(
+                      member,
+                      stayByMemberId.get(member.memberId) ?? member.stayLabel,
+                    )}
                     paymentLine={paymentLineFor(member.memberId)}
                     onPaymentPress={() => openMemberDetails(member, 'payments')}
-                    footerLine={t('membership.members.created', {
-                      date: formatDate(member.createdAt),
-                    })}
+                    footerLine={formatAddedDate(member.createdAt) || undefined}
                     foodLine={
                       showFoodLine
                         ? {
@@ -661,9 +740,10 @@ export function MembersScreen() {
                     <Mail size={18} color="#2563EB" strokeWidth={2.2} />
                   </View>
                   <View style={styles.inviteBody}>
-                    <Text style={styles.inviteTitle} numberOfLines={1}>
-                      {invitation.mobileNumber}
-                    </Text>
+                    <ContactNumberLine
+                      value={invitation.mobileNumber}
+                      textStyle={styles.inviteTitle}
+                    />
                     <View style={styles.inviteChipRow}>
                       <DashboardRoleChip
                         label={formatRoleLabel(invitation.role, permissions.spaceType, t)}
@@ -759,6 +839,11 @@ const styles = StyleSheet.create({
     flexGrow: 0,
     flexBasis: '48%',
   },
+  kpiCardWide: {
+    width: '100%',
+    flexGrow: 1,
+    flexBasis: '100%',
+  },
   errorBanner: {
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
@@ -772,7 +857,7 @@ const styles = StyleSheet.create({
     color: '#DC2626',
   },
   list: {
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   gap: {
     height: spacing.md,

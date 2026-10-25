@@ -15,13 +15,12 @@ import type { CompositeNavigationProp, RouteProp } from '@react-navigation/nativ
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { ArrowUpDown, Building2, ChevronDown, MapPin, Search, SlidersHorizontal, UtensilsCrossed, X } from 'lucide-react-native';
+import { ArrowUpDown, Building2, ChevronDown, Heart, MapPin, Search, SlidersHorizontal, UtensilsCrossed, X } from 'lucide-react-native';
 import { DISCOVER_PAGE_SIZE, getSpaceTypeLabel, locationsApi } from '../api';
 import { discoverFilterKey } from '../api/discoverQuery';
 import { spaceDiscoverApi } from '../api/spaceDiscoverApi';
 import type { DiscoverSpaceCardResponse, SpaceType } from '../api/types';
 import { ApiError } from '../api/types';
-import { EnquireDialog } from '../components/EnquireDialog';
 import { DiscoverLocationSheet } from '../components/discovery/DiscoverLocationSheet';
 import { DiscoverSpaceCard } from '../components/discovery/DiscoverSpaceCard';
 import {
@@ -37,7 +36,8 @@ import {
 } from '../components/ui';
 import type { ListFilterChipOption } from '../components/ui/ListFilterChips';
 import type { MainStackParamList, MemberTabParamList } from '../navigation/types';
-import { colors, radius, spacing, typography } from '../theme';
+import { useFavoriteIds } from '../hooks/useFavorites';
+import { colors, radius, shadows, spacing, typography } from '../theme';
 import {
   formatDiscoverLocationLabel,
   matchLocationRecord,
@@ -61,6 +61,7 @@ const PLACE_TYPES: Array<Exclude<SpaceType, 'MESS'>> = [
   'HOSTEL',
   'CO_LIVING',
   'RENTAL',
+  'CORPORATE_STAY',
 ];
 const DISCOVER_AMENITY_FILTERS: { code: string; label: string }[] = [
   { code: 'WIFI', label: 'Wi-Fi' },
@@ -151,6 +152,7 @@ export function FindAPlaceScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
+  const favoriteCount = useFavoriteIds().size;
 
   const skipCategoryReset = useRef(true);
   const [category, setCategory] = useState<DiscoverCategory>(() =>
@@ -205,7 +207,6 @@ export function FindAPlaceScreen() {
   const [loadMoreError, setLoadMoreError] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [totalElements, setTotalElements] = useState(0);
-  const [enquireItem, setEnquireItem] = useState<DiscoverSpaceCardResponse | null>(null);
   const pageRef = useRef(0);
   const requestSeq = useRef(0);
   const inflightPageRef = useRef<number | null>(null);
@@ -507,17 +508,43 @@ export function FindAPlaceScreen() {
     navigation.setOptions({
       title: isMess ? t('spaces.findPlace.tabs.messTitle') : t('navigation.findAPlace'),
       headerRight: () => (
-        <Pressable
-          onPress={() => openFiltersRef.current()}
-          style={styles.headerFilter}
-          accessibilityRole="button"
-          accessibilityLabel={t('spaces.findPlace.moreFilters')}>
-          <SlidersHorizontal size={18} color={colors.textPrimary} strokeWidth={2.2} />
-          {extraFiltersActive ? <View style={styles.headerFilterDot} /> : null}
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable
+            onPress={() => navigation.navigate('Favorites')}
+            style={styles.headerFilter}
+            accessibilityRole="button"
+            accessibilityLabel={
+              favoriteCount > 0
+                ? t('spaces.favorites.openCount', {
+                    count: favoriteCount,
+                    defaultValue: 'Favorites, {{count}} saved',
+                  })
+                : t('navigation.favorites', { defaultValue: 'Favorites' })
+            }>
+            <Heart
+              size={18}
+              color={favoriteCount > 0 ? '#E11D48' : colors.textPrimary}
+              fill={favoriteCount > 0 ? '#E11D48' : 'transparent'}
+              strokeWidth={2.2}
+            />
+            {favoriteCount > 0 ? (
+              <View style={styles.headerBadge}>
+                <Text style={styles.headerBadgeText}>{favoriteCount > 9 ? '9+' : String(favoriteCount)}</Text>
+              </View>
+            ) : null}
+          </Pressable>
+          <Pressable
+            onPress={() => openFiltersRef.current()}
+            style={styles.headerFilter}
+            accessibilityRole="button"
+            accessibilityLabel={t('spaces.findPlace.moreFilters')}>
+            <SlidersHorizontal size={18} color={colors.textPrimary} strokeWidth={2.2} />
+            {extraFiltersActive ? <View style={styles.headerFilterDot} /> : null}
+          </Pressable>
+        </View>
       ),
     });
-  }, [extraFiltersActive, isMess, navigation, t]);
+  }, [extraFiltersActive, favoriteCount, isMess, navigation, t]);
 
   const listHeader = (
     <View style={styles.header}>
@@ -715,9 +742,17 @@ export function FindAPlaceScreen() {
           <DiscoverSpaceCard
             item={item}
             onPress={() =>
-              navigation.navigate('FindAPlaceDetail', { spaceId: item.spaceId })
+              navigation.navigate('FindAPlaceDetail', {
+                spaceId: item.spaceId,
+                focusSection: null,
+              })
             }
-            onEnquire={() => setEnquireItem(item)}
+            onViewSection={section =>
+              navigation.navigate('FindAPlaceDetail', {
+                spaceId: item.spaceId,
+                focusSection: section,
+              })
+            }
           />
         )}
         ListHeaderComponent={listHeader}
@@ -953,13 +988,6 @@ export function FindAPlaceScreen() {
         </Pressable>
       </Modal>
 
-      <EnquireDialog
-        open={enquireItem != null}
-        spaceId={enquireItem?.spaceId ?? ''}
-        spaceName={enquireItem?.name ?? ''}
-        ownedByCurrentUser={Boolean(enquireItem?.ownedByCurrentUser)}
-        onClose={() => setEnquireItem(null)}
-      />
     </View>
   );
 }
@@ -982,11 +1010,32 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     gap: spacing.sm,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   headerFilter: {
     width: 36,
     height: 36,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  headerBadge: {
+    position: 'absolute',
+    top: 2,
+    right: 0,
+    minWidth: 14,
+    height: 14,
+    borderRadius: 7,
+    paddingHorizontal: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E11D48',
+  },
+  headerBadgeText: {
+    color: colors.white,
+    fontSize: 9,
+    fontWeight: '700',
   },
   headerFilterDot: {
     position: 'absolute',
@@ -1119,10 +1168,11 @@ const styles = StyleSheet.create({
   },
   sortBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.28)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'flex-end',
   },
   sortSheet: {
+    ...shadows.raised,
     backgroundColor: colors.white,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,

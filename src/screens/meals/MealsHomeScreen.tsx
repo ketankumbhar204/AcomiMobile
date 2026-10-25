@@ -29,6 +29,10 @@ type Nav = CompositeNavigationProp<
 
 type MealsHomeScreenProps = {
   spaceId: UUID;
+  /** Date chosen on the dashboard meal operations card. */
+  initialDate?: string;
+  /** Changes on each dashboard open so a repeat of the same date still applies. */
+  menuDateRequest?: number;
 };
 
 function resolveCustomerBillingType(
@@ -44,7 +48,11 @@ function resolveCustomerBillingType(
   return 'PAY_PER_MEAL';
 }
 
-export function MealsHomeScreen({ spaceId }: MealsHomeScreenProps) {
+export function MealsHomeScreen({
+  spaceId,
+  initialDate,
+  menuDateRequest,
+}: MealsHomeScreenProps) {
   const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const permissions = useSpacePermissions(spaceId);
@@ -115,7 +123,13 @@ export function MealsHomeScreen({ spaceId }: MealsHomeScreenProps) {
   );
 
   if (permissions.canManageMeals) {
-    return <MenuPlanningScreen spaceId={spaceId} initialDate={todayIsoDate()} />;
+    return (
+      <MenuPlanningScreen
+        spaceId={spaceId}
+        initialDate={initialDate}
+        menuDateRequest={menuDateRequest}
+      />
+    );
   }
 
   if (isCustomerOrTenant) {

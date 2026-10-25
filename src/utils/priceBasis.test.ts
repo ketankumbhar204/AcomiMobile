@@ -9,6 +9,7 @@ describe('priceBasis', () => {
     expect(defaultPriceBasis('CO_LIVING')).toBe('PER_ROOM');
     expect(defaultPriceBasis('RENTAL')).toBe('PER_UNIT');
     expect(defaultPriceBasis('MESS')).toBe('PER_UNIT');
+    expect(defaultPriceBasis('CORPORATE_STAY')).toBeNull();
   });
 
   it('displays a saved unit instead of the type default', () => {

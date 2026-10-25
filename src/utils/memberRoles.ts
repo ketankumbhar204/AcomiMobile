@@ -21,6 +21,7 @@ const ACCOMMODATION_SPACE_TYPES = new Set<SpaceType>([
   'HOSTEL',
   'CO_LIVING',
   'RENTAL',
+  'CORPORATE_STAY',
 ]);
 
 export type DisplayMembershipRole = MembershipRole | 'MEMBER';

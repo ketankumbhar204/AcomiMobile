@@ -17,6 +17,7 @@ type MemberMealActivityHistoryPanelProps = {
   loading: boolean;
   error: string | null;
   activity: MemberMealActivityMonth | null;
+  showPrices?: boolean;
   onSelectDate: (date: string) => void;
   onRetry?: () => void;
 };
@@ -27,6 +28,7 @@ export function MemberMealActivityHistoryPanel({
   loading,
   error,
   activity,
+  showPrices = true,
   onSelectDate,
   onRetry,
 }: MemberMealActivityHistoryPanelProps) {
@@ -100,6 +102,7 @@ export function MemberMealActivityHistoryPanel({
               day={day}
               todayIso={todayIso}
               locale={i18n.language}
+              showPrices={showPrices}
               onPress={onSelectDate}
             />
           ))}

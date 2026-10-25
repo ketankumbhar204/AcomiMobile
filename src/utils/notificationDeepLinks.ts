@@ -101,6 +101,9 @@ export function navigateFromNotificationType(
         navigateMainStack('ComplaintDetail', { spaceId, complaintId: entityId });
       }
       return;
+    case 'PHOTO_REQUEST_RECEIVED':
+      navigateMainStack('FindAPlaceDetail', { spaceId });
+      return;
     case 'CONTACT_ENQUIRY_SUBMITTED':
     case 'CONTACT_ENQUIRY_SHARED':
     case 'CONTACT_ENQUIRY_REJECTED':
@@ -218,6 +221,8 @@ export function navigateFromNotificationType(
         navigateMainStack('MenuSharePreview', { spaceId, menuDate: tomorrow });
       } else if (notification.actionRoute === 'SubscriptionActivationRequests') {
         navigateMainStack('SubscriptionActivationRequests', { spaceId });
+      } else if (notification.actionRoute === 'FindAPlaceDetail') {
+        navigateMainStack('FindAPlaceDetail', { spaceId });
       }
   }
 }

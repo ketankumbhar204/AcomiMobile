@@ -33,6 +33,13 @@ export type DashboardStatCardProps = {
   surfaceBorder?: string;
   /** Active filter selection (Rooms Property operations). */
   selected?: boolean;
+  /** Border color while selected. Defaults to the brand green. */
+  selectionColor?: string;
+  /**
+   * Horizontal icon | value layout. Dashboard rows stay stacked.
+   * Used by screens that explicitly opted into the wider card.
+   */
+  horizontal?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -52,9 +59,33 @@ export const DashboardStatCard = memo(function DashboardStatCard({
   surface,
   surfaceBorder,
   selected = false,
+  selectionColor,
+  horizontal = false,
   style,
 }: DashboardStatCardProps) {
-  const body = (
+  const body = horizontal ? (
+    <>
+      {Icon ? (
+        <View style={[styles.iconWrapRow, { backgroundColor: `${accent}18` }]}>
+          <Icon size={18} color={accent} strokeWidth={2.2} />
+        </View>
+      ) : null}
+      {Icon ? <View style={styles.divider} /> : null}
+      <View style={styles.copy}>
+        <Text
+          style={[styles.valueRow, { color: accent }, valueStyle]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.7}>
+          {value}
+        </Text>
+        <Text style={styles.labelRow} numberOfLines={2}>
+          {label}
+        </Text>
+      </View>
+      {onPress ? <ChevronRight size={16} color={colors.muted} strokeWidth={2.2} /> : null}
+    </>
+  ) : (
     <>
       {Icon ? (
         <View
@@ -78,9 +109,7 @@ export const DashboardStatCard = memo(function DashboardStatCard({
         minimumFontScale={0.75}>
         {value}
       </Text>
-      <Text
-        style={[styles.label, compact && styles.labelCompact]}
-        numberOfLines={2}>
+      <Text style={[styles.label, compact && styles.labelCompact]} numberOfLines={2}>
         {label}
       </Text>
       {onPress && !compact ? (
@@ -92,13 +121,15 @@ export const DashboardStatCard = memo(function DashboardStatCard({
   );
 
   const cardStyle = [
-    styles.card,
-    compact && styles.cardCompact,
+    horizontal ? styles.cardRow : styles.card,
+    !horizontal && compact && styles.cardCompact,
     gridItem && !compact && styles.gridItem,
     surface
       ? { backgroundColor: surface, borderColor: surfaceBorder ?? `${accent}33` }
       : null,
-    selected ? styles.selected : null,
+    selected
+      ? { borderColor: selectionColor ?? colors.primary, borderWidth: 2 }
+      : null,
     style,
   ];
 
@@ -145,6 +176,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'relative',
   },
+  cardRow: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.white,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    minHeight: 72,
+  },
   cardCompact: {
     flex: 1,
     minWidth: 0,
@@ -165,10 +210,6 @@ const styles = StyleSheet.create({
     opacity: 0.9,
     borderColor: `${colors.primary}66`,
   },
-  selected: {
-    borderColor: colors.primary,
-    borderWidth: 2,
-  },
   iconWrap: {
     width: 32,
     height: 32,
@@ -180,6 +221,24 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: radius.sm,
+  },
+  iconWrapRow: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  divider: {
+    width: 1,
+    alignSelf: 'stretch',
+    marginVertical: 4,
+    backgroundColor: colors.border,
+  },
+  copy: {
+    flex: 1,
+    minWidth: 0,
+    justifyContent: 'center',
   },
   value: {
     ...typography.h3,
@@ -196,6 +255,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     width: '100%',
   },
+  valueRow: {
+    ...typography.h3,
+    fontSize: 26,
+    lineHeight: 30,
+    fontWeight: '700',
+  },
   label: {
     ...typography.caption,
     fontSize: 12,
@@ -209,6 +274,13 @@ const styles = StyleSheet.create({
     lineHeight: 13,
     textAlign: 'center',
     width: '100%',
+  },
+  labelRow: {
+    ...typography.caption,
+    fontSize: 12,
+    lineHeight: 15,
+    color: colors.muted,
+    fontWeight: '600',
   },
   chevron: {
     position: 'absolute',

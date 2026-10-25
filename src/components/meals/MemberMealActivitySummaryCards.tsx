@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { MemberMealActivityMonth, PrepaidBalanceUnit } from '../../api/types';
-import { formatComboPrice } from '../../utils/comboPrice';
+import { formatPaymentAmount } from '../../utils/paymentAmount';
 import {
   MonthlySummaryCards,
   type MonthlySummaryCardItem,
@@ -27,7 +27,7 @@ function formatBalanceValue(
   if (unit === 'MEALS') {
     return t('dashboard.financial.mealsCount', { count: Math.round(amount) });
   }
-  return formatComboPrice(amount, currencyCode) ?? '—';
+  return formatPaymentAmount(amount, currencyCode) ?? '—';
 }
 
 /**
@@ -42,16 +42,16 @@ function buildPayPerMealCards(
   return [
     {
       label: t('meals.activity.history.amountGenerated'),
-      value: formatComboPrice(summary.amountGenerated, currencyCode) ?? '—',
+      value: formatPaymentAmount(summary.amountGenerated, currencyCode) ?? '—',
     },
     {
       label: t('meals.activity.history.paid'),
-      value: formatComboPrice(summary.paidAmount, currencyCode) ?? '—',
+      value: formatPaymentAmount(summary.paidAmount, currencyCode) ?? '—',
       tone: 'success',
     },
     {
       label: t('meals.activity.history.pending'),
-      value: formatComboPrice(summary.pendingAmount, currencyCode) ?? '—',
+      value: formatPaymentAmount(summary.pendingAmount, currencyCode) ?? '—',
       tone: 'pending',
     },
     {
@@ -83,7 +83,7 @@ function buildPrepaidCards(
     },
     {
       label: t('meals.activity.history.amountPaid'),
-      value: formatComboPrice(summary.amountPaidThisMonth, currencyCode) ?? '—',
+      value: formatPaymentAmount(summary.amountPaidThisMonth, currencyCode) ?? '—',
       tone: 'success',
     },
   ];

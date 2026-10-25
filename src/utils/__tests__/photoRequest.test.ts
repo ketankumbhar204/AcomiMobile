@@ -1,7 +1,10 @@
 import {
   buildPhotoRequestMessage,
+  confirmPhotoRequest,
   hasActualListingPhotos,
+  isPhotoRequestNotification,
   photoRequestActionLabel,
+  photoRequestTitle,
   whatsAppChatUrl,
   whatsAppPhoneDigits,
 } from '../photoRequest';
@@ -26,48 +29,51 @@ describe('photo request', () => {
     const propertyEmpty = buildPhotoRequestMessage({
       kind: 'property',
       hasPhotos: false,
-      name: 'Stanza Living Positano House',
-      spaceType: 'CO_LIVING',
+      name: 'Sri Sai Venkateshwara PG',
+      spaceType: 'PG',
       location: 'Hinjawadi',
     });
-    expect(propertyEmpty).toContain('looking for a Co-living in Hinjawadi');
-    expect(propertyEmpty).toContain('actual photos of Stanza Living Positano House');
-    expect(propertyEmpty).toContain('room, bathroom and common areas');
+    expect(propertyEmpty).toBe(
+      "Hi, I'm interested in Sri Sai Venkateshwara PG. Could you please share some recent photos of the property and available rooms? Thank you.",
+    );
+    expect(photoRequestTitle('property', false)).toBe('Request property photos');
     expect(propertyEmpty).not.toMatch(/null|undefined/);
 
     const propertyPhotos = buildPhotoRequestMessage({
       kind: 'property',
       hasPhotos: true,
-      name: 'Stanza Living Positano House',
+      name: 'Sri Sai Venkateshwara PG',
       spaceType: 'PG',
       location: 'Hinjawadi',
     });
-    expect(propertyPhotos).toContain('interested in Stanza Living Positano House');
-    expect(propertyPhotos).toContain('some more photos');
-    expect(propertyPhotos).not.toContain('looking for a');
+    expect(propertyPhotos).toContain('interested in Sri Sai Venkateshwara PG');
+    expect(propertyPhotos).toContain('more recent photos of the property');
+    expect(photoRequestTitle('property', true)).toBe('Request more property photos');
 
     expect(
       buildPhotoRequestMessage({
         kind: 'property',
         hasPhotos: false,
-        name: 'Green PG',
+        name: '   ',
         spaceType: 'PG',
-        location: '  ',
       }),
-    ).toContain('looking for a PG.');
+    ).toContain('interested in this property');
 
     const messEmpty = buildPhotoRequestMessage({
       kind: 'mess',
       hasPhotos: false,
       name: 'Annapurna Mess',
     });
-    expect(messEmpty).toContain('mess service, Annapurna Mess');
-    expect(messEmpty).toContain('meals, food portions and menu');
+    expect(messEmpty).toBe(
+      "Hi, I'm interested in Annapurna Mess. Could you please share some recent photos of the menu, food, and service? Thank you.",
+    );
+    expect(photoRequestTitle('mess', false)).toBe('Request mess photos');
     expect(messEmpty).not.toContain('bathroom');
+    expect(messEmpty).not.toContain('available rooms');
 
     expect(
       buildPhotoRequestMessage({ kind: 'mess', hasPhotos: true, name: 'Annapurna Mess' }),
-    ).toContain('more photos of your meals');
+    ).toContain('more recent photos of the menu, food, and service');
   });
 
   it('encodes an edited message and rejects missing numbers', () => {
@@ -86,5 +92,107 @@ describe('photo request', () => {
     expect(whatsAppChatUrl('', 'Hello')).toBeNull();
     expect(whatsAppChatUrl('123', 'Hello')).toBeNull();
     expect(whatsAppChatUrl(null, 'Hello')).toBeNull();
+  });
+
+  it('opens WhatsApp with the edited message after the notification is saved', async () => {
+    const openUrl = jest.fn(async () => undefined);
+    const request = jest.fn(async () => ({
+      notificationPersisted: true,
+      notificationDuplicate: false,
+      fcmQueued: true,
+      phoneAvailable: true,
+      internationalPhone: '919876543210',
+    }));
+    const edited = 'Hi, please send the kitchen photo.\nThanks!';
+    const result = await confirmPhotoRequest({ message: edited, request, openUrl });
+    expect(result.whatsApp).toBe('opened');
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(openUrl).toHaveBeenCalledWith(whatsAppChatUrl('919876543210', edited));
+    expect(decodeURIComponent(String(openUrl.mock.calls[0][0]).split('?text=')[1])).toBe(edited);
+  });
+
+  it('does not open WhatsApp or notify when the message is empty', async () => {
+    const openUrl = jest.fn();
+    const request = jest.fn();
+    const result = await confirmPhotoRequest({ message: '   ', request, openUrl });
+    expect(result.whatsApp).toBe('unavailable');
+    expect(request).not.toHaveBeenCalled();
+    expect(openUrl).not.toHaveBeenCalled();
+  });
+
+  it('keeps a saved notification when WhatsApp cannot open', async () => {
+    const result = await confirmPhotoRequest({
+      message: 'Please share photos.',
+      request: async () => ({
+        notificationPersisted: true,
+        notificationDuplicate: false,
+        fcmQueued: false,
+        phoneAvailable: true,
+        internationalPhone: '919876543210',
+      }),
+      openUrl: async () => {
+        throw new Error('no app');
+      },
+    });
+    expect(result.whatsApp).toBe('failed');
+    expect(result.notificationPersisted).toBe(true);
+    expect(result.fcmQueued).toBe(false);
+  });
+
+  it('does not open WhatsApp when the listing has no number, but keeps the notification', async () => {
+    const openUrl = jest.fn();
+    const result = await confirmPhotoRequest({
+      message: 'Please share photos.',
+      request: async () => ({
+        notificationPersisted: true,
+        notificationDuplicate: false,
+        fcmQueued: true,
+        phoneAvailable: false,
+        internationalPhone: null,
+      }),
+      openUrl,
+    });
+    expect(result.whatsApp).toBe('unavailable');
+    expect(result.notificationPersisted).toBe(true);
+    expect(openUrl).not.toHaveBeenCalled();
+  });
+
+  it('does not open WhatsApp when the photo request fails', async () => {
+    const openUrl = jest.fn();
+    await expect(
+      confirmPhotoRequest({
+        message: 'Please share photos.',
+        request: async () => {
+          throw new Error('down');
+        },
+        openUrl,
+      }),
+    ).rejects.toThrow('down');
+    expect(openUrl).not.toHaveBeenCalled();
+  });
+
+  it('still opens WhatsApp when the notification is a duplicate and push is not queued', async () => {
+    const openUrl = jest.fn(async () => undefined);
+    const result = await confirmPhotoRequest({
+      message: 'Please share photos.',
+      request: async () => ({
+        notificationPersisted: true,
+        notificationDuplicate: true,
+        fcmQueued: false,
+        phoneAvailable: true,
+        internationalPhone: '919876543210',
+      }),
+      openUrl,
+    });
+    expect(result.whatsApp).toBe('opened');
+    expect(result.notificationDuplicate).toBe(true);
+    expect(result.fcmQueued).toBe(false);
+    expect(openUrl).toHaveBeenCalledTimes(1);
+  });
+
+  it('recognises a photo-request notification without treating it as a contact enquiry', () => {
+    expect(isPhotoRequestNotification({ notificationType: 'PHOTO_REQUEST_RECEIVED' })).toBe(true);
+    expect(isPhotoRequestNotification({ actionRoute: 'FindAPlaceDetail' })).toBe(true);
+    expect(isPhotoRequestNotification({ notificationType: 'CONTACT_ENQUIRY_RECEIVED' })).toBe(false);
   });
 });

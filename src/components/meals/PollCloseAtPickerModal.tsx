@@ -10,7 +10,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/Button';
 import { DateField } from '../ui/DateField';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import {
   parseSpaceLocalDateTime,
   toPollCloseAtPayload,
@@ -121,10 +121,11 @@ export function PollCloseAtPickerModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: '#0F172A88',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'flex-end',
   },
   sheet: {
+    ...shadows.raised,
     backgroundColor: colors.white,
     borderTopLeftRadius: radius.card,
     borderTopRightRadius: radius.card,

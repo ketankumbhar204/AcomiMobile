@@ -26,6 +26,7 @@ import type { EnquiryInboxResponse, OwnerContactResponse, SpaceEnquiryResponse }
 import { ReceivedEnquiriesScreen } from './ReceivedEnquiriesScreen';
 import { PhotoRequestAction } from '../components/discovery/PhotoRequestAction';
 import { Button, Card, EmptyState } from '../components/ui';
+import { ReferenceCode } from '../components/ui/ReferenceCode';
 import { actualListingPhotos } from '../utils/photoRequest';
 import { useUnreadEnquiryIds } from '../hooks/useAccountEnquiryUnreadCount';
 import type { MainStackParamList } from '../navigation/types';
@@ -223,13 +224,12 @@ function ContactDetailsModal({
 
           {photoUrls ? (
             <PhotoRequestAction
+              spaceId={enquiry.spaceId}
               kind={enquiry.spaceType === 'MESS' ? 'mess' : 'property'}
               name={enquiry.spaceName}
               spaceType={enquiry.spaceType}
               location={enquiry.locationLabel}
               photoUrls={photoUrls}
-              phones={mobiles}
-              contactAuthorized
             />
           ) : (
             <ActivityIndicator color={colors.primary} />
@@ -362,6 +362,7 @@ function MemberEnquiriesScreen() {
                         <Text style={styles.title} numberOfLines={1}>
                           {item.spaceName}
                         </Text>
+                        <ReferenceCode value={item.referenceCode} />
                         {unread ? (
                           <View style={styles.newBadge}>
                             <Text style={styles.newBadgeText}>
@@ -565,10 +566,11 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'flex-end',
   },
   modalCard: {
+    ...shadows.raised,
     backgroundColor: colors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,

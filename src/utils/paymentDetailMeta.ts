@@ -57,7 +57,7 @@ export function buildPaymentDetailMetaRows(
     rows.push({
       key: 'baseAmount',
       labelKey: 'paymentCollection.detail.fields.baseAmount',
-      value: `₹${Number(payment.baseAmount).toLocaleString('en-IN')}`,
+      value: `₹${Math.round(Number(payment.baseAmount)).toLocaleString('en-IN')}`,
     });
   }
 
@@ -65,7 +65,7 @@ export function buildPaymentDetailMetaRows(
     rows.push({
       key: 'taxAmount',
       labelKey: 'paymentCollection.detail.fields.taxAmount',
-      value: `₹${Number(payment.taxAmount).toLocaleString('en-IN')}${
+      value: `₹${Math.round(Number(payment.taxAmount)).toLocaleString('en-IN')}${
         payment.taxRatePercent != null ? ` (${payment.taxRatePercent}%)` : ''
       }`,
     });

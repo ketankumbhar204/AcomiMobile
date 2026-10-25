@@ -12,6 +12,7 @@ import type { SpacePaymentResponse } from '../../api/types';
 import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
 import { OwnerPaymentCardActions } from '../../components/payments/OwnerPaymentCardActions';
 import { PaymentReceivedConfirmModal } from '../../components/payments/PaymentReceivedConfirmModal';
+import { PaymentReminderComposer } from '../../components/payments/PaymentReminderComposer';
 import { UniversalPaymentCard } from '../../components/payments/UniversalPaymentCard';
 import { UniversalPaymentProofModal } from '../../components/payments/UniversalPaymentProofModal';
 import { EmptyState, HeaderBackButton, ListFilterChips, Screen, SkeletonCard } from '../../components/ui';
@@ -232,7 +233,7 @@ export function MemberPaymentsScreen() {
                   canManage ? (
                     <OwnerPaymentCardActions
                       showReceived={canOwnerMarkPaymentReceived(payment.paymentStatus)}
-                      showReminder={canOwnerSendPaymentReminder(payment.reminderEligible)}
+                      showReminder={canOwnerSendPaymentReminder(payment)}
                       receivedLoading={cardActions.isProcessing(
                         payment.paymentId,
                         'received',
@@ -258,6 +259,20 @@ export function MemberPaymentsScreen() {
         submitting={submitting}
         onClose={() => setUpdatePayment(null)}
         onSubmit={payload => void handleSubmitProof(payload)}
+      />
+      <PaymentReminderComposer
+        visible={cardActions.reminderDraft != null}
+        memberName={cardActions.reminderDraft?.memberName || memberName}
+        phone={cardActions.reminderPhone}
+        message={cardActions.reminderMessage}
+        notice={cardActions.reminderNotice}
+        submitting={
+          cardActions.reminderDraft != null &&
+          cardActions.isProcessing(cardActions.reminderDraft.paymentId, 'reminder')
+        }
+        onChangeMessage={cardActions.setReminderMessage}
+        onCancel={cardActions.cancelReminder}
+        onConfirm={cardActions.confirmReminder}
       />
       <PaymentReceivedConfirmModal
         visible={cardActions.confirmPayments.length > 0}

@@ -1,7 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Building2 } from 'lucide-react-native';
 import type { BuildingSummaryResponse } from '../../api/types';
 import { Card, InlineEditableName, Skeleton } from '../ui';
 import { colors, shadows, spacing, typography } from '../../theme';
@@ -9,6 +8,7 @@ import type { AccommodationUiProfile } from '../../utils/accommodationProfile';
 import { getAccommodationHierarchyAccent } from '../../utils/accommodationHierarchy';
 import { getLayoutModeLabelKey } from '../../utils/propertyLayoutMode';
 import { EntityPhoto } from '../files/EntityPhoto';
+import { getBuildingIllustration } from './layout/illustrations/illustrationAssets';
 import { CircularOccupancyIndicator } from './layout/cards/CircularOccupancyIndicator';
 import { calcOccupancyPercent } from './layout/cards/occupancyUtils';
 
@@ -75,10 +75,22 @@ export function BuildingSummaryHeader({
               size={42}
               title={summary.name}
               onChanged={onPhotoChanged}
-              fallback={<Building2 size={20} color={accent.accent} strokeWidth={2.2} />}
+              fallback={
+                <Image
+                  source={getBuildingIllustration()}
+                  style={styles.photoArt}
+                  resizeMode="contain"
+                  fadeDuration={0}
+                />
+              }
             />
           ) : (
-            <Building2 size={20} color={accent.accent} strokeWidth={2.2} />
+            <Image
+              source={getBuildingIllustration()}
+              style={styles.photoArt}
+              resizeMode="contain"
+              fadeDuration={0}
+            />
           )}
         </View>
         <View style={styles.copy}>
@@ -135,6 +147,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  photoArt: {
+    width: 42,
+    height: 42,
   },
   copy: {
     flex: 1,

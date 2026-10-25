@@ -62,7 +62,7 @@ export function CorridorFloorPlanLayout({
               entityId={floorId}
               fileId={floorPhotoFileId}
               title={floorName}
-              height={90}
+              height={110}
               fallback={
                 <LayoutIllustration
                   source={getFloorIllustration(layoutMode ?? 'CORRIDOR_PG')}

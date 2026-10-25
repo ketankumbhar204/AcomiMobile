@@ -101,6 +101,7 @@ export function normalizeRepresentativeCategory(
   if (key === 'HOSTEL') return 'HOSTEL';
   if (key === 'CO_LIVING' || key === 'COLIVING') return 'CO_LIVING';
   if (key === 'RENTAL') return 'RENTAL';
+  if (key === 'CORPORATE_STAY') return 'SERVICED';
   if (
     key === 'SERVICED' ||
     key === 'CORPORATE' ||

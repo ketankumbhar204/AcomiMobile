@@ -27,6 +27,9 @@ import { AddMemberScreen } from '../screens/AddMemberScreen';
 import { AddCustomersHubScreen } from '../screens/AddCustomersHubScreen';
 import { ImportExistingPeopleScreen } from '../screens/ImportExistingPeopleScreen';
 import { CreateSpaceScreen } from '../screens/CreateSpaceScreen';
+import { ServiceContactsScreen } from '../screens/serviceContacts/ServiceContactsScreen';
+import { ServiceContactFormScreen } from '../screens/serviceContacts/ServiceContactFormScreen';
+import { ServiceContactDetailsScreen } from '../screens/serviceContacts/ServiceContactDetailsScreen';
 import { EditMemberScreen } from '../screens/EditMemberScreen';
 import { MemberSubscriptionScreen } from '../screens/MemberSubscriptionScreen';
 import { MemberSubscriptionHistoryScreen } from '../screens/MemberSubscriptionHistoryScreen';
@@ -50,6 +53,7 @@ import { MealPollResponseScreen } from '../screens/meals/MealPollResponseScreen'
 import { MenuLibraryScreen } from '../screens/meals/MenuLibraryScreen';
 import { DailyMenuTodayScreen } from '../screens/meals/DailyMenuTodayScreen';
 import { DailyMenuEditScreen } from '../screens/meals/DailyMenuEditScreen';
+import { MealResponseMembersScreen } from '../screens/meals/MealResponseMembersScreen';
 import { DailyMenuSelectComboScreen } from '../screens/meals/DailyMenuSelectComboScreen';
 import { SelectMenuHubScreen } from '../screens/meals/SelectMenuHubScreen';
 import { MealComboFormScreen } from '../screens/meals/MealComboFormScreen';
@@ -355,6 +359,25 @@ export function MainNavigator() {
         options={{ title: t('navigation.createSpace') }}
       />
       <Stack.Screen
+        name="ServiceContacts"
+        component={ServiceContactsScreen}
+        options={{ title: t('serviceContacts.title') }}
+      />
+      <Stack.Screen
+        name="ServiceContactForm"
+        component={ServiceContactFormScreen}
+        options={({ route }) => ({
+          title: route.params?.contactId
+            ? t('serviceContacts.formTitleEdit')
+            : t('serviceContacts.formTitleAdd'),
+        })}
+      />
+      <Stack.Screen
+        name="ServiceContactDetails"
+        component={ServiceContactDetailsScreen}
+        options={{ title: t('serviceContacts.details') }}
+      />
+      <Stack.Screen
         name="SpaceDetails"
         component={SpaceDetailsScreen}
         options={{ title: t('navigation.spaceDetails') }}
@@ -479,6 +502,26 @@ export function MainNavigator() {
             featureTitle={t('navigation.planMenu')}
           >
             <DailyMenuEditScreen
+              spaceId={route.params.spaceId}
+              menuDate={route.params.menuDate}
+              mealType={route.params.mealType}
+            />
+          </GatedStackScreen>
+        )}
+      />
+      <Stack.Screen
+        name="MealResponseMembers"
+        getId={({ params }) =>
+          `${params.spaceId}-${params.menuDate}-${params.mealType}`
+        }
+        options={{ title: t('meals.responses.title', { meal: '', defaultValue: 'Responses' }) }}
+        children={({ route }) => (
+          <GatedStackScreen
+            spaceId={route.params.spaceId}
+            capabilityId="MEAL_OPS"
+            featureTitle={t('meals.responses.screenTitle', { defaultValue: 'Responses' })}
+          >
+            <MealResponseMembersScreen
               spaceId={route.params.spaceId}
               menuDate={route.params.menuDate}
               mealType={route.params.mealType}

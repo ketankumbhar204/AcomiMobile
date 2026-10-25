@@ -22,16 +22,49 @@ export type PersonalPaymentSummary = {
   totalDue: number | null;
   amountPaid: number | null;
   outstanding: number | null;
-  nextDueDate: string | null;
+  /** Charge amount submitted and waiting on owner review. Zero when the month has charges and none are in review. */
+  underReviewAmount: number | null;
 };
 
-const UNDER_REVIEW = new Set(['UNDER_REVIEW', 'PROOF_UPLOADED']);
+/** Summary cards on My payments. `due` is every charge that is not already paid. */
+export type PersonalSummaryFilter = 'due' | 'paid' | 'outstanding' | 'underReview';
+
+const UNDER_REVIEW_STATUSES = new Set(['UNDER_REVIEW', 'PROOF_UPLOADED']);
 
 function asMoney(value: number | null | undefined): number | null {
   if (value == null || Number.isNaN(Number(value))) {
     return null;
   }
   return Number(value);
+}
+
+/** A charge belongs on the card that includes its amount. */
+export function matchesPersonalSummaryFilter(
+  payment: SpacePaymentResponse,
+  filter: PersonalSummaryFilter,
+): boolean {
+  switch (filter) {
+    case 'due':
+      return payment.paymentStatus !== 'PAID';
+    case 'paid': {
+      if (payment.paymentStatus === 'PAID') {
+        return true;
+      }
+      const paid = asMoney(payment.paidAmount);
+      return paid != null && paid > 0;
+    }
+    case 'outstanding': {
+      const outstanding = asMoney(payment.outstandingAmount);
+      if (outstanding != null) {
+        return outstanding > 0;
+      }
+      return payment.paymentStatus !== 'PAID';
+    }
+    case 'underReview':
+      return UNDER_REVIEW_STATUSES.has(payment.paymentStatus);
+    default:
+      return true;
+  }
 }
 
 /**
@@ -47,7 +80,7 @@ export function summarizePersonalPayments(
       totalDue: null,
       amountPaid: null,
       outstanding: null,
-      nextDueDate: null,
+      underReviewAmount: null,
     };
   }
 
@@ -57,13 +90,15 @@ export function summarizePersonalPayments(
   let sawPaid = false;
   let outstanding = 0;
   let sawOutstanding = false;
-  let nextDueDate: string | null = null;
+  let underReviewAmount = 0;
 
   for (const payment of payments) {
     const amount = asMoney(payment.amount);
     if (amount != null) {
-      totalDue += amount;
       sawDue = true;
+      if (payment.paymentStatus !== 'PAID') {
+        totalDue += amount;
+      }
     }
 
     const recordedPaid = asMoney(payment.paidAmount);
@@ -83,13 +118,8 @@ export function summarizePersonalPayments(
       sawOutstanding = true;
     }
 
-    const settled =
-      payment.paymentStatus === 'PAID' || UNDER_REVIEW.has(payment.paymentStatus);
-    const stillDue =
-      !settled &&
-      (recordedOutstanding == null || recordedOutstanding > 0.009);
-    if (stillDue && payment.dueDate && (nextDueDate == null || payment.dueDate < nextDueDate)) {
-      nextDueDate = payment.dueDate;
+    if (UNDER_REVIEW_STATUSES.has(payment.paymentStatus) && amount != null) {
+      underReviewAmount += amount;
     }
   }
 
@@ -97,6 +127,6 @@ export function summarizePersonalPayments(
     totalDue: sawDue ? totalDue : null,
     amountPaid: sawPaid ? amountPaid : null,
     outstanding: sawOutstanding ? outstanding : null,
-    nextDueDate,
+    underReviewAmount,
   };
 }

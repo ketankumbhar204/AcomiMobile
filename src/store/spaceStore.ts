@@ -59,6 +59,8 @@ interface SpaceState {
   searchSpaces: (query: string) => Promise<void>;
   setSearchQuery: (query: string) => void;
   switchSpace: (spaceId: UUID) => Promise<boolean>;
+  /** Marks a space as default without opening its dashboard. */
+  setAsDefault: (spaceId: UUID) => Promise<boolean>;
   loadSpaceDetails: (spaceId: UUID) => Promise<Space | null>;
   setSelectedSpace: (space: Space) => Promise<void>;
   updateSpace: (
@@ -339,11 +341,44 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
+      const listed = get().mySpaces.find(item => item.spaceId === spaceId);
+      if (listed?.isDefault) {
+        const currentSpace: DefaultSpaceResponse = {
+          spaceId: listed.spaceId,
+          spaceName: listed.spaceName,
+          spaceType: listed.spaceType,
+        };
+        await persistCurrentSpace(currentSpace);
+        set({ ...applyCurrentSpace(currentSpace), loading: false });
+      } else {
+        const marked = await get().setAsDefault(spaceId);
+        if (!marked) {
+          set({ loading: false });
+          return false;
+        }
+      }
+
+      await get().loadSpaceDetails(spaceId);
+      set({ loading: false });
+      devLog(`${LOG_TAG} switchSpace success`, spaceId);
+      return true;
+    } catch (err) {
+      const message = getSpaceErrorMessage(err, 'common.errors.loadSpaces');
+      console.error(`${LOG_TAG} switchSpace failed`, err);
+      set({ loading: false, error: message });
+      return false;
+    }
+  },
+
+  setAsDefault: async (spaceId: UUID) => {
+    devLog(`${LOG_TAG} setAsDefault`, spaceId);
+    set({ error: null });
+
+    try {
+      const listed = get().mySpaces.find(item => item.spaceId === spaceId);
       const result = await mySpacesApi.setDefaultSpace(spaceId);
       const spaceType =
-        get().mySpaces.find(item => item.spaceId === spaceId)?.spaceType ??
-        get().currentSpace?.spaceType ??
-        'PG';
+        listed?.spaceType ?? get().currentSpace?.spaceType ?? 'PG';
 
       const currentSpace: DefaultSpaceResponse = {
         spaceId: result.spaceId,
@@ -354,17 +389,16 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
       await persistCurrentSpace(currentSpace);
       set({
         ...applyCurrentSpace(currentSpace),
-        loading: false,
+        mySpaces: get().mySpaces.map(item => ({
+          ...item,
+          isDefault: item.spaceId === spaceId,
+        })),
       });
-
-      await get().loadSpaceDetails(spaceId);
-      await get().loadMySpaces();
-      devLog(`${LOG_TAG} switchSpace success`, spaceId);
       return true;
     } catch (err) {
       const message = getSpaceErrorMessage(err, 'common.errors.loadSpaces');
-      console.error(`${LOG_TAG} switchSpace failed`, err);
-      set({ loading: false, error: message });
+      console.error(`${LOG_TAG} setAsDefault failed`, err);
+      set({ error: message });
       return false;
     }
   },

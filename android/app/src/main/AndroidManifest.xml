@@ -28,7 +28,7 @@
         tools:replace="android:value" />
       <meta-data
         android:name="com.google.firebase.messaging.default_notification_icon"
-        android:resource="@mipmap/ic_launcher" />
+        android:resource="@drawable/ic_stat_acomi" />
       <!--
         Trigger Play services to install the AndroidX Photo Picker backport on older devices.
         See https://developer.android.com/training/data-storage/shared/photo-picker

@@ -30,6 +30,8 @@ type EntityPhotoProps = {
   /** Rectangular frame for layout illustrations instead of a circular chip. */
   fill?: boolean;
   height?: number;
+  /** Fixed frame width. Omit to stretch across the parent. */
+  width?: number;
   resizeMode?: ImageResizeMode;
 };
 
@@ -45,6 +47,7 @@ export function EntityPhoto({
   size = 44,
   fill = false,
   height,
+  width,
   resizeMode,
 }: EntityPhotoProps) {
   const { t } = useTranslation();
@@ -53,6 +56,7 @@ export function EntityPhoto({
   const [busy, setBusy] = useState(false);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [imageFailed, setImageFailed] = useState(false);
   const [localFileId, setLocalFileId] = useState<string | null | undefined>(fileId);
 
   useEffect(() => {
@@ -63,6 +67,7 @@ export function EntityPhoto({
 
   useEffect(() => {
     let cancelled = false;
+    setImageFailed(false);
     if (!activeFileId) {
       setPreviewUrl(null);
       return;
@@ -148,7 +153,12 @@ export function EntityPhoto({
 
   const interactive = Boolean(activeFileId) || canEdit;
   const frameStyle = fill
-    ? [styles.wrap, styles.fill, height != null ? { height } : null]
+    ? [
+        styles.wrap,
+        styles.fill,
+        height != null ? { height } : null,
+        width != null ? { width, flexGrow: 0, flexShrink: 0 } : null,
+      ]
     : [styles.wrap, { width: size, height: size, borderRadius: size / 2 }];
 
   return (
@@ -164,15 +174,29 @@ export function EntityPhoto({
               ? t('files.add', { defaultValue: 'Add photo' })
               : undefined
         }
+        collapsable={false}
         style={frameStyle}>
-        {activeFileId && previewUrl ? (
+        {activeFileId && previewUrl && !imageFailed ? (
           <Image
             source={{ uri: previewUrl }}
             style={styles.image}
             resizeMode={resizeMode ?? 'cover'}
+            fadeDuration={0}
+            onError={() => setImageFailed(true)}
           />
         ) : (
-          fallback
+          <View
+            collapsable={false}
+            style={
+              fill
+                ? [
+                    styles.fallbackFill,
+                    { width: width ?? '100%', height: height ?? '100%' },
+                  ]
+                : undefined
+            }>
+            {fallback}
+          </View>
         )}
         {busy ? (
           <View style={styles.busy}>
@@ -204,11 +228,21 @@ const styles = StyleSheet.create({
   },
   fill: {
     width: '100%',
+    alignSelf: 'stretch',
+    alignItems: 'stretch',
     borderRadius: 12,
   },
-  image: {
+  fallbackFill: {
     width: '100%',
     height: '100%',
+    alignSelf: 'stretch',
+  },
+  image: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
   },
   busy: {
     ...StyleSheet.absoluteFillObject,

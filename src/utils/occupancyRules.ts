@@ -35,6 +35,7 @@ export function getAllowedTargetTypes(spaceType: SpaceType): AllocationTargetTyp
       // usage. Future review required before billing.
       return ['BED', 'ROOM'];
     case 'RENTAL':
+    case 'CORPORATE_STAY':
       return ['UNIT'];
     default:
       return [];

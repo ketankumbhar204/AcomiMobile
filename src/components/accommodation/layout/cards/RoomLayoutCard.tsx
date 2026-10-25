@@ -64,7 +64,7 @@ export function RoomLayoutCard({
         entityId={room.roomId}
         fileId={room.photoFileId}
         title={room.name}
-        height={110}
+        height={120}
         fallback={
           <LayoutIllustration
             source={illustration}

@@ -99,15 +99,12 @@ export function BedLayoutCard({
         entityId={bed.bedId}
         fileId={bed.photoFileId}
         title={displayLabel}
-        height={80}
+        height={96}
         fallback={
           <LayoutIllustration
             source={getBedIllustration(bed.status)}
             size="bed"
-            style={[
-              styles.illustration,
-              inactive ? accommodationInactiveIllustrationStyle : undefined,
-            ]}
+            style={inactive ? accommodationInactiveIllustrationStyle : undefined}
           />
         }
       />
@@ -162,10 +159,8 @@ export function BedLayoutCard({
 
 const styles = StyleSheet.create({
   shell: {
-    flex: 1,
-    minWidth: '46%',
-    maxWidth: '50%',
-    marginBottom: spacing.md,
+    width: '100%',
+    flexGrow: 1,
   },
   card: {
     flex: 1,
@@ -176,6 +171,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     alignItems: 'stretch',
     minHeight: 200,
+    overflow: 'hidden',
   },
   highlighted: {
     borderColor: colors.primary,
@@ -214,9 +210,6 @@ const styles = StyleSheet.create({
   },
   labelInactive: {
     color: '#6B7280',
-  },
-  illustration: {
-    alignSelf: 'center',
   },
   occupant: {
     ...typography.caption,

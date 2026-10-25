@@ -3,7 +3,7 @@ import { Image, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'reac
 import { useTranslation } from 'react-i18next';
 import type { UUID } from '../../api/types';
 import { Button } from '../ui/Button';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { ImagePreviewModal } from '../files/ImagePreviewModal';
 
 type MealPollPaymentReviewModalProps = {
@@ -107,11 +107,12 @@ export function MealPollPaymentReviewModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'center',
     padding: spacing.lg,
   },
   sheet: {
+    ...shadows.raised,
     backgroundColor: colors.white,
     borderRadius: radius.card,
     padding: spacing.lg,

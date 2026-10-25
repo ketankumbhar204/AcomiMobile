@@ -15,7 +15,7 @@ type SpaceDashboardHeaderProps = {
 
 /**
  * Shared space-tab header. The title sits in the leftover width between the
- * leading controls and the trailing controls, so icons cannot cover the name.
+ * leading control and the trailing actions, so icons cannot cover the name.
  */
 export function SpaceDashboardHeader({
   spaceId,

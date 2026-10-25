@@ -508,11 +508,14 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
 
   const filteredCombos = useMemo(() => {
     const query = comboSearch.trim().toLowerCase();
+    const visible = combos.filter(
+      combo => combo.enabledForSpace !== false || selectedComboIds.includes(combo.comboId),
+    );
     if (!query) {
-      return combos;
+      return visible;
     }
-    return combos.filter(combo => combo.name.toLowerCase().includes(query));
-  }, [comboSearch, combos]);
+    return visible.filter(combo => combo.name.toLowerCase().includes(query));
+  }, [comboSearch, combos, selectedComboIds]);
 
   const historyGroups = useMemo(
     () => groupMenuHistoryItems(filterHistoryForMealType(historyItems, mealType)),

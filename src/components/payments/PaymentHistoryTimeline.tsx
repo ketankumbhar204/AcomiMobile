@@ -1,17 +1,48 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { FileText, TriangleAlert, type LucideIcon } from 'lucide-react-native';
 import type { PaymentTimelineEventResponse } from '../../api/types';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { getPaymentStatusIcon } from '../../utils/billingVisuals';
 import {
   PAYMENT_STATUS_THEME,
   resolveTimelineEventVariant,
+  type PaymentStatusVariant,
 } from '../../utils/paymentStatusTheme';
+import {
+  distinctPaymentTimelineEvents,
+  paymentTimelineRemarkContent,
+} from '../../utils/paymentTimelineRemark';
 
 type PaymentHistoryTimelineProps = {
   events: PaymentTimelineEventResponse[];
 };
+
+const REMARK_FALLBACK: Record<string, string> = {
+  'paymentCollection.timeline.whatsappDisabled':
+    'WhatsApp reminders are not set up, so this reminder was not sent.',
+  'paymentCollection.timeline.noDevice':
+    'No registered device was available, so the reminder notification was not delivered.',
+  'paymentCollection.timeline.fcmUnavailable':
+    'Push notifications were unavailable, so this reminder was not delivered.',
+  'paymentCollection.timeline.fcmRejected':
+    'The reminder notification was not accepted by the push service.',
+};
+
+function eventVisual(eventType: string): { variant: PaymentStatusVariant; Icon: LucideIcon } {
+  if (eventType === 'CREATED') {
+    return { variant: 'pending', Icon: FileText };
+  }
+  if (eventType === 'REMINDER_FAILED') {
+    return { variant: 'neutral', Icon: TriangleAlert };
+  }
+  if (eventType === 'REMINDER_SENT') {
+    return { variant: 'paid', Icon: getPaymentStatusIcon('paid') };
+  }
+  const variant = resolveTimelineEventVariant(eventType);
+  return { variant, Icon: getPaymentStatusIcon(variant) };
+}
 
 function formatEventTime(value: string): string {
   const date = new Date(value);
@@ -27,24 +58,35 @@ function formatEventTime(value: string): string {
 
 export function PaymentHistoryTimeline({ events }: PaymentHistoryTimelineProps) {
   const { t } = useTranslation();
+  const rows = distinctPaymentTimelineEvents(events);
 
-  if (events.length === 0) {
+  if (rows.length === 0) {
     return <Text style={styles.empty}>{t('paymentCollection.timeline.empty')}</Text>;
   }
 
   return (
     <View style={styles.container}>
-      {events.map((event, index) => {
-        const variant = resolveTimelineEventVariant(event.eventType);
-        const accent = PAYMENT_STATUS_THEME[variant].accent;
-        const Icon = getPaymentStatusIcon(variant);
-        const isLast = index === events.length - 1;
+      {rows.map((event, index) => {
+        const { variant, Icon } = eventVisual(event.eventType);
+        const theme = PAYMENT_STATUS_THEME[variant];
+        const isLast = index === rows.length - 1;
+        const remark = paymentTimelineRemarkContent(event.remarks);
+        const message = remark.messageKey
+          ? t(remark.messageKey, { defaultValue: REMARK_FALLBACK[remark.messageKey] })
+          : remark.text;
+        const diagnostic =
+          remark.diagnostic && remark.diagnostic !== message ? remark.diagnostic : null;
+        const key = event.eventId?.trim() || `${event.eventType}-${event.performedAt}-${index}`;
 
         return (
-          <View key={event.eventId} style={styles.row}>
+          <View key={key} style={styles.row}>
             <View style={styles.rail}>
-              <View style={[styles.marker, { borderColor: accent }]}>
-                <Icon size={12} color={accent} strokeWidth={2.4} />
+              <View
+                style={[
+                  styles.marker,
+                  { borderColor: theme.accent, backgroundColor: theme.background },
+                ]}>
+                <Icon size={12} color={theme.accent} strokeWidth={2.4} />
               </View>
               {!isLast ? <View style={styles.line} /> : null}
             </View>
@@ -53,7 +95,8 @@ export function PaymentHistoryTimeline({ events }: PaymentHistoryTimelineProps) 
                 {t(`paymentCollection.timeline.${event.eventType}`)}
               </Text>
               <Text style={styles.time}>{formatEventTime(event.performedAt)}</Text>
-              {event.remarks ? <Text style={styles.remarks}>{event.remarks}</Text> : null}
+              {message ? <Text style={styles.remarks}>{message}</Text> : null}
+              {diagnostic ? <Text style={styles.diagnostic}>{diagnostic}</Text> : null}
             </View>
           </View>
         );
@@ -118,6 +161,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: spacing.xxs,
     color: colors.textSecondary,
+  },
+  diagnostic: {
+    ...typography.caption,
+    fontSize: 11,
+    color: colors.muted,
   },
   empty: {
     ...typography.body,

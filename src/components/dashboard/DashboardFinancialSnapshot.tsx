@@ -9,7 +9,7 @@ import {
 } from 'lucide-react-native';
 import type { DashboardFinancialSummary } from '../../api/types';
 import { colors, pastels, radius, spacing, typography } from '../../theme';
-import { formatComboPrice } from '../../utils/comboPrice';
+import { formatPaymentAmount } from '../../utils/paymentAmount';
 import { formatMonthYear, isFutureMonth, shiftMonthKey } from '../../utils/dashboardFinancial';
 import { DashboardSectionTitle } from './DashboardSectionTitle';
 import { DashboardStatCard } from './shared/DashboardStatCard';
@@ -40,20 +40,17 @@ const TILE = {
   pending: pastels.orange,
 } as const;
 
-/** Dashboard money display: never show "—" — null/zero → ₹0.0 */
+/** Dashboard money display: whole rupees with currency. Null or zero is ₹0. */
 function formatMoneyOrZero(
   value: number | null | undefined,
   currencyCode?: string | null,
 ): string {
-  const formatted = formatComboPrice(value ?? 0, currencyCode);
+  const formatted = formatPaymentAmount(value ?? 0, currencyCode ?? 'INR');
   if (formatted) {
     return formatted;
   }
   const code = (currencyCode ?? 'INR').toUpperCase();
-  if (code === 'INR') {
-    return '₹0.0';
-  }
-  return `${code} 0.0`;
+  return code === 'INR' ? '₹0' : `${code} 0`;
 }
 
 export function DashboardFinancialSnapshot({

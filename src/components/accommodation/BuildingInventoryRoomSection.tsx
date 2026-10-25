@@ -14,6 +14,7 @@ import {
   BuildingInventoryAddBedCard,
   BuildingInventoryBedCard,
 } from './BuildingInventoryBedCard';
+import { HorizontalBedCarousel } from './HorizontalBedCarousel';
 
 type BuildingInventoryRoomSectionProps = {
   group: BedRoomGroup;
@@ -185,7 +186,8 @@ function BuildingInventoryRoomSectionComponent({
         </View>
       </View>
 
-      <View style={styles.bedsGrid}>
+      <HorizontalBedCarousel
+        accessibilityLabel={t('accommodation.beds.title', { defaultValue: 'Beds' })}>
         {group.beds.map(bed => (
           <BuildingInventoryBedCard
             key={bed.bedId}
@@ -197,8 +199,10 @@ function BuildingInventoryRoomSectionComponent({
             footer={renderBedFooter?.(bed)}
           />
         ))}
-        {showAddBed && onAddBed ? <BuildingInventoryAddBedCard onPress={onAddBed} /> : null}
-      </View>
+        {showAddBed && onAddBed ? (
+          <BuildingInventoryAddBedCard key="add-bed" onPress={onAddBed} />
+        ) : null}
+      </HorizontalBedCarousel>
     </View>
   );
 }
@@ -323,11 +327,5 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textSecondary,
     fontWeight: '600',
-  },
-  bedsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'stretch',
-    margin: -4,
   },
 });

@@ -257,17 +257,17 @@ export function DiscoverLocationSheet({
   const keyboardOpen = keyboardHeight > 0;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+      statusBarTranslucent
+      presentationStyle="overFullScreen">
       <View style={styles.root}>
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityRole="button" accessibilityLabel={t('common.close')} />
-      <View
-        style={[
-          styles.sheet,
-          {
-            top: frame.marginTop,
-            height: frame.maxHeight,
-          },
-        ]}>
+      <View style={[styles.sheetLift, { top: frame.marginTop, height: frame.maxHeight }]}>
+      <View style={styles.sheet}>
         <View style={styles.handle} />
         <View style={styles.titleRow}>
           <Text style={styles.title}>{t('spaces.findPlace.chooseLocation')}</Text>
@@ -502,6 +502,7 @@ export function DiscoverLocationSheet({
         </View>
       </View>
       </View>
+      </View>
     </Modal>
   );
 }
@@ -558,23 +559,31 @@ function Field({
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
+  root: {
+    flex: 1,
+    backgroundColor: colors.overlayScrim,
+  },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(15, 23, 42, 0.45)',
   },
-  sheet: {
+  sheetLift: {
     position: 'absolute',
     left: 0,
     right: 0,
+    zIndex: 2,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    backgroundColor: colors.white,
+    ...shadows.raised,
+  },
+  sheet: {
+    flex: 1,
     backgroundColor: colors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
-    zIndex: 2,
     overflow: 'hidden',
-    ...shadows.md,
   },
   handle: {
     alignSelf: 'center',

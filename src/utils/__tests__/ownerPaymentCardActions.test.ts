@@ -37,10 +37,25 @@ describe('ownerPaymentCardActions', () => {
     expect(canOwnerMarkPaymentReceived('UPDATE_REQUESTED')).toBe(false);
   });
 
-  it('shows reminder only when the payment is reminder-eligible', () => {
+  it('shows reminder only when the backend marks the payment eligible', () => {
     expect(canOwnerSendPaymentReminder(true)).toBe(true);
     expect(canOwnerSendPaymentReminder(false)).toBe(false);
     expect(canOwnerSendPaymentReminder(undefined)).toBe(false);
+    expect(
+      canOwnerSendPaymentReminder({ paymentStatus: 'PENDING', reminderEligible: false }),
+    ).toBe(false);
+    expect(
+      canOwnerSendPaymentReminder({ paymentStatus: 'PENDING', reminderEligible: null }),
+    ).toBe(false);
+    expect(
+      canOwnerSendPaymentReminder({ paymentStatus: 'PENDING', reminderEligible: true }),
+    ).toBe(true);
+    expect(
+      canOwnerSendPaymentReminder({ paymentStatus: 'PAID', reminderEligible: false }),
+    ).toBe(false);
+    expect(
+      canOwnerSendPaymentReminder({ paymentStatus: 'UNDER_REVIEW', reminderEligible: false }),
+    ).toBe(false);
   });
 
   it('matches owner/manager card action matrix', () => {
@@ -66,8 +81,9 @@ describe('ownerPaymentCardActions', () => {
       payment({ paymentId: 'a', paymentStatus: 'PENDING', reminderEligible: true }),
       payment({ paymentId: 'b', paymentStatus: 'UNDER_REVIEW', reminderEligible: false }),
       payment({ paymentId: 'c', paymentStatus: 'PAID', reminderEligible: false }),
+      payment({ paymentId: 'd', paymentStatus: 'PENDING', reminderEligible: false }),
     ];
-    expect(receivablePayments(rows).map(row => row.paymentId)).toEqual(['a', 'b']);
+    expect(receivablePayments(rows).map(row => row.paymentId)).toEqual(['a', 'b', 'd']);
     expect(reminderEligiblePayments(rows).map(row => row.paymentId)).toEqual(['a']);
   });
 });

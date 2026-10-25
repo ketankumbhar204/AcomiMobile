@@ -9,6 +9,7 @@ import { useDashboardMealDay } from '../../hooks/useDashboardMealDay';
 import { navigateMainStack } from '../../navigation/mainStackNavigation';
 import type { SpaceTabParamList } from '../../navigation/types';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { resolveDayShareAction } from '../../utils/dailyMenuDayStatus';
 import { isPastMenuDate, todayIsoDate } from '../../utils/mealDates';
 import { buildDashboardMealSlotRows } from '../../utils/dashboardMealSlotDisplay';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
@@ -81,10 +82,24 @@ export function DashboardMealOperations({
     [menuDate, spaceId],
   );
 
-  /** Meals tab = Menu Planning overview for managers. */
+  const shareAction = dateReadOnly ? 'hidden' : resolveDayShareAction(mealDay.summary);
+
+  /** Meals tab = Menu Planning overview for managers, on the date selected here. */
   const handleOpenMealsTab = useCallback(() => {
-    navigation.navigate('Meals', { spaceId });
-  }, [navigation, spaceId]);
+    navigation.navigate('Meals', {
+      spaceId,
+      menuDate,
+      menuDateRequest: Date.now(),
+    });
+  }, [menuDate, navigation, spaceId]);
+
+  const handleShareMenu = useCallback(() => {
+    navigateMainStack('MenuSharePreview', {
+      spaceId,
+      menuDate,
+      intent: shareAction === 'reshare' ? 'reshare' : 'save',
+    });
+  }, [menuDate, shareAction, spaceId]);
 
   const mealSlotRows = useMemo(
     () =>
@@ -109,14 +124,18 @@ export function DashboardMealOperations({
   }, [handleOpenMealsTab]);
 
   const handleSlotPress = useCallback(
-    (mealType: MealType) => {
+    (mealType: MealType, statusKind: (typeof mealSlotRows)[number]['statusKind']) => {
+      if (statusKind === 'shared') {
+        navigateMainStack('MealResponseMembers', { spaceId, menuDate, mealType });
+        return;
+      }
       if (dateReadOnly) {
         handleOpenMealsTab();
         return;
       }
       handleOpenDailyMenuEdit(mealType);
     },
-    [dateReadOnly, handleOpenDailyMenuEdit, handleOpenMealsTab],
+    [dateReadOnly, handleOpenDailyMenuEdit, handleOpenMealsTab, menuDate, spaceId],
   );
 
   return (
@@ -184,13 +203,26 @@ export function DashboardMealOperations({
                 )}
               </View>
               {!dateReadOnly ? (
-                <Pressable
-                  style={({ pressed }) => [styles.planLink, pressed && styles.planLinkPressed]}
-                  onPress={handlePlanMenuCta}
-                  accessibilityRole="button">
-                  <Text style={styles.planLinkText}>{t('dashboard.operations.planMenuCta')}</Text>
-                  <ChevronRight size={14} color={colors.primaryDark} strokeWidth={2.6} />
-                </Pressable>
+                <View style={styles.planLinks}>
+                  {shareAction !== 'hidden' ? (
+                    <Pressable
+                      style={({ pressed }) => [styles.planLink, pressed && styles.planLinkPressed]}
+                      onPress={handleShareMenu}
+                      accessibilityRole="button">
+                      <Text style={styles.planLinkText}>
+                        {t('dashboard.operations.shareCta', { defaultValue: 'Share' })}
+                      </Text>
+                      <ChevronRight size={14} color={colors.primaryDark} strokeWidth={2.6} />
+                    </Pressable>
+                  ) : null}
+                  <Pressable
+                    style={({ pressed }) => [styles.planLink, pressed && styles.planLinkPressed]}
+                    onPress={handlePlanMenuCta}
+                    accessibilityRole="button">
+                    <Text style={styles.planLinkText}>{t('dashboard.operations.planMenuCta')}</Text>
+                    <ChevronRight size={14} color={colors.primaryDark} strokeWidth={2.6} />
+                  </Pressable>
+                </View>
               ) : null}
             </View>
 
@@ -205,7 +237,7 @@ export function DashboardMealOperations({
                   countUnit={row.countUnitKey ? t(row.countUnitKey) : undefined}
                   captionTone={row.captionTone}
                   statusKind={row.statusKind}
-                  onPress={() => handleSlotPress(row.mealType)}
+                  onPress={() => handleSlotPress(row.mealType, row.statusKind)}
                 />
               ))}
             </View>
@@ -293,6 +325,11 @@ const styles = StyleSheet.create({
   pollStatusLineOpen: {
     color: MENU_PLANNING_POLL_OPEN_COLOR,
     fontWeight: '600',
+  },
+  planLinks: {
+    flexShrink: 0,
+    alignItems: 'flex-end',
+    gap: 2,
   },
   planLink: {
     flexShrink: 0,

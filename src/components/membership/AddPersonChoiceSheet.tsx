@@ -129,7 +129,7 @@ export function AddPersonChoiceSheet({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'flex-end',
   },
   sheet: {
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingTop: spacing.sm,
-    ...shadows.md,
+    ...shadows.raised,
   },
   handle: {
     alignSelf: 'center',

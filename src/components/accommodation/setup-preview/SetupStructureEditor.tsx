@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,7 +10,6 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
   BedDouble,
-  BedSingle,
   Building2,
   ChevronRight,
   DoorOpen,
@@ -26,7 +26,18 @@ import {
   DashboardStatCard,
 } from '../../dashboard';
 import { Button } from '../../ui';
+import { BedCarouselChrome, BedCarouselFades } from '../BedCarouselChrome';
+import {
+  bedCarouselActiveDot,
+  bedCarouselAtEnd,
+  bedCarouselAtStart,
+  bedCarouselDotCount,
+  bedCarouselHasOverflow,
+  bedCarouselMaxScroll,
+  bedCarouselScrollTarget,
+} from '../bedCarouselNav';
 import { BedPricingDisplay } from '../BedPricingDisplay';
+import { getBedIllustration } from '../layout/illustrations/illustrationAssets';
 import { BedInteractionSheet } from '../BedInteractionSheet';
 import { BedPricingConfirmModal } from '../BedPricingConfirmModal';
 import { useAccommodationActionSheetStore } from '../../../store/accommodationActionSheetStore';
@@ -86,7 +97,7 @@ const ACCENT = {
   beds: colors.success,
 } as const;
 
-const SETUP_BED_CARD_WIDTH = 188;
+const SETUP_BED_CARD_WIDTH = 168;
 const SETUP_ADD_BED_WIDTH = 128;
 const INITIAL_VISIBLE_ROOMS = 6;
 
@@ -249,7 +260,12 @@ function SetupBedCard({
     <View style={styles.setupBedCard}>
       <View style={styles.setupBedHeader}>
         <View style={styles.setupBedIcon}>
-          <BedSingle size={16} color={colors.success} strokeWidth={2.2} />
+          <Image
+            source={getBedIllustration('AVAILABLE')}
+            style={styles.setupBedArt}
+            resizeMode="contain"
+            fadeDuration={0}
+          />
         </View>
         <View style={styles.setupBedTitleWrap}>
           <Text style={styles.setupBedLabel} numberOfLines={2}>
@@ -422,6 +438,10 @@ function SetupRoomInventoryCard({
   const { t } = useTranslation();
   const openSheet = useAccommodationActionSheetStore(state => state.open);
   const [inlineEdit, setInlineEdit] = useState<InlineEditTarget>(null);
+  const bedScrollRef = useRef<ScrollView>(null);
+  const [bedScroll, setBedScroll] = useState(0);
+  const [bedViewport, setBedViewport] = useState(0);
+  const [bedContentWidth, setBedContentWidth] = useState(0);
   const bedCount = row.room.beds.length;
   const roomTypeLabel = t(`accommodation.roomType.${structure.roomType}`, {
     defaultValue: structure.roomType,
@@ -684,11 +704,27 @@ function SetupRoomInventoryCard({
         ) : null}
       </View>
 
+      <View style={styles.setupBedsFrame}>
+      <View style={styles.setupBedsScroller}>
       <ScrollView
+        ref={bedScrollRef}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.setupBedsRow}
-        nestedScrollEnabled>
+        nestedScrollEnabled
+        scrollEventThrottle={16}
+        onLayout={event => {
+          const next = Math.round(event.nativeEvent.layout.width);
+          setBedViewport(prev => (prev === next ? prev : next));
+        }}
+        onContentSizeChange={width => {
+          const next = Math.round(width);
+          setBedContentWidth(prev => (prev === next ? prev : next));
+        }}
+        onScroll={event => {
+          const next = event.nativeEvent.contentOffset.x;
+          setBedScroll(prev => (Math.abs(prev - next) < 0.5 ? prev : next));
+        }}>
         {row.room.beds.map(bed => (
           <SetupBedCard
             key={bed.id}
@@ -707,7 +743,84 @@ function SetupRoomInventoryCard({
           }
         />
       </ScrollView>
+      <SetupBedFades
+        scrollX={bedScroll}
+        viewportWidth={bedViewport}
+        contentWidth={bedContentWidth}
+      />
+      </View>
+      <SetupBedCarouselChrome
+        itemCount={bedCount + 1}
+        stride={SETUP_BED_CARD_WIDTH + spacing.sm}
+        scrollX={bedScroll}
+        viewportWidth={bedViewport}
+        contentWidth={bedContentWidth}
+        backLabel={t('accommodation.beds.previous', { defaultValue: 'Previous beds' })}
+        forwardLabel={t('accommodation.beds.next', { defaultValue: 'Next beds' })}
+        onScroll={target => {
+          setBedScroll(target);
+          bedScrollRef.current?.scrollTo({ x: target, animated: true });
+        }}
+      />
+      </View>
     </View>
+  );
+}
+
+function SetupBedFades({
+  scrollX,
+  viewportWidth,
+  contentWidth,
+}: {
+  scrollX: number;
+  viewportWidth: number;
+  contentWidth: number;
+}) {
+  const maxScroll = bedCarouselMaxScroll(contentWidth, viewportWidth);
+  const overflows = bedCarouselHasOverflow(contentWidth, viewportWidth);
+  return (
+    <BedCarouselFades
+      visible={overflows}
+      showLeft={!bedCarouselAtStart(scrollX)}
+      showRight={!bedCarouselAtEnd(scrollX, maxScroll)}
+    />
+  );
+}
+
+function SetupBedCarouselChrome({
+  itemCount,
+  stride,
+  scrollX,
+  viewportWidth,
+  contentWidth,
+  backLabel,
+  forwardLabel,
+  onScroll,
+}: {
+  itemCount: number;
+  stride: number;
+  scrollX: number;
+  viewportWidth: number;
+  contentWidth: number;
+  backLabel: string;
+  forwardLabel: string;
+  onScroll: (target: number) => void;
+}) {
+  const maxScroll = bedCarouselMaxScroll(contentWidth, viewportWidth);
+  const overflows = bedCarouselHasOverflow(contentWidth, viewportWidth);
+  const dotCount = bedCarouselDotCount(itemCount, overflows);
+  return (
+    <BedCarouselChrome
+      visible={overflows}
+      canGoBack={!bedCarouselAtStart(scrollX)}
+      canGoForward={!bedCarouselAtEnd(scrollX, maxScroll)}
+      dotCount={dotCount}
+      activeDot={bedCarouselActiveDot(scrollX, maxScroll, stride, dotCount, itemCount)}
+      onBack={() => onScroll(bedCarouselScrollTarget(scrollX, -1, stride, maxScroll))}
+      onForward={() => onScroll(bedCarouselScrollTarget(scrollX, 1, stride, maxScroll))}
+      backLabel={backLabel}
+      forwardLabel={forwardLabel}
+    />
   );
 }
 
@@ -1153,6 +1266,13 @@ const styles = StyleSheet.create({
   headerIconBtnPressed: {
     opacity: 0.7,
   },
+  setupBedsFrame: {
+    width: '100%',
+  },
+  setupBedsScroller: {
+    position: 'relative',
+    width: '100%',
+  },
   setupBedsRow: {
     flexDirection: 'row',
     alignItems: 'stretch',
@@ -1175,12 +1295,17 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   setupBedIcon: {
-    width: 32,
-    height: 32,
+    width: 44,
+    height: 44,
     borderRadius: 10,
     backgroundColor: '#DCFCE7',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  setupBedArt: {
+    width: 40,
+    height: 40,
   },
   setupBedTitleWrap: {
     flex: 1,

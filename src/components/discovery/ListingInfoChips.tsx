@@ -17,6 +17,7 @@ import {
   listingInfoFlags,
   type ListingInfoFlags,
   type ListingInfoSource,
+  type ListingSection,
 } from '../../utils/listingInfo';
 import { colors, typography } from '../../theme';
 
@@ -24,7 +25,8 @@ type ListingInfoChipsProps = {
   listing: ListingInfoSource;
   variant: 'card' | 'detail';
   surface?: 'places' | 'meals';
-  onEnquire?: () => void;
+  /** Opens the matching section on the listing detail. */
+  onSelect?: (section: ListingSection) => void;
   /** Opens the existing listing detail. Used by the card layout only. */
   onViewAll?: () => void;
 };
@@ -51,7 +53,7 @@ export function ListingInfoChips({
   listing,
   variant,
   surface = 'places',
-  onEnquire,
+  onSelect,
   onViewAll,
 }: ListingInfoChipsProps) {
   const { t } = useTranslation();
@@ -99,9 +101,9 @@ export function ListingInfoChips({
                 key={key}
                 style={styles.iconItem}
                 accessibilityLabel={state}
-                accessibilityRole={onEnquire ? 'button' : 'text'}
-                disabled={!onEnquire}
-                onPress={onEnquire}>
+                accessibilityRole={onSelect ? 'button' : 'text'}
+                disabled={!onSelect}
+                onPress={() => onSelect?.(key)}>
                 <View style={[styles.iconCircle, available ? styles.iconCircleOn : styles.iconCircleOff]}>
                   <Icon
                     size={16}
@@ -138,13 +140,13 @@ export function ListingInfoChips({
           { field: label },
         );
         const Icon = CHIP_ICONS[key];
-        const ChipWrap = onEnquire ? Pressable : View;
+        const ChipWrap = onSelect ? Pressable : View;
         return (
           <ChipWrap
             key={key}
-            onPress={onEnquire}
+            onPress={() => onSelect?.(key)}
             style={[styles.chip, available ? styles.chipAvailable : styles.chipMuted]}
-            accessibilityRole={onEnquire ? 'button' : 'text'}
+            accessibilityRole={onSelect ? 'button' : 'text'}
             accessibilityLabel={state}>
             <View style={[styles.iconWell, available ? styles.iconAvailable : styles.iconMuted]}>
               <Icon

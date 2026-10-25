@@ -18,10 +18,14 @@
       "progressReady": "✓ Details reviewed  ·  Ready to save"
     },
     "sharePreview": {
-      "reviewMessageTitle": "Review message & recipients",
-      "reviewMessageHint": "Confirm other spaces and the share message before sending.",
+      "selectRecipientsTitle": "Select recipients",
+      "selectRecipientsHint": "Choose the spaces that should receive this menu. This space is always included.",
+      "continueToRecipients": "Continue to recipients ↓",
+      "reviewMessageTitle": "Review message",
+      "reviewMessageHint": "Check the share message before sending.",
       "continueToMessage": "Continue to message ↓",
-      "progressSlotsNext": "✓ Meals selected  ·  Next: Message",
+      "progressSlotsNext": "✓ Meals selected  ·  Next: Recipients",
+      "progressRecipientsNext": "✓ Recipients selected  ·  Next: Message",
       "progressReady": "✓ Ready to share"
     },
     "editSpace": {
@@ -2336,6 +2340,7 @@
       "emptyNonePublished": "Menus are still in draft. Publish and share to start collecting responses.",
       "emptyNoResponses": "Menus are published but no member responses yet.",
       "planMenuCta": "Plan menu",
+      "shareCta": "Share",
       "draftChip": "Draft",
       "statusNotPlanned": "Not planned",
       "statusDraft": "Draft",
@@ -3116,8 +3121,10 @@
       "shareSelectAtLeastOne": "Select at least one meal to share.",
       "sharePublishedSlots": "{{count}} meal(s) ready",
       "shareHint": "Sharing opens in-app polls automatically. Members pick the same numbered options in the app.",
-      "reviewSaveTitle": "Review meal",
-      "reviewSaveHint": "Confirm to save this meal and open the poll. Members can respond in the app. WhatsApp is not opened.",
+      "reviewSaveTitle": "Save and Share",
+      "reviewSaveHint": "Saves this menu and opens meal choice in the app, then lets you send it on WhatsApp or another app.",
+      "saveAndShare": "Save and Share",
+      "saveAndShareBusy": "Saving and sharing…",
       "copyMessage": "Share menu",
       "shareEmpty": "No menus planned for this date yet.",
       "tapToPlan": "Tap to plan {{meal}}",
@@ -4139,6 +4146,10 @@
       "logoutTitle": "வெளியேறு",
       "logoutMessage": "ACOMI இலிருந்து வெளியேற விரும்புகிறீர்களா?",
       "logoutConfirm": "வெளியேறு",
+      "logoutHint": "இந்த சாதனத்திலிருந்து வெளியேற்றுகிறது. உங்கள் கணக்கு நீக்கப்படாது.",
+      "accountManagement": "கணக்கு மேலாண்மை",
+      "deleteAccountSubtitle": "உங்கள் கணக்கையும் அதனுடன் தொடர்புடைய அனைத்து தரவையும் நிரந்தரமாக நீக்குங்கள்.",
+      "deleteAccountLinkHint": "உறுதிப்படுத்தல் திரை திறக்கும். நீங்கள் உறுதிப்படுத்தும் வரை எதுவும் நீக்கப்படாது.",
       "deleteAccount": "Delete account",
       "deleteAccountTitle": "Delete your account?",
       "deleteAccountMessage": "This permanently deletes your ACOMI login and personal account information (name, mobile number, email, address, photo, and uploaded identity documents).\n\nYou will be signed out and will not be able to use this account again.\n\nProperty records such as spaces, rooms, occupancy, meals, payments, and complaints stay with the business. Your personal details on those records are removed or replaced with a generic deleted-user label. Your memberships are removed.\n\nThis cannot be undone. You can create a new account later with the same mobile number.",
@@ -4660,7 +4671,21 @@
     },
     "users": {
       "hint": "Phone-verified accounts. Owner/Member selection is not required.",
-      "empty": "No registered users found."
+      "empty": "No registered users found.",
+      "accountStatusSection": "Account status",
+      "accountStatus": "Status",
+      "accountStatusActive": "Active",
+      "accountStatusDeactivated": "Deactivated",
+      "accountStatusUnknown": "Unknown",
+      "accountStatusHint": "Whether this account can sign in. Separate from mobile verification and onboarding. Last active is recorded use, not a live session.",
+      "lastActive": "Last active",
+      "lastLogin": "Last login",
+      "activityNever": "Never",
+      "activityUnknown": "Not recorded",
+      "activityJustNow": "Just now",
+      "activityMinutesAgo": "{{count}} min ago",
+      "activityHoursAgo": "{{count}} hr ago",
+      "activityDaysAgo": "{{count}} days ago"
     },
     "list": {
       "empty": "No records found."

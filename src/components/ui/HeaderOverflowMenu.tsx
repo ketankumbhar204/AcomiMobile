@@ -252,7 +252,7 @@ export function HeaderOverflowMenu({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.15)',
+    backgroundColor: colors.overlayScrim,
   },
   menu: {
     position: 'absolute',
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
-    ...shadows.md,
+    ...shadows.raised,
   },
   menuItem: {
     paddingHorizontal: spacing.lg,

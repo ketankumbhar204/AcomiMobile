@@ -10,6 +10,7 @@ import type {
   OwnerContactResponse,
   EnquiryInboxResponse,
   ReceivedEnquiry,
+  ReceivedEnquirySummary,
   SpaceEnquiryResponse,
   SpaceEnquiryStatus,
   SpaceNotification,
@@ -28,6 +29,17 @@ export const enquiryApi = {
         `/spaces/${spaceId}/enquiries`,
         payload,
       ),
+    ),
+
+  requestPhotos: async (spaceId: UUID) =>
+    unwrapApiResponse(
+      apiClient.post<ApiResponse<{
+        notificationPersisted: boolean;
+        notificationDuplicate: boolean;
+        fcmQueued: boolean;
+        phoneAvailable: boolean;
+        internationalPhone?: string | null;
+      }>>(`/spaces/${spaceId}/photo-requests`),
     ),
 
   revealedContact: async (spaceId: UUID): Promise<OwnerContactResponse | null> => {
@@ -100,12 +112,20 @@ export const enquiryApi = {
     status?: SpaceEnquiryStatus;
     from?: string;
     to?: string;
+    q?: string;
     page?: number;
     size?: number;
   }): Promise<PagedResponse<ReceivedEnquiry>> =>
     unwrapApiResponse(
       apiClient.get<ApiResponse<PagedResponse<ReceivedEnquiry>>>('/enquiries/received', {
         params,
+      }),
+    ),
+
+  receivedSummary: async (spaceId?: UUID): Promise<ReceivedEnquirySummary> =>
+    unwrapApiResponse(
+      apiClient.get<ApiResponse<ReceivedEnquirySummary>>('/enquiries/received/summary', {
+        params: spaceId ? { spaceId } : undefined,
       }),
     ),
 

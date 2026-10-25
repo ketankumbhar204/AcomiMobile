@@ -127,7 +127,13 @@ function MealsTabScreen() {
     return <PermissionDeniedScreen spaceId={spaceId} />;
   }
 
-  return <MealsHomeScreen spaceId={spaceId} />;
+  return (
+    <MealsHomeScreen
+      spaceId={spaceId}
+      initialDate={route.params.menuDate}
+      menuDateRequest={route.params.menuDateRequest}
+    />
+  );
 }
 
 function PaymentsTabScreen() {

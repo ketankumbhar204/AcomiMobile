@@ -253,6 +253,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 15,
     color: colors.textSecondary,
+    width: '100%',
     flexShrink: 1,
   },
   paidLabel: {

@@ -500,10 +500,11 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'flex-end',
   },
   modalSheet: {
+    ...shadows.raised,
     backgroundColor: colors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,

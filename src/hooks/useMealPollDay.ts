@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { mealsApi } from '../api/mealsApi';
+import { ApiError } from '../api/types';
 import type {
   MealBillingType,
   MealDeliveryLocation,
@@ -19,6 +20,7 @@ import { useNavigationFocusReload } from './useNavigationFocusReload';
 import { hasPrepaidOverflow } from '../utils/mealPollPayment';
 import { isPastMenuDate } from '../utils/mealDates';
 import { resolvePreferredDeliveryLocationId } from '../utils/mealPollDeliveryLocations';
+import { mealPollSaveErrorMessage } from '../utils/mealPollSaveError';
 import { platesForSingleSelectOption } from '../utils/mealSelectionSummary';
 
 type SingleSelections = Partial<Record<MealType, UUID>>;
@@ -79,6 +81,7 @@ export function useMealPollDay(
   const [deliverySelections, setDeliverySelections] = useState<DeliverySelections>({});
   const [lastDeliveryLocations, setLastDeliveryLocations] = useState<DeliverySelections>({});
   const [editing, setEditing] = useState(true);
+  const [chooseMealsBlockReason, setChooseMealsBlockReason] = useState<string | null>(null);
 
   const requiresDeliveryLocation = multiQuantity && deliveryLocations.length > 0;
   const dateReadOnly = isPastMenuDate(menuDate);
@@ -218,6 +221,7 @@ export function useMealPollDay(
       setMyPrepaidDebitedAmount(day.myPrepaidDebitedAmount ?? null);
       setMyPrepaidOverflowPayment(day.myPrepaidOverflowPayment ?? null);
       setDeliveryLocations(day.deliveryLocations ?? []);
+      setChooseMealsBlockReason(day.myChooseMealsBlockReason?.trim() || null);
 
       const lastUsed: DeliverySelections = { ...(day.myLastDeliveryLocationIds ?? {}) };
       const catalog = day.deliveryLocations ?? [];
@@ -429,6 +433,7 @@ export function useMealPollDay(
         setMyPrepaidDebitedAmount(day.myPrepaidDebitedAmount ?? null);
         setMyPrepaidOverflowPayment(day.myPrepaidOverflowPayment ?? null);
         setDeliveryLocations(day.deliveryLocations ?? []);
+        setChooseMealsBlockReason(day.myChooseMealsBlockReason?.trim() || null);
         setLastDeliveryLocations({ ...(day.myLastDeliveryLocationIds ?? {}) });
         setEditing(false);
 
@@ -452,8 +457,18 @@ export function useMealPollDay(
         }
         options?.onSaved?.();
         return true;
-      } catch {
-        showToast(t('meals.errors.saveFailed'));
+      } catch (error) {
+        if (__DEV__) {
+          const status = error instanceof ApiError ? error.status : undefined;
+          const correlation =
+            error instanceof ApiError ? error.body?.timestamp : undefined;
+          console.error('[meals] poll save failed', {
+            status,
+            endpoint: `/spaces/${spaceId}/meal-polls/${menuDate}/responses`,
+            correlation,
+          });
+        }
+        showToast(mealPollSaveErrorMessage(error, t('meals.errors.saveFailed')));
         return false;
       } finally {
         setSaving(false);
@@ -491,10 +506,21 @@ export function useMealPollDay(
         setMyPaymentStatus(day.myPaymentStatus ?? null);
         setMyRejectionReason(day.myRejectionReason ?? null);
         setDeliveryLocations(day.deliveryLocations ?? []);
+        setChooseMealsBlockReason(day.myChooseMealsBlockReason?.trim() || null);
         showToast(t('meals.poll.proofSubmitted'));
         return true;
-      } catch {
-        showToast(t('meals.errors.saveFailed'));
+      } catch (error) {
+        if (__DEV__) {
+          const status = error instanceof ApiError ? error.status : undefined;
+          const correlation =
+            error instanceof ApiError ? error.body?.timestamp : undefined;
+          console.error('[meals] payment proof failed', {
+            status,
+            endpoint: `/spaces/${spaceId}/meal-polls/${menuDate}/payment-proof`,
+            correlation,
+          });
+        }
+        showToast(mealPollSaveErrorMessage(error, t('meals.errors.saveFailed')));
         return false;
       } finally {
         setSaving(false);
@@ -570,6 +596,7 @@ export function useMealPollDay(
     mealsWithPlates,
     totalPlates,
     selections,
+    chooseMealsBlockReason,
     quantitySelections,
     multiQuantity,
     showSummary,

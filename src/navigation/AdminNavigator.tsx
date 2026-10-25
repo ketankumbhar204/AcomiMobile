@@ -21,6 +21,7 @@ import { AdminRegisteredUsersScreen } from '../screens/admin/AdminRegisteredUser
 import { AdminSavedAddressesScreen } from '../screens/admin/AdminSavedAddressesScreen';
 import { AdminInquiryCreditsConfigScreen } from '../screens/admin/AdminInquiryCreditsConfigScreen';
 import { AdminInquiryPurchaseListScreen } from '../screens/admin/AdminInquiryPurchaseListScreen';
+import { AdminNotificationTestingScreen } from '../screens/admin/AdminNotificationTestingScreen';
 import { stackHeaderOptions } from '../theme';
 import type { AdminStackParamList } from './types';
 
@@ -129,6 +130,11 @@ export function AdminNavigator() {
         name="AdminInquiryCreditsConfig"
         component={AdminInquiryCreditsConfigScreen}
         options={{ title: t('admin.nav.creditsConfig', { defaultValue: 'Credits config' }) }}
+      />
+      <Stack.Screen
+        name="AdminNotificationTesting"
+        component={AdminNotificationTestingScreen}
+        options={{ title: t('admin.nav.notificationTesting', { defaultValue: 'Notification Testing' }) }}
       />
       <Stack.Screen
         name="AdminInquiryCreditRequests"

@@ -627,7 +627,7 @@ export function ConfigureLibraryExtrasSheet({
     const firstInvalid = revalidateEnabledPrices();
     if (firstInvalid) {
       setFocusPriceItemId(firstInvalid);
-      showToast(t('meals.pricing.fixFieldsBeforeSave'));
+      showToast(t('meals.pricing.fixFieldsBeforeSave'), undefined, 'error');
       return;
     }
     if (!hasUnsavedPriceEdits()) {
@@ -680,7 +680,7 @@ export function ConfigureLibraryExtrasSheet({
     const firstInvalid = revalidateEnabledPrices();
     if (firstInvalid) {
       setFocusPriceItemId(firstInvalid);
-      showToast(t('meals.pricing.fixFieldsBeforeSave'));
+      showToast(t('meals.pricing.fixFieldsBeforeSave'), undefined, 'error');
       return;
     }
     void (async () => {

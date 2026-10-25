@@ -35,6 +35,7 @@ import {
 import { getSpaceTypeLabel } from '../api';
 import type { Space } from '../api/types';
 import { HeaderBackButton, Screen, Skeleton } from '../components/ui';
+import { ReferenceCode } from '../components/ui/ReferenceCode';
 import { Timeline, type TimelineGroup, type TimelineItem } from '../components/ui/Timeline';
 import { DashboardStatCard } from '../components/dashboard/shared/DashboardStatCard';
 import { SpaceStatusChip } from '../components/spaces/SpaceStatusChip';
@@ -335,6 +336,7 @@ export function SpaceDetailsScreen() {
               <Text style={styles.heroName} numberOfLines={2}>
                 {space.name}
               </Text>
+              <ReferenceCode value={space.referenceCode} />
               <SpaceStatusChip
                 label={
                   space.isActive

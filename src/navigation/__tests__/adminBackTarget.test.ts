@@ -14,5 +14,6 @@ describe('adminParentRoute', () => {
 
   it('falls back to the dashboard when an active space is opened directly', () => {
     expect(adminParentRoute('AdminActiveSpaceDetail')).toBe('AdminDashboard');
+    expect(adminParentRoute('AdminNotificationTesting')).toBe('AdminDashboard');
   });
 });

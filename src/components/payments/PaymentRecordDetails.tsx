@@ -4,24 +4,30 @@ import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronUp } from 'lucide-react-native';
 import type { SpacePaymentResponse } from '../../api/types';
 import { colors, radius, spacing, typography } from '../../theme';
+import { displayPaymentStatus, showsPaymentOverdueCue } from '../../utils/paymentStatus';
 import { formatBillingPeriod } from '../../utils/paymentProofPolicy';
 import { formatPaymentDueDate } from '../../utils/paymentHistory';
 import { formatPaymentAmount } from '../../utils/paymentAmount';
+import { usePaymentStayTrail } from '../../hooks/usePaymentStayTrail';
+import { ContactNumberLine, StayTrailLine } from '../member/ContactAndStayMeta';
 import { PaymentStatusBadge } from './PaymentStatusBadge';
 
 type PaymentRecordDetailsProps = {
   payment: SpacePaymentResponse;
+  spaceId?: string | null;
   spaceName?: string | null;
   memberName?: string | null;
 };
 
 export function PaymentRecordDetails({
   payment,
+  spaceId,
   spaceName,
   memberName,
 }: PaymentRecordDetailsProps) {
   const { t, i18n } = useTranslation();
   const [allocationOpen, setAllocationOpen] = useState(true);
+  const stayTrail = usePaymentStayTrail(spaceId, payment);
   const name = memberName?.trim() || payment.memberName;
   const initial = name.trim().charAt(0).toUpperCase() || '?';
   const periodLabel = payment.month ? formatBillingPeriod(payment.month, i18n.language) : null;
@@ -30,7 +36,7 @@ export function PaymentRecordDetails({
     periodLabel && !title.toLowerCase().includes(periodLabel.toLowerCase())
       ? `${title} — ${periodLabel}`
       : title;
-  const place = [spaceName, payment.targetLabel].filter(Boolean).join(' · ');
+  const place = [spaceName, stayTrail].filter(Boolean).join(' → ');
   const amount = formatPaymentAmount(payment.amount, payment.currencyCode);
   const outstanding = formatPaymentAmount(payment.outstandingAmount, payment.currencyCode);
   const paid = formatPaymentAmount(payment.paidAmount, payment.currencyCode);
@@ -45,14 +51,18 @@ export function PaymentRecordDetails({
         </View>
         <View style={styles.identityText}>
           <Text style={styles.name}>{name}</Text>
-          {payment.memberMobile ? <Text style={styles.meta}>{payment.memberMobile}</Text> : null}
-          {place ? <Text style={styles.meta}>{place}</Text> : null}
+          <ContactNumberLine value={payment.memberMobile} textStyle={styles.meta} />
+          {stayTrail ? (
+            <StayTrailLine label={place} textStyle={styles.meta} />
+          ) : spaceName ? (
+            <Text style={styles.meta}>{spaceName}</Text>
+          ) : null}
         </View>
       </View>
 
       <View style={styles.titleRow}>
         <Text style={styles.title}>{heading}</Text>
-        <PaymentStatusBadge status={payment.isOverdue ? 'OVERDUE' : payment.paymentStatus} />
+        <PaymentStatusBadge status={displayPaymentStatus(payment)} />
       </View>
       {amount ? <Text style={styles.amount}>{amount}</Text> : null}
 
@@ -71,7 +81,7 @@ export function PaymentRecordDetails({
         ) : null}
       </View>
 
-      {payment.isOverdue ? (
+      {showsPaymentOverdueCue(payment) ? (
         <View style={styles.alert}>
           <Text style={styles.alertTitle}>
             {t('paymentCollection.overdue.compact', { count: payment.daysOverdue ?? 0 })}
@@ -112,7 +122,7 @@ export function PaymentRecordDetails({
         ) : null}
       </View>
 
-      {payment.targetLabel ? (
+      {stayTrail ? (
         <View style={styles.allocation}>
           <Pressable
             onPress={() => setAllocationOpen(open => !open)}
@@ -126,9 +136,7 @@ export function PaymentRecordDetails({
             )}
           </Pressable>
           {allocationOpen ? (
-            <Text style={styles.allocationBody}>
-              {payment.targetLabel.replaceAll(' · ', ' → ')}
-            </Text>
+            <Text style={styles.allocationBody}>{stayTrail}</Text>
           ) : null}
         </View>
       ) : null}

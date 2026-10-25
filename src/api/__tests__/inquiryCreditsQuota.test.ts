@@ -1,4 +1,5 @@
 import {
+  directContactDecision,
   inquiryMethodAvailability,
   needsInquiryPayment,
   paidCreditsOf,
@@ -59,5 +60,28 @@ describe('inquiry contact quota', () => {
       inquiryMethodAvailability(quota({ viewHereRemainingToday: 0 })).showViewHereExhausted,
     ).toBe(true);
     expect(inquiryMethodAvailability(quota({ viewHereDailyLimit: 0 })).showViewHere).toBe(false);
+  });
+
+  it('keeps instant viewing available after email enquiry credits are exhausted', () => {
+    const emailExhausted = quota({ freeRemainingToday: 0, availableCredits: 0, viewHereRemainingToday: 2 });
+    const availability = inquiryMethodAvailability(emailExhausted);
+    expect(availability.emailExhausted).toBe(true);
+    expect(availability.showViewHere).toBe(true);
+  });
+
+  it('falls back from instant viewing when the view quota is exhausted', () => {
+    const viewsExhausted = quota({ viewHereRemainingToday: 0, freeRemainingToday: 4, availableCredits: 2 });
+    const availability = inquiryMethodAvailability(viewsExhausted);
+    expect(availability.showViewHere).toBe(false);
+    expect(availability.showViewHereExhausted).toBe(true);
+    expect(availability.emailExhausted).toBe(false);
+  });
+
+  it('reveals contacts only when this platform still has free views', () => {
+    expect(directContactDecision(quota())).toBe('reveal');
+    expect(directContactDecision(quota({ viewHereRemainingToday: 0 }))).toBe('exhausted');
+    expect(directContactDecision(quota({ viewHereDailyLimit: 0, viewHereRemainingToday: 0 }))).toBe(
+      'disabled',
+    );
   });
 });

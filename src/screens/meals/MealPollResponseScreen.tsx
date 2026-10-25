@@ -79,7 +79,8 @@ export function MealPollResponseScreen({
   const mealEditsLocked = poll.mealEditsLocked;
   const pollsClosedOnly =
     !poll.loading && poll.openPolls.length === 0 && poll.displayPolls.length > 0;
-  const viewOnly = dateReadOnly || mealEditsLocked || pollsClosedOnly;
+  const chooseBlocked = !poll.loading && !!poll.chooseMealsBlockReason;
+  const viewOnly = dateReadOnly || mealEditsLocked || pollsClosedOnly || chooseBlocked;
   const [paymentStep, setPaymentStep] = useState(false);
   const [proofModalOpen, setProofModalOpen] = useState(false);
   const showToast = useToastStore(state => state.showToast);
@@ -294,14 +295,24 @@ export function MealPollResponseScreen({
             icon={Vote}
             eyebrow={t('meals.title')}
             heading={
-              paymentStep ? t('meals.poll.paymentTitle') : t('meals.poll.responseTitle')
+              paymentStep
+                ? t('meals.poll.paymentTitle')
+                : chooseBlocked
+                  ? t('meals.poll.cannotChooseTitle')
+                  : t('meals.poll.responseTitle')
             }
             subheading={formatMenuDate(menuDate, i18n.language)}
           />
-          {!dateReadOnly && !paymentStep ? (
+          {!dateReadOnly && !paymentStep && !chooseBlocked ? (
             <PollClosesInHint polls={poll.openPolls} style={styles.pollCloseHint} />
           ) : null}
-          {!poll.loading && visiblePolls.length === 0 ? (
+          {chooseBlocked ? (
+            <EmptyState
+              title={t('meals.poll.cannotChooseTitle')}
+              description={poll.chooseMealsBlockReason ?? undefined}
+              Icon={ClipboardList}
+            />
+          ) : !poll.loading && visiblePolls.length === 0 ? (
             <EmptyState
               title={
                 dateReadOnly
@@ -315,7 +326,8 @@ export function MealPollResponseScreen({
               <MealSelectionSummary
                 model={paymentSummary}
                 variant="detailed"
-                showTotals
+                showPrices={mealPricing.showMealPrices}
+                showTotals={mealPricing.showMealPrices}
                 title={t('meals.poll.paymentReviewTitle')}
               />
               <View style={styles.paymentMeta}>

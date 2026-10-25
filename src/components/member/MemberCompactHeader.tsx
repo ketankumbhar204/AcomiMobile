@@ -10,12 +10,14 @@ import {
 } from '../dashboard/shared/DashboardPersonCard';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { ReferenceCode } from '../ui/ReferenceCode';
 import { isReceivingMeals } from '../../utils/mealAccess';
 import { memberAcomiBadgeLabel } from '../../utils/memberAppStatus';
 import {
   contextualMembershipRole,
   type DisplayMembershipRole,
 } from '../../utils/memberRoles';
+import { formatMemberContactNumber } from '../../utils/indianMobile';
 import { getMemberStatusColor, getMemberStatusLabelKey } from '../../utils/memberStatus';
 
 type MemberCompactHeaderProps = {
@@ -102,6 +104,7 @@ export function MemberCompactHeader({
           <Text style={styles.name} numberOfLines={2}>
             {member.fullName}
           </Text>
+          <ReferenceCode value={member.referenceCode} />
           <View style={styles.chipRow}>
             <DashboardRoleChip label={roleLabel} tone={roleTone(displayRole)} />
             <View style={styles.statusChip}>
@@ -118,7 +121,7 @@ export function MemberCompactHeader({
         <View style={styles.fact}>
           <Phone size={13} color={colors.muted} strokeWidth={2.2} />
           <Text style={styles.factText} numberOfLines={1}>
-            {member.mobileNumber}
+            {formatMemberContactNumber(member.mobileNumber) ?? member.mobileNumber}
           </Text>
         </View>
         <View style={styles.factDivider} />

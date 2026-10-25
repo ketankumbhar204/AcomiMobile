@@ -170,7 +170,12 @@ export function AdminPropertyDetailScreen({ navigation, route }: Props) {
           ) : null}
           <AdminDetailField
             label={t('admin.property.startingPrice')}
-            value={`₹${detail.startingPrice} ${PRICE_BASIS_LABEL[isPriceBasis(detail.priceBasis) ? detail.priceBasis : defaultPriceBasis(detail.propertyType)]}`}
+            value={(() => {
+              const basis = isPriceBasis(detail.priceBasis)
+                ? detail.priceBasis
+                : defaultPriceBasis(detail.propertyType);
+              return `₹${detail.startingPrice}${basis ? ` ${PRICE_BASIS_LABEL[basis]}` : ''}`;
+            })()}
           />
           {detail.capacityEstimate != null ? (
             <AdminDetailField

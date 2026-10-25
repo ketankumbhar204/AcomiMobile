@@ -12,6 +12,7 @@ import type {
   SpaceType,
 } from '../../api/types';
 import { Button, Card, useConfirmDialog } from '../ui';
+import { StayTrailLine } from '../member/ContactAndStayMeta';
 import { MemberOccupancyStatusBadge } from '../member/MemberOccupancyStatusBadge';
 import { occupancyActionTint } from './occupancyActionTints';
 import type { MainStackParamList } from '../../navigation/types';
@@ -23,6 +24,7 @@ import { useMemberStore } from '../../store/memberStore';
 import { useToastStore } from '../../store/toastStore';
 import { useAuthStore } from '../../store/authStore';
 import { colors, radius, spacing, typography } from '../../theme';
+import { formatPaymentStayLabel } from '../../utils/stayTrail';
 import { isAccommodationApplicable } from '../../utils/accommodationProfile';
 import { supportsSpaceAmenities } from '../../utils/amenities';
 import {
@@ -78,8 +80,16 @@ function StayLocationBlock({
   if (lines.length === 0) {
     return null;
   }
+  const trail = formatPaymentStayLabel({
+    buildingName: occupancy.buildingName,
+    floorName: occupancy.floorName,
+    unitName: occupancy.unitName,
+    roomName: occupancy.roomName,
+    bedName: occupancy.bedName,
+  });
   return (
     <View style={styles.locationBlock}>
+      {trail ? <StayTrailLine label={trail} textStyle={styles.locationValue} /> : null}
       {lines.map(line => (
         <View key={line.labelKey} style={styles.locationRow}>
           <Text style={styles.locationLabel}>{t(line.labelKey)}</Text>

@@ -55,7 +55,9 @@ export function SegmentedTabs<T extends string>({
             ) : null}
             <Text
               style={[styles.label, isActive && styles.labelActive]}
-              numberOfLines={1}>
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}>
               {item.label}
             </Text>
           </Pressable>

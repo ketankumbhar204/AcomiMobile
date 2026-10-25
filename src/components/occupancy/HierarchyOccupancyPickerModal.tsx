@@ -619,7 +619,7 @@ export function HierarchyOccupancyPickerModal({
           setSelectedUnit(options[0].value);
           if (stepIndex < steps.length - 1) {
             setStepIndex(index => index + 1);
-          } else if (spaceType === 'RENTAL') {
+          } else if (spaceType === 'RENTAL' || spaceType === 'CORPORATE_STAY') {
             void beginPostHierarchy(
               {
                 targetType: 'UNIT',
@@ -794,7 +794,7 @@ export function HierarchyOccupancyPickerModal({
       if (current < steps.length - 1) {
         return current + 1;
       }
-      if (spaceType === 'RENTAL') {
+      if (spaceType === 'RENTAL' || spaceType === 'CORPORATE_STAY') {
         queueMicrotask(() => {
           void completeHierarchyForUnit(unit);
         });
@@ -862,7 +862,11 @@ export function HierarchyOccupancyPickerModal({
       return;
     }
 
-    if (currentHierarchyStep === 'unit' && spaceType === 'RENTAL' && selectedUnit) {
+    if (
+      currentHierarchyStep === 'unit' &&
+      (spaceType === 'RENTAL' || spaceType === 'CORPORATE_STAY') &&
+      selectedUnit
+    ) {
       await beginPostHierarchy(
         {
           targetType: 'UNIT',

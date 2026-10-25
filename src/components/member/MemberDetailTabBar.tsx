@@ -1,23 +1,13 @@
 import React, { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { CreditCard, History, User, UtensilsCrossed, Wallet } from 'lucide-react-native';
-import type { LucideIcon } from 'lucide-react-native';
 import { SegmentedTabs, type SegmentedTabItem } from '../ui';
-import { spacing } from '../../theme';
+import { colors, radius, spacing } from '../../theme';
 
 export type MemberDetailTab = 'profile' | 'meals' | 'payments' | 'deposit' | 'history';
 
 const BASE_TABS: MemberDetailTab[] = ['profile', 'payments', 'deposit', 'history'];
 const ALL_TABS: MemberDetailTab[] = ['profile', 'meals', 'payments', 'deposit', 'history'];
-
-const TAB_ICONS: Record<MemberDetailTab, LucideIcon> = {
-  profile: User,
-  meals: UtensilsCrossed,
-  payments: CreditCard,
-  deposit: Wallet,
-  history: History,
-};
 
 type MemberDetailTabBarProps = {
   activeTab: MemberDetailTab;
@@ -39,7 +29,6 @@ export function MemberDetailTabBar({
       (showMealsTab ? ALL_TABS : BASE_TABS).map(tab => ({
         key: tab,
         label: t(`membership.detailTabs.${tab}`),
-        icon: TAB_ICONS[tab],
       })),
     [showMealsTab, t],
   );
@@ -58,8 +47,18 @@ export function MemberDetailTabBar({
 const styles = StyleSheet.create({
   wrap: {
     marginBottom: spacing.lg,
+    backgroundColor: colors.section,
+    borderRadius: radius.button,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.xs,
   },
   wrapCompact: {
     marginBottom: spacing.sm,
+    backgroundColor: colors.section,
+    borderRadius: radius.button,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.xs,
   },
 });

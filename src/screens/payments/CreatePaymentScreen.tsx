@@ -15,6 +15,7 @@ import type {
   SpacePaymentResponse,
   UniversalPaymentStatus,
 } from '../../api/types';
+import { ContactNumberLine } from '../../components/member/ContactAndStayMeta';
 import { OccupancyMemberPickerModal } from '../../components/occupancy/OccupancyMemberPickerModal';
 import { MealFormHero } from '../../components/meals/MealFormHero';
 import { MenuDatePickerModal } from '../../components/meals/MenuDatePickerModal';
@@ -30,7 +31,7 @@ import {
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { canManagePayments } from '../../utils/dashboardFinancial';
 import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
 import {
@@ -325,9 +326,7 @@ export function CreatePaymentScreen() {
               numberOfLines={1}>
               {member?.fullName || t('paymentCollection.addRecord.searchPlaceholder')}
             </Text>
-            {member?.mobileNumber ? (
-              <Text style={styles.memberMeta}>{member.mobileNumber}</Text>
-            ) : null}
+            <ContactNumberLine value={member?.mobileNumber} textStyle={styles.memberMeta} />
           </View>
           {memberLocked ? null : (
             <ChevronDown size={18} color={colors.muted} strokeWidth={2.2} />
@@ -606,11 +605,12 @@ const styles = StyleSheet.create({
   error: { ...typography.body, color: '#DC2626' },
   confirmOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'center',
     padding: spacing.xl,
   },
   confirmCard: {
+    ...shadows.raised,
     backgroundColor: colors.white,
     borderRadius: radius.card,
     padding: spacing.lg,

@@ -1,5 +1,6 @@
 import type { SpacePaymentResponse } from '../../api/types';
 import {
+  matchesPersonalSummaryFilter,
   summarizePersonalPayments,
   usesDayMealPayments,
 } from '../personalPaymentSummary';
@@ -82,10 +83,10 @@ describe('summarizePersonalPayments', () => {
       }),
     ]);
 
-    expect(summary.totalDue).toBe(9000);
+    expect(summary.totalDue).toBe(6000);
     expect(summary.amountPaid).toBe(3000);
     expect(summary.outstanding).toBe(6000);
-    expect(summary.nextDueDate).toBe('2026-10-05');
+    expect(summary.underReviewAmount).toBe(0);
   });
 
   it('keeps a real zero when every charge is settled', () => {
@@ -98,9 +99,10 @@ describe('summarizePersonalPayments', () => {
         outstandingAmount: 0,
       }),
     ]);
+    expect(summary.totalDue).toBe(0);
     expect(summary.outstanding).toBe(0);
     expect(summary.amountPaid).toBe(6000);
-    expect(summary.nextDueDate).toBeNull();
+    expect(summary.underReviewAmount).toBe(0);
   });
 
   it('leaves totals unknown when the month has no charges', () => {
@@ -108,7 +110,7 @@ describe('summarizePersonalPayments', () => {
       totalDue: null,
       amountPaid: null,
       outstanding: null,
-      nextDueDate: null,
+      underReviewAmount: null,
     });
   });
 
@@ -126,6 +128,87 @@ describe('summarizePersonalPayments', () => {
     expect(summary.totalDue).toBe(400);
     expect(summary.amountPaid).toBeNull();
     expect(summary.outstanding).toBeNull();
-    expect(summary.nextDueDate).toBe('2026-10-12');
+    expect(summary.underReviewAmount).toBe(0);
+  });
+
+  it('sums submitted charge amounts waiting on review', () => {
+    const summary = summarizePersonalPayments([
+      payment({
+        paymentId: 'rent',
+        paymentStatus: 'UNDER_REVIEW',
+        amount: 6000,
+        paidAmount: 0,
+        outstandingAmount: 6000,
+      }),
+      payment({
+        paymentId: 'meals',
+        paymentStatus: 'PROOF_UPLOADED',
+        amount: 1555,
+        paidAmount: 0,
+        outstandingAmount: 1555,
+      }),
+      payment({
+        paymentId: 'deposit',
+        paymentStatus: 'PAID',
+        amount: 1000,
+        paidAmount: 1000,
+        outstandingAmount: 0,
+      }),
+      payment({
+        paymentId: 'utility',
+        paymentStatus: 'PENDING',
+        amount: 400,
+        outstandingAmount: 400,
+      }),
+    ]);
+
+    expect(summary.underReviewAmount).toBe(7555);
+  });
+
+  it('matches each summary card to the charges that make up that total', () => {
+    const pending = payment({
+      paymentId: 'utility',
+      paymentStatus: 'PENDING',
+      amount: 555,
+      paidAmount: 0,
+      outstandingAmount: 555,
+    });
+    const review = payment({
+      paymentId: 'rent',
+      paymentStatus: 'UNDER_REVIEW',
+      amount: 6000,
+      paidAmount: 0,
+      outstandingAmount: 6000,
+    });
+    const paid = payment({
+      paymentId: 'deposit',
+      paymentStatus: 'PAID',
+      amount: 1000,
+      paidAmount: 1000,
+      outstandingAmount: 0,
+    });
+    const partial = payment({
+      paymentId: 'meals',
+      paymentStatus: 'PENDING',
+      amount: 400,
+      paidAmount: 100,
+      outstandingAmount: 300,
+    });
+
+    expect(matchesPersonalSummaryFilter(paid, 'paid')).toBe(true);
+    expect(matchesPersonalSummaryFilter(partial, 'paid')).toBe(true);
+    expect(matchesPersonalSummaryFilter(pending, 'paid')).toBe(false);
+
+    expect(matchesPersonalSummaryFilter(pending, 'outstanding')).toBe(true);
+    expect(matchesPersonalSummaryFilter(review, 'outstanding')).toBe(true);
+    expect(matchesPersonalSummaryFilter(partial, 'outstanding')).toBe(true);
+    expect(matchesPersonalSummaryFilter(paid, 'outstanding')).toBe(false);
+
+    expect(matchesPersonalSummaryFilter(review, 'underReview')).toBe(true);
+    expect(matchesPersonalSummaryFilter(pending, 'underReview')).toBe(false);
+    expect(matchesPersonalSummaryFilter(paid, 'due')).toBe(false);
+    expect([pending, review, partial].every(row => matchesPersonalSummaryFilter(row, 'due'))).toBe(
+      true,
+    );
   });
 });

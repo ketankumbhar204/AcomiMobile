@@ -38,7 +38,7 @@ import { isValidIndianMobile } from '../../utils/indianMobile';
 
 type Nav = NativeStackNavigationProp<AdminStackParamList, 'AdminAddProperty'>;
 
-const PROPERTY_TYPES: SpaceType[] = ['PG', 'HOSTEL', 'CO_LIVING', 'RENTAL'];
+const PROPERTY_TYPES: SpaceType[] = ['PG', 'HOSTEL', 'CO_LIVING', 'RENTAL', 'CORPORATE_STAY'];
 
 function isValidPincode(value: string): boolean {
   return /^[1-9]\d{5}$/.test(value);
@@ -64,7 +64,7 @@ export function AdminAddPropertyScreen() {
   const [alternateMobileNumber, setAlternateMobileNumber] = useState('');
   const [location, setLocation] = useState(EMPTY_ADDRESS_CAPTURE);
   const [startingPrice, setStartingPrice] = useState('');
-  const [priceBasis, setPriceBasis] = useState<ListingPriceBasis>(defaultPriceBasis('PG'));
+  const [priceBasis, setPriceBasis] = useState<ListingPriceBasis>(defaultPriceBasis('PG') ?? 'PER_BED');
   const [description, setDescription] = useState('');
   const [capacityEstimate, setCapacityEstimate] = useState('');
   const [amenitiesText, setAmenitiesText] = useState('');
@@ -217,7 +217,10 @@ export function AdminAddPropertyScreen() {
                   value={propertyType}
                   onChange={next => {
                     setPropertyType(next);
-                    setPriceBasis(defaultPriceBasis(next));
+                    const basis = defaultPriceBasis(next);
+                    if (basis) {
+                      setPriceBasis(basis);
+                    }
                   }}
                   allowedTypes={PROPERTY_TYPES}
                 />

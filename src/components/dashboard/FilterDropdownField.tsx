@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Check, ChevronDown } from 'lucide-react-native';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 
 export type FilterDropdownOption = {
   value?: string;
@@ -81,8 +81,13 @@ export function FilterDropdownField({
         visible={open}
         transparent
         animationType="fade"
+        statusBarTranslucent
+        presentationStyle="overFullScreen"
         onRequestClose={() => setOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setOpen(false)} />
+        <View style={styles.modalRoot}>
+        <View style={styles.backdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setOpen(false)} />
+        </View>
         <View style={[styles.sheet, compact ? styles.sheetBottom : styles.sheetCentered]}>
           <View style={styles.sheetHeader}>
             <Text style={styles.sheetTitle}>{label}</Text>
@@ -117,6 +122,7 @@ export function FilterDropdownField({
               );
             }}
           />
+        </View>
         </View>
       </Modal>
     </>
@@ -177,11 +183,15 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.muted,
   },
+  modalRoot: {
+    flex: 1,
+  },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colors.overlayScrim,
   },
   sheet: {
+    ...shadows.raised,
     backgroundColor: colors.white,
     overflow: 'hidden',
     borderWidth: 1,

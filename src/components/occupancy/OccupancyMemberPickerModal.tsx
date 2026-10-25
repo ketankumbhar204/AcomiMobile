@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { ChevronRight } from 'lucide-react-native';
 import { memberApi } from '../../api/memberApi';
 import type { MemberResponse } from '../../api/types';
+import { ContactNumberLine } from '../member/ContactAndStayMeta';
 import { AccommodationSearchBar } from '../accommodation/AccommodationSearchBar';
 import { Button } from '../ui';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
@@ -129,10 +130,12 @@ export function OccupancyMemberPickerModal({
                 onPress={() => onSelect(member)}>
                 <View style={styles.rowBody}>
                   <Text style={styles.rowTitle}>{member.fullName}</Text>
-                  <Text style={styles.rowSub}>
-                    {member.mobileNumber} ·{' '}
-                    {t(membershipRoleLabelKey(member.role, permissions.spaceType))}
-                  </Text>
+                  <View style={styles.rowSubLine}>
+                    <ContactNumberLine value={member.mobileNumber} textStyle={styles.rowSub} />
+                    <Text style={styles.rowSub}>
+                      {` · ${t(membershipRoleLabelKey(member.role, permissions.spaceType))}`}
+                    </Text>
+                  </View>
                 </View>
                 <ChevronRight size={18} color={colors.muted} strokeWidth={2.4} />
               </Pressable>
@@ -202,6 +205,11 @@ const styles = StyleSheet.create({
   },
   rowTitle: {
     ...typography.bodyStrong,
+  },
+  rowSubLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
   },
   rowSub: {
     ...typography.caption,

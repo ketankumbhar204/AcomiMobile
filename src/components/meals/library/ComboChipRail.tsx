@@ -17,6 +17,7 @@ type ComboChipRailProps = {
   hideTitle?: boolean;
   onAddCombo?: () => void;
   onEditCombo?: (combo: MealComboResponse) => void;
+  onToggleCombo?: (combo: MealComboResponse) => void;
   onRemoveCombo?: (combo: MealComboResponse) => void;
   spaceId?: string;
   canEditPhoto?: boolean;
@@ -31,6 +32,7 @@ export function ComboChipRail({
   hideTitle = false,
   onAddCombo,
   onEditCombo,
+  onToggleCombo,
   onRemoveCombo,
   spaceId,
   canEditPhoto = false,
@@ -53,6 +55,16 @@ export function ComboChipRail({
       buttons.push({
         text: t('meals.library.editCombo'),
         onPress: () => onEditCombo(combo),
+      });
+    }
+
+    if (onToggleCombo) {
+      buttons.push({
+        text:
+          combo.enabledForSpace === false
+            ? t('meals.library.showComboInSpace', { defaultValue: 'Show in this space' })
+            : t('meals.library.hideComboInSpace', { defaultValue: 'Hide in this space' }),
+        onPress: () => onToggleCombo(combo),
       });
     }
 
@@ -95,7 +107,11 @@ export function ComboChipRail({
             {activeCombos.map(combo => (
             <MenuChip
               key={combo.comboId}
-              label={formatComboNameWithPrice(combo.name, combo.price, combo.currencyCode)}
+              label={`${formatComboNameWithPrice(combo.name, combo.price, combo.currencyCode)}${
+                combo.enabledForSpace === false
+                  ? ` · ${t('meals.library.comboHiddenInSpace', { defaultValue: 'Hidden in this space' })}`
+                  : ''
+              }`}
               variant="combo"
               selected={selectedComboId === combo.comboId}
               foodType={combo.foodType ?? 'VEG'}

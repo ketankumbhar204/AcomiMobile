@@ -9,10 +9,10 @@ describe('locationPickerFrame', () => {
       keyboardHeight: 0,
     });
 
-    expect(frame.marginTop).toBe(78);
-    expect(frame.maxHeight).toBe(688);
+    expect(frame.marginTop).toBe(366);
+    expect(frame.maxHeight).toBe(400);
     expect(frame.marginTop + frame.maxHeight + 34).toBe(800);
-    expect(frame.maxHeight).toBeGreaterThan(800 * 0.7);
+    expect(frame.maxHeight).toBeLessThanOrEqual(800 * 0.5);
   });
 
   it('shrinks to stay above the keyboard', () => {
@@ -46,7 +46,8 @@ describe('locationPickerFrame', () => {
       keyboardHeight: 0,
     });
 
+    expect(frame.marginTop).toBe(200);
+    expect(frame.maxHeight).toBe(300);
     expect(frame.marginTop + frame.maxHeight).toBeLessThanOrEqual(500);
-    expect(frame.maxHeight).toBeGreaterThan(0);
   });
 });

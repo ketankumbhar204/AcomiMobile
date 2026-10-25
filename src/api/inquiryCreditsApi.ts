@@ -125,6 +125,17 @@ export function inquiryMethodAvailability(quota: InquiryQuota | null | undefined
   };
 }
 
+/** What the listing screen should do before showing the contact chooser. */
+export function directContactDecision(
+  quota: InquiryQuota | null | undefined,
+): 'reveal' | 'exhausted' | 'disabled' {
+  const limit = quota?.viewHereDailyLimit ?? 0;
+  const remaining = quota?.viewHereRemainingToday ?? 0;
+  if (limit > 0 && remaining > 0) return 'reveal';
+  if (limit > 0) return 'exhausted';
+  return 'disabled';
+}
+
 export type InquiryCreditPurchaseStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
 export interface SubmitInquiryCreditPurchaseRequest {

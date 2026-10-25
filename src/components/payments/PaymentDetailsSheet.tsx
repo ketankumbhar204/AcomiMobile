@@ -13,6 +13,7 @@ import { PaymentRecordDetails } from './PaymentRecordDetails';
 
 type PaymentDetailsSheetProps = {
   payment: SpacePaymentResponse | null;
+  spaceId?: string | null;
   spaceName?: string | null;
   receivedLoading?: boolean;
   reminderLoading?: boolean;
@@ -20,10 +21,17 @@ type PaymentDetailsSheetProps = {
   onReceived: (payment: SpacePaymentResponse) => void;
   onReminder: (payment: SpacePaymentResponse) => void;
   onOpenFull?: (payment: SpacePaymentResponse) => void;
+  /** Owner/manager only. Tenants never see Received or Send reminder. */
+  showOwnerActions?: boolean;
+  /** Shown instead of Received / Send reminder while the payment is under review. */
+  reviewActions?: React.ReactNode;
+  /** Member-only proof actions. Owners and managers do not receive this. */
+  memberProofActions?: React.ReactNode;
 };
 
 export function PaymentDetailsSheet({
   payment,
+  spaceId,
   spaceName,
   receivedLoading = false,
   reminderLoading = false,
@@ -31,11 +39,14 @@ export function PaymentDetailsSheet({
   onReceived,
   onReminder,
   onOpenFull,
+  showOwnerActions = false,
+  reviewActions,
+  memberProofActions,
 }: PaymentDetailsSheetProps) {
   const { t } = useTranslation();
   const visible = payment != null;
   const showReceived = payment != null && canOwnerMarkPaymentReceived(payment.paymentStatus);
-  const showReminder = payment != null && canOwnerSendPaymentReminder(payment.reminderEligible);
+  const showReminder = payment != null && canOwnerSendPaymentReminder(payment);
 
   return (
     <Modal
@@ -65,15 +76,18 @@ export function PaymentDetailsSheet({
               contentContainerStyle={styles.content}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}>
-              <PaymentRecordDetails payment={payment} spaceName={spaceName} />
-              <OwnerPaymentCardActions
-                showReceived={showReceived}
-                showReminder={showReminder}
-                receivedLoading={receivedLoading}
-                reminderLoading={reminderLoading}
-                onReceived={() => onReceived(payment)}
-                onReminder={() => onReminder(payment)}
-              />
+              <PaymentRecordDetails payment={payment} spaceId={spaceId} spaceName={spaceName} />
+              {reviewActions ??
+                (showOwnerActions ? (
+                  <OwnerPaymentCardActions
+                    showReceived={showReceived}
+                    showReminder={showReminder}
+                    receivedLoading={receivedLoading}
+                    reminderLoading={reminderLoading}
+                    onReceived={() => onReceived(payment)}
+                    onReminder={() => onReminder(payment)}
+                  />
+                ) : null)}
               {onOpenFull ? (
                 <Pressable
                   onPress={() => onOpenFull(payment)}
@@ -86,6 +100,9 @@ export function PaymentDetailsSheet({
               ) : null}
             </ScrollView>
           ) : null}
+          {payment && memberProofActions ? (
+            <View style={styles.memberActions}>{memberProofActions}</View>
+          ) : null}
         </View>
       </View>
     </Modal>
@@ -96,7 +113,7 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    backgroundColor: colors.overlayScrim,
   },
   backdrop: {
     flex: 1,
@@ -107,7 +124,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius.card,
     borderTopRightRadius: radius.card,
     paddingBottom: spacing.lg,
-    ...shadows.md,
+    ...shadows.raised,
   },
   handle: {
     alignSelf: 'center',
@@ -144,5 +161,10 @@ const styles = StyleSheet.create({
     ...typography.bodyStrong,
     color: colors.primaryDark,
     fontSize: 14,
+  },
+  memberActions: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    gap: spacing.sm,
   },
 });

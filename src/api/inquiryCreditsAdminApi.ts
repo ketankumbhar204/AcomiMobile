@@ -24,6 +24,8 @@ export type UpdateInquiryPaymentConfigRequest = {
   upiId?: string | null;
   whatsappNumber?: string | null;
   qrFileId?: string | null;
+  /** True only when the admin explicitly removed the saved QR. Null leaves it unchanged. */
+  clearQr?: boolean;
   instructions?: string | null;
   webFreeDailyLimit?: number;
   viewHereDailyLimit?: number;

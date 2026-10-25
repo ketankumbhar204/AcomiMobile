@@ -22,6 +22,7 @@ import type { MainStackParamList } from '../../navigation/types';
 import { useMemberStore } from '../../store/memberStore';
 import { useToastStore } from '../../store/toastStore';
 import { colors, shadows, spacing, typography } from '../../theme';
+import { formatMemberContactNumber } from '../../utils/indianMobile';
 import { memberAcomiBadgeLabel, memberInviteHint } from '../../utils/memberAppStatus';
 import { isSelectableMemberGender, memberGenderLabelKey } from '../../utils/memberGender';
 import { MemberDocumentsSection } from './MemberDocumentsSection';
@@ -231,7 +232,7 @@ export function MemberProfileTab({
           >
             <MemberDetailRow
               label={t('membership.details.mobile')}
-              value={member.mobileNumber}
+              value={formatMemberContactNumber(member.mobileNumber) ?? member.mobileNumber}
             />
             <MemberDetailRow label={t('membership.details.gender')} value={genderLabel} isLast />
           </ProfileDisclosure>
@@ -246,7 +247,10 @@ export function MemberProfileTab({
             />
             <MemberDetailRow
               label={t('membership.emergency.mobile')}
-              value={member.emergencyContactMobile ?? t('membership.details.notProvided')}
+              value={
+                formatMemberContactNumber(member.emergencyContactMobile) ??
+                t('membership.details.notProvided')
+              }
               isLast
             />
           </ProfileDisclosure>
@@ -463,7 +467,7 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'center',
     padding: spacing.xl,
   },
@@ -471,7 +475,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: 18,
     padding: spacing.xl,
-    ...shadows.md,
+    ...shadows.raised,
   },
   modalTitle: {
     ...typography.h2,

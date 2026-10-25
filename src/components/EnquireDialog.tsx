@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -56,6 +56,7 @@ export function EnquireDialog({
   const defaultEmail = useMemo(() => accountEmail(user), [user]);
   const [step, setStep] = useState<Step>('choose');
   const [quota, setQuota] = useState<InquiryQuota | null>(null);
+  const [quotaSettled, setQuotaSettled] = useState(false);
   const [pendingIntent, setPendingIntent] = useState<'app' | 'email' | 'view' | null>(null);
   const [revealed, setRevealed] = useState<OwnerContactResponse | null>(null);
   const [email, setEmail] = useState(defaultEmail);
@@ -65,6 +66,8 @@ export function EnquireDialog({
   const submittingRef = useRef(false);
   const autoKeyRef = useRef<string | null>(null);
   const openedRef = useRef<string | null>(null);
+  const directViewRef = useRef(false);
+  const quotaGenRef = useRef(0);
 
   async function submit(options?: {
     emailOverride?: string;
@@ -157,8 +160,10 @@ export function EnquireDialog({
       setSubmitted(null);
       setRevealed(null);
       setQuota(null);
+      setQuotaSettled(false);
       setPendingIntent(null);
       autoKeyRef.current = null;
+      directViewRef.current = false;
       return;
     }
     const key = `${spaceId}:${ownedByCurrentUser ? 'own' : 'choose'}`;
@@ -170,8 +175,39 @@ export function EnquireDialog({
     }
     setStep('choose');
     setEmail(defaultEmail);
-    inquiryCreditsApi.getQuota().then(setQuota).catch(() => setQuota(null));
+    directViewRef.current = false;
+    setQuotaSettled(false);
+    const gen = ++quotaGenRef.current;
+    inquiryCreditsApi
+      .getQuota()
+      .then(next => {
+        if (gen === quotaGenRef.current) setQuota(next);
+      })
+      .catch(() => {
+        if (gen === quotaGenRef.current) setQuota(null);
+      })
+      .finally(() => {
+        if (gen === quotaGenRef.current) setQuotaSettled(true);
+      });
   }, [open, ownedByCurrentUser, spaceId, defaultEmail]);
+
+  const canViewHereNow = inquiryMethodAvailability(quota).showViewHere;
+
+  useLayoutEffect(() => {
+    if (
+      !open ||
+      ownedByCurrentUser ||
+      step !== 'choose' ||
+      !quotaSettled ||
+      !canViewHereNow ||
+      directViewRef.current
+    ) {
+      return;
+    }
+    directViewRef.current = true;
+    setPendingIntent('view');
+    void submit({ deliveryChannel: 'VIEW_HERE' });
+  }, [open, ownedByCurrentUser, step, quotaSettled, canViewHereNow]);
 
   function close() {
     if (submittingRef.current) return;
@@ -198,7 +234,11 @@ export function EnquireDialog({
       <View style={styles.backdrop}>
         <Pressable style={styles.backdropTap} onPress={close} disabled={submitting} />
         <View style={styles.card}>
-          {step === 'choose' ? (
+          {step === 'choose' && !ownedByCurrentUser && !quotaSettled ? (
+            <View style={styles.loading}>
+              <ActivityIndicator color={colors.primary} />
+            </View>
+          ) : step === 'choose' ? (
             <ChooseMethods
               quota={quota}
               disabled={submitting}
@@ -522,7 +562,7 @@ function ChooseMethods({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(15,23,42,0.45)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'center',
     padding: spacing.md,
   },
@@ -531,7 +571,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.card,
     padding: spacing.lg,
-    ...shadows.md,
+    ...shadows.raised,
+  },
+  loading: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xl,
   },
   center: { alignItems: 'center' },
   icon: {

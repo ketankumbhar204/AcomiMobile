@@ -46,7 +46,7 @@ import { colors, radius, spacing, typography } from '../../theme';
 type Nav = NativeStackNavigationProp<AdminStackParamList, 'AdminCreateTestUser'>;
 
 const SPACE_ROLES: MembershipRole[] = ['OWNER', 'MANAGER', 'TENANT', 'CUSTOMER', 'STAFF'];
-const SPACE_TYPES: SpaceType[] = ['PG', 'MESS', 'HOSTEL', 'CO_LIVING', 'RENTAL'];
+const SPACE_TYPES: SpaceType[] = ['PG', 'MESS', 'HOSTEL', 'CO_LIVING', 'RENTAL', 'CORPORATE_STAY'];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function errorMessage(err: unknown, fallback: string): string {

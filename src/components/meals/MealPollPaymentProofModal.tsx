@@ -11,7 +11,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Camera } from 'lucide-react-native';
 import { Button } from '../ui/Button';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { pickPaymentProofImage } from '../../utils/pickPaymentProofImage';
 import type { PickedPaymentProof } from '../../utils/pickPaymentProofImage';
 
@@ -119,11 +119,12 @@ export function MealPollPaymentProofModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'center',
     padding: spacing.lg,
   },
   sheet: {
+    ...shadows.raised,
     backgroundColor: colors.white,
     borderRadius: radius.card,
     padding: spacing.lg,

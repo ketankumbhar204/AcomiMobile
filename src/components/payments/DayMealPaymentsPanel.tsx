@@ -57,27 +57,53 @@ export function DayMealPaymentsPanel({
   } = useDayMealPaymentsMonth(spaceId, memberId, true);
 
   const [section, setSection] = useState<DayMealPaymentsSection>('actionNeeded');
+  const [summaryFilter, setSummaryFilter] = useState<'all' | 'collected' | 'pending'>('all');
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
 
   useEffect(() => {
     setSelectedDates([]);
+    setSummaryFilter('all');
   }, [month]);
 
   useEffect(() => {
-    if (loading && items.length === 0) {
+    if (summaryFilter !== 'all' || (loading && items.length === 0)) {
       return;
     }
     setSection(prev => resolvePreferredDayMealPaymentsSection(items, prev));
-  }, [items, loading, month]);
+  }, [items, loading, month, summaryFilter]);
 
   const onRefresh = useCallback(async () => {
     invalidateDayMealPaymentsMonth(spaceId, memberId, month);
     await reload();
   }, [memberId, month, reload, spaceId]);
 
-  const visibleItems = useMemo(
-    () => filterDayMealPaymentsInSection(items, section),
-    [items, section],
+  const visibleItems = useMemo(() => {
+    if (summaryFilter === 'collected') {
+      return items.filter(item => item.displayStatus === 'PAID');
+    }
+    if (summaryFilter === 'pending') {
+      return items.filter(
+        item =>
+          item.displayStatus === 'PENDING' ||
+          item.displayStatus === 'OVERDUE' ||
+          item.displayStatus === 'REJECTED',
+      );
+    }
+    return filterDayMealPaymentsInSection(items, section);
+  }, [items, section, summaryFilter]);
+
+  const selectSummaryFilter = useCallback(
+    (next: 'all' | 'collected' | 'pending') => {
+      const resolved = summaryFilter === next && next !== 'all' ? 'all' : next;
+      setSummaryFilter(resolved);
+      setSelectedDates([]);
+      if (resolved === 'collected') {
+        setSection('history');
+      } else if (resolved === 'pending') {
+        setSection('actionNeeded');
+      }
+    },
+    [summaryFilter],
   );
 
   const selectionMode = section === 'actionNeeded';
@@ -111,23 +137,31 @@ export function DayMealPaymentsPanel({
       {
         label: t('paymentCollection.dayMeals.summary.total'),
         value: formatSummaryMoney(summary.totalAmount),
+        selected: summaryFilter === 'all',
+        onPress: () => selectSummaryFilter('all'),
       },
       {
         label: t('paymentCollection.dayMeals.summary.collected'),
         value: formatSummaryMoney(summary.collectedAmount),
         tone: 'success',
+        selected: summaryFilter === 'collected',
+        onPress: () => selectSummaryFilter('collected'),
       },
       {
         label: t('paymentCollection.dayMeals.summary.pending'),
         value: formatSummaryMoney(summary.pendingAmount),
         tone: 'pending',
+        selected: summaryFilter === 'pending',
+        onPress: () => selectSummaryFilter('pending'),
       },
       {
         label: t('paymentCollection.dayMeals.summary.payments'),
         value: String(summary.pendingCount),
+        selected: summaryFilter === 'pending',
+        onPress: () => selectSummaryFilter('pending'),
       },
     ];
-  }, [formatSummaryMoney, summary.pendingCount, summary.collectedAmount, summary.pendingAmount, summary.totalAmount, t]);
+  }, [formatSummaryMoney, selectSummaryFilter, summary.pendingCount, summary.collectedAmount, summary.pendingAmount, summary.totalAmount, summaryFilter, t]);
 
   const sectionTabs = useMemo(
     () => [
@@ -220,6 +254,7 @@ export function DayMealPaymentsPanel({
           sections={sectionTabs}
           activeSection={section}
           onSectionChange={id => {
+            setSummaryFilter('all');
             setSection(id as DayMealPaymentsSection);
             setSelectedDates([]);
           }}

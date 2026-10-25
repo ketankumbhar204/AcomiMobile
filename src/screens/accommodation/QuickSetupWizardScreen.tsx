@@ -140,7 +140,7 @@ export function QuickSetupWizardScreen() {
   }, [spaceType]);
 
   const bedsPerRoomCount = Number(bedsPerRoom) || 1;
-  const isRental = spaceType === 'RENTAL';
+  const isRental = spaceType === 'RENTAL' || spaceType === 'CORPORATE_STAY';
   const expandConfig = useMemo(
     () => ({
       roomsPerParent: isRental ? 0 : Number(roomsPerParent) || 1,
@@ -385,7 +385,7 @@ export function QuickSetupWizardScreen() {
       if (!validateStructureStep()) {
         return;
       }
-      if (spaceType === 'RENTAL') {
+      if (spaceType === 'RENTAL' || spaceType === 'CORPORATE_STAY') {
         await loadPreview();
         return;
       }
@@ -627,7 +627,8 @@ export function QuickSetupWizardScreen() {
             </View>
           ) : null}
 
-          {currentStep === 'structure' && (spaceType === 'CO_LIVING' || spaceType === 'RENTAL') ? (
+          {currentStep === 'structure' &&
+          (spaceType === 'CO_LIVING' || spaceType === 'RENTAL' || spaceType === 'CORPORATE_STAY') ? (
             <View style={styles.formCard}>
               <Text style={styles.sectionTitle}>{t('accommodation.setup.unitsStep')}</Text>
               <FormInput

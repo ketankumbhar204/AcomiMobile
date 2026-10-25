@@ -15,7 +15,7 @@ import {
 } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Check, X } from 'lucide-react-native';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import {
   androidModalNavigationInset,
   androidModalStatusBarInset,
@@ -190,16 +190,12 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colors.overlayScrim,
   },
   panel: {
+    ...shadows.raised,
     alignSelf: 'stretch',
     backgroundColor: colors.white,
-    shadowColor: '#000',
-    shadowOffset: { width: -2, height: 0 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 24,
   },
   header: {
     flexDirection: 'row',

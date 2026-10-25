@@ -322,7 +322,7 @@ export function sheetNeedsPricingConfirm(
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'flex-end',
     padding: spacing.md,
   },
@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxHeight: '88%',
     zIndex: 1,
-    ...shadows.md,
+    ...shadows.raised,
   },
   header: {
     flexDirection: 'row',

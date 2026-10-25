@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react-native';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { formatComboNameWithPrice } from '../../utils/comboPrice';
 
 type ComboItemsPopupProps = {
@@ -87,7 +87,7 @@ export function ComboItemsPopup({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'center',
     padding: spacing.lg,
   },
@@ -95,6 +95,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   sheet: {
+    ...shadows.raised,
     backgroundColor: colors.white,
     borderRadius: radius.card,
     padding: spacing.lg,

@@ -23,6 +23,8 @@ export function adminParentRoute(
       return 'AdminRegisteredUsers';
     case 'AdminInquiryCreditRequests':
       return 'AdminInquiryCreditsConfig';
+    case 'AdminNotificationTesting':
+      return 'AdminDashboard';
     case 'AdminActiveSpaceDetail':
       return 'AdminDashboard';
     default:

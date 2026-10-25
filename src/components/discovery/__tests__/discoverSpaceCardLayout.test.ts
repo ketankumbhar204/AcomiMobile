@@ -15,7 +15,7 @@ describe('discover listing card layout', () => {
     expect(card).toContain("surface={isMess ? 'meals' : 'places'}");
     expect(card).toContain('showRepresentativeLabel={false}');
     expect(card).toContain('onPress={onPress}');
-    expect(card).toContain('onPress={onEnquire}');
+    expect(card).toContain("onViewSection('contact')");
     expect(card).toContain('contactViewed');
     expect(card).not.toContain('testBadge');
     expect(card).not.toContain('width: 118');

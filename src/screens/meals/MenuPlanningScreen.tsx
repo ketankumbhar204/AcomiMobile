@@ -62,11 +62,14 @@ import {
   summarizeDailyMenuDay,
 } from '../../utils/dailyMenuDayStatus';
 import { clearDayShareFailed, isDayShareFailed } from '../../utils/dayShareFailure';
+import { resolveMealStatusKind } from '../../utils/mealStatusTheme';
 import { findMySpaceEntry } from '../../utils/spacePermissions';
 
 type MenuPlanningScreenProps = {
   spaceId: UUID;
   initialDate?: string;
+  /** Bumps when the dashboard asks to open this date again. */
+  menuDateRequest?: number;
   initialMealType?: MealType;
 };
 
@@ -80,6 +83,7 @@ function menusByType(menus: DailyMenuResponse[]): Partial<Record<MealType, Daily
 export function MenuPlanningScreen({
   spaceId,
   initialDate,
+  menuDateRequest,
   initialMealType,
 }: MenuPlanningScreenProps) {
   const { t, i18n } = useTranslation();
@@ -98,6 +102,12 @@ export function MenuPlanningScreen({
   }, [currentSpace?.spaceId, currentSpace?.spaceName, mySpaces, spaceId]);
 
   const [menuDate, setMenuDate] = useState(initialDate ?? todayIsoDate());
+
+  useEffect(() => {
+    if (initialDate) {
+      setMenuDate(initialDate);
+    }
+  }, [initialDate, menuDateRequest]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [menus, setMenus] = useState<DailyMenuResponse[]>([]);
@@ -294,15 +304,20 @@ export function MenuPlanningScreen({
     ],
   );
 
-  /** Meal strip only; detail card removed ? tap opens DailyMenuEdit. */
+  /** Shared meals open the response list. Unshared meals still open the planner. */
   const selectMealType = useCallback(
     (mealType: MealType) => {
       setSelectedMealType(mealType);
-      if (permissions.canManageMeals) {
-        openPlanner(mealType);
+      if (!permissions.canManageMeals) {
+        return;
       }
+      if (resolveMealStatusKind(menuMap[mealType]) === 'shared') {
+        navigateMain('MealResponseMembers', { spaceId, menuDate, mealType });
+        return;
+      }
+      openPlanner(mealType);
     },
-    [openPlanner, permissions.canManageMeals],
+    [menuDate, menuMap, navigateMain, openPlanner, permissions.canManageMeals, spaceId],
   );
   const relativeKind = relativeMenuDateKind(menuDate);
   const renderHeaderTitle = useCallback(
@@ -456,6 +471,8 @@ export function MenuPlanningScreen({
               menuMap={menuMap}
               statusSummary={statusSummary}
               selectedMealType={selectedMealType}
+              polls={polls}
+              eligibility={eligibility}
               onSelectMealType={selectMealType}
               onShareDay={
                 permissions.canManageMeals &&

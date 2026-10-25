@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { SpacePaymentResponse } from '../../api/types';
 import { colors, shadows, spacing, typography } from '../../theme';
+import { displayPaymentStatus, showsPaymentOverdueCue } from '../../utils/paymentStatus';
 import { formatBillingPeriod } from '../../utils/paymentProofPolicy';
 import { formatPaymentDueDate } from '../../utils/paymentHistory';
 import { formatPaymentAmount } from '../../utils/paymentAmount';
@@ -12,6 +13,8 @@ import {
   type MealSelectionSummaryModel,
 } from '../../utils/mealSelectionSummary';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
+import { usePaymentStayTrail } from '../../hooks/usePaymentStayTrail';
+import { ContactNumberLine, StayTrailLine } from '../member/ContactAndStayMeta';
 import { PaymentReferenceLabel } from './PaymentReferenceLabel';
 import { PaymentStatusBadge } from './PaymentStatusBadge';
 import { PaymentStatusCardFrame } from './PaymentStatusCardFrame';
@@ -36,6 +39,7 @@ export function UniversalPaymentCard({
   ownerActions,
 }: UniversalPaymentCardProps) {
   const { t, i18n } = useTranslation();
+  const stayLabel = usePaymentStayTrail(payment.spaceId, payment);
   const needsUpdate = payment.paymentStatus === 'UPDATE_REQUESTED';
   const canUpdate =
     payment.paymentStatus === 'PENDING' ||
@@ -72,7 +76,7 @@ export function UniversalPaymentCard({
   const nameForAvatar = (showMember ? payment.memberName : displayTitle).trim();
   const initial = nameForAvatar.charAt(0).toUpperCase() || '?';
   const avatar = avatarTint(nameForAvatar);
-  const overdueLabel = payment.isOverdue
+  const overdueLabel = showsPaymentOverdueCue(payment)
     ? t('paymentCollection.overdue.compact', { count: payment.daysOverdue ?? 0 })
     : null;
   const amountLabel = formatPaymentAmount(payment.amount, payment.currencyCode);
@@ -89,20 +93,14 @@ export function UniversalPaymentCard({
               {showMember ? payment.memberName : heading}
             </Text>
             <PaymentStatusBadge
-              status={payment.isOverdue ? 'OVERDUE' : payment.paymentStatus}
+              status={displayPaymentStatus(payment)}
               style={styles.statusBadge}
             />
           </View>
-          {showMember && payment.memberMobile ? (
-            <Text style={styles.meta} numberOfLines={1}>
-              {payment.memberMobile}
-            </Text>
+          {showMember ? (
+            <ContactNumberLine value={payment.memberMobile} textStyle={styles.meta} />
           ) : null}
-          {payment.targetLabel ? (
-            <Text style={styles.meta} numberOfLines={2}>
-              {payment.targetLabel}
-            </Text>
-          ) : null}
+          <StayTrailLine label={stayLabel} textStyle={styles.meta} />
         </View>
       </View>
 

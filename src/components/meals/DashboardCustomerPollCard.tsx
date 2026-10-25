@@ -386,6 +386,7 @@ export function DashboardCustomerPollCard({
             <MealSelectionSummary
               model={selectionSummary}
               variant="compact"
+              showPrices={showMealPrices}
               showTotals={selectionSummary.totalPlates > 0 && showMealPrices}
             />
           ) : null}

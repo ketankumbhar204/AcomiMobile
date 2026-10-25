@@ -28,6 +28,8 @@ export const colors = {
   /** Card / elevated card background */
   surface: '#FFFFFF',
   white: '#FFFFFF',
+  /** Dims the screen behind a drawer or popup. Same scrim as the received-enquiry sheet. */
+  overlayScrim: 'rgba(11, 28, 22, 0.45)',
   /** Hover surface */
   hover: '#F0FAF4',
   /** Selected surface */

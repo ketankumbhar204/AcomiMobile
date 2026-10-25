@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/Button';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import {
   addDaysIsoDate,
   addMonthsToMonthKey,
@@ -151,11 +151,12 @@ export function MenuDatePickerModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'center',
     padding: spacing.lg,
   },
   sheet: {
+    ...shadows.raised,
     backgroundColor: colors.white,
     borderRadius: radius.button,
     padding: spacing.lg,

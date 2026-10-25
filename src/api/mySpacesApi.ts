@@ -12,6 +12,15 @@ import { devLog } from '../utils/devLog';
 
 const LOG_TAG = '[MySpacesApi]';
 
+/** Jackson can emit boolean isDefault as "default". Keep the client field stable. */
+function withDefaultFlag(space: MySpaceResponse): MySpaceResponse {
+  const raw = space as MySpaceResponse & { default?: boolean };
+  return {
+    ...space,
+    isDefault: Boolean(raw.isDefault || raw.default),
+  };
+}
+
 export const mySpacesApi = {
   getMySpaces: async (): Promise<MySpaceResponse[]> => {
     devLog(`${LOG_TAG} GET /spaces/my`);
@@ -21,7 +30,7 @@ export const mySpacesApi = {
     );
 
     devLog(`${LOG_TAG} getMySpaces response`, response.length);
-    return response;
+    return response.map(withDefaultFlag);
   },
 
   searchMySpaces: async (query: string): Promise<MySpaceResponse[]> => {
@@ -35,7 +44,7 @@ export const mySpacesApi = {
     );
 
     devLog(`${LOG_TAG} searchMySpaces response`, response.length);
-    return response;
+    return response.map(withDefaultFlag);
   },
 
   getDefaultSpace: async (): Promise<DefaultSpaceResponse | null> => {
@@ -71,4 +80,56 @@ export const mySpacesApi = {
     devLog(`${LOG_TAG} setDefaultSpace response`, response.spaceId);
     return response;
   },
+
+  listMyListings: async (params?: {
+    status?: 'LIVE' | 'PENDING';
+    kind?: 'PROPERTY' | 'MESS';
+    search?: string;
+  }): Promise<MeListing[]> => {
+    devLog(`${LOG_TAG} GET /me/listings`, params);
+    const response = await unwrapApiResponse(
+      apiClient.get<ApiResponse<MeListing[]>>('/me/listings', { params }),
+    );
+    return Array.isArray(response) ? response : [];
+  },
+
+  updatePropertyLead: async (registrationId: string, body: OwnedLeadUpdate): Promise<MeListing> => {
+    return unwrapApiResponse(
+      apiClient.put<ApiResponse<MeListing>>(
+        `/me/listings/property-registrations/${registrationId}`,
+        body,
+      ),
+    );
+  },
+
+  updateMessLead: async (registrationId: string, body: OwnedLeadUpdate): Promise<MeListing> => {
+    return unwrapApiResponse(
+      apiClient.put<ApiResponse<MeListing>>(
+        `/me/listings/mess-registrations/${registrationId}`,
+        body,
+      ),
+    );
+  },
+};
+
+export type MeListing = {
+  spaceId?: string | null;
+  registrationId?: string | null;
+  kind: 'PROPERTY' | 'MESS';
+  spaceType?: string | null;
+  name: string;
+  address?: string | null;
+  publication: 'LIVE' | 'PENDING';
+  registrationReference?: string | null;
+  registrationStatus?: string | null;
+  operationalManagementAvailable?: boolean;
+  accommodationPath?: string | null;
+  mealsPath?: string | null;
+  publicPath?: string | null;
+};
+
+export type OwnedLeadUpdate = {
+  propertyName?: string;
+  messName?: string;
+  addressLine?: string;
 };

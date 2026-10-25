@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { MemberPaymentLedgerRow, PrepaidBalanceUnit } from '../../api/types';
 import { colors, radius, spacing, typography } from '../../theme';
-import { formatComboPrice } from '../../utils/comboPrice';
+import { formatPaymentAmount } from '../../utils/paymentAmount';
 import { PaymentStatusBadge } from './PaymentStatusBadge';
 
 type MemberPaymentRowProps = {
@@ -35,7 +35,7 @@ function formatBalanceValue(
   if (unit === 'MEALS') {
     return t('dashboard.financial.mealsCount', { count: Math.round(amount) });
   }
-  return formatComboPrice(amount, currencyCode) ?? '—';
+  return formatPaymentAmount(amount, currencyCode) ?? '—';
 }
 
 function MemberAvatar({ name }: { name: string }) {
@@ -79,7 +79,7 @@ export function MemberPaymentRow({
         </View>
         <View style={styles.trailing}>
           <Text style={styles.purchased}>
-            {formatComboPrice(row.collected, currencyCode) ?? '—'}
+            {formatPaymentAmount(row.collected, currencyCode) ?? '—'}
           </Text>
           <Text style={styles.purchasedLabel}>{t('payments.row.collectedThisMonth')}</Text>
         </View>
@@ -87,10 +87,10 @@ export function MemberPaymentRow({
     );
   }
 
-  const pendingDisplay = formatComboPrice(row.pending, currencyCode) ?? '—';
-  const underReviewDisplay = formatComboPrice(row.underReview, currencyCode);
-  const collectedDisplay = formatComboPrice(row.collected, currencyCode);
-  const expectedDisplay = formatComboPrice(row.expectedCharges, currencyCode) ?? '—';
+  const pendingDisplay = formatPaymentAmount(row.pending, currencyCode) ?? '—';
+  const underReviewDisplay = formatPaymentAmount(row.underReview, currencyCode);
+  const collectedDisplay = formatPaymentAmount(row.collected, currencyCode);
+  const expectedDisplay = formatPaymentAmount(row.expectedCharges, currencyCode) ?? '—';
   const hasPending = (row.pending ?? 0) > 0;
   const hasUnderReview =
     row.status === 'UNDER_REVIEW' || ((row.underReview ?? 0) > 0 && !hasPending);

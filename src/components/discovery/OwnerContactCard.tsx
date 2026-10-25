@@ -4,6 +4,8 @@ import { Mail, MapPin, Phone } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import type { OwnerContactResponse } from '../../api/types';
 import { colors, radius, spacing, typography } from '../../theme';
+import { formatMemberContactNumber } from '../../utils/indianMobile';
+import { openableMapsUrl } from '../../utils/mapsLink';
 
 type OwnerContactCardProps = {
   contact: OwnerContactResponse | null | undefined;
@@ -21,7 +23,7 @@ export function OwnerContactCard({ contact, mapUrl }: OwnerContactCardProps) {
     .filter(value => value.length > 0);
   const email = contact?.email?.trim() ?? '';
   const name = contact?.ownerName?.trim() ?? '';
-  const mapHref = mapUrl?.trim() ?? '';
+  const mapHref = openableMapsUrl(mapUrl);
   const hasDetails = phones.length > 0 || email.length > 0 || name.length > 0 || mapHref.length > 0;
 
   return (
@@ -40,7 +42,8 @@ export function OwnerContactCard({ contact, mapUrl }: OwnerContactCardProps) {
             </View>
           ) : null}
           {phones.map(phone => {
-            const digits = dialable(phone);
+            const shown = formatMemberContactNumber(phone) ?? phone;
+            const digits = dialable(shown);
             return (
               <View key={phone} style={styles.actions}>
                 <Pressable
@@ -50,7 +53,7 @@ export function OwnerContactCard({ contact, mapUrl }: OwnerContactCardProps) {
                   }}
                   style={styles.row}>
                   <Phone size={16} color="#0369A1" />
-                  <Text style={styles.value}>{phone}</Text>
+                  <Text style={styles.value}>{shown}</Text>
                 </Pressable>
                 {digits.replace(/\D/g, '').length >= 10 ? (
                   <Pressable

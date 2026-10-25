@@ -74,8 +74,7 @@ type SummaryCardProps = {
 };
 
 /**
- * Mock layout — one horizontal row:
- * [icon] | label + amount (stacked) | >
+ * Horizontal summary card: icon, large amount, label, chevron.
  */
 const SummaryCard = memo(function SummaryCard({
   label,
@@ -103,16 +102,17 @@ const SummaryCard = memo(function SummaryCard({
       <View style={[styles.iconWrap, { backgroundColor: theme.iconBg }]}>
         <Icon size={16} color={theme.accent} strokeWidth={2.2} />
       </View>
+      <View style={styles.divider} />
       <View style={styles.textStack}>
-        <Text style={[styles.label, { color: theme.accent }]} numberOfLines={1}>
-          {label}
-        </Text>
         <Text
-          style={styles.value}
+          style={[styles.value, { color: theme.accent }]}
           numberOfLines={1}
           adjustsFontSizeToFit
           minimumFontScale={0.65}>
           {value}
+        </Text>
+        <Text style={styles.label} numberOfLines={2}>
+          {label}
         </Text>
       </View>
       <ChevronRight size={16} color="#9CA3AF" strokeWidth={2.2} />
@@ -218,28 +218,33 @@ const styles = StyleSheet.create({
     opacity: 0.92,
   },
   iconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  divider: {
+    width: 1,
+    alignSelf: 'stretch',
+    marginVertical: 2,
+    backgroundColor: colors.border,
   },
   textStack: {
     flex: 1,
     minWidth: 0,
-    gap: 2,
   },
   label: {
-    ...typography.bodyStrong,
+    ...typography.caption,
     fontSize: 12,
-    lineHeight: 16,
-    fontWeight: '700',
+    lineHeight: 15,
+    fontWeight: '600',
+    color: colors.muted,
   },
   value: {
     ...typography.bodyStrong,
-    fontSize: 15,
-    lineHeight: 20,
+    fontSize: 20,
+    lineHeight: 24,
     fontWeight: '800',
-    color: colors.textPrimary,
   },
 });

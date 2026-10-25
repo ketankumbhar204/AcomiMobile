@@ -39,8 +39,11 @@ export function photoRequestActionLabel(hasPhotos: boolean): string {
   return hasPhotos ? 'Request more photos on WhatsApp' : 'Request photos on WhatsApp';
 }
 
-export function photoRequestTitle(hasPhotos: boolean): string {
-  return hasPhotos ? 'Request more photos' : 'Request photos';
+export function photoRequestTitle(kind: PhotoRequestKind, hasPhotos: boolean): string {
+  if (kind === 'mess') {
+    return hasPhotos ? 'Request more mess photos' : 'Request mess photos';
+  }
+  return hasPhotos ? 'Request more property photos' : 'Request property photos';
 }
 
 export function friendlySpaceType(type: string | null | undefined): string | null {
@@ -50,6 +53,7 @@ export function friendlySpaceType(type: string | null | undefined): string | nul
   if (key === 'HOSTEL') return 'Hostel';
   if (key === 'CO_LIVING' || key === 'COLIVING') return 'Co-living';
   if (key === 'RENTAL') return 'Rental';
+  if (key === 'CORPORATE_STAY') return 'Corporate Stay';
   return null;
 }
 
@@ -67,25 +71,13 @@ export function buildPhotoRequestMessage(input: {
   location?: string | null;
 }): string {
   const name = cleanPhrase(input.name);
-  const location = cleanPhrase(input.location);
+  const more = input.hasPhotos ? 'more ' : '';
   if (input.kind === 'mess') {
-    if (input.hasPhotos) {
-      const subject = name ? ` in ${name}` : '';
-      return `Hi, I am interested${subject}. Could you please share some more photos of your meals, food portions and menu? Thank you!`;
-    }
-    const named = name ? `, ${name}` : '';
-    return `Hi, I am interested in your mess service${named}. Could you please share some actual photos of your meals, food portions and menu? Thank you!`;
+    const subject = name || 'your mess';
+    return `Hi, I'm interested in ${subject}. Could you please share some ${more}recent photos of the menu, food, and service? Thank you.`;
   }
-
-  if (input.hasPhotos) {
-    const subject = name ? ` in ${name}` : '';
-    return `Hi, I am interested${subject}. Could you please share some more photos, especially of the room, bathroom and common areas? Thank you!`;
-  }
-
-  const spaceType = friendlySpaceType(input.spaceType) ?? 'place';
-  const where = location ? ` in ${location}` : '';
-  const named = name ? ` of ${name}` : '';
-  return `Hi, I am looking for a ${spaceType}${where}. Could you please share some actual photos${named}, including the room, bathroom and common areas? Thank you!`;
+  const subject = name || 'this property';
+  return `Hi, I'm interested in ${subject}. Could you please share some ${more}recent photos of the property and available rooms? Thank you.`;
 }
 
 /** Digits for wa.me. Indian locals become 91XXXXXXXXXX. Existing country codes are kept. */
@@ -119,4 +111,66 @@ export function whatsAppChatUrl(phone: string | null | undefined, message: strin
   const text = message.trim();
   if (!digits || !text) return null;
   return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
+}
+
+export type PhotoRequestHandoff = {
+  notificationPersisted: boolean;
+  notificationDuplicate: boolean;
+  fcmQueued: boolean;
+  phoneAvailable: boolean;
+  internationalPhone?: string | null;
+};
+
+export type PhotoRequestWhatsAppOutcome = 'opened' | 'unavailable' | 'failed';
+
+export type PhotoRequestConfirmResult = PhotoRequestHandoff & {
+  whatsApp: PhotoRequestWhatsAppOutcome;
+};
+
+export function isPhotoRequestNotification(item: {
+  notificationType?: string | null;
+  actionRoute?: string | null;
+}): boolean {
+  const type = (item.notificationType ?? '').toUpperCase();
+  return type === 'PHOTO_REQUEST_RECEIVED' || item.actionRoute === 'FindAPlaceDetail';
+}
+
+/**
+ * Saves the in-app photo request first, then tries to open WhatsApp.
+ * A failure in either step does not undo the other. Opening WhatsApp is not delivery.
+ */
+export async function confirmPhotoRequest(input: {
+  message: string;
+  request: () => Promise<PhotoRequestHandoff>;
+  openUrl: (url: string) => Promise<void>;
+}): Promise<PhotoRequestConfirmResult> {
+  const text = input.message.trim();
+  if (!text) {
+    return {
+      whatsApp: 'unavailable',
+      notificationPersisted: false,
+      notificationDuplicate: false,
+      fcmQueued: false,
+      phoneAvailable: false,
+      internationalPhone: null,
+    };
+  }
+  const handoff = await input.request();
+  const base: PhotoRequestHandoff = {
+    notificationPersisted: Boolean(handoff.notificationPersisted),
+    notificationDuplicate: Boolean(handoff.notificationDuplicate),
+    fcmQueued: Boolean(handoff.fcmQueued),
+    phoneAvailable: Boolean(handoff.phoneAvailable),
+    internationalPhone: handoff.internationalPhone ?? null,
+  };
+  const url = base.phoneAvailable ? whatsAppChatUrl(base.internationalPhone, text) : null;
+  if (!url) {
+    return { ...base, whatsApp: 'unavailable' };
+  }
+  try {
+    await input.openUrl(url);
+    return { ...base, whatsApp: 'opened' };
+  } catch {
+    return { ...base, whatsApp: 'failed' };
+  }
 }

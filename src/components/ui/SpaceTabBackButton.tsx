@@ -7,7 +7,11 @@ import {
 } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { resetToMySpaces } from '../../navigation/navigationRef';
-import { spaceDashboardHeaderDestination } from '../../navigation/spaceHeaderNav';
+import {
+  spaceDashboardHeaderDestination,
+  spaceTabHeaderBackAncestorIndex,
+  type SpaceTabBackAncestor,
+} from '../../navigation/spaceHeaderNav';
 import type { MainStackParamList } from '../../navigation/types';
 import { useTranslation } from 'react-i18next';
 import { colors, spacing } from '../../theme';
@@ -16,22 +20,35 @@ import { devLog } from '../../utils/devLog';
 
 type MainNav = NativeStackNavigationProp<MainStackParamList>;
 
-function goBackInStack(navigation: NavigationProp<ParamListBase>): boolean {
-  if (navigation.canGoBack()) {
-    navigation.goBack();
-    return true;
-  }
+const MAX_BACK_ANCESTORS = 8;
 
+/**
+ * Pop the previous stack screen. Skip tab navigators so this control does
+ * not switch to Dashboard (tab backBehavior is firstRoute). Hardware back
+ * still uses the navigator history and is unchanged.
+ */
+function goBackAboveSpaceTabs(navigation: NavigationProp<ParamListBase>): boolean {
+  const ancestors: SpaceTabBackAncestor[] = [];
+  const navigators: NavigationProp<ParamListBase>[] = [];
   let parent = navigation.getParent();
-  while (parent) {
-    if (parent.canGoBack()) {
-      parent.goBack();
-      return true;
-    }
+
+  while (parent && ancestors.length < MAX_BACK_ANCESTORS) {
+    const state = parent.getState();
+    ancestors.push({
+      type: state?.type,
+      index: state?.index,
+    });
+    navigators.push(parent);
     parent = parent.getParent();
   }
 
-  return false;
+  const index = spaceTabHeaderBackAncestorIndex(ancestors);
+  if (index == null) {
+    return false;
+  }
+
+  navigators[index]?.goBack();
+  return true;
 }
 
 export function SpaceTabBackButton() {
@@ -39,7 +56,7 @@ export function SpaceTabBackButton() {
   const { t } = useTranslation();
 
   const handlePress = () => {
-    const wentBack = goBackInStack(navigation);
+    const wentBack = goBackAboveSpaceTabs(navigation);
     if (spaceDashboardHeaderDestination('back', wentBack) === 'previous') {
       return;
     }

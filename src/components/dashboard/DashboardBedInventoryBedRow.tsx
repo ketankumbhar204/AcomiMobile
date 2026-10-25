@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { BedSingle, ChevronRight, UserPlus, Bookmark } from 'lucide-react-native';
 import type { BedSpaceListItemResponse } from '../../api/types';
 import { AccommodationStatusBadge } from '../accommodation/AccommodationStatusBadge';
+import { ReferenceCode } from '../ui/ReferenceCode';
 import { Button } from '../ui';
 import { colors, radius, spacing, typography } from '../../theme';
 import { formatBedDisplayLabel } from '../../utils/formatBedDisplayLabel';
@@ -67,6 +68,7 @@ function DashboardBedInventoryBedRowComponent({
         </View>
         <View style={styles.info}>
           <Text style={styles.label}>{formatBedDisplayLabel(bed.label, t)}</Text>
+          <ReferenceCode value={bed.referenceCode} />
           <AccommodationStatusBadge status={bed.status} />
         </View>
         {!showDashboardActions && !showSingleFlowAction ? (

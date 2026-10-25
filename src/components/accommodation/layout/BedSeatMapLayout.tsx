@@ -2,11 +2,11 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { BedListItemResponse, RoomType, UUID } from '../../../api/types';
-import { spacing, typography } from '../../../theme';
+import { colors, spacing, typography } from '../../../theme';
 import { filterActiveEntities } from '../../../utils/accommodationEntityActive';
 import { matchesAccommodationSearch } from '../../../utils/accommodationLayoutSearch';
-import { chunkIntoRows } from './visual/planLayoutUtils';
-import { BedLayoutCard } from './cards/BedLayoutCard';
+import { BuildingInventoryBedCard } from '../BuildingInventoryBedCard';
+import { HorizontalBedCarousel } from '../HorizontalBedCarousel';
 import { LayoutSummaryCard } from './cards/LayoutSummaryCard';
 import { LayoutEntityPhoto } from './cards/LayoutEntityPhoto';
 import { LayoutIllustration } from './cards/LayoutIllustration';
@@ -14,8 +14,6 @@ import { calcOccupancyPercent } from './cards/occupancyUtils';
 import { getRoomIllustration } from './illustrations/illustrationAssets';
 import { aggregateBedStatusCounts, countInactiveFromList } from './layoutSummaryStats';
 import type { AccommodationStatus } from '../../../api/types';
-
-const GRID_COLUMNS = 2;
 
 type BedSeatMapLayoutProps = {
   beds: BedListItemResponse[];
@@ -55,12 +53,10 @@ export function BedSeatMapLayout({
   roomInactive = false,
   editableRoomName = false,
   onSaveRoomName,
-  renderBedNameEditor,
   onEditBed,
 }: BedSeatMapLayoutProps) {
   const { t } = useTranslation();
   const activeBeds = filterActiveEntities(beds);
-  const rows = chunkIntoRows(beds, GRID_COLUMNS);
 
   const occupied =
     countByStatus(activeBeds, 'OCCUPIED') + countByStatus(activeBeds, 'RESERVED');
@@ -84,7 +80,7 @@ export function BedSeatMapLayout({
                 entityId={roomId}
                 fileId={roomPhotoFileId}
                 title={roomName}
-                height={110}
+                height={112}
                 fallback={
                   <LayoutIllustration
                     source={getRoomIllustration(Math.max(activeBeds.length, 1))}
@@ -122,28 +118,22 @@ export function BedSeatMapLayout({
 
       <Text style={styles.sectionTitle}>{t('accommodation.layout.dashboard.bedsSection')}</Text>
 
-      {rows.map((row, rowIndex) => (
-        <View key={`row-${rowIndex}`} style={styles.row}>
-          {row.map(bed => {
-            const nameEditor = renderBedNameEditor?.(bed);
-            return (
-              <BedLayoutCard
-                key={bed.bedId}
-                bed={bed}
-                spaceId={spaceId}
-                highlighted={matchesAccommodationSearch(bed.label, searchQuery)}
-                onPress={() => onBedPress(bed)}
-                onLongPress={onBedLongPress ? () => onBedLongPress(bed) : undefined}
-                menu={renderBedMenu?.(bed)}
-                onEdit={onEditBed ? () => onEditBed(bed) : undefined}
-                editableName={nameEditor?.editableName}
-                onSaveName={nameEditor?.onSaveName}
-              />
-            );
-          })}
-          {row.length < GRID_COLUMNS ? <View style={styles.spacer} /> : null}
-        </View>
-      ))}
+      <HorizontalBedCarousel
+        fadeColor={colors.background}
+        accessibilityLabel={t('accommodation.layout.dashboard.bedsSection', { defaultValue: 'Beds' })}>
+        {beds.map(bed => (
+          <BuildingInventoryBedCard
+            key={bed.bedId}
+            bed={bed}
+            spaceId={spaceId}
+            highlighted={matchesAccommodationSearch(bed.label, searchQuery)}
+            onPress={() => onBedPress(bed)}
+            onLongPress={onBedLongPress ? () => onBedLongPress(bed) : undefined}
+            menu={renderBedMenu?.(bed)}
+            onEdit={onEditBed ? () => onEditBed(bed) : undefined}
+          />
+        ))}
+      </HorizontalBedCarousel>
     </View>
   );
 }
@@ -159,12 +149,5 @@ const styles = StyleSheet.create({
   sectionTitle: {
     ...typography.bodyStrong,
     marginBottom: spacing.sm,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  spacer: {
-    flex: 1,
   },
 });

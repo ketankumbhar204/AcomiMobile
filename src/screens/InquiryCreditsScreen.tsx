@@ -592,11 +592,12 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(15,23,42,0.45)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'center',
     padding: spacing.lg,
   },
   modalCard: {
+    ...shadows.raised,
     backgroundColor: colors.white,
     borderRadius: radius.card,
     padding: spacing.lg,

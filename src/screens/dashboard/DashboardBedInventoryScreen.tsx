@@ -1,28 +1,39 @@
-import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { BedDouble, BedSingle } from 'lucide-react-native';
-import type { AccommodationStatus, BedSpaceListItemResponse, UUID } from '../../api/types';
+import type { BedSpaceListItemResponse, UUID } from '../../api/types';
 import { PersistedBedInteractionHost } from '../../components/accommodation/PersistedBedInteractionHost';
 import { BedInventoryBrowser } from '../../components/dashboard/BedInventoryBrowser';
-import { MealFormHero } from '../../components/meals/MealFormHero';
+import {
+  BedInventoryFaceProvider,
+  type MoveInBedFace,
+} from '../../components/dashboard/bedInventoryFace';
+import { DashboardAccommodationOperations } from '../../components/dashboard/DashboardAccommodationOperations';
 import { Screen } from '../../components/ui/Screen';
 import { usePersistedBedInteraction } from '../../hooks/usePersistedBedInteraction';
+import { useSpaceDashboard } from '../../hooks/useSpaceDashboard';
+import { useSpaceOccupancyList } from '../../hooks/useSpaceOccupancyList';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../../navigation/types';
 import { spacing } from '../../theme';
 import { bedIsSelectableForMoveIn } from '../../utils/moveInEntry';
 import { persistedTargetFromSpaceBed } from '../../utils/persistedBedTarget';
 import { invalidateAccommodationQueries } from '../../utils/accommodationQueryCache';
+import {
+  bedStatusForPropertyOpsFocus,
+  propertyOpsFocusFromInventory,
+  type PropertyOpsFocus,
+} from '../../utils/propertyOpsFocus';
 
 type Route = {
   key: string;
   name: 'DashboardBedInventory';
   params: {
     spaceId: UUID;
-    status: AccommodationStatus;
+    status: 'AVAILABLE' | 'OCCUPIED';
+    focus?: PropertyOpsFocus;
     intent?: 'allocate';
   };
 };
@@ -33,8 +44,9 @@ export function DashboardBedInventoryScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
-  const { spaceId, status, intent } = route.params;
-  const selectingForAllocate = intent === 'allocate' && status === 'AVAILABLE';
+  const { spaceId, status, intent, focus: focusParam } = route.params;
+  const opsFocus = propertyOpsFocusFromInventory(status, focusParam);
+  const selectingForAllocate = intent === 'allocate' && opsFocus === 'vacant';
 
   const permissions = useSpacePermissions(spaceId);
   const canManageOccupancy = permissions.canManageOccupancy;
@@ -101,10 +113,59 @@ export function DashboardBedInventoryScreen() {
     [navigation, spaceId],
   );
 
-  const isVacant = status === 'AVAILABLE';
-  const screenTitle = isVacant
-    ? t('dashboard.drilldown.vacantBedsTitle')
-    : t('dashboard.drilldown.occupiedBedsTitle');
+  const knownSpaceType = permissions.spaceType;
+  const showOpsCards = knownSpaceType != null && knownSpaceType !== 'MESS' && opsFocus != null;
+  const dashboard = useSpaceDashboard(spaceId, knownSpaceType, showOpsCards);
+  const moveIns = useSpaceOccupancyList({
+    spaceId,
+    mode: 'moveInsThisMonth',
+    enabled: showOpsCards && opsFocus === 'moveIns',
+  });
+  const moveInsByBedId = useMemo(() => {
+    const map = new Map<string, MoveInBedFace>();
+    if (opsFocus !== 'moveIns') {
+      return map;
+    }
+    for (const row of moveIns.items) {
+      if (!row.bedId) {
+        continue;
+      }
+      map.set(row.bedId, {
+        memberName: row.memberName,
+        moveInDate: row.moveInDate ?? row.actualMoveInAt?.slice(0, 10) ?? null,
+        rent: row.rentSnapshot ?? null,
+        deposit: row.depositSnapshot ?? null,
+      });
+    }
+    return map;
+  }, [moveIns.items, opsFocus]);
+  const moveInBedIds = useMemo(() => {
+    if (opsFocus !== 'moveIns') {
+      return null;
+    }
+    return new Set(moveInsByBedId.keys());
+  }, [moveInsByBedId, opsFocus]);
+
+  const screenTitle =
+    opsFocus === 'moveIns'
+      ? t('dashboard.drilldown.moveInsTitle')
+      : opsFocus === 'occupied'
+        ? t('dashboard.drilldown.occupiedBedsTitle')
+        : t('dashboard.drilldown.vacantBedsTitle');
+
+  const switchFocus = useCallback(
+    (next: PropertyOpsFocus) => {
+      if (next === opsFocus) {
+        return;
+      }
+      navigation.setParams({
+        status: bedStatusForPropertyOpsFocus(next),
+        focus: next,
+        intent: next === 'vacant' ? intent : undefined,
+      });
+    },
+    [intent, navigation, opsFocus],
+  );
 
   useLayoutEffect(() => {
     navigation.setOptions({ title: screenTitle });
@@ -112,10 +173,14 @@ export function DashboardBedInventoryScreen() {
 
   return (
     <Screen style={styles.screen} contentStyle={styles.content}>
+      <BedInventoryFaceProvider moveInsByBedId={moveInsByBedId}>
       <BedInventoryBrowser
         spaceId={spaceId}
         spaceType={spaceType}
-        status={status}
+        status={opsFocus === 'moveIns' ? 'OCCUPIED' : status}
+        opsFocus={opsFocus}
+        bedIdAllowList={moveInBedIds}
+        listPending={opsFocus === 'moveIns' && moveIns.loading && moveIns.items.length === 0}
         flowAction={selectingForAllocate && canManageOccupancy ? 'allocate' : 'dashboard'}
         onFlowAction={selectingForAllocate && canManageOccupancy ? handleAllocateBed : undefined}
         canManageOccupancy={canManageOccupancy}
@@ -124,12 +189,19 @@ export function DashboardBedInventoryScreen() {
         refreshTrigger={refreshToken}
         showSubtitle={false}
         headerAccessory={
-          <MealFormHero
-            icon={isVacant ? BedSingle : BedDouble}
-            heading={screenTitle}
-          />
+          showOpsCards && dashboard.accommodationOperations ? (
+            <DashboardAccommodationOperations
+              hideTitle
+              operations={dashboard.accommodationOperations}
+              selectedMetricId={opsFocus}
+              onOccupiedPress={() => switchFocus('occupied')}
+              onVacantPress={() => switchFocus('vacant')}
+              onMoveInsPress={() => switchFocus('moveIns')}
+            />
+          ) : null
         }
       />
+      </BedInventoryFaceProvider>
       <PersistedBedInteractionHost
         interaction={bedInteraction}
         spaceId={spaceId}

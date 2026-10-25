@@ -11,13 +11,13 @@ function source(relativePath: string): string {
 }
 
 describe('meal review intent', () => {
-  it('keeps external sharing off the Save path', () => {
+  it('opens the share sheet after Save, Share, and Reshare', () => {
     expect(resolveMealReviewIntent('save')).toBe('save');
     expect(resolveMealReviewIntent('share')).toBe('share');
     expect(resolveMealReviewIntent(undefined)).toBe('share');
     expect(resolveMealReviewIntent('publish')).toBe('share');
     expect(resolveMealReviewIntent('reshare')).toBe('reshare');
-    expect(shouldOpenExternalShare('save')).toBe(false);
+    expect(shouldOpenExternalShare('save')).toBe(true);
     expect(shouldOpenExternalShare('share')).toBe(true);
     expect(shouldOpenExternalShare('reshare')).toBe(true);
     expect(shouldPublishMenu('save')).toBe(true);
@@ -50,7 +50,7 @@ describe('meal review intent', () => {
     expect(footer).not.toContain("t('meals.actions.shareMeal')");
   });
 
-  it('publishes and opens polls before the share sheet, and skips the sheet for Save', () => {
+  it('publishes and opens polls before the share sheet, including Save and Share', () => {
     const preview = source('../../screens/meals/MenuSharePreviewScreen.tsx');
     const publishAt = preview.indexOf('publishDraftMenusForTypes(');
     const pollsAt = preview.indexOf('openPollsForMealTypes(');
@@ -65,7 +65,10 @@ describe('meal review intent', () => {
     expect(preview).toContain('shouldOpenExternalShare');
     expect(preview).toContain('shouldPublishMenu');
     expect(preview.indexOf('if (publishMenu)')).toBeLessThan(publishAt);
-    expect(preview).toContain("t('meals.actions.save')");
+    expect(preview).toContain("t('meals.planning.saveAndShare')");
+    expect(preview).toContain("'meals.planning.reviewSaveTitle'");
+    expect(preview).toContain("'meals.planning.reviewSaveHint'");
+    expect(preview).not.toContain("t('meals.actions.save')");
     expect(preview).toContain("t('meals.planning.copyMessage')");
     expect(preview).toContain('includePublished: intent === \'reshare\'');
   });
@@ -79,6 +82,10 @@ describe('meal review intent', () => {
     expect(screen).toContain("navigateMain('SubscriptionPlans'");
     const overview = source('../../components/meals/MenuPlanningDayOverview.tsx');
     expect(overview.indexOf('styles.mealStrip')).toBeLessThan(overview.indexOf('styles.shareBlock'));
+    expect(overview).toContain('MealOperationSlotCard');
+    expect(overview).toContain('buildDashboardMealSlotRows');
+    expect(overview).not.toContain('selector.planned');
+    expect(overview).not.toContain('selector.notPlanned');
     expect(overview).toContain('meals.planning.dayShare.reshare');
     expect(overview).toContain('meals.planning.dayShare.emptyHint');
     expect(overview).not.toContain('styles.dayShareAction');

@@ -1,12 +1,13 @@
-import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { BadgeCheck, Info, Map, MapPin, Sparkles } from 'lucide-react-native';
+import { BadgeCheck, Info, Map as MapIcon, MapPin, Sparkles } from 'lucide-react-native';
 import { getSpaceTypeLabel } from '../api';
 import { enquiryApi } from '../api/enquiryApi';
+import { directContactDecision, inquiryCreditsApi } from '../api/inquiryCreditsApi';
 import { spaceDiscoverApi } from '../api/spaceDiscoverApi';
 import type { DiscoverSpaceDetailResponse, OwnerContactResponse } from '../api/types';
 import { ApiError } from '../api/types';
@@ -26,25 +27,55 @@ import {
 } from '../components/ui';
 import type { MainStackParamList } from '../navigation/types';
 import { useAlreadyInquired, useInquiryRecord, useInquirySentVia } from '../hooks/useAlreadyInquired';
+import { useAuthStore } from '../store/authStore';
 import { useSpaceStore } from '../store/spaceStore';
+import { markInquired } from '../state/inquiredListings';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 import { invalidateAccommodationQueries } from '../utils/accommodationQueryCache';
-import { listingAddress } from '../utils/listingInfo';
+import { listingAddress, type ListingSection } from '../utils/listingInfo';
+import { openableMapsUrl } from '../utils/mapsLink';
 import { firstVerifiedListingImageUrl } from '../utils/representativeImage';
 import { hasActualListingPhotos } from '../utils/photoRequest';
 import { PhotoRequestAction } from '../components/discovery/PhotoRequestAction';
 import { formatCurrency } from '../utils/memberDeposit';
 import { listingPriceSuffix } from '../utils/priceBasis';
 
+async function startDirectContactReveal(spaceId: string): Promise<OwnerContactResponse | RevealPhase> {
+  try {
+    const quota = await inquiryCreditsApi.getQuota();
+    if (directContactDecision(quota) !== 'reveal') {
+      return directContactDecision(quota);
+    }
+    const created = await enquiryApi.create(spaceId, { deliveryChannel: 'VIEW_HERE' });
+    markInquired(created.spaceId || spaceId, null, {
+      contactViewed: true,
+      sentAt: created.deliveredAt || created.requestedAt,
+    });
+    return created.ownerContact ?? { available: false };
+  } catch (err) {
+    const code = err instanceof ApiError ? err.body?.errorCode : undefined;
+    if (code === 'VIEW_HERE_DISABLED') return 'disabled';
+    if (code === 'VIEW_HERE_LIMIT_REACHED') return 'exhausted';
+    return 'error';
+  }
+}
+
 type Nav = NativeStackNavigationProp<MainStackParamList, 'FindAPlaceDetail'>;
 type Route = RouteProp<MainStackParamList, 'FindAPlaceDetail'>;
+type RevealPhase = 'idle' | 'checking' | 'revealing' | 'revealed' | 'disabled' | 'exhausted' | 'error';
+
+const revealInflight = new Map<string, Promise<OwnerContactResponse | RevealPhase>>();
 
 export function FindAPlaceDetailScreen() {
   const { t, i18n } = useTranslation();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
-  const { spaceId } = route.params;
+  const { spaceId, focusSection } = route.params;
+  const scrollRef = useRef<ScrollView>(null);
+  const contentRef = useRef<View>(null);
+  const sectionRefs = useRef<Partial<Record<ListingSection, View | null>>>({});
   const switchSpace = useSpaceStore(state => state.switchSpace);
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
 
   const [detail, setDetail] = useState<DiscoverSpaceDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,6 +87,8 @@ export function FindAPlaceDetailScreen() {
   const contactViewed = inquiry?.contactViewed === true;
   const sentVia = useInquirySentVia(spaceId);
   const [revealed, setRevealed] = useState<OwnerContactResponse | null>(null);
+  const [revealPhase, setRevealPhase] = useState<RevealPhase>('idle');
+  const [revealAttempt, setRevealAttempt] = useState(0);
 
   useEffect(() => {
     if (!contactViewed) {
@@ -70,6 +103,36 @@ export function FindAPlaceDetailScreen() {
       cancelled = true;
     };
   }, [contactViewed, spaceId]);
+
+  useEffect(() => {
+    if (!detail || !isAuthenticated || detail.alreadyMember || detail.ownedByCurrentUser) {
+      return;
+    }
+    if (contactViewed || revealed) {
+      return;
+    }
+    let cancelled = false;
+    setRevealPhase('checking');
+    const run = revealInflight.get(spaceId) ?? startDirectContactReveal(spaceId);
+    revealInflight.set(spaceId, run);
+    void run.then(result => {
+      if (cancelled) return;
+      if (result && typeof result === 'object') {
+        setRevealed(result);
+        setRevealPhase('revealed');
+        return;
+      }
+      if (result === 'disabled' || result === 'exhausted' || result === 'error') {
+        revealInflight.delete(spaceId);
+        setRevealPhase(result);
+        return;
+      }
+      setRevealPhase('error');
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [contactViewed, detail, isAuthenticated, revealed, revealAttempt, spaceId]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -161,14 +224,46 @@ export function FindAPlaceDetailScreen() {
   const cta = t('spaces.findPlace.getContactDetails');
 
   const openMap = useCallback(() => {
-    if (alreadyInquired) return;
-    setEnquireOpen(true);
-  }, [alreadyInquired]);
+    const url = openableMapsUrl(detail?.mapUrl);
+    if (!url) return;
+    void Linking.openURL(url);
+  }, [detail?.mapUrl]);
+
+  const scrollToSection = useCallback((section: ListingSection) => {
+    const target = sectionRefs.current[section];
+    const content = contentRef.current;
+    if (!target || !content) return;
+    target.measureLayout(
+      content,
+      (_x, y) => {
+        scrollRef.current?.scrollTo({ y: Math.max(0, y - 12), animated: true });
+      },
+      () => {},
+    );
+  }, []);
+
+  useEffect(() => {
+    if (!detail || !focusSection) return;
+    const first = setTimeout(() => scrollToSection(focusSection), 60);
+    const second = setTimeout(() => scrollToSection(focusSection), 400);
+    return () => {
+      clearTimeout(first);
+      clearTimeout(second);
+    };
+  }, [detail, focusSection, revealed, revealPhase, scrollToSection]);
+
+  const sectionAnchor = useCallback(
+    (section: ListingSection) => (node: View | null) => {
+      sectionRefs.current[section] = node;
+    },
+    [],
+  );
 
   return (
     <View style={styles.root}>
       <Screen
         scrollable
+        scrollRef={scrollRef}
         contentStyle={styles.content}
         refreshing={loading && !!detail}
         onRefresh={() => void load()}>
@@ -184,7 +279,7 @@ export function FindAPlaceDetailScreen() {
             description={error}
           />
         ) : detail ? (
-          <>
+          <View ref={contentRef} collapsable={false}>
             <View style={styles.heroVisual}>
               <DiscoverListingCover
                 listingId={detail.spaceId}
@@ -205,6 +300,7 @@ export function FindAPlaceDetailScreen() {
             </View>
 
             <View style={styles.infoBlock}>
+              <View ref={sectionAnchor('food')} collapsable={false}>
               <ListingFacts
                 leading={<TypeChip label={getSpaceTypeLabel(detail.type)} />}
                 genderPolicy={detail.genderPolicy}
@@ -212,14 +308,18 @@ export function FindAPlaceDetailScreen() {
                 foodAvailability={detail.foodAvailability}
                 foodIncludedInRent={detail.foodIncludedInRent}
               />
+              </View>
               <Text style={styles.name}>{detail.name}</Text>
               {alreadyInquired ? <InquirySentDetails listingId={detail.spaceId} /> : null}
+              <View ref={sectionAnchor('address')} collapsable={false}>
               {address ? (
                 <View style={styles.addressRow}>
                   <MapPin size={16} color={colors.primaryDark} strokeWidth={2.2} />
                   <Text style={styles.addressText}>{address}</Text>
                 </View>
               ) : null}
+              </View>
+              <View ref={sectionAnchor('rent')} collapsable={false}>
               {isMess ? (
                 <>
                   <Text style={styles.price}>
@@ -240,6 +340,7 @@ export function FindAPlaceDetailScreen() {
                     : t('spaces.findPlace.priceOnRequest')}
                 </Text>
               )}
+              </View>
 
               {detail.alreadyMember ? (
                 <View style={styles.metaRow}>
@@ -249,14 +350,15 @@ export function FindAPlaceDetailScreen() {
             </View>
 
             <View style={styles.infoPanel}>
-              {detail.mapUrl && !alreadyInquired ? (
+              <View ref={sectionAnchor('map')} collapsable={false}>
+              {detail.mapUrl ? (
                 <Pressable
                   onPress={openMap}
                   style={styles.mapsPress}
                   accessibilityRole="button"
-                  accessibilityLabel={`${t('spaces.findPlace.openMaps')}. ${cta}`}>
+                  accessibilityLabel={t('spaces.findPlace.openMaps')}>
                   <View style={styles.mapsIcon}>
-                    <Map size={16} color="#0F6B4C" strokeWidth={2.2} />
+                    <MapIcon size={16} color="#0F6B4C" strokeWidth={2.2} />
                   </View>
                   <View style={styles.mapsCopy}>
                     <Text style={styles.mapsEyebrow}>{t('spaces.findPlace.locationSection')}</Text>
@@ -264,6 +366,7 @@ export function FindAPlaceDetailScreen() {
                   </View>
                 </Pressable>
               ) : null}
+              </View>
               <View style={styles.infoHeadingRow}>
                 <BadgeCheck size={14} color="#0F6B4C" strokeWidth={2.2} />
                 <Text style={styles.infoHeading}>{t('spaces.findPlace.infoAvailable')}</Text>
@@ -272,10 +375,11 @@ export function FindAPlaceDetailScreen() {
                 listing={detail}
                 variant="detail"
                 surface={detail.type === 'MESS' ? 'meals' : 'places'}
-                onEnquire={alreadyInquired ? undefined : () => setEnquireOpen(true)}
+                onSelect={scrollToSection}
               />
             </View>
 
+            <View ref={sectionAnchor('amenities')} collapsable={false}>
             {amenities.length > 0 ? (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>{t('spaces.amenities.title')}</Text>
@@ -291,6 +395,7 @@ export function FindAPlaceDetailScreen() {
                 </View>
               </View>
             ) : null}
+            </View>
 
             <View style={styles.section}>
               <Text style={styles.availabilityLine}>
@@ -311,23 +416,20 @@ export function FindAPlaceDetailScreen() {
               )}
               {!detail.alreadyMember && !detail.ownedByCurrentUser ? (
                 <PhotoRequestAction
+                  spaceId={detail.spaceId}
                   kind={detail.type === 'MESS' ? 'mess' : 'property'}
                   name={detail.name}
                   spaceType={detail.type}
                   location={listingAddress(detail)}
                   photoUrls={[detail.listingImageUrl, detail.coverImageUrl, detail.imageUrl]}
-                  phones={
-                    revealed
-                      ? [revealed.mobileNumber, revealed.alternateMobileNumber, revealed.additionalMobileNumber]
-                      : []
-                  }
-                  contactAuthorized={Boolean(revealed)}
-                  onNeedContact={revealed || contactViewed ? undefined : () => setEnquireOpen(true)}
                 />
               ) : null}
             </View>
 
-            {contactViewed && !detail.alreadyMember && !detail.ownedByCurrentUser ? (
+            <View ref={sectionAnchor('contact')} collapsable={false} onLayout={() => {
+              if (focusSection === 'contact') scrollToSection('contact');
+            }}>
+            {(contactViewed || revealed) && !detail.alreadyMember && !detail.ownedByCurrentUser ? (
               <View style={styles.section}>
                 <Text style={styles.viewedLabel}>
                   {t('spaces.findPlace.contactDetailsViewed', { defaultValue: 'Contact details viewed' })}
@@ -336,15 +438,27 @@ export function FindAPlaceDetailScreen() {
               </View>
             ) : null}
 
-            {!detail.alreadyMember && !detail.ownedByCurrentUser && !contactViewed ? (
+            {!detail.alreadyMember && !detail.ownedByCurrentUser && !contactViewed && !revealed &&
+            (revealPhase === 'disabled' || revealPhase === 'exhausted' || revealPhase === 'error') ? (
               <View style={styles.inviteNotice}>
                 <Info size={18} color={colors.primaryDark} strokeWidth={2.2} />
                 <Text style={styles.inviteNoticeText}>
-                  {t('spaces.findPlace.enquire.privacyHint')}
+                  {revealPhase === 'exhausted'
+                    ? t('spaces.findPlace.enquire.viewHereExhausted', {
+                        defaultValue: 'You have used all instant contact views for today.',
+                      })
+                    : revealPhase === 'error'
+                      ? t('spaces.findPlace.enquire.viewHereFailed', {
+                          defaultValue: 'Contact details could not be loaded. Try again.',
+                        })
+                      : t('spaces.findPlace.enquire.viewHereDisabled', {
+                          defaultValue: 'Instant contact viewing is turned off. You can still request details.',
+                        })}
                 </Text>
               </View>
             ) : null}
-          </>
+            </View>
+          </View>
         ) : null}
       </Screen>
 
@@ -363,7 +477,10 @@ export function FindAPlaceDetailScreen() {
       ) : null}
 
       {detail ? (
-        contactViewed && !alreadyInquired && !detail.alreadyMember && !detail.ownedByCurrentUser ? null : alreadyInquired && !detail.alreadyMember && !detail.ownedByCurrentUser ? (
+        (contactViewed || revealed || revealPhase === 'checking' || revealPhase === 'revealing') &&
+        !alreadyInquired &&
+        !detail.alreadyMember &&
+        !detail.ownedByCurrentUser ? null : alreadyInquired && !detail.alreadyMember && !detail.ownedByCurrentUser ? (
           <StickyFormActions>
             <InquirySent variant="button" sentVia={sentVia} />
           </StickyFormActions>
@@ -374,8 +491,10 @@ export function FindAPlaceDetailScreen() {
                 ? t('spaces.findPlace.openSpaceCta')
                 : detail.ownedByCurrentUser
                   ? t('spaces.findPlace.enquire.ownCta')
-                  : cta,
-              onPress: onPrimaryCta,
+                  : revealPhase === 'error'
+                    ? t('spaces.findPlace.retry', { defaultValue: 'Try again' })
+                    : cta,
+              onPress: revealPhase === 'error' ? () => setRevealAttempt(attempt => attempt + 1) : onPrimaryCta,
               loading: opening,
               disabled: opening,
             }}

@@ -99,11 +99,13 @@ function PendingActionsQuickCard({
   count,
   loading = false,
   error = false,
+  detail,
   onPress,
 }: {
   count: number;
   loading?: boolean;
   error?: boolean;
+  detail?: string;
   onPress: () => void;
 }) {
   const { t } = useTranslation();
@@ -115,7 +117,7 @@ function PendingActionsQuickCard({
       ? t('dashboard.quickActions.pendingActionsLoading', {
           defaultValue: 'Checking actions that need attention',
         })
-      : t('dashboard.quickActions.pendingActionsSubtitle', { count });
+      : detail || t('dashboard.quickActions.pendingActionsSubtitle', { count });
 
   return (
     <DashboardActionRow
@@ -215,6 +217,26 @@ export function DashboardScreen() {
     totalCount: resolvedPendingCount,
   });
   const pendingActionCount = resolvedPendingCount ?? 0;
+  const memberPendingDetail = useMemo(() => {
+    if (showOwnerDashboard) {
+      return undefined;
+    }
+    const labels = (livePendingActions.summary?.groups ?? [])
+      .filter(
+        group =>
+          group.actionType === 'PAYMENT_UPDATE_REQUESTED' ||
+          (group.actionType === 'PENDING_INVITATION' &&
+            (group.actionRoute ?? '').trim() === 'AcceptInvitations'),
+      )
+      .map(group =>
+        group.actionType === 'PAYMENT_UPDATE_REQUESTED'
+          ? t('dashboard.pendingActions.groups.PAYMENT_UPDATE_REQUESTED')
+          : t('dashboard.pendingActions.groups.SPACE_INVITATION', {
+              defaultValue: 'Space invitation',
+            }),
+      );
+    return labels.length > 0 ? labels.join(' · ') : undefined;
+  }, [livePendingActions.summary?.groups, showOwnerDashboard, t]);
 
   const hasOperationalSignal = useMemo(() => {
     const occupied = accommodationOperations?.occupiedBeds ?? 0;
@@ -494,15 +516,15 @@ export function DashboardScreen() {
   );
 
   const handleOccupiedBedsPress = useCallback(() => {
-    navigateFromTab('DashboardOccupancyList', { spaceId, mode: 'active' });
+    navigateFromTab('DashboardBedInventory', { spaceId, status: 'OCCUPIED', focus: 'occupied' });
   }, [navigateFromTab, spaceId]);
 
   const handleVacantBedsPress = useCallback(() => {
-    navigateFromTab('DashboardBedInventory', { spaceId, status: 'AVAILABLE' });
+    navigateFromTab('DashboardBedInventory', { spaceId, status: 'AVAILABLE', focus: 'vacant' });
   }, [navigateFromTab, spaceId]);
 
   const handleMoveInsPress = useCallback(() => {
-    navigateFromTab('DashboardOccupancyList', { spaceId, mode: 'moveInsThisMonth' });
+    navigateFromTab('DashboardBedInventory', { spaceId, status: 'OCCUPIED', focus: 'moveIns' });
   }, [navigateFromTab, spaceId]);
 
   const handleMealsPress = useCallback(() => {
@@ -635,6 +657,7 @@ export function DashboardScreen() {
         count={pendingActionCount}
         loading={pendingCardState === 'loading'}
         error={pendingCardState === 'error'}
+        detail={memberPendingDetail}
         onPress={handlePendingActionsPress}
       />
     );

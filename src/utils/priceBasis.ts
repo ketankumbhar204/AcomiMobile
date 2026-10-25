@@ -8,9 +8,10 @@ export const PRICE_BASIS_LABEL: Record<ListingPriceBasis, string> = {
   PER_UNIT: 'per month',
 };
 
-export function defaultPriceBasis(type: string | null | undefined): ListingPriceBasis {
+export function defaultPriceBasis(type: string | null | undefined): ListingPriceBasis | null {
   if (type === 'PG' || type === 'HOSTEL') return 'PER_BED';
   if (type === 'CO_LIVING') return 'PER_ROOM';
+  if (type === 'CORPORATE_STAY') return null;
   return 'PER_UNIT';
 }
 

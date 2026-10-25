@@ -244,6 +244,25 @@ describe('notificationDeepLinks push types', () => {
     expect(navigateMainStack).toHaveBeenCalledWith('AcceptInvitations', undefined);
   });
 
+  it('opens the listing for a photo request and not the enquiry inbox', () => {
+    navigateFromNotificationType(
+      'space-1',
+      {
+        notificationType: 'PHOTO_REQUEST_RECEIVED',
+        entityId: 'space-1',
+        actionRoute: 'FindAPlaceDetail',
+        message: 'Someone interested in Green PG has requested photos. Open ACOMI to review the request.',
+        title: 'Photo request received',
+      },
+      true,
+    );
+    expect(navigateMainStack).toHaveBeenCalledWith('FindAPlaceDetail', { spaceId: 'space-1' });
+    expect(navigateMainStack).not.toHaveBeenCalledWith(
+      'MemberTabs',
+      expect.anything(),
+    );
+  });
+
   it('opens MySpaces after space deactivation', () => {
     navigateFromNotificationType(
       'space-1',
@@ -257,5 +276,20 @@ describe('notificationDeepLinks push types', () => {
       false,
     );
     expect(navigateMainStack).toHaveBeenCalledWith('MySpaces', undefined);
+  });
+
+  it('opens the listing for a photo request', () => {
+    navigateFromNotificationType(
+      'space-1',
+      {
+        notificationType: 'PHOTO_REQUEST_RECEIVED',
+        entityId: 'space-1',
+        actionRoute: 'FindAPlaceDetail',
+        message: 'Someone interested in Green PG has requested photos. Open ACOMI to review the request.',
+        title: 'Photo request received',
+      },
+      true,
+    );
+    expect(navigateMainStack).toHaveBeenCalledWith('FindAPlaceDetail', { spaceId: 'space-1' });
   });
 });

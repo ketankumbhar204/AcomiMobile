@@ -17,13 +17,8 @@ export function SpaceAttentionCardStatus({
 }: SpaceAttentionCardStatusProps) {
   const { t } = useTranslation();
 
-  if (!summary) {
-    if (loading) {
-      return null;
-    }
-    return (
-      <Text style={styles.upToDate}>{t('spaces.mySpaces.attentionUpToDate')}</Text>
-    );
+  if (!summary || loading) {
+    return null;
   }
 
   const items = summary.items?.length

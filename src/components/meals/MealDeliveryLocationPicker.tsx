@@ -3,7 +3,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { useTranslation } from 'react-i18next';
 import { Check, ChevronDown, Pencil } from 'lucide-react-native';
 import type { MealDeliveryLocation, UUID } from '../../api/types';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 
 type MealDeliveryLocationPickerProps = {
   locations: MealDeliveryLocation[];
@@ -86,11 +86,11 @@ export function MealDeliveryLocationPicker({
             )}
           </View>
           {!readOnly ? (
-            {showEditAffordance ? (
+            showEditAffordance ? (
               <Pencil size={16} color={colors.muted} strokeWidth={2.2} />
             ) : (
               <ChevronDown size={16} color={colors.muted} strokeWidth={2.2} />
-            )}
+            )
           ) : null}
         </Pressable>
       )}
@@ -198,11 +198,12 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'center',
     padding: spacing.lg,
   },
   sheet: {
+    ...shadows.raised,
     backgroundColor: colors.white,
     borderRadius: radius.card,
     padding: spacing.lg,

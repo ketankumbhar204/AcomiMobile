@@ -11,11 +11,13 @@ import { DashboardCustomerHero } from '../dashboard/customer/DashboardCustomerHe
 import { DashboardCustomerQuickActions } from '../dashboard/customer/DashboardCustomerQuickActions';
 import { DashboardCustomerQuickStats } from '../dashboard/customer/DashboardCustomerQuickStats';
 import { DashboardCustomerRecentOrders } from '../dashboard/customer/DashboardCustomerRecentOrders';
+import { useComplaintsList } from '../../hooks/useComplaintsList';
 import { useCustomerSubscriptionStatus } from '../../hooks/useCustomerSubscriptionStatus';
 import { useMealPricingPolicy } from '../../hooks/useMealPricingPolicy';
 import { useLinkedMember } from '../../hooks/useLinkedMember';
 import { useMealPollDay } from '../../hooks/useMealPollDay';
 import { useMemberMealActivity } from '../../hooks/useMemberMealActivity';
+import { useTenantPaymentsMonth } from '../../hooks/useTenantPaymentsMonth';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList, SpaceTabParamList } from '../../navigation/types';
 import { navigateMainStack } from '../../navigation/mainStackNavigation';
@@ -30,8 +32,11 @@ import {
 import {
   buildRecentOrdersFromActivity,
   countMenuItemsFromPolls,
+  countOpenMealPayments,
   countUpcomingPayments,
+  summarizeMemberDashboardLedger,
 } from '../../utils/customerDashboardStats';
+import { usesDayMealPayments } from '../../utils/personalPaymentSummary';
 import { addDaysIsoDate, isPastMenuDate, todayIsoDate } from '../../utils/mealDates';
 import { buildMealSummaryFromPolls } from '../../utils/mealSelectionSummary';
 import { findMySpaceEntry } from '../../utils/spacePermissions';
@@ -114,14 +119,26 @@ export function DashboardCustomerMealsSection({
   const spaceType = permissions.spaceType ?? spaceEntry?.spaceType;
   const showMessWidgets = showsMessDashboardWidgets(spaceType);
   const showMealCard = showsMemberMealSelectionCard(spaceType);
-  const { memberId: linkedMemberId, member: linkedMember } = useLinkedMember(spaceId);
-  const { status: subscriptionStatus, reload: reloadSubscriptionStatus } =
+  const { memberId: linkedMemberId, member: linkedMember, loading: memberLoading } =
+    useLinkedMember(spaceId);
+  const { status: subscriptionStatus, loading: subscriptionLoading, reload: reloadSubscriptionStatus } =
     useCustomerSubscriptionStatus(spaceId);
   const activity = useMemberMealActivity(
     spaceId,
     linkedMemberId ?? spaceId,
     linkedMemberId != null,
   );
+  const isPayPerMeal = usesDayMealPayments({
+    spaceType,
+    prepaidBilling: subscriptionStatus?.prepaidBilling,
+    mealBillingType: subscriptionStatus?.mealBillingType,
+  });
+  const waitForBilling = spaceType === 'MESS' && subscriptionLoading && subscriptionStatus == null;
+  const ledger = useTenantPaymentsMonth(spaceId, {
+    memberId: linkedMemberId ?? undefined,
+    enabled: linkedMemberId != null && !isPayPerMeal && !waitForBilling,
+  });
+  const complaints = useComplaintsList(spaceId, { mine: true });
 
   useFocusEffect(
     useCallback(() => {
@@ -151,7 +168,18 @@ export function DashboardCustomerMealsSection({
       if (linkedMemberId) {
         void activity.reload();
       }
-    }, [activity.reload, linkedMemberId]),
+      if (linkedMemberId != null && !isPayPerMeal && !waitForBilling) {
+        void ledger.reload();
+      }
+      void complaints.reload();
+    }, [
+      activity.reload,
+      complaints.reload,
+      isPayPerMeal,
+      ledger.reload,
+      linkedMemberId,
+      waitForBilling,
+    ]),
   );
 
   const poll = useMealPollDay(spaceId, menuDate, permissions.spaceType);
@@ -195,7 +223,7 @@ export function DashboardCustomerMealsSection({
     [activity.activity],
   );
 
-  const dueAmount = useMemo(() => {
+  const mealDueAmount = useMemo(() => {
     const pending = activity.activity?.summary?.pendingAmount;
     if (pending != null && Number(pending) > 0) {
       return Number(pending);
@@ -210,21 +238,56 @@ export function DashboardCustomerMealsSection({
       }
       return orderSummary.totalAmount > 0 ? orderSummary.totalAmount : null;
     }
-    return null;
+    return activity.activity ? 0 : null;
   }, [
-    activity.activity?.summary?.pendingAmount,
+    activity.activity,
     orderSummary.totalAmount,
     poll.myPaymentChargedAmount,
     poll.myPaymentStatus,
   ]);
 
-  const upcomingPayments = useMemo(() => {
-    const fromActivity = countUpcomingPayments(activity.activity);
-    if (fromActivity > 0) {
-      return fromActivity;
-    }
-    return canUploadMealPaymentProof(poll.myPaymentStatus) ? 1 : 0;
-  }, [activity.activity, poll.myPaymentStatus]);
+  const today = todayIsoDate();
+  const ledgerStats = useMemo(
+    () => summarizeMemberDashboardLedger(ledger.payments, today),
+    [ledger.payments, today],
+  );
+  const ledgerReady = !isPayPerMeal && linkedMemberId != null && !waitForBilling;
+  const paymentsUnavailable =
+    !isPayPerMeal &&
+    !memberLoading &&
+    !waitForBilling &&
+    (linkedMemberId == null || ledger.error != null || ledger.serviceUnavailable);
+  const ledgerPending =
+    ledgerReady && ledger.loadedMonth == null && ledger.error == null && !ledger.serviceUnavailable;
+  const paymentsLoading = isPayPerMeal
+    ? activity.activity == null && activity.loading
+    : memberLoading ||
+      waitForBilling ||
+      ledgerPending ||
+      (ledgerReady && ledger.loading && !paymentsUnavailable);
+  const dueAmount = isPayPerMeal
+    ? mealDueAmount
+    : !ledgerReady || paymentsUnavailable
+      ? null
+      : ledgerStats.dueAmount;
+  const upcomingPayments = isPayPerMeal
+    ? countUpcomingPayments(activity.activity, today)
+    : ledgerStats.upcomingCount;
+  const paymentsCount = isPayPerMeal
+    ? activity.activity == null
+      ? null
+      : countOpenMealPayments(activity.activity)
+    : paymentsLoading
+      ? null
+      : !ledgerReady || paymentsUnavailable
+        ? undefined
+        : ledgerStats.openPaymentCount;
+  const complaintsCount =
+    complaints.loading && complaints.data == null
+      ? null
+      : complaints.data
+        ? complaints.data.openCount + complaints.data.inProgressCount
+        : undefined;
 
   const yourOrders = useMemo(() => {
     const accepted = activity.activity?.summary?.acceptedMeals;
@@ -235,6 +298,9 @@ export function DashboardCustomerMealsSection({
   }, [activity.activity?.summary?.acceptedMeals, orderSummary.totalPlates]);
 
   const mealSelectionBlocked = useMemo(() => {
+    if (poll.chooseMealsBlockReason) {
+      return true;
+    }
     if (!subscriptionStatus?.prepaidBilling) {
       return false;
     }
@@ -242,9 +308,12 @@ export function DashboardCustomerMealsSection({
       return true;
     }
     return !subscriptionStatus.subscriptionActive;
-  }, [subscriptionStatus]);
+  }, [poll.chooseMealsBlockReason, subscriptionStatus]);
 
   const mealSelectionDisabledReason = useMemo(() => {
+    if (poll.chooseMealsBlockReason) {
+      return poll.chooseMealsBlockReason;
+    }
     if (!mealSelectionBlocked || !subscriptionStatus?.prepaidBilling) {
       return undefined;
     }
@@ -252,7 +321,7 @@ export function DashboardCustomerMealsSection({
       return t('meals.subscription.customer.selectionPendingHint');
     }
     return t('meals.subscription.customer.selectionRequiredHint');
-  }, [mealSelectionBlocked, subscriptionStatus, t]);
+  }, [mealSelectionBlocked, poll.chooseMealsBlockReason, subscriptionStatus, t]);
 
   const handlePreviousDate = useCallback(() => {
     if (!canShiftCustomerMealDate(menuDate, -1)) {
@@ -426,10 +495,16 @@ export function DashboardCustomerMealsSection({
             yourOrders={yourOrders}
             dueAmount={dueAmount}
             currencyCode={
-              activity.activity?.summary?.currencyCode || orderSummary.currencyCode || 'INR'
+              ledger.payments.find(payment => payment.currencyCode)?.currencyCode ||
+              activity.activity?.summary?.currencyCode ||
+              orderSummary.currencyCode ||
+              'INR'
             }
             upcomingPayments={upcomingPayments}
-            loading={poll.loading && activity.loading}
+            loading={poll.loading && totalMenuItems === 0}
+            paymentsLoading={paymentsLoading}
+            paymentsUnavailable={paymentsUnavailable}
+            onDuePress={handlePayments}
           />
 
           {showMessWidgets ? (
@@ -448,6 +523,8 @@ export function DashboardCustomerMealsSection({
             onOrders={handleMyOrders}
             onPayments={handlePayments}
             onComplaints={handleComplaints}
+            paymentsCount={paymentsCount}
+            complaintsCount={complaintsCount}
           />
         </>
       ) : null}

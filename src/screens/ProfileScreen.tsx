@@ -31,6 +31,7 @@ import { LanguagePicker } from '../components/settings/LanguagePicker';
 import { ProfileDocumentsSection } from '../components/profile/ProfileDocumentsSection';
 import { ProfileDocumentUploadModal } from '../components/profile/ProfileDocumentUploadModal';
 import { ProfileHero } from '../components/profile/ProfileHero';
+import { ProfileSettingsLink } from '../components/profile/ProfileSettingsLink';
 import { SettingsGroupCard } from '../components/profile/SettingsGroupCard';
 import { UserProfileFields } from '../components/profile/UserProfileFields';
 import { DashboardActionRow } from '../components/dashboard/shared/DashboardActionRow';
@@ -373,6 +374,7 @@ export function ProfileScreen() {
         <ProfileHero
           fullName={user.fullName ?? ''}
           mobile={user.mobileNumber}
+          referenceCode={user.referenceCode}
           photoUrl={user.profilePhotoUrl}
           roleLabel={
             !currentSpace && user.systemRole === 'ADMIN'
@@ -571,23 +573,28 @@ export function ProfileScreen() {
           </View>
         </SettingsGroupCard>
 
-        <Button
-          label={t('settings.profile.privacyPolicy')}
-          variant="ghost"
+        <SettingsGroupCard title={t('settings.profile.accountManagement')} icon={UserRound}>
+          <ProfileSettingsLink
+            variant="embedded"
+            tone="danger"
+            icon={Trash2}
+            title={t('settings.profile.deleteAccount')}
+            subtitle={t('settings.profile.deleteAccountSubtitle')}
+            accessibilityHint={t('settings.profile.deleteAccountLinkHint')}
+            onPress={handleDeleteAccount}
+            disabled={isLoggingOut}
+            testID="profile-delete-account"
+          />
+        </SettingsGroupCard>
+
+        <ProfileSettingsLink
           icon={FileText}
+          title={t('settings.profile.privacyPolicy')}
           onPress={() => {
             void handleOpenPrivacyPolicy();
           }}
           disabled={isLoggingOut}
-        />
-
-        <Button
-          label={t('settings.profile.deleteAccount')}
-          variant="ghost"
-          icon={Trash2}
-          onPress={handleDeleteAccount}
-          disabled={isLoggingOut}
-          style={styles.deleteAccountButton}
+          testID="profile-privacy-policy"
         />
 
         <Button
@@ -598,6 +605,8 @@ export function ProfileScreen() {
           loading={isLoggingOut}
           disabled={isLoggingOut}
           style={styles.logoutButton}
+          accessibilityHint={t('settings.profile.logoutHint')}
+          testID="profile-logout"
         />
       </Screen>
 
@@ -691,14 +700,7 @@ const styles = StyleSheet.create({
   logoutButton: {
     borderWidth: 1,
     borderColor: '#FECACA',
-    marginTop: spacing.sm,
-    backgroundColor: '#FEF2F2',
-    ...shadows.sm,
-  },
-  deleteAccountButton: {
-    borderWidth: 1,
-    borderColor: '#FECACA',
-    marginTop: spacing.sm,
+    marginTop: spacing.xxl,
     backgroundColor: '#FEF2F2',
     ...shadows.sm,
   },

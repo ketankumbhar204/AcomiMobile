@@ -565,7 +565,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
       setPriceErrors(mergedErrors);
       panelRef.current?.validatePrices();
       scrollRef.current?.scrollTo({ y: 0, animated: true });
-      showToast(t(toastKey));
+      showToast(t(toastKey), undefined, 'error');
       return false;
     }
 
@@ -604,7 +604,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     if (mealPricing.requiresMealPrices) {
       if (!(panelRef.current?.validatePrices() ?? true)) {
         scrollRef.current?.scrollTo({ y: 0, animated: true });
-        showToast(t(toastKey));
+        showToast(t(toastKey), undefined, 'error');
         return null;
       }
       const selection = panelRef.current?.getSelectionResult();
@@ -639,7 +639,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     if (optionsToSave.length === 0) {
       if (panelRef.current?.hasSelection()) {
         scrollRef.current?.scrollTo({ y: 0, animated: true });
-        showToast(t(toastKey));
+        showToast(t(toastKey), undefined, 'error');
         return null;
       }
       showToast(t('meals.errors.optionsRequired'));
