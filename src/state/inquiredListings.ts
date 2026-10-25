@@ -4,29 +4,53 @@
  */
 
 export type InquirySentVia = 'EMAIL' | 'APP' | 'BOTH';
-export type InquiredListingRef = string | { id: string; sentVia?: InquirySentVia | null };
+export type InquiryRecord = {
+  sentVia: InquirySentVia | null;
+  sentToEmail: string | null;
+  sentAt: string | null;
+  contactViewed: boolean;
+};
+export type InquiredListingRef =
+  | string
+  | {
+      id: string;
+      sentVia?: InquirySentVia | null;
+      sentToEmail?: string | null;
+      sentAt?: string | null;
+      contactViewed?: boolean;
+    };
 
 type Listener = () => void;
 
 let ids = new Set<string>();
-let sentViaById = new Map<string, InquirySentVia>();
+let records = new Map<string, InquiryRecord>();
 let optimistic = new Set<string>();
-let optimisticVia = new Map<string, InquirySentVia>();
+let optimisticRecords = new Map<string, InquiryRecord>();
 let loadedUserId: string | null = null;
 let loadEpoch = 0;
 let inflight: Promise<void> | null = null;
+let snapshot = 0;
 const listeners = new Set<Listener>();
 
 function emit(): void {
+  snapshot += 1;
   listeners.forEach(listener => listener());
+}
+
+export function getInquirySnapshot(): number {
+  return snapshot;
 }
 
 export function getInquiredIds(): ReadonlySet<string> {
   return ids;
 }
 
+export function getInquiryRecord(listingId: string): InquiryRecord | null {
+  return records.get(listingId) ?? null;
+}
+
 export function getInquirySentVia(listingId: string): InquirySentVia | null {
-  return sentViaById.get(listingId) ?? null;
+  return records.get(listingId)?.sentVia ?? null;
 }
 
 function asSentVia(value: string | null | undefined): InquirySentVia | null {
@@ -53,26 +77,36 @@ export function resetInquiredListings(): void {
   loadedUserId = null;
   inflight = null;
   optimistic = new Set();
-  optimisticVia = new Map();
-  sentViaById = new Map();
+  optimisticRecords = new Map();
+  records = new Map();
   ids = new Set();
   emit();
 }
 
-export function markInquired(listingId: string, sentVia?: InquirySentVia | null): void {
+export function markInquired(
+  listingId: string,
+  sentVia?: InquirySentVia | null,
+  details?: { sentToEmail?: string | null; sentAt?: string | null; contactViewed?: boolean },
+): void {
   const id = listingId.trim();
   if (!id) return;
-  optimistic = new Set(optimistic).add(id);
-  const via = asSentVia(sentVia);
-  if (via) {
-    optimisticVia = new Map(optimisticVia).set(id, via);
-    sentViaById = new Map(sentViaById).set(id, via);
+  const current = records.get(id);
+  const via = asSentVia(sentVia) ?? current?.sentVia ?? null;
+  const next: InquiryRecord = {
+    sentVia: via,
+    sentToEmail: details?.sentToEmail ?? current?.sentToEmail ?? null,
+    sentAt: details?.sentAt ?? current?.sentAt ?? null,
+    contactViewed: details?.contactViewed ?? current?.contactViewed ?? false,
+  };
+  records = new Map(records).set(id, next);
+  const viewOnly = !via && next.contactViewed;
+  if (!viewOnly) {
+    optimistic = new Set(optimistic).add(id);
+    optimisticRecords = new Map(optimisticRecords).set(id, next);
+    if (!ids.has(id)) {
+      ids = new Set(ids).add(id);
+    }
   }
-  if (ids.has(id)) {
-    emit();
-    return;
-  }
-  ids = new Set(ids).add(id);
   emit();
 }
 
@@ -93,26 +127,35 @@ export async function loadInquiredListings(
       const fetched = await fetchIds();
       if (epoch !== loadEpoch) return;
       const next = new Set<string>();
-      const nextVia = new Map<string, InquirySentVia>();
+      const nextRecords = new Map<string, InquiryRecord>();
       for (const item of fetched) {
         const id = typeof item === 'string' ? item : item?.id;
         if (!id) continue;
-        next.add(id);
-        const via = typeof item === 'string' ? null : asSentVia(item.sentVia);
-        if (via) nextVia.set(id, via);
+        if (typeof item !== 'string') {
+          const via = asSentVia(item.sentVia);
+          nextRecords.set(id, {
+            sentVia: via,
+            sentToEmail: item.sentToEmail?.trim() || null,
+            sentAt: item.sentAt?.trim() || null,
+            contactViewed: item.contactViewed === true,
+          });
+          if (via) next.add(id);
+        } else {
+          next.add(id);
+        }
       }
       const stillOptimistic = new Set<string>();
       for (const id of optimistic) {
         if (!optimisticBefore.has(id)) {
           next.add(id);
           stillOptimistic.add(id);
-          const via = optimisticVia.get(id);
-          if (via) nextVia.set(id, via);
+          const record = optimisticRecords.get(id);
+          if (record) nextRecords.set(id, record);
         }
       }
       optimistic = stillOptimistic;
-      optimisticVia = new Map([...optimisticVia].filter(([id]) => stillOptimistic.has(id)));
-      sentViaById = nextVia;
+      optimisticRecords = new Map([...optimisticRecords].filter(([id]) => stillOptimistic.has(id)));
+      records = nextRecords;
       ids = next;
       loadedUserId = userId;
       emit();

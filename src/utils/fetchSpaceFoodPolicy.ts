@@ -1,5 +1,6 @@
 import { spaceApi } from '../api/spaceApi';
-import type { SpaceType, UUID } from '../api/types';
+import type { AmenityAssignment, SpaceType, UUID } from '../api/types';
+import { normalizeAmenityAssignments, supportsSpaceAmenities } from './amenities';
 
 export type SpaceFoodPolicy = {
   foodIncludedInRent: boolean;
@@ -44,4 +45,18 @@ export function resolveSpaceFoodPolicy(space: {
 export async function fetchSpaceFoodPolicy(spaceId: UUID): Promise<SpaceFoodPolicy> {
   const space = await spaceApi.getSpaceById(spaceId);
   return resolveSpaceFoodPolicy(space);
+}
+
+/** Food policy and amenities share one space details request. */
+export async function fetchSpaceOccupancyContext(spaceId: UUID): Promise<{
+  foodPolicy: SpaceFoodPolicy;
+  amenities: AmenityAssignment[];
+}> {
+  const space = await spaceApi.getSpaceById(spaceId);
+  return {
+    foodPolicy: resolveSpaceFoodPolicy(space),
+    amenities: supportsSpaceAmenities(space.type)
+      ? normalizeAmenityAssignments(space.amenities ?? [])
+      : [],
+  };
 }

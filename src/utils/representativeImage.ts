@@ -101,6 +101,7 @@ export function normalizeRepresentativeCategory(
   if (key === 'HOSTEL') return 'HOSTEL';
   if (key === 'CO_LIVING' || key === 'COLIVING') return 'CO_LIVING';
   if (key === 'RENTAL') return 'RENTAL';
+  if (key === 'CORPORATE_STAY') return 'SERVICED';
   if (
     key === 'SERVICED' ||
     key === 'CORPORATE' ||
@@ -128,6 +129,22 @@ export function representativeImageKey(
   variantIndex: number,
 ): string {
   return `${CATEGORY_SLUG[category]}-${variantIndex + 1}`;
+}
+
+/**
+ * Site-relative file paths work in the web app because the browser resolves
+ * them. React Native needs an absolute URL.
+ */
+export function toAbsoluteListingImageUrl(url: string, apiBaseUrl?: string | null): string {
+  const value = url.trim();
+  if (/^https?:\/\//i.test(value)) {
+    return value;
+  }
+  const base = apiBaseUrl?.trim().replace(/\/$/, '') ?? '';
+  if (value.startsWith('/') && base) {
+    return `${base}${value}`;
+  }
+  return value;
 }
 
 export function isVerifiedListingImageUrl(url?: string | null): boolean {
@@ -163,7 +180,7 @@ export function resolveListingCover(input: ListingCoverInput): ListingCover {
       category,
       variantIndex,
       imageKey,
-      source: { uri: listingImageUrl! },
+      source: { uri: toAbsoluteListingImageUrl(listingImageUrl!) },
     };
   }
 

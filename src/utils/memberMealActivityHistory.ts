@@ -1,4 +1,5 @@
 import type {
+  MealPollStatus,
   MemberMealActivityDay,
   MemberMealActivitySlot,
   MemberMealActivitySlotStatus,
@@ -18,6 +19,14 @@ export type ActivityPaymentDisplay =
   | 'NONE';
 
 export type ActivityDateSortOrder = 'asc' | 'desc';
+
+function normalizePollStatus(value: unknown): MealPollStatus | null {
+  const raw = String(value ?? '').toUpperCase();
+  if (raw === 'OPEN' || raw === 'CLOSED') {
+    return raw;
+  }
+  return null;
+}
 
 const MEAL_PREFIX: Record<string, string> = {
   BREAKFAST: 'B',
@@ -119,20 +128,50 @@ export function filterActivityDays(
     });
 }
 
+type ActivityPollSlot = {
+  status: MemberMealActivitySlotStatus;
+  pollStatus?: MealPollStatus | null;
+};
+
+/** Menu was planned, nothing was chosen, and the poll is no longer open. */
+export function isUnansweredClosedPoll(slot: ActivityPollSlot): boolean {
+  return slot.status === 'PENDING' && slot.pollStatus === 'CLOSED';
+}
+
+/** True when at least one published meal can still be chosen. */
+export function canChooseActivityMeals(slots: ActivityPollSlot[]): boolean {
+  return slots.some(slot => slot.status === 'PENDING' && slot.pollStatus !== 'CLOSED');
+}
+
+/** True when every visible meal on the day is on a closed poll. */
+export function activityDayPollClosed(slots: ActivityPollSlot[]): boolean {
+  const visible = slots.filter(slot => slot.status !== 'INACTIVE' && slot.status !== 'NO_MENU');
+  return visible.length > 0 && visible.every(slot => slot.pollStatus === 'CLOSED');
+}
+
 export function formatSlotLine(
   slot: MemberMealActivitySlot,
   slotLabel: (status: MemberMealActivitySlotStatus) => string,
+  notSelectedLabel?: string,
 ): { prefix: string; detail: string; amount: string | null } {
   const prefix = mealSlotPrefix(slot.mealType);
   const amount = formatComboPrice(slot.slotAmount, slot.currencyCode);
+  if (isUnansweredClosedPoll(slot)) {
+    return {
+      prefix,
+      detail: notSelectedLabel ?? slotLabel(slot.status),
+      amount: null,
+    };
+  }
+  const label = slot.selectionLabel?.trim();
 
-  if (slot.status === 'ACCEPTED' && slot.selectionLabel) {
+  if (label && (slot.status === 'ACCEPTED' || slot.status === 'PENDING')) {
     const qtySuffix =
       slot.quantity != null && slot.quantity > 1 ? ` ×${slot.quantity}` : slot.quantity === 1 ? ' ×1' : '';
     return {
       prefix,
-      detail: `${slot.selectionLabel}${qtySuffix}`,
-      amount,
+      detail: `${label}${qtySuffix}`,
+      amount: slot.status === 'ACCEPTED' ? amount : null,
     };
   }
 
@@ -166,10 +205,14 @@ export function normalizeActivityMonthDay(day: MemberMealActivityDay): MemberMea
     dayTotal: day.dayTotal != null ? Number(day.dayTotal) : null,
     paymentStatus: day.paymentStatus as MealPollPaymentStatus | null | undefined,
     hasActivity: dayHasListActivity({ ...day, slots }),
-    slots: slots.map(slot => ({
-      ...slot,
-      slotAmount: slot.slotAmount != null ? Number(slot.slotAmount) : null,
-    })),
+    slots: slots.map(slot => {
+      const raw = slot as MemberMealActivitySlot & { poll_status?: string | null };
+      return {
+        ...slot,
+        slotAmount: slot.slotAmount != null ? Number(slot.slotAmount) : null,
+        pollStatus: normalizePollStatus(raw.pollStatus ?? raw.poll_status),
+      };
+    }),
   };
 }
 

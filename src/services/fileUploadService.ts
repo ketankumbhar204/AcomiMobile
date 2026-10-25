@@ -1,5 +1,5 @@
 import { env } from '../config/env';
-import { getAuthToken } from '../api/client';
+import apiClient from '../api/client';
 import {
   filesApi,
   type CreateUploadSessionRequest,
@@ -128,9 +128,72 @@ function resolveDownloadUrl(contentUrl: string): string {
     return contentUrl;
   }
   const path = contentUrl.startsWith('/') ? contentUrl : `/${contentUrl}`;
-  const token = getAuthToken();
-  if (!token) {
-    return `${env.apiBaseUrl}${path}`;
-  }
   return `${env.apiBaseUrl}${path}`;
+}
+
+export type AuthorizedImageSource = {
+  uri: string;
+  headers?: Record<string, string>;
+};
+
+function isApiFileContentUrl(contentUrl: string): boolean {
+  return /\/files\/[^/?#]+\/content(?:[?#]|$)/.test(contentUrl);
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  const encode = globalThis.btoa;
+  if (typeof encode !== 'function') {
+    throw new Error('Unable to encode the image.');
+  }
+  let binary = '';
+  const chunkSize = 0x8000;
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    const chunk = bytes.subarray(index, index + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  return encode(binary);
+}
+
+/** Image source that can paint a stored file. Protected API files are returned as a data URI. */
+export function imageSourceFromContentUrl(contentUrl: string): AuthorizedImageSource {
+  return { uri: resolveDownloadUrl(contentUrl) };
+}
+
+export async function fetchAuthorizedImageSource(fileId: string): Promise<AuthorizedImageSource> {
+  const meta = await filesApi.getContentUrl(fileId);
+  const resolved = resolveDownloadUrl(meta.contentUrl);
+  if (!isApiFileContentUrl(resolved)) {
+    return { uri: resolved };
+  }
+  const response = await apiClient.get<ArrayBuffer>(`/files/${fileId}/content`, {
+    responseType: 'arraybuffer',
+    headers: { Accept: '*/*' },
+  });
+  const headerType = response.headers['content-type'];
+  const contentType =
+    (typeof headerType === 'string' ? headerType.split(';')[0]?.trim() : null) ||
+    meta.contentType ||
+    'image/jpeg';
+  const bytes = new Uint8Array(response.data);
+  return { uri: `data:${contentType};base64,${bytesToBase64(bytes)}` };
+}
+
+export async function loadPaymentQrImage(
+  fileId?: string | null,
+  contentUrl?: string | null,
+): Promise<AuthorizedImageSource | null> {
+  if (fileId) {
+    return fetchAuthorizedImageSource(fileId);
+  }
+  if (!contentUrl) {
+    return null;
+  }
+  const embeddedFileId = contentUrl.match(/\/files\/([^/?#]+)\/content(?:[?#]|$)/)?.[1];
+  if (embeddedFileId) {
+    return fetchAuthorizedImageSource(embeddedFileId);
+  }
+  if (isApiFileContentUrl(contentUrl)) {
+    return null;
+  }
+  return imageSourceFromContentUrl(contentUrl);
 }

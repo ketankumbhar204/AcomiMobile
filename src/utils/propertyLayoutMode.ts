@@ -10,6 +10,7 @@ export function layoutModesForSpaceType(spaceType: SpaceType): PropertyLayoutMod
     case 'CO_LIVING':
       return ['CO_LIVING'];
     case 'RENTAL':
+    case 'CORPORATE_STAY':
       return ['RENTAL'];
     default:
       return [];

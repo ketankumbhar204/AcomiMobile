@@ -12,6 +12,7 @@ import {
   MemberDetailTabBar,
   type MemberDetailTab,
   MemberHistoryTab,
+  MemberPaymentsTab,
   MemberProfileTab,
 } from '../components/member';
 import { MemberMealsTab } from '../components/meals';
@@ -45,7 +46,9 @@ export function MemberDetailsScreen() {
   const memberLoading = useMemberStore(state => state.memberLoading);
   const error = useMemberStore(state => state.error);
 
-  const [activeTab, setActiveTab] = useState<MemberDetailTab>('profile');
+  const [activeTab, setActiveTab] = useState<MemberDetailTab>(
+    route.params.initialTab ?? 'profile',
+  );
   const activityReloadRef = useRef<(() => void) | null>(null);
   const openActivityDaySheet = useMemberMealActivityDaySheetStore(state => state.open);
   const closeActivityDaySheet = useMemberMealActivityDaySheetStore(state => state.close);
@@ -132,6 +135,8 @@ export function MemberDetailsScreen() {
             }}
           />
         );
+      case 'payments':
+        return <MemberPaymentsTab spaceId={spaceId} member={member} />;
       case 'deposit':
         return <MemberDepositTab spaceId={spaceId} member={member} canEdit={canEdit} />;
       case 'history':

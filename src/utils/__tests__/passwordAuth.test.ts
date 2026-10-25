@@ -62,6 +62,8 @@ describe('password authentication', () => {
     expect(loginScreen).toMatch(/useLogin/);
     expect(loginScreen).toMatch(/useSendOtp/);
     expect(loginScreen).toMatch(/ForgotPassword/);
+    expect(loginScreen).toContain('anchorToScreen');
+    expect(loginScreen).toContain('KeyboardAvoidingView');
     expect(registerScreen).toMatch(/useSendOtp/);
     expect(registerScreen).toMatch(/OtpVerification/);
     expect(passwordField).toMatch(/secureTextEntry=\{!visible\}/);

@@ -12,6 +12,7 @@ import type {
   SpaceType,
 } from '../../api/types';
 import { Button, Card, useConfirmDialog } from '../ui';
+import { StayTrailLine } from '../member/ContactAndStayMeta';
 import { MemberOccupancyStatusBadge } from '../member/MemberOccupancyStatusBadge';
 import { occupancyActionTint } from './occupancyActionTints';
 import type { MainStackParamList } from '../../navigation/types';
@@ -23,6 +24,7 @@ import { useMemberStore } from '../../store/memberStore';
 import { useToastStore } from '../../store/toastStore';
 import { useAuthStore } from '../../store/authStore';
 import { colors, radius, spacing, typography } from '../../theme';
+import { formatPaymentStayLabel } from '../../utils/stayTrail';
 import { isAccommodationApplicable } from '../../utils/accommodationProfile';
 import { supportsSpaceAmenities } from '../../utils/amenities';
 import {
@@ -32,7 +34,7 @@ import {
 } from '../../utils/occupancyPermissions';
 import {
   formatOccupancyAllocatedDate,
-  formatOccupancyLocationHierarchy,
+  occupancyLocationLines,
   getOccupiedDayCount,
   getOccupancyExitDate,
 } from '../../utils/occupancyRules';
@@ -73,22 +75,27 @@ function StayLocationBlock({
 }: {
   occupancy: CurrentOccupancySummaryResponse;
 }) {
-  const { primary, secondary } = formatOccupancyLocationHierarchy(occupancy);
-  if (!primary && !secondary) {
+  const { t } = useTranslation();
+  const lines = occupancyLocationLines(occupancy);
+  if (lines.length === 0) {
     return null;
   }
+  const trail = formatPaymentStayLabel({
+    buildingName: occupancy.buildingName,
+    floorName: occupancy.floorName,
+    unitName: occupancy.unitName,
+    roomName: occupancy.roomName,
+    bedName: occupancy.bedName,
+  });
   return (
     <View style={styles.locationBlock}>
-      {primary ? (
-        <Text style={styles.locationPrimary} numberOfLines={2}>
-          📍 {primary}
-        </Text>
-      ) : null}
-      {secondary ? (
-        <Text style={styles.locationSecondary} numberOfLines={2}>
-          {secondary}
-        </Text>
-      ) : null}
+      {trail ? <StayTrailLine label={trail} textStyle={styles.locationValue} /> : null}
+      {lines.map(line => (
+        <View key={line.labelKey} style={styles.locationRow}>
+          <Text style={styles.locationLabel}>{t(line.labelKey)}</Text>
+          <Text style={styles.locationValue}>{line.value}</Text>
+        </View>
+      ))}
     </View>
   );
 }
@@ -293,7 +300,11 @@ export function MemberAccommodationSection({
               middleLabel={t('occupancy.section.occupiedFor')}
               middleValue={occupiedForLabel}
               exitLabel={t('occupancy.section.expectedMoveOut')}
-              exitValue={formatOccupancyAllocatedDate(exitRaw)}
+              exitValue={
+                exitRaw
+                  ? formatOccupancyAllocatedDate(exitRaw)
+                  : t('occupancy.section.notSet')
+              }
             />
             {activeOccupancy ? (
               <OccupancyContractSnapshotCard occupancy={activeOccupancy} embedded />
@@ -317,7 +328,11 @@ export function MemberAccommodationSection({
               middleLabel={t('occupancy.section.reservedOnShort')}
               middleValue={formatOccupancyAllocatedDate(reservedOccupancy?.reservedAt)}
               exitLabel={t('occupancy.section.expectedMoveOut')}
-              exitValue={formatOccupancyAllocatedDate(getOccupancyExitDate(reservedOccupancy))}
+              exitValue={
+                getOccupancyExitDate(reservedOccupancy)
+                  ? formatOccupancyAllocatedDate(getOccupancyExitDate(reservedOccupancy))
+                  : t('occupancy.section.notSet')
+              }
             />
             {reservedOccupancy ? (
               <OccupancyContractSnapshotCard occupancy={reservedOccupancy} embedded />
@@ -439,16 +454,22 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   locationBlock: {
-    gap: 4,
+    gap: 6,
   },
-  locationPrimary: {
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  locationLabel: {
+    ...typography.caption,
+    color: colors.muted,
+    width: 64,
+  },
+  locationValue: {
     ...typography.bodyStrong,
     color: colors.textPrimary,
-  },
-  locationSecondary: {
-    ...typography.body,
-    color: colors.textSecondary,
-    paddingLeft: 22,
+    flex: 1,
   },
   timelineRow: {
     flexDirection: 'row',

@@ -16,6 +16,14 @@ import { deviceTokensApi } from '../../api/deviceTokensApi';
 import { getAuthToken } from '../../api/client';
 import { Platform } from 'react-native';
 import { devLog } from '../../utils/devLog';
+import {
+  displayLocalNotification,
+  displayedMessageKeys,
+  ensureAndroidNotificationPermission,
+  planNotificationDisplay,
+  requestAndroidPostNotifications,
+  subscribeNotificationOpens,
+} from './notificationDisplay';
 
 const LOG_TAG = '[Push]';
 
@@ -49,6 +57,63 @@ function messageToPayload(message: RemoteMessageLike | null | undefined) {
   return parsePushData(message.data, message.notification);
 }
 
+let permissionWarningShown = false;
+
+async function resolveNotificationPermission(
+  showToast: (message: string) => void,
+): Promise<boolean> {
+  if (Platform.OS !== 'android') {
+    return requestPermissionQuietly();
+  }
+  const messaging = getMessagingSafe();
+  const current = messaging ? await messaging.hasPermission() : AuthorizationStatus.DENIED;
+  const decision = await ensureAndroidNotificationPermission({
+    platform: 'android',
+    sdk: typeof Platform.Version === 'number' ? Platform.Version : Number(Platform.Version),
+    notificationsEnabled:
+      current === AuthorizationStatus.AUTHORIZED || current === AuthorizationStatus.PROVISIONAL,
+    requestPostNotifications: requestAndroidPostNotifications,
+  });
+  if (!decision.enabled && !permissionWarningShown) {
+    permissionWarningShown = true;
+    showToast(
+      'Notifications are off for ACOMI. Enable them in Android Settings, Apps, ACOMI, Notifications.',
+    );
+  }
+  return decision.enabled;
+}
+
+async function presentIncomingMessage(
+  remote: RemoteMessageLike,
+  visibility: 'foreground' | 'background' | 'terminated',
+  notificationsEnabled: boolean,
+): Promise<void> {
+  const title = remote.notification?.title ?? remote.data?.title ?? '';
+  const body = remote.notification?.body ?? remote.data?.body ?? '';
+  const messageKey = remote.messageId ?? remote.data?.notificationId ?? null;
+  devLog(`${LOG_TAG} status=MESSAGE_RECEIVED visibility=${visibility}`);
+  const plan = planNotificationDisplay({
+    visibility,
+    notificationBlockPresent: Boolean(remote.notification?.title || remote.notification?.body),
+    title,
+    body,
+    messageKey,
+    displayedKeys: displayedMessageKeys(),
+    notificationsEnabled,
+  });
+  if (plan.action !== 'display-local') {
+    devLog(`${LOG_TAG} status=${plan.reason}`);
+    return;
+  }
+  const status = await displayLocalNotification({
+    title: title.trim(),
+    body: body.trim(),
+    messageKey,
+    data: remote.data,
+  });
+  devLog(`${LOG_TAG} status=${status === 'DISPLAYED' ? 'NOTIFICATION_DISPLAYED' : status}`);
+}
+
 export function usePushNotifications(options: {
   navigationReady: boolean;
   spaceReady: boolean;
@@ -67,32 +132,33 @@ export function usePushNotifications(options: {
     let unsubscribeRefresh: (() => void) | undefined;
     let unsubscribeMessage: (() => void) | undefined;
     let unsubscribeOpened: (() => void) | undefined;
+    let unsubscribeOpenedLocal: (() => void) | undefined;
 
     async function start() {
       const messaging = getMessagingSafe();
       if (!messaging) {
         return;
       }
-      const granted = await requestPermissionQuietly();
-      if (!granted) {
-        devLog(`${LOG_TAG} permission denied — app continues without push`);
+      const notificationsEnabled = await resolveNotificationPermission(showToast);
+      if (!notificationsEnabled) {
+        devLog(`${LOG_TAG} status=PERMISSION_DENIED`);
       }
       if (cancelled) {
         return;
       }
       await registerCurrentDeviceToken();
+      if (cancelled) {
+        return;
+      }
 
       unsubscribeRefresh = messaging.onTokenRefresh(() => {
         void registerCurrentDeviceToken();
       });
       unsubscribeMessage = messaging.onMessage(remote => {
-        const title = remote.notification?.title?.trim();
-        const body = remote.notification?.body?.trim();
-        const text = [title, body].filter(Boolean).join(' — ');
-        if (text) {
-          const payload = messageToPayload(remote);
-          showToast(text, payload ? () => void openPushNotification(payload) : undefined);
-        }
+        void presentIncomingMessage(remote, 'foreground', notificationsEnabled);
+      });
+      unsubscribeOpenedLocal = subscribeNotificationOpens(payload => {
+        void openPushNotification(payload);
       });
       unsubscribeOpened = messaging.onNotificationOpenedApp(remote => {
         const payload = messageToPayload(remote);
@@ -113,6 +179,7 @@ export function usePushNotifications(options: {
       unsubscribeRefresh?.();
       unsubscribeMessage?.();
       unsubscribeOpened?.();
+      unsubscribeOpenedLocal?.();
     };
   }, [isAuthenticated, showToast, userId]);
 

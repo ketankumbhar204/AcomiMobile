@@ -2,11 +2,11 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { colors, radius, spacing, typography } from '../../theme';
-import { formatComboPrice } from '../../utils/comboPrice';
+import { formatPaymentAmount } from '../../utils/paymentAmount';
 
 type DayMealPaymentBulkFooterProps = {
   selectedCount: number;
-  totalAmount: number;
+  totalAmount: number | null;
   currencyCode: string;
   disabled?: boolean;
   onPaySelected: () => void;
@@ -24,7 +24,11 @@ export function DayMealPaymentBulkFooter({
     return null;
   }
 
-  const amountLabel = formatComboPrice(totalAmount, currencyCode) ?? '—';
+  const formatted = formatPaymentAmount(totalAmount, currencyCode);
+  const amountLabel = formatted
+    ? t('paymentCollection.dayMeals.amountDue', { amount: formatted })
+    : t('paymentCollection.dayMeals.amountUnavailable');
+  const blocked = disabled || totalAmount == null;
 
   return (
     <View style={styles.wrap}>
@@ -35,8 +39,8 @@ export function DayMealPaymentBulkFooter({
         <Text style={styles.amount}>{amountLabel}</Text>
       </View>
       <Pressable
-        style={[styles.button, disabled && styles.buttonDisabled]}
-        disabled={disabled}
+        style={[styles.button, blocked && styles.buttonDisabled]}
+        disabled={blocked}
         onPress={onPaySelected}
         accessibilityRole="button">
         <Text style={styles.buttonLabel}>{t('paymentCollection.dayMeals.bulk.paySelected')}</Text>

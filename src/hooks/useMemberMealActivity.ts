@@ -53,19 +53,31 @@ export function useMemberMealActivity(spaceId: UUID, memberId: UUID, enabled = t
   const [error, setError] = useState<string | null>(null);
   const [activity, setActivity] = useState<MemberMealActivityMonth | null>(null);
   const requestIdRef = useRef(0);
+  const hasDataRef = useRef(false);
+  const scopeRef = useRef('');
 
   const load = useCallback(async () => {
     if (!enabled) {
       return;
     }
     const requestId = ++requestIdRef.current;
-    setLoading(true);
+    const scope = `${spaceId}:${memberId}:${month}`;
+    const sameScope = scopeRef.current === scope;
+    scopeRef.current = scope;
+    const silent = hasDataRef.current && sameScope;
+    if (!sameScope) {
+      hasDataRef.current = false;
+    }
+    if (!silent) {
+      setLoading(true);
+    }
     setError(null);
     try {
       const data = await mealsApi.getMemberMealActivity(spaceId, memberId, month);
       if (requestId !== requestIdRef.current) {
         return;
       }
+      hasDataRef.current = true;
       setActivity(normalizeMonthActivity(data));
     } catch (err) {
       if (requestId !== requestIdRef.current) {
@@ -79,10 +91,11 @@ export function useMemberMealActivity(spaceId: UUID, memberId: UUID, enabled = t
           err,
         });
       }
+      hasDataRef.current = false;
       setError(t('meals.activity.loadError'));
       setActivity(null);
     } finally {
-      if (requestId === requestIdRef.current) {
+      if (requestId === requestIdRef.current && !silent) {
         setLoading(false);
       }
     }

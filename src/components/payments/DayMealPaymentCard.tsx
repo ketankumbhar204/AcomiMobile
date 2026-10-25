@@ -1,8 +1,9 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Check } from 'lucide-react-native';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
-import { formatComboPrice } from '../../utils/comboPrice';
+import { formatPaymentAmount } from '../../utils/paymentAmount';
 import type { DayMealPaymentListItem } from '../../utils/dayMealPayments';
 import { formatMenuDate } from '../../utils/mealDates';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
@@ -25,7 +26,12 @@ export function DayMealPaymentCard({
   onToggleSelect,
 }: DayMealPaymentCardProps) {
   const { t, i18n } = useTranslation();
-  const amountLabel = formatComboPrice(item.amount, item.currencyCode) ?? '—';
+  const formattedAmount = item.amountKnown
+    ? formatPaymentAmount(item.amount, item.currencyCode)
+    : null;
+  const amountLabel = formattedAmount
+    ? t('paymentCollection.dayMeals.amountDue', { amount: formattedAmount })
+    : t('paymentCollection.dayMeals.amountUnavailable');
   const mealsLabel =
     item.mealTypes.length > 0
       ? item.mealTypes.map(type => t(mealTypeLabelKey(type))).join(' • ')
@@ -48,7 +54,7 @@ export function DayMealPaymentCard({
             hitSlop={8}
             accessibilityRole="checkbox"
             accessibilityState={{ checked: selected }}>
-            <Text style={styles.checkboxMark}>{selected ? '✓' : ''}</Text>
+            {selected ? <Check size={12} color={colors.white} strokeWidth={3} /> : null}
           </Pressable>
         ) : null}
         <View style={styles.body}>

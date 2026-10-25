@@ -7,15 +7,8 @@ export const SPACE_TYPE_VALUES: SpaceType[] = [
   'HOSTEL',
   'CO_LIVING',
   'RENTAL',
+  'CORPORATE_STAY',
 ];
-
-const SPACE_TYPE_EMOJI: Record<SpaceType, string> = {
-  PG: '🏠',
-  MESS: '🍽️',
-  HOSTEL: '🛏️',
-  CO_LIVING: '🏘️',
-  RENTAL: '🏢',
-};
 
 const SPACE_TYPE_ICON_LABEL: Record<SpaceType, string> = {
   PG: 'PG',
@@ -23,6 +16,7 @@ const SPACE_TYPE_ICON_LABEL: Record<SpaceType, string> = {
   HOSTEL: 'HO',
   CO_LIVING: 'CO',
   RENTAL: 'RE',
+  CORPORATE_STAY: 'CS',
 };
 
 const SPACE_TYPE_I18N_KEY: Record<SpaceType, string> = {
@@ -31,6 +25,7 @@ const SPACE_TYPE_I18N_KEY: Record<SpaceType, string> = {
   HOSTEL: 'hostel',
   CO_LIVING: 'coLiving',
   RENTAL: 'rental',
+  CORPORATE_STAY: 'corporateStay',
 };
 
 export function getSpaceTypeLabel(type: SpaceType): string {
@@ -42,7 +37,7 @@ export function getSpaceTypeDescription(type: SpaceType): string {
 }
 
 export function formatSpaceType(type: SpaceType): string {
-  return `${SPACE_TYPE_EMOJI[type]} ${getSpaceTypeLabel(type)}`;
+  return getSpaceTypeLabel(type);
 }
 
 export function spaceTypeIconLabel(type: SpaceType): string {

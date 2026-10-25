@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ChevronRight } from 'lucide-react-native';
 import { colors, radius, spacing, typography } from '../../theme';
 
 export type MonthlySummaryCardTone = 'default' | 'success' | 'pending' | 'remaining';
@@ -9,6 +10,7 @@ export type MonthlySummaryCardItem = {
   value: string;
   tone?: MonthlySummaryCardTone;
   onPress?: () => void;
+  selected?: boolean;
 };
 
 type MonthlySummaryCardsProps = {
@@ -39,10 +41,21 @@ export function MonthlySummaryCards({ cards }: MonthlySummaryCardsProps) {
         const cardStyle = [styles.card, useRow && styles.cardInRow];
         const content = (
           <>
-            <Text style={[styles.value, toneStyles[card.tone ?? 'default']]} numberOfLines={1}>
-              {card.value}
-            </Text>
-            <Text style={styles.label}>{card.label}</Text>
+            <View style={styles.copy}>
+              <Text
+                style={[styles.value, toneStyles[card.tone ?? 'default']]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}>
+                {card.value}
+              </Text>
+              <Text style={styles.label} numberOfLines={2}>
+                {card.label}
+              </Text>
+            </View>
+            {card.onPress ? (
+              <ChevronRight size={16} color={colors.muted} strokeWidth={2.2} />
+            ) : null}
           </>
         );
 
@@ -50,9 +63,15 @@ export function MonthlySummaryCards({ cards }: MonthlySummaryCardsProps) {
           return (
             <Pressable
               key={card.label}
-              style={({ pressed }) => [...cardStyle, pressed && styles.cardPressed]}
+              style={({ pressed }) => [
+                ...cardStyle,
+                card.selected && styles.cardSelected,
+                pressed && styles.cardPressed,
+              ]}
               onPress={card.onPress}
-              accessibilityRole="button">
+              accessibilityRole="button"
+              accessibilityState={{ selected: Boolean(card.selected) }}
+              accessibilityLabel={`${card.label}, ${card.value}`}>
               {content}
             </Pressable>
           );
@@ -85,19 +104,27 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.sm,
     minHeight: 64,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xxs,
+    gap: spacing.xs,
+  },
+  copy: {
+    flex: 1,
+    minWidth: 0,
   },
   cardInRow: {
     minWidth: 0,
   },
+  cardSelected: {
+    borderColor: colors.primary,
+    borderWidth: 1.5,
+    backgroundColor: colors.lightGreen,
+  },
   cardPressed: {
     opacity: 0.88,
-    borderColor: colors.primary,
   },
   value: {
     ...typography.bodyStrong,
@@ -105,14 +132,12 @@ const styles = StyleSheet.create({
     fontSize: 22,
     lineHeight: 26,
     fontWeight: '700',
-    textAlign: 'center',
   },
   label: {
     ...typography.caption,
     color: colors.muted,
-    textAlign: 'center',
     fontWeight: '600',
     fontSize: 12,
-    lineHeight: 14,
+    lineHeight: 15,
   },
 });

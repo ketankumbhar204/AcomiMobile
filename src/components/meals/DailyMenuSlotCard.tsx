@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { ClipboardList, Copy, Pencil, Share2, UtensilsCrossed } from 'lucide-react-native';
+import { ChevronRight, ClipboardList, Copy, Pencil, Share2, UtensilsCrossed } from 'lucide-react-native';
 import type { DailyMenuResponse, MealComboResponse, MealType, UUID } from '../../api/types';
 import { Card } from '../ui/Card';
 import { HeaderOverflowMenu } from '../ui/HeaderOverflowMenu';
@@ -48,6 +48,8 @@ type DailyMenuSlotCardProps = {
   pollClosedAtLabel?: string | null;
   pollCloseSource?: 'MANUAL' | 'AUTOMATIC' | null;
   onViewHeadcount?: () => void;
+  /** Opens the meal poll for this slot. Used by members viewing a published menu. */
+  onRespond?: () => void;
   readOnly?: boolean;
 };
 
@@ -70,6 +72,7 @@ export function DailyMenuSlotCard({
   pollClosedAtLabel,
   pollCloseSource,
   onViewHeadcount,
+  onRespond,
   readOnly = false,
 }: DailyMenuSlotCardProps) {
   const { t } = useTranslation();
@@ -192,17 +195,19 @@ export function DailyMenuSlotCard({
               {cardStatusLabel}
             </Text>
           </View>
-          <HeaderOverflowMenu
-            accessibilityLabel={t('spaces.menu.open')}
-            items={[
-              {
-                id: 'copy-menu',
-                label: t('meals.planning.copyMenu'),
-                visible: !readOnly && Boolean(onCopyMenu),
-                onPress: () => onCopyMenu?.(),
-              },
-            ]}
-          />
+          {!readOnly && onCopyMenu ? (
+            <HeaderOverflowMenu
+              accessibilityLabel={t('spaces.menu.open')}
+              items={[
+                {
+                  id: 'copy-menu',
+                  label: t('meals.planning.copyMenu'),
+                  visible: true,
+                  onPress: () => onCopyMenu(),
+                },
+              ]}
+            />
+          ) : null}
         </View>
       </View>
 
@@ -307,7 +312,7 @@ export function DailyMenuSlotCard({
                     </Text>
                   ) : null}
                   {priceLabel ? <Text style={styles.menuPrice}>{priceLabel}</Text> : null}
-                  {isCombo ? <Text style={styles.menuChevron}>›</Text> : null}
+                  {isCombo ? <ChevronRight size={16} color={colors.muted} strokeWidth={2.4} /> : null}
                 </Pressable>
               );
             })}
@@ -327,7 +332,23 @@ export function DailyMenuSlotCard({
         </View>
       )}
 
-      {hasPlan ? (
+      {hasPlan && readOnly && onRespond ? (
+        <View style={styles.plannedActions}>
+          <Pressable
+            onPress={onRespond}
+            android_ripple={{ color: 'rgba(18, 140, 126, 0.1)' }}
+            style={({ pressed }) => [styles.plannedAction, pressed && styles.buttonPressed]}
+            accessibilityRole="button">
+            <Text
+              style={styles.plannedActionText}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.78}>
+              {t('meals.menu.respond')}
+            </Text>
+          </Pressable>
+        </View>
+      ) : hasPlan && !readOnly && (onEdit || onShare) ? (
         <View style={styles.plannedActions}>
           <Pressable
             onPress={!readOnly ? onEdit : undefined}
@@ -388,10 +409,8 @@ export function DailyMenuSlotCard({
             <Text style={styles.pollStatusMuted}>{t('meals.poll.pollOpenPrefix')}</Text>
             {onViewHeadcount ? (
               <Pressable onPress={onViewHeadcount} hitSlop={8} style={styles.pollStatusLinkWrap}>
-                <Text style={styles.pollStatusLink}>
-                  {respondedLabel}
-                  <Text style={styles.pollStatusChevron}> ›</Text>
-                </Text>
+                <Text style={styles.pollStatusLink}>{respondedLabel}</Text>
+                <ChevronRight size={14} color={colors.primaryDark} strokeWidth={2.4} />
               </Pressable>
             ) : (
               <Text style={styles.pollStatusOpen}>{respondedLabel}</Text>
@@ -406,10 +425,8 @@ export function DailyMenuSlotCard({
             <Text style={styles.pollStatusMuted}>{t('meals.poll.pollClosedPrefix')}</Text>
             {onViewHeadcount ? (
               <Pressable onPress={onViewHeadcount} hitSlop={8} style={styles.pollStatusLinkWrap}>
-                <Text style={styles.pollStatusLink}>
-                  {respondedLabel}
-                  <Text style={styles.pollStatusChevron}> ›</Text>
-                </Text>
+                <Text style={styles.pollStatusLink}>{respondedLabel}</Text>
+                <ChevronRight size={14} color={colors.primaryDark} strokeWidth={2.4} />
               </Pressable>
             ) : (
               <Text style={styles.pollStatusClosed}>{respondedLabel}</Text>
@@ -445,12 +462,15 @@ export function DailyMenuSlotCard({
               accessibilityLabel={t('meals.poll.editCloseAtA11y', { when: pollCloseAtLabel })}>
               <Text style={styles.closeAtChipText} numberOfLines={2}>
                 {t('meals.poll.closesAt', { when: pollCloseAtLabel })}
-                {onEditPollCloseAt ? ' ✏️' : ''}
               </Text>
+              {onEditPollCloseAt ? (
+                <Pencil size={14} color={colors.primaryDark} strokeWidth={2.2} />
+              ) : null}
             </Pressable>
           ) : onEditPollCloseAt ? (
             <Pressable style={styles.closeAtChip} onPress={onEditPollCloseAt} hitSlop={6}>
-              <Text style={styles.closeAtChipText}>{t('meals.poll.setCloseAt')} ✏️</Text>
+              <Text style={styles.closeAtChipText}>{t('meals.poll.setCloseAt')}</Text>
+              <Pencil size={14} color={colors.primaryDark} strokeWidth={2.2} />
             </Pressable>
           ) : null}
         </View>
@@ -776,7 +796,12 @@ const styles = StyleSheet.create({
     color: colors.success,
     fontWeight: '600',
   },
-  pollStatusLinkWrap: { paddingVertical: spacing.xxs },
+  pollStatusLinkWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingVertical: spacing.xxs,
+  },
   pollStatusLink: {
     ...typography.caption,
     color: colors.primaryDark,
@@ -817,6 +842,9 @@ const styles = StyleSheet.create({
   pollCloseButtonText: { ...typography.bodyStrong, color: colors.muted, fontSize: 14 },
   closeAtChip: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.xs,
   },

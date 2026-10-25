@@ -1,6 +1,10 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { HeaderBackButton } from '../components/ui/HeaderBackButton';
+import { adminParentRoute } from './adminBackTarget';
 import { AdminActiveSpaceDetailScreen } from '../screens/admin/AdminActiveSpaceDetailScreen';
 import { AdminAddMessScreen } from '../screens/admin/AdminAddMessScreen';
 import { AdminAddPropertyScreen } from '../screens/admin/AdminAddPropertyScreen';
@@ -17,16 +21,41 @@ import { AdminRegisteredUsersScreen } from '../screens/admin/AdminRegisteredUser
 import { AdminSavedAddressesScreen } from '../screens/admin/AdminSavedAddressesScreen';
 import { AdminInquiryCreditsConfigScreen } from '../screens/admin/AdminInquiryCreditsConfigScreen';
 import { AdminInquiryPurchaseListScreen } from '../screens/admin/AdminInquiryPurchaseListScreen';
+import { AdminNotificationTestingScreen } from '../screens/admin/AdminNotificationTestingScreen';
 import { stackHeaderOptions } from '../theme';
 import type { AdminStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<AdminStackParamList>();
 
+function AdminStackBackButton({
+  routeName,
+}: {
+  routeName: keyof AdminStackParamList;
+}) {
+  const navigation = useNavigation<NativeStackNavigationProp<AdminStackParamList>>();
+  const parent = adminParentRoute(routeName);
+  return (
+    <HeaderBackButton
+      fallback={
+        parent
+          ? () => {
+              navigation.navigate(parent as 'AdminDashboard');
+            }
+          : undefined
+      }
+    />
+  );
+}
+
 export function AdminNavigator() {
   const { t } = useTranslation();
 
   return (
-    <Stack.Navigator screenOptions={stackHeaderOptions}>
+    <Stack.Navigator
+      screenOptions={({ route }) => ({
+        ...stackHeaderOptions,
+        headerLeft: () => <AdminStackBackButton routeName={route.name} />,
+      })}>
       <Stack.Screen
         name="AdminDashboard"
         component={AdminDashboardScreen}
@@ -101,6 +130,11 @@ export function AdminNavigator() {
         name="AdminInquiryCreditsConfig"
         component={AdminInquiryCreditsConfigScreen}
         options={{ title: t('admin.nav.creditsConfig', { defaultValue: 'Credits config' }) }}
+      />
+      <Stack.Screen
+        name="AdminNotificationTesting"
+        component={AdminNotificationTestingScreen}
+        options={{ title: t('admin.nav.notificationTesting', { defaultValue: 'Notification Testing' }) }}
       />
       <Stack.Screen
         name="AdminInquiryCreditRequests"

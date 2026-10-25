@@ -6,13 +6,7 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import {
-  ChevronRight,
-  History,
-  TriangleAlert,
-  UserRound,
-  WalletCards,
-} from 'lucide-react-native';
+import { ChevronRight, FileText, TriangleAlert, WalletCards } from 'lucide-react-native';
 import { PaymentServiceUnavailableError, paymentsApi } from '../../api/paymentsApi';
 import { mealsApi } from '../../api/mealsApi';
 import type {
@@ -21,29 +15,31 @@ import type {
   PaymentTimelineEventResponse,
   SpacePaymentResponse,
 } from '../../api/types';
-import { MealFormHero } from '../../components/meals/MealFormHero';
 import { MealSelectionSummary } from '../../components/meals/MealSelectionSummary';
+import { PaymentDetailSummary } from '../../components/payments/PaymentDetailSummary';
 import { PaymentHistoryTimeline } from '../../components/payments/PaymentHistoryTimeline';
 import { PaymentNeedsUpdatePanel } from '../../components/payments/PaymentNeedsUpdatePanel';
 import { PaymentProofPreviewModal } from '../../components/payments/PaymentProofPreviewModal';
 import { PaymentReceivedConfirmModal } from '../../components/payments/PaymentReceivedConfirmModal';
-import { PaymentReferenceLabel } from '../../components/payments/PaymentReferenceLabel';
+import { PaymentReminderComposer } from '../../components/payments/PaymentReminderComposer';
 import { PaymentRequestUpdateModal } from '../../components/payments/PaymentRequestUpdateModal';
-import { PaymentStatusBadge } from '../../components/payments/PaymentStatusBadge';
-import { PaymentStatusCardFrame } from '../../components/payments/PaymentStatusCardFrame';
 import { UniversalPaymentProofModal } from '../../components/payments/UniversalPaymentProofModal';
 import { StickyFormActions } from '../../components/progressive';
 import { Button, EmptyState, HeaderBackButton, Screen, Skeleton, SkeletonCard } from '../../components/ui';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
+import { useSpaceStore } from '../../store/spaceStore';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { canManagePayments } from '../../utils/dashboardFinancial';
-import { canOwnerMarkPaymentReceived } from '../../utils/ownerPaymentCardActions';
 import {
-  paymentReminderToastKey,
-  resolvePaymentReminderToastKind,
-} from '../../utils/paymentReminderFeedback';
+  canOwnerMarkPaymentReceived,
+  canOwnerSendPaymentReminder,
+} from '../../utils/ownerPaymentCardActions';
+import { paymentReminderToastKey } from '../../utils/paymentReminderFeedback';
+import { buildPaymentReminderMessage } from '../../utils/paymentReminderMessage';
+import { firstWhatsAppPhone } from '../../utils/photoRequest';
+import { openReminderWhatsApp } from '../../utils/paymentReminderLaunch';
 import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
 import { invalidatePaymentsMonthCaches } from '../../utils/paymentsMonthCache';
 import {
@@ -51,10 +47,11 @@ import {
   countMealSummaryDays,
   displayMealPaymentTitle,
 } from '../../utils/mealSelectionSummary';
-import { buildPaymentDetailMetaRows } from '../../utils/paymentDetailMeta';
+import {
+  paymentDetailContentGutter,
+  paymentDetailScreenPadding,
+} from './paymentDetailLayout';
 import { resolvePaymentMealDetailDates } from '../../utils/paymentMealDayScope';
-import { formatBillingPeriod } from '../../utils/paymentProofPolicy';
-import { formatPaymentAmount } from '../../utils/paymentHistory';
 import {
   isAwaitingOwnerReview,
   isOwnerReviewActionable,
@@ -80,6 +77,13 @@ export function PaymentDetailScreen() {
     route.params;
   const showToast = useToastStore(state => state.showToast);
   const permissions = useSpacePermissions(spaceId);
+  const spaceName = useSpaceStore(state =>
+    state.currentSpace?.spaceId === spaceId
+      ? state.currentSpace.spaceName
+      : state.selectedSpace?.id === spaceId
+        ? state.selectedSpace.name
+        : null,
+  );
   const isOwnerOperator = canManagePayments(permissions.membershipRole);
 
   const [payment, setPayment] = useState<SpacePaymentResponse | null>(null);
@@ -93,12 +97,16 @@ export function PaymentDetailScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [reviewing, setReviewing] = useState(false);
   const [sendingReminder, setSendingReminder] = useState(false);
+  const [reminderOpen, setReminderOpen] = useState(false);
+  const [reminderMessage, setReminderMessage] = useState('');
+  const [reminderNotice, setReminderNotice] = useState('');
   const [rejectVisible, setRejectVisible] = useState(false);
   const [requestUpdateVisible, setRequestUpdateVisible] = useState(false);
   const [selectedReason, setSelectedReason] = useState<PaymentRejectionReason | null>(null);
   const [receivedVisible, setReceivedVisible] = useState(false);
   const [markingReceived, setMarkingReceived] = useState(false);
   const hasPaymentRef = React.useRef(false);
+  const timelineCountRef = React.useRef(0);
 
   const load = useCallback(async () => {
     const keepExisting = hasPaymentRef.current;
@@ -110,8 +118,19 @@ export function PaymentDetailScreen() {
       const detail = await paymentsApi.getPayment(spaceId, paymentId);
       setPayment(detail);
       hasPaymentRef.current = true;
-      const timelineResponse = await paymentsApi.getPaymentTimeline(spaceId, paymentId);
-      setTimeline(timelineResponse.events);
+      try {
+        const timelineResponse = await paymentsApi.getPaymentTimeline(spaceId, paymentId);
+        timelineCountRef.current = timelineResponse.events.length;
+        setTimeline(timelineResponse.events);
+      } catch (timelineError) {
+        if (timelineError instanceof PaymentServiceUnavailableError) {
+          throw timelineError;
+        }
+        if (timelineCountRef.current === 0) {
+          setTimeline([]);
+          showToast(t('paymentCollection.errors.loadTimeline'));
+        }
+      }
 
       const mealDates = resolvePaymentMealDetailDates(detail);
       if (detail.paymentType === 'MEAL' && detail.memberId && mealDates.length > 0) {
@@ -274,10 +293,58 @@ export function PaymentDetailScreen() {
   }, [paymentId, showToast, spaceId, t]);
 
   const handleSendReminder = useCallback(async () => {
+    const message = reminderMessage.trim();
+    if (!message) {
+      return;
+    }
     setSendingReminder(true);
+    setReminderNotice('');
     try {
       const result = await paymentsApi.sendPaymentReminder(spaceId, paymentId);
-      showToast(t(paymentReminderToastKey(resolvePaymentReminderToastKind(result))));
+      let launch: Awaited<ReturnType<typeof openReminderWhatsApp>> = 'invalid';
+      try {
+        launch = await openReminderWhatsApp(
+          {
+            ...result,
+            internationalPhone:
+              result.internationalPhone || firstWhatsAppPhone([payment?.memberMobile]),
+          },
+          message,
+        );
+      } catch {
+        launch = 'failed';
+      }
+      if (result.inAppFailureCode === 'NOTIFICATION_FAILED') {
+        showToast(t('paymentCollection.reminder.notificationFailed'));
+      } else if (result.inAppFailureCode === 'MEMBER_NOT_ON_ACOMI') {
+        showToast(t('paymentCollection.reminder.memberNotOnAcomi'));
+      } else if (result.inAppRecorded && launch !== 'opened') {
+        showToast(t('paymentCollection.reminder.inAppSaved'));
+      }
+      if (launch === 'opened') {
+        showToast(
+          t(
+            result.inAppRecorded
+              ? 'paymentCollection.reminder.openedWhatsApp'
+              : 'paymentCollection.reminder.whatsAppReady',
+          ),
+        );
+      } else if (launch === 'copied') {
+        showToast(t('paymentCollection.reminder.copied'));
+      } else if (launch === 'invalid') {
+        setReminderNotice(
+          t('paymentCollection.reminder.whatsAppUnavailable', {
+            defaultValue:
+              'This number can’t be opened in WhatsApp. You can still save the in-app reminder.',
+          }),
+        );
+        showToast(t(paymentReminderToastKey('invalidRecipient')));
+      } else {
+        showToast(t('paymentCollection.reminder.whatsAppFailed'));
+      }
+      if (launch !== 'invalid') {
+        setReminderOpen(false);
+      }
       const timelineResponse = await paymentsApi.getPaymentTimeline(spaceId, paymentId);
       setTimeline(timelineResponse.events);
     } catch (err) {
@@ -289,7 +356,7 @@ export function PaymentDetailScreen() {
     } finally {
       setSendingReminder(false);
     }
-  }, [paymentId, showToast, spaceId, t]);
+  }, [payment?.memberMobile, paymentId, reminderMessage, showToast, spaceId, t]);
 
   const mealSummary = useMemo(() => {
     if (!payment || payment.paymentType !== 'MEAL' || mealDayDetails.length === 0) {
@@ -316,28 +383,9 @@ export function PaymentDetailScreen() {
     return displayMealPaymentTitle(payment.title, undefined, undefined, t('payments.mealPaymentTitle'));
   }, [payment, t]);
 
-  const billingPeriodLabel = useMemo(() => {
-    if (!payment?.month) {
-      return null;
-    }
-    return formatBillingPeriod(payment.month, i18n.language);
-  }, [i18n.language, payment?.month]);
-
   const mealDaysCount = useMemo(
     () => (payment?.paymentType === 'MEAL' ? countMealSummaryDays(mealSummary) : 0),
     [mealSummary, payment?.paymentType],
-  );
-
-  const metaRows = useMemo(
-    () =>
-      payment
-        ? buildPaymentDetailMetaRows(payment, t, {
-            billingPeriodLabel:
-              payment.paymentType === 'MEAL' ? billingPeriodLabel : null,
-            mealDaysCount: payment.paymentType === 'MEAL' ? mealDaysCount : null,
-          })
-        : [],
-    [billingPeriodLabel, mealDaysCount, payment, t],
   );
 
   const memberId = payment?.memberId ?? routeMemberId;
@@ -402,9 +450,10 @@ export function PaymentDetailScreen() {
   const waitingReview = isAwaitingOwnerReview(payment.paymentStatus);
   const canOwnerReview =
     isOwnerOperator && isOwnerReviewActionable(payment.paymentStatus);
-  const canSendReminder = isOwnerOperator && Boolean(payment.reminderEligible);
+  const canSendReminder =
+    isOwnerOperator && canOwnerSendPaymentReminder(payment) && !waitingReview;
   const canMarkReceived =
-    isOwnerOperator && canOwnerMarkPaymentReceived(payment.paymentStatus);
+    isOwnerOperator && canOwnerMarkPaymentReceived(payment.paymentStatus) && !waitingReview;
   const canViewProof = Boolean(payment.proofUrl);
   const remarks = payment.remarks?.trim() || '';
   const ownerNotes =
@@ -425,75 +474,13 @@ export function PaymentDetailScreen() {
         style={styles.flex}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-        <MealFormHero
-          icon={WalletCards}
-          eyebrow={t('paymentCollection.detail.eyebrow', { defaultValue: 'Payment' })}
-          heading={displayTitle}
-          subheading={formatPaymentAmount(payment.amount, payment.currencyCode)}
-          compact
-        />
-
-        {isOwnerOperator && memberId ? (
-          <Pressable
-            onPress={openMemberProfile}
-            style={({ pressed }) => [styles.memberCard, pressed && styles.memberCardPressed]}
-            accessibilityRole="button"
-            accessibilityLabel={t('paymentCollection.detail.viewMember')}>
-            <View style={styles.memberAvatar}>
-              <UserRound size={18} color={colors.primaryDark} strokeWidth={2.2} />
-            </View>
-            <View style={styles.memberMain}>
-              <Text style={styles.memberName} numberOfLines={1}>
-                {memberName || t('paymentCollection.memberPayments.title')}
-              </Text>
-              <Text style={styles.memberRole} numberOfLines={1}>
-                {permissions.spaceType === 'MESS'
-                  ? t('spaces.roles.CUSTOMER')
-                  : t('spaces.roles.TENANT')}
-              </Text>
-            </View>
-            <ChevronRight size={18} color={colors.muted} strokeWidth={2.4} />
-          </Pressable>
-        ) : null}
-
-        <PaymentStatusCardFrame status={payment.paymentStatus} style={styles.summaryCard}>
-          <View style={styles.headerRow}>
-            <View style={styles.headerMain}>
-              <Text style={styles.title}>{displayTitle}</Text>
-              <Text style={styles.category}>
-                {t(`paymentCollection.type.${payment.paymentType}`)} ·{' '}
-                {t(`paymentCollection.category.${payment.paymentCategory}`)}
-              </Text>
-            </View>
-          </View>
-          {payment.targetLabel ? <Text style={styles.target}>{payment.targetLabel}</Text> : null}
-          <View style={styles.amountMetaRow}>
-            <Text style={styles.amount}>
-              {formatPaymentAmount(payment.amount, payment.currencyCode)}
-            </Text>
-            <PaymentStatusBadge status={payment.paymentStatus} style={styles.statusBadge} />
-          </View>
-          <PaymentReferenceLabel
-            source={payment}
-            compact={false}
-            style={styles.summaryReference}
-          />
-
-          <View style={styles.metaBlock}>
-            {metaRows.map(row => (
-              <View key={row.key} style={styles.metaRow}>
-                <Text style={styles.metaLabel}>{t(row.labelKey)}</Text>
-                <Text
-                  style={[
-                    styles.metaValue,
-                    row.key === 'paymentReference' && styles.metaValueEmphasis,
-                  ]}>
-                  {row.value}
-                </Text>
-              </View>
-            ))}
-          </View>
-
+        <PaymentDetailSummary
+          payment={payment}
+          spaceId={spaceId}
+          memberName={memberName}
+          spaceName={spaceName}
+          title={displayTitle}
+          mealDaysCount={payment.paymentType === 'MEAL' ? mealDaysCount : null}>
           {waitingReview && !isOwnerOperator ? (
             <Text style={styles.waiting}>{t('paymentCollection.waitingApproval')}</Text>
           ) : null}
@@ -512,6 +499,13 @@ export function PaymentDetailScreen() {
             </Text>
           ) : null}
 
+          {payment.description?.trim() ? (
+            <View style={styles.messageBox}>
+              <Text style={styles.messageLabel}>{t('paymentCollection.addRecord.description')}</Text>
+              <Text style={styles.messageText}>{payment.description.trim()}</Text>
+            </View>
+          ) : null}
+
           {remarks ? (
             <View style={styles.messageBox}>
               <Text style={styles.messageLabel}>{payerMessageLabel}</Text>
@@ -527,7 +521,16 @@ export function PaymentDetailScreen() {
               <Text style={styles.messageText}>{ownerNotes}</Text>
             </View>
           ) : null}
-        </PaymentStatusCardFrame>
+
+          {isOwnerOperator && memberId ? (
+            <Pressable
+              onPress={openMemberProfile}
+              accessibilityRole="button"
+              accessibilityLabel={t('paymentCollection.detail.viewMember')}>
+              <Text style={styles.memberLink}>{t('paymentCollection.detail.viewMember')}</Text>
+            </Pressable>
+          ) : null}
+        </PaymentDetailSummary>
 
         {mealSummary ? (
           <View style={styles.mealSummaryWrap}>
@@ -560,13 +563,15 @@ export function PaymentDetailScreen() {
           />
         ) : null}
 
-        <Button
-          label={t('paymentCollection.timeline.viewFull')}
-          variant="secondary"
-          icon={History}
+        <Pressable
           onPress={openTimeline}
-          style={styles.action}
-        />
+          accessibilityRole="button"
+          accessibilityLabel={t('paymentCollection.timeline.viewFull')}
+          style={styles.timelineButton}>
+          <FileText size={18} color={colors.teal} strokeWidth={2.2} />
+          <Text style={styles.timelineLabel}>{t('paymentCollection.timeline.viewFull')}</Text>
+          <ChevronRight size={18} color={colors.teal} strokeWidth={2.2} />
+        </Pressable>
 
         <Text style={styles.sectionTitle}>{t('paymentCollection.timeline.recent')}</Text>
         <PaymentHistoryTimeline events={timeline} />
@@ -607,7 +612,14 @@ export function PaymentDetailScreen() {
             <Button
               label={t('paymentCollection.reminder.send')}
               variant="secondary"
-              onPress={() => void handleSendReminder()}
+              onPress={() => {
+                if (!payment) {
+                  return;
+                }
+                setReminderNotice('');
+                setReminderMessage(buildPaymentReminderMessage(payment));
+                setReminderOpen(true);
+              }}
               loading={sendingReminder}
               disabled={reviewing || markingReceived}
             />
@@ -666,6 +678,17 @@ export function PaymentDetailScreen() {
         }}
       />
 
+      <PaymentReminderComposer
+        visible={reminderOpen}
+        memberName={payment.memberName || memberName}
+        phone={firstWhatsAppPhone([payment.memberMobile])}
+        message={reminderMessage}
+        notice={reminderNotice}
+        submitting={sendingReminder}
+        onChangeMessage={setReminderMessage}
+        onCancel={() => setReminderOpen(false)}
+        onConfirm={() => void handleSendReminder()}
+      />
       <PaymentReceivedConfirmModal
         visible={receivedVisible}
         payments={[payment]}
@@ -728,17 +751,21 @@ export function PaymentDetailScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+    padding: paymentDetailScreenPadding,
   },
   loadingPad: {
     flex: 1,
-    padding: spacing.lg,
+    padding: paymentDetailScreenPadding,
+    paddingTop: spacing.md,
+    paddingHorizontal: paymentDetailContentGutter,
   },
   skeletonWrap: {
     gap: spacing.md,
   },
   scrollContent: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xl,
+    paddingTop: spacing.md,
+    paddingHorizontal: paymentDetailContentGutter,
+    paddingBottom: spacing.xxl,
     gap: spacing.md,
   },
   flex: {
@@ -747,101 +774,13 @@ const styles = StyleSheet.create({
   stickyStack: {
     gap: spacing.sm,
   },
-  memberCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 18,
-    padding: spacing.md,
-    ...shadows.sm,
-  },
-  memberCardPressed: {
-    opacity: 0.85,
-  },
-  memberAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.button,
-    backgroundColor: colors.lightGreen,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  memberMain: {
-    flex: 1,
-    minWidth: 0,
-  },
-  memberName: {
+  memberLink: {
     ...typography.bodyStrong,
-  },
-  memberRole: {
-    ...typography.caption,
-    color: colors.muted,
-    marginTop: 2,
-  },
-  summaryCard: {
-    padding: spacing.md,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  headerMain: {
-    flex: 1,
-    minWidth: 0,
-  },
-  title: { ...typography.h2 },
-  category: { ...typography.caption, color: colors.muted, marginTop: spacing.xxs },
-  target: { ...typography.caption, color: colors.muted, marginTop: spacing.sm },
-  amountMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
+    color: colors.teal,
     marginTop: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  amount: { ...typography.h1, flex: 1, minWidth: 0 },
-  statusBadge: {
-    flexShrink: 0,
-  },
-  summaryReference: {
-    marginBottom: spacing.xs,
   },
   mealSummaryWrap: {
-    marginTop: spacing.md,
-    marginBottom: spacing.md,
-  },
-  metaBlock: {
-    marginTop: spacing.md,
-    gap: spacing.xs,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  metaLabel: {
-    ...typography.caption,
-    color: colors.muted,
-    flexShrink: 0,
-  },
-  metaValue: {
-    ...typography.caption,
-    color: colors.textPrimary,
-    fontWeight: '600',
-    flex: 1,
-    textAlign: 'right',
-  },
-  metaValueEmphasis: {
-    ...typography.bodyStrong,
-    color: colors.primaryDark,
-    fontWeight: '700',
+    marginTop: spacing.xs,
   },
   waiting: {
     ...typography.body,
@@ -871,27 +810,46 @@ const styles = StyleSheet.create({
     color: '#991B1B',
     marginTop: spacing.md,
   },
-  action: { marginTop: spacing.md },
-  sectionTitle: { ...typography.h3, marginTop: spacing.xl, marginBottom: spacing.sm },
-  error: { ...typography.body, color: '#DC2626' },
+  action: {
+    marginTop: 0,
+  },
+  timelineButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: 52,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: colors.lightGreen,
+    borderRadius: radius.button,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  timelineLabel: {
+    ...typography.bodyStrong,
+    flex: 1,
+    color: colors.teal,
+    fontSize: 15,
+  },
+  sectionTitle: {
+    ...typography.bodyStrong,
+    fontSize: 16,
+    marginTop: spacing.xs,
+  },
   rejectOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'center',
     padding: spacing.xl,
   },
   rejectCard: {
+    ...shadows.raised,
     backgroundColor: colors.white,
     borderRadius: radius.card,
     padding: spacing.lg,
   },
   rejectTitle: {
     ...typography.h3,
-    marginBottom: spacing.md,
-  },
-  receivedBody: {
-    ...typography.body,
-    color: colors.textSecondary,
     marginBottom: spacing.md,
   },
   rejectReason: {

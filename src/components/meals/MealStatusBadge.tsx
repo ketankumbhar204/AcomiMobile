@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { AlertTriangle, Check, Circle, CircleDot } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import type { DailyMenuResponse, MealPollSlot } from '../../api/types';
 import { radius, spacing, typography } from '../../theme';
@@ -34,6 +35,14 @@ export function MealStatusBadge({
   const theme = mealStatusTheme(kind);
   const label = t(theme.labelKey);
   const compact = size === 'compact';
+  const StatusIcon =
+    kind === 'shared'
+      ? Check
+      : kind === 'needs_reshare'
+        ? AlertTriangle
+        : kind === 'draft'
+          ? CircleDot
+          : Circle;
 
   return (
     <View
@@ -48,9 +57,11 @@ export function MealStatusBadge({
       ]}
       accessibilityRole="text"
       accessibilityLabel={label}>
-      <Text style={[styles.icon, compact && styles.iconCompact, { color: theme.color }]}>
-        {theme.icon}
-      </Text>
+      <StatusIcon
+        size={compact ? 11 : 12}
+        color={theme.color}
+        strokeWidth={2.4}
+      />
       <Text
         style={[styles.label, compact && styles.labelCompact, { color: theme.color }]}
         numberOfLines={1}>
@@ -76,15 +87,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
     paddingVertical: 2,
     gap: 3,
-  },
-  icon: {
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 14,
-  },
-  iconCompact: {
-    fontSize: 11,
-    lineHeight: 13,
   },
   label: {
     ...typography.caption,

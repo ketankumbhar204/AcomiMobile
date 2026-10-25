@@ -565,7 +565,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
       setPriceErrors(mergedErrors);
       panelRef.current?.validatePrices();
       scrollRef.current?.scrollTo({ y: 0, animated: true });
-      showToast(t(toastKey));
+      showToast(t(toastKey), undefined, 'error');
       return false;
     }
 
@@ -604,7 +604,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     if (mealPricing.requiresMealPrices) {
       if (!(panelRef.current?.validatePrices() ?? true)) {
         scrollRef.current?.scrollTo({ y: 0, animated: true });
-        showToast(t(toastKey));
+        showToast(t(toastKey), undefined, 'error');
         return null;
       }
       const selection = panelRef.current?.getSelectionResult();
@@ -639,7 +639,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     if (optionsToSave.length === 0) {
       if (panelRef.current?.hasSelection()) {
         scrollRef.current?.scrollTo({ y: 0, animated: true });
-        showToast(t(toastKey));
+        showToast(t(toastKey), undefined, 'error');
         return null;
       }
       showToast(t('meals.errors.optionsRequired'));
@@ -689,6 +689,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
       );
       await saveMenuDraft(spaceId, menuDate, mealType, nextOptions, notes.trim() || null);
       setHasPersistedMenu(true);
+      baselineRef.current = snapshotDraft(options, notes, priceDrafts);
       showToast(t('meals.success.saved'));
       allowLeaveRef.current = true;
       navigation.goBack();
@@ -699,8 +700,9 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     }
   };
 
-  const shareMeal = async () => {
-    const prepared = prepareOptionsForSave('meals.pricing.fixFieldsBeforeShare');
+  const openMealReview = async () => {
+    const validationKey = 'meals.pricing.fixFieldsBeforeShare';
+    const prepared = prepareOptionsForSave(validationKey);
     if (!prepared || prepared.options.length === 0) {
       return;
     }
@@ -708,7 +710,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     try {
       const pricesOk = await syncPricesBeforeSave(
         prepared.options,
-        'meals.pricing.fixFieldsBeforeShare',
+        validationKey,
         prepared.draftPrices,
       );
       if (!pricesOk) {
@@ -720,8 +722,13 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
       );
       await saveMenuDraft(spaceId, menuDate, mealType, nextOptions, notes.trim() || null);
       setHasPersistedMenu(true);
-      allowLeaveRef.current = true;
-      navigateMainStack('MenuSharePreview', { spaceId, menuDate, mealType });
+      baselineRef.current = snapshotDraft(options, notes, priceDrafts);
+      navigateMainStack('MenuSharePreview', {
+        spaceId,
+        menuDate,
+        mealType,
+        intent: 'share',
+      });
     } catch {
       showToast(t('meals.errors.saveFailed'));
     } finally {
@@ -935,13 +942,14 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
         progressiveExtrasEnabled ? (
           <ProgressiveMealPlanningFooter
             phase={progressivePhase}
+            selectedCount={options.filter(option => option.isExtra !== true).length}
             saving={saving}
             canDeleteDraft={status === 'DRAFT' && options.length > 0}
             saveDisabled={options.length === 0 && !panelHasSelection}
             shareDisabled={options.length === 0 && !panelHasSelection}
             onContinueToExtras={continueToExtras}
             onSaveDraft={() => void persist()}
-            onShareMeal={() => void shareMeal()}
+            onShareMeal={() => void openMealReview()}
             onDeleteDraft={() => void clearDraft()}
           />
         ) : (
@@ -956,7 +964,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
             ) : null}
             <View style={styles.footerActions}>
               <Button
-                label={t('meals.actions.saveDraft')}
+                label={t('meals.actions.save')}
                 variant="secondary"
                 loading={saving}
                 disabled={options.length === 0 && !panelHasSelection}
@@ -964,10 +972,10 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
                 style={styles.footerButton}
               />
               <Button
-                label={t('meals.actions.shareMeal')}
+                label={t('meals.actions.share')}
                 loading={saving}
                 disabled={options.length === 0 && !panelHasSelection}
-                onPress={() => void shareMeal()}
+                onPress={() => void openMealReview()}
                 style={styles.footerButton}
               />
             </View>

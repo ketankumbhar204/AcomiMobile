@@ -14,39 +14,39 @@ import { PaymentServiceUnavailableError, paymentsApi } from '../../api/paymentsA
 import type { SpacePaymentResponse } from '../../api/types';
 import { MealFormHero } from '../../components/meals/MealFormHero';
 import { DayMealPaymentsPanel } from '../../components/payments/DayMealPaymentsPanel';
-import { PaymentsSectionTabBar } from '../../components/payments/PaymentsSectionTabBar';
 import { UniversalPaymentCard } from '../../components/payments/UniversalPaymentCard';
 import { UniversalPaymentProofModal } from '../../components/payments/UniversalPaymentProofModal';
-import { Button, EmptyState, ListFilterChips, Skeleton, SkeletonCard } from '../../components/ui';
+import {
+  Button,
+  EmptyState,
+  MonthlySummaryHeader,
+  Skeleton,
+  SkeletonCard,
+} from '../../components/ui';
 import { useCustomerSubscriptionStatus } from '../../hooks/useCustomerSubscriptionStatus';
 import { useLinkedMember } from '../../hooks/useLinkedMember';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useMealPaymentActivitySummaries } from '../../hooks/useMealPaymentActivitySummaries';
+import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useSpaceTabHeader } from '../../hooks/useSpaceTabHeader';
 import { useToastStore } from '../../store/toastStore';
 import { useTenantPaymentsMonth } from '../../hooks/useTenantPaymentsMonth';
 import type { MainStackParamList, SpaceTabParamList } from '../../navigation/types';
 import { colors, spacing, typography } from '../../theme';
+import { currentMonthKey, isFutureMonth, shiftMonthKey } from '../../utils/dashboardFinancial';
+import {
+  matchesPersonalSummaryFilter,
+  summarizePersonalPayments,
+  usesDayMealPayments,
+  type PersonalSummaryFilter,
+} from '../../utils/personalPaymentSummary';
 import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
 import { invalidatePaymentsMonthCaches } from '../../utils/paymentsMonthCache';
-import {
-  countTenantPaymentFilterInSection,
-  countTenantPaymentSection,
-  filterTenantPaymentsInSection,
-  resolvePreferredTenantPaymentsSection,
-  type TenantPaymentFilter,
-  type TenantPaymentsSection,
-} from '../../utils/tenantPaymentFilters';
 
 type Route = RouteProp<SpaceTabParamList, 'Payments'>;
 type Nav = CompositeNavigationProp<
   BottomTabNavigationProp<SpaceTabParamList, 'Payments'>,
   NativeStackNavigationProp<MainStackParamList>
->;
-
-type SectionChipFilter = Extract<
-  TenantPaymentFilter,
-  'ALL' | 'NEEDS_UPDATE' | 'PENDING' | 'PAID' | 'REJECTED'
 >;
 
 export function TenantPaymentsTabScreen() {
@@ -55,6 +55,7 @@ export function TenantPaymentsTabScreen() {
   const route = useRoute<Route>();
   const spaceId = useActiveSpaceId(route.params.spaceId);
   useSpaceTabHeader(spaceId);
+  const permissions = useSpacePermissions(spaceId);
   const showToast = useToastStore(state => state.showToast);
 
   const { memberId, member, loading: memberLoading } = useLinkedMember(spaceId);
@@ -63,10 +64,11 @@ export function TenantPaymentsTabScreen() {
     memberId,
   );
 
-  const isPayPerMeal =
-    !subscriptionStatus?.prepaidBilling &&
-    (subscriptionStatus?.mealBillingType == null ||
-      subscriptionStatus.mealBillingType === 'PAY_PER_MEAL');
+  const isPayPerMeal = usesDayMealPayments({
+    spaceType: permissions.spaceType,
+    prepaidBilling: subscriptionStatus?.prepaidBilling,
+    mealBillingType: subscriptionStatus?.mealBillingType,
+  });
 
   const {
     payments,
@@ -78,6 +80,7 @@ export function TenantPaymentsTabScreen() {
     reload,
     replacePayment,
     month,
+    setMonth,
   } = useTenantPaymentsMonth(spaceId, {
     memberId: memberId ?? undefined,
     enabled: Boolean(memberId) && !isPayPerMeal,
@@ -88,95 +91,79 @@ export function TenantPaymentsTabScreen() {
     payments,
     Boolean(memberId) && !isPayPerMeal,
   );
-  const [section, setSection] = useState<TenantPaymentsSection>('actionNeeded');
-  const [actionFilter, setActionFilter] = useState<SectionChipFilter>('ALL');
-  const [historyFilter, setHistoryFilter] = useState<SectionChipFilter>('ALL');
+  const [summaryFilter, setSummaryFilter] = useState<PersonalSummaryFilter>('due');
   const [updatePayment, setUpdatePayment] = useState<SpacePaymentResponse | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (loading && payments.length === 0) {
-      return;
-    }
-    setSection(prev => resolvePreferredTenantPaymentsSection(payments, prev));
-  }, [loading, month, payments]);
+    setSummaryFilter('due');
+  }, [month]);
 
   const onRefresh = useCallback(async () => {
     await reload();
     await reloadMealSummaries();
   }, [reload, reloadMealSummaries]);
 
-  const sectionTabs = useMemo(
-    () => [
-      {
-        id: 'actionNeeded' as const,
-        label: t('paymentCollection.tenantSections.actionNeeded', {
-          count: countTenantPaymentSection(payments, 'actionNeeded'),
-        }),
-      },
-      {
-        id: 'underReview' as const,
-        label: t('paymentCollection.tenantSections.underReview', {
-          count: countTenantPaymentSection(payments, 'underReview'),
-        }),
-      },
-      {
-        id: 'history' as const,
-        label: t('paymentCollection.tenantSections.history', {
-          count: countTenantPaymentSection(payments, 'history'),
-        }),
-      },
-    ],
-    [payments, t],
-  );
-
-  const actionChipOptions = useMemo(
-    () => [
-      {
-        id: 'ALL' as const,
-        label: t('paymentCollection.review.chips.all'),
-      },
-      {
-        id: 'NEEDS_UPDATE' as const,
-        label: t('paymentCollection.tenantFilters.needsUpdate', {
-          count: countTenantPaymentFilterInSection(payments, 'actionNeeded', 'NEEDS_UPDATE'),
-        }),
-      },
-      {
-        id: 'PENDING' as const,
-        label: t('paymentCollection.tenantFilters.pending', {
-          count: countTenantPaymentFilterInSection(payments, 'actionNeeded', 'PENDING'),
-        }),
-      },
-      {
-        id: 'REJECTED' as const,
-        label: t('paymentCollection.tenantFilters.rejected', {
-          count: countTenantPaymentFilterInSection(payments, 'actionNeeded', 'REJECTED'),
-        }),
-      },
-    ],
-    [payments, t],
-  );
-
-  const historyChipOptions = useMemo(
-    () => [
-      { id: 'ALL' as const, label: t('paymentCollection.review.chips.all') },
-      {
-        id: 'PAID' as const,
-        label: t('paymentCollection.tenantFilters.paid', {
-          count: countTenantPaymentFilterInSection(payments, 'history', 'PAID'),
-        }),
-      },
-    ],
-    [payments, t],
-  );
-
-  const activeFilter: TenantPaymentFilter =
-    section === 'actionNeeded' ? actionFilter : section === 'history' ? historyFilter : 'ALL';
-
   const visiblePayments = useMemo(
-    () => filterTenantPaymentsInSection(payments, section, activeFilter),
-    [activeFilter, payments, section],
+    () => payments.filter(payment => matchesPersonalSummaryFilter(payment, summaryFilter)),
+    [payments, summaryFilter],
+  );
+
+  const selectSummaryFilter = useCallback((next: PersonalSummaryFilter) => {
+    setSummaryFilter(current => (current === next && next !== 'due' ? 'due' : next));
+  }, []);
+
+  const personalSummary = useMemo(() => summarizePersonalPayments(payments), [payments]);
+  const summaryCurrency = payments.find(payment => payment.currencyCode)?.currencyCode ?? 'INR';
+
+  const formatSummaryMoney = useCallback(
+    (amount: number | null) => {
+      if (amount == null) {
+        return '—';
+      }
+      return new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: summaryCurrency,
+        maximumFractionDigits: 0,
+      }).format(amount);
+    },
+    [summaryCurrency],
+  );
+
+  const summaryCards = useMemo(
+    () => [
+      {
+        label: t('paymentCollection.memberPayments.summary.due', { defaultValue: 'Amount due' }),
+        value: loading ? '…' : formatSummaryMoney(personalSummary.totalDue),
+        selected: summaryFilter === 'due',
+        onPress: () => selectSummaryFilter('due'),
+      },
+      {
+        label: t('paymentCollection.memberPayments.summary.paid', { defaultValue: 'Paid' }),
+        value: loading ? '…' : formatSummaryMoney(personalSummary.amountPaid),
+        tone: 'success' as const,
+        selected: summaryFilter === 'paid',
+        onPress: () => selectSummaryFilter('paid'),
+      },
+      {
+        label: t('paymentCollection.memberPayments.summary.outstanding', {
+          defaultValue: 'Outstanding',
+        }),
+        value: loading ? '…' : formatSummaryMoney(personalSummary.outstanding),
+        tone: 'pending' as const,
+        selected: summaryFilter === 'outstanding',
+        onPress: () => selectSummaryFilter('outstanding'),
+      },
+      {
+        label: t('paymentCollection.memberPayments.summary.underReview', {
+          defaultValue: 'Under review',
+        }),
+        value: loading ? '…' : formatSummaryMoney(personalSummary.underReviewAmount),
+        selected: summaryFilter === 'underReview',
+        onPress: () => selectSummaryFilter('underReview'),
+      },
+    ],
+    [formatSummaryMoney, loading, personalSummary, selectSummaryFilter, summaryFilter, t],
   );
 
   const openPayment = useCallback(
@@ -276,27 +263,14 @@ export function TenantPaymentsTabScreen() {
           compact
         />
 
-        <PaymentsSectionTabBar
-          sections={sectionTabs}
-          activeSection={section}
-          onSectionChange={id => setSection(id as TenantPaymentsSection)}
+        <MonthlySummaryHeader
+          month={month}
+          onPreviousMonth={() => setMonth(shiftMonthKey(month, -1))}
+          onNextMonth={() => setMonth(shiftMonthKey(month, 1))}
+          disableNext={isFutureMonth(shiftMonthKey(month, 1))}
+          maxMonth={currentMonthKey()}
+          cards={summaryCards}
         />
-
-        {section === 'actionNeeded' ? (
-          <ListFilterChips
-            options={actionChipOptions}
-            value={actionFilter}
-            onChange={setActionFilter}
-          />
-        ) : null}
-
-        {section === 'history' ? (
-          <ListFilterChips
-            options={historyChipOptions}
-            value={historyFilter}
-            onChange={setHistoryFilter}
-          />
-        ) : null}
 
         {serviceUnavailable ? (
           <EmptyState
@@ -333,7 +307,19 @@ export function TenantPaymentsTabScreen() {
           <EmptyState
             Icon={WalletCards}
             title={t('paymentCollection.memberPayments.emptyTitle')}
-            description={t(`paymentCollection.tenantSections.empty.${section}`)}
+            description={
+              summaryFilter === 'outstanding'
+                ? t('paymentCollection.memberPayments.emptyOutstanding', {
+                    defaultValue: 'No outstanding payments for this month.',
+                  })
+                : t(
+                    summaryFilter === 'paid'
+                      ? 'paymentCollection.tenantSections.empty.history'
+                      : summaryFilter === 'underReview'
+                        ? 'paymentCollection.tenantSections.empty.underReview'
+                        : 'paymentCollection.memberPayments.emptyDescription',
+                  )
+            }
           />
         ) : null}
 

@@ -15,6 +15,7 @@ import {
   type MemberListFilterState,
   type MemberSortOption,
 } from '../../utils/memberListQuery';
+import type { MemberPaymentDuesFilter } from '../../utils/memberDues';
 import { createdDateSortLabelKey } from '../../utils/listSort';
 import { toggleSetValue } from '../../utils/filterCount';
 
@@ -24,6 +25,7 @@ type MembersFilterDrawerProps = {
   applied: MemberListFilterState;
   showStatusSection: boolean;
   showSortSection: boolean;
+  showPaymentFilter?: boolean;
   onClose: () => void;
   onApply: (filters: MemberListFilterState) => void;
 };
@@ -34,6 +36,7 @@ export function MembersFilterDrawer({
   applied,
   showStatusSection,
   showSortSection,
+  showPaymentFilter = false,
   onClose,
   onApply,
 }: MembersFilterDrawerProps) {
@@ -46,7 +49,8 @@ export function MembersFilterDrawer({
         roles: new Set(applied.roles),
         statuses: new Set(applied.statuses),
         sort: applied.sort,
-        joinedThisMonthOnly: false,
+        joinedThisMonthOnly: applied.joinedThisMonthOnly,
+        paymentDues: applied.paymentDues ?? 'all',
       });
     }
   }, [applied, visible]);
@@ -71,7 +75,8 @@ export function MembersFilterDrawer({
           roles: new Set(draft.roles),
           statuses: new Set(draft.statuses),
           sort: draft.sort,
-          joinedThisMonthOnly: false,
+          joinedThisMonthOnly: draft.joinedThisMonthOnly,
+          paymentDues: draft.paymentDues ?? 'all',
         });
         onClose();
       }}>
@@ -104,6 +109,33 @@ export function MembersFilterDrawer({
                   setDraft(prev => ({
                     ...prev,
                     statuses: toggleSetValue(prev.statuses, status),
+                  }))
+                }
+              />
+            ))}
+          </FilterDrawerSection>
+        </>
+      ) : null}
+
+      {showPaymentFilter && showStatusSection ? (
+        <>
+          <FilterDrawerDivider />
+          <FilterDrawerSection title={t('membership.dues.filterTitle', { defaultValue: 'Payments' })}>
+            {(
+              [
+                ['all', t('membership.dues.filterAll', { defaultValue: 'All members' })],
+                ['pending', t('membership.dues.filterPending', { defaultValue: 'Pending payments' })],
+                ['clear', t('membership.dues.filterClear', { defaultValue: 'No pending dues' })],
+              ] as const
+            ).map(([id, label]) => (
+              <FilterRadioRow
+                key={id}
+                label={label}
+                selected={(draft.paymentDues ?? 'all') === id}
+                onSelect={() =>
+                  setDraft(prev => ({
+                    ...prev,
+                    paymentDues: id as MemberPaymentDuesFilter,
                   }))
                 }
               />

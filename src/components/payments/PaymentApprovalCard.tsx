@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
   LayoutAnimation,
-  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -10,8 +9,10 @@ import {
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Check, Pencil, CircleX } from 'lucide-react-native';
+import { ChevronDown, ChevronRight } from 'lucide-react-native';
 import type { PaymentRejectionReason, SpacePaymentResponse, SpaceType } from '../../api/types';
+import { usePaymentStayTrail } from '../../hooks/usePaymentStayTrail';
+import { StayTrailLine } from '../member/ContactAndStayMeta';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { colors, radius, spacing, typography } from '../../theme';
@@ -19,20 +20,13 @@ import { formatPaymentAmount, formatPaymentSubmittedAt } from '../../utils/payme
 import { resolvePaymentReferenceDisplay } from '../../utils/paymentReference';
 import { PaymentProofPreviewModal } from './PaymentProofPreviewModal';
 import { PaymentReferenceLabel } from './PaymentReferenceLabel';
-import { PaymentRequestUpdateModal } from './PaymentRequestUpdateModal';
+import { PaymentReviewActions } from './PaymentReviewActions';
 import { PaymentStatusBadge } from './PaymentStatusBadge';
 import { PaymentStatusCardFrame } from './PaymentStatusCardFrame';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
-
-const REJECTION_REASONS: PaymentRejectionReason[] = [
-  'PAYMENT_AMOUNT_MISMATCH',
-  'WRONG_SCREENSHOT',
-  'INVALID_UTR',
-  'OTHER',
-];
 
 const MESSAGE_COLLAPSE_CHARS = 120;
 
@@ -83,12 +77,10 @@ export function PaymentApprovalCard({
   onOpenDetail,
 }: PaymentApprovalCardProps) {
   const { t } = useTranslation();
+  const stayLabel = usePaymentStayTrail(payment.spaceId, payment);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [messageExpanded, setMessageExpanded] = useState(false);
-  const [rejectVisible, setRejectVisible] = useState(false);
-  const [requestUpdateVisible, setRequestUpdateVisible] = useState(false);
   const [proofPreviewVisible, setProofPreviewVisible] = useState(false);
-  const [selectedReason, setSelectedReason] = useState<PaymentRejectionReason | null>(null);
 
   const methodLabel = payment.paymentMethod
     ? t(`paymentCollection.method.${payment.paymentMethod}`)
@@ -116,21 +108,6 @@ export function PaymentApprovalCard({
     setDetailsOpen(open => !open);
   };
 
-  const handleRejectConfirm = () => {
-    if (!selectedReason) {
-      return;
-    }
-    const label = t(`paymentCollection.rejection.${selectedReason}`);
-    onReject(selectedReason, label);
-    setRejectVisible(false);
-    setSelectedReason(null);
-  };
-
-  const handleRequestUpdateConfirm = async (message: string) => {
-    await onRequestUpdate(message);
-    setRequestUpdateVisible(false);
-  };
-
   return (
     <PaymentStatusCardFrame status={payment.paymentStatus} style={styles.card}>
       <View style={styles.headerRow}>
@@ -148,11 +125,7 @@ export function PaymentApprovalCard({
           <Text style={styles.memberName} numberOfLines={1}>
             {payment.memberName}
           </Text>
-          {payment.targetLabel ? (
-            <Text style={styles.target} numberOfLines={1}>
-              {payment.targetLabel}
-            </Text>
-          ) : null}
+          <StayTrailLine label={stayLabel} textStyle={styles.target} numberOfLines={1} />
           <Text style={styles.title} numberOfLines={2}>
             {titleDisplay}
           </Text>
@@ -179,12 +152,18 @@ export function PaymentApprovalCard({
             ? t('paymentCollection.approval.hideDetails')
             : t('paymentCollection.approval.viewDetails')
         }>
-        <Text style={styles.detailsToggleLabel}>
-          {detailsOpen
-            ? t('paymentCollection.approval.hideDetails')
-            : t('paymentCollection.approval.viewDetails')}
-          {detailsOpen ? '' : ' ›'}
-        </Text>
+        <View style={styles.detailsToggleRow}>
+          <Text style={styles.detailsToggleLabel}>
+            {detailsOpen
+              ? t('paymentCollection.approval.hideDetails')
+              : t('paymentCollection.approval.viewDetails')}
+          </Text>
+          {detailsOpen ? (
+            <ChevronDown size={14} color={colors.primaryDark} strokeWidth={2.4} />
+          ) : (
+            <ChevronRight size={14} color={colors.primaryDark} strokeWidth={2.4} />
+          )}
+        </View>
       </Pressable>
 
       {detailsOpen ? (
@@ -264,60 +243,22 @@ export function PaymentApprovalCard({
           style={({ pressed }) => [styles.openDetailLink, pressed && styles.detailsTogglePressed]}
           accessibilityRole="button"
           accessibilityLabel={t('paymentCollection.detail.openFromReview')}>
-          <Text style={styles.openDetailLinkText}>
-            {t('paymentCollection.detail.openFromReview')} ›
-          </Text>
+          <View style={styles.detailsToggleRow}>
+            <Text style={styles.openDetailLinkText}>
+              {t('paymentCollection.detail.openFromReview')}
+            </Text>
+            <ChevronRight size={14} color={colors.primaryDark} strokeWidth={2.4} />
+          </View>
         </Pressable>
       ) : null}
 
       {showActions ? (
-        <View style={styles.actionsRow}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.approveButton,
-              pressed && !reviewing && styles.actionPressed,
-              reviewing && styles.actionDisabled,
-            ]}
-            onPress={onApprove}
-            disabled={reviewing}
-            accessibilityRole="button"
-            accessibilityLabel={t('paymentCollection.approval.approve')}>
-            <Check size={16} color={colors.white} strokeWidth={2.6} />
-            <Text style={styles.approveLabel} numberOfLines={1}>
-              {t('paymentCollection.approval.approve')}
-            </Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [
-              styles.requestUpdateButton,
-              pressed && !reviewing && styles.actionPressed,
-              reviewing && styles.actionDisabled,
-            ]}
-            onPress={() => setRequestUpdateVisible(true)}
-            disabled={reviewing}
-            accessibilityRole="button"
-            accessibilityLabel={t('paymentCollection.approval.needsUpdateAction')}>
-            <Pencil size={15} color="#C2410C" strokeWidth={2.2} />
-            <Text style={styles.requestUpdateLabel} numberOfLines={1}>
-              {t('paymentCollection.approval.needsUpdateAction')}
-            </Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [
-              styles.rejectButton,
-              pressed && !reviewing && styles.actionPressed,
-              reviewing && styles.actionDisabled,
-            ]}
-            onPress={() => setRejectVisible(true)}
-            disabled={reviewing}
-            accessibilityRole="button"
-            accessibilityLabel={t('paymentCollection.approval.reject')}>
-            <CircleX size={16} color="#DC2626" strokeWidth={2.2} />
-            <Text style={styles.rejectLabel} numberOfLines={1}>
-              {t('paymentCollection.approval.reject')}
-            </Text>
-          </Pressable>
-        </View>
+        <PaymentReviewActions
+          reviewing={reviewing}
+          onApprove={onApprove}
+          onReject={onReject}
+          onRequestUpdate={onRequestUpdate}
+        />
       ) : null}
 
       <PaymentProofPreviewModal
@@ -326,42 +267,6 @@ export function PaymentApprovalCard({
         fileId={payment.proofFileId}
         onClose={() => setProofPreviewVisible(false)}
       />
-
-      <PaymentRequestUpdateModal
-        visible={requestUpdateVisible}
-        reviewing={reviewing}
-        onClose={() => setRequestUpdateVisible(false)}
-        onConfirm={handleRequestUpdateConfirm}
-      />
-
-      <Modal visible={rejectVisible} transparent animationType="fade" onRequestClose={() => setRejectVisible(false)}>
-        <View style={styles.backdrop}>
-          <View style={styles.rejectSheet}>
-            <Text style={styles.rejectTitle}>{t('paymentCollection.rejection.title')}</Text>
-            {REJECTION_REASONS.map(reason => (
-              <Pressable
-                key={reason}
-                style={[styles.reasonRow, selectedReason === reason && styles.reasonRowActive]}
-                onPress={() => setSelectedReason(reason)}>
-                <Text style={styles.reasonText}>{t(`paymentCollection.rejection.${reason}`)}</Text>
-              </Pressable>
-            ))}
-            <View style={styles.rejectActions}>
-              <Button
-                label={t('paymentCollection.approval.reject')}
-                variant="secondary"
-                onPress={handleRejectConfirm}
-                disabled={!selectedReason || reviewing}
-              />
-              <Button
-                label={t('common.cancel')}
-                variant="ghost"
-                onPress={() => setRejectVisible(false)}
-              />
-            </View>
-          </View>
-        </View>
-      </Modal>
     </PaymentStatusCardFrame>
   );
 }
@@ -432,6 +337,11 @@ const styles = StyleSheet.create({
   },
   detailsTogglePressed: {
     opacity: 0.7,
+  },
+  detailsToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   detailsToggleLabel: {
     ...typography.caption,
@@ -510,91 +420,4 @@ const styles = StyleSheet.create({
     minHeight: 44,
     paddingVertical: spacing.sm,
   },
-  actionsRow: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    marginTop: spacing.sm,
-    paddingTop: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-  },
-  approveButton: {
-    flex: 1.15,
-    minHeight: 44,
-    borderRadius: radius.button,
-    backgroundColor: colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingHorizontal: spacing.sm,
-  },
-  approveLabel: {
-    ...typography.bodyStrong,
-    fontSize: 13,
-    color: colors.white,
-  },
-  requestUpdateButton: {
-    flex: 1.2,
-    minHeight: 44,
-    borderRadius: radius.button,
-    borderWidth: 1.5,
-    borderColor: '#F97316',
-    backgroundColor: colors.white,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    paddingHorizontal: spacing.xs,
-  },
-  requestUpdateLabel: {
-    ...typography.bodyStrong,
-    fontSize: 12,
-    color: '#C2410C',
-  },
-  rejectButton: {
-    flex: 0.9,
-    minHeight: 44,
-    borderRadius: radius.button,
-    borderWidth: 1.5,
-    borderColor: '#EF4444',
-    backgroundColor: colors.white,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    paddingHorizontal: spacing.xs,
-  },
-  rejectLabel: {
-    ...typography.bodyStrong,
-    fontSize: 12,
-    color: '#DC2626',
-  },
-  actionPressed: { opacity: 0.88 },
-  actionDisabled: { opacity: 0.5 },
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'center',
-    padding: spacing.lg,
-  },
-  rejectSheet: {
-    backgroundColor: colors.white,
-    borderRadius: radius.card,
-    padding: spacing.lg,
-    gap: spacing.sm,
-  },
-  rejectTitle: { ...typography.h3, marginBottom: spacing.sm },
-  reasonRow: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.button,
-    padding: spacing.md,
-  },
-  reasonRowActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.lightGreen,
-  },
-  reasonText: { ...typography.body },
-  rejectActions: { gap: spacing.sm, marginTop: spacing.md },
 });

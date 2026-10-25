@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'center',
     padding: spacing.xl,
   },
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: radius.card,
     padding: spacing.xl,
-    ...shadows.md,
+    ...shadows.raised,
   },
   modalTitle: {
     ...typography.h2,

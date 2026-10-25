@@ -10,7 +10,8 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { colors, radius, spacing, typography } from '../../theme';
+import { Check, ChevronDown } from 'lucide-react-native';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 
 export type FilterDropdownOption = {
   value?: string;
@@ -72,7 +73,7 @@ export function FilterDropdownField({
             numberOfLines={1}>
             {valueLabel}
           </Text>
-          <Text style={styles.chevron}>▾</Text>
+          <ChevronDown size={14} color={colors.muted} strokeWidth={2.4} />
         </Pressable>
       </View>
 
@@ -80,8 +81,13 @@ export function FilterDropdownField({
         visible={open}
         transparent
         animationType="fade"
+        statusBarTranslucent
+        presentationStyle="overFullScreen"
         onRequestClose={() => setOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setOpen(false)} />
+        <View style={styles.modalRoot}>
+        <View style={styles.backdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setOpen(false)} />
+        </View>
         <View style={[styles.sheet, compact ? styles.sheetBottom : styles.sheetCentered]}>
           <View style={styles.sheetHeader}>
             <Text style={styles.sheetTitle}>{label}</Text>
@@ -111,11 +117,12 @@ export function FilterDropdownField({
                     numberOfLines={1}>
                     {item.label}
                   </Text>
-                  {selected ? <Text style={styles.optionCheck}>✓</Text> : null}
+                  {selected ? <Check size={16} color={colors.primaryDark} strokeWidth={2.4} /> : null}
                 </Pressable>
               );
             }}
           />
+        </View>
         </View>
       </Modal>
     </>
@@ -176,11 +183,15 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.muted,
   },
+  modalRoot: {
+    flex: 1,
+  },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colors.overlayScrim,
   },
   sheet: {
+    ...shadows.raised,
     backgroundColor: colors.white,
     overflow: 'hidden',
     borderWidth: 1,

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { CheckCircle2, Sparkles } from 'lucide-react-native';
+import { Check, CheckCircle2, Sparkles } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import type { MealDeliveryLocation, MealPollSlot, MealType, UUID } from '../../api/types';
 import { Button } from '../ui';
@@ -38,6 +38,7 @@ type MealPollDayContentProps = {
   hideSubmitButton?: boolean;
   readOnly?: boolean;
   showMealPrices?: boolean;
+  initialMealType?: MealType | null;
 };
 
 function sortPolls(polls: MealPollSlot[]): MealPollSlot[] {
@@ -70,6 +71,7 @@ export function MealPollDayContent({
   hideSubmitButton = false,
   readOnly = false,
   showMealPrices = true,
+  initialMealType = null,
 }: MealPollDayContentProps) {
   const { t, i18n } = useTranslation();
   const isDashboard = variant === 'dashboard';
@@ -80,7 +82,7 @@ export function MealPollDayContent({
   const sortedPolls = useMemo(() => sortPolls(openPolls), [openPolls]);
 
   const [selectedMealType, setSelectedMealType] = useState<MealType | null>(
-    () => sortedPolls[0]?.mealType ?? null,
+    () => initialMealType ?? sortedPolls[0]?.mealType ?? null,
   );
 
   useEffect(() => {
@@ -92,9 +94,12 @@ export function MealPollDayContent({
       if (prev && sortedPolls.some(poll => poll.mealType === prev)) {
         return prev;
       }
+      if (initialMealType && sortedPolls.some(poll => poll.mealType === initialMealType)) {
+        return initialMealType;
+      }
       return sortedPolls[0].mealType;
     });
-  }, [sortedPolls]);
+  }, [initialMealType, sortedPolls]);
 
   const activePoll = useMemo(() => {
     if (showSummary) {
@@ -275,9 +280,12 @@ export function MealPollDayContent({
                     )
                   : t('meals.poll.notSelected');
                 return (
-                  <Text key={selection.optionId} style={styles.summaryChoice}>
-                    ✓ {label} × {selection.quantity}
-                  </Text>
+                  <View key={selection.optionId} style={styles.summaryChoiceRow}>
+                    <Check size={14} color={colors.primaryDark} strokeWidth={2.6} />
+                    <Text style={styles.summaryChoice}>
+                      {label} × {selection.quantity}
+                    </Text>
+                  </View>
                 );
               };
               return (
@@ -312,15 +320,17 @@ export function MealPollDayContent({
               <View key={poll.id} style={styles.section}>
                 <Text style={styles.sectionTitle}>{t(mealTypeLabelKey(poll.mealType))}</Text>
                 {selected ? (
-                  <Text style={styles.summaryChoice}>
-                    ✓{' '}
+                  <View style={styles.summaryChoiceRow}>
+                    <Check size={14} color={colors.primaryDark} strokeWidth={2.6} />
+                    <Text style={styles.summaryChoice}>
                     {formatComboNameWithPrice(
                       selected.label,
                       selected.price,
                       selected.currencyCode,
                       showMealPrices,
                     )}
-                  </Text>
+                    </Text>
+                  </View>
                 ) : (
                   <Text style={styles.summaryMissing}>{t('meals.poll.notSelected')}</Text>
                 )}
@@ -465,7 +475,13 @@ const styles = StyleSheet.create({
   extrasGroupLabel: {
     marginTop: spacing.sm,
   },
-  summaryChoice: { ...typography.bodyStrong, marginBottom: spacing.xxs },
+  summaryChoiceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.xxs,
+  },
+  summaryChoice: { ...typography.bodyStrong, flex: 1 },
   summaryMissing: { ...typography.body, color: colors.muted, marginBottom: spacing.xxs },
   deliverySummary: {
     ...typography.body,

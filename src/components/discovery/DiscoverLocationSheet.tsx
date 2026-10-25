@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -10,16 +10,18 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, Map, MapPin, X } from 'lucide-react-native';
+import { ChevronDown, ChevronRight, Map, MapPin, Search, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { locationsApi } from '../../api/locationsApi';
 import type { LocationRecord } from '../../api/types';
 import { ListSearchBar } from '../ui';
 import { toSelectedDiscoverLocation, type SelectedDiscoverLocation } from '../../utils/discoverLocation';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { keyboardOverlap, locationPickerFrame } from '../../utils/locationPickerFrame';
 import {
   AUTOCOMPLETE_DEBOUNCE_MS,
   AUTOCOMPLETE_MIN_LENGTH,
@@ -63,6 +65,12 @@ export function DiscoverLocationSheet({
 }: DiscoverLocationSheetProps) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const restingHeight = useRef(windowHeight);
+  if (keyboardHeight === 0) {
+    restingHeight.current = windowHeight;
+  }
   const [mode, setMode] = useState<PickerMode>('search');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -81,6 +89,21 @@ export function DiscoverLocationSheet({
   const [browseLoad, setBrowseLoad] = useState<LoadState>('idle');
   const [stateMenuOpen, setStateMenuOpen] = useState(false);
   const [menuQuery, setMenuQuery] = useState('');
+
+  useEffect(() => {
+    if (!visible) {
+      setKeyboardHeight(0);
+      return;
+    }
+    const show = Keyboard.addListener('keyboardDidShow', event => {
+      setKeyboardHeight(event.endCoordinates.height);
+    });
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardHeight(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, [visible]);
 
   useEffect(() => {
     if (!visible) return;
@@ -221,11 +244,30 @@ export function DiscoverLocationSheet({
 
   const needle = menuQuery.trim().toLowerCase();
   const filteredStates = needle ? states.filter(item => item.toLowerCase().includes(needle)) : states;
+  const frame = locationPickerFrame({
+    windowHeight,
+    topInset: insets.top,
+    bottomInset: insets.bottom,
+    keyboardHeight: keyboardOverlap({
+      restingHeight: restingHeight.current,
+      windowHeight,
+      keyboardHeight,
+    }),
+  });
+  const keyboardOpen = keyboardHeight > 0;
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityRole="button" />
-      <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+      statusBarTranslucent
+      presentationStyle="overFullScreen">
+      <View style={styles.root}>
+      <Pressable style={styles.backdrop} onPress={onClose} accessibilityRole="button" accessibilityLabel={t('common.close')} />
+      <View style={[styles.sheetLift, { top: frame.marginTop, height: frame.maxHeight }]}>
+      <View style={styles.sheet}>
         <View style={styles.handle} />
         <View style={styles.titleRow}>
           <Text style={styles.title}>{t('spaces.findPlace.chooseLocation')}</Text>
@@ -241,6 +283,7 @@ export function DiscoverLocationSheet({
             accessibilityRole="button"
             accessibilityState={{ selected: mode === 'search' }}
             accessibilityLabel={t('spaces.findPlace.locationSearchTab')}>
+            <Search size={14} color={mode === 'search' ? colors.tealDark : colors.muted} />
             <Text style={[styles.tabText, mode === 'search' && styles.tabTextActive]}>
               {t('spaces.findPlace.locationSearchTab')}
             </Text>
@@ -259,7 +302,7 @@ export function DiscoverLocationSheet({
         </View>
 
         {mode === 'search' ? (
-          <View style={styles.panel}>
+          <View style={styles.panelFill}>
             <ListSearchBar
               value={search}
               onChangeText={value => {
@@ -299,7 +342,7 @@ export function DiscoverLocationSheet({
                   data={results}
                   keyExtractor={(item, index) => suggestionKey(item, index)}
                   keyboardShouldPersistTaps="handled"
-                  style={styles.list}
+                  style={styles.listFill}
                   renderItem={({ item }) => {
                     const title = suggestionTitle(item);
                     if (!title) return null;
@@ -317,6 +360,7 @@ export function DiscoverLocationSheet({
                           <Text style={styles.resultTitle}>{title}</Text>
                           {detail ? <Text style={styles.resultMeta}>{detail}</Text> : null}
                         </View>
+                        <ChevronRight size={16} color={colors.muted} />
                       </Pressable>
                     );
                   }}
@@ -336,7 +380,9 @@ export function DiscoverLocationSheet({
             </Text>
           </View>
         ) : (
-          <ScrollView style={styles.panel} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            style={styles.panelFill}
+            keyboardShouldPersistTaps="handled">
             <Field
               label={t('spaces.findPlace.locationStateLabel')}
               value={stateName}
@@ -420,6 +466,7 @@ export function DiscoverLocationSheet({
                             <Text style={styles.resultTitle}>{record.location}</Text>
                             {detail ? <Text style={styles.resultMeta}>{detail}</Text> : null}
                           </View>
+                          <ChevronRight size={16} color={colors.muted} />
                         </Pressable>
                       );
                     })
@@ -436,7 +483,7 @@ export function DiscoverLocationSheet({
           </ScrollView>
         )}
 
-        <View style={styles.actions}>
+        <View style={[styles.actions, { paddingBottom: keyboardOpen ? spacing.sm : Math.max(insets.bottom, spacing.sm) }]}>
           <Pressable onPress={onClose} style={styles.cancelButton} accessibilityRole="button">
             <Text style={styles.cancelText}>{t('common.cancel')}</Text>
           </Pressable>
@@ -453,6 +500,8 @@ export function DiscoverLocationSheet({
             </Text>
           </Pressable>
         </View>
+      </View>
+      </View>
       </View>
     </Modal>
   );
@@ -510,22 +559,39 @@ function Field({
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.4)' },
-  sheet: {
+  root: {
+    flex: 1,
+    backgroundColor: colors.overlayScrim,
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  sheetLift: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    zIndex: 2,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     backgroundColor: colors.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '86%',
-    paddingHorizontal: spacing.xl,
+    ...shadows.raised,
+  },
+  sheet: {
+    flex: 1,
+    backgroundColor: colors.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
+    overflow: 'hidden',
   },
   handle: {
     alignSelf: 'center',
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: colors.border,
-    marginBottom: spacing.md,
+    backgroundColor: '#E2E8F0',
+    marginBottom: spacing.sm,
   },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { ...typography.h3, fontSize: 18, color: colors.textPrimary, flex: 1 },
@@ -546,17 +612,23 @@ const styles = StyleSheet.create({
   tabActive: { backgroundColor: colors.mintSubtle, borderColor: colors.primary },
   tabText: { ...typography.caption, fontWeight: '600', color: colors.textSecondary, textAlign: 'center' },
   tabTextActive: { color: colors.tealDark, fontWeight: '700' },
-  panel: { maxHeight: 360 },
-  list: { maxHeight: 280 },
+  panelFill: { flex: 1, minHeight: 0 },
+  listFill: { flex: 1 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginVertical: spacing.md },
   hintText: { ...typography.caption, color: colors.muted, marginVertical: spacing.md },
   errorText: { ...typography.caption, color: colors.danger, marginVertical: spacing.sm },
   retry: { ...typography.caption, color: colors.primaryDark, fontWeight: '700', marginBottom: spacing.sm },
   resultRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: spacing.sm,
     paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  plainRow: {
+    minHeight: 44,
+    justifyContent: 'center',
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
@@ -599,7 +671,16 @@ const styles = StyleSheet.create({
   loader: { marginVertical: spacing.sm },
   fieldOpen: { borderColor: colors.primary },
   plainRowText: { ...typography.body, color: colors.textPrimary },
-  actions: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md, marginTop: spacing.md },
+  actions: {
+    flexShrink: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
   cancelButton: {
     minHeight: 44,
     paddingHorizontal: spacing.lg,

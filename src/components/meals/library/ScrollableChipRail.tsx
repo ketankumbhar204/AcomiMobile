@@ -8,6 +8,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { colors, spacing, typography } from '../../../theme';
 
 type ScrollableChipRailProps = {
@@ -41,7 +42,7 @@ export function ScrollableChipRail({ children }: ScrollableChipRailProps) {
           style={styles.arrow}
           onPress={() => scrollBy(-SCROLL_STEP)}
           hitSlop={8}>
-          <Text style={styles.arrowLabel}>‹</Text>
+          <ChevronLeft size={18} color={colors.primaryDark} strokeWidth={2.4} />
         </Pressable>
       ) : null}
 
@@ -63,7 +64,7 @@ export function ScrollableChipRail({ children }: ScrollableChipRailProps) {
           style={styles.arrow}
           onPress={() => scrollBy(SCROLL_STEP)}
           hitSlop={8}>
-          <Text style={styles.arrowLabel}>›</Text>
+          <ChevronRight size={18} color={colors.primaryDark} strokeWidth={2.4} />
         </Pressable>
       ) : null}
     </View>

@@ -7,6 +7,10 @@ import type {
   CreateSpaceEnquiryRequest,
   NotificationListResponse,
   PagedResponse,
+  OwnerContactResponse,
+  EnquiryInboxResponse,
+  ReceivedEnquiry,
+  ReceivedEnquirySummary,
   SpaceEnquiryResponse,
   SpaceEnquiryStatus,
   SpaceNotification,
@@ -27,11 +31,53 @@ export const enquiryApi = {
       ),
     ),
 
-  listInquiredListingIds: async (): Promise<Array<{ id: string; sentVia: 'EMAIL' | 'APP' | 'BOTH' | null }>> => {
+  requestPhotos: async (spaceId: UUID) =>
+    unwrapApiResponse(
+      apiClient.post<ApiResponse<{
+        notificationPersisted: boolean;
+        notificationDuplicate: boolean;
+        fcmQueued: boolean;
+        phoneAvailable: boolean;
+        internationalPhone?: string | null;
+      }>>(`/spaces/${spaceId}/photo-requests`),
+    ),
+
+  revealedContact: async (spaceId: UUID): Promise<OwnerContactResponse | null> => {
+    try {
+      return await unwrapApiResponse(
+        apiClient.get<ApiResponse<OwnerContactResponse>>(`/spaces/${spaceId}/revealed-contact`),
+      );
+    } catch {
+      return null;
+    }
+  },
+
+  sendAgain: async (spaceId: UUID): Promise<SpaceEnquiryResponse> =>
+    unwrapApiResponse(
+      apiClient.post<ApiResponse<SpaceEnquiryResponse>>(
+        `/spaces/${spaceId}/enquiries/send-again`,
+      ),
+    ),
+
+  listInquiredListingIds: async (): Promise<
+    Array<{
+      id: string;
+      sentVia: 'EMAIL' | 'APP' | 'BOTH' | null;
+      sentToEmail: string | null;
+      sentAt: string | null;
+      contactViewed: boolean;
+    }>
+  > => {
     const data = await unwrapApiResponse(
       apiClient.get<ApiResponse<{
         inquiredListingIds?: string[];
-        inquiries?: { listingId?: string; sentVia?: string }[];
+        inquiries?: {
+          listingId?: string;
+          sentVia?: string;
+          sentToEmail?: string | null;
+          sentAt?: string | null;
+          contactViewed?: boolean;
+        }[];
       }>>('/enquiries/me/listing-ids'),
     );
     const asVia = (value: string | undefined): 'EMAIL' | 'APP' | 'BOTH' | null =>
@@ -40,11 +86,48 @@ export const enquiryApi = {
       return data.inquiries.flatMap(row => {
         const id = row.listingId?.trim();
         if (!id) return [];
-        return [{ id, sentVia: asVia(row.sentVia) }];
+        return [{
+          id,
+          sentVia: asVia(row.sentVia),
+          sentToEmail: row.sentToEmail?.trim() || null,
+          sentAt: row.sentAt?.trim() || null,
+          contactViewed: row.contactViewed === true,
+        }];
       });
     }
-    return (data.inquiredListingIds ?? []).map(id => ({ id, sentVia: null }));
+    return (data.inquiredListingIds ?? []).map(id => ({
+      id,
+      sentVia: null,
+      sentToEmail: null,
+      sentAt: null,
+      contactViewed: false,
+    }));
   },
+
+  inbox: async (): Promise<EnquiryInboxResponse> =>
+    unwrapApiResponse(apiClient.get<ApiResponse<EnquiryInboxResponse>>('/enquiries/inbox')),
+
+  listReceived: async (params?: {
+    spaceId?: UUID;
+    status?: SpaceEnquiryStatus;
+    from?: string;
+    to?: string;
+    q?: string;
+    page?: number;
+    size?: number;
+  }): Promise<PagedResponse<ReceivedEnquiry>> =>
+    unwrapApiResponse(
+      apiClient.get<ApiResponse<PagedResponse<ReceivedEnquiry>>>('/enquiries/received', {
+        params,
+      }),
+    ),
+
+  receivedSummary: async (spaceId?: UUID): Promise<ReceivedEnquirySummary> =>
+    unwrapApiResponse(
+      apiClient.get<ApiResponse<ReceivedEnquirySummary>>('/enquiries/received/summary', {
+        params: spaceId ? { spaceId } : undefined,
+      }),
+    ),
 
   listMine: async (params?: {
     page?: number;

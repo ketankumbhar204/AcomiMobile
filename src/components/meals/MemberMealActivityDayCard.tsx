@@ -5,6 +5,7 @@ import type { MemberMealActivityDay } from '../../api/types';
 import { colors, radius, spacing, typography } from '../../theme';
 import { MEAL_TYPES } from '../../utils/mealLabels';
 import {
+  activityDayPollClosed,
   formatActivityListDate,
   formatPaymentLine,
   formatSlotLine,
@@ -33,6 +34,7 @@ type MemberMealActivityDayCardProps = {
   day: MemberMealActivityDay;
   todayIso: string;
   locale: string;
+  showPrices?: boolean;
   onPress: (date: string) => void;
 };
 
@@ -40,6 +42,7 @@ export function MemberMealActivityDayCard({
   day,
   todayIso,
   locale,
+  showPrices = true,
   onPress,
 }: MemberMealActivityDayCardProps) {
   const { t } = useTranslation();
@@ -47,10 +50,12 @@ export function MemberMealActivityDayCard({
   const slotLabel = useMemo(
     () => (status: string) => {
       switch (status) {
+        case 'ACCEPTED':
+          return t('meals.activity.statusAccepted');
         case 'PENDING':
-          return t('meals.activity.history.notSelected');
+          return t('meals.activity.daySheet.statusPending');
         case 'SKIPPED':
-          return t('meals.activity.history.notSelected');
+          return t('meals.activity.daySheet.statusSkipped');
         case 'NO_MENU':
           return t('meals.activity.statusNoMenu');
         case 'INACTIVE':
@@ -80,30 +85,42 @@ export function MemberMealActivityDayCard({
   }).filter(slot => slot != null && slot.status !== 'INACTIVE' && slot.status !== 'NO_MENU');
 
   const payment = formatPaymentLine(day, todayIso, paymentLabels);
+  const pollClosedLabel = t('meals.poll.pollClosed');
+  const notSelectedLabel = t('meals.poll.notSelected');
+  const dayClosed = activityDayPollClosed(day.slots ?? []);
 
   return (
     <Pressable
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
       onPress={() => onPress(day.date)}
       accessibilityRole="button">
-      <Text style={styles.dateLabel}>{formatActivityListDate(day.date, locale)}</Text>
+      <View style={styles.dateRow}>
+        <Text style={styles.dateLabel}>{formatActivityListDate(day.date, locale)}</Text>
+        {dayClosed ? (
+          <View style={styles.closedBadge} accessibilityRole="text">
+            <Text style={styles.closedBadgeText}>{pollClosedLabel}</Text>
+          </View>
+        ) : null}
+      </View>
 
       <View style={styles.slotList}>
         {visibleSlots.map(slot => {
-          const line = formatSlotLine(slot, slotLabel);
+          const line = formatSlotLine(slot, slotLabel, notSelectedLabel);
           return (
             <View key={slot.mealType} style={styles.slotRow}>
               <Text style={styles.slotPrefix}>{line.prefix}:</Text>
               <Text style={styles.slotDetail} numberOfLines={2}>
                 {line.detail}
               </Text>
-              {line.amount ? <Text style={styles.slotAmount}>{line.amount}</Text> : null}
+              {showPrices && line.amount ? (
+                <Text style={styles.slotAmount}>{line.amount}</Text>
+              ) : null}
             </View>
           );
         })}
       </View>
 
-      {payment.display !== 'NONE' && payment.amount ? (
+      {showPrices && payment.display !== 'NONE' && payment.amount ? (
         <View style={styles.paymentRow}>
           <View style={styles.paymentStatus}>
             <View style={[styles.paymentDot, { backgroundColor: PAYMENT_DOT[payment.display] }]} />
@@ -132,9 +149,27 @@ const styles = StyleSheet.create({
   cardPressed: {
     opacity: 0.92,
   },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
   dateLabel: {
     ...typography.bodyStrong,
     color: colors.primaryDark,
+    flex: 1,
+  },
+  closedBadge: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 6,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+  },
+  closedBadgeText: {
+    ...typography.caption,
+    color: colors.muted,
+    fontWeight: '700',
   },
   slotList: {
     gap: 4,

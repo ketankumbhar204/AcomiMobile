@@ -1,6 +1,7 @@
 package com.acomi
 
 import android.app.Application
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
@@ -17,8 +18,7 @@ class MainApplication : Application(), ReactApplication {
       context = applicationContext,
       packageList =
         PackageList(this).packages.apply {
-          // Packages that cannot be autolinked yet can be added manually here, for example:
-          // add(MyReactNativePackage())
+          add(AcomiNotificationPackage())
         },
     )
   }
@@ -40,6 +40,8 @@ class MainApplication : Application(), ReactApplication {
         NotificationManager.IMPORTANCE_HIGH,
       )
     channel.description = "Transactional updates from ACOMI"
+    channel.lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+    channel.enableVibration(true)
     val manager = getSystemService(NotificationManager::class.java)
     manager.createNotificationChannel(channel)
   }

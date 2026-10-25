@@ -1,7 +1,9 @@
-import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,15 +15,28 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { Info, Lightbulb, Mail } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { inquiryCreditsAdminApi } from '../../api/inquiryCreditsAdminApi';
 import type { InquiryCreditPackage, InquiryCreditsPaymentConfig } from '../../api/inquiryCreditsApi';
 import { ApiError } from '../../api/types';
-import { HeaderBackButton } from '../../components/ui';
 import type { AdminStackParamList } from '../../navigation/types';
-import { uploadLocalFile } from '../../services/fileUploadService';
+import {
+  loadPaymentQrImage,
+  uploadLocalFile,
+  type AuthorizedImageSource,
+} from '../../services/fileUploadService';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, spacing, typography } from '../../theme';
+import { pastels } from '../../theme/colors';
+import { ZoomableImageModal } from '../../components/files/ZoomableImageModal';
 import { pickOptimizedImage } from '../../utils/pickOptimizedImage';
+import {
+  draftFromPaymentConfig,
+  emptyInquiryCreditsConfigDraft,
+  paymentConfigUpdateFromDraft,
+  type InquiryCreditsConfigDraft,
+} from './inquiryCreditsConfigDraft';
 
 type Nav = NativeStackNavigationProp<AdminStackParamList, 'AdminInquiryCreditsConfig'>;
 
@@ -43,30 +58,96 @@ function Section({
   );
 }
 
+function Note({ icon, children }: { icon?: React.ReactNode; children: string }) {
+  return (
+    <View style={styles.note}>
+      {icon}
+      <Text style={styles.noteText}>{children}</Text>
+    </View>
+  );
+}
+
+function ToggleRow({
+  label,
+  hint,
+  value,
+  onValueChange,
+}: {
+  label: string;
+  hint?: string;
+  value: boolean;
+  onValueChange: (value: boolean) => void;
+}) {
+  return (
+    <View style={styles.row}>
+      <View style={styles.toggleCopy}>
+        <Text style={styles.labelInline}>{label}</Text>
+        {hint ? <Text style={styles.fieldHint}>{hint}</Text> : null}
+      </View>
+      <Switch
+        value={value}
+        onValueChange={onValueChange}
+        trackColor={{ false: '#E2E8F0', true: '#86EFAC' }}
+        thumbColor={value ? colors.primary : '#F8FAFC'}
+      />
+    </View>
+  );
+}
+
+function LimitField({
+  label,
+  value,
+  onChangeText,
+  editable = true,
+}: {
+  label: string;
+  value: string;
+  onChangeText: (value: string) => void;
+  editable?: boolean;
+}) {
+  return (
+    <View>
+      <Text style={[styles.label, !editable && styles.labelDisabled]}>{label}</Text>
+      <TextInput
+        style={[styles.input, !editable && styles.inputDisabled]}
+        value={value}
+        onChangeText={onChangeText}
+        keyboardType="number-pad"
+        editable={editable}
+        selectTextOnFocus={editable}
+      />
+    </View>
+  );
+}
+
 function PackageEditor({
   title,
   hint,
+  footer,
   packages,
   onChange,
 }: {
   title: string;
   hint: string;
+  footer: string;
   packages: InquiryCreditPackage[];
   onChange: (id: string, patch: Partial<InquiryCreditPackage>) => void;
 }) {
   const { t } = useTranslation();
   return (
-    <Section title={title} hint={hint}>
+    <View style={styles.packageBox}>
+      <Text style={styles.packageTitle}>{title}</Text>
+      <Text style={styles.sectionHint}>{hint}</Text>
       {packages.length === 0 ? (
         <Text style={styles.sectionHint}>
           {t('admin.credits.noPackageSeeded', {
-            defaultValue: 'No package seeded for this channel yet.',
+            defaultValue: 'No package seeded for this channel yet. Run the latest backend migration.',
           })}
         </Text>
       ) : (
         packages.map(pkg => (
           <View key={pkg.id} style={styles.pkgCard}>
-            <Text style={styles.label}>{t('admin.credits.packageName', { defaultValue: 'Name' })}</Text>
+            <Text style={styles.label}>{t('admin.credits.packageName', { defaultValue: 'Package name' })}</Text>
             <TextInput
               style={styles.input}
               value={pkg.name}
@@ -81,9 +162,10 @@ function PackageEditor({
                   style={styles.input}
                   value={String(pkg.credits)}
                   keyboardType="number-pad"
-                  onChangeText={value =>
-                    onChange(pkg.id, { credits: Math.max(1, Number(value) || 1) })
-                  }
+                  onChangeText={value => {
+                    const digits = value.replace(/[^\d]/g, '');
+                    onChange(pkg.id, { credits: digits === '' ? 0 : Number(digits) });
+                  }}
                 />
               </View>
               <View style={styles.pkgField}>
@@ -100,73 +182,97 @@ function PackageEditor({
                 />
               </View>
             </View>
-            <View style={styles.row}>
-              <Text style={styles.labelInline}>
-                {t('admin.credits.packageEnabled', { defaultValue: 'Enabled' })}
-              </Text>
-              <Switch
-                value={pkg.enabled}
-                onValueChange={value => onChange(pkg.id, { enabled: value })}
-              />
-            </View>
+            <ToggleRow
+              label={t('admin.credits.packageEnabled', { defaultValue: 'Enabled' })}
+              value={pkg.enabled}
+              onValueChange={value => onChange(pkg.id, { enabled: value })}
+            />
+            <Text style={styles.packageFooter}>{footer}</Text>
           </View>
         ))
       )}
-    </Section>
+    </View>
   );
 }
 
 export function AdminInquiryCreditsConfigScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
+  const insets = useSafeAreaInsets();
   const showToast = useToastStore(state => state.showToast);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [qrUploading, setQrUploading] = useState(false);
   const [config, setConfig] = useState<InquiryCreditsPaymentConfig | null>(null);
   const [packages, setPackages] = useState<InquiryCreditPackage[]>([]);
-  const [enabled, setEnabled] = useState(false);
-  const [upiId, setUpiId] = useState('');
-  const [whatsapp, setWhatsapp] = useState('');
-  const [instructions, setInstructions] = useState('');
-  const [webFree, setWebFree] = useState('5');
-  const [androidMode, setAndroidMode] = useState<'FREE' | 'CREDITS'>('FREE');
-  const [androidFree, setAndroidFree] = useState('5');
-  const [hourly, setHourly] = useState('20');
-  const [qrUrl, setQrUrl] = useState<string | null>(null);
-  const [qrFileId, setQrFileId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<InquiryCreditsConfigDraft>(emptyInquiryCreditsConfigDraft);
+  const [qrSource, setQrSource] = useState<AuthorizedImageSource | null>(null);
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrError, setQrError] = useState<string | null>(null);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const loadGen = useRef(0);
+  const interactionLock = useRef(false);
 
   useLayoutEffect(() => {
     navigation.setOptions({
       title: t('admin.credits.configTitle', { defaultValue: 'Inquiry credits — payment config' }),
-      headerLeft: () => <HeaderBackButton />,
     });
   }, [navigation, t]);
 
+  const applyLoaded = useCallback(
+    async (nextConfig: InquiryCreditsPaymentConfig, nextPackages: InquiryCreditPackage[]) => {
+      setConfig(nextConfig);
+      setPackages(nextPackages.length ? nextPackages : nextConfig.packages ?? []);
+      setDraft(draftFromPaymentConfig(nextConfig));
+      setLoadError(null);
+      setQrError(null);
+      setQrLoading(Boolean(nextConfig.qrFileId || nextConfig.qrUrl));
+      try {
+        const source = await loadPaymentQrImage(nextConfig.qrFileId, nextConfig.qrUrl);
+        setQrSource(source);
+        if ((nextConfig.qrFileId || nextConfig.qrUrl) && !source) {
+          setQrError(
+            t('admin.credits.qrMissing', { defaultValue: 'No payment QR is saved.' }),
+          );
+        }
+      } catch {
+        setQrSource(null);
+        if (nextConfig.qrFileId) {
+          const message = t('admin.credits.qrLoadFailed', {
+            defaultValue: 'Unable to load the payment QR.',
+          });
+          setQrError(message);
+          showToast(message);
+        }
+      } finally {
+        setQrLoading(false);
+      }
+    },
+    [showToast, t],
+  );
+
   const load = useCallback(async () => {
+    if (interactionLock.current) return;
+    const gen = ++loadGen.current;
     setLoading(true);
+    setLoadError(null);
     try {
       const [nextConfig, nextPackages] = await Promise.all([
         inquiryCreditsAdminApi.getPaymentConfig(),
         inquiryCreditsAdminApi.listPackages().catch(() => [] as InquiryCreditPackage[]),
       ]);
-      setConfig(nextConfig);
-      setPackages(nextPackages.length ? nextPackages : nextConfig.packages ?? []);
-      setEnabled(nextConfig.enabled);
-      setUpiId(nextConfig.upiId ?? '');
-      setWhatsapp(nextConfig.whatsappNumber ?? '');
-      setInstructions(nextConfig.instructions ?? '');
-      setWebFree(String(nextConfig.webFreeDailyLimit ?? 5));
-      setAndroidMode(nextConfig.androidBillingMode === 'CREDITS' ? 'CREDITS' : 'FREE');
-      setAndroidFree(String(nextConfig.androidFreeDailyLimit ?? 5));
-      setHourly(String(nextConfig.androidHourlyRateLimit ?? 20));
-      setQrUrl(nextConfig.qrUrl ?? null);
-      setQrFileId(nextConfig.qrFileId ?? null);
+      if (gen !== loadGen.current || interactionLock.current) return;
+      await applyLoaded(nextConfig, nextPackages);
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : t('common.errors.generic'));
+      if (gen !== loadGen.current) return;
+      const message = err instanceof ApiError ? err.message : t('common.errors.generic');
+      setLoadError(message);
+      showToast(message);
     } finally {
-      setLoading(false);
+      if (gen === loadGen.current) setLoading(false);
     }
-  }, [showToast, t]);
+  }, [applyLoaded, showToast, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -183,24 +289,21 @@ export function AdminInquiryCreditsConfigScreen() {
     [packages],
   );
 
+  function patchDraft(patch: Partial<InquiryCreditsConfigDraft>) {
+    setDraft(current => ({ ...current, ...patch }));
+  }
+
   function updatePackage(id: string, patch: Partial<InquiryCreditPackage>) {
     setPackages(current => current.map(row => (row.id === id ? { ...row, ...patch } : row)));
   }
 
   async function save() {
+    if (!config || saving || interactionLock.current) return;
+    interactionLock.current = true;
+    loadGen.current += 1;
     setSaving(true);
     try {
-      await inquiryCreditsAdminApi.updatePaymentConfig({
-        enabled,
-        upiId: upiId.trim() || null,
-        whatsappNumber: whatsapp.trim() || null,
-        instructions: instructions.trim() || null,
-        qrFileId,
-        webFreeDailyLimit: Number(webFree) || 0,
-        androidBillingMode: androidMode,
-        androidFreeDailyLimit: Number(androidFree) || 0,
-        androidHourlyRateLimit: Math.max(1, Number(hourly) || 20),
-      });
+      await inquiryCreditsAdminApi.updatePaymentConfig(paymentConfigUpdateFromDraft(draft));
       await Promise.all(
         packages.map(pkg =>
           inquiryCreditsAdminApi.updatePackage(pkg.id, {
@@ -211,27 +314,45 @@ export function AdminInquiryCreditsConfigScreen() {
           }),
         ),
       );
+      const [nextConfig, nextPackages] = await Promise.all([
+        inquiryCreditsAdminApi.getPaymentConfig(),
+        inquiryCreditsAdminApi.listPackages().catch(() => [] as InquiryCreditPackage[]),
+      ]);
+      await applyLoaded(nextConfig, nextPackages);
       showToast(t('admin.credits.saved', { defaultValue: 'Payment configuration saved.' }));
-      await load();
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : t('common.errors.generic'));
     } finally {
+      interactionLock.current = false;
       setSaving(false);
     }
   }
 
   async function pickQr() {
+    if (qrUploading) return;
+    interactionLock.current = true;
+    loadGen.current += 1;
     try {
       const picked = await pickOptimizedImage('INQUIRY_PAYMENT_QR');
       if (!picked) return;
+      setQrUploading(true);
       const fileId = await uploadLocalFile(
         { uri: picked.uri, mime: picked.mime, size: picked.size, name: picked.name },
         { purpose: 'INQUIRY_PAYMENT_QR' },
       );
-      setQrFileId(fileId);
-      setQrUrl(picked.previewUri);
+      patchDraft({ qrFileId: fileId, qrCleared: false });
+      setQrError(null);
+      setQrSource({ uri: picked.previewUri });
+      try {
+        await inquiryCreditsAdminApi.updatePaymentConfig({ qrFileId: fileId });
+      } catch (err) {
+        showToast(err instanceof ApiError ? err.message : t('common.errors.generic'));
+      }
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : t('common.errors.generic'));
+    } finally {
+      interactionLock.current = false;
+      setQrUploading(false);
     }
   }
 
@@ -243,214 +364,395 @@ export function AdminInquiryCreditsConfigScreen() {
     );
   }
 
-  return (
-    <ScrollView
-      style={styles.root}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled">
-      <Text style={styles.pageHint}>
-        {t('admin.credits.configSubtitle', {
-          defaultValue:
-            'Configure payment details and separate credit packages for email/web vs mobile app enquiries.',
-        })}
-      </Text>
-      <Pressable
-        onPress={() => navigation.navigate('AdminInquiryCreditRequests')}
-        style={styles.linkRow}
-        accessibilityRole="button">
-        <Text style={styles.linkText}>
-          {t('admin.nav.creditPayments', { defaultValue: 'Credit payments' })}
+  if (!config) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.loadError}>
+          {loadError ??
+            t('admin.credits.loadFailed', { defaultValue: 'Could not load payment configuration.' })}
         </Text>
-      </Pressable>
-
-      <Section
-        title={t('admin.credits.enablePurchases', { defaultValue: 'Enable credit purchases' })}
-        hint={t('admin.credits.enableHint', {
-          defaultValue:
-            'On: free daily limit then ₹9 / 30 UPI + WhatsApp screenshot flow. Off: no daily limit and no paywall on web or mobile.',
-        })}>
-        <View style={styles.row}>
-          <Text style={styles.labelInline}>
-            {enabled
-              ? t('admin.credits.enabledOn', { defaultValue: 'Purchases on' })
-              : t('admin.credits.enabledOff', { defaultValue: 'Purchases off' })}
+        <Pressable onPress={() => void load()} style={styles.secondaryBtn}>
+          <Text style={styles.secondaryText}>
+            {t('admin.credits.retry', { defaultValue: 'Retry' })}
           </Text>
-          <Switch value={enabled} onValueChange={setEnabled} />
-        </View>
-      </Section>
+        </Pressable>
+      </View>
+    );
+  }
 
-      <Section title={t('admin.credits.paymentDetails', { defaultValue: 'Payment details' })}>
-        <Text style={styles.label}>{t('admin.credits.upi', { defaultValue: 'UPI ID' })}</Text>
-        <TextInput
-          style={styles.input}
-          value={upiId}
-          onChangeText={setUpiId}
-          autoCapitalize="none"
-          placeholder="yourupi@bank"
-          placeholderTextColor={colors.muted}
-        />
-        <Text style={styles.label}>
-          {t('admin.credits.whatsapp', { defaultValue: 'WhatsApp number for payment screenshots' })}
-        </Text>
-        <TextInput
-          style={styles.input}
-          value={whatsapp}
-          onChangeText={setWhatsapp}
-          keyboardType="phone-pad"
-          placeholder="9198XXXXXXXX"
-          placeholderTextColor={colors.muted}
-        />
-        <Text style={styles.fieldHint}>
-          {t('admin.credits.whatsappHint', {
-            defaultValue:
-              'Seekers pay on UPI, then send the screenshot here. Use country code. Approve under Credit payments.',
-          })}
-        </Text>
-        <Text style={styles.label}>
-          {t('admin.credits.instructions', { defaultValue: 'Instructions (shown to seekers)' })}
-        </Text>
-        <TextInput
-          style={[styles.input, styles.multiline]}
-          value={instructions}
-          onChangeText={setInstructions}
-          multiline
-        />
-      </Section>
+  const creditsBilling = draft.androidMode === 'CREDITS';
 
-      <Section title={t('admin.credits.qr', { defaultValue: 'Payment QR code' })}>
-        {qrUrl ? <Image source={{ uri: qrUrl }} style={styles.qr} /> : null}
-        <View style={styles.qrActions}>
-          <Pressable onPress={() => void pickQr()} style={styles.secondaryBtn}>
-            <Text style={styles.secondaryText}>
-              {qrUrl
-                ? t('admin.credits.replaceQr', { defaultValue: 'Replace QR' })
-                : t('admin.credits.uploadQr', { defaultValue: 'Upload QR' })}
-            </Text>
-          </Pressable>
-          {qrFileId ? (
-            <Pressable
-              onPress={() => {
-                setQrFileId(null);
-                setQrUrl(null);
-              }}
-              style={styles.dangerBtn}>
-              <Text style={styles.dangerText}>
-                {t('admin.credits.removeQr', { defaultValue: 'Remove' })}
-              </Text>
-            </Pressable>
-          ) : null}
-        </View>
-        <Text style={styles.fieldHint}>
-          {t('admin.credits.qrHint', { defaultValue: 'PNG or JPG, max 5 MB.' })}
-        </Text>
-      </Section>
-
-      <Section
-        title={t('admin.credits.webAccess', { defaultValue: 'Email / web enquiry access' })}
-        hint={t('admin.credits.webAccessHint', {
-          defaultValue:
-            'Seekers on web get this many free enquiries per day, then use paid credits from the email package below.',
-        })}>
-        <Text style={styles.label}>
-          {t('admin.credits.webFree', { defaultValue: 'Free email enquiries per day' })}
-        </Text>
-        <TextInput
-          style={styles.input}
-          value={webFree}
-          onChangeText={setWebFree}
-          keyboardType="number-pad"
-        />
-      </Section>
-
-      <PackageEditor
-        title={t('admin.credits.webPackages', { defaultValue: 'Credit package — email / web' })}
-        hint={t('admin.credits.webPackagesHint', {
-          defaultValue:
-            'Used when seekers enquire from the website (email delivery). Wallet credits are shared.',
-        })}
-        packages={emailPackages}
-        onChange={updatePackage}
-      />
-
-      <Section
-        title={t('admin.credits.androidAccess', { defaultValue: 'Mobile app enquiry access' })}
-        hint={t('admin.credits.androidAccessHint', {
-          defaultValue:
-            'Controls whether in-app enquiries stay free or consume credits after a daily free allowance.',
-        })}>
-        <Text style={styles.label}>
-          {t('admin.credits.androidMode', { defaultValue: 'Billing mode' })}
-        </Text>
-        <View style={styles.filters}>
-          {(['FREE', 'CREDITS'] as const).map(mode => (
-            <Pressable
-              key={mode}
-              onPress={() => setAndroidMode(mode)}
-              style={[styles.chip, androidMode === mode && styles.chipOn]}>
-              <Text style={[styles.chipText, androidMode === mode && styles.chipTextOn]}>
-                {mode === 'FREE'
-                  ? t('admin.credits.modeFree', { defaultValue: 'Free (rate limit only)' })
-                  : t('admin.credits.modeCredits', {
-                      defaultValue: 'Credits (after free quota)',
-                    })}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-        <Text style={styles.label}>
-          {t('admin.credits.androidFree', { defaultValue: 'Free mobile enquiries per day' })}
-        </Text>
-        <TextInput
-          style={[styles.input, androidMode === 'FREE' && styles.inputDisabled]}
-          value={androidFree}
-          onChangeText={setAndroidFree}
-          keyboardType="number-pad"
-          editable={androidMode === 'CREDITS'}
-        />
-        {androidMode === 'FREE' ? (
-          <Text style={styles.fieldHint}>
-            {t('admin.credits.androidFreeHint', {
-              defaultValue: 'Only used when billing mode is Credits',
+  return (
+    <>
+      <KeyboardAvoidingView
+        style={styles.root}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView
+          style={styles.root}
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: spacing.section + insets.bottom },
+          ]}
+          keyboardShouldPersistTaps="handled">
+          <Text style={styles.pageHint}>
+            {t('admin.credits.configSubtitle', {
+              defaultValue:
+                'Configure payment details and separate credit packages for email/web vs mobile app enquiries.',
             })}
           </Text>
-        ) : null}
-        <Text style={styles.label}>
-          {t('admin.credits.hourly', { defaultValue: 'Hourly rate limit' })}
-        </Text>
-        <TextInput
-          style={styles.input}
-          value={hourly}
-          onChangeText={setHourly}
-          keyboardType="number-pad"
-        />
-      </Section>
+          <Pressable
+            onPress={() => navigation.navigate('AdminInquiryCreditRequests')}
+            style={styles.linkRow}
+            accessibilityRole="button">
+            <Text style={styles.linkText}>
+              {t('admin.nav.creditPayments', { defaultValue: 'Credit payments' })}
+            </Text>
+          </Pressable>
 
-      <PackageEditor
-        title={t('admin.credits.mobilePackages', { defaultValue: 'Credit package — mobile app' })}
-        hint={t('admin.credits.mobilePackagesHint', {
-          defaultValue:
-            'Shown on Android when billing mode is Credits and purchases are enabled.',
-        })}
-        packages={mobilePackages}
-        onChange={updatePackage}
+          <View style={styles.card}>
+            <ToggleRow
+              label={t('admin.credits.enablePurchases', { defaultValue: 'Enable credit purchases' })}
+              hint={t('admin.credits.enableHint', {
+                defaultValue:
+                  'On: free daily limit then ₹9 / 30 UPI + WhatsApp screenshot flow. Off: no daily limit and no paywall on web or mobile.',
+              })}
+              value={draft.enabled}
+              onValueChange={enabled => patchDraft({ enabled })}
+            />
+          </View>
+
+          <View style={styles.howCard}>
+            <Lightbulb size={18} color="#16A34A" />
+            <View style={styles.toggleCopy}>
+              <Text style={styles.packageTitle}>
+                {t('admin.credits.howItWorksTitle', { defaultValue: 'How it works' })}
+              </Text>
+              <Text style={styles.sectionHint}>
+                {t('admin.credits.howItWorksBody', {
+                  defaultValue:
+                    'Add UPI, QR, and WhatsApp below. Users can purchase credits after using their free daily limit. Admin approves the request.',
+                })}
+              </Text>
+            </View>
+          </View>
+
+          <Section
+            title={t('admin.credits.paymentDetails', { defaultValue: 'Payment details' })}
+            hint={t('admin.credits.paymentDetailsHint', {
+              defaultValue: 'Configure UPI and payment instructions for credit purchases.',
+            })}>
+            <Text style={styles.label}>{t('admin.credits.upi', { defaultValue: 'UPI ID' })}</Text>
+            <TextInput
+              style={styles.input}
+              value={draft.upiId}
+              onChangeText={upiId => patchDraft({ upiId })}
+              autoCapitalize="none"
+              placeholder="yourupi@bank"
+              placeholderTextColor={colors.muted}
+            />
+            <Text style={styles.fieldHint}>
+              {t('admin.credits.upiHint', {
+                defaultValue: 'Users will see this UPI ID to make payments.',
+              })}
+            </Text>
+            <Text style={styles.label}>
+              {t('admin.credits.whatsapp', {
+                defaultValue: 'WhatsApp number for payment screenshots',
+              })}
+            </Text>
+            <TextInput
+              style={styles.input}
+              value={draft.whatsapp}
+              onChangeText={whatsapp => patchDraft({ whatsapp })}
+              keyboardType="phone-pad"
+              placeholder="9198XXXXXXXX"
+              placeholderTextColor={colors.muted}
+            />
+            <Text style={styles.fieldHint}>
+              {t('admin.credits.whatsappHint', {
+                defaultValue:
+                  'Users will send the payment screenshot to this number. Include the country code, for example 9198XXXXXXXX.',
+              })}
+            </Text>
+            <Text style={styles.label}>
+              {t('admin.credits.instructions', {
+                defaultValue: 'Payment instructions (shown to seekers)',
+              })}
+            </Text>
+            <TextInput
+              style={[styles.input, styles.multiline]}
+              value={draft.instructions}
+              onChangeText={instructions => patchDraft({ instructions })}
+              multiline
+              placeholder={t('admin.credits.instructionsPlaceholder', {
+                defaultValue:
+                  'Transfer the amount to the UPI ID above, then enter your UTR below.',
+              })}
+              placeholderTextColor={colors.muted}
+            />
+            <View style={styles.counterRow}>
+              <Text style={[styles.fieldHint, styles.counterHint]}>
+                {t('admin.credits.instructionsHint', {
+                  defaultValue: 'These instructions will be visible to users on the payment screen.',
+                })}
+              </Text>
+              <Text style={styles.counter}>{draft.instructions.length}/500</Text>
+            </View>
+
+            <Text style={styles.qrTitle}>{t('admin.credits.qr', { defaultValue: 'Payment QR code' })}</Text>
+            <View style={styles.qrRow}>
+              {qrLoading ? (
+                <View style={styles.qrEmpty}>
+                  <ActivityIndicator color={colors.primary} />
+                </View>
+              ) : qrSource ? (
+                <Pressable
+                  onPress={() => setQrOpen(true)}
+                  accessibilityRole="imagebutton"
+                  accessibilityLabel={t('admin.credits.openQr', { defaultValue: 'Open payment QR' })}>
+                  <Image source={qrSource} style={styles.qr} resizeMode="contain" />
+                </Pressable>
+              ) : (
+                <View style={styles.qrEmpty}>
+                  <Text style={styles.qrEmptyText}>
+                    {t('admin.credits.qrEmptyShort', { defaultValue: 'No QR' })}
+                  </Text>
+                </View>
+              )}
+              <View style={styles.qrActions}>
+                <Pressable
+                  disabled={qrUploading}
+                  onPress={() => void pickQr()}
+                  style={styles.secondaryBtn}>
+                  <Text style={styles.secondaryText}>
+                    {qrUploading
+                      ? t('admin.credits.uploadingQr', { defaultValue: 'Uploading…' })
+                      : qrSource
+                        ? t('admin.credits.replaceQr', { defaultValue: 'Replace QR' })
+                        : t('admin.credits.uploadQr', { defaultValue: 'Upload QR' })}
+                  </Text>
+                </Pressable>
+                {qrSource ? (
+                  <Pressable onPress={() => setQrOpen(true)} style={styles.secondaryBtn}>
+                    <Text style={styles.secondaryText}>
+                      {t('admin.credits.viewQr', { defaultValue: 'View QR' })}
+                    </Text>
+                  </Pressable>
+                ) : null}
+                {draft.qrFileId ? (
+                  <Pressable
+                    onPress={() => {
+                      patchDraft({ qrFileId: null, qrCleared: true });
+                      setQrSource(null);
+                      setQrOpen(false);
+                    }}
+                    style={styles.dangerBtn}>
+                    <Text style={styles.dangerText}>
+                      {t('admin.credits.removeQr', { defaultValue: 'Remove' })}
+                    </Text>
+                  </Pressable>
+                ) : null}
+                <Text style={styles.fieldHint}>
+                  {qrError
+                    ? qrError
+                    : draft.qrFileId
+                      ? t('admin.credits.qrHint', {
+                          defaultValue: 'Supported formats: PNG or JPG. Max size: 5 MB.',
+                        })
+                      : t('admin.credits.qrEmptyHint', {
+                          defaultValue:
+                            'No payment QR uploaded yet. Supported formats: PNG or JPG. Max size: 5 MB.',
+                        })}
+                </Text>
+              </View>
+            </View>
+            <Note icon={<Info size={16} color={colors.info} />}>
+              {t('admin.credits.qrShownHint', {
+                defaultValue: 'This QR code will be shown to users on the payment screen.',
+              })}
+            </Note>
+          </Section>
+
+          <Section
+            title={t('admin.credits.webAccess', { defaultValue: 'Email / Website / Web App' })}
+            hint={t('admin.credits.webAccessHint', {
+              defaultValue:
+                'Instant contact views and email enquiries use separate daily limits. Instant views do not use email enquiry credits.',
+            })}>
+            <ToggleRow
+              label={t('admin.credits.freeContactViewing', { defaultValue: 'Free contact viewing' })}
+              hint={t('admin.credits.freeContactViewingHint', {
+                defaultValue:
+                  'Shows the owner or vendor contact on the listing itself. This is separate from enquiries and from paid credits.',
+              })}
+              value={draft.webViewHereEnabled}
+              onValueChange={webViewHereEnabled => patchDraft({ webViewHereEnabled })}
+            />
+            <LimitField
+              label={t('admin.credits.instantViewsPerDay', {
+                defaultValue: 'Free instant contact views per day',
+              })}
+              value={draft.webViewHere}
+              editable={draft.webViewHereEnabled}
+              onChangeText={webViewHere => patchDraft({ webViewHere })}
+            />
+            <Note>
+              {t('admin.credits.instantViewsHint', {
+                defaultValue:
+                  'Instant views shown on the listing. 0 hides the option. Enquiry delivery and credit packages below are unchanged.',
+              })}
+            </Note>
+            <LimitField
+              label={t('admin.credits.webFree', { defaultValue: 'Free email enquiries per day' })}
+              value={draft.webFree}
+              onChangeText={webFree => patchDraft({ webFree })}
+            />
+            <Note icon={<Mail size={16} color={colors.info} />}>
+              {t('admin.credits.webFreeHint', {
+                defaultValue:
+                  'After the free limit, users need to purchase enquiry credits using the package below.',
+              })}
+            </Note>
+            <PackageEditor
+              title={t('admin.credits.webPackages', { defaultValue: 'Credit package — email / web' })}
+              hint={t('admin.credits.webPackagesHint', {
+                defaultValue:
+                  'Used when seekers enquire from the website (email delivery). Wallet credits are shared.',
+              })}
+              footer={t('admin.credits.webPackageFooter', {
+                defaultValue: 'This package will be shown to users on web.',
+              })}
+              packages={emailPackages}
+              onChange={updatePackage}
+            />
+          </Section>
+
+          <Section
+            title={t('admin.credits.androidAccess', { defaultValue: 'Mobile App' })}
+            hint={t('admin.credits.androidAccessHint', {
+              defaultValue:
+                'Instant contact views and mobile enquiries use separate daily limits. Instant views do not use mobile enquiry credits.',
+            })}>
+            <ToggleRow
+              label={t('admin.credits.freeContactViewing', { defaultValue: 'Free contact viewing' })}
+              hint={t('admin.credits.freeContactViewingHint', {
+                defaultValue:
+                  'Shows the owner or vendor contact on the listing itself. This is separate from enquiries and from paid credits.',
+              })}
+              value={draft.androidViewHereEnabled}
+              onValueChange={androidViewHereEnabled => patchDraft({ androidViewHereEnabled })}
+            />
+            <LimitField
+              label={t('admin.credits.instantViewsPerDay', {
+                defaultValue: 'Free instant contact views per day',
+              })}
+              value={draft.androidViewHere}
+              editable={draft.androidViewHereEnabled}
+              onChangeText={androidViewHere => patchDraft({ androidViewHere })}
+            />
+            <Note>
+              {t('admin.credits.instantViewsHint', {
+                defaultValue:
+                  'Instant views shown on the listing. 0 hides the option. Enquiry delivery and credit packages below are unchanged.',
+              })}
+            </Note>
+            <Text style={styles.label}>
+              {t('admin.credits.androidMode', { defaultValue: 'Billing mode' })}
+            </Text>
+            <View style={styles.filters}>
+              {(['FREE', 'CREDITS'] as const).map(mode => (
+                <Pressable
+                  key={mode}
+                  onPress={() => patchDraft({ androidMode: mode })}
+                  style={[styles.chip, draft.androidMode === mode && styles.chipOn]}>
+                  <Text style={[styles.chipText, draft.androidMode === mode && styles.chipTextOn]}>
+                    {mode === 'FREE'
+                      ? t('admin.credits.modeFree', { defaultValue: 'Free (rate limit only)' })
+                      : t('admin.credits.modeCredits', {
+                          defaultValue: 'Credits (after free quota)',
+                        })}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <LimitField
+              label={t('admin.credits.androidFree', { defaultValue: 'Free mobile enquiries per day' })}
+              value={draft.androidFree}
+              editable={creditsBilling}
+              onChangeText={androidFree => patchDraft({ androidFree })}
+            />
+            <LimitField
+              label={t('admin.credits.hourly', { defaultValue: 'Hourly rate limit' })}
+              value={draft.hourly}
+              onChangeText={hourly => patchDraft({ hourly })}
+            />
+            {draft.androidMode === 'FREE' ? (
+              <Text style={styles.fieldHint}>
+                {t('admin.credits.androidFreeHint', {
+                  defaultValue:
+                    'The free enquiry count is only used when billing mode is Credits. The hourly rate limit still applies.',
+                })}
+              </Text>
+            ) : null}
+            <PackageEditor
+              title={t('admin.credits.mobilePackages', {
+                defaultValue: 'Credit package — mobile app',
+              })}
+              hint={t('admin.credits.mobilePackagesHint', {
+                defaultValue:
+                  'Shown on Android when billing mode is Credits and purchases are enabled. Creating new packages is not supported yet.',
+              })}
+              footer={t('admin.credits.mobilePackageFooter', {
+                defaultValue: 'This package will be shown to users in the mobile app.',
+              })}
+              packages={mobilePackages}
+              onChange={updatePackage}
+            />
+          </Section>
+
+          <Pressable
+            disabled={saving}
+            onPress={() => void save()}
+            style={[styles.save, saving && styles.saveDisabled]}>
+            {saving ? <ActivityIndicator color={colors.white} /> : null}
+            <Text style={styles.saveText}>
+              {saving
+                ? t('common.saving', { defaultValue: 'Saving…' })
+                : t('common.save', { defaultValue: 'Save' })}
+            </Text>
+          </Pressable>
+        </ScrollView>
+      </KeyboardAvoidingView>
+      <ZoomableImageModal
+        visible={qrOpen}
+        source={qrSource}
+        title={t('admin.credits.qr', { defaultValue: 'Payment QR code' })}
+        closeLabel={t('common.close', { defaultValue: 'Close' })}
+        loading={qrLoading}
+        error={qrError}
+        onClose={() => setQrOpen(false)}
       />
-
-      <Pressable disabled={saving} onPress={() => void save()} style={styles.save}>
-        <Text style={styles.saveText}>
-          {saving
-            ? t('common.saving', { defaultValue: 'Saving…' })
-            : t('common.save', { defaultValue: 'Save' })}
-        </Text>
-      </Pressable>
-    </ScrollView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.md, paddingBottom: spacing.section, gap: spacing.md },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  pageHint: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs },
+  content: { padding: spacing.md, gap: spacing.md },
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+    padding: spacing.lg,
+    backgroundColor: colors.background,
+  },
+  pageHint: { ...typography.caption, color: colors.textSecondary },
+  loadError: {
+    ...typography.body,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
   linkRow: { alignSelf: 'flex-start', marginTop: -spacing.xs },
   linkText: { ...typography.caption, color: colors.primary, fontWeight: '700' },
   card: {
@@ -459,24 +761,35 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.md,
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   sectionTitle: { ...typography.bodyStrong, color: colors.textPrimary },
-  sectionHint: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.sm },
+  sectionHint: { ...typography.caption, color: colors.textSecondary },
+  howCard: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    alignItems: 'flex-start',
+    backgroundColor: colors.lightGreen,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: pastels.mint.border,
+    padding: spacing.md,
+  },
   row: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: spacing.md,
-    marginTop: spacing.xs,
   },
+  toggleCopy: { flex: 1, gap: 4 },
   label: {
     ...typography.caption,
     fontWeight: '700',
     color: colors.textPrimary,
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
   },
-  labelInline: { ...typography.caption, fontWeight: '700', color: colors.textPrimary, flex: 1 },
+  labelDisabled: { color: colors.muted },
+  labelInline: { ...typography.caption, fontWeight: '700', color: colors.textPrimary },
   fieldHint: { ...typography.caption, color: colors.textSecondary, marginTop: 4 },
   input: {
     borderWidth: 1,
@@ -488,26 +801,74 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginTop: 4,
   },
-  inputDisabled: { backgroundColor: colors.surfaceSecondary, color: colors.muted },
-  multiline: { minHeight: 88, textAlignVertical: 'top' },
-  qr: {
-    width: 160,
-    height: 160,
-    borderRadius: radius.card,
-    backgroundColor: colors.surfaceSecondary,
-    alignSelf: 'flex-start',
+  inputDisabled: {
+    backgroundColor: '#F1F5F9',
+    color: colors.muted,
+    borderColor: '#E2E8F0',
   },
-  qrActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
-  secondaryBtn: {
+  multiline: { minHeight: 88, textAlignVertical: 'top' },
+  counterRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  counterHint: { flex: 1, marginTop: 0 },
+  counter: { ...typography.caption, color: colors.textSecondary },
+  note: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    alignItems: 'flex-start',
+    backgroundColor: pastels.blue.bg,
+    borderRadius: radius.input,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  noteText: { ...typography.caption, color: colors.textSecondary, flex: 1 },
+  qrTitle: { ...typography.bodyStrong, color: colors.textPrimary, marginTop: spacing.sm },
+  qrRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  qr: {
+    width: 88,
+    height: 88,
+    borderRadius: radius.input,
+    backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  qrEmpty: {
+    width: 88,
+    height: 88,
+    borderRadius: radius.input,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 4,
+  },
+  qrEmptyText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  qrBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.72)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  qrBackdropTap: { ...StyleSheet.absoluteFillObject },
+  qrFull: { width: '100%', height: '70%' },
+  qrActions: { flex: 1, gap: spacing.sm },
+  secondaryBtn: {
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
     borderRadius: radius.input,
     paddingHorizontal: spacing.md,
     paddingVertical: 8,
     backgroundColor: colors.white,
   },
-  secondaryText: { ...typography.caption, fontWeight: '700', color: colors.tealDark },
+  secondaryText: { ...typography.caption, fontWeight: '700', color: '#16A34A' },
   dangerBtn: {
+    alignSelf: 'flex-start',
     borderWidth: 1,
     borderColor: '#FECACA',
     borderRadius: radius.input,
@@ -516,26 +877,31 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2',
   },
   dangerText: { ...typography.caption, fontWeight: '700', color: colors.danger },
-  filters: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: 4 },
+  filters: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: {
     borderRadius: radius.full,
     borderWidth: 1,
     borderColor: colors.border,
     paddingHorizontal: spacing.md,
-    paddingVertical: 6,
+    paddingVertical: 8,
     backgroundColor: colors.white,
+    maxWidth: '100%',
   },
   chipOn: { backgroundColor: colors.mintSubtle, borderColor: colors.primary },
   chipText: { ...typography.caption, color: colors.textSecondary, fontWeight: '700' },
   chipTextOn: { color: colors.tealDark },
-  pkgCard: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.card,
-    padding: spacing.sm,
+  packageBox: {
     marginTop: spacing.sm,
-    backgroundColor: colors.surfaceSecondary,
+    padding: spacing.md,
+    borderRadius: radius.card,
+    backgroundColor: colors.lightGreen,
+    borderWidth: 1,
+    borderColor: '#D3F0E0',
+    gap: spacing.xs,
   },
+  packageTitle: { ...typography.bodyStrong, color: colors.textPrimary, fontSize: 14 },
+  packageFooter: { ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs },
+  pkgCard: { marginTop: spacing.sm, gap: spacing.xs },
   pkgRow: { flexDirection: 'row', gap: spacing.sm },
   pkgField: { flex: 1 },
   save: {
@@ -544,6 +910,10 @@ const styles = StyleSheet.create({
     borderRadius: radius.input,
     paddingVertical: 14,
     alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
+  saveDisabled: { opacity: 0.7 },
   saveText: { ...typography.bodyStrong, color: colors.white },
 });

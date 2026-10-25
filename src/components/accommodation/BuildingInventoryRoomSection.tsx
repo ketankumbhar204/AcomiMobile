@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { ChevronRight, DoorOpen, Pencil, Users } from 'lucide-react-native';
 import type { BedSpaceListItemResponse } from '../../api/types';
@@ -14,9 +14,11 @@ import {
   BuildingInventoryAddBedCard,
   BuildingInventoryBedCard,
 } from './BuildingInventoryBedCard';
+import { HorizontalBedCarousel } from './HorizontalBedCarousel';
 
 type BuildingInventoryRoomSectionProps = {
   group: BedRoomGroup;
+  spaceId?: string;
   /** Override path crumbs (defaults to Floor / Unit / Room). */
   pathCrumbs?: RoomPathCrumb[];
   /** Override path segments (defaults to Floor / Unit / Room). */
@@ -38,6 +40,7 @@ type BuildingInventoryRoomSectionProps = {
 
 function BuildingInventoryRoomSectionComponent({
   group,
+  spaceId,
   pathCrumbs: pathCrumbsProp,
   pathSegments: pathSegmentsProp,
   title,
@@ -183,15 +186,12 @@ function BuildingInventoryRoomSectionComponent({
         </View>
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.bedsRow}
-        decelerationRate="fast"
-        nestedScrollEnabled>
+      <HorizontalBedCarousel
+        accessibilityLabel={t('accommodation.beds.title', { defaultValue: 'Beds' })}>
         {group.beds.map(bed => (
           <BuildingInventoryBedCard
             key={bed.bedId}
+            spaceId={spaceId}
             bed={bed}
             onPress={onBedPress ? () => onBedPress(bed) : undefined}
             onEdit={onEditBed ? () => onEditBed(bed) : undefined}
@@ -199,8 +199,10 @@ function BuildingInventoryRoomSectionComponent({
             footer={renderBedFooter?.(bed)}
           />
         ))}
-        {showAddBed && onAddBed ? <BuildingInventoryAddBedCard onPress={onAddBed} /> : null}
-      </ScrollView>
+        {showAddBed && onAddBed ? (
+          <BuildingInventoryAddBedCard key="add-bed" onPress={onAddBed} />
+        ) : null}
+      </HorizontalBedCarousel>
     </View>
   );
 }
@@ -325,11 +327,5 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textSecondary,
     fontWeight: '600',
-  },
-  bedsRow: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    gap: spacing.sm,
-    paddingRight: spacing.sm,
   },
 });

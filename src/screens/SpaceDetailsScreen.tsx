@@ -35,6 +35,7 @@ import {
 import { getSpaceTypeLabel } from '../api';
 import type { Space } from '../api/types';
 import { HeaderBackButton, Screen, Skeleton } from '../components/ui';
+import { ReferenceCode } from '../components/ui/ReferenceCode';
 import { Timeline, type TimelineGroup, type TimelineItem } from '../components/ui/Timeline';
 import { DashboardStatCard } from '../components/dashboard/shared/DashboardStatCard';
 import { SpaceStatusChip } from '../components/spaces/SpaceStatusChip';
@@ -311,7 +312,7 @@ export function SpaceDetailsScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
         {/* Hero */}
-        <View style={[styles.hero, { backgroundColor: `${accent}0F`, borderColor: `${accent}33` }]}>
+        <View style={[styles.hero, { backgroundColor: `${accent}0F` }]}>
           <View style={styles.heroTop}>
             <View style={[styles.heroIcon, { borderColor: `${accent}33` }]}>
               <EntityPhoto
@@ -335,6 +336,7 @@ export function SpaceDetailsScreen() {
               <Text style={styles.heroName} numberOfLines={2}>
                 {space.name}
               </Text>
+              <ReferenceCode value={space.referenceCode} />
               <SpaceStatusChip
                 label={
                   space.isActive
@@ -524,9 +526,10 @@ const styles = StyleSheet.create({
   hero: {
     borderRadius: 20,
     borderWidth: 1,
+    borderColor: colors.border,
     padding: spacing.lg,
     gap: spacing.md,
-    ...shadows.sm,
+    overflow: 'hidden',
   },
   heroTop: {
     flexDirection: 'row',

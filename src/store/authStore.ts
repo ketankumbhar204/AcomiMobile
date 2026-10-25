@@ -19,6 +19,10 @@ function mergeStoredUserProfile(
     return apiUser;
   }
 
+  if (apiUser.profileCompleted === false) {
+    return apiUser;
+  }
+
   if (apiUser.profileCompleted === true || isUserProfileComplete(apiUser)) {
     return apiUser;
   }

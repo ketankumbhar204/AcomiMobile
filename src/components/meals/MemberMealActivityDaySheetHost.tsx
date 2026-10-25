@@ -22,6 +22,7 @@ export function MemberMealActivityDaySheetHost() {
       memberId={context.memberId}
       memberName={context.memberName}
       canManage={context.canManage}
+      onRespond={context.onRespond}
       onClose={close}
       onPaymentReviewed={() => onPaymentReviewed?.()}
     />

@@ -14,9 +14,15 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { Building2, MapPin, Phone } from 'lucide-react-native';
+import { Building2, Phone } from 'lucide-react-native';
 import type { AmenityAssignment, GenderPolicy, SpaceType } from '../api/types';
-import { FormInput, SpaceTypePicker } from '../components/ui';
+import { AddressLocationFields } from '../components/location/AddressLocationFields';
+import { Button, EmptyState, FormInput, SpaceTypePicker } from '../components/ui';
+import {
+  EMPTY_ADDRESS_CAPTURE,
+  addressCaptureIssue,
+  composeStoredAddress,
+} from '../utils/locationAutocomplete';
 import { SpaceAmenitiesField } from '../components/spaces/SpaceAmenitiesField';
 import { SpacePropertyCategoryPicker } from '../components/spaces/SpacePropertyCategoryPicker';
 import { HeaderBackButton } from '../components/ui/HeaderBackButton';
@@ -38,15 +44,12 @@ import { isAccommodationApplicable } from '../utils/accommodationProfile';
 import { markAutoOpenedAccommodation } from '../utils/spaceSetupStorage';
 import { resolveProgressivePhase } from '../utils/progressivePhase';
 import type { MainStackParamList } from '../navigation/types';
-import {
-  resetToAccommodationHome,
-  resetToDashboard,
-} from '../navigation/navigationRef';
 import { useAuthStore } from '../store/authStore';
 import { useSpaceStore } from '../store/spaceStore';
 import { useToastStore } from '../store/toastStore';
 import { resolveDefaultSpaceContact } from '../utils/defaultSpaceContact';
 import { isDuplicateSpaceName } from '../utils/suggestBuildingDefaults';
+import { canCreateSpace } from '../utils/spaceCreationAccess';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 
 type CreateSpaceNav = NativeStackNavigationProp<MainStackParamList, 'CreateSpace'>;
@@ -63,6 +66,8 @@ export function CreateSpaceScreen() {
   const navigation = useNavigation<CreateSpaceNav>();
   const { createSpace, isSubmitting, error, clearError } = useCreateSpace();
   const refresh = useSpaceStore(state => state.refresh);
+  const loadMySpaces = useSpaceStore(state => state.loadMySpaces);
+  const [membershipsReady, setMembershipsReady] = useState(false);
   const switchSpace = useSpaceStore(state => state.switchSpace);
   const mySpaces = useSpaceStore(state => state.mySpaces);
   const ownerSpaceContact = useSpaceStore(state => state.selectedSpace?.contactNumber);
@@ -70,9 +75,23 @@ export function CreateSpaceScreen() {
   const accessToken = useAuthStore(state => state.accessToken);
   const showToast = useToastStore(state => state.showToast);
 
+  useEffect(() => {
+    let cancelled = false;
+    void loadMySpaces().finally(() => {
+      if (!cancelled) {
+        setMembershipsReady(true);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [loadMySpaces]);
+
+  const creationAllowed = membershipsReady && canCreateSpace(mySpaces);
+
   const [name, setName] = useState('');
   const [type, setType] = useState<SpaceType | null>(null);
-  const [address, setAddress] = useState('');
+  const [location, setLocation] = useState(EMPTY_ADDRESS_CAPTURE);
   const [contactNumber, setContactNumber] = useState(() =>
     resolveDefaultSpaceContact({
       userMobile,
@@ -154,6 +173,11 @@ export function CreateSpaceScreen() {
     if (!type) {
       errors.type = t('spaces.createSpace.typeRequired');
     }
+    if (addressCaptureIssue(location) === 'selection') {
+      errors.address = t('locationCapture.selectionRequired', {
+        defaultValue: 'Select a location from the suggestions.',
+      });
+    }
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   }
@@ -179,7 +203,10 @@ export function CreateSpaceScreen() {
       const space = await createSpace({
         name: name.trim(),
         type: type!,
-        address: address.trim() || undefined,
+        address: composeStoredAddress(location) || undefined,
+        ...(location.latitude != null && location.longitude != null
+          ? { latitude: location.latitude, longitude: location.longitude }
+          : {}),
         contactNumber: contactNumber.trim() || undefined,
         amenities: supportsSpaceAmenities(type)
           ? normalizeAmenityAssignments(amenities)
@@ -210,19 +237,23 @@ export function CreateSpaceScreen() {
         await markAutoOpenedAccommodation(space.id);
       }
 
-      try {
-        navigation.replace('SpaceTabs', {
-          spaceId: space.id,
-          screen: openAccommodation ? 'Accommodation' : 'Dashboard',
-          params: { spaceId: space.id },
-        });
-      } catch {
-        if (openAccommodation) {
-          resetToAccommodationHome(space.id);
-        } else {
-          resetToDashboard(space.id);
-        }
-      }
+      const destinationScreen = openAccommodation ? 'Accommodation' : 'Dashboard';
+      // Replace the whole main stack. `replace` would leave OnboardingChoice
+      // underneath, and Android back would return to role selection.
+      // Tabs are not mounted yet on this screen, so this reset is safe.
+      navigation.reset({
+        index: 0,
+        routes: [
+          {
+            name: 'SpaceTabs',
+            params: {
+              spaceId: space.id,
+              screen: destinationScreen,
+              params: { spaceId: space.id },
+            },
+          },
+        ],
+      });
 
       showToast(t('spaces.createSpace.successMessage', { name: space.name }));
     } finally {
@@ -231,6 +262,36 @@ export function CreateSpaceScreen() {
         setIsFinishing(false);
       }
     }
+  }
+
+  if (!membershipsReady) {
+    return <View style={styles.flex} />;
+  }
+
+  if (!creationAllowed) {
+    return (
+      <View style={styles.denied}>
+        <EmptyState
+          Icon={Building2}
+          title={t('spaces.createSpace.notAllowedTitle', { defaultValue: 'Cannot create a space' })}
+          description={t('spaces.createSpace.notAllowed', {
+            defaultValue:
+              'Only an owner can create a space. Tenant and customer access does not include this.',
+          })}
+        />
+        <Button
+          label={t('common.back', { defaultValue: 'Back' })}
+          variant="secondary"
+          onPress={() => {
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+              return;
+            }
+            navigation.navigate('MemberTabs', { screen: 'Home' });
+          }}
+        />
+      </View>
+    );
   }
 
   return (
@@ -320,15 +381,10 @@ export function CreateSpaceScreen() {
               />
             ) : null}
 
-            <FormInput
-              label={t('spaces.createSpace.addressLabel')}
-              placeholder={t('spaces.createSpace.addressPlaceholder')}
-              value={address}
-              onChangeText={setAddress}
+            <AddressLocationFields
+              value={location}
+              onChange={setLocation}
               error={fieldErrors.address}
-              autoCapitalize="sentences"
-              returnKeyType="next"
-              leadingIcon={MapPin}
             />
 
             <FormInput
@@ -379,6 +435,8 @@ export function CreateSpaceScreen() {
                 current: progressivePhase === 'continue' ? 1 : 2,
                 total: 2,
               })}
+              stepCurrent={progressivePhase === 'continue' ? 1 : 2}
+              stepTotal={2}
               progressLine={
                 progressivePhase === 'continue'
                   ? t('progressiveWorkflow.createSpace.progressEssentialsNext')
@@ -426,6 +484,13 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  denied: {
+    flex: 1,
+    backgroundColor: colors.background,
+    padding: spacing.lg,
+    justifyContent: 'center',
+    gap: spacing.md,
   },
   scroll: {
     flex: 1,

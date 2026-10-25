@@ -2,6 +2,7 @@ package com.acomi
 
 
 
+import android.content.Intent
 import android.graphics.Color
 
 import android.graphics.PixelFormat
@@ -43,7 +44,22 @@ class MainActivity : ReactActivity() {
     window.decorView.setBackgroundColor(Color.parseColor("#ECFDF5"))
 
     super.onCreate(savedInstanceState)
+    deliverNotificationIntent(intent)
+  }
 
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
+    deliverNotificationIntent(intent)
+  }
+
+  private fun deliverNotificationIntent(source: Intent?) {
+    if (source == null) {
+      return
+    }
+    val json = source.getStringExtra(AcomiNotificationBridge.EXTRA) ?: return
+    source.removeExtra(AcomiNotificationBridge.EXTRA)
+    AcomiNotificationBridge.deliver(json)
   }
 
 

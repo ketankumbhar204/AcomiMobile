@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
-import { Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { Image, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Building2, ChevronRight } from 'lucide-react-native';
+import { ChevronRight } from 'lucide-react-native';
 import type { BuildingResponse, BuildingSummaryResponse, SpaceType } from '../../api/types';
 import { InlineEditableName } from '../ui/InlineEditableName';
 import { colors, fontSize, shadows, spacing, typography } from '../../theme';
@@ -13,6 +13,7 @@ import { isAccommodationEntityActive } from '../../utils/accommodationEntityActi
 import { getAccommodationHierarchyAccent } from '../../utils/accommodationHierarchy';
 import { EntityPhoto } from '../files/EntityPhoto';
 import type { EntityPhotoKind } from '../../files/entityPhoto';
+import { getBuildingIllustration } from './layout/illustrations/illustrationAssets';
 
 type BuildingListCardProps = {
   building: BuildingResponse;
@@ -154,18 +155,20 @@ export function BuildingListCard({
               title={building.name}
               onChanged={onPhotoChanged}
               fallback={
-                <Building2
-                  size={20}
-                  color={inactive ? '#9CA3AF' : buildingAccent.accent}
-                  strokeWidth={2.2}
+                <Image
+                  source={getBuildingIllustration()}
+                  style={inactive ? [styles.photoArt, styles.photoArtInactive] : styles.photoArt}
+                  resizeMode="contain"
+                  fadeDuration={0}
                 />
               }
             />
           ) : (
-            <Building2
-              size={20}
-              color={inactive ? '#9CA3AF' : buildingAccent.accent}
-              strokeWidth={2.2}
+            <Image
+              source={getBuildingIllustration()}
+              style={inactive ? [styles.photoArt, styles.photoArtInactive] : styles.photoArt}
+              resizeMode="contain"
+              fadeDuration={0}
             />
           )}
         </View>
@@ -241,6 +244,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+  },
+  photoArt: {
+    width: 42,
+    height: 42,
+  },
+  photoArtInactive: {
+    opacity: 0.45,
   },
   inactiveBadgeWrap: {
     flexShrink: 0,

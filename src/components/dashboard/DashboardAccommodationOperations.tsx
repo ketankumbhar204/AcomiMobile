@@ -48,6 +48,7 @@ export function DashboardAccommodationOperations({
           label={t('dashboard.accommodationOperations.occupiedBeds')}
           onPress={onOccupiedPress}
           selected={selectedMetricId === 'occupied'}
+          selectionColor={pastels.mint.fg}
           gridItem={showPending}
         />
         <DashboardStatCard
@@ -59,6 +60,7 @@ export function DashboardAccommodationOperations({
           label={t('dashboard.accommodationOperations.vacantBeds')}
           onPress={onVacantPress}
           selected={selectedMetricId === 'vacant'}
+          selectionColor={pastels.purple.fg}
           gridItem={showPending}
         />
         <DashboardStatCard
@@ -70,6 +72,7 @@ export function DashboardAccommodationOperations({
           label={t('dashboard.accommodationOperations.moveInsThisMonth')}
           onPress={onMoveInsPress}
           selected={selectedMetricId === 'moveIns'}
+          selectionColor={pastels.blue.fg}
           gridItem={showPending}
         />
         {showPending ? (

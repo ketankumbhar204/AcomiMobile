@@ -28,6 +28,20 @@ export function isAccommodationApplicable(spaceType: SpaceType): boolean {
 
 }
 
+/** Menu and order dashboard widgets. Unknown or non-mess types do not show them. */
+export function showsMessDashboardWidgets(
+  spaceType: SpaceType | null | undefined,
+): boolean {
+  return spaceType === 'MESS';
+}
+
+/** Member dashboard meal-selection card. PG and Mess both plan and respond to menus. */
+export function showsMemberMealSelectionCard(
+  spaceType: SpaceType | null | undefined,
+): boolean {
+  return spaceType === 'MESS' || spaceType === 'PG';
+}
+
 
 
 export function defaultLayoutModeForSpaceType(spaceType: SpaceType): PropertyLayoutMode {
@@ -45,6 +59,8 @@ export function defaultLayoutModeForSpaceType(spaceType: SpaceType): PropertyLay
       return 'CO_LIVING';
 
     case 'RENTAL':
+
+    case 'CORPORATE_STAY':
 
       return 'RENTAL';
 

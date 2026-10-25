@@ -1,6 +1,6 @@
 import React, { useCallback, useLayoutEffect } from 'react';
-import { StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { ActivityIndicator, BackHandler, StyleSheet, View } from 'react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { Building2, Sparkles, UsersRound } from 'lucide-react-native';
@@ -13,8 +13,10 @@ import { OnboardingBrandHeader } from '../components/ui/OnboardingBrandHeader';
 import { ProfileHeaderButton } from '../components/ui/ProfileHeaderButton';
 import { Screen } from '../components/ui/Screen';
 import type { MainStackParamList } from '../navigation/types';
-import { spacing } from '../theme';
+import { useSpaceStore } from '../store/spaceStore';
+import { colors, spacing } from '../theme';
 import { setAccountIntent } from '../utils/accountIntent';
+import { resolveRoleOnboardingAccess } from '../utils/roleOnboardingAccess';
 
 const heroBuilding = require('../assets/onboarding/hero-building.png');
 
@@ -23,6 +25,16 @@ type Nav = NativeStackNavigationProp<MainStackParamList, 'OnboardingChoice'>;
 export function OnboardingChoiceScreen() {
   const { t, i18n } = useTranslation();
   const navigation = useNavigation<Nav>();
+  const mySpaces = useSpaceStore(state => state.mySpaces);
+  const selectedSpaceId = useSpaceStore(state => state.selectedSpaceId);
+  const hasSpaceBootstrapped = useSpaceStore(state => state.hasSpaceBootstrapped);
+  const access = resolveRoleOnboardingAccess(
+    mySpaces.map(space => space.spaceId),
+    selectedSpaceId,
+  );
+  const redirectSpaceId = access.status === 'space' ? access.spaceId : null;
+  const redirectToPicker = access.status === 'picker';
+  const showChoice = hasSpaceBootstrapped && access.status === 'allowed';
 
   const headerTitle = useCallback(() => <OnboardingBrandHeader />, []);
   const headerRight = useCallback(() => <ProfileHeaderButton />, []);
@@ -36,6 +48,59 @@ export function OnboardingChoiceScreen() {
       headerRight,
     });
   }, [headerRight, headerTitle, navigation, t, i18n.language]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!hasSpaceBootstrapped || showChoice) {
+        return undefined;
+      }
+
+      const leave = () => {
+        if (redirectSpaceId) {
+          navigation.reset({
+            index: 0,
+            routes: [
+              {
+                name: 'SpaceTabs',
+                params: {
+                  spaceId: redirectSpaceId,
+                  screen: 'Dashboard',
+                  params: { spaceId: redirectSpaceId },
+                },
+              },
+            ],
+          });
+          return;
+        }
+        if (redirectToPicker) {
+          navigation.reset({ index: 0, routes: [{ name: 'MySpaces' }] });
+        }
+      };
+
+      leave();
+      const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+        leave();
+        return true;
+      });
+      return () => subscription.remove();
+    }, [
+      hasSpaceBootstrapped,
+      navigation,
+      redirectSpaceId,
+      redirectToPicker,
+      showChoice,
+    ]),
+  );
+
+  if (!showChoice) {
+    return (
+      <Screen>
+        <View style={styles.pending}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      </Screen>
+    );
+  }
 
   return (
     <Screen scrollable contentStyle={styles.content}>
@@ -77,7 +142,7 @@ export function OnboardingChoiceScreen() {
         illustration="member"
         onPress={() => {
           void setAccountIntent('member');
-          navigation.navigate('MemberTabs', { screen: 'Home' });
+          navigation.replace('MemberTabs', { screen: 'Home' });
         }}
       />
 
@@ -93,5 +158,10 @@ const styles = StyleSheet.create({
   content: {
     paddingBottom: spacing.xl,
     gap: spacing.sm,
+  },
+  pending: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

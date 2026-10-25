@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Phone, UtensilsCrossed } from 'lucide-react-native';
-import type { MemberDetailsResponse, MembershipRole, SpaceType } from '../../api/types';
+import type { MemberDetailsResponse, SpaceType } from '../../api/types';
 import { setMemberMealAccess } from '../../api/mealsApi';
 import {
   DashboardRoleChip,
@@ -10,8 +10,14 @@ import {
 } from '../dashboard/shared/DashboardPersonCard';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { ReferenceCode } from '../ui/ReferenceCode';
 import { isReceivingMeals } from '../../utils/mealAccess';
 import { memberAcomiBadgeLabel } from '../../utils/memberAppStatus';
+import {
+  contextualMembershipRole,
+  type DisplayMembershipRole,
+} from '../../utils/memberRoles';
+import { formatMemberContactNumber } from '../../utils/indianMobile';
 import { getMemberStatusColor, getMemberStatusLabelKey } from '../../utils/memberStatus';
 
 type MemberCompactHeaderProps = {
@@ -23,15 +29,17 @@ type MemberCompactHeaderProps = {
   onRefreshMember?: () => void;
 };
 
-function roleTone(role: MembershipRole): DashboardPersonRoleTone {
+function roleTone(role: DisplayMembershipRole): DashboardPersonRoleTone {
   switch (role) {
     case 'OWNER':
       return 'owner';
-    case 'MANAGER':
     case 'CUSTOMER':
       return 'customer';
     case 'TENANT':
       return 'resident';
+    case 'MEMBER':
+      return 'neutral';
+    case 'MANAGER':
     default:
       return 'staff';
   }
@@ -52,7 +60,8 @@ export function MemberCompactHeader({
   const receiving = isReceivingMeals(member.mealParticipation);
   const statusColor = getMemberStatusColor(member.status);
   const statusLabel = t(getMemberStatusLabelKey(member.status));
-  const roleLabel = t(`spaces.roles.${member.role}`);
+  const displayRole = contextualMembershipRole(member.role, spaceType);
+  const roleLabel = t(`spaces.roles.${displayRole}`);
   const acomiLabel = memberAcomiBadgeLabel(member, t);
   const initial = member.fullName?.trim()?.charAt(0)?.toUpperCase();
 
@@ -95,8 +104,9 @@ export function MemberCompactHeader({
           <Text style={styles.name} numberOfLines={2}>
             {member.fullName}
           </Text>
+          <ReferenceCode value={member.referenceCode} />
           <View style={styles.chipRow}>
-            <DashboardRoleChip label={roleLabel} tone={roleTone(member.role)} />
+            <DashboardRoleChip label={roleLabel} tone={roleTone(displayRole)} />
             <View style={styles.statusChip}>
               <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
               <Text style={[styles.statusText, { color: statusColor }]} numberOfLines={1}>
@@ -111,7 +121,7 @@ export function MemberCompactHeader({
         <View style={styles.fact}>
           <Phone size={13} color={colors.muted} strokeWidth={2.2} />
           <Text style={styles.factText} numberOfLines={1}>
-            {member.mobileNumber}
+            {formatMemberContactNumber(member.mobileNumber) ?? member.mobileNumber}
           </Text>
         </View>
         <View style={styles.factDivider} />

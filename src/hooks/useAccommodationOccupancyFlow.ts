@@ -2,7 +2,6 @@ import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type {
   AccommodationStatus,
-  MemberResponse,
   OccupancyResponse,
   SpaceType,
 } from '../api/types';
@@ -18,6 +17,9 @@ export type OccupancyFlowContext = {
   target: OccupancyTargetSelection;
   accommodationStatus: AccommodationStatus;
   occupancy?: OccupancyResponse | null;
+  catalogRent?: number | null;
+  catalogDeposit?: number | null;
+  catalogKnown?: boolean;
 };
 
 type UseAccommodationOccupancyFlowOptions = {
@@ -36,8 +38,7 @@ export function useAccommodationOccupancyFlow({
   const { t } = useTranslation();
   const showToast = useToastStore(state => state.showToast);
   const { showConfirm } = useConfirmDialog();
-  const { cancelReservation, vacate, loading, error, clearError } =
-    useOccupancyMutations(spaceId);
+  const { cancelReservation, loading, error, clearError } = useOccupancyMutations(spaceId);
 
   const [flowContext, setFlowContext] = useState<OccupancyFlowContext | null>(null);
   const [resolvingOccupancy, setResolvingOccupancy] = useState(false);
@@ -86,8 +87,8 @@ export function useAccommodationOccupancyFlow({
       mode: 'ALLOCATE' | 'RESERVE' | 'MOVE_IN' | 'TRANSFER' | 'VACATE',
       context: OccupancyFlowContext,
       resolvedOccupancy?: OccupancyResponse | null,
-    ) => {
-      openOccupancyWizardFromRef({
+    ): boolean => {
+      return openOccupancyWizardFromRef({
         spaceId,
         mode,
         memberId: resolvedOccupancy?.memberId,
@@ -96,6 +97,10 @@ export function useAccommodationOccupancyFlow({
         unitId: context.target.unitId,
         buildingId: context.target.buildingId,
         occupancyId: resolvedOccupancy?.occupancyId,
+        prefilledTarget: context.target,
+        catalogRent: context.catalogRent,
+        catalogDeposit: context.catalogDeposit,
+        catalogKnown: context.catalogKnown,
       });
     },
     [spaceId],
@@ -124,17 +129,17 @@ export function useAccommodationOccupancyFlow({
   }, [afterMutation, cancelReservation, occupancy?.occupancyId, showConfirm, showToast, t]);
 
   const startReserve = useCallback(
-    (context: OccupancyFlowContext) => {
+    (context: OccupancyFlowContext): boolean => {
       clearError();
-      openWizard('RESERVE', context);
+      return openWizard('RESERVE', context);
     },
     [clearError, openWizard],
   );
 
   const startWalkIn = useCallback(
-    (context: OccupancyFlowContext) => {
+    (context: OccupancyFlowContext): boolean => {
       clearError();
-      openWizard('ALLOCATE', context);
+      return openWizard('ALLOCATE', context);
     },
     [clearError, openWizard],
   );

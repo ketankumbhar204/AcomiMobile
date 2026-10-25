@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Keyboard,
@@ -30,6 +30,7 @@ import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, spacing, typography } from '../../theme';
 import { formatInventoryUnit } from '../../utils/inventoryCatalog';
+import { supplierWrite } from '../../utils/inventorySupplier';
 
 type Route = RouteProp<MainStackParamList, 'InventoryItemForm'>;
 type Nav = NativeStackNavigationProp<MainStackParamList, 'InventoryItemForm'>;
@@ -45,7 +46,7 @@ export function InventoryItemFormScreen() {
   const isEdit = mode === 'edit';
   const units = profile.defaultUnits;
 
-  const { categories, loading: catalogLoading } = useInventoryItems(
+  const { categories, suppliers, loading: catalogLoading } = useInventoryItems(
     spaceId,
     spaceType,
     canManage,
@@ -58,6 +59,9 @@ export function InventoryItemFormScreen() {
   const [unit, setUnit] = useState<InventoryUnit>(units[0] ?? 'PIECE');
   const [currentStock, setCurrentStock] = useState('0');
   const [minimumStock, setMinimumStock] = useState('0');
+  const [supplierName, setSupplierName] = useState('');
+  const [loadedSupplierId, setLoadedSupplierId] = useState<string | null>(null);
+  const supplierTouched = useRef(false);
   const [nameError, setNameError] = useState<string | null>(null);
   const [categoryError, setCategoryError] = useState<string | null>(null);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
@@ -92,6 +96,8 @@ export function InventoryItemFormScreen() {
           setUnit(item.unit);
           setCurrentStock(String(item.currentStock));
           setMinimumStock(String(item.minimumStock));
+          setSupplierName(item.supplierName?.trim() ?? '');
+          setLoadedSupplierId(item.supplierId ?? null);
         }
       } catch {
         showToast(t('common.errors.generic'));
@@ -100,6 +106,16 @@ export function InventoryItemFormScreen() {
       }
     })();
   }, [isEdit, itemId, showToast, spaceId, spaceType, t]);
+
+  useEffect(() => {
+    if (supplierTouched.current || supplierName.trim() || !loadedSupplierId) {
+      return;
+    }
+    const match = suppliers.find(supplier => supplier.supplierId === loadedSupplierId);
+    if (match?.name) {
+      setSupplierName(match.name);
+    }
+  }, [loadedSupplierId, supplierName, suppliers]);
 
   const selectedCategoryName = useMemo(
     () => categories.find(c => c.categoryId === categoryId)?.name,
@@ -127,6 +143,7 @@ export function InventoryItemFormScreen() {
       return;
     }
 
+    const supplier = supplierWrite(supplierName, suppliers);
     setSubmitting(true);
     try {
       if (isEdit && itemId) {
@@ -135,6 +152,8 @@ export function InventoryItemFormScreen() {
           categoryId,
           unit,
           minimumStock: Math.max(0, Number(minimumStock) || 0),
+          supplierId: supplier.supplierId,
+          supplierName: supplier.supplierName,
         });
         showToast(t('inventory.form.updateSuccess', { defaultValue: 'Item updated' }));
       } else {
@@ -144,6 +163,8 @@ export function InventoryItemFormScreen() {
           unit,
           openingStock: Math.max(0, Number(currentStock) || 0),
           minimumStock: Math.max(0, Number(minimumStock) || 0),
+          supplierId: supplier.supplierId,
+          supplierName: supplier.supplierName,
         });
         showToast(t('inventory.form.createSuccess', { defaultValue: 'Item created' }));
       }
@@ -164,6 +185,8 @@ export function InventoryItemFormScreen() {
     showToast,
     spaceId,
     spaceType,
+    supplierName,
+    suppliers,
     t,
     unit,
   ]);
@@ -276,6 +299,52 @@ export function InventoryItemFormScreen() {
             onChangeText={setMinimumStock}
             keyboardType="decimal-pad"
           />
+          <FormInput
+            label={t('inventory.form.supplier', { defaultValue: 'Supplier' })}
+            value={supplierName}
+            onChangeText={value => {
+              supplierTouched.current = true;
+              setSupplierName(value);
+            }}
+            placeholder={t('inventory.form.supplierPlaceholder', {
+              defaultValue: 'Select or type a supplier',
+            })}
+          />
+          {suppliers.length > 0 ? (
+            <View style={styles.chipRow}>
+              <Pressable
+                onPress={() => {
+                  supplierTouched.current = true;
+                  setSupplierName('');
+                }}
+                style={[styles.chip, !supplierName.trim() && styles.chipActive]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: !supplierName.trim() }}>
+                <Text style={[styles.chipText, !supplierName.trim() && styles.chipTextActive]}>
+                  {t('inventory.form.noSupplier', { defaultValue: 'No supplier' })}
+                </Text>
+              </Pressable>
+              {suppliers.map(supplier => {
+                const active =
+                  supplier.name.trim().toLocaleLowerCase() === supplierName.trim().toLocaleLowerCase();
+                return (
+                  <Pressable
+                    key={supplier.supplierId}
+                    onPress={() => {
+                      supplierTouched.current = true;
+                      setSupplierName(supplier.name);
+                    }}
+                    style={[styles.chip, active && styles.chipActive]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}>
+                    <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                      {supplier.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : null}
         </ScrollView>
 
         <StickyFormActions

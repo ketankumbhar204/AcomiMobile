@@ -2,8 +2,11 @@ import {
   aggregateFinancialFromRows,
   buildFinancialSummary,
   computePending,
+  currentMonthKey,
   derivePaymentStatus,
+  isFutureMonth,
   mergeFinancialSummaries,
+  shiftMonthKey,
   sumNullable,
 } from '../dashboardFinancial';
 import type { MemberPaymentLedgerRow } from '../../api/types';
@@ -131,5 +134,25 @@ describe('sumNullable', () => {
 
   it('skips nulls when summing', () => {
     expect(sumNullable([100, null, 200])).toBe(300);
+  });
+});
+
+describe('shiftMonthKey', () => {
+  it('crosses the year boundary', () => {
+    expect(shiftMonthKey('2026-12', 1)).toBe('2027-01');
+    expect(shiftMonthKey('2027-01', -1)).toBe('2026-12');
+  });
+
+  it('keeps September, October, and November distinct', () => {
+    expect(shiftMonthKey('2026-10', -1)).toBe('2026-09');
+    expect(shiftMonthKey('2026-10', 1)).toBe('2026-11');
+  });
+
+  it('treats a later YYYY-MM as future', () => {
+    const today = new Date(2026, 9, 7);
+    expect(currentMonthKey(today)).toBe('2026-10');
+    expect(isFutureMonth('2026-11', today)).toBe(true);
+    expect(isFutureMonth('2026-10', today)).toBe(false);
+    expect(isFutureMonth('2026-09', today)).toBe(false);
   });
 });

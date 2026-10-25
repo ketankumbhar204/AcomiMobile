@@ -38,6 +38,8 @@ export function PersistedBedInteractionHost({
         visible={target != null}
         mode="persisted"
         label={displayLabel}
+        bedId={target?.bedId}
+        spaceId={spaceId}
         bedNumber={target?.bedNumber ?? ''}
         status={target?.status}
         locationLine={target?.locationLine}

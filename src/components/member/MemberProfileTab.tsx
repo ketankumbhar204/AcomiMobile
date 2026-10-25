@@ -6,22 +6,27 @@ import { useTranslation } from 'react-i18next';
 import {
   Pencil,
   Phone,
+  FileText,
   ShieldAlert,
+  ShieldCheck,
+  StickyNote,
   Trash2,
   UserPlus,
 } from 'lucide-react-native';
 import type { MemberDetailsResponse, MemberStatus, SpaceType } from '../../api/types';
 import { MemberAccommodationSection } from '../occupancy';
-import { Button, Card, FormInput, useConfirmDialog } from '../ui';
+import { Button, FormInput, useConfirmDialog } from '../ui';
 import { DashboardActionRow } from '../dashboard/shared/DashboardActionRow';
 import { DashboardSectionTitle } from '../dashboard/DashboardSectionTitle';
 import type { MainStackParamList } from '../../navigation/types';
 import { useMemberStore } from '../../store/memberStore';
 import { useToastStore } from '../../store/toastStore';
 import { colors, shadows, spacing, typography } from '../../theme';
+import { formatMemberContactNumber } from '../../utils/indianMobile';
 import { memberAcomiBadgeLabel, memberInviteHint } from '../../utils/memberAppStatus';
 import { isSelectableMemberGender, memberGenderLabelKey } from '../../utils/memberGender';
 import { MemberDocumentsSection } from './MemberDocumentsSection';
+import { ProfileDisclosure } from './ProfileDisclosure';
 import { MemberProfileCorrectionSection } from '../profile/MemberProfileCorrectionSection';
 import { UserProfileFields } from '../profile/UserProfileFields';
 import { MemberDetailRow } from './MemberDetailRow';
@@ -183,35 +188,6 @@ export function MemberProfileTab({
         currentRole={currentRole}
       />
 
-      <Card style={styles.card}>
-        <MemberDetailRow
-          label={t('membership.details.mobile')}
-          value={member.mobileNumber}
-        />
-        <MemberDetailRow label={t('membership.details.gender')} value={genderLabel} />
-        <MemberDetailRow
-          label={t('membership.details.appStatus')}
-          value={appStatusLabel}
-        />
-        <MemberDetailRow
-          label={t('membership.status.label')}
-          value={t(`membership.status.${member.status}`)}
-        />
-        <MemberDetailRow
-          label={t('membership.status.updatedAt')}
-          value={formatDate(member.statusUpdatedAt)}
-        />
-        <MemberDetailRow
-          label={t('membership.details.created')}
-          value={formatDate(member.createdAt)}
-        />
-        <MemberDetailRow
-          label={t('membership.details.updated')}
-          value={formatDate(member.updatedAt)}
-          isLast
-        />
-      </Card>
-
       {member.linkedUserProfile ? (
         <UserProfileFields
           user={member.linkedUserProfile}
@@ -220,9 +196,89 @@ export function MemberProfileTab({
             relation: member.emergencyContactRelation,
             mobile: member.emergencyContactMobile,
           }}
-          showPhoto
+          showPhoto={false}
+          collapsible
+          verificationExtra={
+            <>
+              <MemberDetailRow
+                label={t('membership.details.appStatus')}
+                value={appStatusLabel}
+              />
+              <MemberDetailRow
+                label={t('membership.status.label')}
+                value={t(`membership.status.${member.status}`)}
+              />
+              <MemberDetailRow
+                label={t('membership.status.updatedAt')}
+                value={formatDate(member.statusUpdatedAt)}
+              />
+              <MemberDetailRow
+                label={t('membership.details.created')}
+                value={formatDate(member.createdAt)}
+              />
+              <MemberDetailRow
+                label={t('membership.details.updated')}
+                value={formatDate(member.updatedAt)}
+              />
+            </>
+          }
         />
-      ) : null}
+      ) : (
+        <>
+          <ProfileDisclosure
+            title={t('settings.profile.personalSection')}
+            icon={UserPlus}
+            defaultOpen
+          >
+            <MemberDetailRow
+              label={t('membership.details.mobile')}
+              value={formatMemberContactNumber(member.mobileNumber) ?? member.mobileNumber}
+            />
+            <MemberDetailRow label={t('membership.details.gender')} value={genderLabel} isLast />
+          </ProfileDisclosure>
+          <ProfileDisclosure title={t('membership.emergency.heading')} icon={Phone}>
+            <MemberDetailRow
+              label={t('membership.emergency.name')}
+              value={member.emergencyContactName ?? t('membership.details.notProvided')}
+            />
+            <MemberDetailRow
+              label={t('membership.emergency.relation')}
+              value={member.emergencyContactRelation ?? t('membership.details.notProvided')}
+            />
+            <MemberDetailRow
+              label={t('membership.emergency.mobile')}
+              value={
+                formatMemberContactNumber(member.emergencyContactMobile) ??
+                t('membership.details.notProvided')
+              }
+              isLast
+            />
+          </ProfileDisclosure>
+          <ProfileDisclosure title={t('settings.profile.kycSection')} icon={ShieldCheck}>
+            <MemberDetailRow
+              label={t('membership.details.appStatus')}
+              value={appStatusLabel}
+            />
+            <MemberDetailRow
+              label={t('membership.status.label')}
+              value={t(`membership.status.${member.status}`)}
+            />
+            <MemberDetailRow
+              label={t('membership.status.updatedAt')}
+              value={formatDate(member.statusUpdatedAt)}
+            />
+            <MemberDetailRow
+              label={t('membership.details.created')}
+              value={formatDate(member.createdAt)}
+            />
+            <MemberDetailRow
+              label={t('membership.details.updated')}
+              value={formatDate(member.updatedAt)}
+              isLast
+            />
+          </ProfileDisclosure>
+        </>
+      )}
 
       {spaceType === 'MESS' ? (
         <MemberMealBillingPanel
@@ -233,31 +289,20 @@ export function MemberProfileTab({
         />
       ) : null}
 
-      <DashboardSectionTitle title={t('membership.emergency.heading')} />
-      {!member.linkedUserProfile ? (
-        <Card style={styles.card}>
-          <MemberDetailRow
-            label={t('membership.emergency.name')}
-            value={member.emergencyContactName ?? '—'}
-          />
-          <MemberDetailRow
-            label={t('membership.emergency.relation')}
-            value={member.emergencyContactRelation ?? '—'}
-          />
-          <MemberDetailRow
-            label={t('membership.emergency.mobile')}
-            value={member.emergencyContactMobile ?? '—'}
-            isLast
-          />
-        </Card>
-      ) : null}
-
-      <MemberDocumentsSection memberId={member.memberId} canEdit={canEdit} />
+      <ProfileDisclosure
+        title={t('membership.documents.heading', { defaultValue: 'Documents' })}
+        icon={FileText}>
+        <MemberDocumentsSection memberId={member.memberId} canEdit={canEdit} embedded />
+      </ProfileDisclosure>
       <MemberProfileCorrectionSection
         memberId={member.memberId}
         canRequest={canEdit && member.linkedUser}
       />
-      <MemberNotesSection memberId={member.memberId} canEdit={canEdit} />
+      <ProfileDisclosure
+        title={t('membership.notes.heading', { defaultValue: 'Notes' })}
+        icon={StickyNote}>
+        <MemberNotesSection memberId={member.memberId} canEdit={canEdit} embedded />
+      </ProfileDisclosure>
 
       <DashboardSectionTitle title={t('membership.details.actionsHeading', {
         defaultValue: 'Actions',
@@ -422,7 +467,7 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'center',
     padding: spacing.xl,
   },
@@ -430,7 +475,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: 18,
     padding: spacing.xl,
-    ...shadows.md,
+    ...shadows.raised,
   },
   modalTitle: {
     ...typography.h2,

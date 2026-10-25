@@ -329,6 +329,10 @@ export function CustomerSubscriptionPlansScreen({
                 })
               : undefined
           }
+          stepCurrent={
+            progressivePhase === 'continue' ? 1 : progressivePhase === 'ready' ? 2 : undefined
+          }
+          stepTotal={progressivePhase === 'start' ? undefined : 2}
           progressLine={
             progressivePhase === 'continue'
               ? t('progressiveWorkflow.subscription.progressPlanNext')

@@ -1,8 +1,10 @@
 export function formatPaymentAmount(amount: number, currencyCode = 'INR'): string {
-  if (currencyCode === 'INR') {
-    return `₹${amount.toLocaleString('en-IN')}`;
+  const code = (currencyCode || 'INR').toUpperCase();
+  const whole = Math.round(amount).toLocaleString('en-IN');
+  if (code === 'INR') {
+    return `₹${whole}`;
   }
-  return `${currencyCode} ${amount.toLocaleString()}`;
+  return `${code} ${whole}`;
 }
 
 export function formatPaymentDueDate(isoDate: string): string {

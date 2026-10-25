@@ -1,6 +1,7 @@
 import { navigateFromNotificationType } from '../notificationDeepLinks';
 import { navigateMainStack } from '../../navigation/mainStackNavigation';
 import { navigateToMembersTab, navigateToPaymentsTab } from '../../navigation/navigationRef';
+import { todayIsoDate } from '../mealDates';
 
 jest.mock('../../navigation/mainStackNavigation', () => ({
   navigateMainStack: jest.fn(),
@@ -16,7 +17,26 @@ describe('notificationDeepLinks push types', () => {
     jest.clearAllMocks();
   });
 
-  it('opens today menu for MENU_PUBLISHED', () => {
+  it('opens the published menu for the date in a MENU_PUBLISHED message', () => {
+    navigateFromNotificationType(
+      'space-1',
+      {
+        notificationType: 'MENU_PUBLISHED',
+        entityId: 'menu-1',
+        actionRoute: 'DailyMenuToday',
+        message: 'LUNCH · 2026-10-09 · Sunrise PG',
+        title: "Today's menu is ready",
+      },
+      false,
+    );
+    expect(navigateMainStack).toHaveBeenCalledWith('DailyMenuToday', {
+      spaceId: 'space-1',
+      menuDate: '2026-10-09',
+      mealType: 'LUNCH',
+    });
+  });
+
+  it('opens today when a menu notification has no date', () => {
     navigateFromNotificationType(
       'space-1',
       {
@@ -28,7 +48,29 @@ describe('notificationDeepLinks push types', () => {
       },
       false,
     );
-    expect(navigateMainStack).toHaveBeenCalledWith('DailyMenuToday', { spaceId: 'space-1' });
+    expect(navigateMainStack).toHaveBeenCalledWith('DailyMenuToday', {
+      spaceId: 'space-1',
+      menuDate: todayIsoDate(),
+    });
+  });
+
+  it('opens the meal poll for the space, date, and meal', () => {
+    navigateFromNotificationType(
+      'space-1',
+      {
+        notificationType: 'MEAL_POLL_PUBLISHED',
+        entityId: 'poll-1',
+        actionRoute: 'MealPollResponse',
+        message: 'DINNER · 2026-10-09 · Sunrise PG',
+        title: 'Meal poll opened',
+      },
+      false,
+    );
+    expect(navigateMainStack).toHaveBeenCalledWith('MealPollResponse', {
+      spaceId: 'space-1',
+      menuDate: '2026-10-09',
+      mealType: 'DINNER',
+    });
   });
 
   it('opens member dashboard for ALLOCATION_CREATED when not an operator', () => {
@@ -202,6 +244,25 @@ describe('notificationDeepLinks push types', () => {
     expect(navigateMainStack).toHaveBeenCalledWith('AcceptInvitations', undefined);
   });
 
+  it('opens the listing for a photo request and not the enquiry inbox', () => {
+    navigateFromNotificationType(
+      'space-1',
+      {
+        notificationType: 'PHOTO_REQUEST_RECEIVED',
+        entityId: 'space-1',
+        actionRoute: 'FindAPlaceDetail',
+        message: 'Someone interested in Green PG has requested photos. Open ACOMI to review the request.',
+        title: 'Photo request received',
+      },
+      true,
+    );
+    expect(navigateMainStack).toHaveBeenCalledWith('FindAPlaceDetail', { spaceId: 'space-1' });
+    expect(navigateMainStack).not.toHaveBeenCalledWith(
+      'MemberTabs',
+      expect.anything(),
+    );
+  });
+
   it('opens MySpaces after space deactivation', () => {
     navigateFromNotificationType(
       'space-1',
@@ -215,5 +276,20 @@ describe('notificationDeepLinks push types', () => {
       false,
     );
     expect(navigateMainStack).toHaveBeenCalledWith('MySpaces', undefined);
+  });
+
+  it('opens the listing for a photo request', () => {
+    navigateFromNotificationType(
+      'space-1',
+      {
+        notificationType: 'PHOTO_REQUEST_RECEIVED',
+        entityId: 'space-1',
+        actionRoute: 'FindAPlaceDetail',
+        message: 'Someone interested in Green PG has requested photos. Open ACOMI to review the request.',
+        title: 'Photo request received',
+      },
+      true,
+    );
+    expect(navigateMainStack).toHaveBeenCalledWith('FindAPlaceDetail', { spaceId: 'space-1' });
   });
 });

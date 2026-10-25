@@ -12,8 +12,23 @@ export function canOwnerMarkPaymentReceived(
   return status != null && RECEIVABLE_STATUSES.has(status as UniversalPaymentStatus);
 }
 
-export function canOwnerSendPaymentReminder(reminderEligible?: boolean | null): boolean {
-  return Boolean(reminderEligible);
+/**
+ * Matches the backend reminder window: unpaid, active member, and due within
+ * three days. A pending status alone is not enough — the API rejects it.
+ */
+export function canOwnerSendPaymentReminder(
+  source?:
+    | boolean
+    | null
+    | {
+        reminderEligible?: boolean | null;
+        paymentStatus?: string | null;
+      },
+): boolean {
+  if (typeof source === 'boolean' || source == null) {
+    return Boolean(source);
+  }
+  return source.reminderEligible === true;
 }
 
 export function memberRowShowsReceived(
@@ -43,5 +58,5 @@ export function receivablePayments(
 export function reminderEligiblePayments(
   payments: readonly SpacePaymentResponse[],
 ): SpacePaymentResponse[] {
-  return payments.filter(payment => canOwnerSendPaymentReminder(payment.reminderEligible));
+  return payments.filter(payment => canOwnerSendPaymentReminder(payment));
 }

@@ -52,10 +52,16 @@ export function PendingActionGroupCard({ spaceId, group }: PendingActionGroupCar
   const Icon = getNotificationIcon(group.actionType, category);
   const tone = priorityTone(group.priority);
 
-  const title =
-    t(`dashboard.pendingActions.groups.${group.actionType}`, {
-      defaultValue: group.title,
-    }) + (group.count > 0 ? ` (${group.count})` : '');
+  const titleBase =
+    group.actionType === 'PENDING_INVITATION' &&
+    (group.actionRoute ?? '').trim() === 'AcceptInvitations'
+      ? t('dashboard.pendingActions.groups.SPACE_INVITATION', {
+          defaultValue: 'Space invitation',
+        })
+      : t(`dashboard.pendingActions.groups.${group.actionType}`, {
+          defaultValue: group.title,
+        });
+  const title = titleBase + (group.count > 0 ? ` (${group.count})` : '');
 
   const subtitle =
     sample?.message ??

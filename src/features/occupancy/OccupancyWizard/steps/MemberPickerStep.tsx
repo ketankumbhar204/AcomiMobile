@@ -42,6 +42,11 @@ type MemberPickerStepProps = {
   selectedMemberId?: string | null;
   hideTitle?: boolean;
   /**
+   * Hide the search/new chips. Add Member chooses the mode before this step opens.
+   * Occupancy assignment still shows its own chips.
+   */
+  hideModeToggle?: boolean;
+  /**
    * Render members in the parent page scroll instead of a nested FlatList.
    * Use when the wizard already owns the only vertical ScrollView.
    */
@@ -110,6 +115,7 @@ export function MemberPickerStep({
   creatingMember = false,
   selectedMemberId,
   hideTitle = false,
+  hideModeToggle = false,
   embedInParentScroll = false,
   onSelect,
   onCreateNewPress,
@@ -125,9 +131,6 @@ export function MemberPickerStep({
   const availableLabel = isCustomer
     ? t('membership.add.reuseCard.available')
     : t('occupancyWizard.residentCard.available');
-  const addActionLabel = isCustomer
-    ? t('membership.add.reuseCard.addAction')
-    : t('occupancyWizard.residentCard.moveIn');
   const emptyReuseLabel = isCustomer
     ? t('membership.add.noReusableCustomers')
     : t('occupancyWizard.noReusableResidents');
@@ -234,7 +237,7 @@ export function MemberPickerStep({
         </>
       ) : null}
 
-      {allowAddNew ? (
+      {allowAddNew && !hideModeToggle ? (
         <View style={styles.modeRow}>
           <Pressable
             style={[styles.modeChip, pickerMode === 'search' && styles.modeChipSelected]}

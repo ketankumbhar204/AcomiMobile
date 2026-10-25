@@ -17,7 +17,14 @@ import { useTranslation } from 'react-i18next';
 import { adminApi } from '../../api/adminApi';
 import type { SavedAddress } from '../../api/types';
 import { AdminLeadCard } from '../../components/admin';
-import { FormInput, ListSearchBar, useConfirmDialog } from '../../components/ui';
+import { AddressLocationFields } from '../../components/location/AddressLocationFields';
+import { ListSearchBar, useConfirmDialog } from '../../components/ui';
+import {
+  EMPTY_ADDRESS_CAPTURE,
+  addressCaptureIssue,
+  captureFromParts,
+  composeStoredAddress,
+} from '../../utils/locationAutocomplete';
 import { formatAdminDate } from '../../utils/adminLabels';
 import type { AdminStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
@@ -39,13 +46,7 @@ export function AdminSavedAddressesScreen() {
   const [error, setError] = useState<string | null>(null);
   const [editTarget, setEditTarget] = useState<SavedAddress | null>(null);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    addressLine: '',
-    city: '',
-    state: '',
-    pincode: '',
-    mapUrl: '',
-  });
+  const [location, setLocation] = useState(EMPTY_ADDRESS_CAPTURE);
 
   React.useEffect(() => {
     const timer = setTimeout(() => setDebounced(search.trim()), 300);
@@ -77,26 +78,28 @@ export function AdminSavedAddressesScreen() {
 
   function openEdit(address: SavedAddress) {
     setEditTarget(address);
-    setForm({
-      addressLine: address.addressLine,
-      city: address.city,
-      state: address.state,
-      pincode: address.pincode,
-      mapUrl: address.mapUrl ?? '',
-    });
+    setLocation(
+      captureFromParts({
+        addressLine: address.addressLine,
+        city: address.city,
+        state: address.state,
+        pincode: address.pincode,
+        mapUrl: address.mapUrl,
+      }),
+    );
   }
 
   async function handleSave() {
     if (!editTarget) return;
-    if (!form.addressLine.trim() || !form.city.trim() || !form.state.trim()) {
+    if (addressCaptureIssue(location, { required: true, pincodeRequired: true })) {
       showToast(t('admin.addresses.requiredFields'));
       return;
     }
-    if (!PINCODE_PATTERN.test(form.pincode.trim())) {
+    if (!PINCODE_PATTERN.test(location.pincode.trim())) {
       showToast(t('admin.addresses.invalidPincode'));
       return;
     }
-    const mapUrl = form.mapUrl.trim();
+    const mapUrl = location.mapUrl.trim();
     if (mapUrl && !mapUrl.startsWith('http://') && !mapUrl.startsWith('https://')) {
       showToast(t('admin.addresses.invalidMapUrl'));
       return;
@@ -104,10 +107,10 @@ export function AdminSavedAddressesScreen() {
     setSaving(true);
     try {
       await adminApi.updateSavedAddress(editTarget.id, {
-        addressLine: form.addressLine.trim(),
-        city: form.city.trim(),
-        state: form.state.trim(),
-        pincode: form.pincode.trim(),
+        addressLine: composeStoredAddress(location),
+        city: location.city.trim(),
+        state: location.state.trim(),
+        pincode: location.pincode.trim(),
         mapUrl: mapUrl || undefined,
       });
       showToast(t('admin.addresses.updated'));
@@ -184,33 +187,11 @@ export function AdminSavedAddressesScreen() {
         >
           <Text style={styles.modalTitle}>{t('admin.addresses.editTitle')}</Text>
           <ScrollView keyboardShouldPersistTaps="handled">
-            <FormInput
-              label={t('admin.common.address')}
-              value={form.addressLine}
-              onChangeText={addressLine => setForm(prev => ({ ...prev, addressLine }))}
-            />
-            <FormInput
-              label={t('admin.common.city')}
-              value={form.city}
-              onChangeText={city => setForm(prev => ({ ...prev, city }))}
-            />
-            <FormInput
-              label={t('admin.common.state')}
-              value={form.state}
-              onChangeText={state => setForm(prev => ({ ...prev, state }))}
-            />
-            <FormInput
-              label={t('admin.common.pincode')}
-              value={form.pincode}
-              onChangeText={pincode => setForm(prev => ({ ...prev, pincode }))}
-              keyboardType="number-pad"
-              maxLength={6}
-            />
-            <FormInput
-              label={t('admin.common.mapLink')}
-              value={form.mapUrl}
-              onChangeText={mapUrl => setForm(prev => ({ ...prev, mapUrl }))}
-              autoCapitalize="none"
+            <AddressLocationFields
+              value={location}
+              onChange={setLocation}
+              required
+              pincodeRequired
             />
           </ScrollView>
           <View style={styles.modalActions}>

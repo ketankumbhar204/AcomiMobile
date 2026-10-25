@@ -18,7 +18,12 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { FlaskConical } from 'lucide-react-native';
 import { adminApi } from '../../api/adminApi';
-import type { AdminActiveSpace, MembershipRole, SpaceType } from '../../api/types';
+import type {
+  AdminActiveSpace,
+  AdminRegisteredUser,
+  MembershipRole,
+  SpaceType,
+} from '../../api/types';
 import { ApiError } from '../../api/types';
 import {
   AdminFormHero,
@@ -30,14 +35,18 @@ import { FormInput, SpaceTypePicker } from '../../components/ui';
 import { StickyFormActions } from '../../components/progressive';
 import type { AdminStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
-import { isValidIndianMobile } from '../../utils/indianMobile';
+import {
+  INDIAN_MOBILE_INPUT_MAX_LENGTH,
+  isValidIndianMobile,
+  normalizeIndianMobileDigits,
+} from '../../utils/indianMobile';
 import { confirmPasswordError, newPasswordError } from '../../utils/passwordMessages';
 import { colors, radius, spacing, typography } from '../../theme';
 
 type Nav = NativeStackNavigationProp<AdminStackParamList, 'AdminCreateTestUser'>;
 
 const SPACE_ROLES: MembershipRole[] = ['OWNER', 'MANAGER', 'TENANT', 'CUSTOMER', 'STAFF'];
-const SPACE_TYPES: SpaceType[] = ['PG', 'MESS', 'HOSTEL', 'CO_LIVING', 'RENTAL'];
+const SPACE_TYPES: SpaceType[] = ['PG', 'MESS', 'HOSTEL', 'CO_LIVING', 'RENTAL', 'CORPORATE_STAY'];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function errorMessage(err: unknown, fallback: string): string {
@@ -68,6 +77,7 @@ export function AdminCreateTestUserScreen() {
   const [loadingSpaces, setLoadingSpaces] = useState(false);
   const [spacePickerOpen, setSpacePickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [existingUser, setExistingUser] = useState<AdminRegisteredUser | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
@@ -135,6 +145,7 @@ export function AdminCreateTestUserScreen() {
   async function handleSubmit() {
     Keyboard.dismiss();
     setError(null);
+    setExistingUser(null);
     if (!validate() || !spaceRole) return;
 
     setLoading(true);
@@ -155,6 +166,23 @@ export function AdminCreateTestUserScreen() {
       navigation.goBack();
     } catch (err) {
       setError(errorMessage(err, t('admin.users.createTestUserFailed')));
+      if (err instanceof ApiError && err.status === 409) {
+        try {
+          const page = await adminApi.listRegisteredUsers({
+            q: mobileNumber.trim(),
+            size: 10,
+          });
+          const digits = mobileNumber.replace(/\D/g, '');
+          const match = (page.content ?? []).find(user =>
+            user.mobileNumber.replace(/\D/g, '').endsWith(digits),
+          );
+          if (match) {
+            setExistingUser(match);
+          }
+        } catch {
+          // The duplicate message still stands if the lookup fails.
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -167,8 +195,10 @@ export function AdminCreateTestUserScreen() {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <View style={styles.root}>
           <ScrollView
+            style={styles.scroll}
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
             showsVerticalScrollIndicator={false}>
             <AdminFormHero
               icon={FlaskConical}
@@ -180,6 +210,19 @@ export function AdminCreateTestUserScreen() {
             {error ? (
               <View style={adminErrorBanner.box}>
                 <Text style={adminErrorBanner.text}>{error}</Text>
+                {existingUser ? (
+                  <Pressable
+                    onPress={() =>
+                      navigation.navigate('AdminRegisteredUserDetail', { user: existingUser })
+                    }
+                    accessibilityRole="button">
+                    <Text style={styles.existingLink}>
+                      {t('admin.users.openExistingUser', {
+                        defaultValue: 'Open existing user',
+                      })}
+                    </Text>
+                  </Pressable>
+                ) : null}
               </View>
             ) : null}
 
@@ -194,10 +237,10 @@ export function AdminCreateTestUserScreen() {
               <FormInput
                 label={t('admin.users.createTestUserFields.mobile')}
                 value={mobileNumber}
-                onChangeText={text => setMobileNumber(text.replace(/\D/g, '').slice(0, 10))}
+                onChangeText={text => setMobileNumber(normalizeIndianMobileDigits(text))}
                 error={fieldErrors.mobileNumber}
                 keyboardType="number-pad"
-                maxLength={10}
+                maxLength={INDIAN_MOBILE_INPUT_MAX_LENGTH}
               />
               <FormInput
                 label={t('admin.users.createTestUserFields.email')}
@@ -302,6 +345,7 @@ export function AdminCreateTestUserScreen() {
           </ScrollView>
 
           <StickyFormActions
+            anchorToScreen
             primary={{
               label: loading ? t('common.saving') : t('admin.users.createTestUser'),
               onPress: () => {
@@ -358,8 +402,15 @@ export function AdminCreateTestUserScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.md, paddingBottom: spacing.xxl },
+  scroll: { flex: 1 },
+  content: { padding: spacing.md, paddingBottom: spacing.lg },
   passwordGap: { height: spacing.sm },
+  existingLink: {
+    ...typography.caption,
+    color: colors.primary,
+    fontWeight: '700',
+    marginTop: spacing.sm,
+  },
   label: {
     ...typography.label,
     color: colors.textPrimary,

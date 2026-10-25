@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -20,6 +20,8 @@ import { colors, spacing, typography } from '../../theme';
 
 type Nav = NativeStackNavigationProp<AdminStackParamList, 'AdminPropertyList'>;
 type Route = NativeStackScreenProps<AdminStackParamList, 'AdminPropertyList'>['route'];
+
+const PAGE_SIZE = 20;
 
 function filterLabel(
   t: TFunction,
@@ -46,8 +48,13 @@ export function AdminPropertyListScreen() {
   const sourceFilter = route.params?.source;
 
   const [leads, setLeads] = useState<PropertyRegistrationListItem[]>([]);
-  const [activeSpaces, setActiveSpaces] = useState<AdminActiveSpace[]>([]);
+  const [activeAll, setActiveAll] = useState<AdminActiveSpace[]>([]);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [leadPage, setLeadPage] = useState(0);
+  const [hasMoreLeads, setHasMoreLeads] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadingMoreRef = useRef(false);
   const [tab, setTab] = useState<'leads' | 'active'>(route.params?.tab ?? 'leads');
 
   useFocusEffect(
@@ -63,18 +70,24 @@ export function AdminPropertyListScreen() {
       const source = route.params?.source;
       async function load() {
         setLoading(true);
+        setLeadPage(0);
+        setVisibleCount(PAGE_SIZE);
         try {
           if (activeTab === 'leads') {
             const page = await adminApi.listPropertyRegistrations({
               leadsOnly: source ? undefined : true,
               source,
-              size: 50,
+              page: 0,
+              size: PAGE_SIZE,
             });
-            if (!cancelled) setLeads(page.content);
+            if (!cancelled) {
+              setLeads(page.content);
+              setHasMoreLeads(!page.last && page.content.length > 0);
+            }
           } else {
             const spaces = await adminApi.listActiveSpaces();
             if (!cancelled) {
-              setActiveSpaces(spaces.filter(s => s.type !== 'MESS'));
+              setActiveAll(spaces.filter(s => s.type !== 'MESS'));
             }
           }
         } finally {
@@ -90,6 +103,38 @@ export function AdminPropertyListScreen() {
 
   const activeFilterLabel = filterLabel(t, tab, sourceFilter);
   const dash = t('admin.labels.emDash');
+  const activeSpaces = activeAll.slice(0, visibleCount);
+
+  async function loadMoreLeads() {
+    if (loading || loadingMoreRef.current || !hasMoreLeads) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    try {
+      const nextPage = leadPage + 1;
+      const page = await adminApi.listPropertyRegistrations({
+        leadsOnly: sourceFilter ? undefined : true,
+        source: sourceFilter,
+        page: nextPage,
+        size: PAGE_SIZE,
+      });
+      setLeads(prev => [...prev, ...page.content]);
+      setLeadPage(nextPage);
+      setHasMoreLeads(!page.last && page.content.length > 0);
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }
+
+  function handleEndReached() {
+    if (tab === 'leads') {
+      void loadMoreLeads();
+      return;
+    }
+    if (visibleCount < activeAll.length) {
+      setVisibleCount(count => count + PAGE_SIZE);
+    }
+  }
 
   function handleDelete(item: PropertyRegistrationListItem) {
     showConfirm({
@@ -140,6 +185,11 @@ export function AdminPropertyListScreen() {
           data={leads}
           keyExtractor={item => item.id}
           contentContainerStyle={styles.list}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.4}
+          ListFooterComponent={
+            loadingMore ? <ActivityIndicator color={colors.primary} style={styles.footer} /> : null
+          }
           renderItem={({ item }) => (
             <AdminLeadCard
               title={item.propertyName}
@@ -159,11 +209,14 @@ export function AdminPropertyListScreen() {
           data={activeSpaces}
           keyExtractor={item => item.id}
           contentContainerStyle={styles.list}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.4}
           renderItem={({ item }) => (
             <AdminLeadCard
               title={item.name}
               subtitle={`${item.type} · ${item.ownerName}`}
               meta={`${item.ownerMobile} · ${item.address?.trim() || dash}`}
+              testLead={item.testLead}
               onPress={() => navigation.navigate('AdminActiveSpaceDetail', { space: item })}
             />
           )}
@@ -178,6 +231,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   loader: { marginTop: spacing.xl },
   list: { padding: spacing.md, paddingBottom: spacing.xxl },
+  footer: { marginVertical: spacing.md },
   empty: {
     textAlign: 'center',
     ...typography.caption,

@@ -6,6 +6,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
 import { navigateMainStack } from '../../navigation/mainStackNavigation';
+import { navigationRef } from '../../navigation/navigationRef';
 import { navigateFromNotificationType } from '../../utils/notificationDeepLinks';
 import { findMySpaceEntry, resolveSpacePermissions } from '../../utils/spacePermissions';
 import { canManageNotifications } from '../../utils/spaceOperator';
@@ -59,6 +60,19 @@ export async function openPushNotification(
     return;
   }
 
+  if (payload.test === 'true' || payload.actionRoute === 'NotificationTest') {
+    if (isPlatformAdmin(auth.user?.systemRole)) {
+      useAdminStore.getState().setAdminMode(true);
+      if (navigationRef.isReady()) {
+        navigationRef.navigate('Admin', {
+          screen: 'AdminNotificationTesting',
+          params: payload.type ? { notificationType: payload.type } : undefined,
+        });
+      }
+    }
+    return;
+  }
+
   if (payload.type === 'CONTACT_ENQUIRY' && isPlatformAdmin(auth.user?.systemRole)) {
     setPendingPushPayload(payload);
     useAdminStore.getState().setAdminMode(true);
@@ -79,6 +93,12 @@ export async function openPushNotification(
   ) {
     markReadBestEffort(payload);
     navigateMainStack('InquiryCredits', undefined);
+    return;
+  }
+
+  if (payload.type === 'PHOTO_REQUEST_RECEIVED' && payload.spaceId) {
+    markReadBestEffort(payload);
+    navigateMainStack('FindAPlaceDetail', { spaceId: payload.spaceId });
     return;
   }
 

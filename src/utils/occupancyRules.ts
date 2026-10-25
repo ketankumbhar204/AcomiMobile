@@ -35,6 +35,7 @@ export function getAllowedTargetTypes(spaceType: SpaceType): AllocationTargetTyp
       // usage. Future review required before billing.
       return ['BED', 'ROOM'];
     case 'RENTAL':
+    case 'CORPORATE_STAY':
       return ['UNIT'];
     default:
       return [];
@@ -240,6 +241,33 @@ export function formatOccupancyLocation(
     parts.push(summary.bedName);
   }
   return parts.join(' · ');
+}
+
+export type OccupancyLocationLine = {
+  labelKey:
+    | 'occupancy.section.building'
+    | 'occupancy.section.floor'
+    | 'occupancy.section.unit'
+    | 'occupancy.section.room'
+    | 'occupancy.section.bed';
+  value: string;
+};
+
+/** Explicit property hierarchy. Values stay as configured; missing levels are omitted. */
+export function occupancyLocationLines(
+  summary: CurrentOccupancySummaryResponse | null | undefined,
+): OccupancyLocationLine[] {
+  if (!summary) {
+    return [];
+  }
+  const candidates: OccupancyLocationLine[] = [
+    { labelKey: 'occupancy.section.building', value: summary.buildingName?.trim() ?? '' },
+    { labelKey: 'occupancy.section.floor', value: summary.floorName?.trim() ?? '' },
+    { labelKey: 'occupancy.section.unit', value: summary.unitName?.trim() ?? '' },
+    { labelKey: 'occupancy.section.room', value: summary.roomName?.trim() ?? '' },
+    { labelKey: 'occupancy.section.bed', value: summary.bedName?.trim() ?? '' },
+  ];
+  return candidates.filter(line => line.value.length > 0);
 }
 
 /** Building/floor on line 1; unit/room/bed on line 2 — for compact stay cards. */

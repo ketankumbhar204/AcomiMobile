@@ -12,6 +12,7 @@ import { DashboardSectionHeader } from '../dashboard/shared/DashboardSectionHead
 import { MemberDetailRow } from '../member/MemberDetailRow';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { isSelectableMemberGender, memberGenderLabelKey } from '../../utils/memberGender';
+import { ProfileDisclosure } from '../member/ProfileDisclosure';
 import { ProfileAssetUploadRow } from './ProfileAssetUploadRow';
 import { ImagePreviewModal } from '../files/ImagePreviewModal';
 
@@ -36,11 +37,14 @@ type UserProfileFieldsProps = {
   onUploadProfilePhoto?: () => void;
   onUploadIdentityProof?: () => void;
   onUploadAddressProof?: () => void;
+  /** Member details: collapse secondary sections and skip the duplicate photo header. */
+  collapsible?: boolean;
+  verificationExtra?: React.ReactNode;
 };
 
-function formatDate(value?: string | null): string {
+function formatDate(value: string | null | undefined, missing: string): string {
   if (!value) {
-    return '—';
+    return missing;
   }
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -72,25 +76,49 @@ export function UserProfileFields({
   onUploadProfilePhoto,
   onUploadIdentityProof,
   onUploadAddressProof,
+  collapsible = false,
+  verificationExtra,
 }: UserProfileFieldsProps) {
   const { t } = useTranslation();
   const [photoViewerOpen, setPhotoViewerOpen] = React.useState(false);
 
-  const genderLabel = isSelectableMemberGender(user.gender)
-    ? t(memberGenderLabelKey(user.gender))
-    : '—';
-
-  const profileStatusLabel = user.profileStatus
-    ? t(`settings.profile.profileStatus.${user.profileStatus}`)
-    : '—';
-
-  const kycStatusLabel = user.kycStatus
-    ? t(`settings.profile.kycStatus.${user.kycStatus}`)
-    : '—';
-
   const photoUri = previewUriForStoredFile(user.profilePhotoUrl);
   const showPhotoCard =
     showPhoto && (showPhotoMeta || (canUploadAssets && onUploadProfilePhoto));
+
+  const missing = collapsible ? t('membership.details.notProvided') : '—';
+  const genderLabel = isSelectableMemberGender(user.gender)
+    ? t(memberGenderLabelKey(user.gender))
+    : collapsible
+      ? t('membership.gender.unspecified')
+      : '—';
+  const profileStatusLabel = user.profileStatus
+    ? t(`settings.profile.profileStatus.${user.profileStatus}`)
+    : missing;
+  const kycStatusLabel = user.kycStatus
+    ? t(`settings.profile.kycStatus.${user.kycStatus}`)
+    : missing;
+  const display = (value?: string | null) => {
+    const trimmed = value?.trim();
+    return trimmed ? trimmed : missing;
+  };
+
+  const section = (
+    title: string,
+    icon: typeof UserRound,
+    body: React.ReactNode,
+    defaultOpen = false,
+  ) =>
+    collapsible ? (
+      <ProfileDisclosure title={title} icon={icon} defaultOpen={defaultOpen}>
+        {body}
+      </ProfileDisclosure>
+    ) : (
+      <>
+        <DashboardSectionHeader title={title} icon={icon} />
+        <View style={styles.card}>{body}</View>
+      </>
+    );
 
   return (
     <View style={styles.root}>
@@ -128,121 +156,117 @@ export function UserProfileFields({
         </View>
       ) : null}
 
-      <DashboardSectionHeader
-        title={t('settings.profile.personalSection')}
-        icon={UserRound}
-      />
-      <View style={styles.card}>
-        <MemberDetailRow label={t('settings.profile.fullNameLabel')} value={user.fullName || '—'} />
-        <MemberDetailRow
-          label={t('settings.profile.mobileLabel')}
-          value={user.mobileNumber ? `+91 ${user.mobileNumber}` : '—'}
-        />
-        <MemberDetailRow label={t('settings.profile.emailLabel')} value={user.email ?? '—'} />
-        <MemberDetailRow label={t('settings.profile.genderLabel')} value={genderLabel} />
-        <MemberDetailRow
-          label={t('settings.profile.dateOfBirthLabel')}
-          value={formatDate(user.dateOfBirth)}
-          isLast={!identityDocument && !canUploadAssets}
-        />
-        {identityDocument ? (
-          <>
-            <MemberDetailRow
-              label={t('membership.documents.typeLabel')}
-              value={t(`membership.documents.types.${identityDocument.type}`)}
-            />
-            <MemberDetailRow
-              label={t('profileCompletion.fields.documentNumber')}
-              value={identityDocument.number}
-              isLast={!canUploadAssets}
-            />
-          </>
-        ) : null}
-        {canUploadAssets && onUploadIdentityProof ? (
-          <ProfileAssetUploadRow
-            label={t('profileCompletion.fields.identityProof')}
-            previewUri={identityProofPreviewUri}
-            onUpload={onUploadIdentityProof}
-            loading={uploadingAsset === 'identityProof'}
-            hint={
-              identityDocument
-                ? undefined
-                : t('settings.profile.identityProofHint')
-            }
-          />
-        ) : null}
-      </View>
-
-      <DashboardSectionHeader
-        title={t('settings.profile.addressSection')}
-        icon={MapPin}
-      />
-      <View style={styles.card}>
-        <MemberDetailRow
-          label={t('settings.profile.permanentAddressLabel')}
-          value={user.permanentAddress ?? '—'}
-        />
-        <MemberDetailRow label={t('settings.profile.cityLabel')} value={user.city ?? '—'} />
-        <MemberDetailRow label={t('settings.profile.stateLabel')} value={user.state ?? '—'} />
-        <MemberDetailRow
-          label={t('settings.profile.pincodeLabel')}
-          value={user.pincode ?? '—'}
-          isLast={!canUploadAssets}
-        />
-        {canUploadAssets && onUploadAddressProof ? (
-          <ProfileAssetUploadRow
-            label={t('profileCompletion.fields.addressProof')}
-            previewUri={addressProofPreviewUri}
-            onUpload={onUploadAddressProof}
-            loading={uploadingAsset === 'addressProof'}
-          />
-        ) : null}
-      </View>
-
-      {emergencyContact ? (
+      {section(
+        t('settings.profile.personalSection'),
+        UserRound,
         <>
-          <DashboardSectionHeader
-            title={t('settings.profile.emergencySection')}
-            icon={Phone}
+          <MemberDetailRow label={t('settings.profile.fullNameLabel')} value={display(user.fullName)} />
+          <MemberDetailRow
+            label={t('settings.profile.mobileLabel')}
+            value={user.mobileNumber ? `+91 ${user.mobileNumber}` : missing}
           />
-          <View style={styles.card}>
-            <MemberDetailRow
-              label={t('membership.emergency.name')}
-              value={emergencyContact.name ?? '—'}
+          <MemberDetailRow label={t('settings.profile.emailLabel')} value={display(user.email)} />
+          <MemberDetailRow label={t('settings.profile.genderLabel')} value={genderLabel} />
+          <MemberDetailRow
+            label={t('settings.profile.dateOfBirthLabel')}
+            value={formatDate(user.dateOfBirth, missing)}
+            isLast={!identityDocument && !canUploadAssets}
+          />
+          {identityDocument ? (
+            <>
+              <MemberDetailRow
+                label={t('membership.documents.typeLabel')}
+                value={t(`membership.documents.types.${identityDocument.type}`)}
+              />
+              <MemberDetailRow
+                label={t('profileCompletion.fields.documentNumber')}
+                value={identityDocument.number}
+                isLast={!canUploadAssets}
+              />
+            </>
+          ) : null}
+          {canUploadAssets && onUploadIdentityProof ? (
+            <ProfileAssetUploadRow
+              label={t('profileCompletion.fields.identityProof')}
+              previewUri={identityProofPreviewUri}
+              onUpload={onUploadIdentityProof}
+              loading={uploadingAsset === 'identityProof'}
+              hint={identityDocument ? undefined : t('settings.profile.identityProofHint')}
             />
-            <MemberDetailRow
-              label={t('membership.emergency.relation')}
-              value={emergencyContact.relation ?? '—'}
-            />
-            <MemberDetailRow
-              label={t('membership.emergency.mobile')}
-              value={emergencyContact.mobile ?? '—'}
-              isLast
-            />
-          </View>
-        </>
-      ) : null}
+          ) : null}
+        </>,
+        true,
+      )}
 
-      <DashboardSectionHeader
-        title={t('settings.profile.kycSection')}
-        icon={ShieldCheck}
-      />
-      <View style={styles.card}>
-        <MemberDetailRow
-          label={t('settings.profile.profileStatusLabel')}
-          value={profileStatusLabel}
-        />
-        <MemberDetailRow label={t('settings.profile.kycStatusLabel')} value={kycStatusLabel} />
-        <MemberDetailRow
-          label={t('settings.profile.documentsUploadedLabel')}
-          value={String(user.documentsUploaded ?? 0)}
-        />
-        <MemberDetailRow
-          label={t('settings.profile.profileCompletedAtLabel')}
-          value={formatDate(user.profileCompletedAt)}
-          isLast
-        />
-      </View>
+      {section(
+        t('settings.profile.addressSection'),
+        MapPin,
+        <>
+          <MemberDetailRow
+            label={t('settings.profile.permanentAddressLabel')}
+            value={display(user.permanentAddress)}
+          />
+          <MemberDetailRow label={t('settings.profile.cityLabel')} value={display(user.city)} />
+          <MemberDetailRow label={t('settings.profile.stateLabel')} value={display(user.state)} />
+          <MemberDetailRow
+            label={t('settings.profile.pincodeLabel')}
+            value={display(user.pincode)}
+            isLast={!canUploadAssets}
+          />
+          {canUploadAssets && onUploadAddressProof ? (
+            <ProfileAssetUploadRow
+              label={t('profileCompletion.fields.addressProof')}
+              previewUri={addressProofPreviewUri}
+              onUpload={onUploadAddressProof}
+              loading={uploadingAsset === 'addressProof'}
+            />
+          ) : null}
+        </>,
+      )}
+
+      {emergencyContact
+        ? section(
+            t('settings.profile.emergencySection'),
+            Phone,
+            <>
+              <MemberDetailRow
+                label={t('membership.emergency.name')}
+                value={display(emergencyContact.name)}
+              />
+              <MemberDetailRow
+                label={t('membership.emergency.relation')}
+                value={display(emergencyContact.relation)}
+              />
+              <MemberDetailRow
+                label={t('membership.emergency.mobile')}
+                value={display(emergencyContact.mobile)}
+                isLast
+              />
+            </>,
+          )
+        : null}
+
+      {section(
+        t('settings.profile.kycSection'),
+        ShieldCheck,
+        <>
+          {verificationExtra}
+          <MemberDetailRow
+            label={t('settings.profile.profileStatusLabel')}
+            value={profileStatusLabel}
+          />
+          <MemberDetailRow label={t('settings.profile.kycStatusLabel')} value={kycStatusLabel} />
+          <MemberDetailRow
+            label={t('settings.profile.documentsUploadedLabel')}
+            value={String(user.documentsUploaded ?? 0)}
+          />
+          <MemberDetailRow
+            label={t('settings.profile.profileCompletedAtLabel')}
+            value={formatDate(user.profileCompletedAt, missing)}
+            isLast
+          />
+        </>,
+      )}
       <ImagePreviewModal
         visible={photoViewerOpen}
         imageUrl={photoUri || user.profilePhotoUrl}

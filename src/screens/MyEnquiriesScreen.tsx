@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -21,8 +21,13 @@ import {
   UserRound,
 } from 'lucide-react-native';
 import { enquiryApi } from '../api/enquiryApi';
-import type { OwnerContactResponse, SpaceEnquiryResponse } from '../api/types';
+import { spaceDiscoverApi } from '../api/spaceDiscoverApi';
+import type { EnquiryInboxResponse, OwnerContactResponse, SpaceEnquiryResponse } from '../api/types';
+import { ReceivedEnquiriesScreen } from './ReceivedEnquiriesScreen';
+import { PhotoRequestAction } from '../components/discovery/PhotoRequestAction';
 import { Button, Card, EmptyState } from '../components/ui';
+import { ReferenceCode } from '../components/ui/ReferenceCode';
+import { actualListingPhotos } from '../utils/photoRequest';
 import { useUnreadEnquiryIds } from '../hooks/useAccountEnquiryUnreadCount';
 import type { MainStackParamList } from '../navigation/types';
 import {
@@ -89,15 +94,37 @@ function canShowOwnerContact(item: SpaceEnquiryResponse): boolean {
 function ContactDetailsModal({
   visible,
   contact,
-  spaceName,
+  enquiry,
   onClose,
 }: {
   visible: boolean;
   contact: OwnerContactResponse;
-  spaceName: string;
+  enquiry: SpaceEnquiryResponse;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
+  const [photoUrls, setPhotoUrls] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    if (!visible) return;
+    let cancelled = false;
+    setPhotoUrls(null);
+    spaceDiscoverApi
+      .getDiscoverSpace(enquiry.spaceId)
+      .then(detail => {
+        if (!cancelled) {
+          setPhotoUrls(
+            actualListingPhotos([detail.listingImageUrl, detail.coverImageUrl, detail.imageUrl]),
+          );
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setPhotoUrls([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [enquiry.spaceId, visible]);
   const mobiles = [
     contact.mobileNumber,
     contact.alternateMobileNumber,
@@ -111,7 +138,7 @@ function ContactDetailsModal({
       <Pressable style={styles.modalBackdrop} onPress={onClose}>
         <Pressable style={styles.modalCard} onPress={e => e.stopPropagation()}>
           <Text style={styles.modalTitle}>{t('spaces.enquiries.contactDetails')}</Text>
-          <Text style={styles.modalSubtitle}>{spaceName}</Text>
+          <Text style={styles.modalSubtitle}>{enquiry.spaceName}</Text>
 
           {contact.ownerName?.trim() ? (
             <View style={styles.contactActionRow}>
@@ -195,6 +222,19 @@ function ContactDetailsModal({
             </View>
           ) : null}
 
+          {photoUrls ? (
+            <PhotoRequestAction
+              spaceId={enquiry.spaceId}
+              kind={enquiry.spaceType === 'MESS' ? 'mess' : 'property'}
+              name={enquiry.spaceName}
+              spaceType={enquiry.spaceType}
+              location={enquiry.locationLabel}
+              photoUrls={photoUrls}
+            />
+          ) : (
+            <ActivityIndicator color={colors.primary} />
+          )}
+
           <Button
             label={t('common.done', { defaultValue: 'Done' })}
             variant="ghost"
@@ -207,7 +247,7 @@ function ContactDetailsModal({
   );
 }
 
-export function MyEnquiriesScreen() {
+function MemberEnquiriesScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
@@ -322,6 +362,7 @@ export function MyEnquiriesScreen() {
                         <Text style={styles.title} numberOfLines={1}>
                           {item.spaceName}
                         </Text>
+                        <ReferenceCode value={item.referenceCode} />
                         {unread ? (
                           <View style={styles.newBadge}>
                             <Text style={styles.newBadgeText}>
@@ -379,12 +420,67 @@ export function MyEnquiriesScreen() {
         <ContactDetailsModal
           visible
           contact={contactTarget.ownerContact}
-          spaceName={contactTarget.spaceName}
+          enquiry={contactTarget}
           onClose={() => setContactTarget(null)}
         />
       ) : null}
     </View>
   );
+}
+
+export function MyEnquiriesScreen() {
+  const { t } = useTranslation();
+  const navigation = useNavigation<Nav>();
+  const [inbox, setInbox] = useState<EnquiryInboxResponse | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  const loadInbox = useCallback(() => {
+    setFailed(false);
+    void enquiryApi
+      .inbox()
+      .then(setInbox)
+      .catch(() => setFailed(true));
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadInbox();
+    }, [loadInbox]),
+  );
+
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      title:
+        inbox?.mode === 'RECEIVED'
+          ? t('spaces.enquiries.receivedTitle', { defaultValue: 'Enquiries received' })
+          : t('spaces.enquiries.title', { defaultValue: 'My Enquiries' }),
+    });
+  }, [inbox?.mode, navigation, t]);
+
+  if (!inbox && !failed) {
+    return (
+      <View style={styles.root}>
+        <ActivityIndicator style={styles.loader} color={colors.primary} />
+      </View>
+    );
+  }
+  if (failed || !inbox) {
+    return (
+      <View style={styles.root}>
+        <EmptyState
+          title={t('common.error', { defaultValue: 'Something went wrong' })}
+          description={t('spaces.enquiries.receivedError', {
+            defaultValue: 'Enquiries could not be loaded.',
+          })}
+        />
+        <Button label={t('common.retry', { defaultValue: 'Try again' })} onPress={loadInbox} />
+      </View>
+    );
+  }
+  if (inbox.mode === 'RECEIVED') {
+    return <ReceivedEnquiriesScreen listings={inbox.listings ?? []} />;
+  }
+  return <MemberEnquiriesScreen />;
 }
 
 const styles = StyleSheet.create({
@@ -470,10 +566,11 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'flex-end',
   },
   modalCard: {
+    ...shadows.raised,
     backgroundColor: colors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,

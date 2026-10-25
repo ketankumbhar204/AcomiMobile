@@ -17,6 +17,8 @@ import { StickyFormActions } from '../../components/progressive';
 import type { AdminStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { formatRegistrationSource, formatRegistrationStatus } from '../../utils/adminLabels';
+import { PRICE_BASIS_LABEL, defaultPriceBasis, isPriceBasis } from '../../utils/priceBasis';
+import { isMarkedTestLead } from '../../utils/adminTestLead';
 import { colors, spacing, typography } from '../../theme';
 
 type Props = NativeStackScreenProps<AdminStackParamList, 'AdminPropertyDetail'>;
@@ -86,6 +88,9 @@ export function AdminPropertyDetailScreen({ navigation, route }: Props) {
         <Card style={styles.headerCard}>
           <Text style={styles.title}>{detail.propertyName}</Text>
           <Text style={styles.ref}>{detail.reference}</Text>
+          {isMarkedTestLead(detail.testLead) ? (
+            <Text style={styles.testBadge}>{t('admin.labels.testBadge')}</Text>
+          ) : null}
         </Card>
 
         <AdminDetailSection>
@@ -165,14 +170,13 @@ export function AdminPropertyDetailScreen({ navigation, route }: Props) {
           ) : null}
           <AdminDetailField
             label={t('admin.property.startingPrice')}
-            value={`₹${detail.startingPrice}`}
+            value={(() => {
+              const basis = isPriceBasis(detail.priceBasis)
+                ? detail.priceBasis
+                : defaultPriceBasis(detail.propertyType);
+              return `₹${detail.startingPrice}${basis ? ` ${PRICE_BASIS_LABEL[basis]}` : ''}`;
+            })()}
           />
-          {detail.priceBasis ? (
-            <AdminDetailField
-              label={t('admin.property.priceBasis', { defaultValue: 'Price basis' })}
-              value={detail.priceBasis}
-            />
-          ) : null}
           {detail.capacityEstimate != null ? (
             <AdminDetailField
               label={t('admin.common.capacityEstimate', { defaultValue: 'Capacity estimate' })}
@@ -229,4 +233,16 @@ const styles = StyleSheet.create({
   headerCard: { marginBottom: spacing.sm },
   title: { ...typography.h2, color: colors.textPrimary },
   ref: { ...typography.caption, color: colors.textSecondary, marginTop: 4 },
+  testBadge: {
+    alignSelf: 'flex-start',
+    marginTop: spacing.sm,
+    ...typography.caption,
+    color: colors.white,
+    backgroundColor: '#EF4444',
+    fontWeight: '700',
+    overflow: 'hidden',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
 });

@@ -8,6 +8,7 @@ import type { UserNotification } from '../api/types';
 import { EmptyState } from '../components/ui';
 import type { MainStackParamList } from '../navigation/types';
 import { refreshAccountEnquiryUnread } from '../store/accountEnquiryUnreadStore';
+import { isPhotoRequestNotification } from '../utils/photoRequest';
 import { colors, spacing, typography } from '../theme';
 
 const UUID_RE =
@@ -55,6 +56,10 @@ export function AccountNotificationsScreen() {
     }
     const enquiryId = item.enquiryId && UUID_RE.test(item.enquiryId) ? item.enquiryId : undefined;
     void refreshAccountEnquiryUnread();
+    if (isPhotoRequestNotification(item) && item.spaceId) {
+      navigation.navigate('FindAPlaceDetail', { spaceId: item.spaceId });
+      return;
+    }
     const type = (item.notificationType ?? '').toUpperCase();
     if (
       type === 'INQUIRY_CREDIT_PAYMENT_APPROVED' ||

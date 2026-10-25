@@ -1,9 +1,11 @@
 import {
+  displayPaymentStatus,
   isChangesRequested,
   isOwnerReviewActionable,
   isPaymentActionable,
   isPaymentProofEditable,
   isSubmittedForReview,
+  showsPaymentOverdueCue,
 } from '../paymentStatus';
 
 describe('paymentStatus', () => {
@@ -36,6 +38,23 @@ describe('paymentStatus', () => {
   it('identifies changes requested queue', () => {
     expect(isChangesRequested('UPDATE_REQUESTED')).toBe(true);
     expect(isChangesRequested('REJECTED')).toBe(false);
+  });
+
+  it('keeps a submitted proof as under review even when the due date has passed', () => {
+    const submitted = { paymentStatus: 'UNDER_REVIEW' as const, isOverdue: true };
+    expect(displayPaymentStatus(submitted)).toBe('UNDER_REVIEW');
+    expect(showsPaymentOverdueCue(submitted)).toBe(false);
+    expect(displayPaymentStatus({ paymentStatus: 'PROOF_UPLOADED', isOverdue: true })).toBe(
+      'PROOF_UPLOADED',
+    );
+  });
+
+  it('still shows overdue for a customer-action charge', () => {
+    const overdue = { paymentStatus: 'PENDING' as const, isOverdue: true };
+    expect(displayPaymentStatus(overdue)).toBe('OVERDUE');
+    expect(showsPaymentOverdueCue(overdue)).toBe(true);
+    expect(displayPaymentStatus({ paymentStatus: 'PAID', isOverdue: true })).toBe('PAID');
+    expect(showsPaymentOverdueCue({ paymentStatus: 'PAID', isOverdue: true })).toBe(false);
   });
 
   it('allows owner review actions before resubmission', () => {

@@ -4,8 +4,10 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { AdminDetailField, AdminDetailSection } from '../../components/admin';
 import { Card } from '../../components/ui';
+import { ReferenceCode } from '../../components/ui/ReferenceCode';
 import type { AdminStackParamList } from '../../navigation/types';
 import { formatAdminDate } from '../../utils/adminLabels';
+import { isMarkedTestLead } from '../../utils/adminTestLead';
 import { colors, spacing, typography } from '../../theme';
 
 type Props = NativeStackScreenProps<AdminStackParamList, 'AdminActiveSpaceDetail'>;
@@ -20,7 +22,11 @@ export function AdminActiveSpaceDetailScreen({ route }: Props) {
         <Text style={styles.title} numberOfLines={2}>
           {space.name}
         </Text>
+        <ReferenceCode value={space.referenceCode} />
         <Text style={styles.subtitle}>{space.type}</Text>
+        {isMarkedTestLead(space.testLead) ? (
+          <Text style={styles.testBadge}>{t('admin.labels.testBadge')}</Text>
+        ) : null}
       </Card>
 
       <AdminDetailSection>
@@ -58,6 +64,18 @@ const styles = StyleSheet.create({
   headerCard: { marginBottom: spacing.sm },
   title: { ...typography.h2, color: colors.textPrimary },
   subtitle: { ...typography.caption, color: colors.textSecondary, marginTop: 4 },
+  testBadge: {
+    alignSelf: 'flex-start',
+    marginTop: spacing.sm,
+    ...typography.caption,
+    color: colors.white,
+    backgroundColor: '#EF4444',
+    fontWeight: '700',
+    overflow: 'hidden',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
   footnote: {
     ...typography.caption,
     color: colors.muted,

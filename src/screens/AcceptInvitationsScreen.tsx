@@ -23,6 +23,7 @@ import type { MainStackParamList } from '../navigation/types';
 import { useSpaceStore } from '../store/spaceStore';
 import { useToastStore } from '../store/toastStore';
 import { colors, spacing, typography } from '../theme';
+import { membershipRoleLabelKey } from '../utils/memberRoles';
 
 type AcceptInvitationsNav = NativeStackNavigationProp<
   MainStackParamList,
@@ -42,10 +43,10 @@ function formatDate(value: string): string {
 }
 
 function formatRoleLabel(
-  role: MyInvitationResponse['role'],
+  invitation: MyInvitationResponse,
   t: (key: string) => string,
 ): string {
-  return t(`spaces.roles.${role}`);
+  return t(membershipRoleLabelKey(invitation.role, invitation.spaceType));
 }
 
 export function AcceptInvitationsScreen() {
@@ -170,7 +171,7 @@ export function AcceptInvitationsScreen() {
                   key={invitation.invitationId}
                   spaceName={invitation.spaceName}
                   spaceTypeLabel={formatSpaceType(invitation.spaceType)}
-                  roleLabel={formatRoleLabel(invitation.role, t)}
+                  roleLabel={formatRoleLabel(invitation, t)}
                   invitedBy={t('membership.incoming.invitedBy', {
                     name: invitation.invitedBy,
                   })}

@@ -5,6 +5,7 @@ import {
   Building2,
   Check,
   House,
+  Briefcase,
   KeyRound,
   Users,
   UtensilsCrossed,
@@ -59,6 +60,12 @@ const TYPE_VISUAL: Record<
     accent: '#0284C7',
     tint: '#E8F4FF',
     selectedTint: '#D6ECFC',
+  },
+  CORPORATE_STAY: {
+    icon: Briefcase,
+    accent: '#0F766E',
+    tint: '#F0FDFA',
+    selectedTint: '#CCFBF1',
   },
 };
 

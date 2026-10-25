@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { AlertTriangle } from 'lucide-react-native';
 import { Button } from '../ui';
 import { colors, radius, spacing, typography } from '../../theme';
 import { PAYMENT_STATUS_THEME } from '../../utils/paymentStatusTheme';
@@ -28,9 +29,10 @@ export function PaymentNeedsUpdatePanel({
 
   return (
     <View style={styles.card} accessibilityRole="summary">
-      <Text style={styles.title}>
-        ⚠ {t('paymentCollection.needsUpdate.actionRequired')}
-      </Text>
+      <View style={styles.titleRow}>
+        <AlertTriangle size={16} color={theme.accent} strokeWidth={2.2} />
+        <Text style={styles.title}>{t('paymentCollection.needsUpdate.actionRequired')}</Text>
+      </View>
       <Text style={styles.hint}>{t('paymentCollection.updateRequestedHint')}</Text>
 
       {reason ? (
@@ -60,6 +62,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     padding: spacing.md,
     gap: spacing.sm,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   title: {
     ...typography.bodyStrong,

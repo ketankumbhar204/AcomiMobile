@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +10,7 @@ import { StickyFormActions } from '../../components/progressive';
 import type { AdminStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, spacing, typography } from '../../theme';
+import { adminEnquiryShareErrorMessage } from '../../utils/adminEnquiryShareError';
 
 type Props = NativeStackScreenProps<AdminStackParamList, 'AdminEnquiryDetail'>;
 
@@ -20,6 +21,7 @@ export function AdminEnquiryDetailScreen({ route }: Props) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [reason, setReason] = useState('');
+  const shareInFlight = useRef(false);
 
   useEffect(() => {
     adminEnquiryApi
@@ -29,13 +31,26 @@ export function AdminEnquiryDetailScreen({ route }: Props) {
   }, [route.params.id]);
 
   async function share() {
+    if (shareInFlight.current || busy) {
+      return;
+    }
+    shareInFlight.current = true;
     setBusy(true);
     try {
       setDetail(await adminEnquiryApi.share(route.params.id));
       showToast(t('admin.enquiries.shareSuccess'));
-    } catch {
-      showToast(t('admin.enquiries.shareFailed'));
+    } catch (error) {
+      showToast(
+        adminEnquiryShareErrorMessage(error, {
+          alreadyShared: t('admin.enquiries.alreadyShared'),
+          notPending: t('admin.enquiries.notPending'),
+          notFound: t('admin.enquiries.notFound'),
+          forbidden: t('admin.enquiries.shareForbidden'),
+          fallback: t('admin.enquiries.shareFailed'),
+        }),
+      );
     } finally {
+      shareInFlight.current = false;
       setBusy(false);
     }
   }

@@ -11,6 +11,7 @@ import {
   Languages,
   LogOut,
   Bell,
+  Heart,
   MessageCircle,
   SquarePen,
   Smartphone,
@@ -20,11 +21,17 @@ import {
 } from 'lucide-react-native';
 import { authApi } from '../api/authApi';
 import { memberApi } from '../api/memberApi';
-import type { MemberDetailsResponse, MemberDocumentType, MembershipRole } from '../api/types';
+import type {
+  MemberDetailsResponse,
+  MemberDocumentType,
+  MembershipRole,
+  SpaceType,
+} from '../api/types';
 import { LanguagePicker } from '../components/settings/LanguagePicker';
 import { ProfileDocumentsSection } from '../components/profile/ProfileDocumentsSection';
 import { ProfileDocumentUploadModal } from '../components/profile/ProfileDocumentUploadModal';
 import { ProfileHero } from '../components/profile/ProfileHero';
+import { ProfileSettingsLink } from '../components/profile/ProfileSettingsLink';
 import { SettingsGroupCard } from '../components/profile/SettingsGroupCard';
 import { UserProfileFields } from '../components/profile/UserProfileFields';
 import { DashboardActionRow } from '../components/dashboard/shared/DashboardActionRow';
@@ -55,6 +62,10 @@ import {
   profileCompletionPercentage,
 } from '../utils/profileCompletion';
 import {
+  contextualMembershipRole,
+  membershipRoleLabelKey,
+} from '../utils/memberRoles';
+import {
   findPrimaryIdentityDocument,
   profileDocumentsToFormState,
   type ProfileDocumentFormState,
@@ -71,12 +82,12 @@ type ProfileNav = NativeStackNavigationProp<MainStackParamList, 'Profile'>;
 
 function roleToneLabel(
   role: MembershipRole | undefined,
+  spaceType: SpaceType | undefined,
   t: (key: string, opts?: { defaultValue?: string }) => string,
-): string | null {
-  if (!role) {
-    return null;
-  }
-  return t(`spaces.roles.${role}`, { defaultValue: role });
+): string {
+  return t(membershipRoleLabelKey(role, spaceType), {
+    defaultValue: contextualMembershipRole(role, spaceType),
+  });
 }
 
 export function ProfileScreen() {
@@ -363,8 +374,13 @@ export function ProfileScreen() {
         <ProfileHero
           fullName={user.fullName ?? ''}
           mobile={user.mobileNumber}
+          referenceCode={user.referenceCode}
           photoUrl={user.profilePhotoUrl}
-          roleLabel={roleToneLabel(currentSpace?.membershipRole, t)}
+          roleLabel={
+            !currentSpace && user.systemRole === 'ADMIN'
+              ? t('spaces.roles.ADMIN', { defaultValue: 'Admin' })
+              : roleToneLabel(currentSpace?.membershipRole, currentSpace?.spaceType, t)
+          }
           spaceName={currentSpace?.spaceName ?? null}
           statusLabel={profileStatusLabel}
           statusTone={profileStatusTone}
@@ -398,6 +414,14 @@ export function ProfileScreen() {
             subtitle={t('settings.profile.mobileHint')}
             icon={Smartphone}
             onPress={() => navigation.navigate('ChangeMobile')}
+          />
+          <DashboardActionRow
+            title={t('navigation.favorites', { defaultValue: 'Favorites' })}
+            subtitle={t('spaces.favorites.profileSubtitle', {
+              defaultValue: 'PG, hostel, co-living, rental, and mess listings you saved',
+            })}
+            icon={Heart}
+            onPress={() => navigation.navigate('Favorites')}
           />
           <DashboardActionRow
             title={t('settings.profile.myEnquiries')}
@@ -549,23 +573,28 @@ export function ProfileScreen() {
           </View>
         </SettingsGroupCard>
 
-        <Button
-          label={t('settings.profile.privacyPolicy')}
-          variant="ghost"
+        <SettingsGroupCard title={t('settings.profile.accountManagement')} icon={UserRound}>
+          <ProfileSettingsLink
+            variant="embedded"
+            tone="danger"
+            icon={Trash2}
+            title={t('settings.profile.deleteAccount')}
+            subtitle={t('settings.profile.deleteAccountSubtitle')}
+            accessibilityHint={t('settings.profile.deleteAccountLinkHint')}
+            onPress={handleDeleteAccount}
+            disabled={isLoggingOut}
+            testID="profile-delete-account"
+          />
+        </SettingsGroupCard>
+
+        <ProfileSettingsLink
           icon={FileText}
+          title={t('settings.profile.privacyPolicy')}
           onPress={() => {
             void handleOpenPrivacyPolicy();
           }}
           disabled={isLoggingOut}
-        />
-
-        <Button
-          label={t('settings.profile.deleteAccount')}
-          variant="ghost"
-          icon={Trash2}
-          onPress={handleDeleteAccount}
-          disabled={isLoggingOut}
-          style={styles.deleteAccountButton}
+          testID="profile-privacy-policy"
         />
 
         <Button
@@ -576,6 +605,8 @@ export function ProfileScreen() {
           loading={isLoggingOut}
           disabled={isLoggingOut}
           style={styles.logoutButton}
+          accessibilityHint={t('settings.profile.logoutHint')}
+          testID="profile-logout"
         />
       </Screen>
 
@@ -669,14 +700,7 @@ const styles = StyleSheet.create({
   logoutButton: {
     borderWidth: 1,
     borderColor: '#FECACA',
-    marginTop: spacing.sm,
-    backgroundColor: '#FEF2F2',
-    ...shadows.sm,
-  },
-  deleteAccountButton: {
-    borderWidth: 1,
-    borderColor: '#FECACA',
-    marginTop: spacing.sm,
+    marginTop: spacing.xxl,
     backgroundColor: '#FEF2F2',
     ...shadows.sm,
   },

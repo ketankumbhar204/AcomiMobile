@@ -3,7 +3,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { ChevronRight } from 'lucide-react-native';
 import { Card } from '../ui';
-import { colors, spacing, typography } from '../../theme';
+import { colors, radius, spacing, typography } from '../../theme';
+import { isMarkedTestLead } from '../../utils/adminTestLead';
 
 type AdminLeadCardProps = {
   title: string;
@@ -54,10 +55,8 @@ export function AdminLeadCard({
                 {sourceLabel}
               </Text>
             ) : null}
-            {testLead != null ? (
-              <Text style={[styles.testBadge, testLead && styles.testBadgeActive]}>
-                {testLead ? t('admin.labels.testYes') : t('admin.labels.testNo')}
-              </Text>
+            {isMarkedTestLead(testLead) ? (
+              <Text style={styles.testBadge}>{t('admin.labels.testBadge')}</Text>
             ) : null}
             {actionLabel ? <Text style={styles.actionBadge}>{actionLabel}</Text> : null}
           </View>
@@ -104,11 +103,13 @@ const styles = StyleSheet.create({
   },
   testBadge: {
     ...typography.caption,
-    color: colors.textSecondary,
-  },
-  testBadgeActive: {
-    color: colors.warning,
-    fontWeight: '600',
+    color: colors.white,
+    backgroundColor: '#EF4444',
+    fontWeight: '700',
+    overflow: 'hidden',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.full,
   },
   actionBadge: {
     ...typography.caption,

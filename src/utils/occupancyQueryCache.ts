@@ -1,6 +1,7 @@
 import type { OccupancyListFilters, UUID } from '../api/types';
 import { invalidateAccommodationQueries } from './accommodationQueryCache';
 import { invalidateDashboardQueries } from './dashboardQueryCache';
+import { invalidateStayPaymentCache } from './stayChargeIndex';
 
 export const occupancyKeys = {
   detail: (spaceId: UUID, occupancyId: UUID) =>
@@ -30,9 +31,10 @@ export function subscribeOccupancyInvalidation(listener: InvalidationListener): 
   return () => listeners.delete(listener);
 }
 
-/** Refresh accommodation lists/summary and occupancy caches after allocate/transfer/vacate. */
+/** Refresh accommodation lists, bed occupant cards, and occupancy caches after allocate/transfer/vacate. */
 export function invalidateAfterOccupancyChange(): void {
   invalidateOccupancyQueries();
   invalidateAccommodationQueries();
   invalidateDashboardQueries();
+  invalidateStayPaymentCache();
 }

@@ -180,6 +180,7 @@ export function AccommodationOpsFocusInventory({
         roomGroups.map(group => (
           <BuildingInventoryRoomSection
             key={group.key}
+            spaceId={spaceId}
             group={group}
             pathCrumbs={roomGroupPathCrumbs(group, {
               includeBuilding: true,

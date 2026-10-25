@@ -9,6 +9,7 @@ import type { DailyMenuResponse, MealComboResponse, MealType, UUID } from '../..
 import { DailyMenuSlotCard, MealFormHero } from '../../components/meals';
 import { EmptyState } from '../../components/ui';
 import { Screen } from '../../components/ui/Screen';
+import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../../navigation/types';
 import { colors, spacing, typography } from '../../theme';
 import { formatMenuDate, todayIsoDate } from '../../utils/mealDates';
@@ -18,6 +19,8 @@ type DailyMenuTodayScreenProps = {
   spaceId: UUID;
   /** ISO date (YYYY-MM-DD). Defaults to today when omitted. */
   menuDate?: string;
+  /** Meal from a notification. Shown first when that menu exists. */
+  mealType?: MealType;
 };
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'DailyMenuToday'>;
@@ -29,13 +32,20 @@ function menusByType(menus: DailyMenuResponse[]): Partial<Record<MealType, Daily
   }, {});
 }
 
+function menuHasChoices(menu: DailyMenuResponse | undefined): boolean {
+  return Boolean(menu?.options?.some(option => option.isAvailable));
+}
+
 export function DailyMenuTodayScreen({
   spaceId,
   menuDate: menuDateProp,
+  mealType: focusMealType,
 }: DailyMenuTodayScreenProps) {
   const { t, i18n } = useTranslation();
   const navigation = useNavigation<Nav>();
   const route = useRoute();
+  const permissions = useSpacePermissions(spaceId);
+  const canManage = permissions.canManageMeals === true;
   const menuDate = menuDateProp?.trim() || todayIsoDate();
   const isToday = menuDate === todayIsoDate();
   const isStackRoute = route.name === 'DailyMenuToday';
@@ -74,9 +84,7 @@ export function DailyMenuTodayScreen({
     setError(null);
     try {
       const [dayMenus, comboList] = await Promise.all([
-        isToday
-          ? mealsApi.getDailyMenusToday(spaceId)
-          : mealsApi.getDailyMenusByDate(spaceId, menuDate),
+        mealsApi.getDailyMenusByDate(spaceId, menuDate),
         mealsApi.getMealCombos(spaceId).catch(() => []),
       ]);
       setMenus(dayMenus);
@@ -86,7 +94,7 @@ export function DailyMenuTodayScreen({
     } finally {
       setLoading(false);
     }
-  }, [isToday, menuDate, spaceId, t]);
+  }, [menuDate, spaceId, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -94,10 +102,38 @@ export function DailyMenuTodayScreen({
     }, [load]),
   );
 
-  const menuMap = menusByType(menus);
+  const menuMap = useMemo(() => menusByType(menus), [menus]);
   const comboById = useMemo(
     () => new Map(combos.map(combo => [combo.comboId, combo])),
     [combos],
+  );
+  const visibleMealTypes = useMemo(() => {
+    const planned = canManage
+      ? [...MEAL_TYPES]
+      : MEAL_TYPES.filter(type => menuHasChoices(menuMap[type]));
+    if (!focusMealType || !planned.includes(focusMealType)) {
+      return planned;
+    }
+    return [focusMealType, ...planned.filter(type => type !== focusMealType)];
+  }, [canManage, focusMealType, menuMap]);
+
+  const openPlanner = useCallback(
+    (mealType: MealType) => {
+      navigation.navigate('SelectMenuHub', { spaceId, menuDate, mealType });
+    },
+    [menuDate, navigation, spaceId],
+  );
+  const openEditor = useCallback(
+    (mealType: MealType) => {
+      navigation.navigate('DailyMenuEdit', { spaceId, menuDate, mealType });
+    },
+    [menuDate, navigation, spaceId],
+  );
+  const openPoll = useCallback(
+    (mealType: MealType) => {
+      navigation.navigate('MealPollResponse', { spaceId, menuDate, mealType });
+    },
+    [menuDate, navigation, spaceId],
   );
 
   return (
@@ -114,17 +150,26 @@ export function DailyMenuTodayScreen({
           <Text style={styles.error}>{error}</Text>
         </View>
       ) : null}
-      {MEAL_TYPES.map(mealType => (
-        <DailyMenuSlotCard
-          key={mealType}
-          mealType={mealType}
-          menu={menuMap[mealType]}
-          spaceId={spaceId}
-          comboById={comboById}
+      {!loading && !error
+        ? visibleMealTypes.map(mealType => (
+            <DailyMenuSlotCard
+              key={mealType}
+              mealType={mealType}
+              menu={menuMap[mealType]}
+              spaceId={spaceId}
+              comboById={comboById}
+              readOnly={!canManage}
+              onSelectMenu={canManage ? () => openPlanner(mealType) : undefined}
+              onEdit={canManage ? () => openEditor(mealType) : undefined}
+              onRespond={!canManage ? () => openPoll(mealType) : undefined}
+            />
+          ))
+        : null}
+      {!loading && !error && visibleMealTypes.length === 0 ? (
+        <EmptyState
+          title={canManage ? emptyLabel : t('meals.menu.unavailable')}
+          Icon={UtensilsCrossed}
         />
-      ))}
-      {!loading && !error && menus.length === 0 ? (
-        <EmptyState title={emptyLabel} Icon={UtensilsCrossed} />
       ) : null}
     </Screen>
   );

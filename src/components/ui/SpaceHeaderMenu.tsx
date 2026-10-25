@@ -106,6 +106,14 @@ export function SpaceHeaderMenu({ spaceId }: SpaceHeaderMenuProps) {
           stackNavigation.navigate('EditSpace', { spaceId });
         },
       },
+      {
+        id: 'profile',
+        label: t('navigation.profile'),
+        onPress: () => {
+          devLog('[SpaceHeaderMenu] navigate Profile');
+          navigateMainStack('Profile', undefined);
+        },
+      },
     ];
   }, [moreItems, owner, spaceId, stackNavigation, t, tabNavigation]);
 

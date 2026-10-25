@@ -1,0 +1,77 @@
+import type { LucideIcon } from 'lucide-react-native';
+import {
+  AlertTriangle,
+  Bed,
+  CalendarDays,
+  Car,
+  CircleDollarSign,
+  CreditCard,
+  Droplets,
+  Flame,
+  House,
+  Key,
+  LogIn,
+  LogOut,
+  MoreHorizontal,
+  Plug,
+  Shirt,
+  Sparkles,
+  Utensils,
+  Wallet,
+  Wifi,
+  Wrench,
+  Zap,
+} from 'lucide-react-native';
+import type { ChargeCategoryId } from './chargeCatalog';
+
+const CHARGE_TYPE_ICONS: Record<string, LucideIcon> = {
+  RENT: House,
+  ADVANCE_RENT: House,
+  NOTICE_PERIOD: CalendarDays,
+  SECURITY_DEPOSIT: Wallet,
+  DEPOSIT_ADJUSTMENT: Wallet,
+  MAINTENANCE: Wrench,
+  REPAIR: Wrench,
+  DAMAGE: AlertTriangle,
+  FURNITURE_DAMAGE: AlertTriangle,
+  EQUIPMENT_DAMAGE: AlertTriangle,
+  ELECTRICITY: Zap,
+  WATER: Droplets,
+  GAS: Flame,
+  INTERNET: Wifi,
+  OTHER_UTILITY: Plug,
+  MEAL_PLAN: Utensils,
+  EXTRA_MEALS: Utensils,
+  MEAL_ADJUSTMENT: Utensils,
+  OTHER_MEAL: Utensils,
+  LAUNDRY: Shirt,
+  CLEANING: Sparkles,
+  PARKING: Car,
+  KEY_REPLACEMENT: Key,
+  ACCESS_CARD: CreditCard,
+  APPLIANCE: Plug,
+  MOVE_IN: LogIn,
+  MOVE_OUT: LogOut,
+  ROOM_CHANGE: Bed,
+  OTHER_SERVICE: Wrench,
+  LATE_FEE: AlertTriangle,
+  FINE: AlertTriangle,
+  OTHER_PENALTY: AlertTriangle,
+  MISCELLANEOUS: MoreHorizontal,
+  OTHER: MoreHorizontal,
+};
+
+export function getChargeTypeIcon(typeId: string): LucideIcon {
+  return CHARGE_TYPE_ICONS[typeId] ?? CircleDollarSign;
+}
+
+export const CHARGE_CATEGORY_BADGE: Record<ChargeCategoryId, { bg: string; color: string }> = {
+  RENT: { bg: '#DCFCE7', color: '#15803D' },
+  DEPOSIT: { bg: '#FEF3C7', color: '#B45309' },
+  MAINTENANCE: { bg: '#EDE9FE', color: '#6D28D9' },
+  UTILITY: { bg: '#DBEAFE', color: '#1D4ED8' },
+  MEALS: { bg: '#FFEDD5', color: '#C2410C' },
+  SERVICE: { bg: '#F1F5F9', color: '#475569' },
+  PENALTY: { bg: '#FEE2E2', color: '#B91C1C' },
+  OTHER: { bg: '#F1F5F9', color: '#475569' },
+};

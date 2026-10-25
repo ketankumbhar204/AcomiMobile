@@ -13,7 +13,9 @@ import {
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Coffee, Moon, UtensilsCrossed, X, type LucideIcon } from 'lucide-react-native';
 import { mealsApi } from '../../api/mealsApi';
+import { useMealPricingPolicy } from '../../hooks/useMealPricingPolicy';
 import type {
   MemberMealActivityDayDetail,
   MemberMealActivitySlotDetail,
@@ -25,11 +27,15 @@ import type {
   UUID,
 } from '../../api/types';
 import { useToastStore } from '../../store/toastStore';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { formatComboPrice } from '../../utils/comboPrice';
 import { formatMenuDateCompact, formatResponseDateParts } from '../../utils/mealDates';
 import { MEAL_TYPES, mealTypeLabelKey } from '../../utils/mealLabels';
 import { dayDetailHasActivity, formatPlateCount } from '../../utils/memberMealActivityDayDetail';
+import {
+  canChooseActivityMeals,
+  isUnansweredClosedPoll,
+} from '../../utils/memberMealActivityHistory';
 import { canSendPaymentReminder } from '../../utils/mealPollPayment';
 import { MealPollPaymentReviewModal } from './MealPollPaymentReviewModal';
 import { ImagePreviewModal } from '../files/ImagePreviewModal';
@@ -38,21 +44,21 @@ const BACKDROP_DELAY_MS = 450;
 const SHEET_MIN_RATIO = 0.88;
 const SHEET_MAX_RATIO = 0.96;
 
-const MEAL_EMOJI: Record<MealType, string> = {
-  BREAKFAST: '🍳',
-  LUNCH: '🍱',
-  DINNER: '🌙',
+const MEAL_ICON: Record<MealType, LucideIcon> = {
+  BREAKFAST: Coffee,
+  LUNCH: UtensilsCrossed,
+  DINNER: Moon,
 };
 
 const STATUS_CHIP: Record<
   MemberMealActivitySlotStatus,
   { bg: string; text: string; dot: string }
 > = {
-  ACCEPTED: { bg: colors.successTint, text: colors.success, dot: '🟢' },
-  PENDING: { bg: '#FEFCE8', text: '#CA8A04', dot: '🟡' },
-  SKIPPED: { bg: '#FEF2F2', text: '#DC2626', dot: '🔴' },
-  NO_MENU: { bg: '#F3F4F6', text: colors.muted, dot: '⚪' },
-  INACTIVE: { bg: '#F9FAFB', text: colors.muted, dot: '⚪' },
+  ACCEPTED: { bg: colors.successTint, text: colors.success, dot: colors.success },
+  PENDING: { bg: '#FEFCE8', text: '#CA8A04', dot: '#CA8A04' },
+  SKIPPED: { bg: '#FEF2F2', text: '#DC2626', dot: '#DC2626' },
+  NO_MENU: { bg: '#F3F4F6', text: colors.muted, dot: colors.muted },
+  INACTIVE: { bg: '#F9FAFB', text: colors.muted, dot: colors.muted },
 };
 
 type MemberMealActivityDaySheetProps = {
@@ -62,6 +68,7 @@ type MemberMealActivityDaySheetProps = {
   memberId: UUID;
   memberName: string;
   canManage: boolean;
+  onRespond?: (date: string) => void;
   onClose: () => void;
   onPaymentReviewed?: () => void;
 };
@@ -137,9 +144,8 @@ function StatusChip({ status, label }: { status: MemberMealActivitySlotStatus; l
   const chip = STATUS_CHIP[status];
   return (
     <View style={[styles.statusChip, { backgroundColor: chip.bg }]}>
-      <Text style={styles.statusChipText}>
-        {chip.dot} {label}
-      </Text>
+      <View style={[styles.statusDot, { backgroundColor: chip.dot }]} />
+      <Text style={[styles.statusChipText, { color: chip.text }]}>{label}</Text>
     </View>
   );
 }
@@ -148,27 +154,36 @@ function MealCard({
   slot,
   t,
   currencyCode,
+  showPrices,
 }: {
   slot: MemberMealActivitySlotDetail;
   t: (key: string, options?: Record<string, unknown>) => string;
   currencyCode?: string | null;
+  showPrices: boolean;
 }) {
   const totalQuantity = slot.selections.reduce((sum, row) => sum + row.quantity, 0);
   const comboLabels = slot.selections.map(row => row.label).join(', ');
-  const statusText = dayStatusLabel(slot.status, t);
+  const unansweredClosed = isUnansweredClosedPoll(slot);
+  const statusText = unansweredClosed
+    ? t('meals.poll.notSelected')
+    : dayStatusLabel(slot.status, t);
+  const chipStatus = unansweredClosed ? 'NO_MENU' : slot.status;
   const amount = formatComboPrice(slot.slotTotal, slot.selections[0]?.currencyCode ?? currencyCode);
-  const showChipOnly =
-    slot.status !== 'ACCEPTED' ||
-    (!comboLabels && totalQuantity === 0);
+  const showChipOnly = !comboLabels && totalQuantity === 0;
+  const MealIcon = MEAL_ICON[slot.mealType];
 
   return (
     <View style={styles.mealCard}>
-      <Text style={styles.mealTitle}>
-        {MEAL_EMOJI[slot.mealType]} {t(mealTypeLabelKey(slot.mealType))}
-      </Text>
+      <View style={styles.mealTitleRow}>
+        <MealIcon size={16} color={colors.primaryDark} strokeWidth={2.2} />
+        <Text style={styles.mealTitle}>{t(mealTypeLabelKey(slot.mealType))}</Text>
+        {slot.pollStatus === 'CLOSED' && !unansweredClosed ? (
+          <Text style={styles.pollClosedInline}>{t('meals.poll.pollClosed')}</Text>
+        ) : null}
+      </View>
 
       {showChipOnly ? (
-        <StatusChip status={slot.status} label={statusText} />
+        <StatusChip status={chipStatus} label={statusText} />
       ) : (
         <View style={styles.mealRows}>
           <CompactRow label={t('meals.activity.daySheet.status')} value={statusText} />
@@ -181,7 +196,7 @@ function MealCard({
               value={formatPlateCount(totalQuantity, t)}
             />
           ) : null}
-          {amount ? (
+          {showPrices && amount ? (
             <CompactRow
               label={t('meals.activity.daySheet.amount')}
               value={amount}
@@ -203,6 +218,7 @@ function PaymentSummarySection({
   reminding,
   t,
   locale,
+  showPrices,
 }: {
   detail: MemberMealActivityDayDetail;
   subscription?: MemberMealActivitySubscription | null;
@@ -212,11 +228,14 @@ function PaymentSummarySection({
   reminding: boolean;
   t: ReturnType<typeof useTranslation>['t'];
   locale: string;
+  showPrices: boolean;
 }) {
   const payment = detail.payment;
   const [proofViewerOpen, setProofViewerOpen] = useState(false);
-  const hasCharges = (detail.dailyCharges?.length ?? 0) > 0;
-  const dayTotalFormatted = formatComboPrice(detail.dayTotal, detail.currencyCode);
+  const hasCharges = showPrices && (detail.dailyCharges?.length ?? 0) > 0;
+  const dayTotalFormatted = showPrices
+    ? formatComboPrice(detail.dayTotal, detail.currencyCode)
+    : null;
 
   if (!payment && !subscription?.coveredBySubscription && !hasCharges && !dayTotalFormatted) {
     return null;
@@ -281,19 +300,24 @@ function PaymentSummarySection({
           />
         ) : null}
 
-        {(detail.dailyCharges ?? []).map(charge => {
-          const amount = formatComboPrice(charge.amount, charge.currencyCode ?? detail.currencyCode);
-          if (!amount) {
-            return null;
-          }
-          return (
-            <CompactRow
-              key={charge.mealType}
-              label={t(mealTypeLabelKey(charge.mealType as MealType))}
-              value={amount}
-            />
-          );
-        })}
+        {showPrices
+          ? (detail.dailyCharges ?? []).map(charge => {
+              const amount = formatComboPrice(
+                charge.amount,
+                charge.currencyCode ?? detail.currencyCode,
+              );
+              if (!amount) {
+                return null;
+              }
+              return (
+                <CompactRow
+                  key={charge.mealType}
+                  label={t(mealTypeLabelKey(charge.mealType as MealType))}
+                  value={amount}
+                />
+              );
+            })
+          : null}
       </View>
 
       {payment?.proofSubmittedAt ? (
@@ -460,11 +484,15 @@ export function MemberMealActivityDaySheet({
   memberId,
   memberName,
   canManage,
+  onRespond,
   onClose,
   onPaymentReviewed,
 }: MemberMealActivityDaySheetProps) {
   const { t, i18n } = useTranslation();
   const showToast = useToastStore(state => state.showToast);
+  const { showMealPrices } = useMealPricingPolicy(spaceId);
+  const onReviewedRef = useRef(onPaymentReviewed);
+  onReviewedRef.current = onPaymentReviewed;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detail, setDetail] = useState<MemberMealActivityDayDetail | null>(null);
@@ -488,6 +516,7 @@ export function MemberMealActivityDaySheet({
     try {
       const data = await mealsApi.getMemberMealActivityDay(spaceId, memberId, date);
       setDetail(data);
+      onReviewedRef.current?.();
     } catch {
       setError(t('meals.activity.dayDetailLoadError'));
       showToast(t('meals.activity.dayDetailLoadError'));
@@ -654,6 +683,13 @@ export function MemberMealActivityDaySheet({
   const sheetTitle = date ? formatMenuDateCompact(date, i18n.language) : '';
   const sheetSubtitle = detail?.memberName ?? memberName;
   const slotsToShow = visibleSlots.length > 0 ? visibleSlots : orderedSlots;
+  const canChooseMeals = canChooseActivityMeals(slotsToShow);
+  const showClosedChoice =
+    !canManage &&
+    Boolean(onRespond) &&
+    Boolean(date) &&
+    slotsToShow.some(slot => slot.status === 'PENDING') &&
+    !canChooseMeals;
 
   return (
     <>
@@ -694,7 +730,7 @@ export function MemberMealActivityDaySheet({
                   ) : null}
                 </View>
                 <Pressable onPress={onClose} hitSlop={12} style={styles.headerSide}>
-                  <Text style={styles.closeBtn}>✕</Text>
+                  <X size={18} color={colors.textPrimary} strokeWidth={2.2} />
                 </Pressable>
               </View>
 
@@ -720,9 +756,29 @@ export function MemberMealActivityDaySheet({
                             slot={slot}
                             t={t}
                             currencyCode={detail.currencyCode}
+                            showPrices={showMealPrices}
                           />
                         ))}
                       </View>
+                      {!canManage && onRespond && date && canChooseMeals ? (
+                        <Pressable
+                          style={styles.reviewBtn}
+                          onPress={() => onRespond(date)}
+                          accessibilityRole="button">
+                          <Text style={styles.reviewBtnText}>
+                            {t('dashboard.pollCard.chooseMyMeals')}
+                          </Text>
+                        </Pressable>
+                      ) : showClosedChoice ? (
+                        <View
+                          style={styles.reviewBtnDisabled}
+                          accessibilityRole="text"
+                          accessibilityState={{ disabled: true }}>
+                          <Text style={styles.reviewBtnDisabledText}>
+                            {t('meals.poll.pollClosed')}
+                          </Text>
+                        </View>
+                      ) : null}
                     </Section>
 
                     <PaymentSummarySection
@@ -734,6 +790,7 @@ export function MemberMealActivityDaySheet({
                       reminding={reminding}
                       t={t}
                       locale={i18n.language}
+                      showPrices={showMealPrices}
                     />
 
                     <DeliverySection slots={orderedSlots} t={t} />
@@ -787,7 +844,7 @@ export function MemberMealActivityDaySheet({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'flex-end',
   },
   backdropTap: {
@@ -795,16 +852,12 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   sheet: {
+    ...shadows.raised,
     backgroundColor: colors.white,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     overflow: 'hidden',
-    elevation: 24,
     zIndex: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
   },
   handleArea: {
     alignItems: 'center',
@@ -929,19 +982,38 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     gap: spacing.xs,
   },
+  mealTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
   mealTitle: {
     ...typography.bodyStrong,
     color: colors.primaryDark,
     fontSize: 14,
+    flex: 1,
+  },
+  pollClosedInline: {
+    ...typography.caption,
+    color: colors.muted,
+    fontWeight: '700',
   },
   mealRows: {
     gap: 3,
   },
   statusChip: {
     alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     borderRadius: 6,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   statusChipText: {
     ...typography.caption,
@@ -976,6 +1048,19 @@ const styles = StyleSheet.create({
   reviewBtnText: {
     ...typography.caption,
     color: colors.white,
+    fontWeight: '700',
+  },
+  reviewBtnDisabled: {
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    marginTop: spacing.xs,
+  },
+  reviewBtnDisabledText: {
+    ...typography.caption,
+    color: colors.muted,
     fontWeight: '700',
   },
   remindBtn: {

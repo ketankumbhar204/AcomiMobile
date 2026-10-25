@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { AccommodationStatus, OccupancyResponse, SpaceType } from '../api/types';
 import { updateBedDetails } from '../utils/accommodationInlineRename';
 import {
+  bedTargetAfterDetailsSave,
   hasBedPricingChange,
   isBedDraftUnchanged,
   type BedInteractionDraft,
@@ -10,6 +11,7 @@ import {
 import { formatBedDisplayLabel } from '../utils/formatBedDisplayLabel';
 import type { OccupancyTargetSelection } from '../utils/occupancyRules';
 import { getAccommodationErrorMessage } from '../utils/accommodationErrors';
+import { invalidateStayPaymentCache } from '../utils/stayChargeIndex';
 import { useToastStore } from '../store/toastStore';
 import { useConfirmBedPricingCommit } from './useConfirmBedPricingCommit';
 
@@ -40,6 +42,11 @@ export function usePersistedBedInteraction(options: {
   const [saving, setSaving] = useState(false);
   const onSuccessRef = useRef(options.onSuccess);
   onSuccessRef.current = options.onSuccess;
+  const savedDraftRef = useRef<BedInteractionDraft | null>(null);
+
+  const keepOpenWithSavedDraft = useCallback((draft: BedInteractionDraft) => {
+    setTarget(current => (current ? bedTargetAfterDetailsSave(current, draft) : current));
+  }, []);
 
   const close = useCallback(() => {
     setTarget(null);
@@ -48,7 +55,10 @@ export function usePersistedBedInteraction(options: {
   const pricingCommit = useConfirmBedPricingCommit({
     spaceId: options.spaceId,
     onSuccess: async () => {
-      setTarget(null);
+      if (savedDraftRef.current) {
+        keepOpenWithSavedDraft(savedDraftRef.current);
+        savedDraftRef.current = null;
+      }
       await onSuccessRef.current?.();
     },
   });
@@ -84,7 +94,11 @@ export function usePersistedBedInteraction(options: {
             bedNumber: nextNumber,
           });
           showToast(t('accommodation.beds.updateSuccess'));
-          setTarget(null);
+          keepOpenWithSavedDraft({
+            bedNumber: nextNumber,
+            rent: target.rent ?? null,
+            deposit: target.deposit ?? null,
+          });
           await onSuccessRef.current?.();
         } catch (err) {
           showToast(getAccommodationErrorMessage(err, 'accommodation.errors.saveBed'));
@@ -94,6 +108,11 @@ export function usePersistedBedInteraction(options: {
         return;
       }
 
+      savedDraftRef.current = {
+        bedNumber: nextNumber,
+        rent: draft.rent,
+        deposit: draft.deposit,
+      };
       pricingCommit.request({
         roomId: target.roomId,
         bedId: target.bedId,
@@ -106,7 +125,7 @@ export function usePersistedBedInteraction(options: {
         bedNumber: nextNumber,
       });
     },
-    [options, pricingCommit, showToast, t, target],
+    [keepOpenWithSavedDraft, options, pricingCommit, showToast, t, target],
   );
 
   return {
@@ -120,6 +139,7 @@ export function usePersistedBedInteraction(options: {
     canEditStructure: options.canEditStructure,
     canManageOccupancy: options.canManageOccupancy,
     onOccupancySuccess: () => {
+      invalidateStayPaymentCache();
       setTarget(null);
       void onSuccessRef.current?.();
     },

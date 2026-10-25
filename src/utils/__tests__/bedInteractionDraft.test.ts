@@ -1,4 +1,5 @@
 import {
+  bedTargetAfterDetailsSave,
   hasBedNumberChange,
   hasBedPricingChange,
   isBedDraftUnchanged,
@@ -49,5 +50,56 @@ describe('bedInteractionDraft', () => {
     expect(isOccupancyMoneyMissing('3000')).toBe(false);
     expect(isOccupancyMoneyMissing(3000)).toBe(false);
     expect(isOccupancyMoneyMissing(6000)).toBe(false);
+  });
+
+  it('keeps the same bed selected after rent and deposit are saved', () => {
+    const target = {
+      bedId: 'bed-b',
+      roomId: 'room-b',
+      bedNumber: 'B',
+      label: 'Bed B',
+      rent: 5000,
+      deposit: 2000,
+      locationLine: 'Room B · Unit 101 · Floor 1 · Sunrise PG',
+      occupancyTarget: {
+        bedId: 'bed-b',
+        roomId: 'room-b',
+        bedName: 'Bed B',
+      },
+    };
+
+    const rentOnly = bedTargetAfterDetailsSave(target, {
+      bedNumber: 'B',
+      rent: 6000,
+      deposit: 2000,
+    });
+    expect(rentOnly.bedId).toBe('bed-b');
+    expect(rentOnly.rent).toBe(6000);
+    expect(rentOnly.deposit).toBe(2000);
+    expect(rentOnly.locationLine).toBe(target.locationLine);
+
+    const depositOnly = bedTargetAfterDetailsSave(target, {
+      bedNumber: 'B',
+      rent: 5000,
+      deposit: 3000,
+    });
+    expect(depositOnly.bedId).toBe('bed-b');
+    expect(depositOnly.deposit).toBe(3000);
+
+    const both = bedTargetAfterDetailsSave(target, {
+      bedNumber: ' B ',
+      rent: 6000,
+      deposit: 3000,
+    });
+    expect(both.bedId).toBe('bed-b');
+    expect(both.bedNumber).toBe('B');
+    expect(both.label).toBe('B');
+    expect(both.rent).toBe(6000);
+    expect(both.deposit).toBe(3000);
+    expect(both.occupancyTarget).toEqual({
+      bedId: 'bed-b',
+      roomId: 'room-b',
+      bedName: 'B',
+    });
   });
 });

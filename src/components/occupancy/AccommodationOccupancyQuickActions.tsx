@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { ChevronRight } from 'lucide-react-native';
 import type { AccommodationStatus, SpaceType } from '../../api/types';
 import { colors, radius, spacing, typography } from '../../theme';
 import { isOccupancyTargetSupported } from '../../utils/buildOccupancyTarget';
@@ -114,7 +115,7 @@ export function AccommodationOccupancyQuickActions({
           <Text style={styles.occupantLabel} numberOfLines={1}>
             {occupantText}
           </Text>
-          <Text style={styles.occupantChevron}>›</Text>
+          <ChevronRight size={16} color={colors.muted} strokeWidth={2.4} />
         </Pressable>
       ) : occupantText ? (
         <Text style={styles.occupantLabel} numberOfLines={1}>

@@ -87,4 +87,13 @@ export const locationsApi = {
       }),
     );
   },
+
+  autocompleteAddress: async (q: string): Promise<LocationAutocompleteSuggestion[]> => {
+    devLog(`${LOG_TAG} GET /locations/autocomplete/address`, { queryLength: q.trim().length });
+    return unwrapApiResponse(
+      apiClient.get<ApiResponse<LocationAutocompleteSuggestion[]>>('/locations/autocomplete/address', {
+        params: { q: q.trim() },
+      }),
+    );
+  },
 };

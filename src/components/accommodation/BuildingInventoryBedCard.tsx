@@ -1,16 +1,27 @@
 import React, { memo, useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { BedSingle, ChevronRight, Plus } from 'lucide-react-native';
-import type { AccommodationStatus, BedSpaceListItemResponse } from '../../api/types';
+import { ChevronRight, Plus } from 'lucide-react-native';
+import type { AccommodationStatus } from '../../api/types';
 import { BedPricingDisplay } from './BedPricingDisplay';
-import { colors, spacing, typography } from '../../theme';
+import { OccupiedBedPaymentFace } from './OccupiedBedPaymentFace';
+import { getBedIllustration } from './layout/illustrations/illustrationAssets';
+import { useMoveInBedFace } from '../dashboard/bedInventoryFace';
+import { colors, pastels, spacing, typography } from '../../theme';
 import { formatBedDisplayLabel } from '../../utils/formatBedDisplayLabel';
 import { getAccommodationStatusColor } from '../../utils/accommodationStatus';
 
-/** Wide enough for labeled Rent / Deposit while still showing ~2 cards. */
-const BED_CARD_WIDTH = 188;
-const ADD_CARD_WIDTH = 128;
+/** Fields both the room list and the building inventory list provide. */
+export type InventoryBedCardModel = {
+  bedId: string;
+  label: string;
+  status: AccommodationStatus;
+  defaultRent?: number | null;
+  defaultDeposit?: number | null;
+  active?: boolean;
+};
+
+/** Fills the carousel slot. The room carousel sets the card width. */
 
 function bedSurface(status: AccommodationStatus): {
   bg: string;
@@ -54,8 +65,11 @@ function bedSurface(status: AccommodationStatus): {
 }
 
 type BuildingInventoryBedCardProps = {
-  bed: BedSpaceListItemResponse;
+  bed: InventoryBedCardModel;
+  spaceId?: string;
+  highlighted?: boolean;
   onPress?: () => void;
+  onLongPress?: () => void;
   onEdit?: () => void;
   menu?: React.ReactNode;
   footer?: React.ReactNode;
@@ -63,32 +77,55 @@ type BuildingInventoryBedCardProps = {
 
 function BuildingInventoryBedCardComponent({
   bed,
+  spaceId,
+  highlighted = false,
   onPress,
+  onLongPress,
   onEdit,
   menu,
   footer,
 }: BuildingInventoryBedCardProps) {
   const { t } = useTranslation();
   const displayLabel = formatBedDisplayLabel(bed.label, t);
-  const surface = useMemo(() => bedSurface(bed.status), [bed.status]);
+  const moveIn = useMoveInBedFace(bed.bedId);
+  const surface = useMemo(() => {
+    if (moveIn) {
+      return {
+        accent: pastels.blue.fg,
+        bg: pastels.blue.bg,
+        border: pastels.blue.border,
+        iconBg: '#DBEAFE',
+      };
+    }
+    return bedSurface(bed.status);
+  }, [bed.status, moveIn]);
 
   return (
+    <View style={styles.slot}>
     <Pressable
       onPress={onPress}
+      onLongPress={onLongPress}
       disabled={!onPress}
       style={({ pressed }) => [
         styles.card,
         {
           backgroundColor: surface.bg,
-          borderColor: surface.border,
+          borderColor: highlighted ? colors.primary : surface.border,
+          borderWidth: highlighted ? 1.5 : 1,
         },
+        bed.active === false ? styles.cardInactive : null,
         pressed && onPress ? styles.cardPressed : null,
       ]}
       accessibilityRole={onPress ? 'button' : undefined}
       accessibilityLabel={displayLabel}>
       <View style={styles.header}>
         <View style={[styles.iconWrap, { backgroundColor: surface.iconBg }]}>
-          <BedSingle size={16} color={surface.accent} strokeWidth={2.2} />
+          <Image
+            source={getBedIllustration(bed.status)}
+            style={styles.bedArt}
+            resizeMode="contain"
+            fadeDuration={0}
+          />
         </View>
         <View style={styles.titleWrap}>
           <Text style={styles.label} numberOfLines={1}>
@@ -104,7 +141,9 @@ function BuildingInventoryBedCardComponent({
             ]}>
             <View style={[styles.statusDot, { backgroundColor: surface.accent }]} />
             <Text style={[styles.statusText, { color: surface.accent }]} numberOfLines={1}>
-              {t(`accommodation.status.${bed.status}`, { defaultValue: bed.status })}
+              {moveIn
+                ? t('dashboard.drilldown.movedIn', { defaultValue: 'Moved in' })
+                : t(`accommodation.status.${bed.status}`, { defaultValue: bed.status })}
             </Text>
           </View>
         </View>
@@ -124,11 +163,28 @@ function BuildingInventoryBedCardComponent({
           <View style={styles.menuSlot}>{menu}</View>
         ) : null}
       </View>
-      <View style={styles.pricingWell}>
-        <BedPricingDisplay rent={bed.defaultRent} deposit={bed.defaultDeposit} layout="stack" />
+      <View style={styles.pricing}>
+        {moveIn ? (
+          <>
+            {moveIn.moveInDate ? (
+              <Text style={styles.moveInLine} numberOfLines={1}>
+                {t('dashboard.drilldown.moveInLine', { date: moveIn.moveInDate })}
+              </Text>
+            ) : null}
+            <Text style={styles.moveInMember} numberOfLines={1}>
+              {moveIn.memberName}
+            </Text>
+            <BedPricingDisplay rent={moveIn.rent} deposit={moveIn.deposit} layout="stack" />
+          </>
+        ) : bed.status === 'OCCUPIED' ? (
+          <OccupiedBedPaymentFace spaceId={spaceId} bedId={bed.bedId} />
+        ) : (
+          <BedPricingDisplay rent={bed.defaultRent} deposit={bed.defaultDeposit} layout="stack" />
+        )}
       </View>
       {footer}
     </Pressable>
+    </View>
   );
 }
 
@@ -139,6 +195,7 @@ type BuildingInventoryAddBedCardProps = {
 export function BuildingInventoryAddBedCard({ onPress }: BuildingInventoryAddBedCardProps) {
   const { t } = useTranslation();
   return (
+    <View style={styles.slot}>
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [styles.addCard, pressed && styles.cardPressed]}
@@ -151,21 +208,31 @@ export function BuildingInventoryAddBedCard({ onPress }: BuildingInventoryAddBed
         {t('accommodation.builder.addBed', { defaultValue: 'Add Bed' })}
       </Text>
     </Pressable>
+    </View>
   );
 }
 
 export const BuildingInventoryBedCard = memo(BuildingInventoryBedCardComponent);
 
 const styles = StyleSheet.create({
+  slot: {
+    width: '100%',
+    flexGrow: 1,
+  },
   card: {
-    width: BED_CARD_WIDTH,
+    flex: 1,
     borderRadius: 14,
-    borderWidth: 1.5,
-    padding: spacing.sm,
-    gap: spacing.sm,
+    borderWidth: 1,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    gap: 6,
+    overflow: 'hidden',
   },
   cardPressed: {
     opacity: 0.92,
+  },
+  cardInactive: {
+    opacity: 0.55,
   },
   header: {
     flexDirection: 'row',
@@ -174,11 +241,16 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   iconWrap: {
-    width: 32,
-    height: 32,
+    width: 44,
+    height: 44,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  bedArt: {
+    width: 40,
+    height: 40,
   },
   titleWrap: {
     flex: 1,
@@ -226,17 +298,23 @@ const styles = StyleSheet.create({
     marginTop: -6,
     marginRight: -6,
   },
-  pricingWell: {
-    backgroundColor: colors.white,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(15, 23, 42, 0.06)',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
+  moveInLine: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  moveInMember: {
+    ...typography.caption,
+    color: colors.textPrimary,
+    fontWeight: '700',
+  },
+  pricing: {
+    minWidth: 0,
+    width: '100%',
+    marginTop: 2,
   },
   addCard: {
-    width: ADD_CARD_WIDTH,
-    minHeight: 148,
+    flex: 1,
+    minHeight: 112,
     borderRadius: 14,
     borderWidth: 1.5,
     borderStyle: 'dashed',

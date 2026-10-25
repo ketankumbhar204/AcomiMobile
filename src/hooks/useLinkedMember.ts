@@ -10,11 +10,12 @@ import { useAuthStore } from '../store/authStore';
 export function useLinkedMember(spaceId: UUID | null | undefined) {
   const userId = useAuthStore(state => state.userId);
   const [member, setMember] = useState<MemberResponse | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(Boolean(spaceId && userId));
 
   const refresh = useCallback(async () => {
     if (!spaceId || !userId) {
       setMember(null);
+      setLoading(false);
       return null;
     }
 

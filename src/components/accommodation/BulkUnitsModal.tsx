@@ -86,7 +86,7 @@ export function BulkUnitsModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'center',
     padding: spacing.xl,
   },
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: radius.card,
     padding: spacing.xl,
-    ...shadows.md,
+    ...shadows.raised,
   },
   title: {
     ...typography.h2,

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { ChevronDown, ChevronRight, Pencil } from 'lucide-react-native';
 import type {
   MealHeadcountDetailResponse,
   MealHeadcountMember,
@@ -171,7 +172,11 @@ function CollapsibleSection({
         <Text style={styles.secondaryTitle}>{title}</Text>
         <View style={styles.secondaryMeta}>
           <Text style={styles.secondaryCount}>{count}</Text>
-          <Text style={styles.chevron}>{expanded ? '▾' : '▸'}</Text>
+          {expanded ? (
+            <ChevronDown size={16} color={colors.muted} strokeWidth={2.4} />
+          ) : (
+            <ChevronRight size={16} color={colors.muted} strokeWidth={2.4} />
+          )}
         </View>
       </Pressable>
       {expanded ? children : null}
@@ -593,7 +598,7 @@ function DeliveryLocationHierarchyAccordion({
                   ellipsizeMode="tail">
                   {group.locationName}
                 </Text>
-                <Text style={styles.servingLocationEditIcon}>✏️</Text>
+                <Pencil size={14} color={colors.primaryDark} strokeWidth={2.2} />
               </Pressable>
             ) : (
               <Text
@@ -606,7 +611,11 @@ function DeliveryLocationHierarchyAccordion({
             <Text style={styles.locationSeparator}>:</Text>
             <View style={styles.locationHeaderSpacer} />
             <Text style={styles.locationMealsInline}>{mealsLabel}</Text>
-            <Text style={styles.chevron}>{expanded ? '▾' : '›'}</Text>
+            {expanded ? (
+              <ChevronDown size={16} color={colors.muted} strokeWidth={2.4} />
+            ) : (
+              <ChevronRight size={16} color={colors.muted} strokeWidth={2.4} />
+            )}
           </Pressable>
         )}
       </View>

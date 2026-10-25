@@ -5,19 +5,36 @@ import { X } from 'lucide-react-native';
 import type { SpacePaymentResponse } from '../../api/types';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { formatPaymentAmount } from '../../utils/paymentHistory';
+import { usePaymentStayTrail } from '../../hooks/usePaymentStayTrail';
+import { StayTrailLine } from '../member/ContactAndStayMeta';
 import { Button } from '../ui';
 
 type PaymentReceivedConfirmModalProps = {
   visible: boolean;
   payments: SpacePaymentResponse[];
+  spaceName?: string | null;
   loading?: boolean;
   onClose: () => void;
   onConfirm: () => void;
 };
 
+function periodLabel(month?: string | null): string | null {
+  if (!month) return null;
+  const match = /^(\d{4})-(\d{2})$/.exec(month);
+  if (!match) return month;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, 1);
+  return date.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+}
+
+function ConfirmStayLine({ payment }: { payment: SpacePaymentResponse }) {
+  const trail = usePaymentStayTrail(payment.spaceId, payment);
+  return <StayTrailLine label={trail} textStyle={styles.line} />;
+}
+
 export function PaymentReceivedConfirmModal({
   visible,
   payments,
+  spaceName,
   loading = false,
   onClose,
   onConfirm,
@@ -26,7 +43,13 @@ export function PaymentReceivedConfirmModal({
   const primary = payments[0];
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      presentationStyle="overFullScreen"
+      onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.card}>
           <View style={styles.header}>
@@ -44,16 +67,21 @@ export function PaymentReceivedConfirmModal({
           {primary ? (
             <View style={styles.summary}>
               <Text style={styles.member}>{primary.memberName}</Text>
-              {payments.map(payment => (
-                <Text key={payment.paymentId} style={styles.line}>
-                  {payment.title}
-                  {' · '}
-                  {formatPaymentAmount(payment.amount, payment.currencyCode)}
-                </Text>
-              ))}
-              {primary.targetLabel ? (
-                <Text style={styles.target}>{primary.targetLabel}</Text>
-              ) : null}
+              {spaceName ? <Text style={styles.line}>{spaceName}</Text> : null}
+              {payments.map(payment => {
+                const outstanding = payment.outstandingAmount ?? payment.amount;
+                const period = periodLabel(payment.month);
+                return (
+                  <View key={payment.paymentId}>
+                    <Text style={styles.line}>{payment.title}</Text>
+                    <ConfirmStayLine payment={payment} textStyle={styles.line} />
+                    {period ? <Text style={styles.line}>{period}</Text> : null}
+                    <Text style={styles.line}>
+                      {formatPaymentAmount(outstanding, payment.currencyCode)}
+                    </Text>
+                  </View>
+                );
+              })}
             </View>
           ) : null}
 
@@ -83,7 +111,7 @@ export function PaymentReceivedConfirmModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'center',
     padding: spacing.xl,
   },
@@ -91,7 +119,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: radius.card,
     padding: spacing.lg,
-    ...shadows.md,
+    ...shadows.raised,
   },
   header: {
     flexDirection: 'row',

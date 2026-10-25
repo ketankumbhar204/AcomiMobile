@@ -17,6 +17,7 @@ import {
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Check, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { accommodationApi } from '../../api/accommodationApi';
 import type { FloorListItemResponse, SpaceType, UnitListItemResponse, UUID } from '../../api/types';
 import { useBuildings } from '../../hooks/useBuildings';
@@ -100,9 +101,11 @@ function FilterTrigger({
           numberOfLines={1}>
           {valueLabel}
         </Text>
-        <Text style={[styles.chevron, active && styles.chevronActive]}>
-          {active ? '▴' : '▾'}
-        </Text>
+        {active ? (
+          <ChevronUp size={14} color={colors.primaryDark} strokeWidth={2.4} />
+        ) : (
+          <ChevronDown size={14} color={colors.muted} strokeWidth={2.4} />
+        )}
       </Pressable>
     </View>
   );
@@ -122,12 +125,14 @@ export function DashboardBedInventoryFilterDropdownOverlay({
 
   return (
     <>
-      <Pressable
-        style={styles.backdrop}
-        onPress={onClose}
-        accessibilityRole="button"
-        accessibilityLabel={t('navigation.closeFilterDropdown')}
-      />
+      <View style={styles.backdrop}>
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel={t('navigation.closeFilterDropdown')}
+        />
+      </View>
       <View
         style={[styles.dropdownOverlay, { top: anchorBottom }]}
         onLayout={event => {
@@ -171,7 +176,7 @@ export function DashboardBedInventoryFilterDropdownOverlay({
                   numberOfLines={1}>
                   {item.label}
                 </Text>
-                {selected ? <Text style={styles.optionCheck}>✓</Text> : null}
+                {selected ? <Check size={16} color={colors.primaryDark} strokeWidth={2.4} /> : null}
               </Pressable>
             );
           }}
@@ -719,7 +724,7 @@ const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 998,
-    elevation: 18,
+    backgroundColor: colors.overlayScrim,
   },
   dropdownOverlay: {
     position: 'absolute',
@@ -732,8 +737,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     overflow: 'hidden',
     zIndex: 999,
-    elevation: 20,
-    ...shadows.md,
+    ...shadows.raised,
   },
   dropdownList: {
     flexGrow: 0,

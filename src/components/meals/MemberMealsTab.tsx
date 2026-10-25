@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { UtensilsCrossed } from 'lucide-react-native';
 import type { MemberDetailsResponse, SpaceType } from '../../api/types';
 import { Card, EmptyState } from '../ui';
 import { MealParticipationStatusBadge } from './MealBadges';
@@ -47,7 +48,7 @@ export function MemberMealsTab({
     return (
       <View style={styles.wrap}>
         <EmptyState
-          icon="🍽"
+          Icon={UtensilsCrossed}
           title={t('membership.meals.emptyTitle')}
           description={t('membership.meals.emptyDescription')}
         />

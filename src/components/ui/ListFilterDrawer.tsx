@@ -8,9 +8,19 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  initialWindowMetrics,
+  SafeAreaProvider,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { colors, radius, spacing, typography } from '../../theme';
+import { Check, X } from 'lucide-react-native';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
+import {
+  androidModalNavigationInset,
+  androidModalStatusBarInset,
+  resolveModalSafeInsets,
+} from '../../utils/modalSafeInsets';
 import { Button } from './Button';
 
 type ListFilterDrawerProps = {
@@ -22,8 +32,23 @@ type ListFilterDrawerProps = {
   children: React.ReactNode;
 };
 
-export function ListFilterDrawer({
-  visible,
+export function ListFilterDrawer(props: ListFilterDrawerProps) {
+  return (
+    <Modal
+      visible={props.visible}
+      transparent
+      animationType="fade"
+      onRequestClose={props.onClose}
+      statusBarTranslucent
+      hardwareAccelerated>
+      <SafeAreaProvider style={styles.flex} initialMetrics={initialWindowMetrics}>
+        <FilterDrawerPanel {...props} />
+      </SafeAreaProvider>
+    </Modal>
+  );
+}
+
+function FilterDrawerPanel({
   title,
   onClose,
   onReset,
@@ -32,17 +57,17 @@ export function ListFilterDrawer({
 }: ListFilterDrawerProps) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const safe = resolveModalSafeInsets(
+    insets,
+    initialWindowMetrics?.insets,
+    androidModalStatusBarInset(),
+  );
+  const topInset = safe.top;
+  const bottomInset = safe.bottom > 0 ? safe.bottom : androidModalNavigationInset();
   const { width: windowWidth } = useWindowDimensions();
   const panelWidth = Math.min(Math.round(windowWidth * 0.88), 400);
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-      statusBarTranslucent
-      hardwareAccelerated>
       <View style={styles.root}>
         <Pressable
           style={styles.backdrop}
@@ -50,8 +75,12 @@ export function ListFilterDrawer({
           accessibilityRole="button"
           accessibilityLabel={t('common.close')}
         />
-        <View style={[styles.panel, { width: panelWidth, paddingBottom: insets.bottom }]}>
-          <View style={[styles.header, { paddingTop: spacing.md + insets.top }]}>
+        <View
+          style={[
+            styles.panel,
+            { width: panelWidth, marginTop: topInset, marginBottom: bottomInset },
+          ]}>
+          <View style={styles.header}>
             <Text style={styles.title} numberOfLines={1}>
               {title ?? t('list.filterDrawer.title')}
             </Text>
@@ -61,7 +90,7 @@ export function ListFilterDrawer({
               style={styles.closeButton}
               accessibilityRole="button"
               accessibilityLabel={t('common.close')}>
-              <Text style={styles.close}>✕</Text>
+              <X size={18} color={colors.textPrimary} strokeWidth={2.2} />
             </Pressable>
           </View>
 
@@ -88,7 +117,6 @@ export function ListFilterDrawer({
           </View>
         </View>
       </View>
-    </Modal>
   );
 }
 
@@ -120,7 +148,7 @@ export function FilterCheckboxRow({ label, checked, onToggle }: FilterCheckboxRo
       accessibilityRole="checkbox"
       accessibilityState={{ checked }}>
       <View style={[optionStyles.box, checked && optionStyles.boxChecked]}>
-        {checked ? <Text style={optionStyles.checkMark}>✓</Text> : null}
+        {checked ? <Check size={14} color={colors.primaryDark} strokeWidth={2.6} /> : null}
       </View>
       <Text style={optionStyles.label}>{label}</Text>
     </Pressable>
@@ -153,27 +181,28 @@ export function FilterDrawerDivider() {
 }
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
   root: {
     flex: 1,
     flexDirection: 'row',
   },
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colors.overlayScrim,
   },
   panel: {
+    ...shadows.raised,
+    alignSelf: 'stretch',
     backgroundColor: colors.white,
-    shadowColor: '#000',
-    shadowOffset: { width: -2, height: 0 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 24,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
     paddingBottom: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
@@ -187,8 +216,8 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   closeButton: {
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -201,6 +230,7 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flex: 1,
+    minHeight: 0,
   },
   scrollContent: {
     padding: spacing.lg,

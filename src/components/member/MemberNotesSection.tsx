@@ -10,6 +10,7 @@ import { MemberDetailRow, MemberSectionTitle } from './MemberDetailRow';
 type MemberNotesSectionProps = {
   memberId: string;
   canEdit: boolean;
+  embedded?: boolean;
 };
 
 function formatDate(value: string): string {
@@ -20,7 +21,11 @@ function formatDate(value: string): string {
   return date.toLocaleString();
 }
 
-export function MemberNotesSection({ memberId, canEdit }: MemberNotesSectionProps) {
+export function MemberNotesSection({
+  memberId,
+  canEdit,
+  embedded = false,
+}: MemberNotesSectionProps) {
   const { t } = useTranslation();
   const showToast = useToastStore(state => state.showToast);
   const notes = useMemberStore(state => state.notes);
@@ -53,7 +58,7 @@ export function MemberNotesSection({ memberId, canEdit }: MemberNotesSectionProp
   if (notesLoading && notes.length === 0) {
     return (
       <View style={styles.wrap}>
-        <MemberSectionTitle title={t('membership.detailTabs.notes')} />
+        {embedded ? null : <MemberSectionTitle title={t('membership.detailTabs.notes')} />}
         <SkeletonCard />
       </View>
     );
@@ -61,7 +66,7 @@ export function MemberNotesSection({ memberId, canEdit }: MemberNotesSectionProp
 
   return (
     <View style={styles.wrap}>
-      <MemberSectionTitle title={t('membership.detailTabs.notes')} />
+      {embedded ? null : <MemberSectionTitle title={t('membership.detailTabs.notes')} />}
 
       {canEdit ? (
         <Card style={styles.card}>

@@ -52,11 +52,16 @@ describe('locationsApi search wiring', () => {
 });
 
 describe('FindAPlace discovery alignment with the website', () => {
-  it('prompts for location, keeps search separate, and skips mess rent filters', () => {
+  it('prompts for location, keeps search separate, and shares price filters', () => {
     const source = readFileSync(join(__dirname, '../../screens/FindAPlaceScreen.tsx'), 'utf8');
     expect(source).toContain('shouldPromptDiscoverLocation');
     expect(source).toContain('rankingContext');
-    expect(source).toContain('minRent: isMess ? null');
+    expect(source).toContain('minRent,');
+    expect(source).not.toContain('minRent: isMess ? null');
+    expect(source).toContain('mealTypes: isMess && mealTypes.length > 0 ? mealTypes : undefined');
+    expect(source).toContain('foodTypes: isMess && foodTypes.length > 0 ? foodTypes : undefined');
+    expect(source).toContain("['BREAKFAST', 'Breakfast']");
+    expect(source).toContain("['VEG', 'Vegetarian']");
     expect(source).toContain("type: apiType");
     expect(source).toContain('types: placeTypes');
     expect(source).not.toContain('locations.json');

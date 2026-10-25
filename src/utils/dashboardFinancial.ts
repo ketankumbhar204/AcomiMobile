@@ -8,6 +8,30 @@ export function currentMonthKey(date = new Date()): string {
   return `${year}-${month}`;
 }
 
+/** Calendar month step. YYYY-MM sorts and compares lexicographically. */
+export function shiftMonthKey(month: string, delta: number): string {
+  const [year, monthNum] = month.split('-').map(Number);
+  if (!year || !monthNum) {
+    return currentMonthKey();
+  }
+  return currentMonthKey(new Date(year, monthNum - 1 + delta, 1));
+}
+
+export function isFutureMonth(month: string, today = new Date()): boolean {
+  return month > currentMonthKey(today);
+}
+
+export function formatMonthYear(month: string, locale?: string): string {
+  const [year, monthNum] = month.split('-').map(Number);
+  if (!year || !monthNum) {
+    return month;
+  }
+  return new Date(year, monthNum - 1, 1).toLocaleDateString(locale, {
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
 export function monthDateRange(month: string): { from: string; to: string } {
   const [year, monthNum] = month.split('-').map(Number);
   const lastDay = new Date(year, monthNum, 0).getDate();

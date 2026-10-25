@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Camera } from 'lucide-react-native';
 import { colors, radius, spacing, typography } from '../../theme';
 import { pickPaymentProofImage } from '../../utils/pickPaymentProofImage';
 
@@ -64,7 +65,7 @@ export function PaymentProofUploadField({
             <ActivityIndicator color={colors.primary} />
           ) : (
             <>
-              <Text style={styles.pickIcon}>📷</Text>
+              <Camera size={22} color={colors.primaryDark} strokeWidth={2.2} />
               <Text style={styles.pickLabel}>{t('meals.poll.uploadScreenshot')}</Text>
             </>
           )}

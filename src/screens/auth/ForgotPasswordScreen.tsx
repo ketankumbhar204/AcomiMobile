@@ -19,7 +19,11 @@ import { useSendOtp } from '../../hooks/useAuth';
 import { useOtpCooldown } from '../../hooks/useOtpCooldown';
 import type { AuthStackParamList } from '../../navigation/types';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
-import { isValidIndianMobile, normalizeIndianMobileDigits } from '../../utils/indianMobile';
+import {
+  INDIAN_MOBILE_INPUT_MAX_LENGTH,
+  isValidIndianMobile,
+  normalizeIndianMobileDigits,
+} from '../../utils/indianMobile';
 import { formatCountdown } from '../../utils/otpAuthErrors';
 
 type ForgotNav = NativeStackNavigationProp<AuthStackParamList, 'ForgotPassword'>;
@@ -108,7 +112,7 @@ export function ForgotPasswordScreen() {
                 }
               }}
               keyboardType="phone-pad"
-              maxLength={10}
+              maxLength={INDIAN_MOBILE_INPUT_MAX_LENGTH}
               autoCorrect={false}
               accessibilityLabel={t('auth.login.mobileLabel')}
             />

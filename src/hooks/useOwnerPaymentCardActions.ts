@@ -1,16 +1,16 @@
 import { useCallback, useState } from 'react';
 import { PaymentServiceUnavailableError, paymentsApi } from '../api/paymentsApi';
-import type { SpacePaymentResponse, UUID } from '../api/types';
+import { ApiError, type SpacePaymentResponse, type UUID } from '../api/types';
 import { useToastStore } from '../store/toastStore';
 import { invalidateDashboardQueries } from '../utils/dashboardQueryCache';
 import {
   receivablePayments,
   reminderEligiblePayments,
 } from '../utils/ownerPaymentCardActions';
-import {
-  paymentReminderToastKey,
-  resolvePaymentReminderToastKind,
-} from '../utils/paymentReminderFeedback';
+import { paymentReminderToastKey } from '../utils/paymentReminderFeedback';
+import { firstWhatsAppPhone } from '../utils/photoRequest';
+import { buildPaymentReminderMessage } from '../utils/paymentReminderMessage';
+import { openReminderWhatsApp } from '../utils/paymentReminderLaunch';
 import { invalidatePaymentsMonthCaches } from '../utils/paymentsMonthCache';
 import { useTranslation } from 'react-i18next';
 
@@ -34,6 +34,9 @@ export function useOwnerPaymentCardActions({
     null,
   );
   const [confirmPayments, setConfirmPayments] = useState<SpacePaymentResponse[]>([]);
+  const [reminderQueue, setReminderQueue] = useState<SpacePaymentResponse[]>([]);
+  const [reminderMessage, setReminderMessage] = useState('');
+  const [reminderNotice, setReminderNotice] = useState('');
 
   const refreshAfterChange = useCallback(async () => {
     invalidateDashboardQueries();
@@ -77,34 +80,94 @@ export function useOwnerPaymentCardActions({
     [refreshAfterChange, showToast, spaceId, t],
   );
 
-  const sendReminders = useCallback(
-    async (payments: SpacePaymentResponse[], key: string) => {
-      if (payments.length === 0) {
+  const beginReminders = useCallback(
+    (payments: SpacePaymentResponse[]) => {
+      const first = payments[0];
+      if (!first) {
         showToast(t('paymentCollection.reminder.noneActionable'));
         return;
       }
-      setProcessingKey(key);
-      setProcessingAction('reminder');
-      try {
-        let lastKind: ReturnType<typeof resolvePaymentReminderToastKind> = 'failed';
-        for (const payment of payments) {
-          const result = await paymentsApi.sendPaymentReminder(spaceId, payment.paymentId);
-          lastKind = resolvePaymentReminderToastKind(result);
-        }
-        showToast(t(paymentReminderToastKey(lastKind)));
-      } catch (err) {
-        if (err instanceof PaymentServiceUnavailableError) {
-          showToast(t('paymentCollection.serviceUnavailable.title'));
-        } else {
-          showToast(t('paymentCollection.reminder.failed'));
-        }
-      } finally {
-        setProcessingKey(null);
-        setProcessingAction(null);
-      }
+      setReminderNotice('');
+      setReminderMessage(buildPaymentReminderMessage(first));
+      setReminderQueue(payments);
     },
-    [showToast, spaceId, t],
+    [showToast, t],
   );
+
+  const confirmReminder = useCallback(async () => {
+    const payment = reminderQueue[0];
+    const message = reminderMessage.trim();
+    if (!payment || !message) {
+      return;
+    }
+    setProcessingKey(payment.paymentId);
+    setProcessingAction('reminder');
+    setReminderNotice('');
+    try {
+      const result = await paymentsApi.sendPaymentReminder(spaceId, payment.paymentId);
+      let launch: Awaited<ReturnType<typeof openReminderWhatsApp>> = 'invalid';
+      try {
+        launch = await openReminderWhatsApp(
+          {
+            ...result,
+            internationalPhone:
+              result.internationalPhone || firstWhatsAppPhone([payment.memberMobile]),
+          },
+          message,
+        );
+      } catch {
+        launch = 'failed';
+      }
+      if (result.inAppFailureCode === 'NOTIFICATION_FAILED') {
+        showToast(t('paymentCollection.reminder.notificationFailed'));
+      } else if (result.inAppFailureCode === 'MEMBER_NOT_ON_ACOMI') {
+        showToast(t('paymentCollection.reminder.memberNotOnAcomi'));
+      } else if (result.inAppRecorded && launch !== 'opened') {
+        showToast(t('paymentCollection.reminder.inAppSaved'));
+      }
+      if (launch === 'opened') {
+        showToast(
+          t(
+            result.inAppRecorded
+              ? 'paymentCollection.reminder.openedWhatsApp'
+              : 'paymentCollection.reminder.whatsAppReady',
+          ),
+        );
+      } else if (launch === 'copied') {
+        showToast(t('paymentCollection.reminder.copied'));
+      } else if (launch === 'invalid') {
+        setReminderNotice(
+          t('paymentCollection.reminder.whatsAppUnavailable', {
+            defaultValue:
+              'This number can’t be opened in WhatsApp. You can still save the in-app reminder.',
+          }),
+        );
+        if (result.inAppFailureCode !== 'NOTIFICATION_FAILED') {
+          showToast(t(paymentReminderToastKey('invalidRecipient')));
+        }
+      } else {
+        showToast(t('paymentCollection.reminder.whatsAppFailed'));
+      }
+      if (launch === 'invalid') {
+        return;
+      }
+      const rest = reminderQueue.slice(1);
+      setReminderQueue(rest);
+      setReminderMessage(rest[0] ? buildPaymentReminderMessage(rest[0]) : '');
+      setReminderNotice('');
+    } catch (err) {
+      if (err instanceof PaymentServiceUnavailableError) {
+        showToast(t('paymentCollection.serviceUnavailable.title'));
+      } else if (err instanceof ApiError && err.status === 409 && err.message) {
+        showToast(err.message);
+      } else {
+        showToast(t('paymentCollection.reminder.failed'));
+      }
+    } finally {
+      setProcessingKey(null);
+      setProcessingAction(null);
+    }
+  }, [reminderMessage, reminderQueue, showToast, spaceId, t]);
 
   const requestReceivedForPayment = useCallback((payment: SpacePaymentResponse) => {
     setConfirmPayments([payment]);
@@ -139,9 +202,9 @@ export function useOwnerPaymentCardActions({
 
   const sendReminderForPayment = useCallback(
     (payment: SpacePaymentResponse) => {
-      void sendReminders([payment], payment.paymentId);
+      beginReminders([payment]);
     },
-    [sendReminders],
+    [beginReminders],
   );
 
   const sendReminderForMember = useCallback(
@@ -158,14 +221,14 @@ export function useOwnerPaymentCardActions({
         const targets = reminderEligiblePayments(response.payments ?? []);
         setProcessingKey(null);
         setProcessingAction(null);
-        await sendReminders(targets, key);
+        beginReminders(targets);
       } catch {
         setProcessingKey(null);
         setProcessingAction(null);
         showToast(t('paymentCollection.reminder.failed'));
       }
     },
-    [month, sendReminders, showToast, spaceId, t],
+    [beginReminders, month, showToast, spaceId, t],
   );
 
   return {
@@ -177,6 +240,16 @@ export function useOwnerPaymentCardActions({
     requestReceivedForMember,
     sendReminderForPayment,
     sendReminderForMember,
+    reminderDraft: reminderQueue[0] ?? null,
+    reminderPhone: firstWhatsAppPhone([reminderQueue[0]?.memberMobile]),
+    reminderMessage,
+    setReminderMessage,
+    reminderNotice,
+    confirmReminder: () => void confirmReminder(),
+    cancelReminder: () => {
+      setReminderQueue([]);
+      setReminderNotice('');
+    },
     confirmReceived: () => void markPaymentsReceived(confirmPayments),
     cancelConfirm: () => setConfirmPayments([]),
     receivedConfirmLoading:

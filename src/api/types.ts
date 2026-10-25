@@ -1,6 +1,6 @@
 export type UUID = string;
 
-export type SpaceType = 'PG' | 'MESS' | 'HOSTEL' | 'CO_LIVING' | 'RENTAL';
+export type SpaceType = 'PG' | 'MESS' | 'HOSTEL' | 'CO_LIVING' | 'RENTAL' | 'CORPORATE_STAY';
 
 export interface AmenityAssignment {
   code: string;
@@ -38,6 +38,7 @@ export interface ApiResponse<T> {
 
 export interface SpaceResponse {
   id: UUID;
+  referenceCode?: string | null;
   name: string;
   type: SpaceType;
   address?: string;
@@ -50,9 +51,12 @@ export interface SpaceResponse {
 
 export interface SpaceDetailsResponse {
   id: UUID;
+  referenceCode?: string | null;
   name: string;
   type: SpaceType;
   address?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   contactNumber?: string;
   ownerId: UUID;
   /** When true, food is mandatory and bundled in rent — no separate food charge. */
@@ -115,6 +119,7 @@ export interface PrepaidBalanceSummary {
 
 export interface UserSpaceResponse {
   spaceId: UUID;
+  referenceCode?: string | null;
   spaceName: string;
   spaceType: SpaceType;
   membershipRole: MembershipRole;
@@ -272,6 +277,8 @@ export interface MealComboResponse {
   foodType?: FoodType;
   items?: Array<{ itemId: UUID; name: string; foodType?: FoodType; quantity?: number }>;
   photoFileId?: UUID | null;
+  /** False when this space has hidden the shared combo. Omitted means available. */
+  enabledForSpace?: boolean;
 }
 
 /** Meal-specific planner history entry (combo or single item). */
@@ -511,6 +518,8 @@ export interface MealPollDayResponse {
   myPaymentChargedAmount?: number | null;
   /** Ephemeral delta from this submit only (Paid edits). Not stored. */
   myPaymentAdjustment?: number | null;
+  /** Present when this member can see the poll but cannot submit a choice. */
+  myChooseMealsBlockReason?: string | null;
 }
 
 export type MealPollPaymentEventType =
@@ -620,6 +629,8 @@ export type MemberMealActivitySlotStatus =
 export interface MemberMealActivitySlot {
   mealType: MealType;
   status: MemberMealActivitySlotStatus;
+  /** Effective poll availability. Separate from the member response in `status`. */
+  pollStatus?: MealPollStatus | null;
   selectionLabel?: string | null;
   quantity?: number | null;
   deliveryLocationName?: string | null;
@@ -631,6 +642,8 @@ export interface MemberMealActivityDay {
   date: string;
   hasActivity?: boolean;
   dayTotal?: number | null;
+  /** False when an accepted meal has no price, so the day total must not be shown as zero. */
+  amountKnown?: boolean | null;
   currencyCode?: string | null;
   paymentStatus?: MealPollPaymentStatus | null;
   /** Immutable human payment reference when available (e.g. PAY-20260720-000123). */
@@ -801,12 +814,15 @@ export interface MemberMealActivityDayDetail {
 
 export interface MySpaceResponse {
   spaceId: UUID;
+  referenceCode?: string | null;
   spaceName: string;
   spaceType: SpaceType;
   membershipRole: MembershipRole;
   isDefault: boolean;
   joinedAt: string;
   address?: string | null;
+  /** Owner of the space. Menu library records are shared across this owner's spaces. */
+  ownerId?: UUID | null;
   permissions?: SpacePermissionsResponse;
   photoFileId?: UUID | null;
 }
@@ -822,6 +838,7 @@ export interface DiscoverSpaceCardResponse {
   imageUrl?: string | null;
   address?: string | null;
   startingPrice?: number | string | null;
+  priceBasis?: string | null;
   monthlyPrice?: number | string | null;
   mealPrice?: number | string | null;
   mapUrl?: string | null;
@@ -832,6 +849,8 @@ export interface DiscoverSpaceCardResponse {
   amenityCodes?: string[];
   amenityLabels?: string[];
   foodIncludedInRent: boolean;
+  foodAvailability?: 'INCLUDED' | 'AVAILABLE' | 'NONE' | null;
+  sharingNotes?: string | null;
   genderPolicy?: GenderPolicy | null;
   alreadyMember: boolean;
   /** True when the signed-in user owns this Space. Contact enquiry is blocked. */
@@ -864,8 +883,49 @@ export interface OwnerContactResponse {
   available: boolean;
 }
 
+export type EnquiryInboxMode = 'MINE' | 'RECEIVED';
+
+export interface EnquiryInboxListing {
+  spaceId: UUID;
+  name: string;
+  spaceType?: string | null;
+  locationLabel?: string | null;
+}
+
+export interface ReceivedEnquirySummary {
+  total: number;
+  pending: number;
+  shared: number;
+  closed: number;
+}
+
+export interface EnquiryInboxResponse {
+  mode: EnquiryInboxMode;
+  listings: EnquiryInboxListing[];
+}
+
+export interface ReceivedEnquiry {
+  enquiryId: UUID;
+  referenceCode?: string | null;
+  spaceId: UUID;
+  spaceName: string;
+  spaceType?: string | null;
+  locationLabel?: string | null;
+  sharingNotes?: string | null;
+  foodIncludedLabel?: string | null;
+  listingAvailable?: boolean;
+  requesterName?: string | null;
+  requesterEmail?: string | null;
+  requesterMobile?: string | null;
+  requesterType?: 'MEMBER' | 'OWNER' | null;
+  status: SpaceEnquiryStatus;
+  requestedAt: string;
+  expiresAt?: string | null;
+}
+
 export interface SpaceEnquiryResponse {
   enquiryId: UUID;
+  referenceCode?: string | null;
   spaceId: UUID;
   spaceName: string;
   spaceType?: string | null;
@@ -886,10 +946,14 @@ export interface SpaceEnquiryResponse {
   contactEmailSent?: boolean;
   ownerContact?: OwnerContactResponse | null;
   reusedExisting?: boolean;
+  deliveredAt?: string | null;
+  emailDeliveredAt?: string | null;
+  alreadyDelivered?: boolean;
 }
 
 export interface CreateSpaceEnquiryRequest {
   email?: string;
+  deliveryChannel?: 'APP' | 'EMAIL' | 'VIEW_HERE';
 }
 
 export interface AdminSpaceEnquiryListItem {
@@ -924,6 +988,14 @@ export interface DiscoverSpacesParams {
   minRent?: number | null;
   maxRent?: number | null;
   amenities?: string[];
+  genders?: string[];
+  sharings?: string[];
+  foods?: string[];
+  furnishings?: string[];
+  contactAvailable?: boolean;
+  servicedApartment?: boolean;
+  mealTypes?: string[];
+  foodTypes?: string[];
   page?: number;
   size?: number;
   sort?: 'newest' | string;
@@ -939,12 +1011,14 @@ export interface LocationRecord {
 
 export interface DefaultSpaceResponse {
   spaceId: UUID;
+  referenceCode?: string | null;
   spaceName: string;
   spaceType: SpaceType;
 }
 
 export interface SetDefaultSpaceResponse {
   spaceId: UUID;
+  referenceCode?: string | null;
   spaceName: string;
   isDefault: boolean;
 }
@@ -952,6 +1026,8 @@ export interface SetDefaultSpaceResponse {
 export interface UpdateSpaceRequest {
   name: string;
   address?: string;
+  latitude?: number;
+  longitude?: number;
   contactNumber?: string;
   foodIncludedInRent?: boolean;
   defaultFoodCharge?: number | null;
@@ -1059,6 +1135,8 @@ export interface MemberResponse {
   occupancyStatus?: MemberOccupancyStatus;
   gender?: MemberGender | null;
   createdAt: string;
+  /** Payment-style stay trail. Present only for a moved-in tenant with a real location. */
+  stayLabel?: string | null;
 }
 
 /** Eligible resident for cross-space Move In / Reserve reuse. */
@@ -1083,6 +1161,7 @@ export interface ImportMemberRequest {
 
 export interface MemberDetailsResponse {
   memberId: UUID;
+  referenceCode?: string | null;
   spaceId: UUID;
   fullName: string;
   mobileNumber: string;
@@ -1164,10 +1243,13 @@ export interface SpaceMembershipResponse {
 /** App-level space model used by stores and navigation. */
 export interface Space {
   id: UUID;
+  referenceCode?: string | null;
   ownerId: UUID;
   name: string;
   type: SpaceType;
   address: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   contactNumber: string | null;
   isActive: boolean;
   foodIncludedInRent?: boolean;
@@ -1189,6 +1271,8 @@ export interface CreateSpaceRequest {
   name: string;
   type: SpaceType;
   address?: string;
+  latitude?: number;
+  longitude?: number;
   contactNumber?: string;
   ownerId: UUID;
   genderPolicy?: GenderPolicy | null;
@@ -1274,6 +1358,7 @@ export type SystemRole = 'USER' | 'ADMIN';
 
 export interface UserResponse {
   id: UUID;
+  referenceCode?: string | null;
   mobileNumber: string;
   fullName: string;
   profilePhotoUrl?: string | null;
@@ -1455,6 +1540,7 @@ export interface AccommodationActionMetadata {
 
 export interface BuildingResponse {
   buildingId: UUID;
+  referenceCode?: string | null;
   spaceId: UUID;
   name: string;
   code?: string | null;
@@ -1468,6 +1554,7 @@ export interface BuildingResponse {
 
 export interface FloorResponse {
   floorId: UUID;
+  referenceCode?: string | null;
   buildingId: UUID;
   name: string;
   floorNumber: number;
@@ -1481,6 +1568,7 @@ export interface FloorResponse {
 
 export interface UnitResponse {
   unitId: UUID;
+  referenceCode?: string | null;
   buildingId: UUID;
   floorId?: UUID | null;
   name: string;
@@ -1499,6 +1587,7 @@ export interface UnitResponse {
 
 export interface RoomResponse {
   roomId: UUID;
+  referenceCode?: string | null;
   buildingId?: UUID | null;
   floorId?: UUID | null;
   unitId?: UUID | null;
@@ -1525,6 +1614,7 @@ export interface BedOccupantSummaryResponse {
 
 export interface BedResponse {
   bedId: UUID;
+  referenceCode?: string | null;
   roomId: UUID;
   name: string;
   bedNumber: string;
@@ -1784,6 +1874,7 @@ export interface BedSpaceListItemResponse {
   roomType?: string | null;
   defaultRent?: number | null;
   defaultDeposit?: number | null;
+  referenceCode?: string | null;
 }
 
 export interface DuplicateBuildingRequest {
@@ -1916,6 +2007,7 @@ export interface OccupancyChargeSnapshotResponse {
 
 export interface OccupancyResponse {
   occupancyId: UUID;
+  referenceCode?: string | null;
   spaceId: UUID;
   memberId: UUID;
   memberName: string;
@@ -2217,7 +2309,9 @@ export type NotificationType =
   | 'CONTACT_ENQUIRY_EXPIRED'
   | 'INQUIRY_CREDIT_PAYMENT_PENDING'
   | 'INQUIRY_CREDIT_PAYMENT_APPROVED'
-  | 'INQUIRY_CREDIT_PAYMENT_REJECTED';
+  | 'INQUIRY_CREDIT_PAYMENT_REJECTED'
+  | 'PASSWORD_CHANGED'
+  | 'PHOTO_REQUEST_RECEIVED';
 
 export type NotificationCategory =
   | 'INFORMATION'
@@ -2458,7 +2552,15 @@ export interface CreateSubscriptionActivationRequest {
 
 // ─── Universal payment collection (SpacePayment) ────────────────────────────
 
-export type UniversalPaymentType = 'MEAL' | 'RENT' | 'DEPOSIT' | 'MAINTENANCE' | 'OTHER';
+export type UniversalPaymentType =
+  | 'MEAL'
+  | 'RENT'
+  | 'DEPOSIT'
+  | 'MAINTENANCE'
+  | 'UTILITY'
+  | 'SERVICE'
+  | 'PENALTY'
+  | 'OTHER';
 
 export type UniversalPaymentMethod = 'UPI' | 'BANK_TRANSFER' | 'CASH' | 'CHEQUE' | 'OTHER';
 
@@ -2485,6 +2587,7 @@ export type PaymentCategory =
   | 'REFUND'
   | 'ELECTRICITY'
   | 'WATER'
+  | 'GAS'
   | 'INTERNET'
   | 'OTHER';
 
@@ -2510,10 +2613,12 @@ export interface SpacePaymentResponse {
   spaceId: UUID;
   memberId: UUID;
   memberName: string;
+  memberMobile?: string | null;
   occupancyId?: UUID | null;
   paymentType: UniversalPaymentType;
   paymentCategory: PaymentCategory;
   title: string;
+  description?: string | null;
   amount: number;
   currencyCode: string;
   dueDate: string;
@@ -2660,6 +2765,7 @@ export interface CreateSpacePaymentRequest {
   month?: string;
   dueDate?: string;
   title?: string;
+  description?: string;
   remarks?: string;
   confirmDuplicateDeposit?: boolean;
 }
@@ -2742,6 +2848,7 @@ export interface ComplaintAttachment {
 
 export interface ComplaintResponse {
   complaintId: UUID;
+  referenceCode?: string | null;
   spaceId: UUID;
   createdByMemberId: UUID;
   createdByMemberName?: string | null;
@@ -2888,6 +2995,7 @@ export interface AdminDashboardSummary {
 
 export interface AdminActiveSpace {
   id: UUID;
+  referenceCode?: string | null;
   name: string;
   type: SpaceType;
   address?: string | null;
@@ -2896,6 +3004,8 @@ export interface AdminActiveSpace {
   ownerName: string;
   ownerMobile: string;
   createdAt: string;
+  /** True when the converted registration is a test lead. */
+  testLead?: boolean;
 }
 
 export type AdminUserSelectedRole = 'NOT_SELECTED' | 'OWNER' | 'MEMBER' | 'OWNER_AND_MEMBER';
@@ -2924,6 +3034,15 @@ export interface AdminRegisteredUser {
   systemRole?: string | null;
   active?: boolean;
   testUser?: boolean;
+  /** Last successful sign-in. Null when none was recorded. */
+  lastLoginAt?: string | null;
+  /** Last authenticated use of ACOMI. Null when none was recorded. */
+  lastActiveAt?: string | null;
+  /**
+   * False when this account predates activity tracking and has not been observed since.
+   * A null timestamp then means unknown, not "never".
+   */
+  activityTracked?: boolean;
 }
 
 export interface AdminRegisteredUsersSummary {
@@ -3024,6 +3143,7 @@ export interface MessRegistrationDetail extends MessRegistrationListItem {
   addressLine: string;
   mapUrl?: string | null;
   monthlyPrice: number;
+  monthlyPriceBasis?: string | null;
   mealPrice: number;
   capacityEstimate?: number | null;
   convertedSpaceId?: UUID | null;
@@ -3043,7 +3163,10 @@ export interface AdminCreatePropertyRegistrationRequest {
   state?: string;
   pincode?: string;
   mapUrl?: string;
+  latitude?: number;
+  longitude?: number;
   startingPrice?: number;
+  priceBasis?: 'PER_BED' | 'PER_ROOM' | 'PER_UNIT';
   capacityEstimate?: number;
   amenities?: Array<{ code: string; label?: string }>;
   testLead?: boolean;
@@ -3060,7 +3183,10 @@ export interface AdminCreateMessRegistrationRequest {
   state?: string;
   pincode?: string;
   mapUrl?: string;
+  latitude?: number;
+  longitude?: number;
   monthlyPrice?: number;
+  monthlyPriceBasis?: 'PER_BED' | 'PER_ROOM' | 'PER_UNIT';
   mealPrice?: number;
   capacityEstimate?: number;
   testLead?: boolean;

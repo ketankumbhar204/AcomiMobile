@@ -20,6 +20,7 @@ type BedDetailHeroProps = {
   bedId?: string;
   photoFileId?: string | null;
   onEdit?: () => void;
+  onPhotoChanged?: (fileId: string | null) => void;
 };
 
 export function BedDetailHero({
@@ -32,6 +33,7 @@ export function BedDetailHero({
   bedId,
   photoFileId,
   onEdit,
+  onPhotoChanged,
 }: BedDetailHeroProps) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
@@ -46,8 +48,10 @@ export function BedDetailHero({
             entityId={bedId ?? ''}
             fileId={photoFileId}
             title={label}
+            width={visualSize}
             height={visualSize}
             resizeMode="contain"
+            onChanged={onPhotoChanged}
             fallback={
               <LayoutIllustration
                 source={getBedIllustration(status)}

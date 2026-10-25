@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { AlertTriangle, CreditCard } from 'lucide-react-native';
 import type { PaymentRejectionReason, SpacePaymentResponse, SpaceType } from '../../api/types';
 import type { HistoryReviewFilter, PendingReviewFilter } from '../../utils/ownerPaymentFilters';
 import { colors, spacing, typography } from '../../theme';
@@ -51,7 +52,7 @@ export function PaymentsReviewList({
       <EmptyState
         title={t('paymentCollection.serviceUnavailable.title')}
         description={t('paymentCollection.serviceUnavailable.description')}
-        icon="⚠️"
+        Icon={AlertTriangle}
       />
     );
   }
@@ -63,7 +64,7 @@ export function PaymentsReviewList({
       {review.loading && review.payments.length === 0 ? (
         <SkeletonCard />
       ) : review.payments.length === 0 ? (
-        <EmptyState title={t(emptyStateKey(review))} icon="💳" />
+        <EmptyState title={t(emptyStateKey(review))} Icon={CreditCard} />
       ) : (
         review.payments.map(payment => (
           <PaymentApprovalCard

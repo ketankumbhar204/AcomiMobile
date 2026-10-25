@@ -1,55 +1,61 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   CompositeNavigationProp,
   RouteProp,
+  useFocusEffect,
   useNavigation,
   useRoute,
 } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { ChevronRight, Info, Users } from 'lucide-react-native';
-import { MemberPaymentRow } from '../../components/payments/MemberPaymentRow';
+import { AlertTriangle, ChevronRight, Info, Plus, Users } from 'lucide-react-native';
+import type { SpacePaymentResponse } from '../../api/types';
 import { OwnerPaymentCardActions } from '../../components/payments/OwnerPaymentCardActions';
+import { PaymentDetailsSheet } from '../../components/payments/PaymentDetailsSheet';
+import { UniversalPaymentCard } from '../../components/payments/UniversalPaymentCard';
 import { PaymentReceivedConfirmModal } from '../../components/payments/PaymentReceivedConfirmModal';
+import { PaymentReminderComposer } from '../../components/payments/PaymentReminderComposer';
 import { PaymentsFilterDrawer } from '../../components/payments/PaymentsFilterDrawer';
 import { PaymentsSummaryFilters } from '../../components/payments/PaymentsSummaryFilters';
 import {
+  Button,
   EmptyState,
-  FAB,
   ListSearchFilterBar,
   MonthlySummaryHeader,
   SkeletonCard,
 } from '../../components/ui';
 import { DashboardTipCard } from '../../components/dashboard/shared/DashboardGuidedCards';
-import { usePaymentsMembers } from '../../hooks/usePaymentsMembers';
 import { usePaymentsSummary } from '../../hooks/usePaymentsSummary';
+import { useTenantPaymentsMonth } from '../../hooks/useTenantPaymentsMonth';
 import { useOwnerPaymentCardActions } from '../../hooks/useOwnerPaymentCardActions';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
+import { useSpaceStore } from '../../store/spaceStore';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useSpaceProgressiveAccess } from '../../hooks/useSpaceProgressiveAccess';
 import { useSpaceTabHeader } from '../../hooks/useSpaceTabHeader';
 import type { MainStackParamList, SpaceTabParamList } from '../../navigation/types';
-import { useToastStore } from '../../store/toastStore';
 import { colors, radius, spacing, typography } from '../../theme';
 import { canManagePayments, currentMonthKey } from '../../utils/dashboardFinancial';
 import {
   countPaymentListFilters,
+  defaultPaymentListFilters,
   isPrepaidOnlyLedger,
   PAYMENT_FILTER_OPTION_COUNT,
+  paymentFiltersFromLegacy,
   type PaymentLedgerFilter,
+  type PaymentListFilterState,
 } from '../../utils/paymentLedger';
+import { filterIndividualPayments } from '../../utils/individualPayments';
 import { shouldUseFilterDrawer } from '../../utils/filterUx';
 import { invalidatePaymentsMonthCaches } from '../../utils/paymentsMonthCache';
+import { paymentListEmptyKind } from '../../utils/paymentMonthList';
 import { paymentsApi } from '../../api/paymentsApi';
-import { resolveMemberMonthPaymentTarget } from '../../utils/resolveMemberMonthPaymentTarget';
 import {
-  memberRowShowsOwnerPaymentActions,
-  memberRowShowsReceived,
-  memberRowShowsReminder,
+  canOwnerMarkPaymentReceived,
+  canOwnerSendPaymentReminder,
 } from '../../utils/ownerPaymentCardActions';
-import { NotificationBellButton } from '../../components/notifications/NotificationBellButton';
 
 type PaymentsRoute = RouteProp<SpaceTabParamList, 'Payments'>;
 type PaymentsNav = CompositeNavigationProp<
@@ -98,16 +104,14 @@ export function PaymentsScreen() {
   const navigation = useNavigation<PaymentsNav>();
   const route = useRoute<PaymentsRoute>();
   const spaceId = useActiveSpaceId(route.params.spaceId);
-  const notificationBell = useMemo(
-    () => <NotificationBellButton spaceId={spaceId} />,
-    [spaceId],
+  const spaceName = useSpaceStore(state =>
+    state.currentSpace?.spaceId === spaceId
+      ? state.currentSpace.spaceName
+      : state.selectedSpace?.id === spaceId
+        ? state.selectedSpace.name
+        : null,
   );
-  useSpaceTabHeader(spaceId, {
-    showProfileAndMenu: true,
-    headerRightExtra: notificationBell,
-  });
-  const showToast = useToastStore(state => state.showToast);
-
+  useSpaceTabHeader(spaceId);
   const permissions = useSpacePermissions(spaceId);
   const canManage = canManagePayments(permissions.membershipRole);
   const { getCapability, loading: progressiveLoading } =
@@ -120,17 +124,37 @@ export function PaymentsScreen() {
     Boolean(paymentsAccess.reasonKey);
 
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  const [detailsPayment, setDetailsPayment] = useState<SpacePaymentResponse | null>(null);
 
   const summary = usePaymentsSummary(spaceId, canManage);
-  const summarySettled = summary.hasData || Boolean(summary.error) || !summary.loading;
-  const members = usePaymentsMembers(spaceId, summary.month, canManage && summarySettled);
+  const [filters, setFilters] = useState<PaymentListFilterState>(defaultPaymentListFilters);
+  const [search, setSearch] = useState('');
+  const records = useTenantPaymentsMonth(canManage ? spaceId : null, {
+    enabled: canManage,
+    initialMonth: summary.month,
+  });
   const cardActions = useOwnerPaymentCardActions({
     spaceId,
     month: summary.month,
     onSettled: async () => {
-      await Promise.all([summary.reload(), members.reload()]);
+      await Promise.all([summary.reload(), records.reload()]);
     },
   });
+  const summaryReloadRef = useRef(summary.reload);
+  const recordsReloadRef = useRef(records.reload);
+  summaryReloadRef.current = summary.reload;
+  recordsReloadRef.current = records.reload;
+  const skipFocusReload = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (skipFocusReload.current) {
+        skipFocusReload.current = false;
+        return;
+      }
+      summaryReloadRef.current().catch(() => undefined);
+      recordsReloadRef.current().catch(() => undefined);
+    }, []),
+  );
 
   const isCurrentMonth = summary.month >= currentMonthKey();
   const submittedCount = summary.counts.submitted ?? 0;
@@ -160,10 +184,10 @@ export function PaymentsScreen() {
     if (initialFilter === 'underReview') {
       openReviewQueue({ section: 'pendingReview', pendingFilter: 'SUBMITTED' });
     } else {
-      members.setFilter(initialFilter);
+      setFilters(paymentFiltersFromLegacy(initialFilter));
     }
     navigation.setParams({ initialFilter: undefined });
-  }, [members.setFilter, navigation, openReviewQueue, route.params.initialFilter]);
+  }, [navigation, openReviewQueue, route.params.initialFilter]);
 
   useEffect(() => {
     const initialSection = route.params.initialSection;
@@ -185,21 +209,69 @@ export function PaymentsScreen() {
     navigation.setParams({ initialSection: undefined });
   }, [navigation, openReviewQueue, route.params.initialSection]);
 
+  useEffect(() => {
+    if (records.month !== summary.month) {
+      records.setMonth(summary.month);
+    }
+  }, [records, summary.month]);
+
+  const listReady = records.loadedMonth === summary.month;
+  const reconciledMonth = useRef<string | null>(null);
+  useEffect(() => {
+    if (!listReady || records.loading) {
+      return;
+    }
+    const pending = summary.financial?.pending ?? 0;
+    if (pending <= 0 || records.payments.length > 0) {
+      return;
+    }
+    if (reconciledMonth.current === summary.month) {
+      return;
+    }
+    reconciledMonth.current = summary.month;
+    records.reload().catch(() => undefined);
+  }, [
+    listReady,
+    records,
+    summary.financial?.pending,
+    summary.month,
+  ]);
+  const visiblePayments = useMemo(
+    () => (listReady ? filterIndividualPayments(records.payments, filters, search) : []),
+    [filters, listReady, records.payments, search],
+  );
+
   const activeFilterCount = useMemo(
-    () => countPaymentListFilters(members.filters),
-    [members.filters],
+    () => countPaymentListFilters(filters),
+    [filters],
   );
 
   const prepaidOnly = isPrepaidOnlyLedger(summary.financial);
 
   const paymentEmptyState = useMemo(() => {
-    if (members.filters.preset === 'pending') {
+    const kind = paymentListEmptyKind({
+      selectedMonth: summary.month,
+      loadedMonth: records.loadedMonth,
+      loading: records.loading,
+      pendingAmount: summary.financial?.pending,
+      recordCount: records.payments.length,
+      visibleCount: visiblePayments.length,
+      preset: filters.preset ?? null,
+      hasSearchOrExtraFilter: Boolean(search.trim()) || activeFilterCount > 0,
+    });
+    if (kind === 'mismatch') {
+      return {
+        title: t('payments.emptyMismatch.title'),
+        description: t('payments.emptyMismatch.description'),
+      };
+    }
+    if (kind === 'pending') {
       return {
         title: t('payments.emptyPending.title'),
         description: t('payments.emptyPending.description'),
       };
     }
-    if (members.filters.preset === 'collected') {
+    if (kind === 'collected') {
       return {
         title: t('payments.emptyCollected.title'),
         description: prepaidOnly
@@ -209,16 +281,22 @@ export function PaymentsScreen() {
     }
 
     return {
-      title:
-        members.search.trim() || activeFilterCount > 0
-          ? t('list.emptyFiltered')
-          : t('payments.empty.title'),
-      description:
-        members.search.trim() || activeFilterCount > 0
-          ? undefined
-          : t('payments.empty.description'),
+      title: t('payments.records.emptyTitle'),
+      description: t('payments.records.emptyDescription'),
     };
-  }, [activeFilterCount, members.filters.preset, members.search, prepaidOnly, t]);
+  }, [
+    activeFilterCount,
+    filters.preset,
+    prepaidOnly,
+    records.loadedMonth,
+    records.loading,
+    records.payments.length,
+    search,
+    summary.financial?.pending,
+    summary.month,
+    t,
+    visiblePayments.length,
+  ]);
 
   const handleFilterNavigate = useCallback(
     (nextFilter: PaymentLedgerFilter) => {
@@ -227,65 +305,28 @@ export function PaymentsScreen() {
         return;
       }
 
-      const active: PaymentLedgerFilter = members.filters.preset ?? 'all';
+      const active: PaymentLedgerFilter = filters.preset ?? 'all';
       if (nextFilter === active) {
-        members.setFilter('all');
+        setFilters(paymentFiltersFromLegacy('all'));
         return;
       }
-      members.setFilter(nextFilter);
+      setFilters(paymentFiltersFromLegacy(nextFilter));
     },
-    [members.filters.preset, members.setFilter, openReviewQueue],
+    [filters.preset, openReviewQueue],
   );
 
-  const activeSummaryFilter: PaymentLedgerFilter = members.filters.preset ?? 'all';
-
-  const handleMemberPress = useCallback(
-    async (memberId: string, memberName: string) => {
-      try {
-        const target = await resolveMemberMonthPaymentTarget(
-          spaceId,
-          memberId,
-          memberName,
-          summary.month,
-          { sync: true },
-        );
-        invalidatePaymentsMonthCaches(spaceId, summary.month);
-        if (target.kind === 'detail') {
-          navigation.navigate('PaymentDetail', {
-            spaceId,
-            paymentId: target.paymentId,
-            memberId: target.memberId,
-            memberName: target.memberName,
-          });
-          return;
-        }
-        if (target.paymentCount === 0) {
-          showToast(t('paymentCollection.memberPayments.emptyDescription'));
-          return;
-        }
-        navigation.navigate('MemberPayments', {
-          spaceId,
-          memberId: target.memberId,
-          memberName: target.memberName,
-          month: target.month,
-        });
-      } catch {
-        showToast(t('paymentCollection.errors.loadPayment'));
-      }
-    },
-    [navigation, showToast, spaceId, summary.month, t],
-  );
+  const activeSummaryFilter: PaymentLedgerFilter = filters.preset ?? 'all';
 
   const handlePrevMonth = useCallback(() => {
     summary.setMonth(shiftMonth(summary.month, -1));
-  }, [summary.month, summary.setMonth]);
+  }, [summary]);
 
   const handleNextMonth = useCallback(() => {
     if (isCurrentMonth) {
       return;
     }
     summary.setMonth(shiftMonth(summary.month, 1));
-  }, [isCurrentMonth, summary.month, summary.setMonth]);
+  }, [isCurrentMonth, summary]);
 
   const handleRefresh = useCallback(async () => {
     try {
@@ -294,8 +335,8 @@ export function PaymentsScreen() {
       // Still refresh reads even if sync fails.
     }
     invalidatePaymentsMonthCaches(spaceId, summary.month);
-    await Promise.all([summary.reload(), members.reload()]);
-  }, [members, spaceId, summary]);
+    await Promise.all([summary.reload(), records.reload()]);
+  }, [records, spaceId, summary]);
 
   if (!canManage) {
     return (
@@ -312,7 +353,7 @@ export function PaymentsScreen() {
 
   const showFullPageError =
     !summary.hasData && !summary.loading && Boolean(summary.error);
-  const refreshing = summary.refreshing || members.refreshing;
+  const refreshing = summary.refreshing || records.refreshing;
 
   return (
     <View style={styles.screen}>
@@ -324,7 +365,17 @@ export function PaymentsScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} />
         }>
-        <Text style={styles.heading}>{t('payments.title')}</Text>
+        <View style={styles.headingRow}>
+          <Text style={styles.heading}>{t('payments.title')}</Text>
+          <Button
+            label={t('paymentCollection.addRecord.createAction')}
+            icon={Plus}
+            onPress={() =>
+              navigation.navigate('CreatePayment', { spaceId, month: summary.month })
+            }
+            style={styles.createButton}
+          />
+        </View>
 
         {showPaymentsSoftTip && paymentsAccess?.reasonKey ? (
           <View style={styles.softTip}>
@@ -355,7 +406,7 @@ export function PaymentsScreen() {
                 : t('payments.errors.title')
             }
             description={t(summary.error ?? 'payments.errors.loadLedger')}
-            icon="⚠️"
+            Icon={AlertTriangle}
           />
         ) : (
           <>
@@ -382,90 +433,63 @@ export function PaymentsScreen() {
               </Pressable>
             ) : null}
 
-            {(summary.refreshError || members.refreshError) ? (
+            {(summary.refreshError || records.refreshError) ? (
               <Text style={styles.refreshError} onPress={() => void handleRefresh()}>
-                {t(summary.refreshError ?? members.refreshError ?? '')} ·{' '}
+                {t(summary.refreshError ?? records.refreshError ?? '')} ·{' '}
                 {t('common.retry', { defaultValue: 'Tap to retry' })}
               </Text>
             ) : null}
 
             <ListSearchFilterBar
-              searchValue={members.search}
-              onSearchChange={members.setSearch}
-              searchPlaceholder={t('list.search.membersPayments')}
+              searchValue={search}
+              onSearchChange={setSearch}
+              searchPlaceholder={t('payments.records.search')}
               onFilterPress={() => setFilterDrawerOpen(true)}
               activeFilterCount={activeFilterCount}
               showFilterButton={shouldUseFilterDrawer(PAYMENT_FILTER_OPTION_COUNT)}
             />
 
             <View style={styles.listHeader}>
-              <Text style={styles.listTitle}>{t('membership.tabs.members')}</Text>
+              <Text style={styles.listTitle}>{t('payments.records.heading')}</Text>
               <Text style={styles.listCount}>
                 {t('payments.membersCount', {
-                  count: members.filteredMembers.length,
+                  count: visiblePayments.length,
                 })}
               </Text>
             </View>
 
-            {members.loading ? (
+            {!listReady || records.loading ? (
               <SkeletonCard />
-            ) : members.error ? (
+            ) : records.error ? (
               <EmptyState
                 title={t('payments.errors.title')}
-                description={t(members.error)}
-                icon="⚠️"
+                description={t(records.error)}
+                Icon={AlertTriangle}
               />
-            ) : members.filteredMembers.length === 0 ? (
+            ) : visiblePayments.length === 0 ? (
               <EmptyState
                 title={paymentEmptyState.title}
                 description={paymentEmptyState.description}
               />
             ) : (
-              <>
-                {members.filteredMembers.map(row => (
-                  <MemberPaymentRow
-                    key={row.memberId}
-                    row={row}
-                    amountEmphasis={
-                      members.filters.preset === 'collected' ? 'collected' : 'default'
-                    }
-                    onPress={() => void handleMemberPress(row.memberId, row.memberName)}
-                    ownerActions={
-                      members.filters.preset !== 'collected' &&
-                      memberRowShowsOwnerPaymentActions(row.status)
-                        ? (
-                            <OwnerPaymentCardActions
-                              showReceived={memberRowShowsReceived(row.status)}
-                              showReminder={memberRowShowsReminder(row.status)}
-                              receivedLoading={cardActions.isProcessing(
-                                `member:${row.memberId}`,
-                                'received',
-                              )}
-                              reminderLoading={cardActions.isProcessing(
-                                `member:${row.memberId}`,
-                                'reminder',
-                              )}
-                              onReceived={() =>
-                                void cardActions.requestReceivedForMember(
-                                  row.memberId,
-                                  row.memberName,
-                                )
-                              }
-                              onReminder={() =>
-                                void cardActions.sendReminderForMember(row.memberId)
-                              }
-                            />
-                          )
-                        : undefined
-                    }
-                  />
-                ))}
-                {members.hasMore ? (
-                  <Text style={styles.loadMore} onPress={() => void members.loadMore()}>
-                    {t('common.loadMore', { defaultValue: 'Load more' })}
-                  </Text>
-                ) : null}
-              </>
+              visiblePayments.map(payment => (
+                <UniversalPaymentCard
+                  key={payment.paymentId}
+                  payment={payment}
+                  showMember
+                  onPress={() => setDetailsPayment(payment)}
+                  ownerActions={
+                    <OwnerPaymentCardActions
+                      showReceived={canOwnerMarkPaymentReceived(payment.paymentStatus)}
+                      showReminder={canOwnerSendPaymentReminder(payment)}
+                      receivedLoading={cardActions.isProcessing(payment.paymentId, 'received')}
+                      reminderLoading={cardActions.isProcessing(payment.paymentId, 'reminder')}
+                      onReceived={() => cardActions.requestReceivedForPayment(payment)}
+                      onReminder={() => cardActions.sendReminderForPayment(payment)}
+                    />
+                  }
+                />
+              ))
             )}
           </>
         )}
@@ -473,22 +497,62 @@ export function PaymentsScreen() {
 
       <PaymentsFilterDrawer
         visible={filterDrawerOpen}
-        applied={members.filters}
+        applied={filters}
         onClose={() => setFilterDrawerOpen(false)}
-        onApply={members.setFilters}
+        onApply={setFilters}
+      />
+      <PaymentDetailsSheet
+        payment={
+          detailsPayment
+            ? visiblePayments.find(row => row.paymentId === detailsPayment.paymentId) ??
+              detailsPayment
+            : null
+        }
+        spaceId={spaceId}
+        spaceName={spaceName}
+        receivedLoading={
+          detailsPayment != null &&
+          cardActions.isProcessing(detailsPayment.paymentId, 'received')
+        }
+        reminderLoading={
+          detailsPayment != null &&
+          cardActions.isProcessing(detailsPayment.paymentId, 'reminder')
+        }
+        onClose={() => setDetailsPayment(null)}
+        showOwnerActions={canManage}
+        onReceived={payment => cardActions.requestReceivedForPayment(payment)}
+        onReminder={payment => cardActions.sendReminderForPayment(payment)}
+        onOpenFull={payment => {
+          setDetailsPayment(null);
+          navigation.navigate('PaymentDetail', {
+            spaceId,
+            paymentId: payment.paymentId,
+            memberId: payment.memberId,
+            memberName: payment.memberName,
+          });
+        }}
+      />
+      <PaymentReminderComposer
+        visible={cardActions.reminderDraft != null}
+        memberName={cardActions.reminderDraft?.memberName ?? ''}
+        phone={cardActions.reminderPhone}
+        message={cardActions.reminderMessage}
+        notice={cardActions.reminderNotice}
+        submitting={
+          cardActions.reminderDraft != null &&
+          cardActions.isProcessing(cardActions.reminderDraft.paymentId, 'reminder')
+        }
+        onChangeMessage={cardActions.setReminderMessage}
+        onCancel={cardActions.cancelReminder}
+        onConfirm={cardActions.confirmReminder}
       />
       <PaymentReceivedConfirmModal
         visible={cardActions.confirmPayments.length > 0}
         payments={cardActions.confirmPayments}
+        spaceName={spaceName}
         loading={cardActions.receivedConfirmLoading}
         onClose={cardActions.cancelConfirm}
         onConfirm={cardActions.confirmReceived}
-      />
-      <FAB
-        onPress={() =>
-          navigation.navigate('CreatePayment', { spaceId, month: summary.month })
-        }
-        accessibilityLabel={t('paymentCollection.create.title')}
       />
     </View>
   );
@@ -507,9 +571,26 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.section,
     gap: spacing.sm,
   },
+  headingRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
   heading: {
     ...typography.h2,
-    marginBottom: spacing.md,
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: '52%',
+  },
+  createButton: {
+    flexGrow: 0,
+    flexShrink: 0,
+    minHeight: 40,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
   },
   softTip: {
     marginBottom: spacing.sm,
