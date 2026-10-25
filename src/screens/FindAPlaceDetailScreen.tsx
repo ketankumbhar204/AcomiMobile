@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { BadgeCheck, Info, Map as MapIcon, MapPin, Sparkles } from 'lucide-react-native';
 import { getSpaceTypeLabel } from '../api';
 import { enquiryApi } from '../api/enquiryApi';
-import { directContactDecision, inquiryCreditsApi } from '../api/inquiryCreditsApi';
+import { directContactDecision, inquiryCreditsApi, isUnlimitedQuota, type InquiryQuota } from '../api/inquiryCreditsApi';
 import { spaceDiscoverApi } from '../api/spaceDiscoverApi';
 import type { DiscoverSpaceDetailResponse, OwnerContactResponse } from '../api/types';
 import { ApiError } from '../api/types';
@@ -37,6 +37,7 @@ import { openableMapsUrl } from '../utils/mapsLink';
 import { firstVerifiedListingImageUrl } from '../utils/representativeImage';
 import { hasActualListingPhotos } from '../utils/photoRequest';
 import { PhotoRequestAction } from '../components/discovery/PhotoRequestAction';
+import { ListingExtrasPayModal } from '../components/discovery/ListingExtrasPayModal';
 import { formatCurrency } from '../utils/memberDeposit';
 import { listingPriceSuffix } from '../utils/priceBasis';
 
@@ -87,22 +88,72 @@ export function FindAPlaceDetailScreen() {
   const contactViewed = inquiry?.contactViewed === true;
   const sentVia = useInquirySentVia(spaceId);
   const [revealed, setRevealed] = useState<OwnerContactResponse | null>(null);
+  const [contactLoad, setContactLoad] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [contactReload, setContactReload] = useState(0);
   const [revealPhase, setRevealPhase] = useState<RevealPhase>('idle');
   const [revealAttempt, setRevealAttempt] = useState(0);
+  const [extrasQuota, setExtrasQuota] = useState<InquiryQuota | null>(null);
+  const [extrasFetched, setExtrasFetched] = useState(false);
+  const [payOpen, setPayOpen] = useState(false);
+  const [payPurpose, setPayPurpose] = useState<'map' | 'photos'>('map');
+  const [sessionPaid, setSessionPaid] = useState(false);
+  const [photoOpenToken, setPhotoOpenToken] = useState(0);
+  const payPurposeRef = useRef<'map' | 'photos'>('map');
+  const accessGrantedRef = useRef(false);
+  const revealedRef = useRef(revealed);
+  revealedRef.current = revealed;
 
   useEffect(() => {
     if (!contactViewed) {
       setRevealed(null);
+      setContactLoad('idle');
+      return;
+    }
+    if (revealedRef.current) {
+      setContactLoad('idle');
       return;
     }
     let cancelled = false;
-    enquiryApi.revealedContact(spaceId).then(contact => {
-      if (!cancelled && contact) setRevealed(contact);
-    });
+    setContactLoad('loading');
+    enquiryApi
+      .revealedContact(spaceId)
+      .then(contact => {
+        if (cancelled) return;
+        setRevealed(contact);
+        setContactLoad('idle');
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setContactLoad('error');
+      });
     return () => {
       cancelled = true;
     };
-  }, [contactViewed, spaceId]);
+  }, [contactReload, contactViewed, spaceId]);
+
+  useEffect(() => {
+    setExtrasQuota(null);
+    setExtrasFetched(false);
+    setPayOpen(false);
+    setSessionPaid(false);
+    setPhotoOpenToken(0);
+    accessGrantedRef.current = false;
+    let cancelled = false;
+    inquiryCreditsApi
+      .getQuota()
+      .then(quota => {
+        if (!cancelled) setExtrasQuota(quota);
+      })
+      .catch(() => {
+        if (!cancelled) setExtrasQuota(null);
+      })
+      .finally(() => {
+        if (!cancelled) setExtrasFetched(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [spaceId]);
 
   useEffect(() => {
     if (!detail || !isAuthenticated || detail.alreadyMember || detail.ownedByCurrentUser) {
@@ -223,11 +274,82 @@ export function FindAPlaceDetailScreen() {
   const hasStarting = startingPrice != null && Number.isFinite(startingPrice) && startingPrice > 0;
   const cta = t('spaces.findPlace.getContactDetails');
 
+  const releasePaidAccess = useCallback(() => {
+    if (accessGrantedRef.current) return;
+    accessGrantedRef.current = true;
+    const purpose = payPurposeRef.current;
+    setSessionPaid(true);
+    setPayOpen(false);
+    if (purpose === 'map') {
+      const url = openableMapsUrl(detail?.mapUrl);
+      if (url) void Linking.openURL(url);
+      return;
+    }
+    setPhotoOpenToken(token => token + 1);
+  }, [detail?.mapUrl]);
+
+  const openPay = useCallback((purpose: 'map' | 'photos') => {
+    payPurposeRef.current = purpose;
+    setPayPurpose(purpose);
+    setPayOpen(true);
+  }, []);
+
+  const holdForPayment = useCallback(
+    (purpose: 'map' | 'photos') => {
+      if (
+        detail?.alreadyMember ||
+        alreadyInquired ||
+        contactViewed ||
+        revealed ||
+        sessionPaid
+      ) {
+        return true;
+      }
+      if (!extrasFetched) {
+        void inquiryCreditsApi
+          .getQuota()
+          .then(quota => {
+            setExtrasQuota(quota);
+            setExtrasFetched(true);
+            if (isUnlimitedQuota(quota) || quota.freeRemainingToday > 0) {
+              if (purpose === 'map') {
+                const url = openableMapsUrl(detail?.mapUrl);
+                if (url) void Linking.openURL(url);
+                return;
+              }
+              setPhotoOpenToken(token => token + 1);
+              return;
+            }
+            openPay(purpose);
+          })
+          .catch(() => openPay(purpose));
+        return false;
+      }
+      if (extrasQuota != null && (isUnlimitedQuota(extrasQuota) || extrasQuota.freeRemainingToday > 0)) {
+        return true;
+      }
+      openPay(purpose);
+      return false;
+    },
+    [
+      alreadyInquired,
+      contactViewed,
+      detail?.alreadyMember,
+      detail?.mapUrl,
+      extrasFetched,
+      extrasQuota,
+      openPay,
+      revealed,
+      sessionPaid,
+    ],
+  );
+
   const openMap = useCallback(() => {
+    if (!holdForPayment('map')) return;
     const url = openableMapsUrl(detail?.mapUrl);
     if (!url) return;
     void Linking.openURL(url);
-  }, [detail?.mapUrl]);
+  }, [detail?.mapUrl, holdForPayment]);
 
   const scrollToSection = useCallback((section: ListingSection) => {
     const target = sectionRefs.current[section];
@@ -414,7 +536,7 @@ export function FindAPlaceDetailScreen() {
                   {t('spaces.findPlace.notAvailable', { defaultValue: 'Not available' })}
                 </Text>
               )}
-              {!detail.alreadyMember && !detail.ownedByCurrentUser ? (
+              {!detail.alreadyMember ? (
                 <PhotoRequestAction
                   spaceId={detail.spaceId}
                   kind={detail.type === 'MESS' ? 'mess' : 'property'}
@@ -422,6 +544,8 @@ export function FindAPlaceDetailScreen() {
                   spaceType={detail.type}
                   location={listingAddress(detail)}
                   photoUrls={[detail.listingImageUrl, detail.coverImageUrl, detail.imageUrl]}
+                  onBeforeOpen={() => holdForPayment('photos')}
+                  openToken={photoOpenToken}
                 />
               ) : null}
             </View>
@@ -429,17 +553,41 @@ export function FindAPlaceDetailScreen() {
             <View ref={sectionAnchor('contact')} collapsable={false} onLayout={() => {
               if (focusSection === 'contact') scrollToSection('contact');
             }}>
-            {(contactViewed || revealed) && !detail.alreadyMember && !detail.ownedByCurrentUser ? (
+            {(contactViewed ||
+              revealed ||
+              contactLoad !== 'idle' ||
+              revealPhase === 'checking' ||
+              revealPhase === 'revealing' ||
+              revealPhase === 'error') &&
+            !detail.alreadyMember &&
+            !detail.ownedByCurrentUser ? (
               <View style={styles.section}>
-                <Text style={styles.viewedLabel}>
-                  {t('spaces.findPlace.contactDetailsViewed', { defaultValue: 'Contact details viewed' })}
-                </Text>
-                <OwnerContactCard contact={revealed} mapUrl={detail.mapUrl} />
+                {contactViewed || revealed ? (
+                  <Text style={styles.viewedLabel}>
+                    {t('spaces.findPlace.contactDetailsViewed', { defaultValue: 'Contact details viewed' })}
+                  </Text>
+                ) : null}
+                <OwnerContactCard
+                  contact={revealed}
+                  mapUrl={detail.mapUrl}
+                  loading={
+                    !revealed &&
+                    (contactLoad === 'loading' || revealPhase === 'checking' || revealPhase === 'revealing')
+                  }
+                  error={!revealed && (contactLoad === 'error' || revealPhase === 'error')}
+                  onRetry={() => {
+                    if (contactLoad === 'error') {
+                      setContactReload(value => value + 1);
+                      return;
+                    }
+                    setRevealAttempt(attempt => attempt + 1);
+                  }}
+                />
               </View>
             ) : null}
 
             {!detail.alreadyMember && !detail.ownedByCurrentUser && !contactViewed && !revealed &&
-            (revealPhase === 'disabled' || revealPhase === 'exhausted' || revealPhase === 'error') ? (
+            (revealPhase === 'disabled' || revealPhase === 'exhausted') ? (
               <View style={styles.inviteNotice}>
                 <Info size={18} color={colors.primaryDark} strokeWidth={2.2} />
                 <Text style={styles.inviteNoticeText}>
@@ -447,13 +595,9 @@ export function FindAPlaceDetailScreen() {
                     ? t('spaces.findPlace.enquire.viewHereExhausted', {
                         defaultValue: 'You have used all instant contact views for today.',
                       })
-                    : revealPhase === 'error'
-                      ? t('spaces.findPlace.enquire.viewHereFailed', {
-                          defaultValue: 'Contact details could not be loaded. Try again.',
-                        })
-                      : t('spaces.findPlace.enquire.viewHereDisabled', {
-                          defaultValue: 'Instant contact viewing is turned off. You can still request details.',
-                        })}
+                    : t('spaces.findPlace.enquire.viewHereDisabled', {
+                        defaultValue: 'Instant contact viewing is turned off. You can still request details.',
+                      })}
                 </Text>
               </View>
             ) : null}
@@ -461,6 +605,15 @@ export function FindAPlaceDetailScreen() {
           </View>
         ) : null}
       </Screen>
+
+      {detail ? (
+        <ListingExtrasPayModal
+          open={payOpen}
+          purpose={payPurpose}
+          onClose={() => setPayOpen(false)}
+          onConfirmed={releasePaidAccess}
+        />
+      ) : null}
 
       {detail ? (
         <EnquireDialog
