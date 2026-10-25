@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -23,6 +23,10 @@ type PhotoRequestActionProps = {
   spaceType?: string | null;
   location?: string | null;
   photoUrls?: ReadonlyArray<string | null | undefined> | null;
+  /** Return false to keep the WhatsApp dialog closed, for example while payment is required. */
+  onBeforeOpen?: () => boolean;
+  /** Increment to open the dialog after payment is confirmed. */
+  openToken?: number;
 };
 
 export function PhotoRequestAction({
@@ -32,6 +36,8 @@ export function PhotoRequestAction({
   spaceType,
   location,
   photoUrls,
+  onBeforeOpen,
+  openToken = 0,
 }: PhotoRequestActionProps) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -45,11 +51,23 @@ export function PhotoRequestAction({
   const title = photoRequestTitle(kind, hasPhotos);
   const bottomInset = Math.max(insets.bottom, androidModalNavigationInset());
 
-  function openRequest() {
+  function openComposer() {
     setMessage(buildPhotoRequestMessage({ kind, hasPhotos, name, spaceType, location }));
     setNotice('');
     setOpen(true);
   }
+
+  function openRequest() {
+    if (onBeforeOpen && !onBeforeOpen()) return;
+    openComposer();
+  }
+
+  const seenOpenToken = useRef(0);
+  useEffect(() => {
+    if (!openToken || openToken === seenOpenToken.current) return;
+    seenOpenToken.current = openToken;
+    openComposer();
+  }, [hasPhotos, kind, location, name, openToken, spaceType]);
 
   function closeRequest() {
     if (submittingRef.current) return;
