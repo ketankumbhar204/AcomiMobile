@@ -46,7 +46,14 @@ import type {
   SpaceType,
 } from '../api/types';
 import { StickyFormActions } from '../components/progressive';
+import { AddressLocationFields } from '../components/location/AddressLocationFields';
 import { FormInput, HeaderBackButton, ListFilterChips, useConfirmDialog } from '../components/ui';
+import {
+  EMPTY_ADDRESS_CAPTURE,
+  addressCaptureIssue,
+  captureFromFreeText,
+  composeStoredAddress,
+} from '../utils/locationAutocomplete';
 import { MealFormHero } from '../components/meals/MealFormHero';
 import type { ListFilterChipOption } from '../components/ui/ListFilterChips';
 import {
@@ -75,6 +82,7 @@ type EditSpaceRoute = NativeStackScreenProps<MainStackParamList, 'EditSpace'>['r
 
 type FieldErrors = {
   name?: string;
+  address?: string;
 };
 
 function EditSectionCard({
@@ -185,7 +193,7 @@ export function EditSpaceScreen() {
   const error = useSpaceStore(state => state.error);
 
   const [name, setName] = useState('');
-  const [address, setAddress] = useState('');
+  const [location, setLocation] = useState(EMPTY_ADDRESS_CAPTURE);
   const [contactNumber, setContactNumber] = useState('');
   const [typeLabel, setTypeLabel] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -260,7 +268,12 @@ export function EditSpaceScreen() {
       loadSpaceDetails(spaceId).then(async loaded => {
         if (loaded) {
           setName(loaded.name);
-          setAddress(loaded.address ?? '');
+          const captured = captureFromFreeText(loaded.address);
+          setLocation({
+            ...captured,
+            latitude: typeof loaded.latitude === 'number' ? loaded.latitude : captured.latitude,
+            longitude: typeof loaded.longitude === 'number' ? loaded.longitude : captured.longitude,
+          });
           setContactNumber(loaded.contactNumber ?? '');
           setTypeLabel(formatSpaceType(loaded.type));
           setSpaceType(loaded.type);
@@ -328,6 +341,11 @@ export function EditSpaceScreen() {
 
   function validate(): boolean {
     const errors: FieldErrors = {};
+    if (addressCaptureIssue(location) === 'selection') {
+      errors.address = t('locationCapture.selectionRequired', {
+        defaultValue: 'Select a location from the suggestions.',
+      });
+    }
     if (!name.trim()) {
       errors.name = t('spaces.editSpace.nameRequired');
     } else if (
@@ -352,7 +370,10 @@ export function EditSpaceScreen() {
 
     const updated = await updateSpace(spaceId, {
       name: name.trim(),
-      address: address.trim() || undefined,
+      address: composeStoredAddress(location) || undefined,
+      ...(location.latitude != null && location.longitude != null
+        ? { latitude: location.latitude, longitude: location.longitude }
+        : {}),
       contactNumber: contactNumber.trim() || undefined,
       amenities: showAmenities ? normalizeAmenityAssignments(amenities) : undefined,
       genderPolicy: showPropertyCategory ? genderPolicy : undefined,
@@ -523,14 +544,10 @@ export function EditSpaceScreen() {
                   helper={t('spaces.editSpace.contactHelper', {
                     defaultValue: 'How residents and staff can reach this space.',
                   })}>
-                  <FormInput
-                    label={t('spaces.createSpace.addressLabel')}
-                    placeholder={t('spaces.createSpace.addressPlaceholder')}
-                    value={address}
-                    onChangeText={setAddress}
-                    autoCapitalize="sentences"
-                    returnKeyType="next"
-                    leadingIcon={MapPin}
+                  <AddressLocationFields
+                    value={location}
+                    onChange={setLocation}
+                    error={fieldErrors.address}
                   />
 
                   <FormInput

@@ -23,6 +23,8 @@ import { hasPrepaidOverflow } from '../../utils/mealPollPayment';
 import { MEAL_TYPES, mealTypeLabelKey } from '../../utils/mealLabels';
 import {
   buildMealSummaryFromPolls,
+  resolveMealPollChoice,
+  type MealPollChoice,
   type MealSummaryLineItem,
 } from '../../utils/mealSelectionSummary';
 import { countMenuItemsByMeal } from '../../utils/customerDashboardStats';
@@ -131,6 +133,7 @@ function actionLabel(
 type MealMiniCardProps = {
   mealType: MealType;
   itemCount: number;
+  choice: MealPollChoice;
   selectedItems?: MealSummaryLineItem[];
   showMealPrices?: boolean;
   onPress?: () => void;
@@ -140,6 +143,7 @@ type MealMiniCardProps = {
 function MealMiniCard({
   mealType,
   itemCount,
+  choice,
   selectedItems = [],
   showMealPrices = true,
   onPress,
@@ -148,15 +152,18 @@ function MealMiniCard({
   const { t } = useTranslation();
   const label = t(mealTypeLabelKey(mealType));
   const theme = mealTypeTheme(mealType);
-  const selected = selectedItems.length > 0;
+  const selected = choice === 'selected' && selectedItems.length > 0;
+  const unavailable = choice === 'unavailable';
   const previewItems = selectedItems.slice(0, 2);
   const moreCount = Math.max(0, selectedItems.length - previewItems.length);
 
-  const accessibilityDetail = selected
-    ? `${t('dashboard.pollCard.youHaveSelected')}, ${previewItems
-        .map(item => item.label)
-        .join(', ')}`
-    : t('dashboard.customer.mealItems', { count: itemCount });
+  const accessibilityDetail = unavailable
+    ? t('dashboard.pollCard.notAvailable', { defaultValue: 'Not available' })
+    : selected
+      ? `${t('dashboard.pollCard.youHaveSelected')}, ${previewItems
+          .map(item => item.label)
+          .join(', ')}`
+      : t('dashboard.customer.mealItems', { count: itemCount });
 
   return (
     <Pressable
@@ -178,7 +185,11 @@ function MealMiniCard({
         <Text style={[styles.mealCardTitle, { color: theme.accent }]} numberOfLines={1}>
           {label}
         </Text>
-        {selected ? (
+        {unavailable ? (
+          <Text style={styles.mealCardUnavailable} numberOfLines={2}>
+            {t('dashboard.pollCard.notAvailable', { defaultValue: 'Not available' })}
+          </Text>
+        ) : selected ? (
           <>
             <Text style={styles.mealCardSelectedHint} numberOfLines={1}>
               {t('dashboard.pollCard.youHaveSelected')}
@@ -276,6 +287,7 @@ export function DashboardCustomerPollCard({
   }, [justSaved, onDismissSuccess]);
 
   const mealCards = MEAL_TYPES.filter(mealType => itemCounts[mealType] != null).map(mealType => {
+    const poll = sortedPolls.find(row => row.mealType === mealType);
     const selectedItems =
       selectionSummary.sections.find(section => section.mealType === mealType)?.items ?? [];
     return (
@@ -283,6 +295,7 @@ export function DashboardCustomerPollCard({
         key={mealType}
         mealType={mealType}
         itemCount={itemCounts[mealType] ?? 0}
+        choice={resolveMealPollChoice(poll, multiQuantity)}
         selectedItems={selectedItems}
         showMealPrices={showMealPrices}
         onPress={isPressable ? onAction : undefined}
@@ -373,6 +386,7 @@ export function DashboardCustomerPollCard({
             <MealSelectionSummary
               model={selectionSummary}
               variant="compact"
+              showPrices={showMealPrices}
               showTotals={selectionSummary.totalPlates > 0 && showMealPrices}
             />
           ) : null}
@@ -588,6 +602,11 @@ const styles = StyleSheet.create({
   mealCardSelectedHint: {
     ...typography.caption,
     color: colors.primaryDark,
+    fontWeight: '700',
+  },
+  mealCardUnavailable: {
+    ...typography.caption,
+    color: colors.textSecondary,
     fontWeight: '700',
   },
   mealCardSelectionLine: {

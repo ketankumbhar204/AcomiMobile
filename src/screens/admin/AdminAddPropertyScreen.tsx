@@ -12,9 +12,10 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { Building2, IndianRupee, MapPin, UserRound } from 'lucide-react-native';
+import { Building2, IndianRupee, UserRound } from 'lucide-react-native';
 import { adminApi } from '../../api/adminApi';
 import type { AdminCreatePropertyRegistrationRequest, SpaceType } from '../../api/types';
+import { defaultPriceBasis, type ListingPriceBasis } from '../../utils/priceBasis';
 import {
   AdminFormHero,
   AdminFormSection,
@@ -22,7 +23,14 @@ import {
   AdminTestLeadToggle,
   adminErrorBanner,
 } from '../../components/admin';
+import { AddressLocationFields } from '../../components/location/AddressLocationFields';
 import { FormInput, SpaceTypePicker } from '../../components/ui';
+import { PriceBasisPicker } from '../../components/ui/PriceBasisPicker';
+import {
+  EMPTY_ADDRESS_CAPTURE,
+  addressCaptureIssue,
+  captureFromParts,
+} from '../../utils/locationAutocomplete';
 import { StickyFormActions } from '../../components/progressive';
 import type { AdminStackParamList } from '../../navigation/types';
 import { colors, spacing } from '../../theme';
@@ -30,7 +38,7 @@ import { isValidIndianMobile } from '../../utils/indianMobile';
 
 type Nav = NativeStackNavigationProp<AdminStackParamList, 'AdminAddProperty'>;
 
-const PROPERTY_TYPES: SpaceType[] = ['PG', 'HOSTEL', 'CO_LIVING', 'RENTAL'];
+const PROPERTY_TYPES: SpaceType[] = ['PG', 'HOSTEL', 'CO_LIVING', 'RENTAL', 'CORPORATE_STAY'];
 
 function isValidPincode(value: string): boolean {
   return /^[1-9]\d{5}$/.test(value);
@@ -54,12 +62,9 @@ export function AdminAddPropertyScreen() {
   const [ownerName, setOwnerName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
   const [alternateMobileNumber, setAlternateMobileNumber] = useState('');
-  const [addressLine, setAddressLine] = useState('');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
-  const [pincode, setPincode] = useState('');
-  const [mapUrl, setMapUrl] = useState('');
+  const [location, setLocation] = useState(EMPTY_ADDRESS_CAPTURE);
   const [startingPrice, setStartingPrice] = useState('');
+  const [priceBasis, setPriceBasis] = useState<ListingPriceBasis>(defaultPriceBasis('PG') ?? 'PER_BED');
   const [description, setDescription] = useState('');
   const [capacityEstimate, setCapacityEstimate] = useState('');
   const [amenitiesText, setAmenitiesText] = useState('');
@@ -87,11 +92,16 @@ export function AdminAddPropertyScreen() {
       setError(t('admin.property.errors.alternateDifferent'));
       return;
     }
-    if (pincode.trim() && !isValidPincode(pincode.trim())) {
+    const locationIssue = addressCaptureIssue(location, { allowManual: true });
+    if (locationIssue === 'selection') {
+      setError(t('locationCapture.selectionRequired', { defaultValue: 'Select a location from the suggestions.' }));
+      return;
+    }
+    if (locationIssue === 'pincode' || (location.pincode.trim() && !isValidPincode(location.pincode.trim()))) {
       setError(t('admin.property.errors.pincode'));
       return;
     }
-    if (mapUrl.trim() && !isValidMapUrl(mapUrl)) {
+    if (location.mapUrl.trim() && !isValidMapUrl(location.mapUrl)) {
       setError(t('admin.property.errors.mapUrl'));
       return;
     }
@@ -138,11 +148,11 @@ export function AdminAddPropertyScreen() {
     const owner = optionalText(ownerName);
     const mobile = optionalText(mobileNumber);
     const alternateMobile = optionalText(alternateMobileNumber);
-    const address = optionalText(addressLine);
-    const cityValue = optionalText(city);
-    const stateValue = optionalText(state);
-    const pincodeValue = optionalText(pincode);
-    const map = optionalText(mapUrl);
+    const address = optionalText(location.selected ? location.address : location.query);
+    const cityValue = optionalText(location.city);
+    const stateValue = optionalText(location.state);
+    const pincodeValue = optionalText(location.pincode);
+    const map = optionalText(location.mapUrl);
     const descriptionValue = optionalText(description);
     if (name) payload.propertyName = name;
     if (owner) payload.ownerName = owner;
@@ -154,7 +164,12 @@ export function AdminAddPropertyScreen() {
     if (stateValue) payload.state = stateValue;
     if (pincodeValue) payload.pincode = pincodeValue;
     if (map) payload.mapUrl = map;
+    if (location.latitude != null && location.longitude != null) {
+      payload.latitude = location.latitude;
+      payload.longitude = location.longitude;
+    }
     if (price !== undefined) payload.startingPrice = price;
+    payload.priceBasis = priceBasis;
     if (capacity !== undefined) payload.capacityEstimate = capacity;
     if (amenities.length > 0) payload.amenities = amenities;
     if (testLead) payload.testLead = true;
@@ -200,7 +215,13 @@ export function AdminAddPropertyScreen() {
                 description={t('admin.property.detailsHint')}>
                 <SpaceTypePicker
                   value={propertyType}
-                  onChange={setPropertyType}
+                  onChange={next => {
+                    setPropertyType(next);
+                    const basis = defaultPriceBasis(next);
+                    if (basis) {
+                      setPriceBasis(basis);
+                    }
+                  }}
                   allowedTypes={PROPERTY_TYPES}
                 />
                 <FormInput
@@ -263,38 +284,16 @@ export function AdminAddPropertyScreen() {
                 title={t('admin.common.location')}
                 description={t('admin.common.locationHint')}>
                 <AdminSavedAddressPicker
-                  value={{ addressLine, city, state, pincode, mapUrl }}
-                  onChange={next => {
-                    setAddressLine(next.addressLine);
-                    setCity(next.city);
-                    setState(next.state);
-                    setPincode(next.pincode);
-                    setMapUrl(next.mapUrl);
+                  value={{
+                    addressLine: location.address,
+                    city: location.city,
+                    state: location.state,
+                    pincode: location.pincode,
+                    mapUrl: location.mapUrl,
                   }}
+                  onChange={next => setLocation(captureFromParts(next))}
                 />
-                <FormInput
-                  label={t('admin.common.address')}
-                  value={addressLine}
-                  onChangeText={setAddressLine}
-                  leadingIcon={MapPin}
-                />
-                <FormInput label={t('admin.common.city')} value={city} onChangeText={setCity} />
-                <FormInput label={t('admin.common.state')} value={state} onChangeText={setState} />
-                <FormInput
-                  label={t('admin.common.pincode')}
-                  value={pincode}
-                  onChangeText={setPincode}
-                  keyboardType="number-pad"
-                  maxLength={6}
-                />
-                <FormInput
-                  label={t('admin.common.mapLink')}
-                  value={mapUrl}
-                  onChangeText={setMapUrl}
-                  placeholder={t('admin.common.mapLinkPlaceholder')}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
+                <AddressLocationFields value={location} onChange={setLocation} showBuildingName={false} allowManual />
               </AdminFormSection>
 
               <AdminFormSection title={t('admin.common.pricingOptions')}>
@@ -305,6 +304,7 @@ export function AdminAddPropertyScreen() {
                   keyboardType="numeric"
                   leadingIcon={IndianRupee}
                 />
+                <PriceBasisPicker value={priceBasis} onChange={setPriceBasis} />
                 <AdminTestLeadToggle embedded value={testLead} onValueChange={setTestLead} />
               </AdminFormSection>
             </View>

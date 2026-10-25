@@ -6,6 +6,7 @@ import type {
   OtpPurpose,
   UUID,
 } from '../api/types';
+import type { ListingSection } from '../utils/listingInfo';
 
 export type OtpVerificationParams = {
   mobileNumber: string;
@@ -27,7 +28,7 @@ export type SpaceTabParamList = {
   Dashboard: { spaceId: UUID };
   Members: { spaceId: UUID };
   Accommodation: { spaceId: UUID };
-  Meals: { spaceId: UUID };
+  Meals: { spaceId: UUID; menuDate?: string; menuDateRequest?: number };
   Payments: {
     spaceId: UUID;
     initialFilter?: 'all' | 'pending' | 'collected' | 'underReview';
@@ -68,9 +69,10 @@ export type MainStackParamList = {
   MemberTabs: NavigatorScreenParams<MemberTabParamList> | undefined;
   MySpaces: undefined;
   FindAPlace: FindAPlaceParams | undefined;
-  FindAPlaceDetail: { spaceId: UUID };
+  FindAPlaceDetail: { spaceId: UUID; focusSection?: ListingSection | null };
   MyEnquiries: { enquiryId?: UUID } | undefined;
   AccountNotifications: undefined;
+  Favorites: undefined;
   OnboardingChoice: undefined;
   MemberHome: undefined;
   JoinSpace: undefined;
@@ -83,6 +85,9 @@ export type MainStackParamList = {
   ChangeMobile: undefined;
   ChangeMobileOtp: OtpVerificationParams;
   CreateSpace: undefined;
+  ServiceContacts: undefined;
+  ServiceContactForm: { contactId?: UUID } | undefined;
+  ServiceContactDetails: { contactId: UUID };
   SpaceDetails: { spaceId: UUID };
   EditSpace: { spaceId: UUID };
   /** Parent space id + optional nested tab target (soft navigate; avoid CommonActions.reset). */
@@ -96,7 +101,7 @@ export type MainStackParamList = {
   AddMember: { spaceId: UUID; initialMode?: 'new' | 'search' };
   AddCustomersHub: { spaceId: UUID };
   ImportExistingPeople: { spaceId: UUID };
-  MemberDetails: { spaceId: UUID; memberId: UUID };
+  MemberDetails: { spaceId: UUID; memberId: UUID; initialTab?: 'profile' | 'payments' | 'meals' | 'history' | 'deposit' };
   MemberOccupancyHistory: { spaceId: UUID; memberId: UUID; memberName: string };
   EditMember: { spaceId: UUID; memberId: UUID };
   MemberSubscription: {
@@ -208,9 +213,35 @@ export type MainStackParamList = {
     unitId?: UUID;
     buildingId?: UUID;
     occupancyId?: UUID;
+    /** Bed already shown in the details modal. Skips another bed/room/building fetch. */
+    prefilledTarget?: {
+      targetType: 'BED' | 'ROOM' | 'UNIT';
+      buildingId: string;
+      buildingName: string;
+      floorId?: string;
+      floorName?: string;
+      unitId?: string;
+      unitName?: string;
+      roomId?: string;
+      roomName?: string;
+      bedId?: string;
+      bedName?: string;
+    };
+    catalogRent?: number | null;
+    catalogDeposit?: number | null;
+    catalogKnown?: boolean;
   };
-  DailyMenuToday: { spaceId: UUID; menuDate?: string };
+  DailyMenuToday: {
+    spaceId: UUID;
+    menuDate?: string;
+    mealType?: 'BREAKFAST' | 'LUNCH' | 'DINNER';
+  };
   DailyMenuEdit: {
+    spaceId: UUID;
+    menuDate: string;
+    mealType: 'BREAKFAST' | 'LUNCH' | 'DINNER';
+  };
+  MealResponseMembers: {
     spaceId: UUID;
     menuDate: string;
     mealType: 'BREAKFAST' | 'LUNCH' | 'DINNER';
@@ -238,10 +269,17 @@ export type MainStackParamList = {
     spaceId: UUID;
     menuDate: string;
     mealType?: 'BREAKFAST' | 'LUNCH' | 'DINNER';
+    /**
+     * save publishes through the poll, then opens the share sheet.
+     * share does that as well.
+     * reshare opens the share sheet for an already published day.
+     */
+    intent?: 'save' | 'share' | 'reshare';
   };
   MealPollResponse: {
     spaceId: UUID;
     menuDate: string;
+    mealType?: 'BREAKFAST' | 'LUNCH' | 'DINNER';
   };
   SubscriptionPlans: { spaceId: UUID };
   CustomerSubscriptionPlans: { spaceId: UUID; memberId: UUID };
@@ -255,6 +293,10 @@ export type MainStackParamList = {
   DashboardBedInventory: {
     spaceId: UUID;
     status: 'AVAILABLE' | 'OCCUPIED';
+    /** Property-operations card that opened this screen. */
+    focus?: 'occupied' | 'vacant' | 'moveIns';
+    /** Choosing an available bed continues into the Allocate wizard. */
+    intent?: 'allocate';
   };
   MemberPayments: {
     spaceId: UUID;
@@ -272,6 +314,9 @@ export type MainStackParamList = {
   CreatePayment: {
     spaceId: UUID;
     month?: string;
+    memberId?: UUID;
+    memberName?: string;
+    memberMobile?: string;
   };
   DayMealPaymentDetail: {
     spaceId: UUID;
@@ -336,6 +381,7 @@ export type AdminStackParamList = {
   AdminEnquiryDetail: { id: string };
   AdminInquiryCreditsConfig: undefined;
   AdminInquiryCreditRequests: undefined;
+  AdminNotificationTesting: { notificationType?: string } | undefined;
 };
 
 export type RootStackParamList = {

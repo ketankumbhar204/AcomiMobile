@@ -36,6 +36,7 @@ import {
 import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
 import { DashboardAvatar } from '../../components/dashboard/shared/DashboardPersonCard';
 import { MealFormHero } from '../../components/meals/MealFormHero';
+import { ReferenceCode } from '../../components/ui/ReferenceCode';
 import { StickyFormActions } from '../../components/progressive';
 import {
   Button,
@@ -218,6 +219,7 @@ export function ComplaintDetailScreen() {
           soft={colors.warningTint}
           border="#FDE68A"
         />
+        <ReferenceCode value={complaint.referenceCode} />
 
         <View style={styles.sectionCard}>
           <View style={styles.badgeRow}>

@@ -46,9 +46,9 @@ export function openOccupancyWizard(
   navigation.navigate('OccupancyWizard', params);
 }
 
-export function openOccupancyWizardFromRef(params: OccupancyWizardNavParams) {
+export function openOccupancyWizardFromRef(params: OccupancyWizardNavParams): boolean {
   if (!navigationRef.isReady()) {
-    return;
+    return false;
   }
   navigationRef.dispatch(
     CommonActions.navigate({
@@ -59,4 +59,5 @@ export function openOccupancyWizardFromRef(params: OccupancyWizardNavParams) {
       },
     } as never),
   );
+  return true;
 }

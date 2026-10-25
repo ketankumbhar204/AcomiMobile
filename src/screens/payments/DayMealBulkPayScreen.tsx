@@ -15,7 +15,7 @@ import { Screen } from '../../components/ui';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
-import { formatComboPrice } from '../../utils/comboPrice';
+import { formatPaymentAmount } from '../../utils/paymentAmount';
 import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
 import { invalidatePaymentsMonthCaches } from '../../utils/paymentsMonthCache';
 import { formatMenuDate } from '../../utils/mealDates';
@@ -65,7 +65,7 @@ export function DayMealBulkPayScreen() {
     [dates],
   );
 
-  const amountLabel = formatComboPrice(totalAmount, currencyCode) ?? '—';
+  const amountLabel = formatPaymentAmount(totalAmount, currencyCode) ?? '—';
 
   const proofTitle = useMemo(() => {
     if (sortedDates.length === 1) {

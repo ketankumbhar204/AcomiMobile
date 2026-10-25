@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Bell } from 'lucide-react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
@@ -7,7 +8,7 @@ import type { MainStackParamList } from '../../navigation/types';
 import type { UUID } from '../../api/types';
 import { useSpaceNotifications } from '../../hooks/useSpaceNotifications';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
-import { colors, spacing, typography } from '../../theme';
+import { colors, pastels, radius, typography } from '../../theme';
 import { currentMonthKey } from '../../utils/dashboardFinancial';
 import { canManageNotifications } from '../../utils/spaceOperator';
 import {
@@ -71,7 +72,7 @@ export function NotificationBellButton({ spaceId }: NotificationBellButtonProps)
       accessibilityRole="button"
       accessibilityLabel={t('notifications.title')}
       style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
-      <Text style={styles.icon}>🔔</Text>
+      <Bell size={18} color={pastels.orange.fg} strokeWidth={2.2} />
       {badgeCount > 0 ? (
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{badgeCount > 9 ? '9+' : String(badgeCount)}</Text>
@@ -85,20 +86,18 @@ const styles = StyleSheet.create({
   button: {
     width: 36,
     height: 36,
+    borderRadius: radius.button,
+    backgroundColor: pastels.orange.bg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.sm,
   },
   pressed: {
     opacity: 0.7,
   },
-  icon: {
-    fontSize: 18,
-  },
   badge: {
     position: 'absolute',
     top: 2,
-    right: 0,
+    right: 2,
     minWidth: 16,
     height: 16,
     borderRadius: 8,

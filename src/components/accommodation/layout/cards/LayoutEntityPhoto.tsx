@@ -11,7 +11,9 @@ type LayoutEntityPhotoProps = {
   title?: string;
   fallback: React.ReactNode;
   height: number;
+  width?: number;
   resizeMode?: ImageResizeMode;
+  onChanged?: (nextFileId: string | null) => void;
 };
 
 export function LayoutEntityPhoto({
@@ -21,7 +23,9 @@ export function LayoutEntityPhoto({
   title,
   fallback,
   height,
+  width,
   resizeMode,
+  onChanged,
 }: LayoutEntityPhotoProps) {
   const ctx = useEntityPhotoContext();
   if (!ctx || !entityId) {
@@ -37,7 +41,9 @@ export function LayoutEntityPhoto({
       title={title}
       fill
       height={height}
+      width={width}
       resizeMode={resizeMode}
+      onChanged={onChanged}
       fallback={fallback}
     />
   );

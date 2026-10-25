@@ -43,8 +43,14 @@ import { useSpaceStore } from '../../../store/spaceStore';
 import { colors, radius, shadows, spacing, typography } from '../../../theme';
 import { buildBedOccupancyTarget } from '../../../utils/buildOccupancyTarget';
 import { fetchTargetCatalogDefaults } from '../../../utils/fetchTargetCatalogDefaults';
-import { fetchSpaceFoodPolicy, type SpaceFoodPolicy } from '../../../utils/fetchSpaceFoodPolicy';
-import { fetchSpaceAmenities } from '../../../utils/fetchSpaceAmenities';
+import {
+  fetchSpaceOccupancyContext,
+  type SpaceFoodPolicy,
+} from '../../../utils/fetchSpaceFoodPolicy';
+import {
+  shouldBlockOccupancyWizardBoot,
+  shouldRefetchAllocationTarget,
+} from '../../../utils/occupancyWizardBoot';
 import {
   defaultAssignedAmenities,
 } from '../../../utils/amenities';
@@ -160,11 +166,25 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
 
   const [member, setMember] = useState<MemberResponse | null>(null);
   const [memberQuery, setMemberQuery] = useState('');
-  const [targetSelection, setTargetSelection] = useState<OccupancyTargetSelection | null>(null);
-  const [catalogRent, setCatalogRent] = useState<number | null>(null);
-  const [catalogDeposit, setCatalogDeposit] = useState<number | null>(null);
+  const prefilledTarget = route.params.prefilledTarget ?? null;
+  const [targetSelection, setTargetSelection] = useState<OccupancyTargetSelection | null>(
+    prefilledTarget,
+  );
+  const [catalogRent, setCatalogRent] = useState<number | null>(
+    route.params.catalogKnown ? route.params.catalogRent ?? null : null,
+  );
+  const [catalogDeposit, setCatalogDeposit] = useState<number | null>(
+    route.params.catalogKnown ? route.params.catalogDeposit ?? null : null,
+  );
   const [contractValues, setContractValues] = useState<ContractTermsFormValues>(
-    emptyContractTermsFormValues(),
+    emptyContractTermsFormValues(
+      route.params.catalogKnown
+        ? {
+            defaultRent: route.params.catalogRent,
+            defaultDeposit: route.params.catalogDeposit,
+          }
+        : undefined,
+    ),
   );
   const [foodPolicy, setFoodPolicy] = useState<SpaceFoodPolicy>({
     foodIncludedInRent: false,
@@ -178,7 +198,12 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
   const [allowEarlyMoveIn, setAllowEarlyMoveIn] = useState(false);
   const [currentOccupancy, setCurrentOccupancy] = useState<OccupancyResponse | null>(null);
   const [occupancyId, setOccupancyId] = useState(initialOccupancyId);
-  const [bootLoading, setBootLoading] = useState(true);
+  const [bootLoading, setBootLoading] = useState(() =>
+    shouldBlockOccupancyWizardBoot({
+      memberId: route.params.memberId,
+      occupancyId: route.params.occupancyId,
+    }),
+  );
   const [formError, setFormError] = useState<string | null>(null);
   const [memberPickerMode, setMemberPickerMode] = useState<MemberPickerMode>('search');
   const [newMemberName, setNewMemberName] = useState('');
@@ -213,7 +238,7 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
   const membersError = allowAddNewMember ? importMemberSearch.error : localMemberSearch.error;
 
   const { submit, loading: submitting } = useOccupancyWizardSubmit(spaceId);
-  const { buildings } = useBuildings(spaceId);
+  const { buildings } = useBuildings(spaceId, { enabled: currentStep === 'target' });
   const effectiveFoodPolicy = useMemo(
     () =>
       resolveContractFoodPolicy(
@@ -278,19 +303,30 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
 
   useEffect(() => {
     let cancelled = false;
+    const blockForBoot = shouldBlockOccupancyWizardBoot({
+      memberId: initialMemberId,
+      occupancyId: initialOccupancyId,
+    });
+    const refetchTarget = shouldRefetchAllocationTarget({
+      bedId,
+      unitId,
+      catalogKnown: route.params.catalogKnown,
+    });
     async function bootstrap() {
-      setBootLoading(true);
+      if (blockForBoot) {
+        setBootLoading(true);
+      }
       try {
-        const [policy, amenities] = await Promise.all([
-          fetchSpaceFoodPolicy(spaceId),
-          fetchSpaceAmenities(spaceId),
-        ]);
+        const occupancyContext = await fetchSpaceOccupancyContext(spaceId);
         if (cancelled) {
           return;
         }
+        const policy = occupancyContext.foodPolicy;
         setFoodPolicy(policy);
-        setSpaceAmenities(amenities);
-        setAssignedAmenities(defaultAssignedAmenities(amenities));
+        setSpaceAmenities(occupancyContext.amenities);
+        setAssignedAmenities(current =>
+          current.length > 0 ? current : defaultAssignedAmenities(occupancyContext.amenities),
+        );
 
         if (initialMemberId) {
           const details = await memberApi.getMember(spaceId, initialMemberId);
@@ -373,7 +409,7 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
           }
         }
 
-        if (bedId || unitId) {
+        if (refetchTarget) {
           const prefilled = await fetchPrefilledAllocationTarget(spaceId, {
             bedId,
             roomId,
@@ -395,6 +431,10 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
             );
           }
         }
+      } catch (err) {
+        if (!cancelled && blockForBoot) {
+          setFormError(getOccupancyErrorMessage(err));
+        }
       } finally {
         if (!cancelled) {
           setBootLoading(false);
@@ -412,6 +452,7 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
     initialOccupancyId,
     mode,
     roomId,
+    route.params.catalogKnown,
     spaceId,
     unitId,
   ]);
@@ -658,6 +699,26 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
     ) {
       setFormError(t('occupancy.errors.targetRequired'));
       return;
+    }
+
+    if (mode === 'ALLOCATE' && resolvedTarget?.bedId) {
+      try {
+        const fresh = await fetchPrefilledAllocationTarget(spaceId, {
+          bedId: resolvedTarget.bedId,
+          roomId: resolvedTarget.roomId,
+          unitId: resolvedTarget.unitId,
+          buildingId: resolvedTarget.buildingId,
+        });
+        if (!fresh?.row.selectable) {
+          setFormError(t('occupancy.errors.targetUnavailable'));
+          return;
+        }
+        resolvedTarget = fresh.selection;
+        setTargetSelection(fresh.selection);
+      } catch (err) {
+        setFormError(getOccupancyErrorMessage(err));
+        return;
+      }
     }
 
     try {
@@ -1093,6 +1154,8 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
                 current: contractFooterPhase === 'continue' ? 1 : 2,
                 total: 2,
               })}
+              stepCurrent={contractFooterPhase === 'continue' ? 1 : 2}
+              stepTotal={2}
               progressLine={
                 contractFooterPhase === 'continue'
                   ? t('progressiveWorkflow.occupancy.progressRentNext')

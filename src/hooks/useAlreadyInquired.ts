@@ -3,10 +3,12 @@ import { enquiryApi } from '../api/enquiryApi';
 import { useAuthStore } from '../store/authStore';
 import {
   getInquiredIds,
-  getInquirySentVia,
+  getInquiryRecord,
+  getInquirySnapshot,
   loadInquiredListings,
   resetInquiredListings,
   subscribeInquired,
+  type InquiryRecord,
   type InquirySentVia,
 } from '../state/inquiredListings';
 
@@ -26,8 +28,14 @@ export function useAlreadyInquired(listingId?: string | null): boolean {
   return Boolean(listingId && ids.has(listingId));
 }
 
+export function useInquiryRecord(listingId?: string | null): InquiryRecord | null {
+  useAlreadyInquired(listingId);
+  const version = useSyncExternalStore(subscribeInquired, getInquirySnapshot, getInquirySnapshot);
+  void version;
+  if (!listingId) return null;
+  return getInquiryRecord(listingId);
+}
+
 export function useInquirySentVia(listingId?: string | null): InquirySentVia | null {
-  const inquired = useAlreadyInquired(listingId);
-  if (!inquired || !listingId) return null;
-  return getInquirySentVia(listingId);
+  return useInquiryRecord(listingId)?.sentVia ?? null;
 }

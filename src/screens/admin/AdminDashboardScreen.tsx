@@ -20,6 +20,7 @@ import {
   MapPin,
   MessageCircle,
   Users,
+  Bell,
   Wallet,
 } from 'lucide-react-native';
 import { adminApi } from '../../api/adminApi';
@@ -332,6 +333,16 @@ export function AdminDashboardScreen() {
         <Text style={styles.sectionLabel}>
           {t('admin.dashboard.manage', { defaultValue: 'Manage' })}
         </Text>
+        <ManageCard
+          icon={Bell}
+          title={t('admin.dashboard.nav.notificationTestingTitle', {
+            defaultValue: 'Notification testing',
+          })}
+          hint={t('admin.dashboard.nav.notificationTestingHint', {
+            defaultValue: 'Send a test notification to this admin account',
+          })}
+          onPress={() => navigation.navigate('AdminNotificationTesting')}
+        />
         <ManageCard
           icon={MessageCircle}
           title={t('admin.dashboard.nav.enquiriesTitle')}

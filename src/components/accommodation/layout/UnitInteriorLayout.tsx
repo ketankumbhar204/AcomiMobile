@@ -60,7 +60,7 @@ export function UnitInteriorLayout({
               entityId={unitId}
               fileId={unitPhotoFileId}
               title={unitName}
-              height={100}
+              height={110}
               fallback={
                 <LayoutIllustration
                   source={getUnitIllustration(rooms.length, totals.bedCount)}

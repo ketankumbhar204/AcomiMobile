@@ -64,6 +64,7 @@ export interface InventoryItem {
   minimumStock: number;
   location?: string | null;
   supplierId?: UUID | null;
+  supplierName?: string | null;
   purchasePrice?: number | null;
   averagePrice?: number | null;
   barcode?: string | null;
@@ -128,6 +129,7 @@ export interface CreateInventoryItemRequest {
   minimumStock: number;
   location?: string | null;
   supplierId?: UUID | null;
+  supplierName?: string | null;
   purchasePrice?: number | null;
   barcode?: string | null;
   notes?: string | null;
@@ -140,6 +142,7 @@ export interface UpdateInventoryItemRequest {
   minimumStock?: number;
   location?: string | null;
   supplierId?: UUID | null;
+  supplierName?: string | null;
   purchasePrice?: number | null;
   averagePrice?: number | null;
   barcode?: string | null;

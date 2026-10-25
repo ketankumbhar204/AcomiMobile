@@ -346,6 +346,20 @@ export function MenuLibraryScreen({ spaceId, initialTab }: MenuLibraryScreenProp
     [reload, showToast, spaceId, t],
   );
 
+  const toggleComboInSpace = useCallback(
+    (combo: MealComboResponse) => {
+      void (async () => {
+        try {
+          await mealsApi.setMealComboEnabled(spaceId, combo.comboId, combo.enabledForSpace === false);
+          await reload();
+        } catch {
+          showToast(t('meals.errors.actionFailed'));
+        }
+      })();
+    },
+    [reload, showToast, spaceId, t],
+  );
+
   const openComboForm = useCallback(
     (mode: 'create' | 'edit', comboId?: UUID) => {
       closeInlineEditors();
@@ -495,6 +509,7 @@ export function MenuLibraryScreen({ spaceId, initialTab }: MenuLibraryScreenProp
             onPhotoChanged={() => void reload()}
             onAddCombo={() => openComboForm('create')}
             onEditCombo={combo => openComboForm('edit', combo.comboId)}
+            onToggleCombo={canManage ? toggleComboInSpace : undefined}
             onRemoveCombo={canManage ? removeCombo : undefined}
           />
           <ComboPreviewBar

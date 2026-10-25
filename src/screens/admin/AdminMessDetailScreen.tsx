@@ -14,6 +14,8 @@ import { StickyFormActions } from '../../components/progressive';
 import type { AdminStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { formatRegistrationSource, formatRegistrationStatus } from '../../utils/adminLabels';
+import { PRICE_BASIS_LABEL, isPriceBasis } from '../../utils/priceBasis';
+import { isMarkedTestLead } from '../../utils/adminTestLead';
 import { colors, spacing, typography } from '../../theme';
 
 type Props = NativeStackScreenProps<AdminStackParamList, 'AdminMessDetail'>;
@@ -83,6 +85,9 @@ export function AdminMessDetailScreen({ navigation, route }: Props) {
         <Card style={styles.headerCard}>
           <Text style={styles.title}>{detail.messName}</Text>
           <Text style={styles.ref}>{detail.reference}</Text>
+          {isMarkedTestLead(detail.testLead) ? (
+            <Text style={styles.testBadge}>{t('admin.labels.testBadge')}</Text>
+          ) : null}
         </Card>
 
         <AdminDetailSection>
@@ -149,7 +154,9 @@ export function AdminMessDetailScreen({ navigation, route }: Props) {
           ) : null}
           <AdminDetailField
             label={t('admin.mess.monthlyPrice')}
-            value={`₹${detail.monthlyPrice}`}
+            value={`₹${detail.monthlyPrice} ${
+              isPriceBasis(detail.monthlyPriceBasis) ? PRICE_BASIS_LABEL[detail.monthlyPriceBasis] : 'per month'
+            }`}
           />
           <AdminDetailField label={t('admin.mess.mealPrice')} value={`₹${detail.mealPrice}`} />
           {detail.capacityEstimate != null ? (
@@ -193,4 +200,16 @@ const styles = StyleSheet.create({
   headerCard: { marginBottom: spacing.sm },
   title: { ...typography.h2, color: colors.textPrimary },
   ref: { ...typography.caption, color: colors.textSecondary, marginTop: 4 },
+  testBadge: {
+    alignSelf: 'flex-start',
+    marginTop: spacing.sm,
+    ...typography.caption,
+    color: colors.white,
+    backgroundColor: '#EF4444',
+    fontWeight: '700',
+    overflow: 'hidden',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
 });

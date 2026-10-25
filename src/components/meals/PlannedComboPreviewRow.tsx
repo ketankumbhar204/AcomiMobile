@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { ChevronRight } from 'lucide-react-native';
 import type { DailyMenuOptionResponse } from '../../api/types';
 import { colors, spacing, typography } from '../../theme';
 import { formatComboPrice } from '../../utils/comboPrice';
@@ -44,7 +45,7 @@ export function PlannedComboPreviewRow({
           {priceLabel}
         </Text>
       ) : null}
-      {canOpenDetails ? <Text style={styles.chevron}>›</Text> : null}
+      {canOpenDetails ? <ChevronRight size={16} color={colors.muted} strokeWidth={2.4} /> : null}
     </>
   );
 

@@ -53,18 +53,23 @@ export function DashboardAvatar({
 export function DashboardRoleChip({
   label,
   tone = 'neutral',
+  compact = false,
 }: {
   label: string;
   tone?: DashboardPersonRoleTone;
+  compact?: boolean;
 }) {
   const palette = ROLE_TONE[tone];
   return (
     <View
       style={[
         styles.roleChip,
+        compact && styles.roleChipCompact,
         { backgroundColor: palette.bg, borderColor: palette.border },
       ]}>
-      <Text style={[styles.roleChipText, { color: palette.text }]}>{label}</Text>
+      <Text style={[styles.roleChipText, compact && styles.roleChipTextCompact, { color: palette.text }]}>
+        {label}
+      </Text>
     </View>
   );
 }
@@ -168,15 +173,25 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
   },
   roleChip: {
+    alignSelf: 'flex-start',
     borderWidth: 1,
     borderRadius: radius.full,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
   },
+  roleChipCompact: {
+    paddingHorizontal: 6,
+    paddingVertical: 0,
+  },
   roleChipText: {
     ...typography.caption,
     fontSize: 11,
     fontWeight: '700',
+  },
+  roleChipTextCompact: {
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: '600',
   },
   statusChip: {
     flexDirection: 'row',

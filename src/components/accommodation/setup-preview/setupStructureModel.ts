@@ -78,7 +78,7 @@ function inferLabels(
 
 function createBeds(count: number, bedLabels?: string[]): EditableBed[] {
   return Array.from({ length: count }, (_, index) => {
-    const label = bedLabels?.[index] ?? String.fromCharCode(65 + index);
+    const label = bedLabels?.[index] ?? String(index + 1);
     return {
       id: createStructureId(),
       label,
@@ -94,8 +94,7 @@ function createRooms(
   roomLabels?: string[],
 ): EditableRoom[] {
   return Array.from({ length: count }, (_, index) => {
-    const letter = String.fromCharCode(65 + (index % 26));
-    const label = roomLabels?.[index] ?? letter;
+    const label = roomLabels?.[index] ?? String(index + 1);
     return {
       id: createStructureId(),
       name: label.startsWith('Room') ? label : `Room ${label}`,

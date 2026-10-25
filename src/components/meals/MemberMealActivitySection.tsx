@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import type { MealBillingType, UUID } from '../../api/types';
+import { useMealPricingPolicy } from '../../hooks/useMealPricingPolicy';
 import { useMemberMealActivity } from '../../hooks/useMemberMealActivity';
 import { colors, spacing } from '../../theme';
 import { MonthlySummaryHeader } from '../ui/MonthlySummaryHeader';
@@ -39,6 +41,7 @@ export function MemberMealActivitySection({
   const [activeView, setActiveView] = useState<MemberMealActivityView>('history');
   const { month, loading, error, activity, reload, goToPreviousMonth, goToNextMonth } =
     useMemberMealActivity(spaceId, memberId);
+  const { showMealPrices } = useMealPricingPolicy(spaceId);
 
   const isPrepaid = effectiveMealBillingType === 'PREPAID_BALANCE';
   const isCustomer = audience === 'customer';
@@ -46,6 +49,13 @@ export function MemberMealActivitySection({
   useEffect(() => {
     onBindReload?.(reload);
   }, [onBindReload, reload]);
+
+  // The Meals tab stays mounted, so a save on Home would leave this month list stale.
+  useFocusEffect(
+    useCallback(() => {
+      void reload();
+    }, [reload]),
+  );
 
   const handlePurchased = () => {
     reload();
@@ -110,6 +120,7 @@ export function MemberMealActivitySection({
           loading={loading}
           error={error}
           activity={activity}
+          showPrices={showMealPrices}
           onSelectDate={onSelectDate}
           onRetry={reload}
         />

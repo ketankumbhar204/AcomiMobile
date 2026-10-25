@@ -16,6 +16,7 @@ import type { MainStackParamList, MemberTabParamList } from '../navigation/types
 import { useToastStore } from '../store/toastStore';
 import { colors, shadows, spacing, typography } from '../theme';
 import { setAccountIntent } from '../utils/accountIntent';
+import { membershipRoleLabelKey } from '../utils/memberRoles';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 
@@ -148,7 +149,7 @@ export function MemberHomeScreen() {
                   key={invitation.invitationId}
                   spaceName={invitation.spaceName}
                   spaceTypeLabel={formatSpaceType(invitation.spaceType)}
-                  roleLabel={t(`spaces.roles.${invitation.role}`)}
+                  roleLabel={t(membershipRoleLabelKey(invitation.role, invitation.spaceType))}
                   invitedBy={t('membership.incoming.invitedBy', {
                     name: invitation.invitedBy,
                   })}
@@ -176,7 +177,7 @@ export function MemberHomeScreen() {
         variant="ghost"
         onPress={() => {
           void setAccountIntent('owner');
-          navigation.navigate('OnboardingChoice');
+          navigation.navigate('CreateSpace');
         }}
         style={styles.ownerSwitch}
       />

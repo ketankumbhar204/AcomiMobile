@@ -4,6 +4,7 @@ import {
   normalizeRepresentativeCategory,
   resolveListingCover,
   stableHash,
+  toAbsoluteListingImageUrl,
 } from '../representativeImage';
 
 describe('representativeImage', () => {
@@ -76,6 +77,15 @@ describe('representativeImage', () => {
         listingImageUrl: 'https://cdn.example.com/spaces/verified.jpg',
       }).kind,
     ).toBe('listing');
+  });
+
+  it('turns site-relative listing photos into absolute URLs', () => {
+    expect(
+      toAbsoluteListingImageUrl('/files/photo.jpg', 'http://10.0.2.2:8080/api/v1'),
+    ).toBe('http://10.0.2.2:8080/api/v1/files/photo.jpg');
+    expect(
+      toAbsoluteListingImageUrl('https://cdn.example.com/spaces/verified.jpg', 'http://localhost/api/v1'),
+    ).toBe('https://cdn.example.com/spaces/verified.jpg');
   });
 
   it('does not treat Unsplash or pack URLs as verified photos', () => {

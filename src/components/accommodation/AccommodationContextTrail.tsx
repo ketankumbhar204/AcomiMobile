@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ChevronRight } from 'lucide-react-native';
 import type {
   AccommodationTrailLevel,
   AccommodationTrailSegment,
@@ -24,7 +25,7 @@ export function AccommodationContextTrail({
       <View style={styles.row}>
         {segments.map((segment, index) => (
           <React.Fragment key={`${segment.level}-${segment.label}`}>
-            {index > 0 ? <Text style={styles.separator}> › </Text> : null}
+            {index > 0 ? <ChevronRight size={12} color={colors.muted} strokeWidth={2.4} /> : null}
             {onNavigate ? (
               <Pressable
                 onPress={() => onNavigate(segment.level)}

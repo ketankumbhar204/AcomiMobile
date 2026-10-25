@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AlertCircle } from 'lucide-react-native';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 
@@ -10,7 +11,9 @@ export function Toast() {
   const insets = useSafeAreaInsets();
   const message = useToastStore(state => state.message);
   const onPress = useToastStore(state => state.onPress);
+  const tone = useToastStore(state => state.tone);
   const hideToast = useToastStore(state => state.hideToast);
+  const isError = tone === 'error';
 
   useEffect(() => {
     if (!message) {
@@ -30,15 +33,18 @@ export function Toast() {
       style={[styles.container, { bottom: insets.bottom + spacing.xl }]}
       pointerEvents={onPress ? 'box-none' : 'none'}>
       <Pressable
-        style={styles.toast}
+        style={[styles.toast, isError && styles.toastError]}
         disabled={!onPress}
         onPress={() => {
           const action = onPress;
           hideToast();
           action?.();
         }}
-        accessibilityRole={onPress ? 'button' : 'text'}>
-        <Text style={styles.text}>{message}</Text>
+        accessibilityRole={onPress ? 'button' : isError ? 'alert' : 'text'}>
+        {isError ? (
+          <AlertCircle size={18} color={colors.danger} strokeWidth={2.4} />
+        ) : null}
+        <Text style={[styles.text, isError && styles.textError]}>{message}</Text>
       </Pressable>
     </View>
   );
@@ -60,9 +66,23 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
     ...shadows.md,
   },
+  toastError: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    alignSelf: 'stretch',
+    gap: spacing.sm,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
   text: {
     ...typography.bodyStrong,
     color: colors.white,
     textAlign: 'center',
+  },
+  textError: {
+    flex: 1,
+    color: '#991B1B',
+    textAlign: 'left',
   },
 });

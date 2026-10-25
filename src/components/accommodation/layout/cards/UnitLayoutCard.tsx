@@ -56,7 +56,7 @@ export function UnitLayoutCard({
         entityId={unit.unitId}
         fileId={unit.photoFileId}
         title={unit.name}
-        height={100}
+        height={110}
         fallback={<LayoutIllustration source={illustration} size="unit" />}
       />
       <Text style={styles.title} numberOfLines={2}>

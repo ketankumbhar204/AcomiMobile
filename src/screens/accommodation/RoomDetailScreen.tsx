@@ -29,6 +29,7 @@ import {
   Screen,
   SkeletonCard,
 } from '../../components/ui';
+import { ReferenceCode } from '../../components/ui/ReferenceCode';
 import {
   AccommodationOccupantSection,
   AccommodationOccupancyActions,
@@ -182,6 +183,7 @@ export function RoomDetailScreen() {
                 label={t('accommodation.fields.name')}
                 value={room.name}
               />
+              <ReferenceCode value={room.referenceCode} />
               <AccommodationDetailRow
                 label={t('accommodation.rooms.roomNumberLabel')}
                 value={room.roomNumber}

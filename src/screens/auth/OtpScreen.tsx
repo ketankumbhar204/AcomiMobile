@@ -39,7 +39,10 @@ import { useAuthStore } from '../../store/authStore';
 import { useToastStore } from '../../store/toastStore';
 import { colors, shadows, spacing, typography } from '../../theme';
 import type { OtpPurpose } from '../../api/types';
-import { isVerificationTokenInvalidated } from '../../utils/accountDeletion';
+import {
+  canStartAccountDeletion,
+  isVerificationTokenInvalidated,
+} from '../../utils/accountDeletion';
 import { formatCountdown, mapRegistrationTokenError } from '../../utils/otpAuthErrors';
 import { maskIndianMobile, normalizeIndianMobileDigits } from '../../utils/indianMobile';
 
@@ -93,7 +96,10 @@ export function OtpScreen() {
   const busy = isLoading || isResending || isRegistering || isOtpLoggingIn || isDeleting || changingMobile;
   const bannerError = error || registerError || loginOtpError || changeError;
   const canConfirmDelete =
-    deletionConfirmed && tokenOk && Boolean(verificationToken) && !isDeleting;
+    canStartAccountDeletion({
+      acknowledged: deletionConfirmed,
+      reauthenticated: tokenOk && Boolean(verificationToken),
+    }) && !isDeleting;
 
   const otpDeadline = useMemo(
     () => (otpSentAt != null && expiresIn != null ? otpSentAt + expiresIn * 1000 : null),
@@ -187,7 +193,13 @@ export function OtpScreen() {
   }
 
   async function handleConfirmDelete() {
-    if (!canConfirmDelete || !verificationToken) {
+    if (
+      !canStartAccountDeletion({
+        acknowledged: deletionConfirmed,
+        reauthenticated: Boolean(verificationToken) && tokenOk,
+      }) ||
+      !verificationToken
+    ) {
       return;
     }
     setDeleteError(null);

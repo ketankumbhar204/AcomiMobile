@@ -15,6 +15,7 @@ type BedSectionFlowProps = {
 };
 
 type DashboardBedUnitSectionCardProps = BedSectionFlowProps & {
+  spaceId?: string;
   group: BedUnitGroup;
   canManageOccupancy: boolean;
   onBedPress: (bed: BedSpaceListItemResponse) => void;
@@ -25,6 +26,7 @@ type DashboardBedUnitSectionCardProps = BedSectionFlowProps & {
 };
 
 function DashboardBedUnitSectionCardComponent({
+  spaceId,
   group,
   canManageOccupancy: _canManageOccupancy,
   onBedPress,
@@ -60,6 +62,7 @@ function DashboardBedUnitSectionCardComponent({
       {group.rooms.map(room => (
         <BuildingInventoryRoomSection
           key={room.key}
+          spaceId={spaceId}
           group={room}
           onPathCrumbPress={
             onPathCrumbPress ? crumb => onPathCrumbPress(room, crumb) : undefined

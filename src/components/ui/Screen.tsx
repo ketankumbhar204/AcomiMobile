@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { type RefObject } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View, ViewStyle } from 'react-native';
 import { useScreenBackButton } from '../../hooks/useScreenBackButton';
 import { colors, spacing } from '../../theme';
@@ -11,6 +11,7 @@ type ScreenProps = {
   contentStyle?: ViewStyle;
   refreshing?: boolean;
   onRefresh?: () => void;
+  scrollRef?: RefObject<ScrollView | null>;
 };
 
 export function Screen({
@@ -21,6 +22,7 @@ export function Screen({
   contentStyle,
   refreshing,
   onRefresh,
+  scrollRef,
 }: ScreenProps) {
   useScreenBackButton(showBack);
 
@@ -28,6 +30,7 @@ export function Screen({
     return (
       <View style={[styles.screen, style]}>
         <ScrollView
+          ref={scrollRef}
           style={styles.scroll}
           contentContainerStyle={[styles.content, contentStyle]}
           showsVerticalScrollIndicator={false}

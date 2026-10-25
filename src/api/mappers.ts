@@ -23,6 +23,7 @@ export function spaceResponseToSpace(response: SpaceResponse): Space {
 
   return {
     id,
+    referenceCode: response.referenceCode ?? null,
     ownerId: response.ownerId,
     name: response.name,
     type: response.type,
@@ -40,10 +41,13 @@ export function spaceDetailsResponseToSpace(
 ): Space {
   return {
     id: response.id,
+    referenceCode: response.referenceCode ?? null,
     ownerId: response.ownerId,
     name: response.name,
     type: response.type,
     address: response.address ?? null,
+    latitude: response.latitude ?? null,
+    longitude: response.longitude ?? null,
     contactNumber: response.contactNumber ?? null,
     isActive: true,
     foodIncludedInRent: response.foodIncludedInRent,
@@ -61,6 +65,7 @@ export function spaceDetailsResponseToSpace(
 export function mySpaceResponseToSpace(response: MySpaceResponse): Space {
   return {
     id: response.spaceId,
+    referenceCode: response.referenceCode ?? null,
     ownerId: '',
     name: response.spaceName,
     type: response.spaceType,
@@ -80,6 +85,7 @@ export function defaultSpaceResponseToSpace(
 ): Space {
   return {
     id: response.spaceId,
+    referenceCode: response.referenceCode ?? null,
     ownerId: '',
     name: response.spaceName,
     type: response.spaceType,
@@ -95,6 +101,7 @@ export function defaultSpaceResponseToSpace(
 export function userSpaceResponseToSpace(response: UserSpaceResponse): Space {
   return {
     id: response.spaceId,
+    referenceCode: response.referenceCode ?? null,
     ownerId: '',
     name: response.spaceName,
     type: response.spaceType,

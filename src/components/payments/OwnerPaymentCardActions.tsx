@@ -109,12 +109,15 @@ export function OwnerPaymentCardActions({
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
+    alignItems: 'stretch',
     gap: spacing.sm,
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
+    width: '100%',
   },
   btn: {
     flex: 1,
-    minHeight: 40,
+    minWidth: 0,
+    minHeight: 36,
     borderRadius: radius.button,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,

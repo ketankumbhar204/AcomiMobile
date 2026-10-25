@@ -18,7 +18,7 @@ import { StickyFormActions } from '../../components/progressive';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
-import { formatComboPrice } from '../../utils/comboPrice';
+import { formatPaymentAmount } from '../../utils/paymentAmount';
 import { resolveDayMealPaymentDisplayStatus } from '../../utils/dayMealPayments';
 import { formatMenuDate } from '../../utils/mealDates';
 import { buildMealSummaryFromDayDetails } from '../../utils/mealSelectionSummary';
@@ -69,12 +69,12 @@ export function DayMealPaymentDetailScreen() {
     displayStatus === 'PENDING' ||
     displayStatus === 'OVERDUE' ||
     displayStatus === 'REJECTED';
-  const amount =
-    detail?.payment?.chargedAmount != null
-      ? Number(detail.payment.chargedAmount)
-      : detail?.dayTotal != null
-        ? Number(detail.dayTotal)
-        : summary?.totalAmount ?? 0;
+  const charged =
+    detail?.payment?.chargedAmount != null ? Number(detail.payment.chargedAmount) : null;
+  const live = detail?.dayTotal != null ? Number(detail.dayTotal) : null;
+  const amount = live != null && live > 0 ? live : charged != null && charged > 0 ? charged : null;
+  const amountPaid = amount != null && displayStatus === 'PAID' ? amount : amount != null ? 0 : null;
+  const amountRemaining = amount != null && displayStatus === 'PAID' ? 0 : amount;
   const currencyCode = detail?.currencyCode ?? 'INR';
   const hasReference = Boolean(resolvePaymentReferenceDisplay(detail?.payment));
 
@@ -83,7 +83,7 @@ export function DayMealPaymentDetailScreen() {
       spaceId,
       memberId,
       dates: [date],
-      totalAmount: amount,
+      totalAmount: amount ?? 0,
       currencyCode,
       memberName: memberName ?? undefined,
     });
@@ -115,11 +115,23 @@ export function DayMealPaymentDetailScreen() {
               </View>
               <View style={styles.amountBody}>
                 <Text style={styles.amountLabel}>
-                  {t('paymentCollection.dayMeals.totalAmount')}
+                  {t('paymentCollection.dayMeals.amountDueLabel')}
                 </Text>
                 <Text style={styles.amountValue}>
-                  {formatComboPrice(amount, currencyCode) ?? '—'}
+                  {formatPaymentAmount(amount, currencyCode) ??
+                    t('paymentCollection.dayMeals.amountUnavailable')}
                 </Text>
+                {amount != null ? (
+                  <Text style={styles.amountMeta}>
+                    {t('paymentCollection.dayMeals.amountPaid', {
+                      amount: formatPaymentAmount(amountPaid, currencyCode),
+                    })}
+                    {' · '}
+                    {t('paymentCollection.dayMeals.amountRemaining', {
+                      amount: formatPaymentAmount(amountRemaining, currencyCode),
+                    })}
+                  </Text>
+                ) : null}
                 <View style={styles.metaRow}>
                   {hasReference ? (
                     <PaymentReferenceLabel
@@ -169,7 +181,7 @@ export function DayMealPaymentDetailScreen() {
         ) : null}
       </Screen>
 
-      {canPay && !loading && detail ? (
+      {canPay && amount != null && !loading && detail ? (
         <StickyFormActions
           primary={{
             label: t('paymentCollection.payNow'),
@@ -227,6 +239,10 @@ const styles = StyleSheet.create({
     fontSize: 24,
     lineHeight: 28,
     color: colors.primaryDark,
+  },
+  amountMeta: {
+    ...typography.caption,
+    color: colors.muted,
   },
   metaRow: {
     flexDirection: 'row',

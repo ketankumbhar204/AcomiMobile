@@ -1,20 +1,21 @@
 import { mealsApi } from '../api/mealsApi';
 import { ApiError } from '../api/types';
 import type {
-  FoodCategoryResponse,
   FoodItemResponse,
-  MealComboResponse,
   UUID,
 } from '../api/types';
+import {
+  clearAllMenuCatalogs,
+  dropInflightMenuCatalog,
+  dropMenuCatalog,
+  readInflightMenuCatalog,
+  readMenuCatalog,
+  storeInflightMenuCatalog,
+  storeMenuCatalog,
+  type SpaceMenuCatalog,
+} from './menuCatalogCache';
 
-export type SpaceMenuCatalog = {
-  categories: FoodCategoryResponse[];
-  items: FoodItemResponse[];
-  combos: MealComboResponse[];
-};
-
-const inflight = new Map<string, Promise<SpaceMenuCatalog>>();
-const cache = new Map<string, SpaceMenuCatalog>();
+export type { SpaceMenuCatalog } from './menuCatalogCache';
 
 async function withNetworkRetry<T>(run: () => Promise<T>): Promise<T> {
   try {
@@ -47,11 +48,11 @@ export async function fetchSpaceMenuCatalog(
   const force = options?.force === true;
 
   if (!force) {
-    const cached = cache.get(spaceId);
+    const cached = readMenuCatalog(spaceId);
     if (cached) {
       return cached;
     }
-    const existing = inflight.get(spaceId);
+    const existing = readInflightMenuCatalog(spaceId);
     if (existing) {
       return existing;
     }
@@ -59,7 +60,7 @@ export async function fetchSpaceMenuCatalog(
     // Force must not join a concurrent non-force load — that request can race
     // backend lazy-seed and cache an empty catalog, which then keeps MEAL_OPS locked
     // even after Menu Library shows seeded defaults.
-    cache.delete(spaceId);
+    dropMenuCatalog(spaceId);
   }
 
   const request = (async () => {
@@ -67,24 +68,25 @@ export async function fetchSpaceMenuCatalog(
     const items = await withNetworkRetry(() => mealsApi.getFoodItems(spaceId));
     const combos = await withNetworkRetry(() => mealsApi.getMealCombos(spaceId));
     const catalog = { categories, items, combos };
-    cache.set(spaceId, catalog);
+    storeMenuCatalog(spaceId, catalog);
     return catalog;
   })().finally(() => {
-    inflight.delete(spaceId);
+    dropInflightMenuCatalog(spaceId);
   });
 
-  inflight.set(spaceId, request);
+  storeInflightMenuCatalog(spaceId, request);
   return request;
 }
 
 export function invalidateSpaceMenuCatalog(spaceId: UUID): void {
-  cache.delete(spaceId);
-  inflight.delete(spaceId);
+  dropMenuCatalog(spaceId);
 }
+
+export { clearAllMenuCatalogs };
 
 /** Patch one food item in the in-memory catalog cache without a full reload. */
 export function patchSpaceMenuCatalogItem(spaceId: UUID, item: FoodItemResponse): void {
-  const cached = cache.get(spaceId);
+  const cached = readMenuCatalog(spaceId);
   if (!cached) {
     return;
   }
@@ -93,5 +95,5 @@ export function patchSpaceMenuCatalogItem(spaceId: UUID, item: FoodItemResponse)
     index >= 0
       ? cached.items.map(row => (row.itemId === item.itemId ? item : row))
       : [...cached.items, item];
-  cache.set(spaceId, { ...cached, items });
+  storeMenuCatalog(spaceId, { ...cached, items });
 }

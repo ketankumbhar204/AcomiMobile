@@ -2,8 +2,10 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSta
 import {
   ActivityIndicator,
   FlatList,
+  Modal,
   Pressable,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -13,13 +15,12 @@ import type { CompositeNavigationProp, RouteProp } from '@react-navigation/nativ
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { Building2, MapPin, Search, SlidersHorizontal, UtensilsCrossed, X } from 'lucide-react-native';
+import { ArrowUpDown, Building2, ChevronDown, Heart, MapPin, Search, SlidersHorizontal, UtensilsCrossed, X } from 'lucide-react-native';
 import { DISCOVER_PAGE_SIZE, getSpaceTypeLabel, locationsApi } from '../api';
 import { discoverFilterKey } from '../api/discoverQuery';
 import { spaceDiscoverApi } from '../api/spaceDiscoverApi';
 import type { DiscoverSpaceCardResponse, SpaceType } from '../api/types';
 import { ApiError } from '../api/types';
-import { EnquireDialog } from '../components/EnquireDialog';
 import { DiscoverLocationSheet } from '../components/discovery/DiscoverLocationSheet';
 import { DiscoverSpaceCard } from '../components/discovery/DiscoverSpaceCard';
 import {
@@ -35,7 +36,8 @@ import {
 } from '../components/ui';
 import type { ListFilterChipOption } from '../components/ui/ListFilterChips';
 import type { MainStackParamList, MemberTabParamList } from '../navigation/types';
-import { colors, radius, spacing, typography } from '../theme';
+import { useFavoriteIds } from '../hooks/useFavorites';
+import { colors, radius, shadows, spacing, typography } from '../theme';
 import {
   formatDiscoverLocationLabel,
   matchLocationRecord,
@@ -43,8 +45,6 @@ import {
   toSelectedDiscoverLocation,
   type SelectedDiscoverLocation,
 } from '../utils/discoverLocation';
-import { PRESET_AMENITY_CODES, resolvePresetAmenityLabel } from '../utils/amenities';
-
 type Nav = CompositeNavigationProp<
   BottomTabNavigationProp<MemberTabParamList, 'FindAPlace'>,
   NativeStackNavigationProp<MainStackParamList>
@@ -61,8 +61,50 @@ const PLACE_TYPES: Array<Exclude<SpaceType, 'MESS'>> = [
   'HOSTEL',
   'CO_LIVING',
   'RENTAL',
+  'CORPORATE_STAY',
 ];
-const AMENITY_FILTER_CODES = PRESET_AMENITY_CODES.filter(code => code !== 'BEDS');
+const DISCOVER_AMENITY_FILTERS: { code: string; label: string }[] = [
+  { code: 'WIFI', label: 'Wi-Fi' },
+  { code: 'FOOD_INCLUDED', label: 'Meals' },
+  { code: 'WASHING_MACHINE', label: 'Laundry / Washing machine' },
+  { code: 'PARKING', label: 'Parking' },
+  { code: 'HOUSEKEEPING', label: 'Housekeeping' },
+  { code: 'POWER_BACKUP', label: 'Power Backup' },
+  { code: 'AC', label: 'AC' },
+  { code: 'KITCHEN', label: 'Kitchen' },
+  { code: 'CCTV', label: 'CCTV / Security' },
+  { code: 'RO_WATER', label: 'RO water' },
+  { code: 'HOT_WATER', label: 'Hot water' },
+  { code: 'REFRIGERATOR', label: 'Refrigerator' },
+  { code: 'WARDROBE', label: 'Wardrobe' },
+];
+const GENDER_FILTERS = [
+  { id: 'MALE', label: 'Gents' },
+  { id: 'FEMALE', label: 'Ladies' },
+  { id: 'MIXED', label: 'Gents & Ladies' },
+] as const;
+const SHARING_FILTERS = [
+  { id: 'SINGLE', label: 'Single' },
+  { id: 'TWO', label: '2 Sharing' },
+  { id: 'THREE', label: '3 Sharing' },
+  { id: 'FOUR', label: '4 Sharing' },
+  { id: 'FIVE', label: '5 Sharing' },
+  { id: 'SIX_PLUS', label: '6+ Sharing' },
+] as const;
+const FOOD_FILTERS = [
+  { id: 'INCLUDED', label: 'Food Included' },
+  { id: 'AVAILABLE', label: 'Food Available' },
+  { id: 'NONE', label: 'No Food' },
+] as const;
+const FURNISHING_FILTERS = [
+  { id: 'FULL', label: 'Fully Furnished' },
+  { id: 'SEMI', label: 'Semi Furnished' },
+  { id: 'UNFURNISHED', label: 'Unfurnished' },
+] as const;
+
+function toggleValue<T>(list: T[], value: T): T[] {
+  return list.includes(value) ? list.filter(item => item !== value) : [...list, value];
+}
 
 function rentFromPreset(preset: RentPreset): { minRent: number | null; maxRent: number | null } {
   switch (preset) {
@@ -107,9 +149,10 @@ function mergeUnique(
 }
 
 export function FindAPlaceScreen() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
+  const favoriteCount = useFavoriteIds().size;
 
   const skipCategoryReset = useRef(true);
   const [category, setCategory] = useState<DiscoverCategory>(() =>
@@ -134,10 +177,28 @@ export function FindAPlaceScreen() {
   const [minRent, setMinRent] = useState<number | null>(null);
   const [maxRent, setMaxRent] = useState<number | null>(null);
   const [amenities, setAmenities] = useState<string[]>([]);
+  const [genders, setGenders] = useState<string[]>([]);
+  const [sharings, setSharings] = useState<string[]>([]);
+  const [foods, setFoods] = useState<string[]>([]);
+  const [furnishings, setFurnishings] = useState<string[]>([]);
+  const [contactAvailable, setContactAvailable] = useState(false);
+  const [mealTypes, setMealTypes] = useState<string[]>([]);
+  const [foodTypes, setFoodTypes] = useState<string[]>([]);
+  const [servicedApartment, setServicedApartment] = useState(false);
+  const [sort, setSort] = useState<'recommended' | 'newest'>('newest');
+  const [sortOpen, setSortOpen] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [draftRent, setDraftRent] = useState<RentPreset>('any');
   const [draftAmenities, setDraftAmenities] = useState<string[]>([]);
+  const [draftGenders, setDraftGenders] = useState<string[]>([]);
+  const [draftSharings, setDraftSharings] = useState<string[]>([]);
+  const [draftFoods, setDraftFoods] = useState<string[]>([]);
+  const [draftFurnishings, setDraftFurnishings] = useState<string[]>([]);
+  const [draftContactAvailable, setDraftContactAvailable] = useState(false);
+  const [draftMealTypes, setDraftMealTypes] = useState<string[]>([]);
+  const [draftFoodTypes, setDraftFoodTypes] = useState<string[]>([]);
+  const [draftServicedApartment, setDraftServicedApartment] = useState(false);
   const [items, setItems] = useState<DiscoverSpaceCardResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -146,7 +207,6 @@ export function FindAPlaceScreen() {
   const [loadMoreError, setLoadMoreError] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [totalElements, setTotalElements] = useState(0);
-  const [enquireItem, setEnquireItem] = useState<DiscoverSpaceCardResponse | null>(null);
   const pageRef = useRef(0);
   const requestSeq = useRef(0);
   const inflightPageRef = useRef<number | null>(null);
@@ -154,11 +214,7 @@ export function FindAPlaceScreen() {
   const locationPromptedFor = useRef<DiscoverCategory | null>(null);
   const [routeReady, setRouteReady] = useState(false);
 
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      title: t('navigation.findAPlace'),
-    });
-  }, [navigation, t, i18n.language]);
+  const openFiltersRef = useRef<() => void>(() => undefined);
 
   useEffect(() => {
     const params = route.params;
@@ -258,6 +314,14 @@ export function FindAPlaceScreen() {
     setMinRent(null);
     setMaxRent(null);
     setAmenities([]);
+    setGenders([]);
+    setSharings([]);
+    setFoods([]);
+    setFurnishings([]);
+    setContactAvailable(false);
+    setMealTypes([]);
+    setFoodTypes([]);
+    setServicedApartment(false);
   }, [category]);
 
   const placeTypeOptions = useMemo<ListFilterChipOption<PlaceTypeFilter>[]>(
@@ -272,7 +336,8 @@ export function FindAPlaceScreen() {
   );
 
   const isMess = category === 'mess';
-  const placeTypes = !isMess && placeTypeFilter === 'ALL' ? PLACE_TYPES : undefined;
+  const servicedOnly = !isMess && servicedApartment && placeTypeFilter === 'ALL';
+  const placeTypes = !isMess && placeTypeFilter === 'ALL' && !servicedOnly ? PLACE_TYPES : undefined;
   const apiType: SpaceType | undefined = isMess
     ? 'MESS'
     : placeTypeFilter === 'ALL'
@@ -285,13 +350,39 @@ export function FindAPlaceScreen() {
       location: selectedLocation?.location || undefined,
       type: apiType,
       types: placeTypes,
-      minRent: isMess ? null : minRent,
-      maxRent: isMess ? null : maxRent,
+      minRent,
+      maxRent,
       amenities: isMess || amenities.length === 0 ? undefined : amenities,
+      genders: isMess || genders.length === 0 ? undefined : genders,
+      sharings: isMess || sharings.length === 0 ? undefined : sharings,
+      foods: isMess || foods.length === 0 ? undefined : foods,
+      furnishings: isMess || furnishings.length === 0 ? undefined : furnishings,
+      contactAvailable: contactAvailable ? true : undefined,
+      mealTypes: isMess && mealTypes.length > 0 ? mealTypes : undefined,
+      foodTypes: isMess && foodTypes.length > 0 ? foodTypes : undefined,
+      servicedApartment: !isMess && servicedApartment ? true : undefined,
       size: DISCOVER_PAGE_SIZE,
-      sort: 'newest' as const,
+      sort,
     }),
-    [amenities, apiType, debouncedSearch, isMess, maxRent, minRent, placeTypes, selectedLocation?.location],
+    [
+      amenities,
+      apiType,
+      contactAvailable,
+      debouncedSearch,
+      foodTypes,
+      mealTypes,
+      foods,
+      furnishings,
+      genders,
+      isMess,
+      maxRent,
+      minRent,
+      placeTypes,
+      selectedLocation?.location,
+      servicedApartment,
+      sharings,
+      sort,
+    ],
   );
   const filterKey = discoverFilterKey(discoverParams);
 
@@ -379,7 +470,18 @@ export function FindAPlaceScreen() {
     void loadPage(pageRef.current + 1, true);
   }, [hasMore, loadMoreError, loading, loadingMore, loadPage, refreshing]);
 
-  const extraFiltersActive = !isMess && (minRent != null || maxRent != null || amenities.length > 0);
+  const extraFiltersActive =
+    minRent != null ||
+    maxRent != null ||
+    amenities.length > 0 ||
+    genders.length > 0 ||
+    sharings.length > 0 ||
+    foods.length > 0 ||
+    furnishings.length > 0 ||
+    contactAvailable ||
+    mealTypes.length > 0 ||
+    foodTypes.length > 0 ||
+    servicedApartment;
   const isFiltering =
     debouncedSearch.length > 0 ||
     (!isMess && placeTypeFilter !== 'ALL') ||
@@ -390,8 +492,59 @@ export function FindAPlaceScreen() {
   const openFilters = () => {
     setDraftRent(presetFromRent(minRent, maxRent));
     setDraftAmenities(amenities);
+    setDraftGenders(genders);
+    setDraftSharings(sharings);
+    setDraftFoods(foods);
+    setDraftFurnishings(furnishings);
+    setDraftContactAvailable(contactAvailable);
+    setDraftMealTypes(mealTypes);
+    setDraftFoodTypes(foodTypes);
+    setDraftServicedApartment(servicedApartment);
     setFilterOpen(true);
   };
+  openFiltersRef.current = openFilters;
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: isMess ? t('spaces.findPlace.tabs.messTitle') : t('navigation.findAPlace'),
+      headerRight: () => (
+        <View style={styles.headerActions}>
+          <Pressable
+            onPress={() => navigation.navigate('Favorites')}
+            style={styles.headerFilter}
+            accessibilityRole="button"
+            accessibilityLabel={
+              favoriteCount > 0
+                ? t('spaces.favorites.openCount', {
+                    count: favoriteCount,
+                    defaultValue: 'Favorites, {{count}} saved',
+                  })
+                : t('navigation.favorites', { defaultValue: 'Favorites' })
+            }>
+            <Heart
+              size={18}
+              color={favoriteCount > 0 ? '#E11D48' : colors.textPrimary}
+              fill={favoriteCount > 0 ? '#E11D48' : 'transparent'}
+              strokeWidth={2.2}
+            />
+            {favoriteCount > 0 ? (
+              <View style={styles.headerBadge}>
+                <Text style={styles.headerBadgeText}>{favoriteCount > 9 ? '9+' : String(favoriteCount)}</Text>
+              </View>
+            ) : null}
+          </Pressable>
+          <Pressable
+            onPress={() => openFiltersRef.current()}
+            style={styles.headerFilter}
+            accessibilityRole="button"
+            accessibilityLabel={t('spaces.findPlace.moreFilters')}>
+            <SlidersHorizontal size={18} color={colors.textPrimary} strokeWidth={2.2} />
+            {extraFiltersActive ? <View style={styles.headerFilterDot} /> : null}
+          </Pressable>
+        </View>
+      ),
+    });
+  }, [extraFiltersActive, favoriteCount, isMess, navigation, t]);
 
   const listHeader = (
     <View style={styles.header}>
@@ -425,18 +578,6 @@ export function FindAPlaceScreen() {
           </Text>
         </Pressable>
       </View>
-
-      <Text style={styles.eyebrow}>
-        {isMess ? t('spaces.findPlace.tabs.messEyebrow') : t('spaces.findPlace.eyebrow')}
-      </Text>
-      <Text style={styles.heading}>
-        {isMess ? t('spaces.findPlace.tabs.messTitle') : t('spaces.findPlace.heading')}
-      </Text>
-      <Text style={styles.subheading}>
-        {isMess
-          ? t('spaces.findPlace.tabs.messSubtitle')
-          : t('spaces.findPlace.subheading')}
-      </Text>
 
       <View style={styles.locationRow}>
         <Pressable
@@ -476,33 +617,69 @@ export function FindAPlaceScreen() {
         }
       />
       {!isMess ? (
-        <View style={styles.filterRow}>
-          <View style={styles.typeChips}>
-            <ListFilterChips
-              options={placeTypeOptions}
-              value={placeTypeFilter}
-              onChange={setPlaceTypeFilter}
-            />
-          </View>
+        <ListFilterChips
+          options={placeTypeOptions}
+          value={placeTypeFilter}
+          onChange={setPlaceTypeFilter}
+        />
+      ) : (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.messChips}>
           <Pressable
-            onPress={openFilters}
-            style={[styles.moreFilters, extraFiltersActive && styles.moreFiltersActive]}
+            onPress={() => setMealTypes([])}
+            style={[styles.messChip, mealTypes.length === 0 && styles.messChipOn]}
             accessibilityRole="button"
-            accessibilityLabel={t('spaces.findPlace.moreFilters')}>
-            <SlidersHorizontal
-              size={16}
-              color={extraFiltersActive ? colors.white : colors.textSecondary}
-              strokeWidth={2.2}
-            />
+            accessibilityState={{ selected: mealTypes.length === 0 }}>
+            <Text style={[styles.messChipText, mealTypes.length === 0 && styles.messChipTextOn]}>
+              {t('spaces.findPlace.typeAll')}
+            </Text>
+          </Pressable>
+          {(
+            [
+              ['BREAKFAST', 'Breakfast'],
+              ['LUNCH', 'Lunch'],
+              ['DINNER', 'Dinner'],
+            ] as const
+          ).map(([id, label]) => {
+            const selected = mealTypes.includes(id);
+            return (
+              <Pressable
+                key={id}
+                onPress={() =>
+                  setMealTypes(current =>
+                    current.includes(id) ? current.filter(value => value !== id) : [...current, id],
+                  )
+                }
+                style={[styles.messChip, selected && styles.messChipOn]}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}>
+                <Text style={[styles.messChipText, selected && styles.messChipTextOn]}>{label}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      )}
+      {!loading && !error ? (
+        <View style={styles.resultsRow}>
+          <Text style={styles.resultCount} numberOfLines={1}>
+            {isMess
+              ? t('spaces.findPlace.tabs.messResultCount', { count: totalElements })
+              : t('spaces.findPlace.resultCount', { count: totalElements })}
+          </Text>
+          <Pressable
+            onPress={() => setSortOpen(true)}
+            style={styles.sortButton}
+            accessibilityRole="button"
+            accessibilityLabel={t('spaces.findPlace.sortLabel', { defaultValue: 'Sort' })}>
+            <ArrowUpDown size={14} color={colors.textPrimary} strokeWidth={2.2} />
+            <Text style={styles.sortLabel}>
+              {t('spaces.findPlace.sortLabel', { defaultValue: 'Sort' })}
+            </Text>
+            <ChevronDown size={14} color={colors.textSecondary} strokeWidth={2.2} />
           </Pressable>
         </View>
-      ) : null}
-      {!loading && !error ? (
-        <Text style={styles.resultCount}>
-          {isMess
-            ? t('spaces.findPlace.tabs.messResultCount', { count: totalElements })
-            : t('spaces.findPlace.resultCount', { count: totalElements })}
-        </Text>
       ) : null}
       {error && items.length > 0 ? (
         <Text style={styles.errorInline}>{error}</Text>
@@ -565,9 +742,17 @@ export function FindAPlaceScreen() {
           <DiscoverSpaceCard
             item={item}
             onPress={() =>
-              navigation.navigate('FindAPlaceDetail', { spaceId: item.spaceId })
+              navigation.navigate('FindAPlaceDetail', {
+                spaceId: item.spaceId,
+                focusSection: null,
+              })
             }
-            onEnquire={() => setEnquireItem(item)}
+            onViewSection={section =>
+              navigation.navigate('FindAPlaceDetail', {
+                spaceId: item.spaceId,
+                focusSection: section,
+              })
+            }
           />
         )}
         ListHeaderComponent={listHeader}
@@ -626,14 +811,54 @@ export function FindAPlaceScreen() {
         onReset={() => {
           setDraftRent('any');
           setDraftAmenities([]);
+          setDraftGenders([]);
+          setDraftSharings([]);
+          setDraftFoods([]);
+          setDraftFurnishings([]);
+          setDraftContactAvailable(false);
+          setDraftMealTypes([]);
+          setDraftFoodTypes([]);
+          setDraftServicedApartment(false);
         }}
         onApply={() => {
           const next = rentFromPreset(draftRent);
           setMinRent(next.minRent);
           setMaxRent(next.maxRent);
           setAmenities(draftAmenities);
+          setGenders(draftGenders);
+          setSharings(draftSharings);
+          setFoods(draftFoods);
+          setFurnishings(draftFurnishings);
+          setContactAvailable(draftContactAvailable);
+          setMealTypes(draftMealTypes);
+          setFoodTypes(draftFoodTypes);
+          setServicedApartment(draftServicedApartment);
           setFilterOpen(false);
         }}>
+        {!isMess ? (
+          <>
+            <FilterDrawerSection title={t('spaces.findPlace.filters.gender', { defaultValue: 'Gender' })}>
+              {GENDER_FILTERS.map(option => (
+                <FilterCheckboxRow
+                  key={option.id}
+                  label={option.label}
+                  checked={draftGenders.includes(option.id)}
+                  onToggle={() => setDraftGenders(current => toggleValue(current, option.id))}
+                />
+              ))}
+            </FilterDrawerSection>
+            <FilterDrawerSection title={t('spaces.findPlace.filters.sharing', { defaultValue: 'Sharing' })}>
+              {SHARING_FILTERS.map(option => (
+                <FilterCheckboxRow
+                  key={option.id}
+                  label={option.label}
+                  checked={draftSharings.includes(option.id)}
+                  onToggle={() => setDraftSharings(current => toggleValue(current, option.id))}
+                />
+              ))}
+            </FilterDrawerSection>
+          </>
+        ) : null}
         <FilterDrawerSection title={t('spaces.findPlace.rentRange')}>
           {(['any', 'under8k', 'mid', 'over15k'] as const).map(preset => (
             <FilterRadioRow
@@ -644,31 +869,125 @@ export function FindAPlaceScreen() {
             />
           ))}
         </FilterDrawerSection>
-        <FilterDrawerSection title={t('spaces.amenities.title')}>
-          {AMENITY_FILTER_CODES.map(code => (
+        {isMess ? (
+          <FilterDrawerSection title={t('spaces.findPlace.filters.mealType', { defaultValue: 'Meal type' })}>
+            {(
+              [
+                ['BREAKFAST', 'Breakfast'],
+                ['LUNCH', 'Lunch'],
+                ['DINNER', 'Dinner'],
+              ] as const
+            ).map(([id, label]) => (
+              <FilterCheckboxRow
+                key={id}
+                label={label}
+                checked={draftMealTypes.includes(id)}
+                onToggle={() => setDraftMealTypes(current => toggleValue(current, id))}
+              />
+            ))}
+          </FilterDrawerSection>
+        ) : null}
+        {isMess ? (
+          <FilterDrawerSection title={t('spaces.findPlace.filters.foodType', { defaultValue: 'Food type' })}>
+            {(
+              [
+                ['VEG', 'Vegetarian'],
+                ['NON_VEG', 'Non-vegetarian'],
+                ['EGG', 'Egg'],
+              ] as const
+            ).map(([id, label]) => (
+              <FilterCheckboxRow
+                key={id}
+                label={label}
+                checked={draftFoodTypes.includes(id)}
+                onToggle={() => setDraftFoodTypes(current => toggleValue(current, id))}
+              />
+            ))}
+          </FilterDrawerSection>
+        ) : null}
+        {!isMess ? (
+        <FilterDrawerSection title={t('spaces.findPlace.filters.food', { defaultValue: 'Food' })}>
+          {FOOD_FILTERS.map(option => (
             <FilterCheckboxRow
-              key={code}
-              label={resolvePresetAmenityLabel(code, t)}
-              checked={draftAmenities.includes(code)}
-              onToggle={() =>
-                setDraftAmenities(current =>
-                  current.includes(code)
-                    ? current.filter(item => item !== code)
-                    : [...current, code],
-                )
-              }
+              key={option.id}
+              label={option.label}
+              checked={draftFoods.includes(option.id)}
+              onToggle={() => setDraftFoods(current => toggleValue(current, option.id))}
             />
           ))}
         </FilterDrawerSection>
+        ) : null}
+        {!isMess ? (
+        <FilterDrawerSection title={t('spaces.amenities.title')}>
+          {DISCOVER_AMENITY_FILTERS.map(option => (
+            <FilterCheckboxRow
+              key={option.code}
+              label={option.label}
+              checked={draftAmenities.includes(option.code)}
+              onToggle={() => setDraftAmenities(current => toggleValue(current, option.code))}
+            />
+          ))}
+        </FilterDrawerSection>
+        ) : null}
+        {!isMess ? (
+        <FilterDrawerSection title={t('spaces.findPlace.filters.furnishing', { defaultValue: 'Furnishing' })}>
+          {FURNISHING_FILTERS.map(option => (
+            <FilterCheckboxRow
+              key={option.id}
+              label={option.label}
+              checked={draftFurnishings.includes(option.id)}
+              onToggle={() => setDraftFurnishings(current => toggleValue(current, option.id))}
+            />
+          ))}
+        </FilterDrawerSection>
+        ) : null}
+        <FilterDrawerSection title={t('spaces.findPlace.filters.more', { defaultValue: 'More' })}>
+          <FilterCheckboxRow
+            label={t('spaces.findPlace.filters.contactAvailable', { defaultValue: 'Contact Available' })}
+            checked={draftContactAvailable}
+            onToggle={() => setDraftContactAvailable(current => !current)}
+          />
+          {!isMess ? (
+          <FilterCheckboxRow
+            label={t('spaces.findPlace.filters.servicedApartment', {
+              defaultValue: 'Serviced / Corporate Apartment',
+            })}
+            checked={draftServicedApartment}
+            onToggle={() => setDraftServicedApartment(current => !current)}
+          />
+          ) : null}
+        </FilterDrawerSection>
       </ListFilterDrawer>
 
-      <EnquireDialog
-        open={enquireItem != null}
-        spaceId={enquireItem?.spaceId ?? ''}
-        spaceName={enquireItem?.name ?? ''}
-        ownedByCurrentUser={Boolean(enquireItem?.ownedByCurrentUser)}
-        onClose={() => setEnquireItem(null)}
-      />
+      <Modal
+        visible={sortOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSortOpen(false)}>
+        <Pressable style={styles.sortBackdrop} onPress={() => setSortOpen(false)}>
+          <View style={styles.sortSheet}>
+            {(
+              [
+                ['recommended', t('spaces.findPlace.sort.recommended', { defaultValue: 'Recommended' })],
+                ['newest', t('spaces.findPlace.sort.newest', { defaultValue: 'Newest' })],
+              ] as const
+            ).map(([id, label]) => (
+              <Pressable
+                key={id}
+                onPress={() => {
+                  setSort(id);
+                  setSortOpen(false);
+                }}
+                style={styles.sortOption}
+                accessibilityRole="button"
+                accessibilityState={{ selected: sort === id }}>
+                <Text style={[styles.sortOptionText, sort === id && styles.sortOptionOn]}>{label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </Pressable>
+      </Modal>
+
     </View>
   );
 }
@@ -688,8 +1007,46 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   header: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     gap: spacing.sm,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerFilter: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerBadge: {
+    position: 'absolute',
+    top: 2,
+    right: 0,
+    minWidth: 14,
+    height: 14,
+    borderRadius: 7,
+    paddingHorizontal: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E11D48',
+  },
+  headerBadgeText: {
+    color: colors.white,
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  headerFilterDot: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+    borderWidth: 1,
+    borderColor: colors.white,
   },
   categoryRow: {
     flexDirection: 'row',
@@ -720,24 +1077,6 @@ const styles = StyleSheet.create({
   },
   categoryLabelActive: {
     color: colors.white,
-  },
-  eyebrow: {
-    ...typography.caption,
-    fontWeight: '800',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    color: colors.primaryDark,
-  },
-  heading: {
-    ...typography.h2,
-    fontSize: 24,
-    lineHeight: 30,
-    color: colors.textPrimary,
-  },
-  subheading: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
   },
   locationRow: {
     flexDirection: 'row',
@@ -773,34 +1112,84 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  filterRow: {
+  messChips: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    paddingRight: spacing.sm,
+  },
+  messChip: {
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: colors.lightGreen,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  messChipOn: {
+    backgroundColor: colors.primary,
+  },
+  messChipText: {
+    ...typography.caption,
+    fontWeight: '600',
+    color: colors.primaryDark,
+  },
+  messChipTextOn: {
+    color: colors.white,
+    fontWeight: '700',
+  },
+  resultsRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: spacing.sm,
-  },
-  typeChips: {
-    flex: 1,
-    minWidth: 0,
-  },
-  moreFilters: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  moreFiltersActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    marginTop: spacing.xs,
   },
   resultCount: {
     ...typography.caption,
+    flex: 1,
     fontWeight: '600',
     color: colors.textSecondary,
-    marginTop: spacing.xs,
+  },
+  sortButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    minHeight: 36,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+  },
+  sortLabel: {
+    ...typography.caption,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  sortBackdrop: {
+    flex: 1,
+    backgroundColor: colors.overlayScrim,
+    justifyContent: 'flex-end',
+  },
+  sortSheet: {
+    ...shadows.raised,
+    backgroundColor: colors.white,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
+  sortOption: {
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  sortOptionText: {
+    ...typography.body,
+    color: colors.textPrimary,
+  },
+  sortOptionOn: {
+    fontWeight: '700',
+    color: colors.primaryDark,
   },
   separator: {
     height: spacing.md,

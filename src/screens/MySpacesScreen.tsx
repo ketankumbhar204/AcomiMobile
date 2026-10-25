@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { CompositeNavigationProp } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
-import { Plus, Search } from "lucide-react-native";
+import { Contact, CreditCard, Home, Mail, Plus, Search, Star } from "lucide-react-native";
 import { formatSpaceType, getSpaceTypeLabel, spaceTypeIconLabel } from "../api";
 import type {
   MembershipRole,
@@ -13,6 +13,7 @@ import type {
   MySpaceResponse,
 } from "../api/types";
 import { memberApi } from "../api/memberApi";
+import { mySpacesApi, type MeListing } from "../api/mySpacesApi";
 import { InvitationCard } from "../components/auth";
 import {
   SpaceAttentionCardStatus,
@@ -24,7 +25,6 @@ import { SpaceStatusBadge } from "../components/spaces/SpaceStatusBadge";
 import { DashboardActionRow } from "../components/dashboard/shared/DashboardActionRow";
 import { DashboardSectionTitle } from "../components/dashboard/DashboardSectionTitle";
 import {
-  Badge,
   EmptyState,
   FAB,
   FormInput,
@@ -41,6 +41,12 @@ import { useToastStore } from "../store/toastStore";
 import { colors, radius, spacing, typography } from "../theme";
 import { formatSpaceDisplayName } from "../utils/spaceLabels";
 import { isConsumerMembershipRole } from "../utils/profileCompletion";
+import { membershipRoleLabelKey } from "../utils/memberRoles";
+import { getAccountIntent } from "../utils/accountIntent";
+import { canCreateSpace } from "../utils/spaceCreationAccess";
+import { canOpenServiceContacts } from "../utils/serviceContactAccess";
+import { sortSpacesForHome } from "../utils/sortSpacesForHome";
+import { isPendingLead, showsResidentialInventory } from "../utils/listingActions";
 
 type MySpacesNavigation = CompositeNavigationProp<
   BottomTabNavigationProp<MemberTabParamList, "Home">,
@@ -49,8 +55,12 @@ type MySpacesNavigation = CompositeNavigationProp<
 
 const SEARCH_DEBOUNCE_MS = 300;
 
-function formatRoleLabel(role: MembershipRole, t: (key: string) => string): string {
-  return t(`spaces.roles.${role}`);
+function formatRoleLabel(
+  role: MembershipRole,
+  spaceType: MySpaceResponse["spaceType"],
+  t: (key: string) => string,
+): string {
+  return t(membershipRoleLabelKey(role, spaceType));
 }
 
 function formatInviteDate(value: string): string {
@@ -85,16 +95,39 @@ export function MySpacesScreen() {
   const loadMySpaces = useSpaceStore(state => state.loadMySpaces);
   const searchSpaces = useSpaceStore(state => state.searchSpaces);
   const searchQuery = useSpaceStore(state => state.searchQuery);
+  const [allowCreateSpace, setAllowCreateSpace] = useState(false);
+  const [ownerIntent, setOwnerIntent] = useState(false);
   const setSearchQuery = useSpaceStore(state => state.setSearchQuery);
   const switchSpace = useSpaceStore(state => state.switchSpace);
+  const setAsDefault = useSpaceStore(state => state.setAsDefault);
   const refresh = useSpaceStore(state => state.refresh);
 
   const [search, setSearch] = useState(searchQuery);
   const [refreshing, setRefreshing] = useState(false);
+  const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
   const [myInvitations, setMyInvitations] = useState<MyInvitationResponse[]>([]);
+  const [pendingListings, setPendingListings] = useState<MeListing[]>([]);
+  const [editingLead, setEditingLead] = useState<MeListing | null>(null);
+  const [leadName, setLeadName] = useState("");
+  const [leadAddress, setLeadAddress] = useState("");
+  const [savingLead, setSavingLead] = useState(false);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
   const showToast = useToastStore(state => state.showToast);
   const { acceptInvitation, isSubmitting } = useAcceptInvitationFlow();
+
+  useEffect(() => {
+    void getAccountIntent().then(intent => setOwnerIntent(intent === "owner"));
+  }, []);
+
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      return;
+    }
+    if (loading && mySpaces.length === 0) {
+      return;
+    }
+    setAllowCreateSpace(canCreateSpace(mySpaces));
+  }, [loading, mySpaces, searchQuery]);
 
   const hasOperatorSpace = useMemo(
     () => mySpaces.some(s => s.membershipRole === "OWNER" || s.membershipRole === "MANAGER"),
@@ -128,23 +161,76 @@ export function MySpacesScreen() {
 
   const totalPendingCount = globalDashboard.data?.totalAttentionCount ?? 0;
 
-  const sortedSpaces = useMemo(() => {
-    return [...mySpaces].sort((a, b) => {
-      const pendingA = isConsumerMembershipRole(a.membershipRole)
-        ? (consumerAttention.bySpaceId[a.spaceId]?.totalCount ?? 0)
-        : (pendingBySpace.get(a.spaceId) ?? 0);
-      const pendingB = isConsumerMembershipRole(b.membershipRole)
-        ? (consumerAttention.bySpaceId[b.spaceId]?.totalCount ?? 0)
-        : (pendingBySpace.get(b.spaceId) ?? 0);
-      if (pendingA > 0 !== pendingB > 0) {
-        return pendingA > 0 ? -1 : 1;
+  const memberPendingRows = useMemo(() => {
+    const invitedSpaceIds = new Set(myInvitations.map(invitation => invitation.spaceId));
+    const rows: Array<{
+      key: string;
+      title: string;
+      subtitle: string;
+      icon: typeof CreditCard;
+      accent: string;
+      onPress: () => void;
+    }> = [];
+
+    for (const space of mySpaces) {
+      if (!isConsumerMembershipRole(space.membershipRole)) {
+        continue;
       }
-      if (pendingA !== pendingB) {
-        return pendingB - pendingA;
+      const summary = consumerAttention.bySpaceId[space.spaceId];
+      for (const item of summary?.items ?? []) {
+        if (item.actionType === "PAYMENT_UPDATE_REQUESTED") {
+          rows.push({
+            key: `payment-${space.spaceId}`,
+            title: t("dashboard.pendingActions.groups.PAYMENT_UPDATE_REQUESTED"),
+            subtitle: item.detail?.trim() || formatSpaceDisplayName(space),
+            icon: CreditCard,
+            accent: "#D97706",
+            onPress: () =>
+              navigation.navigate("DashboardPendingActions", { spaceId: space.spaceId }),
+          });
+        } else if (
+          item.actionType === "PENDING_INVITATION" &&
+          !invitedSpaceIds.has(space.spaceId)
+        ) {
+          rows.push({
+            key: `invite-action-${space.spaceId}`,
+            title: t("dashboard.pendingActions.groups.SPACE_INVITATION", {
+              defaultValue: "Space invitation",
+            }),
+            subtitle: item.detail?.trim() || formatSpaceDisplayName(space),
+            icon: Mail,
+            accent: "#2563EB",
+            onPress: () => navigation.navigate("AcceptInvitations"),
+          });
+        }
       }
-      return formatSpaceDisplayName(a).localeCompare(formatSpaceDisplayName(b));
-    });
-  }, [consumerAttention.bySpaceId, mySpaces, pendingBySpace]);
+    }
+
+    for (const invitation of myInvitations) {
+      rows.push({
+        key: `invite-${invitation.invitationId}`,
+        title: t("dashboard.pendingActions.groups.SPACE_INVITATION", {
+          defaultValue: "Space invitation",
+        }),
+        subtitle: invitation.spaceName,
+        icon: Mail,
+        accent: "#2563EB",
+        onPress: () => navigation.navigate("AcceptInvitations"),
+      });
+    }
+
+    return rows;
+  }, [consumerAttention.bySpaceId, myInvitations, mySpaces, navigation, t]);
+
+  const sortedSpaces = useMemo(
+    () =>
+      sortSpacesForHome(mySpaces, space =>
+        isConsumerMembershipRole(space.membershipRole)
+          ? (consumerAttention.bySpaceId[space.spaceId]?.totalCount ?? 0)
+          : (pendingBySpace.get(space.spaceId) ?? 0),
+      ),
+    [consumerAttention.bySpaceId, mySpaces, pendingBySpace],
+  );
 
   const loadMyInvitations = useCallback(async () => {
     try {
@@ -162,6 +248,15 @@ export function MySpacesScreen() {
     });
   }, [navigation, t, i18n.language]);
 
+  const loadPendingListings = useCallback(async () => {
+    try {
+      const rows = await mySpacesApi.listMyListings({ status: "PENDING" });
+      setPendingListings(rows.filter(isPendingLead));
+    } catch {
+      setPendingListings([]);
+    }
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       if (searchQuery.trim()) {
@@ -170,7 +265,8 @@ export function MySpacesScreen() {
         loadMySpaces();
       }
       void loadMyInvitations();
-    }, [loadMyInvitations, loadMySpaces, searchQuery, searchSpaces]),
+      void loadPendingListings();
+    }, [loadMyInvitations, loadMySpaces, loadPendingListings, searchQuery, searchSpaces]),
   );
 
   // Empty My Spaces for members is handled by MemberLandingScreen (shows MemberHome).
@@ -190,6 +286,7 @@ export function MySpacesScreen() {
     await Promise.all([
       refresh(),
       loadMyInvitations(),
+      loadPendingListings(),
       hasOperatorSpace ? globalDashboard.reload(true) : Promise.resolve(),
       hasConsumerSpace ? consumerAttention.reload(true) : Promise.resolve(),
     ]);
@@ -200,6 +297,7 @@ export function MySpacesScreen() {
     hasConsumerSpace,
     hasOperatorSpace,
     loadMyInvitations,
+    loadPendingListings,
     refresh,
   ]);
 
@@ -214,6 +312,27 @@ export function MySpacesScreen() {
       });
     }
   };
+
+  const handleSetDefault = useCallback(
+    async (space: MySpaceResponse) => {
+      if (space.isDefault || settingDefaultId) {
+        return;
+      }
+      setSettingDefaultId(space.spaceId);
+      const success = await setAsDefault(space.spaceId);
+      setSettingDefaultId(null);
+      if (success) {
+        showToast(
+          t("spaces.mySpaces.setDefaultSuccess", {
+            defaultValue: "Default space updated.",
+          }),
+        );
+      } else {
+        showToast(t("common.errors.generic"));
+      }
+    },
+    [setAsDefault, settingDefaultId, showToast, t],
+  );
 
   const handleAcceptInvitation = useCallback(
     async (invitation: MyInvitationResponse) => {
@@ -235,8 +354,9 @@ export function MySpacesScreen() {
 
   const buildSubtitle = (space: MySpaceResponse) => {
     const typeLabel = getSpaceTypeLabel(space.spaceType);
-    const roleLabel = formatRoleLabel(space.membershipRole, t);
-    return `${typeLabel} · ${roleLabel}`;
+    const roleLabel = formatRoleLabel(space.membershipRole, space.spaceType, t);
+    const ref = space.referenceCode ? ` · ${space.referenceCode}` : '';
+    return `${typeLabel} · ${roleLabel}${ref}`;
   };
 
   const isSearching = search.trim().length > 0;
@@ -267,6 +387,23 @@ export function MySpacesScreen() {
           <Text style={styles.subheading}>{t("spaces.mySpaces.subheading")}</Text>
         </View>
 
+        {memberPendingRows.length > 0 && !isSearching ? (
+          <View style={styles.memberPending}>
+            <DashboardSectionTitle title={t("dashboard.quickActions.pendingActions")} />
+            {memberPendingRows.map(row => (
+              <DashboardActionRow
+                key={row.key}
+                icon={row.icon}
+                accent={row.accent}
+                highlight
+                title={row.title}
+                subtitle={row.subtitle}
+                onPress={row.onPress}
+              />
+            ))}
+          </View>
+        ) : null}
+
         <FormInput
           label={t("spaces.mySpaces.searchLabel")}
           placeholder={t("spaces.mySpaces.searchPlaceholder")}
@@ -296,7 +433,7 @@ export function MySpacesScreen() {
                   key={invitation.invitationId}
                   spaceName={invitation.spaceName}
                   spaceTypeLabel={formatSpaceType(invitation.spaceType)}
-                  roleLabel={t(`spaces.roles.${invitation.role}`)}
+                  roleLabel={t(membershipRoleLabelKey(invitation.role, invitation.spaceType))}
                   invitedBy={t("membership.incoming.invitedBy", {
                     name: invitation.invitedBy,
                   })}
@@ -345,6 +482,94 @@ export function MySpacesScreen() {
           </View>
         ) : null}
 
+        {pendingListings.length > 0 && !isSearching ? (
+          <View style={styles.list}>
+            <DashboardSectionTitle
+              title={t("spaces.mySpaces.pendingTitle", { defaultValue: "Pending review" })}
+              subtitle={t("spaces.mySpaces.pendingHint", {
+                defaultValue: "Not public until ACOMI publishes the listing.",
+              })}
+            />
+            {pendingListings.map(listing => {
+              const mess = listing.kind === "MESS" || listing.spaceType === "MESS";
+              const residential = showsResidentialInventory(listing);
+              return (
+                <View key={listing.registrationId} style={styles.listItem}>
+                  <ListCard
+                    title={listing.name}
+                    subtitle={[
+                      mess ? "MESS" : listing.spaceType || listing.kind,
+                      listing.registrationStatus || "PENDING",
+                      listing.registrationReference || "",
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                    status={
+                      <Text style={styles.pendingNote}>
+                        {residential
+                          ? ""
+                          : t("spaces.mySpaces.pendingNoInventory", {
+                              defaultValue: "No rooms or beds until this listing is published.",
+                            })}
+                      </Text>
+                    }
+                    onPress={() => {
+                      setEditingLead(listing);
+                      setLeadName(listing.name ?? "");
+                      setLeadAddress(listing.address ?? "");
+                    }}
+                  />
+                </View>
+              );
+            })}
+            {editingLead ? (
+              <View style={styles.listItem}>
+                <FormInput label={t("spaces.mySpaces.listingName", { defaultValue: "Name" })} value={leadName} onChangeText={setLeadName} />
+                <FormInput
+                  label={t("spaces.mySpaces.listingAddress", { defaultValue: "Address" })}
+                  value={leadAddress}
+                  onChangeText={setLeadAddress}
+                />
+                <Pressable
+                  disabled={savingLead || !leadName.trim() || !editingLead.registrationId}
+                  onPress={() => {
+                    const registrationId = editingLead.registrationId;
+                    if (!registrationId) return;
+                    setSavingLead(true);
+                    const request =
+                      editingLead.kind === "MESS"
+                        ? mySpacesApi.updateMessLead(registrationId, {
+                            messName: leadName.trim(),
+                            addressLine: leadAddress.trim(),
+                          })
+                        : mySpacesApi.updatePropertyLead(registrationId, {
+                            propertyName: leadName.trim(),
+                            addressLine: leadAddress.trim(),
+                          });
+                    void request
+                      .then(async () => {
+                        setEditingLead(null);
+                        await loadPendingListings();
+                        showToast(t("spaces.mySpaces.pendingSaved", { defaultValue: "Listing updated." }));
+                      })
+                      .catch(() => {
+                        showToast(t("common.errors.generic"));
+                      })
+                      .finally(() => setSavingLead(false));
+                  }}
+                  style={styles.setDefaultButton}
+                >
+                  <Text style={styles.setDefaultLabel}>
+                    {savingLead
+                      ? t("spaces.mySpaces.savingListing", { defaultValue: "Saving…" })
+                      : t("spaces.mySpaces.saveListing", { defaultValue: "Save listing" })}
+                  </Text>
+                </Pressable>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
         {showLoading ? (
           <>
             <SkeletonCard />
@@ -364,7 +589,7 @@ export function MySpacesScreen() {
                   ? t("spaces.mySpaces.searchEmptyDescription")
                   : t("spaces.mySpaces.emptyDescription")
               }
-              icon="🏠"
+              Icon={Home}
             />
             {!isSearching ? (
               <DashboardActionRow
@@ -378,35 +603,76 @@ export function MySpacesScreen() {
           </View>
         ) : (
           <View style={styles.list}>
-            <DashboardSectionTitle title={t("spaces.mySpaces.spacesSection")} />
+            <DashboardSectionTitle
+              title={t("spaces.mySpaces.spacesSection")}
+              subtitle={t("spaces.mySpaces.defaultHint", {
+                defaultValue: "Your default space opens first when you launch the app.",
+              })}
+            />
             {sortedSpaces.map(space => {
               const isConsumer = isConsumerMembershipRole(space.membershipRole);
               const consumerSummary = consumerAttention.bySpaceId[space.spaceId];
               const operatorPending = pendingBySpace.get(space.spaceId) ?? 0;
+              const isSettingDefault = settingDefaultId === space.spaceId;
 
               return (
                 <View key={space.spaceId} style={styles.listItem}>
-                  {space.isDefault ? (
-                    <View style={styles.defaultBadge}>
-                      <Badge label={t("spaces.mySpaces.defaultBadge")} />
-                    </View>
-                  ) : null}
                   <ListCard
                     title={formatSpaceDisplayName(space)}
                     subtitle={buildSubtitle(space)}
                     iconLabel={spaceTypeIconLabel(space.spaceType)}
                     status={
-                      isConsumer ? (
-                        <SpaceAttentionCardStatus
-                          summary={consumerSummary}
-                          loading={consumerAttention.loading && !consumerSummary}
-                        />
-                      ) : operatorPending > 0 ? (
-                        <SpaceStatusBadge pendingActionCount={operatorPending} />
-                      ) : undefined
+                      <View style={styles.cardStatusRow}>
+                        <View style={styles.cardStatusMain}>
+                          {isConsumer ? (
+                            <SpaceAttentionCardStatus
+                              summary={consumerSummary}
+                              loading={consumerAttention.loading && !consumerSummary}
+                            />
+                          ) : operatorPending > 0 ? (
+                            <SpaceStatusBadge pendingActionCount={operatorPending} />
+                          ) : null}
+                        </View>
+                        {space.isDefault ? (
+                          <Text style={styles.defaultLabel}>
+                            {t("spaces.mySpaces.defaultBadge")}
+                          </Text>
+                        ) : (
+                          <Pressable
+                            onPress={() => void handleSetDefault(space)}
+                            disabled={Boolean(settingDefaultId)}
+                            hitSlop={8}
+                            style={({ pressed }) => [
+                              styles.setDefaultButton,
+                              pressed && styles.setDefaultButtonPressed,
+                              isSettingDefault && styles.setDefaultButtonBusy,
+                            ]}
+                            accessibilityRole="button"
+                            accessibilityLabel={t("spaces.mySpaces.setDefault", {
+                              defaultValue: "Set as default",
+                            })}
+                          >
+                            <Star
+                              size={14}
+                              color={colors.primaryDark}
+                              strokeWidth={2.2}
+                              fill={isSettingDefault ? colors.primaryDark : "transparent"}
+                            />
+                            <Text style={styles.setDefaultLabel}>
+                              {isSettingDefault
+                                ? t("spaces.mySpaces.settingDefault", {
+                                    defaultValue: "Updating…",
+                                  })
+                                : t("spaces.mySpaces.setDefault", {
+                                    defaultValue: "Set as default",
+                                  })}
+                            </Text>
+                          </Pressable>
+                        )}
+                      </View>
                     }
                     trailingBadge={
-                      isConsumer ? (
+                      !space.isDefault && isConsumer ? (
                         <SpaceAttentionCountBadge count={consumerSummary?.totalCount ?? 0} />
                       ) : undefined
                     }
@@ -427,20 +693,34 @@ export function MySpacesScreen() {
             subtitle={t("spaces.mySpaces.findPlaceSubtitle")}
             onPress={() => navigation.navigate("FindAPlace")}
           />
-          <DashboardActionRow
-            icon={Plus}
-            accent={colors.primaryDark}
-            title={t("spaces.mySpaces.addSpace")}
-            subtitle={t("spaces.mySpaces.addSpaceSubtitle")}
-            onPress={() => navigation.navigate("CreateSpace")}
-          />
+          {allowCreateSpace ? (
+            <DashboardActionRow
+              icon={Plus}
+              accent={colors.primaryDark}
+              title={t("spaces.mySpaces.addSpace")}
+              subtitle={t("spaces.mySpaces.addSpaceSubtitle")}
+              onPress={() => navigation.navigate("CreateSpace")}
+            />
+          ) : null}
+          {canOpenServiceContacts(mySpaces, ownerIntent) ? (
+            <DashboardActionRow
+              icon={Contact}
+              accent={colors.primaryDark}
+              highlight
+              title={t("spaces.mySpaces.serviceContacts")}
+              subtitle={t("spaces.mySpaces.serviceContactsSubtitle")}
+              onPress={() => navigation.navigate("ServiceContacts")}
+            />
+          ) : null}
         </View>
       </ScrollView>
 
-      <FAB
-        onPress={() => navigation.navigate("CreateSpace")}
-        accessibilityLabel={t("spaces.mySpaces.createFab")}
-      />
+      {allowCreateSpace ? (
+        <FAB
+          onPress={() => navigation.navigate("CreateSpace")}
+          accessibilityLabel={t("spaces.mySpaces.createFab")}
+        />
+      ) : null}
     </View>
   );
 }
@@ -489,6 +769,11 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     marginBottom: spacing.lg,
   },
+  memberPending: {
+    marginTop: spacing.md,
+    marginBottom: spacing.lg,
+    gap: spacing.sm,
+  },
   inviteSection: {
     marginTop: spacing.md,
     marginBottom: spacing.lg,
@@ -511,8 +796,47 @@ const styles = StyleSheet.create({
   listItem: {
     gap: spacing.xs,
   },
-  defaultBadge: {
-    marginBottom: spacing.xs,
+  pendingNote: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  cardStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+  },
+  cardStatusMain: {
+    flex: 1,
+    minWidth: 0,
+  },
+  defaultLabel: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    fontWeight: "700",
+    marginLeft: "auto",
+    flexShrink: 0,
+  },
+  setDefaultButton: {
+    marginLeft: "auto",
+    flexShrink: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xxs,
+    paddingVertical: spacing.xxs,
+    paddingHorizontal: spacing.xs,
+    borderRadius: radius.button,
+  },
+  setDefaultButtonPressed: {
+    backgroundColor: colors.lightGreen,
+  },
+  setDefaultButtonBusy: {
+    opacity: 0.7,
+  },
+  setDefaultLabel: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    fontWeight: "700",
   },
   skeletonGap: {
     height: spacing.md,

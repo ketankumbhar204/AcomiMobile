@@ -32,4 +32,12 @@ export const shadows = {
     shadowRadius: 16,
     elevation: 6,
   },
+  /** Lifts a drawer or popup above the dimmed screen. */
+  raised: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 12,
+    elevation: 24,
+  },
 } as const satisfies Record<string, ShadowStyle>;

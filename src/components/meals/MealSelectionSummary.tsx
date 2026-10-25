@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { ChevronRight } from 'lucide-react-native';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { formatComboPrice } from '../../utils/comboPrice';
 import { formatMenuDate } from '../../utils/mealDates';
@@ -17,6 +18,8 @@ type MealSelectionSummaryProps = {
   /** detailed = payment screens; compact = dashboard card body */
   variant?: 'detailed' | 'compact';
   showTotals?: boolean;
+  /** PG / hostel / co-living meals are headcount only — hide item and day prices. */
+  showPrices?: boolean;
   title?: string;
   /** When set, each dated day header opens the same day detail used from Payments. */
   onDayPress?: (isoDate: string) => void;
@@ -30,6 +33,7 @@ export function MealSelectionSummary({
   model,
   variant = 'detailed',
   showTotals = true,
+  showPrices = true,
   title,
   onDayPress,
 }: MealSelectionSummaryProps) {
@@ -71,8 +75,10 @@ export function MealSelectionSummary({
               {formatMenuDate(group.date, i18n.language)}
             </Text>
             <View style={styles.dayHeaderTrailing}>
-              {dayTotalLabel ? <Text style={styles.dayTotal}>{dayTotalLabel}</Text> : null}
-              {dayPressable ? <Text style={styles.dayChevron}>›</Text> : null}
+              {showPrices && dayTotalLabel ? (
+                <Text style={styles.dayTotal}>{dayTotalLabel}</Text>
+              ) : null}
+              {dayPressable ? <ChevronRight size={18} color={colors.muted} strokeWidth={2.4} /> : null}
             </View>
           </View>
         ) : null;
@@ -103,7 +109,7 @@ export function MealSelectionSummary({
                     <View key={sectionKey(section, index)} style={styles.compactSection}>
                       <View style={styles.compactHeader}>
                         <Text style={styles.mealLabel}>{mealLabel}</Text>
-                        {section.items.length > 0 && subtotalLabel ? (
+                        {showPrices && section.items.length > 0 && subtotalLabel ? (
                           <Text style={styles.subtotal}>{subtotalLabel}</Text>
                         ) : null}
                       </View>
@@ -113,7 +119,7 @@ export function MealSelectionSummary({
                         section.items.map((item, itemIndex) => {
                           const unitLabel = formatComboPrice(item.unitPrice, item.currencyCode);
                           const lineLabel = formatComboPrice(item.lineAmount, item.currencyCode);
-                          const priceHint = unitLabel ?? lineLabel;
+                          const priceHint = showPrices ? (unitLabel ?? lineLabel) : null;
                           return (
                             <Text
                               key={`${item.label}-${itemIndex}`}
@@ -146,7 +152,7 @@ export function MealSelectionSummary({
                       <Text style={styles.lineLabel} numberOfLines={2}>
                         • {item.label} × {item.quantity}
                       </Text>
-                      {amountLabel ? (
+                      {showPrices && amountLabel ? (
                         <Text style={styles.lineAmount}>{amountLabel}</Text>
                       ) : null}
                     </View>
@@ -170,7 +176,7 @@ export function MealSelectionSummary({
                             )}
                           </>
                         ) : null}
-                        {!hasPerLineAmounts && subtotalLabel ? (
+                        {showPrices && !hasPerLineAmounts && subtotalLabel ? (
                           <View style={styles.lineRow}>
                             <Text style={styles.sectionSubtotalSpacer} />
                             <Text style={styles.lineAmount}>{subtotalLabel}</Text>

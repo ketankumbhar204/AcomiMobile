@@ -1,6 +1,9 @@
 import React, { useCallback, useMemo, useRef } from 'react';
 import { StyleSheet } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { CompositeNavigationProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { UtensilsCrossed } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import type { MealBillingType, UUID } from '../../api/types';
@@ -11,14 +14,25 @@ import { Screen } from '../../components/ui/Screen';
 import { useCustomerSubscriptionStatus } from '../../hooks/useCustomerSubscriptionStatus';
 import { useLinkedMember } from '../../hooks/useLinkedMember';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
+import type { MainStackParamList, SpaceTabParamList } from '../../navigation/types';
+import { navigateMainStack } from '../../navigation/mainStackNavigation';
 import { useMemberMealActivityDaySheetStore } from '../../store/memberMealActivityDaySheetStore';
 import { spacing } from '../../theme';
 import { todayIsoDate } from '../../utils/mealDates';
 import { DailyMenuTodayScreen } from './DailyMenuTodayScreen';
 import { MenuPlanningScreen } from './MenuPlanningScreen';
 
+type Nav = CompositeNavigationProp<
+  BottomTabNavigationProp<SpaceTabParamList, 'Meals'>,
+  NativeStackNavigationProp<MainStackParamList>
+>;
+
 type MealsHomeScreenProps = {
   spaceId: UUID;
+  /** Date chosen on the dashboard meal operations card. */
+  initialDate?: string;
+  /** Changes on each dashboard open so a repeat of the same date still applies. */
+  menuDateRequest?: number;
 };
 
 function resolveCustomerBillingType(
@@ -34,8 +48,13 @@ function resolveCustomerBillingType(
   return 'PAY_PER_MEAL';
 }
 
-export function MealsHomeScreen({ spaceId }: MealsHomeScreenProps) {
+export function MealsHomeScreen({
+  spaceId,
+  initialDate,
+  menuDateRequest,
+}: MealsHomeScreenProps) {
   const { t } = useTranslation();
+  const navigation = useNavigation<Nav>();
   const permissions = useSpacePermissions(spaceId);
   const role = permissions.membershipRole;
   const isCustomerOrTenant = role === 'TENANT' || role === 'CUSTOMER';
@@ -84,16 +103,33 @@ export function MealsHomeScreen({ spaceId }: MealsHomeScreenProps) {
             memberId: linkedMemberId,
             memberName: member?.fullName ?? '',
             canManage: false,
+            onRespond: menuDate => {
+              closeActivityDaySheet();
+              const params = { spaceId, menuDate };
+              const stack =
+                navigation.getParent<NativeStackNavigationProp<MainStackParamList>>();
+              if (stack?.navigate) {
+                stack.navigate('MealPollResponse', params);
+                return;
+              }
+              navigateMainStack('MealPollResponse', params);
+            },
           },
           () => activityReloadRef.current?.(),
         );
       }, 100);
     },
-    [linkedMemberId, member?.fullName, openActivityDaySheet, spaceId],
+    [closeActivityDaySheet, linkedMemberId, member?.fullName, navigation, openActivityDaySheet, spaceId],
   );
 
   if (permissions.canManageMeals) {
-    return <MenuPlanningScreen spaceId={spaceId} initialDate={todayIsoDate()} />;
+    return (
+      <MenuPlanningScreen
+        spaceId={spaceId}
+        initialDate={initialDate}
+        menuDateRequest={menuDateRequest}
+      />
+    );
   }
 
   if (isCustomerOrTenant) {

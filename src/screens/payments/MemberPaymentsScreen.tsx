@@ -1,6 +1,6 @@
-import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type {
   NativeStackNavigationProp,
   NativeStackScreenProps,
@@ -12,6 +12,7 @@ import type { SpacePaymentResponse } from '../../api/types';
 import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
 import { OwnerPaymentCardActions } from '../../components/payments/OwnerPaymentCardActions';
 import { PaymentReceivedConfirmModal } from '../../components/payments/PaymentReceivedConfirmModal';
+import { PaymentReminderComposer } from '../../components/payments/PaymentReminderComposer';
 import { UniversalPaymentCard } from '../../components/payments/UniversalPaymentCard';
 import { UniversalPaymentProofModal } from '../../components/payments/UniversalPaymentProofModal';
 import { EmptyState, HeaderBackButton, ListFilterChips, Screen, SkeletonCard } from '../../components/ui';
@@ -21,7 +22,7 @@ import { useOwnerPaymentCardActions } from '../../hooks/useOwnerPaymentCardActio
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useUniversalPayments } from '../../hooks/useUniversalPayments';
 import type { MainStackParamList } from '../../navigation/types';
-import { spacing, typography } from '../../theme';
+import { colors, spacing, typography } from '../../theme';
 import {
   countTenantPaymentFilter,
   filterTenantPayments,
@@ -74,8 +75,40 @@ export function MemberPaymentsScreen() {
       title: t('paymentCollection.memberPayments.title'),
       headerBackVisible: false,
       headerLeft: () => <HeaderBackButton />,
+      headerRight: canManage
+        ? () => (
+            <Pressable
+              onPress={() =>
+                navigation.navigate('CreatePayment', {
+                  spaceId,
+                  month: routeMonth,
+                  memberId,
+                  memberName,
+                })
+              }
+              accessibilityRole="button"
+              accessibilityLabel={t('paymentCollection.addRecord.action')}
+              hitSlop={8}
+              style={styles.headerAction}>
+              <Text style={styles.headerActionLabel}>{t('paymentCollection.addRecord.action')}</Text>
+            </Pressable>
+          )
+        : undefined,
     });
-  }, [i18n.language, navigation, t]);
+  }, [canManage, i18n.language, memberId, memberName, navigation, routeMonth, spaceId, t]);
+
+  const reloadRef = useRef(reload);
+  reloadRef.current = reload;
+  const skipFocusReload = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (skipFocusReload.current) {
+        skipFocusReload.current = false;
+        return;
+      }
+      reloadRef.current().catch(() => undefined);
+    }, []),
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -200,7 +233,7 @@ export function MemberPaymentsScreen() {
                   canManage ? (
                     <OwnerPaymentCardActions
                       showReceived={canOwnerMarkPaymentReceived(payment.paymentStatus)}
-                      showReminder={canOwnerSendPaymentReminder(payment.reminderEligible)}
+                      showReminder={canOwnerSendPaymentReminder(payment)}
                       receivedLoading={cardActions.isProcessing(
                         payment.paymentId,
                         'received',
@@ -227,6 +260,20 @@ export function MemberPaymentsScreen() {
         onClose={() => setUpdatePayment(null)}
         onSubmit={payload => void handleSubmitProof(payload)}
       />
+      <PaymentReminderComposer
+        visible={cardActions.reminderDraft != null}
+        memberName={cardActions.reminderDraft?.memberName || memberName}
+        phone={cardActions.reminderPhone}
+        message={cardActions.reminderMessage}
+        notice={cardActions.reminderNotice}
+        submitting={
+          cardActions.reminderDraft != null &&
+          cardActions.isProcessing(cardActions.reminderDraft.paymentId, 'reminder')
+        }
+        onChangeMessage={cardActions.setReminderMessage}
+        onCancel={cardActions.cancelReminder}
+        onConfirm={cardActions.confirmReminder}
+      />
       <PaymentReceivedConfirmModal
         visible={cardActions.confirmPayments.length > 0}
         payments={cardActions.confirmPayments}
@@ -242,6 +289,16 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: spacing.lg,
+  },
+  headerAction: {
+    paddingHorizontal: spacing.sm,
+    minHeight: 40,
+    justifyContent: 'center',
+  },
+  headerActionLabel: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    fontWeight: '700',
   },
   gap: {
     height: spacing.sm,

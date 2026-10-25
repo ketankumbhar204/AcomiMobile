@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import {
@@ -38,6 +38,14 @@ type AccommodationOccupancyActionsProps = {
   onBeforeAllocate?: () => boolean;
   /** Return false to keep buttons enabled but skip starting reserve. */
   onBeforeReserve?: () => boolean;
+  /** Rent already shown for this bed. Avoids refetching it inside the wizard. */
+  catalogRent?: number | null;
+  catalogDeposit?: number | null;
+  catalogKnown?: boolean;
+  /** Hide the bed details modal before the wizard screen is shown. */
+  onDismissBeforeFlow?: () => void;
+  /** When false, drop any in-progress opening state (modal dismissed). */
+  interactionEnabled?: boolean;
 };
 
 type ActionTile = {
@@ -95,6 +103,11 @@ export function AccommodationOccupancyActions({
   layout = 'stack',
   onBeforeAllocate,
   onBeforeReserve,
+  catalogRent,
+  catalogDeposit,
+  catalogKnown = false,
+  onDismissBeforeFlow,
+  interactionEnabled = true,
 }: AccommodationOccupancyActionsProps) {
   const { t } = useTranslation();
 
@@ -110,9 +123,21 @@ export function AccommodationOccupancyActions({
       target,
       accommodationStatus,
       occupancy,
+      catalogRent,
+      catalogDeposit,
+      catalogKnown,
     }),
-    [accommodationStatus, occupancy, target],
+    [accommodationStatus, catalogDeposit, catalogKnown, catalogRent, occupancy, target],
   );
+  const [opening, setOpening] = useState<'allocate' | 'reserve' | null>(null);
+  const openingRef = useRef(false);
+
+  useEffect(() => {
+    if (!interactionEnabled && openingRef.current) {
+      openingRef.current = false;
+      setOpening(null);
+    }
+  }, [interactionEnabled]);
 
   const targetSupported = isOccupancyTargetSupported(spaceType, target.targetType);
   const showActions = canManage && targetSupported;
@@ -128,30 +153,51 @@ export function AccommodationOccupancyActions({
   const isAvailable = accommodationStatus === 'AVAILABLE';
   const isReserved = accommodationStatus === 'RESERVED';
   const isOccupied = accommodationStatus === 'OCCUPIED';
-  const disabled = flow.loading;
+  const disabled = flow.loading || opening != null;
   const useTiles = layout === 'tiles';
 
-  const startAllocate = () => {
-    if (onBeforeAllocate && !onBeforeAllocate()) {
+  const beginFlow = (kind: 'allocate' | 'reserve') => {
+    if (openingRef.current || flow.loading) {
       return;
     }
-    flow.startWalkIn(context);
+    if (kind === 'allocate' && onBeforeAllocate && !onBeforeAllocate()) {
+      return;
+    }
+    if (kind === 'reserve' && onBeforeReserve && !onBeforeReserve()) {
+      return;
+    }
+    openingRef.current = true;
+    setOpening(kind);
+    const opened = kind === 'allocate' ? flow.startWalkIn(context) : flow.startReserve(context);
+    if (!opened) {
+      openingRef.current = false;
+      setOpening(null);
+      return;
+    }
+    onDismissBeforeFlow?.();
   };
 
-  const startReserve = () => {
-    if (onBeforeReserve && !onBeforeReserve()) {
-      return;
-    }
-    flow.startReserve(context);
-  };
+  const startAllocate = () => beginFlow('allocate');
+  const startReserve = () => beginFlow('reserve');
+  const allocateLabel =
+    opening === 'allocate'
+      ? t('occupancy.actions.openingAllocation', { defaultValue: 'Opening allocation…' })
+      : t('occupancy.actions.allocate');
+  const reserveLabel =
+    opening === 'reserve'
+      ? t('occupancy.actions.openingReservation', { defaultValue: 'Opening reservation…' })
+      : t('occupancy.actions.reserve');
 
   const tiles: ActionTile[] = isAvailable
     ? [
         {
           key: 'allocate',
-          title: t('occupancy.bedQuickActions.allocateTitle', {
-            defaultValue: 'Allocate Bed',
-          }),
+          title:
+            opening === 'allocate'
+              ? allocateLabel
+              : t('occupancy.bedQuickActions.allocateTitle', {
+                  defaultValue: 'Allocate Bed',
+                }),
           subtitle: t('occupancy.bedQuickActions.allocateHint', {
             defaultValue: 'Assign a member to this bed',
           }),
@@ -163,9 +209,12 @@ export function AccommodationOccupancyActions({
         },
         {
           key: 'reserve',
-          title: t('occupancy.bedQuickActions.reserveTitle', {
-            defaultValue: 'Reserve Bed',
-          }),
+          title:
+            opening === 'reserve'
+              ? reserveLabel
+              : t('occupancy.bedQuickActions.reserveTitle', {
+                  defaultValue: 'Reserve Bed',
+                }),
           subtitle: t('occupancy.bedQuickActions.reserveHint', {
             defaultValue: 'Reserve for future use',
           }),
@@ -253,19 +302,23 @@ export function AccommodationOccupancyActions({
           {isAvailable ? (
             <>
               <Button
-                label={t('occupancy.actions.allocate')}
+                label={allocateLabel}
                 tint={occupancyActionTint.allocate}
-                icon={UserPlus}
+                icon={opening === 'allocate' ? undefined : UserPlus}
                 onPress={startAllocate}
-                disabled={flow.loading}
+                loading={opening === 'allocate'}
+                disabled={disabled}
+                accessibilityLabel={allocateLabel}
                 style={styles.actionBtn}
               />
               <Button
-                label={t('occupancy.actions.reserve')}
+                label={reserveLabel}
                 tint={occupancyActionTint.reserve}
-                icon={CalendarClock}
+                icon={opening === 'reserve' ? undefined : CalendarClock}
                 onPress={startReserve}
-                disabled={flow.loading}
+                loading={opening === 'reserve'}
+                disabled={disabled}
+                accessibilityLabel={reserveLabel}
                 style={styles.actionBtn}
               />
             </>

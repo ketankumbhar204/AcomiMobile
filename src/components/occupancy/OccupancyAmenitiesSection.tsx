@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Check } from 'lucide-react-native';
 import type { AmenityAssignment } from '../../api/types';
 import {
   amenityKey,
@@ -38,7 +39,7 @@ function AmenityCheckbox({
       accessibilityRole="checkbox"
       accessibilityState={{ checked, disabled: Boolean(disabled) }}>
       <View style={[styles.checkboxBox, checked && styles.checkboxBoxChecked]}>
-        {checked ? <Text style={styles.checkboxMark}>✓</Text> : null}
+        {checked ? <Check size={12} color={colors.white} strokeWidth={3} /> : null}
       </View>
       <Text style={styles.checkboxLabel} numberOfLines={2}>
         {label}

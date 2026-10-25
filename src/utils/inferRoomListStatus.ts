@@ -7,14 +7,11 @@ export function inferRoomListStatus(
   if (room.bedCount <= 0) {
     return null;
   }
-  if (room.availableBeds === room.bedCount) {
-    return 'AVAILABLE';
-  }
-  if (room.availableBeds === 0 && room.occupiedBeds > 0) {
+  if (room.occupiedBeds >= room.bedCount) {
     return 'OCCUPIED';
   }
-  if (room.availableBeds > 0 && room.occupiedBeds > 0) {
-    return 'RESERVED';
+  if (room.availableBeds > 0) {
+    return 'AVAILABLE';
   }
-  return null;
+  return 'RESERVED';
 }

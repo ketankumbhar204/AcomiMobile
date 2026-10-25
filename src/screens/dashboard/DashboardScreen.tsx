@@ -20,6 +20,8 @@ import {
   Share2,
   UserPlus,
   Users,
+  CreditCard,
+  Home,
   UtensilsCrossed,
   Wallet,
 } from 'lucide-react-native';
@@ -40,11 +42,10 @@ import type { QuickActionSheetOption } from '../../components/ui';
 import { Screen } from '../../components/ui/Screen';
 import { useDashboardAccommodationOperationsQuick } from '../../hooks/useDashboardAccommodationOperationsQuick';
 import { useLinkedMember } from '../../hooks/useLinkedMember';
-import { useHierarchyOccupancyPicker } from '../../hooks/useHierarchyOccupancyPicker';
 import { useNavigateFromSpaceTab } from '../../hooks/useNavigateFromSpaceTab';
 import { usePendingActions } from '../../hooks/usePendingActions';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
-import { useSpaceDashboard } from '../../hooks/useSpaceDashboard';
+import { useDashboardMonthFinancial, useSpaceDashboard } from '../../hooks/useSpaceDashboard';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useSpaceLifecycle } from '../../hooks/useSpaceLifecycle';
 import { useSpaceLifecycleSignals } from '../../hooks/useSpaceLifecycleSignals';
@@ -62,6 +63,10 @@ import { canViewInventory } from '../../utils/inventoryPermissions';
 import { canManageNotifications } from '../../utils/spaceOperator';
 import { peekDashboardSummary } from '../../utils/dashboardQueryCache';
 import { peekPendingActions } from '../../utils/pendingActionsQueryCache';
+import {
+  resolvePendingActionsCardState,
+  resolvePendingActionsCount,
+} from '../../utils/pendingActionsCardState';
 import { todayIsoDate, tomorrowIsoDate } from '../../utils/mealDates';
 import { shouldShowDashboardMealOperations } from '../../utils/dashboardMealOperations';
 import {
@@ -92,21 +97,36 @@ type DashboardNav = CompositeNavigationProp<
 
 function PendingActionsQuickCard({
   count,
+  loading = false,
+  error = false,
+  detail,
   onPress,
 }: {
   count: number;
+  loading?: boolean;
+  error?: boolean;
+  detail?: string;
   onPress: () => void;
 }) {
   const { t } = useTranslation();
+  const subtitle = error
+    ? t('dashboard.quickActions.pendingActionsError', {
+        defaultValue: 'Could not load pending actions. Tap to open them.',
+      })
+    : loading
+      ? t('dashboard.quickActions.pendingActionsLoading', {
+          defaultValue: 'Checking actions that need attention',
+        })
+      : detail || t('dashboard.quickActions.pendingActionsSubtitle', { count });
 
   return (
     <DashboardActionRow
       icon={Bell}
       accent="#D97706"
       highlight
-      badgeCount={count}
+      badgeCount={loading || error ? undefined : count}
       title={t('dashboard.quickActions.pendingActions')}
-      subtitle={t('dashboard.quickActions.pendingActionsSubtitle', { count })}
+      subtitle={subtitle}
       onPress={onPress}
     />
   );
@@ -125,7 +145,6 @@ export function DashboardScreen() {
   const isMess = spaceType === 'MESS';
   const { memberId: linkedMemberId, member: linkedMember } = useLinkedMember(spaceId);
   const { showQuickActionSheet } = useQuickActionSheet();
-  const hierarchyPicker = useHierarchyOccupancyPicker(spaceId, spaceType);
   const navigateFromTab = useNavigateFromSpaceTab();
 
   const isTenant = permissions.membershipRole === 'TENANT';
@@ -142,7 +161,25 @@ export function DashboardScreen() {
   const showInventoryQuickAction = canViewInventory(permissions);
   const autoNavAttemptedRef = useRef<string | null>(null);
 
+  const [summaryMonth, setSummaryMonth] = useState(currentMonthKey);
+  useEffect(() => {
+    setSummaryMonth(currentMonthKey());
+  }, [spaceId]);
   const dashboard = useSpaceDashboard(spaceId, spaceType, showOwnerDashboard);
+  const monthFinancial = useDashboardMonthFinancial(
+    spaceId,
+    spaceType,
+    summaryMonth,
+    showOwnerDashboard,
+  );
+  const showingCurrentMonth = summaryMonth === currentMonthKey();
+  const paymentFinancial = showingCurrentMonth
+    ? dashboard.financial
+    : monthFinancial.financial;
+  const paymentFinancialLoading = showingCurrentMonth
+    ? dashboard.financialLoading && dashboard.financial == null
+    : monthFinancial.loading;
+  const paymentFinancialError = showingCurrentMonth ? false : monthFinancial.error;
   const hasSummaryAccommodation = dashboard.accommodationOperations != null;
   const quickAccommodation = useDashboardAccommodationOperationsQuick(
     spaceId,
@@ -155,14 +192,51 @@ export function DashboardScreen() {
     dashboard.pendingActions ??
     peekDashboardSummary(spaceId, currentMonthKey())?.pendingActions ??
     null;
-  const tenantPendingActions = usePendingActions(spaceId, !showOwnerDashboard, false);
+  const livePendingActions = usePendingActions(spaceId, true, showOwnerDashboard);
   const monthKey = currentMonthKey();
-  // Prefer live dashboard summary once available — peeks are fallback only.
-  const pendingActionCount = showOwnerDashboard
+  const fallbackPendingCount = showOwnerDashboard
     ? (pendingActions?.totalCount ??
       peekPendingActions(spaceId, monthKey)?.totalCount ??
-      0)
-    : tenantPendingActions.totalCount;
+      null)
+    : null;
+  const livePendingCount =
+    livePendingActions.summary != null ? livePendingActions.totalCount : null;
+  const livePendingSettled =
+    livePendingActions.summary != null ||
+    (livePendingActions.error && !livePendingActions.loading);
+  const resolvedPendingCount = resolvePendingActionsCount({
+    liveCount: livePendingCount,
+    liveSettled: livePendingSettled,
+    liveError: livePendingActions.error,
+    fallbackCount: fallbackPendingCount,
+  });
+  const pendingCardState = resolvePendingActionsCardState({
+    // A failed refresh must not collapse to "hidden", including when the last
+    // known count was zero. A positive count still wins inside the resolver.
+    error: livePendingActions.error,
+    totalCount: resolvedPendingCount,
+  });
+  const pendingActionCount = resolvedPendingCount ?? 0;
+  const memberPendingDetail = useMemo(() => {
+    if (showOwnerDashboard) {
+      return undefined;
+    }
+    const labels = (livePendingActions.summary?.groups ?? [])
+      .filter(
+        group =>
+          group.actionType === 'PAYMENT_UPDATE_REQUESTED' ||
+          (group.actionType === 'PENDING_INVITATION' &&
+            (group.actionRoute ?? '').trim() === 'AcceptInvitations'),
+      )
+      .map(group =>
+        group.actionType === 'PAYMENT_UPDATE_REQUESTED'
+          ? t('dashboard.pendingActions.groups.PAYMENT_UPDATE_REQUESTED')
+          : t('dashboard.pendingActions.groups.SPACE_INVITATION', {
+              defaultValue: 'Space invitation',
+            }),
+      );
+    return labels.length > 0 ? labels.join(' · ') : undefined;
+  }, [livePendingActions.summary?.groups, showOwnerDashboard, t]);
 
   const hasOperationalSignal = useMemo(() => {
     const occupied = accommodationOperations?.occupiedBeds ?? 0;
@@ -274,7 +348,13 @@ export function DashboardScreen() {
     void dashboard.reload(true);
     void quickAccommodation.reload();
     void refreshLifecycle();
-  }, [dashboard.reload, quickAccommodation.reload, refreshLifecycle]);
+    void livePendingActions.reload();
+  }, [
+    dashboard.reload,
+    livePendingActions.reload,
+    quickAccommodation.reload,
+    refreshLifecycle,
+  ]);
 
   const showMealOperations = shouldShowDashboardMealOperations({
     showOwnerDashboard,
@@ -436,15 +516,15 @@ export function DashboardScreen() {
   );
 
   const handleOccupiedBedsPress = useCallback(() => {
-    navigateFromTab('DashboardOccupancyList', { spaceId, mode: 'active' });
+    navigateFromTab('DashboardBedInventory', { spaceId, status: 'OCCUPIED', focus: 'occupied' });
   }, [navigateFromTab, spaceId]);
 
   const handleVacantBedsPress = useCallback(() => {
-    navigateFromTab('DashboardBedInventory', { spaceId, status: 'AVAILABLE' });
+    navigateFromTab('DashboardBedInventory', { spaceId, status: 'AVAILABLE', focus: 'vacant' });
   }, [navigateFromTab, spaceId]);
 
   const handleMoveInsPress = useCallback(() => {
-    navigateFromTab('DashboardOccupancyList', { spaceId, mode: 'moveInsThisMonth' });
+    navigateFromTab('DashboardBedInventory', { spaceId, status: 'OCCUPIED', focus: 'moveIns' });
   }, [navigateFromTab, spaceId]);
 
   const handleMealsPress = useCallback(() => {
@@ -513,7 +593,12 @@ export function DashboardScreen() {
         icon: UserPlus,
         iconColor: '#2563EB',
         iconBackground: '#DBEAFE',
-        action: () => hierarchyPicker.openFromSpace('ALLOCATE'),
+        action: () =>
+          navigateFromTab('DashboardBedInventory', {
+            spaceId,
+            status: 'AVAILABLE',
+            intent: 'allocate',
+          }),
       },
       {
         label: t('dashboard.quickActions.reserve'),
@@ -521,7 +606,12 @@ export function DashboardScreen() {
         icon: Lock,
         iconColor: '#2563EB',
         iconBackground: '#DBEAFE',
-        action: () => hierarchyPicker.openFromSpace('RESERVE'),
+        action: () =>
+          navigateFromTab('DashboardBedInventory', {
+            spaceId,
+            status: 'AVAILABLE',
+            intent: 'allocate',
+          }),
       },
       {
         label: t('dashboard.quickActions.transfer'),
@@ -541,7 +631,7 @@ export function DashboardScreen() {
         destructive: true,
       },
     ]);
-  }, [hierarchyPicker, navigateFromTab, showQuickActionSheet, spaceId, t]);
+  }, [navigateFromTab, showQuickActionSheet, spaceId, t]);
 
   const handleMyPaymentsPress = useCallback(() => {
     if (!linkedMemberId || !linkedMember) {
@@ -562,9 +652,16 @@ export function DashboardScreen() {
   }, [linkedMemberId, navigateFromTab, spaceId]);
 
   const pendingActionsCard =
-    pendingActionCount > 0 ? (
-      <PendingActionsQuickCard count={pendingActionCount} onPress={handlePendingActionsPress} />
-    ) : null;
+    pendingCardState === 'hidden' ? null : (
+      <PendingActionsQuickCard
+        count={pendingActionCount}
+        loading={pendingCardState === 'loading'}
+        error={pendingCardState === 'error'}
+        detail={memberPendingDetail}
+        onPress={handlePendingActionsPress}
+      />
+    );
+  const quickActionPendingCard = isMealParticipant ? null : pendingActionsCard;
 
   const handleInventoryPress = useCallback(() => {
     navigateFromTab('InventoryDashboard', { spaceId });
@@ -589,7 +686,7 @@ export function DashboardScreen() {
 
     return (
       <View style={styles.quickStack}>
-        {pendingActionsCard}
+        {quickActionPendingCard}
         <DashboardActionRow
           icon={UtensilsCrossed}
           accent={colors.primaryDark}
@@ -636,7 +733,7 @@ export function DashboardScreen() {
     handleSubscriptionPlansPress,
     inventoryQuickAction,
     isMess,
-    pendingActionsCard,
+    quickActionPendingCard,
     showMealsActions,
     t,
   ]);
@@ -645,7 +742,7 @@ export function DashboardScreen() {
     if (showResidentsActions || (showMealsActions && !isMess)) {
       return (
         <View style={styles.quickStack}>
-          {pendingActionsCard}
+          {quickActionPendingCard}
           {showResidentsActions ? (
             <DashboardActionRow
               icon={Users}
@@ -681,16 +778,16 @@ export function DashboardScreen() {
     if (showMyStay) {
       return (
         <View style={styles.quickStack}>
-          {pendingActionsCard}
+          {quickActionPendingCard}
           <ModuleActionCard
-            icon="🏠"
+            Icon={Home}
             title={t('permissions.myStay.title')}
             subtitle={t('permissions.myStay.subtitle')}
             onPress={handleMyStayPress}
           />
           {!isMealParticipant ? (
             <ModuleActionCard
-              icon="💳"
+              Icon={CreditCard}
               title={t('paymentCollection.memberPayments.dashboardTitle')}
               subtitle={t('paymentCollection.memberPayments.dashboardSubtitle')}
               onPress={handleMyPaymentsPress}
@@ -703,9 +800,9 @@ export function DashboardScreen() {
     if ((isTenant || isCustomer) && linkedMemberId && !isMealParticipant) {
       return (
         <View style={styles.quickStack}>
-          {pendingActionsCard}
+          {quickActionPendingCard}
           <ModuleActionCard
-            icon="💳"
+            Icon={CreditCard}
             title={t('paymentCollection.memberPayments.dashboardTitle')}
             subtitle={t('paymentCollection.memberPayments.dashboardSubtitle')}
             onPress={handleMyPaymentsPress}
@@ -715,9 +812,7 @@ export function DashboardScreen() {
     }
 
     if ((isTenant || isCustomer) && linkedMemberId && isMealParticipant) {
-      return pendingActionsCard ? (
-        <View style={styles.quickStack}>{pendingActionsCard}</View>
-      ) : null;
+      return null;
     }
 
     if (isTenant && !linkedMemberId) {
@@ -738,7 +833,7 @@ export function DashboardScreen() {
     isMealParticipant,
     isTenant,
     linkedMemberId,
-    pendingActionsCard,
+    quickActionPendingCard,
     showMealsActions,
     showMyStay,
     showResidentsActions,
@@ -752,7 +847,7 @@ export function DashboardScreen() {
   const messSetupQuickActions =
     visibility.showMessSetupQuickActions && showMealsActions && isMess ? (
       <View style={styles.quickStack}>
-        {pendingActionsCard}
+        {quickActionPendingCard}
         <DashboardActionRow
           icon={UtensilsCrossed}
           accent={colors.primaryDark}
@@ -836,7 +931,9 @@ export function DashboardScreen() {
     ? showOwnerDashboardBody &&
       (quickActions != null ||
         (visibility.elevatePendingActions && pendingActionsCard != null))
-    : quickActions != null || pendingActionsCard != null;
+    : isMealParticipant
+      ? quickActions != null
+      : quickActions != null || pendingActionsCard != null;
 
   const showSetupCard =
     showOwnerDashboardBody &&
@@ -891,7 +988,6 @@ export function DashboardScreen() {
       contentStyle={styles.content}
       refreshing={dashboard.refreshing}
       onRefresh={showOwnerDashboard ? handleDashboardRefresh : undefined}>
-      {hierarchyPicker.pickerModal}
       {showOwnerDashboard && !ownerDashboardReady ? (
         <DashboardOwnerLoadingSkeleton
           showPropertyOps={!isMess && accommodationApplicable}
@@ -926,7 +1022,11 @@ export function DashboardScreen() {
       ) : null}
 
       {isMealParticipant ? (
-        <DashboardCustomerMealsSection spaceId={spaceId} showCustomerChrome />
+        <DashboardCustomerMealsSection
+          spaceId={spaceId}
+          showCustomerChrome
+          pendingActions={pendingActionsCard}
+        />
       ) : null}
 
       {showOwnerDashboardBody ? (
@@ -965,8 +1065,12 @@ export function DashboardScreen() {
                   }>
                   <DashboardFinancialSnapshot
                     alwaysShow
-                    loading={false}
-                    financial={dashboard.financial}
+                    loading={paymentFinancialLoading}
+                    financial={paymentFinancial}
+                    month={summaryMonth}
+                    onMonthChange={setSummaryMonth}
+                    error={paymentFinancialError}
+                    onRetry={monthFinancial.reload}
                     emptyHint={
                       isMess && visibility.softenFinancial
                         ? t('dashboard.financial.emptyHintMess')

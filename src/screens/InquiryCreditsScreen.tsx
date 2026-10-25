@@ -23,6 +23,10 @@ import {
 import { ApiError } from '../api/types';
 import { Button, EmptyState, HeaderBackButton, Screen } from '../components/ui';
 import type { MainStackParamList } from '../navigation/types';
+import {
+  loadPaymentQrImage,
+  type AuthorizedImageSource,
+} from '../services/fileUploadService';
 import { useToastStore } from '../store/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 
@@ -138,6 +142,8 @@ export function InquiryCreditsScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [buyTarget, setBuyTarget] = useState<InquiryCreditPackage | null>(null);
+  const [qrSource, setQrSource] = useState<AuthorizedImageSource | null>(null);
+  const [qrOpen, setQrOpen] = useState(false);
   const [utr, setUtr] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -158,6 +164,11 @@ export function InquiryCreditsScreen() {
       ]);
       setWallet(walletData);
       setConfig(configData);
+      try {
+        setQrSource(await loadPaymentQrImage(configData.qrFileId, configData.qrUrl));
+      } catch {
+        setQrSource(null);
+      }
     } catch (err) {
       setError(
         err instanceof ApiError
@@ -351,8 +362,13 @@ export function InquiryCreditsScreen() {
             {config?.upiId ? (
               <Text style={styles.modalMeta}>UPI: {config.upiId}</Text>
             ) : null}
-            {config?.qrUrl ? (
-              <Image source={{ uri: config.qrUrl }} style={styles.qr} />
+            {qrSource ? (
+              <Pressable
+                onPress={() => setQrOpen(true)}
+                accessibilityRole="imagebutton"
+                accessibilityLabel={t('inquiryCredits.openQr', { defaultValue: 'Open payment QR' })}>
+                <Image source={qrSource} style={styles.qr} resizeMode="contain" />
+              </Pressable>
             ) : null}
             {config?.whatsappNumber ? (
               <Pressable
@@ -405,6 +421,12 @@ export function InquiryCreditsScreen() {
               />
             </View>
           </View>
+        </View>
+      </Modal>
+      <Modal visible={qrOpen} transparent animationType="fade" onRequestClose={() => setQrOpen(false)}>
+        <View style={styles.qrBackdrop}>
+          <Pressable style={styles.qrBackdropTap} onPress={() => setQrOpen(false)} />
+          {qrSource ? <Image source={qrSource} style={styles.qrFull} resizeMode="contain" /> : null}
         </View>
       </Modal>
     </Screen>
@@ -570,11 +592,12 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(15,23,42,0.45)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'center',
     padding: spacing.lg,
   },
   modalCard: {
+    ...shadows.raised,
     backgroundColor: colors.white,
     borderRadius: radius.card,
     padding: spacing.lg,
@@ -600,6 +623,20 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     borderRadius: radius.card,
     backgroundColor: colors.white,
+  },
+  qrBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.72)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  qrBackdropTap: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  qrFull: {
+    width: '100%',
+    height: '70%',
   },
   waBtn: {
     flexDirection: 'row',

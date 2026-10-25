@@ -1,14 +1,33 @@
 import type { PendingActionGroup, SpaceNotification, UUID } from '../api/types';
 import { navigateMainStack } from '../navigation/mainStackNavigation';
 import { navigateToMembersTab, navigateToPaymentsTab } from '../navigation/navigationRef';
-import { extractIsoDateFromText } from './extractIsoDateFromText';
-import { tomorrowIsoDate } from './mealDates';
+import { extractIsoDateFromText, extractMealTypeFromText } from './extractIsoDateFromText';
+import { todayIsoDate, tomorrowIsoDate } from './mealDates';
 import { isOwnerOnlyNotificationType } from './ownerOnlyNotifications';
 
 type NotificationLike = Pick<
   SpaceNotification,
   'notificationType' | 'entityId' | 'actionRoute' | 'message' | 'title'
 >;
+
+function mealContext(notification: NotificationLike): {
+  menuDate: string;
+  mealType?: 'BREAKFAST' | 'LUNCH' | 'DINNER';
+} {
+  const menuDate =
+    extractIsoDateFromText(
+      notification.message,
+      notification.title,
+      notification.actionRoute,
+    ) ?? todayIsoDate();
+  const mealType =
+    extractMealTypeFromText(
+      notification.message,
+      notification.title,
+      notification.actionRoute,
+    ) ?? undefined;
+  return mealType ? { menuDate, mealType } : { menuDate };
+}
 
 /**
  * Central deep-link resolver for inbox notifications and Pending Action groups.
@@ -55,18 +74,11 @@ export function navigateFromNotificationType(
       return;
     case 'MEAL_POLL_PUBLISHED':
     case 'MEAL_POLL_REMINDER':
-    case 'MENU_PUBLISHED': {
-      const menuDate = extractIsoDateFromText(
-        notification.message,
-        notification.title,
-        notification.actionRoute,
-      );
-      navigateMainStack(
-        'DailyMenuToday',
-        menuDate ? { spaceId, menuDate } : { spaceId },
-      );
+      navigateMainStack('MealPollResponse', { spaceId, ...mealContext(notification) });
       return;
-    }
+    case 'MENU_PUBLISHED':
+      navigateMainStack('DailyMenuToday', { spaceId, ...mealContext(notification) });
+      return;
     case 'SUBSCRIPTION_ACTIVATION_PENDING':
       navigateMainStack('SubscriptionActivationRequests', { spaceId });
       return;
@@ -88,6 +100,9 @@ export function navigateFromNotificationType(
       if (entityId) {
         navigateMainStack('ComplaintDetail', { spaceId, complaintId: entityId });
       }
+      return;
+    case 'PHOTO_REQUEST_RECEIVED':
+      navigateMainStack('FindAPlaceDetail', { spaceId });
       return;
     case 'CONTACT_ENQUIRY_SUBMITTED':
     case 'CONTACT_ENQUIRY_SHARED':
@@ -190,12 +205,24 @@ export function navigateFromNotificationType(
         } else {
           navigateMainStack('SpaceTabs', { spaceId, screen: 'Dashboard', params: { spaceId } });
         }
+      } else if (
+        notification.actionRoute === 'MealPollResponse' ||
+        notification.actionRoute?.startsWith('MealPollResponse?')
+      ) {
+        navigateMainStack('MealPollResponse', { spaceId, ...mealContext(notification) });
+      } else if (
+        notification.actionRoute === 'DailyMenuToday' ||
+        notification.actionRoute?.startsWith('DailyMenuToday?')
+      ) {
+        navigateMainStack('DailyMenuToday', { spaceId, ...mealContext(notification) });
       } else if (notification.actionRoute === 'MenuPlanning') {
         navigateMainStack('MenuPlanning', { spaceId, menuDate: tomorrow });
       } else if (notification.actionRoute === 'MenuSharePreview') {
         navigateMainStack('MenuSharePreview', { spaceId, menuDate: tomorrow });
       } else if (notification.actionRoute === 'SubscriptionActivationRequests') {
         navigateMainStack('SubscriptionActivationRequests', { spaceId });
+      } else if (notification.actionRoute === 'FindAPlaceDetail') {
+        navigateMainStack('FindAPlaceDetail', { spaceId });
       }
   }
 }

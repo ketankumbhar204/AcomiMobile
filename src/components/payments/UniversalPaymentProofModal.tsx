@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Camera } from 'lucide-react-native';
 import type { SpacePaymentResponse, UniversalPaymentMethod } from '../../api/types';
 import { useToastStore } from '../../store/toastStore';
 import {
@@ -20,7 +21,7 @@ import {
   type PaymentProofRequirements,
 } from '../../utils/paymentProofPolicy';
 import { Button } from '../ui/Button';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { pickPaymentProofImage, paymentProofToLocalFile } from '../../utils/pickPaymentProofImage';
 import type { LocalFileInput } from '../../services/fileUploadService';
 import type { PickedPaymentProof } from '../../utils/pickPaymentProofImage';
@@ -230,7 +231,7 @@ export function UniversalPaymentProofModal({
             <ActivityIndicator color={colors.primary} />
           ) : (
             <>
-              <Text style={styles.pickIcon}>📷</Text>
+              <Camera size={22} color={colors.primaryDark} strokeWidth={2.2} />
               <Text style={styles.pickLabel}>{t('paymentCollection.proof.uploadScreenshot')}</Text>
               <Text style={styles.pickOptional}>{t('paymentCollection.proof.uploadOptional')}</Text>
             </>
@@ -322,7 +323,7 @@ export function UniversalPaymentProofModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'center',
   },
   scrollContent: {
@@ -331,6 +332,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sheet: {
+    ...shadows.raised,
     backgroundColor: colors.white,
     borderRadius: radius.card,
     padding: spacing.lg,

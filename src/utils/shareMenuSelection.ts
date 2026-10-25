@@ -42,14 +42,18 @@ export function menusByMealType(
 export function defaultSelectedMealTypes(
   menuMap: Partial<Record<MealType, DailyMenuResponse>>,
   initialMealType?: MealType,
+  options?: { includePublished?: boolean },
 ): MealType[] {
-  /** Already-shared (PUBLISHED) meals stay unchecked — user selects them explicitly. */
+  /** Already-shared (PUBLISHED) meals stay unchecked unless this is a reshare. */
   const shouldPreselect = (type: MealType): boolean => {
     const menu = menuMap[type];
     if (getSlotShareState(menu) !== 'shareable') {
       return false;
     }
-    return menu?.status === 'DRAFT' || menu?.status === 'MODIFIED';
+    if (menu?.status === 'DRAFT' || menu?.status === 'MODIFIED') {
+      return true;
+    }
+    return options?.includePublished === true && menu?.status === 'PUBLISHED';
   };
 
   if (initialMealType) {
@@ -284,17 +288,35 @@ export async function buildShareMessageForSelection(
   );
 }
 
-/** Opens in-app polls for shared meals. Reopens closed polls; extends past deadlines. */
+export type OpenedPolls = {
+  opened: MealType[];
+  failed: MealType[];
+};
+
+/**
+ * Opens in-app polls for shared meals. Reopens closed polls; extends past deadlines.
+ * A failed meal is listed in `failed` so a retry can skip meals that already opened.
+ */
 export async function openPollsForMealTypes(
   spaceId: UUID,
   menuDate: string,
   mealTypes: MealType[],
-): Promise<number> {
+): Promise<OpenedPolls> {
   if (mealTypes.length === 0) {
-    return 0;
+    return { opened: [], failed: [] };
   }
   const results = await Promise.allSettled(
     mealTypes.map(type => mealsApi.openMealPoll(spaceId, menuDate, type)),
   );
-  return results.filter(result => result.status === 'fulfilled').length;
+  const opened: MealType[] = [];
+  const failed: MealType[] = [];
+  results.forEach((result, index) => {
+    const mealType = mealTypes[index];
+    if (result.status === 'fulfilled') {
+      opened.push(mealType);
+    } else {
+      failed.push(mealType);
+    }
+  });
+  return { opened, failed };
 }

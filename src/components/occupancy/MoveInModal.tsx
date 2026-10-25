@@ -281,7 +281,7 @@ export function MoveInModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'center',
     padding: spacing.xl,
   },
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     padding: spacing.xl,
     maxHeight: '90%',
-    ...shadows.md,
+    ...shadows.raised,
   },
   title: {
     ...typography.h3,

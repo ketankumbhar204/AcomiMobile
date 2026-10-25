@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { ChevronDown, ChevronRight } from 'lucide-react-native';
 import type { MemberMealBalanceActivityEvent, PrepaidBalanceUnit } from '../../api/types';
 import { colors, radius, spacing, typography } from '../../theme';
 import { formatComboPrice } from '../../utils/comboPrice';
@@ -184,7 +185,11 @@ function SubscriptionHistoryMonthAccordion({
             })}
           </Text>
         </View>
-        <Text style={styles.chevron}>{expanded ? '▾' : '▸'}</Text>
+        {expanded ? (
+          <ChevronDown size={16} color={colors.muted} strokeWidth={2.4} />
+        ) : (
+          <ChevronRight size={16} color={colors.muted} strokeWidth={2.4} />
+        )}
       </Pressable>
 
       {expanded ? (

@@ -12,7 +12,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { BedDouble, BedSingle } from 'lucide-react-native';
+import { BedDouble, BedSingle, CalendarDays } from 'lucide-react-native';
 import type { AccommodationStatus, BedSpaceListItemResponse, SpaceType, UUID } from '../../api/types';
 import { EmptyState, InventoryListSkeleton, ListSearchBar } from '../ui';
 import { useBuildings } from '../../hooks/useBuildings';
@@ -39,6 +39,10 @@ import {
 import { DashboardBedRoomSectionCard } from './DashboardBedRoomSectionCard';
 import { DashboardBedUnitSectionCard } from './DashboardBedUnitSectionCard';
 import type { BedInventoryFlowAction } from './DashboardBedInventoryBedRow';
+import {
+  filterBedsById,
+  type PropertyOpsFocus,
+} from '../../utils/propertyOpsFocus';
 
 export type BedInventoryBrowserProps = {
   spaceId: UUID;
@@ -61,6 +65,12 @@ export type BedInventoryBrowserProps = {
   /** Scroll filters, search, and bed groups in one list (wizard flows). */
   unifiedScroll?: boolean;
   headerAccessory?: ReactNode;
+  /** Property-operations card that is open. Drives the result summary wording. */
+  opsFocus?: PropertyOpsFocus | null;
+  /** When set, only these beds stay in the list (move-ins this month). */
+  bedIdAllowList?: ReadonlySet<string> | null;
+  /** Hold the list on a skeleton while the allow-list is still loading. */
+  listPending?: boolean;
 };
 
 export function BedInventoryBrowser({
@@ -83,6 +93,9 @@ export function BedInventoryBrowser({
   compactPadding = false,
   unifiedScroll = false,
   headerAccessory,
+  opsFocus = null,
+  bedIdAllowList = null,
+  listPending = false,
 }: BedInventoryBrowserProps) {
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
@@ -115,10 +128,15 @@ export function BedInventoryBrowser({
     }
   }, [beds, refreshTrigger]);
 
+  const visibleBeds = useMemo(
+    () => filterBedsById(beds.items, bedIdAllowList),
+    [bedIdAllowList, beds.items],
+  );
+
   const inventoryGroups = useMemo(
     () =>
-      groupBedsForInventoryBrowse(beds.items, spaceType, buildings, filters.buildingId),
-    [beds.items, buildings, filters.buildingId, spaceType],
+      groupBedsForInventoryBrowse(visibleBeds, spaceType, buildings, filters.buildingId),
+    [buildings, filters.buildingId, spaceType, visibleBeds],
   );
 
   const hasActiveFilters =
@@ -138,12 +156,18 @@ export function BedInventoryBrowser({
     () => ({
       title: hasActiveFilters
         ? t('list.emptyFiltered')
-        : status === 'AVAILABLE'
-          ? t('dashboard.drilldown.emptyVacantBeds')
-          : t('dashboard.drilldown.emptyOccupiedBeds'),
-      description: hasActiveFilters ? undefined : t('dashboard.drilldown.emptyBedsDescription'),
+        : opsFocus === 'moveIns'
+          ? t('dashboard.drilldown.emptyMoveIns')
+          : status === 'AVAILABLE'
+            ? t('dashboard.drilldown.emptyVacantBeds')
+            : t('dashboard.drilldown.emptyOccupiedBeds'),
+      description: hasActiveFilters
+        ? undefined
+        : opsFocus === 'moveIns'
+          ? t('dashboard.drilldown.emptyOccupancyDescription')
+          : t('dashboard.drilldown.emptyBedsDescription'),
     }),
-    [hasActiveFilters, status, t],
+    [hasActiveFilters, opsFocus, status, t],
   );
 
   const resolvedSubtitle =
@@ -155,6 +179,7 @@ export function BedInventoryBrowser({
   const renderInventoryGroup = useCallback(
     ({ item }: { item: BedInventoryListGroup }) => {
       const sharedProps = {
+        spaceId,
         flowAction,
         onFlowAction,
         canManageOccupancy,
@@ -208,22 +233,32 @@ export function BedInventoryBrowser({
 
   const inventoryGroupKey = useCallback((item: BedInventoryListGroup) => item.group.key, []);
 
+  const summaryCount = visibleBeds.length;
+  const summaryLabel =
+    opsFocus === 'moveIns'
+      ? t('dashboard.drilldown.showingMoveIns', {
+          count: summaryCount,
+          defaultValue: 'Showing {{count}} move-ins this month',
+        })
+      : opsFocus === 'occupied' || status === 'OCCUPIED'
+        ? t('dashboard.drilldown.showingOccupiedBeds', {
+            count: summaryCount,
+            defaultValue: 'Showing {{count}} occupied beds',
+          })
+        : status === 'AVAILABLE'
+          ? t('dashboard.drilldown.showingAvailableBeds', { count: summaryCount })
+          : t('dashboard.drilldown.showingBeds', { count: summaryCount });
+  const SummaryIcon =
+    opsFocus === 'moveIns' ? CalendarDays : status === 'AVAILABLE' ? BedSingle : BedDouble;
+
   const summaryBlock =
-    showSummary && !beds.loading && beds.items.length > 0 ? (
+    showSummary && !beds.loading && !listPending && summaryCount > 0 ? (
       <View style={styles.summaryCard}>
         <View style={styles.summaryIcon}>
-          {status === 'AVAILABLE' ? (
-            <BedSingle size={16} color={colors.primaryDark} strokeWidth={2.2} />
-          ) : (
-            <BedDouble size={16} color={colors.primaryDark} strokeWidth={2.2} />
-          )}
+          <SummaryIcon size={16} color={colors.primaryDark} strokeWidth={2.2} />
         </View>
         <View style={styles.summaryText}>
-          <Text style={styles.summaryPrimary}>
-            {status === 'AVAILABLE'
-              ? t('dashboard.drilldown.showingAvailableBeds', { count: beds.items.length })
-              : t('dashboard.drilldown.showingBeds', { count: beds.items.length })}
-          </Text>
+          <Text style={styles.summaryPrimary}>{summaryLabel}</Text>
           <Text style={styles.summaryScope}>{summaryScope}</Text>
         </View>
       </View>
@@ -277,7 +312,7 @@ export function BedInventoryBrowser({
   const listHeader = summaryBlock;
 
   const emptyComponent = useMemo(() => {
-    if (beds.loading && beds.items.length === 0) {
+    if (listPending || (beds.loading && beds.items.length === 0)) {
       return <InventoryListSkeleton cards={3} />;
     }
     if (beds.error) {
@@ -296,7 +331,7 @@ export function BedInventoryBrowser({
         description={empty.description}
       />
     );
-  }, [beds.error, beds.items.length, beds.loading, empty.description, empty.title, status, t]);
+  }, [beds.error, beds.items.length, beds.loading, empty.description, empty.title, listPending, status, t]);
 
   if (unifiedScroll) {
     return (
@@ -343,7 +378,7 @@ export function BedInventoryBrowser({
   return (
     <View ref={overlayHostRef} style={[styles.body, contentStyle]}>
       {fixedHeader}
-      {beds.loading && beds.items.length === 0 ? (
+      {listPending || (beds.loading && beds.items.length === 0) ? (
         <InventoryListSkeleton cards={3} />
       ) : beds.error ? (
         <EmptyState
@@ -373,7 +408,7 @@ export function BedInventoryBrowser({
           initialNumToRender={6}
           maxToRenderPerBatch={4}
           windowSize={7}
-          removeClippedSubviews
+          removeClippedSubviews={false}
           keyboardShouldPersistTaps="handled"
           ListFooterComponent={
             beds.loadingMore ? (

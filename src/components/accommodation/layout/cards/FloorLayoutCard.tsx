@@ -89,7 +89,8 @@ export function FloorLayoutCard({
             entityId={floor.floorId}
             fileId={floor.photoFileId}
             title={floor.name}
-            height={90}
+            width={128}
+            height={110}
             fallback={
               <LayoutIllustration
                 source={getFloorIllustration(layoutMode)}

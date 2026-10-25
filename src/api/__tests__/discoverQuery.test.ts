@@ -18,9 +18,28 @@ describe('buildDiscoverSearchParams', () => {
     expect(query.get('minRent')).toBe('5000');
     expect(query.get('maxRent')).toBe('15000');
     expect(query.getAll('amenities')).toEqual(['WIFI', 'FOOD_INCLUDED']);
+    expect(query.has('genders')).toBe(false);
     expect(query.get('page')).toBe('0');
     expect(query.get('size')).toBe(String(DISCOVER_PAGE_SIZE));
     expect(query.has('pincode')).toBe(false);
+  });
+
+  it('sends gender, sharing, food, furnishing, contact, and serviced filters', () => {
+    const query = buildDiscoverSearchParams({
+      genders: ['FEMALE'],
+      sharings: ['TWO'],
+      foods: ['INCLUDED'],
+      furnishings: ['SEMI'],
+      contactAvailable: true,
+      servicedApartment: true,
+      page: 0,
+    });
+    expect(query.getAll('genders')).toEqual(['FEMALE']);
+    expect(query.getAll('sharings')).toEqual(['TWO']);
+    expect(query.getAll('foods')).toEqual(['INCLUDED']);
+    expect(query.getAll('furnishings')).toEqual(['SEMI']);
+    expect(query.get('contactAvailable')).toBe('true');
+    expect(query.get('servicedApartment')).toBe('true');
   });
 
   it('sends the Places type list separately from location', () => {

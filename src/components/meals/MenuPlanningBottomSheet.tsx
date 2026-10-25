@@ -2,10 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Dimensions,
-  Keyboard,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,7 +12,13 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { colors, spacing, typography } from '../../theme';
+import { X } from 'lucide-react-native';
+import {
+  stickyBarKeyboardDock,
+  stickyBarKeyboardSlot,
+  useKeyboardScreenLift,
+} from '../progressive/stickyBarStyles';
+import { colors, shadows, spacing, typography } from '../../theme';
 
 const DEFAULT_MIN_SHEET_RATIO = 0.5;
 const DEFAULT_MAX_SHEET_RATIO = 0.85;
@@ -71,7 +74,7 @@ export function MenuPlanningBottomSheet({
   const [stickyHeight, setStickyHeight] = useState(0);
   const [footerHeight, setFooterHeight] = useState(0);
   const [contentHeight, setContentHeight] = useState(0);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const keyboardLift = useKeyboardScreenLift();
   const [backdropDismissible, setBackdropDismissible] = useState(false);
   const backdropTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const internalScrollRef = useRef<ScrollView>(null);
@@ -89,7 +92,6 @@ export function MenuPlanningBottomSheet({
       setContentHeight(0);
       setFooterHeight(0);
       setStickyHeight(0);
-      setKeyboardHeight(0);
       setBackdropDismissible(false);
       if (backdropTimerRef.current) {
         clearTimeout(backdropTimerRef.current);
@@ -111,26 +113,7 @@ export function MenuPlanningBottomSheet({
     };
   }, [visible]);
 
-  useEffect(() => {
-    if (!visible) {
-      return;
-    }
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    const showSub = Keyboard.addListener(showEvent, event => {
-      setKeyboardHeight(event.endCoordinates.height);
-    });
-    const hideSub = Keyboard.addListener(hideEvent, () => {
-      setKeyboardHeight(0);
-    });
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, [visible]);
-
-  // Keep the sheet within the visible area above the keyboard so header/search are not clipped.
-  const availableHeight = Math.max(windowHeight - keyboardHeight, 300);
+  const availableHeight = Math.max(windowHeight, 300);
   const minSheetHeight = Math.min(Math.max(availableHeight * minHeightRatio, 240), availableHeight);
   const maxSheetHeight = Math.min(
     Math.max(availableHeight * Math.max(maxHeightRatio, minHeightRatio), 280),
@@ -193,10 +176,7 @@ export function MenuPlanningBottomSheet({
           accessibilityRole="button"
           accessibilityLabel={t('common.close')}
         />
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.sheetKeyboard}
-          pointerEvents="box-none">
+        <View style={styles.sheetKeyboard} pointerEvents="box-none">
           <View
             style={[
               styles.sheet,
@@ -237,7 +217,7 @@ export function MenuPlanningBottomSheet({
                     disabled={busy}
                     accessibilityRole="button"
                     accessibilityLabel={t('common.close')}>
-                    <Text style={[styles.closeBtn, busy && styles.closeBtnDisabled]}>✕</Text>
+                    <X size={18} color={busy ? colors.muted : colors.textPrimary} strokeWidth={2.2} />
                   </Pressable>
                 </View>
               </View>
@@ -273,13 +253,17 @@ export function MenuPlanningBottomSheet({
 
             {footer ? (
               <View
-                style={styles.footer}
-                onLayout={event => handleFooterLayout(event.nativeEvent.layout.height)}>
-                {footer}
+                pointerEvents={keyboardLift > 0 ? 'none' : 'auto'}
+                style={keyboardLift > 0 ? stickyBarKeyboardSlot : undefined}>
+                <View
+                  style={[styles.footer, stickyBarKeyboardDock(keyboardLift)]}
+                  onLayout={event => handleFooterLayout(event.nativeEvent.layout.height)}>
+                  {footer}
+                </View>
               </View>
             ) : null}
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </View>
     </Modal>
   );
@@ -328,7 +312,7 @@ export function SheetSecondaryButton({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'flex-end',
   },
   /**
@@ -345,16 +329,12 @@ const styles = StyleSheet.create({
     elevation: 24,
   },
   sheet: {
+    ...shadows.raised,
     backgroundColor: colors.white,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    elevation: 24,
     zIndex: 2,
     width: '100%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
     flexDirection: 'column',
   },
   handle: {

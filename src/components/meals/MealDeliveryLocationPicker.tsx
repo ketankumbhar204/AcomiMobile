@@ -1,8 +1,9 @@
 import React, { useState, type ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Check, ChevronDown, Pencil } from 'lucide-react-native';
 import type { MealDeliveryLocation, UUID } from '../../api/types';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 
 type MealDeliveryLocationPickerProps = {
   locations: MealDeliveryLocation[];
@@ -10,7 +11,7 @@ type MealDeliveryLocationPickerProps = {
   lastUsedLocationId?: UUID | null;
   onSelect: (locationId: UUID) => void;
   readOnly?: boolean;
-  /** When editable, show ✏ instead of ▾ on the default trigger. */
+  /** When editable, show a pencil instead of a chevron on the default trigger. */
   showEditAffordance?: boolean;
   /** Optional custom trigger that opens the same picker modal. */
   trigger?: ReactNode;
@@ -85,7 +86,11 @@ export function MealDeliveryLocationPicker({
             )}
           </View>
           {!readOnly ? (
-            <Text style={styles.chevron}>{showEditAffordance ? '✏' : '▾'}</Text>
+            showEditAffordance ? (
+              <Pencil size={16} color={colors.muted} strokeWidth={2.2} />
+            ) : (
+              <ChevronDown size={16} color={colors.muted} strokeWidth={2.2} />
+            )
           ) : null}
         </Pressable>
       )}
@@ -124,7 +129,7 @@ export function MealDeliveryLocationPicker({
                         </Text>
                       ) : null}
                     </View>
-                    {selected ? <Text style={styles.check}>✓</Text> : null}
+                    {selected ? <Check size={16} color={colors.primaryDark} strokeWidth={2.4} /> : null}
                   </Pressable>
                 );
               })}
@@ -193,11 +198,12 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'center',
     padding: spacing.lg,
   },
   sheet: {
+    ...shadows.raised,
     backgroundColor: colors.white,
     borderRadius: radius.card,
     padding: spacing.lg,

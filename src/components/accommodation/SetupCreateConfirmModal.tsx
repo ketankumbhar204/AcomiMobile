@@ -159,7 +159,7 @@ export function SetupCreateConfirmModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.xl,
@@ -175,8 +175,7 @@ const styles = StyleSheet.create({
     maxWidth: 420,
     maxHeight: '85%',
     zIndex: 1,
-    elevation: 8,
-    ...shadows.md,
+        ...shadows.raised,
   },
   title: {
     ...typography.h3,

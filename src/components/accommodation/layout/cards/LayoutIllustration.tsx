@@ -3,6 +3,7 @@ import {
   Image,
   StyleSheet,
   View,
+  type ImageStyle,
   type ImageSourcePropType,
   type StyleProp,
   type ViewStyle,
@@ -16,16 +17,35 @@ type LayoutIllustrationProps = {
   style?: StyleProp<ViewStyle>;
 };
 
-const SIZES: Record<
-  LayoutIllustrationSize,
-  { width: number | `${number}%`; height: number }
-> = {
-  building: { width: '100%', height: 180 },
-  floor: { width: 90, height: 90 },
-  unit: { width: '100%', height: 100 },
-  room: { width: '100%', height: 110 },
-  bed: { width: 60, height: 80 },
-  bedHero: { width: 112, height: 112 },
+/**
+ * Width and height are set on the image itself. A percentage-sized image
+ * inside a centered frame collapses to a blank gap on Android.
+ */
+const ART: Record<LayoutIllustrationSize, { frame: ViewStyle; image: ImageStyle }> = {
+  building: {
+    frame: { width: '100%', height: 160 },
+    image: { width: '100%', height: 160 },
+  },
+  floor: {
+    frame: { width: '100%', height: 96 },
+    image: { width: '100%', height: 96 },
+  },
+  unit: {
+    frame: { width: '100%', height: 100 },
+    image: { width: '100%', height: 100 },
+  },
+  room: {
+    frame: { width: '100%', height: 112 },
+    image: { width: '100%', height: 112 },
+  },
+  bed: {
+    frame: { width: 72, height: 72, alignSelf: 'center' },
+    image: { width: 72, height: 72 },
+  },
+  bedHero: {
+    frame: { width: 112, height: 112, alignSelf: 'center' },
+    image: { width: 112, height: 112 },
+  },
 };
 
 export function LayoutIllustration({
@@ -33,27 +53,14 @@ export function LayoutIllustration({
   size = 'unit',
   style,
 }: LayoutIllustrationProps) {
-  const dim = SIZES[size];
-
+  const art = ART[size];
   return (
-    <View
-      style={[
-        styles.frame,
-        size === 'building' && styles.buildingFrame,
-        size === 'unit' && styles.unitFrame,
-        size === 'room' && styles.roomFrame,
-        size === 'bed' && styles.bedFrame,
-        size === 'bedHero' && styles.bedHeroFrame,
-        style,
-      ]}>
+    <View collapsable={false} style={[styles.frame, art.frame, style]}>
       <Image
         source={source}
-        style={[
-          styles.image,
-          dim,
-          (size === 'bed' || size === 'bedHero') && styles.containedImage,
-        ]}
+        style={[art.image, styles.image]}
         resizeMode="contain"
+        fadeDuration={0}
       />
     </View>
   );
@@ -61,37 +68,13 @@ export function LayoutIllustration({
 
 const styles = StyleSheet.create({
   frame: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  buildingFrame: {
-    width: '100%',
-    minHeight: 180,
-    marginBottom: 12,
-  },
-  unitFrame: {
-    width: '100%',
-    marginBottom: 8,
-  },
-  roomFrame: {
-    width: '100%',
-    marginBottom: 8,
-  },
-  bedFrame: {
-    width: 60,
-    height: 80,
-  },
-  bedHeroFrame: {
-    width: 112,
-    height: 112,
+    alignSelf: 'stretch',
   },
   image: {
-    width: '100%',
-    height: 100,
-  },
-  containedImage: {
-    width: '100%',
-    height: '100%',
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
   },
 });

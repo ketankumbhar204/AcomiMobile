@@ -10,6 +10,7 @@ type MessagingLike = {
 };
 
 export type RemoteMessageLike = {
+  messageId?: string | null;
   notification?: { title?: string | null; body?: string | null } | null;
   data?: Record<string, string>;
 };

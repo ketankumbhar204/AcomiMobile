@@ -28,6 +28,7 @@ import {
   Screen,
   SkeletonCard,
 } from '../../components/ui';
+import { ReferenceCode } from '../../components/ui/ReferenceCode';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import {
@@ -152,6 +153,7 @@ export function FloorDetailScreen() {
                 label={t('accommodation.fields.name')}
                 value={floor.name}
               />
+              <ReferenceCode value={floor.referenceCode} />
               <AccommodationDetailRow
                 label={t('accommodation.floors.floorNumberLabel')}
                 value={String(floor.floorNumber)}

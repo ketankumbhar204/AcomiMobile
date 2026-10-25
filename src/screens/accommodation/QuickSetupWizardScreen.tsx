@@ -15,7 +15,7 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { Hash, Tag, Type } from 'lucide-react-native';
+import { AlertTriangle, Hash, Tag, Type } from 'lucide-react-native';
 import type {
   AccommodationSetupPreviewResponse,
   AccommodationSetupRequest,
@@ -140,7 +140,7 @@ export function QuickSetupWizardScreen() {
   }, [spaceType]);
 
   const bedsPerRoomCount = Number(bedsPerRoom) || 1;
-  const isRental = spaceType === 'RENTAL';
+  const isRental = spaceType === 'RENTAL' || spaceType === 'CORPORATE_STAY';
   const expandConfig = useMemo(
     () => ({
       roomsPerParent: isRental ? 0 : Number(roomsPerParent) || 1,
@@ -385,7 +385,7 @@ export function QuickSetupWizardScreen() {
       if (!validateStructureStep()) {
         return;
       }
-      if (spaceType === 'RENTAL') {
+      if (spaceType === 'RENTAL' || spaceType === 'CORPORATE_STAY') {
         await loadPreview();
         return;
       }
@@ -627,7 +627,8 @@ export function QuickSetupWizardScreen() {
             </View>
           ) : null}
 
-          {currentStep === 'structure' && (spaceType === 'CO_LIVING' || spaceType === 'RENTAL') ? (
+          {currentStep === 'structure' &&
+          (spaceType === 'CO_LIVING' || spaceType === 'RENTAL' || spaceType === 'CORPORATE_STAY') ? (
             <View style={styles.formCard}>
               <Text style={styles.sectionTitle}>{t('accommodation.setup.unitsStep')}</Text>
               <FormInput
@@ -716,9 +717,10 @@ export function QuickSetupWizardScreen() {
               {preview.warnings.length > 0 ? (
                 <View style={styles.warnings}>
                   {preview.warnings.map((warning, index) => (
-                    <Text key={`${warning}-${index}`} style={styles.warningText}>
-                      ⚠ {warning}
-                    </Text>
+                    <View key={`${warning}-${index}`} style={styles.warningRow}>
+                      <AlertTriangle size={14} color={colors.warning} strokeWidth={2.2} />
+                      <Text style={styles.warningText}>{warning}</Text>
+                    </View>
                   ))}
                 </View>
               ) : null}
@@ -867,6 +869,11 @@ const styles = StyleSheet.create({
   warnings: {
     marginTop: spacing.lg,
     marginBottom: spacing.lg,
+    gap: spacing.xs,
+  },
+  warningRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     gap: spacing.xs,
   },
   warningText: {

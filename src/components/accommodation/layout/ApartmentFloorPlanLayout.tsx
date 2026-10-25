@@ -65,7 +65,7 @@ export function ApartmentFloorPlanLayout({
               entityId={floorId}
               fileId={floorPhotoFileId}
               title={floorName}
-              height={90}
+              height={110}
               fallback={<LayoutIllustration source={getFloorIllustration()} size="floor" />}
             />
           ) : undefined

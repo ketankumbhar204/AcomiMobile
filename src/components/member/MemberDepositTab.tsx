@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Landmark } from 'lucide-react-native';
 import type { MemberDetailsResponse } from '../../api/types';
 import { OccupancyContractSnapshotCard } from '../occupancy';
 import { Button, Card, EmptyState, FormInput, SkeletonCard } from '../ui';
@@ -8,7 +9,8 @@ import { useMemberOccupancies } from '../../hooks/useMemberOccupancies';
 import { useMemberStore } from '../../store/memberStore';
 import { useToastStore } from '../../store/toastStore';
 import { spacing, typography } from '../../theme';
-import { formatCurrency, parseDepositAmount, validateDeposit } from '../../utils/memberDeposit';
+import { formatPaymentAmount } from '../../utils/paymentAmount';
+import { parseDepositAmount, validateDeposit } from '../../utils/memberDeposit';
 import { MemberDetailRow } from './MemberDetailRow';
 
 type MemberDepositTabProps = {
@@ -72,7 +74,7 @@ export function MemberDepositTab({ spaceId, member, canEdit }: MemberDepositTabP
   ) {
     return (
       <EmptyState
-        icon="🏦"
+        Icon={Landmark}
         title={t('membership.deposit.emptyTitle')}
         description={t('membership.deposit.emptyDescription')}
       />
@@ -134,19 +136,19 @@ export function MemberDepositTab({ spaceId, member, canEdit }: MemberDepositTabP
       <Card style={styles.card}>
         <MemberDetailRow
           label={t('membership.deposit.amount')}
-          value={formatCurrency(member.depositAmount ?? 0)}
+          value={formatPaymentAmount(member.depositAmount ?? 0)}
         />
         <MemberDetailRow
           label={t('membership.deposit.paid')}
-          value={formatCurrency(member.depositPaid ?? 0)}
+          value={formatPaymentAmount(member.depositPaid ?? 0)}
         />
         <MemberDetailRow
           label={t('membership.deposit.refunded')}
-          value={formatCurrency(member.depositRefunded ?? 0)}
+          value={formatPaymentAmount(member.depositRefunded ?? 0)}
         />
         <MemberDetailRow
           label={t('membership.deposit.balance')}
-          value={formatCurrency(member.depositBalance ?? 0)}
+          value={formatPaymentAmount(member.depositBalance ?? 0)}
           isLast
         />
       </Card>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import type { PendingActionsSummary, UUID } from '../api/types';
 import { currentMonthKey } from '../utils/dashboardFinancial';
@@ -14,6 +14,8 @@ import {
 
 export function usePendingActions(spaceId: UUID, enabled: boolean, isOwnerOperator = false) {
   const month = currentMonthKey();
+  const spaceRef = useRef(spaceId);
+  spaceRef.current = spaceId;
   const [summary, setSummary] = useState<PendingActionsSummary | null>(() => {
     if (!enabled) {
       return null;
@@ -40,26 +42,27 @@ export function usePendingActions(spaceId: UUID, enabled: boolean, isOwnerOperat
         setSummary(null);
         return;
       }
-      // Tenants must not reuse a possibly owner-seeded cache entry as the sole source of truth.
-      if (!force && isOwnerOperator) {
-        const cached = peekPendingActions(spaceId, month);
-        if (cached) {
-          applySummary(cached);
-          return;
-        }
-      }
+      const requestedSpace = spaceId;
       setLoading(true);
       setError(false);
       try {
         const data = await fetchPendingActionsCached(spaceId, month, {
           force: force || !isOwnerOperator,
         });
+        if (spaceRef.current !== requestedSpace) {
+          return;
+        }
         applySummary(data);
       } catch {
+        if (spaceRef.current !== requestedSpace) {
+          return;
+        }
+        // Keep the last summary. Clearing it would look like zero pending actions.
         setError(true);
-        setSummary(null);
       } finally {
-        setLoading(false);
+        if (spaceRef.current === requestedSpace) {
+          setLoading(false);
+        }
       }
     },
     [applySummary, enabled, isOwnerOperator, month, spaceId],
@@ -75,18 +78,25 @@ export function usePendingActions(spaceId: UUID, enabled: boolean, isOwnerOperat
   useEffect(() => {
     if (!enabled) {
       setSummary(null);
+      setError(false);
+      return;
+    }
+    const peeked =
+      peekPendingActions(spaceId, month) ??
+      peekDashboardSummary(spaceId, month)?.pendingActions ??
+      null;
+    setSummary(isOwnerOperator ? peeked : filterTenantVisiblePendingActions(peeked));
+    setError(false);
+  }, [enabled, isOwnerOperator, month, spaceId]);
+
+  useEffect(() => {
+    if (!enabled) {
       return undefined;
     }
     return subscribeDashboardInvalidation(() => {
       void reload(true);
     });
   }, [enabled, reload]);
-
-  useEffect(() => {
-    if (!enabled) {
-      setSummary(null);
-    }
-  }, [enabled]);
 
   return {
     summary,

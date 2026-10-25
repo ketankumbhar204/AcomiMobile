@@ -12,10 +12,6 @@ import type {
 import { deriveMealPermissions } from './mealPermissions';
 import { openPollsForMealTypes } from './shareMenuSelection';
 
-function normalizeName(value: string): string {
-  return value.trim().toLowerCase().replace(/\s+/g, ' ');
-}
-
 /** Spaces that can receive a shared meal plan (excludes rental / no-meals). */
 export function isMealShareCompatibleSpace(space: MySpaceResponse): boolean {
   if (space.spaceType === 'RENTAL') {
@@ -38,27 +34,33 @@ export function listOtherShareTargetSpaces(
 
 type MappedOption = UpsertDailyMenuRequest['options'][number];
 
+export type ShareBlockReason = 'missing' | 'cross-owner' | 'hidden';
+
 function mapOptionToTarget(
   option: DailyMenuOptionResponse,
   targetCombos: MealComboResponse[],
   targetItems: FoodItemResponse[],
-): { ok: true; option: MappedOption } | { ok: false; missing: string } {
+): { ok: true; option: MappedOption } | { ok: false; missing: string; reason: ShareBlockReason } {
   const entryType = option.entryType ?? (option.itemId ? 'ITEM' : 'COMBO');
   const label = option.label;
 
   if (entryType === 'COMBO') {
-    const combo = targetCombos.find(
-      row => normalizeName(row.name) === normalizeName(label) && row.isActive,
-    );
-    if (!combo) {
-      return { ok: false, missing: label };
+    if (!option.comboId) {
+      return { ok: false, missing: label, reason: 'missing' };
+    }
+    const combo = targetCombos.find(row => row.comboId === option.comboId);
+    if (combo && !combo.isActive) {
+      return { ok: false, missing: label, reason: 'missing' };
+    }
+    if (combo && combo.enabledForSpace === false) {
+      return { ok: false, missing: label, reason: 'hidden' };
     }
     return {
       ok: true,
       option: {
         entryType: 'COMBO',
-        comboId: combo.comboId,
-        label: combo.name,
+        comboId: option.comboId,
+        label,
         sortOrder: option.sortOrder,
         isAvailable: option.isAvailable,
       },
@@ -66,20 +68,19 @@ function mapOptionToTarget(
   }
 
   if (entryType === 'ITEM') {
-    const item = targetItems.find(
-      row =>
-        row.isActive &&
-        normalizeName(row.name) === normalizeName(option.label),
-    );
+    if (!option.itemId) {
+      return { ok: false, missing: label, reason: 'missing' };
+    }
+    const item = targetItems.find(row => row.itemId === option.itemId && row.isActive);
     if (!item) {
-      return { ok: false, missing: label };
+      return { ok: false, missing: label, reason: 'missing' };
     }
     return {
       ok: true,
       option: {
         entryType: 'ITEM',
         itemId: item.itemId,
-        label: item.name,
+        label,
         sortOrder: option.sortOrder,
         isAvailable: option.isAvailable,
         price: option.price ?? item.defaultPrice ?? null,
@@ -88,31 +89,27 @@ function mapOptionToTarget(
     };
   }
 
-  // PACKAGE — remap by package item names when present, else by label split.
-  const packageNames =
-    option.packageItems?.map(pi => pi.name) ??
-    (option.label ? [option.label] : []);
-  const mappedIds: UUID[] = [];
-  for (const name of packageNames) {
-    const item = targetItems.find(
-      row => row.isActive && normalizeName(row.name) === normalizeName(name),
-    );
-    if (!item) {
-      return { ok: false, missing: name };
-    }
-    mappedIds.push(item.itemId);
+  const packageIds =
+    option.packageItems?.map(item => item.itemId).filter((id): id is UUID => Boolean(id)) ?? [];
+  if (packageIds.length === 0) {
+    return { ok: false, missing: label, reason: 'missing' };
   }
-  if (mappedIds.length === 0) {
-    return { ok: false, missing: label };
+  for (const itemId of packageIds) {
+    const item = targetItems.find(row => row.itemId === itemId && row.isActive);
+    if (!item) {
+      const name = option.packageItems?.find(row => row.itemId === itemId)?.name ?? label;
+      return { ok: false, missing: name, reason: 'missing' };
+    }
   }
   return {
     ok: true,
     option: {
       entryType: 'PACKAGE',
-      itemIds: mappedIds,
+      itemIds: packageIds,
       label,
       sortOrder: option.sortOrder,
       isAvailable: option.isAvailable,
+      isExtra: option.isExtra,
       price: option.price ?? null,
       currencyCode: option.currencyCode ?? 'INR',
     },
@@ -121,22 +118,37 @@ function mapOptionToTarget(
 
 export type ShareToSpaceValidation =
   | { ok: true; optionsByMeal: Partial<Record<MealType, MappedOption[]>>; notesByMeal: Partial<Record<MealType, string | null>> }
-  | { ok: false; spaceName: string; missingLabels: string[] };
+  | { ok: false; spaceName: string; missingLabels: string[]; reason: ShareBlockReason };
 
-/** Validate that target space library can host the selected source menus. */
+/** Validate that the target space can use the same shared menu ids. */
 export async function validateShareMenusToSpace(
   sourceMenus: Partial<Record<MealType, DailyMenuResponse>>,
   mealTypes: MealType[],
   targetSpace: MySpaceResponse,
+  sourceSpace?: MySpaceResponse,
 ): Promise<ShareToSpaceValidation> {
+  if (
+    sourceSpace?.ownerId &&
+    targetSpace.ownerId &&
+    sourceSpace.ownerId !== targetSpace.ownerId
+  ) {
+    return {
+      ok: false,
+      spaceName: targetSpace.spaceName,
+      missingLabels: [],
+      reason: 'cross-owner',
+    };
+  }
+
   const [combos, items] = await Promise.all([
-    mealsApi.getMealCombos(targetSpace.spaceId).catch(() => [] as MealComboResponse[]),
-    mealsApi.getFoodItems(targetSpace.spaceId).catch(() => [] as FoodItemResponse[]),
+    mealsApi.getMealCombos(targetSpace.spaceId),
+    mealsApi.getFoodItems(targetSpace.spaceId),
   ]);
 
   const optionsByMeal: Partial<Record<MealType, MappedOption[]>> = {};
   const notesByMeal: Partial<Record<MealType, string | null>> = {};
   const missingLabels: string[] = [];
+  let reason: ShareBlockReason = 'missing';
 
   for (const mealType of mealTypes) {
     const source = sourceMenus[mealType];
@@ -149,6 +161,9 @@ export async function validateShareMenusToSpace(
       const result = mapOptionToTarget(option, combos, items);
       if (!result.ok) {
         missingLabels.push(result.missing);
+        if (result.reason === 'hidden') {
+          reason = 'hidden';
+        }
         continue;
       }
       mapped.push(result.option);
@@ -164,6 +179,7 @@ export async function validateShareMenusToSpace(
       ok: false,
       spaceName: targetSpace.spaceName,
       missingLabels: [...new Set(missingLabels)],
+      reason,
     };
   }
 
@@ -175,6 +191,7 @@ export async function validateShareMenusToSpace(
       ok: false,
       spaceName: targetSpace.spaceName,
       missingLabels: mealTypes.map(String),
+      reason: 'missing',
     };
   }
 
@@ -185,8 +202,37 @@ function validatedOptionsCount(options?: MappedOption[]): number {
   return options?.length ?? 0;
 }
 
+/** Keep the device and API from opening dozens of spaces at once. */
+export const SHARE_SPACE_CONCURRENCY = 4;
+
+export async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  concurrency: number,
+  worker: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  if (items.length === 0) {
+    return [];
+  }
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+  const workers = Math.max(1, Math.min(concurrency, items.length));
+
+  async function run(): Promise<void> {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await worker(items[index], index);
+    }
+  }
+
+  await Promise.all(Array.from({ length: workers }, () => run()));
+  return results;
+}
+
 /**
  * Copy selected meal menus into a target space, publish, and open polls.
+ * Meals for one space run together. Meals already opened in this attempt are skipped
+ * so a retry does not publish again or rebuild an open poll.
  * Does not copy poll responses, headcount, delivery, or payments.
  */
 export async function shareMenusToSpace(
@@ -194,19 +240,35 @@ export async function shareMenusToSpace(
   menuDate: string,
   mealTypes: MealType[],
   validated: Extract<ShareToSpaceValidation, { ok: true }>,
-): Promise<number> {
-  const appliedTypes: MealType[] = [];
-  for (const mealType of mealTypes) {
+  alreadyOpen: readonly MealType[] = [],
+): Promise<{ opened: MealType[]; failed: MealType[] }> {
+  const open = new Set(alreadyOpen);
+  const pending = mealTypes.filter(mealType => {
     const options = validated.optionsByMeal[mealType];
-    if (!options || options.length === 0) {
-      continue;
-    }
-    await mealsApi.upsertDailyMenu(targetSpaceId, menuDate, mealType, {
-      options,
-      notes: validated.notesByMeal[mealType] ?? null,
-    });
-    await mealsApi.publishDailyMenu(targetSpaceId, menuDate, mealType);
-    appliedTypes.push(mealType);
-  }
-  return openPollsForMealTypes(targetSpaceId, menuDate, appliedTypes);
+    return Boolean(options && options.length > 0) && !open.has(mealType);
+  });
+
+  await Promise.all(
+    pending.map(async mealType => {
+      const options = validated.optionsByMeal[mealType];
+      if (!options || options.length === 0) {
+        return;
+      }
+      await mealsApi.upsertDailyMenu(targetSpaceId, menuDate, mealType, {
+        options,
+        notes: validated.notesByMeal[mealType] ?? null,
+      });
+      await mealsApi.publishDailyMenu(targetSpaceId, menuDate, mealType);
+    }),
+  );
+
+  const polls =
+    pending.length === 0
+      ? { opened: [] as MealType[], failed: [] as MealType[] }
+      : await openPollsForMealTypes(targetSpaceId, menuDate, pending);
+
+  return {
+    opened: mealTypes.filter(mealType => open.has(mealType) || polls.opened.includes(mealType)),
+    failed: polls.failed,
+  };
 }

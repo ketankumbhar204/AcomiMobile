@@ -34,6 +34,8 @@ type ButtonProps = {
   /** Optional Lucide leading icon. */
   icon?: ComponentType<IconProps>;
   accessibilityLabel?: string;
+  accessibilityHint?: string;
+  testID?: string;
   numberOfLines?: number;
 };
 
@@ -47,6 +49,8 @@ export function Button({
   style,
   icon: Icon,
   accessibilityLabel,
+  accessibilityHint,
+  testID,
   numberOfLines,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
@@ -60,8 +64,11 @@ export function Button({
       onPress={onPress}
       disabled={isDisabled}
       hitSlop={8}
+      testID={testID}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{ disabled: isDisabled, busy: loading }}
       android_ripple={{ color: 'rgba(0,0,0,0.08)' }}
       style={({ pressed }) => [
         styles.base,
@@ -72,7 +79,7 @@ export function Button({
           borderColor: tint.border,
         },
         pressed && !isDisabled && styles.pressed,
-        isDisabled && styles.disabled,
+        disabled && !loading && styles.disabled,
         style,
       ]}>
       {loading ? (

@@ -37,3 +37,30 @@ export function isOwnerReviewActionable(status: UniversalPaymentStatus): boolean
 export function isPaymentProofEditable(status: UniversalPaymentStatus): boolean {
   return status === 'UNDER_REVIEW' || status === 'PROOF_UPLOADED';
 }
+
+/**
+ * A submitted proof is waiting on the owner. That status wins over a stale overdue flag,
+ * which only describes customer-action dues.
+ */
+export function displayPaymentStatus(payment: {
+  paymentStatus: UniversalPaymentStatus;
+  isOverdue?: boolean | null;
+}): UniversalPaymentStatus | 'OVERDUE' {
+  if (isAwaitingOwnerReview(payment.paymentStatus)) {
+    return payment.paymentStatus;
+  }
+  if (payment.isOverdue && payment.paymentStatus !== 'PAID') {
+    return 'OVERDUE';
+  }
+  return payment.paymentStatus;
+}
+
+export function showsPaymentOverdueCue(payment: {
+  paymentStatus: UniversalPaymentStatus;
+  isOverdue?: boolean | null;
+}): boolean {
+  if (payment.paymentStatus === 'PAID' || isAwaitingOwnerReview(payment.paymentStatus)) {
+    return false;
+  }
+  return Boolean(payment.isOverdue);
+}

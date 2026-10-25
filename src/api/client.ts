@@ -27,7 +27,11 @@ function redactSensitive(data: unknown): unknown {
   }
   const clone: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
-    if (/password|confirmPassword|^otp$|verificationToken|accessToken/i.test(key)) {
+    if (
+      /password|confirmPassword|^otp$|verificationToken|accessToken|authorization|proofImageBase64|refreshToken/i.test(
+        key,
+      )
+    ) {
       clone[key] = '[redacted]';
     } else {
       clone[key] = redactSensitive(value);
@@ -82,6 +86,17 @@ function logResponse(
   }
 }
 
+function headerValue(
+  headers: Record<string, unknown> | undefined,
+  name: string,
+): string | undefined {
+  if (!headers) {
+    return undefined;
+  }
+  const value = headers[name] ?? headers[name.toLowerCase()];
+  return typeof value === 'string' && value.trim() ? value : undefined;
+}
+
 function logError(error: AxiosError<ApiErrorBody>): void {
   if (!__DEV__) {
     return;
@@ -91,8 +106,27 @@ function logError(error: AxiosError<ApiErrorBody>): void {
   const url = `${error.config?.baseURL ?? ''}${error.config?.url ?? ''}`;
 
   if (error.response) {
-    console.error(`${LOG_TAG} ✗ ${error.response.status} ${method} ${url}`);
-    console.error(
+    const status = error.response.status;
+    // Expected misses — callers treat these as empty results, not failures.
+    const expected =
+      (status === 401 && url.includes('/auth/login')) ||
+      (status === 403 && url.includes('/auth/login')) ||
+      (status === 409 &&
+        (url.includes('/admin/registered-users') || url.includes('/reminders'))) ||
+      (status === 404 && (url.includes('/spaces/default') || url.endsWith('/spaces/default')));
+    const write = expected ? console.log : console.error;
+    const headers = error.response.headers as Record<string, unknown> | undefined;
+    const correlation =
+      headerValue(headers, 'x-request-id') ??
+      headerValue(headers, 'x-correlation-id') ??
+      (typeof error.response.data?.timestamp === 'string'
+        ? error.response.data.timestamp
+        : undefined);
+    write(
+      `${LOG_TAG} ${expected ? '!' : '✗'} ${status} ${method} ${url}` +
+        (correlation ? ` correlation=${correlation}` : ''),
+    );
+    write(
       `${LOG_TAG}   Error body:`,
       JSON.stringify(error.response.data, null, 2),
     );

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { BedLabelStyle } from '../../api/types';
 import { validateBulkBeds } from '../../utils/accommodationLimits';
 import { Button, FormInput } from '../ui';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 
 const LABEL_STYLES: BedLabelStyle[] = ['ALPHA', 'NUMERIC'];
 
@@ -27,13 +27,13 @@ export function BulkBedsModal({
 }: BulkBedsModalProps) {
   const { t } = useTranslation();
   const [count, setCount] = useState('3');
-  const [labelStyle, setLabelStyle] = useState<BedLabelStyle>('ALPHA');
+  const [labelStyle, setLabelStyle] = useState<BedLabelStyle>('NUMERIC');
   const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
     if (visible) {
       setCount('3');
-      setLabelStyle('ALPHA');
+      setLabelStyle('NUMERIC');
       setValidationError(null);
     }
   }, [visible]);
@@ -94,11 +94,12 @@ export function BulkBedsModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'center',
     padding: spacing.xl,
   },
   card: {
+    ...shadows.raised,
     backgroundColor: colors.white,
     borderRadius: radius.card,
     padding: spacing.xl,

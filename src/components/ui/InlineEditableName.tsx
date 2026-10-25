@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Check, Pencil, X } from 'lucide-react-native';
 import { colors, radius, spacing, typography } from '../../theme';
 
 type InlineEditableNameProps = {
@@ -109,7 +110,7 @@ export function InlineEditableName({
             onPress={cancelEditing}
             disabled={saving}
             accessibilityLabel={t('accommodation.inlineEdit.cancel')}>
-            <Text style={styles.cancelText}>✕</Text>
+            <X size={16} color={colors.muted} strokeWidth={2.4} />
           </Pressable>
           <Pressable
             style={[styles.actionBtn, styles.saveBtn]}
@@ -119,7 +120,7 @@ export function InlineEditableName({
             {saving ? (
               <ActivityIndicator size="small" color={colors.white} />
             ) : (
-              <Text style={styles.saveText}>✓</Text>
+              <Check size={16} color={colors.primaryDark} strokeWidth={2.4} />
             )}
           </Pressable>
         </View>
@@ -148,7 +149,7 @@ export function InlineEditableName({
         onPress={startEditing}
         hitSlop={8}
         accessibilityLabel={t('accommodation.inlineEdit.editName')}>
-        <Text style={styles.editIcon}>✎</Text>
+        <Pencil size={14} color={colors.primaryDark} strokeWidth={2.2} />
       </Pressable>
     </View>
   );

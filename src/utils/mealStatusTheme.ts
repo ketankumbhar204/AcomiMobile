@@ -11,7 +11,6 @@ export type MealStatusKind = 'empty' | 'draft' | 'shared' | 'needs_reshare';
 export type MealStatusTheme = {
   color: string;
   background: string;
-  icon: string;
   labelKey: string;
 };
 
@@ -22,25 +21,21 @@ export const MEAL_STATUS_THEME: Record<MealStatusKind, MealStatusTheme> = {
   empty: {
     color: '#C2410C',
     background: colors.warningTint,
-    icon: '○',
     labelKey: 'meals.status.empty',
   },
   draft: {
     color: '#D97706',
     background: colors.warningTint,
-    icon: '●',
     labelKey: 'meals.status.notShared',
   },
   shared: {
     color: colors.success,
     background: colors.successTint,
-    icon: '✓',
     labelKey: 'meals.status.shared',
   },
   needs_reshare: {
     color: '#B45309',
     background: colors.warningTint,
-    icon: '⚠',
     labelKey: 'meals.status.needsReshare',
   },
 };

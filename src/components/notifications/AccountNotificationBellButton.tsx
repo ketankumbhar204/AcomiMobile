@@ -1,11 +1,12 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Bell } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { useAccountEnquiryUnreadCount } from '../../hooks/useAccountEnquiryUnreadCount';
 import type { MainStackParamList } from '../../navigation/types';
-import { colors, spacing, typography } from '../../theme';
+import { colors, pastels, radius, spacing, typography } from '../../theme';
 
 export function AccountNotificationBellButton() {
   const { t } = useTranslation();
@@ -19,7 +20,7 @@ export function AccountNotificationBellButton() {
       accessibilityRole="button"
       accessibilityLabel={t('notifications.title')}
       style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
-      <Text style={styles.icon}>🔔</Text>
+      <Bell size={18} color={pastels.orange.fg} strokeWidth={2.2} />
       {unreadCount > 0 ? (
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : String(unreadCount)}</Text>
@@ -33,15 +34,14 @@ const styles = StyleSheet.create({
   button: {
     width: 36,
     height: 36,
+    borderRadius: radius.button,
+    backgroundColor: pastels.orange.bg,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.lg,
   },
   pressed: {
     opacity: 0.7,
-  },
-  icon: {
-    fontSize: 18,
   },
   badge: {
     position: 'absolute',

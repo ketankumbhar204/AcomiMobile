@@ -24,7 +24,9 @@ export function useTenantPaymentsMonth(
   const memberId = options?.memberId;
   const [month, setMonthState] = useState(options?.initialMonth ?? currentMonthKey());
   const [payments, setPayments] = useState<SpacePaymentResponse[]>([]);
+  const [loadedMonth, setLoadedMonth] = useState<string | null>(null);
   const paymentsRef = useRef<SpacePaymentResponse[]>([]);
+  const loadedMonthRef = useRef<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +37,8 @@ export function useTenantPaymentsMonth(
   const commit = useCallback(
     (next: SpacePaymentResponse[], requestMonth: string) => {
       paymentsRef.current = next;
+      loadedMonthRef.current = requestMonth;
+      setLoadedMonth(requestMonth);
       setPayments(next);
       setError(null);
       setRefreshError(null);
@@ -61,6 +65,11 @@ export function useTenantPaymentsMonth(
       }
 
       const cacheKey = tenantPaymentsMonthCache.key([spaceId, memberId ?? '', requestMonth]);
+      if (loadedMonthRef.current !== requestMonth) {
+        paymentsRef.current = [];
+        setPayments([]);
+        setLoading(true);
+      }
       if (!options?.force) {
         const cached = tenantPaymentsMonthCache.get(cacheKey);
         if (cached) {
@@ -96,6 +105,8 @@ export function useTenantPaymentsMonth(
         if (!guard.isCurrent(requestId)) {
           return;
         }
+        loadedMonthRef.current = requestMonth;
+        setLoadedMonth(requestMonth);
         if (err instanceof PaymentServiceUnavailableError) {
           if (hasData) {
             setRefreshError('paymentCollection.serviceUnavailable.description');
@@ -151,6 +162,7 @@ export function useTenantPaymentsMonth(
 
   return {
     month,
+    loadedMonth,
     setMonth,
     payments,
     loading: loading && payments.length === 0,

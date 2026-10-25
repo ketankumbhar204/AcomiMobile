@@ -152,6 +152,14 @@ export const adminApi = {
       apiClient.post<ApiResponse<AdminRegisteredUser>>('/admin/registered-users', payload),
     ),
 
+  resetRegisteredUserPassword: async (
+    id: string,
+    payload: { password: string; confirmPassword: string },
+  ): Promise<void> =>
+    unwrapVoidResponse(
+      apiClient.post(`/admin/registered-users/${id}/reset-password`, payload),
+    ),
+
   listSavedAddresses: async (params?: {
     search?: string;
     page?: number;

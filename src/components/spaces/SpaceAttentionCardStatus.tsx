@@ -17,13 +17,8 @@ export function SpaceAttentionCardStatus({
 }: SpaceAttentionCardStatusProps) {
   const { t } = useTranslation();
 
-  if (!summary) {
-    if (loading) {
-      return null;
-    }
-    return (
-      <Text style={styles.upToDate}>{t('spaces.mySpaces.attentionUpToDate')}</Text>
-    );
+  if (!summary || loading) {
+    return null;
   }
 
   const items = summary.items?.length
@@ -42,14 +37,17 @@ export function SpaceAttentionCardStatus({
 
   return (
     <View style={styles.wrap} accessibilityRole="text">
-      {items.map(item => (
-        <View key={item.actionType} style={styles.primaryRow}>
-          <Text style={styles.emoji}>{item.emoji}</Text>
-          <Text style={styles.primaryTitle} numberOfLines={1}>
-            {item.title}
-          </Text>
-        </View>
-      ))}
+      {items.map(item => {
+        const AttentionIcon = item.Icon;
+        return (
+          <View key={item.actionType} style={styles.primaryRow}>
+            <AttentionIcon size={14} color={colors.textSecondary} strokeWidth={2.2} />
+            <Text style={styles.primaryTitle} numberOfLines={1}>
+              {item.title}
+            </Text>
+          </View>
+        );
+      })}
       {showDetail ? (
         <Text style={styles.detail} numberOfLines={1}>
           {items[0].detail}
@@ -90,9 +88,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-  },
-  emoji: {
-    fontSize: 14,
   },
   primaryTitle: {
     ...typography.caption,

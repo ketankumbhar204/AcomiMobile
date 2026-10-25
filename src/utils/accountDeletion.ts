@@ -21,6 +21,18 @@ export function isVerificationTokenInvalidated(error: unknown): boolean {
   );
 }
 
+/**
+ * Account deletion may call the API only after the user has acknowledged
+ * that it is permanent and has re-authenticated (password or OTP).
+ * Logout never satisfies this gate.
+ */
+export function canStartAccountDeletion(input: {
+  acknowledged: boolean;
+  reauthenticated: boolean;
+}): boolean {
+  return input.acknowledged === true && input.reauthenticated === true;
+}
+
 /** 401/404 mean the login is already gone; clear the local session. */
 export function shouldClearSessionAfterDeleteFailure(error: unknown): boolean {
   return error instanceof ApiError && (error.status === 401 || error.status === 404);

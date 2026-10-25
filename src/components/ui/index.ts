@@ -23,6 +23,9 @@ export { HeaderBackButton } from './HeaderBackButton';
 export { StackTitleWithSubtitle } from './StackTitleWithSubtitle';
 export { ProfileHeaderButton } from './ProfileHeaderButton';
 export { SpaceTabBackButton } from './SpaceTabBackButton';
+export { SpaceTabHomeButton } from './SpaceTabHomeButton';
+export { SpaceDashboardHeader } from './SpaceDashboardHeader';
+export { SpaceTabHeaderLeading } from './SpaceTabHeaderLeading';
 export { SpaceTabHeaderActions } from './SpaceTabHeaderActions';
 export {
   HeaderOverflowMenu,

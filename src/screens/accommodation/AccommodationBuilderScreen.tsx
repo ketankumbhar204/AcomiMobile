@@ -365,7 +365,9 @@ export function AccommodationBuilderScreen() {
         }
       />
 
-      {canManage && profile?.showUnits && (spaceType === 'CO_LIVING' || spaceType === 'RENTAL') ? (
+      {canManage &&
+      profile?.showUnits &&
+      (spaceType === 'CO_LIVING' || spaceType === 'RENTAL' || spaceType === 'CORPORATE_STAY') ? (
         <DashboardActionRow
           icon={Grid2x2}
           accent="#EA580C"
@@ -675,6 +677,7 @@ export function AccommodationBuilderScreen() {
 
   const renderInventoryItem = ({ item }: { item: BedRoomGroup }) => (
     <BuildingInventoryRoomSection
+      spaceId={spaceId}
       group={item}
       pathCrumbs={roomGroupPathCrumbs(item, {
         includeBuilding: true,
@@ -809,6 +812,7 @@ export function AccommodationBuilderScreen() {
               ? (item as FloorListItemResponse).floorId
               : (item as UnitListItemResponse).unitId
         }
+        removeClippedSubviews={false}
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />

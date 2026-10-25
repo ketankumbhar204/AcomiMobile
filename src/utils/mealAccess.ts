@@ -29,7 +29,7 @@ export function isReceivingMealsForMember(
   if (options?.spaceType === 'MESS') {
     return true;
   }
-  if (options?.spaceType && options.spaceType !== 'MESS') {
+  if (options?.spaceType) {
     return isTenantMovedIn(options.occupancyStatus);
   }
   return true;

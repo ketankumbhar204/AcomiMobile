@@ -1,23 +1,26 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { BadgeCheck, Heart } from 'lucide-react-native';
-import { useAlreadyInquired, useInquirySentVia } from '../../hooks/useAlreadyInquired';
+import { Eye, House, MapPin, Phone, UtensilsCrossed } from 'lucide-react-native';
+import { FavoriteHeartButton } from './FavoriteHeartButton';
+import { useAlreadyInquired, useInquiryRecord, useInquirySentVia } from '../../hooks/useAlreadyInquired';
 import { InquirySent } from './InquirySent';
 import { getSpaceTypeLabel } from '../../api';
-import type { DiscoverSpaceCardResponse, SpaceType } from '../../api/types';
+import type { DiscoverSpaceCardResponse } from '../../api/types';
 import { Button } from '../ui';
-import { listingAddress } from '../../utils/listingInfo';
+import { listingAddress, type ListingSection } from '../../utils/listingInfo';
 import { formatCurrency } from '../../utils/memberDeposit';
+import { listingPriceSuffix } from '../../utils/priceBasis';
 import { colors, shadows, spacing, typography } from '../../theme';
 import { firstVerifiedListingImageUrl } from '../../utils/representativeImage';
 import { DiscoverListingCover } from './DiscoverListingCover';
+import { ListingFacts } from './ListingFacts';
 import { ListingInfoChips } from './ListingInfoChips';
 
 type DiscoverSpaceCardProps = {
   item: DiscoverSpaceCardResponse;
   onPress: () => void;
-  onEnquire: () => void;
+  onViewSection: (section: ListingSection) => void;
 };
 
 function toPositiveAmount(value?: number | string | null): number | null {
@@ -32,7 +35,7 @@ function priceAmount(item: DiscoverSpaceCardResponse): number | null {
   return toPositiveAmount(item.startingPrice);
 }
 
-export function DiscoverSpaceCard({ item, onPress, onEnquire }: DiscoverSpaceCardProps) {
+export function DiscoverSpaceCard({ item, onPress, onViewSection }: DiscoverSpaceCardProps) {
   const { t } = useTranslation();
   const typeLabel = getSpaceTypeLabel(item.type);
   const address = listingAddress(item);
@@ -41,129 +44,164 @@ export function DiscoverSpaceCard({ item, onPress, onEnquire }: DiscoverSpaceCar
   const mealAmount = toPositiveAmount(item.mealPrice);
   const isMess = item.type === 'MESS';
   const cta = t('spaces.findPlace.getContactDetails');
-  const viewLabel = t('spaces.findPlace.view', { defaultValue: 'View' });
-  const viewDetails = t('spaces.findPlace.viewDetails');
-  const [stackActions, setStackActions] = useState(false);
+  const viewDetails = t('spaces.findPlace.viewDetails', { defaultValue: 'View Details' });
+  const priceSuffix = listingPriceSuffix(t, item.type, item.priceBasis);
+  const displayAmount = isMess ? (monthlyAmount ?? mealAmount) : amount;
+  const displaySuffix = isMess
+    ? monthlyAmount != null
+      ? priceSuffix
+      : mealAmount != null
+        ? t('spaces.findPlace.perMeal')
+        : priceSuffix
+    : priceSuffix;
   const alreadyInquired = useAlreadyInquired(item.spaceId);
+  const inquiry = useInquiryRecord(item.spaceId);
+  const contactViewed = inquiry?.contactViewed === true;
   const sentVia = useInquirySentVia(item.spaceId);
+  const viewedLabel = t('spaces.findPlace.viewed', { defaultValue: 'Viewed' });
+  const viewedHint = t('spaces.findPlace.contactDetailsViewed', {
+    defaultValue: 'Contact details viewed',
+  });
   return (
     <View style={styles.card}>
-      <Pressable
-        onPress={onPress}
-        style={({ pressed }) => [styles.pressable, pressed && styles.cardPressed]}
-        accessibilityRole="button"
-        accessibilityLabel={item.name}>
-        <View style={styles.media}>
-          <DiscoverListingCover
-            listingId={item.spaceId}
-            spaceType={item.type}
-            listingImageUrl={firstVerifiedListingImageUrl(
-              item.listingImageUrl,
-              item.coverImageUrl,
-              item.imageUrl,
-            )}
-            style={styles.mediaFill}
-            accessibilityName={item.name}
-          />
-          <View style={styles.badgeRow}>
-            <View style={styles.typeBadge}>
-              <Text style={styles.typeBadgeText} numberOfLines={1}>
-                {typeLabel}
-              </Text>
-            </View>
-            {alreadyInquired ? <InquirySent /> : null}
+      <View style={styles.clip}>
+      <View style={styles.media}>
+        <Pressable
+          onPress={onPress}
+          style={({ pressed }) => [styles.mediaPress, pressed && styles.cardPressed]}
+          accessibilityRole="button"
+          accessibilityLabel={item.name}>
+          <View pointerEvents="none" style={styles.mediaFill}>
+            <DiscoverListingCover
+              listingId={item.spaceId}
+              spaceType={item.type}
+              listingImageUrl={firstVerifiedListingImageUrl(
+                item.listingImageUrl,
+                item.coverImageUrl,
+                item.imageUrl,
+              )}
+              showRepresentativeLabel={false}
+              style={styles.mediaFill}
+              accessibilityName={item.name}
+            />
           </View>
-          {item.testSpace ? (
-            <View style={styles.testBadge}>
-              <Text style={styles.testBadgeText}>{t('spaces.findPlace.testBadge')}</Text>
-            </View>
-          ) : null}
-          <View
-            style={styles.heartWrap}
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants">
-            <Heart size={15} color={colors.textPrimary} strokeWidth={2} />
-          </View>
-          {item.alreadyMember ? (
-            <View style={styles.memberOverlay}>
-              <Text style={styles.memberOverlayText}>{t('spaces.findPlace.memberBadge')}</Text>
-            </View>
-          ) : null}
+        </Pressable>
+        <View style={styles.categoryBadge} pointerEvents="none">
+          {isMess ? (
+            <UtensilsCrossed size={12} color="#0F6B4C" strokeWidth={2.3} />
+          ) : (
+            <House size={12} color="#0F6B4C" strokeWidth={2.3} />
+          )}
+          <Text style={styles.categoryBadgeText} numberOfLines={1}>
+            {typeLabel}
+          </Text>
         </View>
+        {(alreadyInquired && !contactViewed) || item.alreadyMember ? (
+          <View style={styles.imageOverlay} pointerEvents="none">
+            {alreadyInquired && !contactViewed ? (
+              <InquirySent variant="chip" sentVia={sentVia} />
+            ) : null}
+            {item.alreadyMember ? (
+              <View style={styles.memberBadge}>
+                <Text style={styles.memberOverlayText}>{t('spaces.findPlace.memberBadge')}</Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+      </View>
 
-        <View style={styles.body}>
+      <View style={styles.body}>
+        <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={item.name}>
           <Text style={styles.title} numberOfLines={2}>
             {item.name}
           </Text>
-          {alreadyInquired ? <InquirySent variant="inline" sentVia={sentVia} /> : null}
-          {address ? (
-            <Text style={styles.addressText} numberOfLines={2}>
+        </Pressable>
+        {address ? (
+          <Pressable
+            onPress={() => onViewSection('address')}
+            accessibilityRole="button"
+            accessibilityLabel={`${t('spaces.findPlace.infoAddress', { defaultValue: 'Address' })}: ${item.name}`}
+            style={styles.addressRow}>
+            <MapPin size={14} color={colors.textSecondary} strokeWidth={2.2} />
+            <Text style={styles.addressText} numberOfLines={1}>
               {address}
             </Text>
-          ) : null}
-          {isMess ? (
-            <>
-              <Text style={styles.price}>
-                {monthlyAmount != null
-                  ? `${formatCurrency(monthlyAmount)} ${t('spaces.findPlace.priceSuffix.MESS')}`
-                  : t('spaces.findPlace.priceOnRequest')}
-              </Text>
-              {mealAmount != null ? (
-                <Text style={styles.mealPrice}>
-                  {`${formatCurrency(mealAmount)} ${t('spaces.findPlace.perMeal')}`}
-                </Text>
-              ) : null}
-            </>
-          ) : (
-            <Text style={styles.price}>
-              {amount != null
-                ? `${formatCurrency(amount)} ${t(`spaces.findPlace.priceSuffix.${item.type as SpaceType}`)}`
-                : t('spaces.findPlace.priceOnRequest')}
-            </Text>
-          )}
-          <View style={styles.infoPanel}>
-            <View style={styles.infoHeadingRow}>
-              <BadgeCheck size={14} color="#0F6B4C" strokeWidth={2.2} />
-              <Text style={styles.infoHeading}>{t('spaces.findPlace.infoAvailable')}</Text>
-            </View>
-            <ListingInfoChips
-              listing={item}
-              variant="card"
-              surface={isMess ? 'meals' : 'places'}
-              onEnquire={alreadyInquired ? undefined : onEnquire}
-            />
-          </View>
-        </View>
-      </Pressable>
-      <View
-        style={[styles.ctaWrap, stackActions ? styles.ctaStack : styles.ctaRow]}
-        onLayout={event => {
-          const next = event.nativeEvent.layout.width < 260;
-          setStackActions(current => (current === next ? current : next));
-        }}>
-        <Button
-          label={viewLabel}
-          variant="secondary"
-          onPress={onPress}
-          numberOfLines={1}
-          accessibilityLabel={`${viewDetails}: ${item.name}`}
-          style={stackActions ? styles.ctaFull : styles.ctaView}
+          </Pressable>
+        ) : null}
+        <Pressable
+          onPress={() => onViewSection('rent')}
+          accessibilityRole="button"
+          accessibilityLabel={`${t('spaces.findPlace.infoRent', { defaultValue: 'Rent' })}: ${item.name}`}>
+          <Text style={styles.price} numberOfLines={2}>
+            {displayAmount != null ? (
+              <>
+                <Text style={styles.priceAmount}>{formatCurrency(displayAmount)}</Text>
+                <Text style={styles.priceUnit}>{` ${displaySuffix}`}</Text>
+              </>
+            ) : (
+              t('spaces.findPlace.priceOnRequest')
+            )}
+          </Text>
+        </Pressable>
+        <ListingFacts
+          appearance="pills"
+          genderPolicy={item.genderPolicy}
+          sharingNotes={item.sharingNotes}
+          foodAvailability={item.foodAvailability}
+          foodIncludedInRent={item.foodIncludedInRent}
         />
-        {alreadyInquired ? (
-          <InquirySent
-            variant="button"
-            sentVia={sentVia}
-            style={stackActions ? styles.ctaFull : styles.ctaContact}
+        <View style={styles.infoPanel}>
+          <ListingInfoChips
+            listing={item}
+            variant="card"
+            surface={isMess ? 'meals' : 'places'}
+            onViewAll={onPress}
+            onSelect={onViewSection}
           />
-        ) : (
+        </View>
+        <View style={styles.ctaRow}>
           <Button
-            label={cta}
-            onPress={onEnquire}
+            label={viewDetails}
+            variant="secondary"
+            onPress={onPress}
             numberOfLines={1}
-            accessibilityLabel={`${cta}: ${item.name}`}
-            style={stackActions ? styles.ctaFull : styles.ctaContact}
+            accessibilityLabel={`${viewDetails}: ${item.name}`}
+            style={styles.viewDetails}
           />
-        )}
+          {contactViewed ? (
+            <Button
+              label={viewedLabel}
+              variant="secondary"
+              tint={{ bg: '#E7F6EE', border: '#8FCBAB', fg: '#0F6B4C' }}
+              icon={Eye}
+              onPress={() => onViewSection('contact')}
+              numberOfLines={1}
+              accessibilityLabel={`${viewedHint}: ${item.name}`}
+              style={styles.ctaContact}
+            />
+          ) : alreadyInquired ? (
+            <InquirySent
+              variant="button"
+              sentVia={sentVia}
+              email={inquiry?.sentToEmail}
+              style={styles.ctaContact}
+            />
+          ) : (
+            <Button
+              label={cta}
+              icon={Phone}
+              onPress={() => onViewSection('contact')}
+              numberOfLines={1}
+              accessibilityLabel={`${cta}: ${item.name}`}
+              style={styles.ctaContact}
+            />
+          )}
+        </View>
+      </View>
+      </View>
+      {/* Kept outside the clipped card so Android delivers the heart press. */}
+      <View style={styles.heartSlot} collapsable={false}>
+        <FavoriteHeartButton spaceId={item.spaceId} listingName={item.name} />
       </View>
     </View>
   );
@@ -175,22 +213,24 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(15, 23, 42, 0.06)',
-    overflow: 'hidden',
     ...shadows.sm,
   },
-  pressable: {
-    flexGrow: 1,
+  clip: {
+    borderRadius: 16,
     overflow: 'hidden',
   },
   cardPressed: {
     opacity: 0.96,
-    transform: [{ translateY: 1 }],
   },
   media: {
-    aspectRatio: 4 / 3,
+    width: '100%',
+    aspectRatio: 16 / 10,
     backgroundColor: colors.mintSubtle,
     position: 'relative',
     overflow: 'hidden',
+  },
+  mediaPress: {
+    ...StyleSheet.absoluteFillObject,
   },
   mediaFill: {
     position: 'absolute',
@@ -199,66 +239,47 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
   },
-  badgeRow: {
+  categoryBadge: {
     position: 'absolute',
-    top: 12,
-    left: 12,
-    right: 52,
+    top: 8,
+    left: 8,
+    zIndex: 2,
+    maxWidth: '88%',
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'flex-start',
-    gap: 6,
-  },
-  typeBadge: {
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    maxWidth: '100%',
-  },
-  typeBadgeText: {
-    ...typography.caption,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
-    color: colors.textPrimary,
-  },
-  testBadge: {
-    position: 'absolute',
-    top: 44,
-    left: 12,
-    backgroundColor: '#FFEDD5',
-    borderColor: '#F59E0B',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.white,
+    borderRadius: 999,
     borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    borderColor: 'rgba(15,23,42,0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    ...shadows.sm,
   },
-  testBadgeText: {
+  categoryBadgeText: {
     ...typography.caption,
+    flexShrink: 1,
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.4,
     textTransform: 'uppercase',
-    color: '#9A3412',
+    color: '#0F6B4C',
   },
-  heartWrap: {
+  heartSlot: {
     position: 'absolute',
     top: 10,
     right: 10,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadows.sm,
   },
-  memberOverlay: {
+  imageOverlay: {
     position: 'absolute',
-    bottom: 12,
     left: 12,
+    bottom: 10,
+    maxWidth: '70%',
+    zIndex: 2,
+    alignItems: 'flex-start',
+    gap: 6,
+  },
+  memberBadge: {
     backgroundColor: colors.primary,
     borderRadius: 999,
     paddingHorizontal: 10,
@@ -271,153 +292,77 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   body: {
-    flexGrow: 1,
+    minWidth: 0,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-    gap: spacing.sm,
+    paddingBottom: spacing.md,
+    gap: 8,
   },
   title: {
     ...typography.h3,
-    fontSize: 16,
-    lineHeight: 21,
-    fontWeight: '700',
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: '800',
     color: colors.textPrimary,
+  },
+  addressRow: {
+    minHeight: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   addressText: {
     ...typography.caption,
+    flex: 1,
     fontSize: 13,
     color: colors.textSecondary,
     lineHeight: 18,
   },
   infoPanel: {
-    backgroundColor: colors.mintSubtle,
-    borderRadius: 16,
-    padding: 10,
-    gap: 8,
-  },
-  mapsRow: {
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  mapsRowMuted: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-  },
-  mapsPress: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-  },
-  mapsIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: colors.lightGreen,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mapsIconMuted: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: 'rgba(15, 23, 42, 0.04)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mapsCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  mapsEyebrow: {
-    ...typography.caption,
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    color: colors.muted,
-  },
-  mapsLinkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 2,
-  },
-  mapsLink: {
-    ...typography.caption,
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#0F6B4C',
-  },
-  mapsMuted: {
-    ...typography.caption,
-    fontSize: 12,
-    color: colors.muted,
-    marginTop: 2,
-  },
-  infoHeadingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 2,
-  },
-  infoHeading: {
-    ...typography.caption,
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    color: '#0F6B4C',
+    backgroundColor: '#F3FBF7',
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 12,
   },
   price: {
     ...typography.bodyStrong,
-    fontSize: 15,
+    fontSize: 16,
     color: colors.textPrimary,
   },
-  mealPrice: {
-    ...typography.caption,
+  priceAmount: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.textPrimary,
+  },
+  priceUnit: {
     fontSize: 13,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  ctaWrap: {
-    marginTop: 'auto',
-    gap: 8,
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md,
+    fontWeight: '500',
+    color: colors.textSecondary,
   },
   ctaRow: {
     flexDirection: 'row',
     alignItems: 'stretch',
+    gap: 8,
   },
-  ctaStack: {
-    flexDirection: 'column',
-  },
-  ctaView: {
-    flexGrow: 0,
-    flexShrink: 0,
-    minHeight: 40,
-    paddingHorizontal: 16,
+  viewDetails: {
+    flexGrow: 0.82,
+    flexShrink: 1,
+    flexBasis: 0,
+    minHeight: 44,
+    paddingHorizontal: 10,
     paddingVertical: spacing.sm,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: '#0F6B4C',
+    borderRadius: 12,
   },
   ctaContact: {
-    flexGrow: 1,
-    flexShrink: 0,
-    minHeight: 40,
-    paddingHorizontal: 12,
+    flexGrow: 1.18,
+    flexShrink: 1,
+    flexBasis: 0,
+    minHeight: 44,
+    paddingHorizontal: 10,
     paddingVertical: spacing.sm,
-  },
-  ctaFull: {
-    width: '100%',
-    minHeight: 40,
-    paddingVertical: spacing.sm,
+    borderRadius: 12,
   },
 });

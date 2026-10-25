@@ -26,7 +26,14 @@ import {
   SkeletonCard,
 } from '../../components/ui';
 import { useToastStore } from '../../store/toastStore';
+import { AddressLocationFields } from '../../components/location/AddressLocationFields';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
+import {
+  EMPTY_ADDRESS_CAPTURE,
+  addressCaptureIssue,
+  captureFromFreeText,
+  composeStoredAddress,
+} from '../../utils/locationAutocomplete';
 import { formatDeliveryLocationSecondary } from '../../utils/deliveryLocationLabel';
 
 type MealDeliveryLocationsScreenProps = {
@@ -48,7 +55,8 @@ export function MealDeliveryLocationsScreen({ spaceId }: MealDeliveryLocationsSc
   const [locations, setLocations] = useState<MealDeliveryLocation[]>([]);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [address, setAddress] = useState('');
+  const [addressCapture, setAddressCapture] = useState(EMPTY_ADDRESS_CAPTURE);
+  const [editAddress, setEditAddress] = useState(EMPTY_ADDRESS_CAPTURE);
   const [editingLocation, setEditingLocation] = useState<MealDeliveryLocation | null>(null);
   const [editForm, setEditForm] = useState<EditForm>({
     name: '',
@@ -80,16 +88,22 @@ export function MealDeliveryLocationsScreen({ spaceId }: MealDeliveryLocationsSc
     if (!trimmed) {
       return;
     }
+    if (addressCaptureIssue(addressCapture) === 'selection') {
+      showToast(
+        t('locationCapture.selectionRequired', { defaultValue: 'Select a location from the suggestions.' }),
+      );
+      return;
+    }
     setSaving(true);
     try {
       await mealsApi.createMealDeliveryLocation(spaceId, {
         name: trimmed,
         description: description.trim() || undefined,
-        address: address.trim() || undefined,
+        address: composeStoredAddress(addressCapture) || undefined,
       });
       setName('');
       setDescription('');
-      setAddress('');
+      setAddressCapture(EMPTY_ADDRESS_CAPTURE);
       showToast(t('meals.deliveryLocations.created'));
       await load();
     } catch {
@@ -101,6 +115,7 @@ export function MealDeliveryLocationsScreen({ spaceId }: MealDeliveryLocationsSc
 
   const openEdit = (location: MealDeliveryLocation) => {
     setEditingLocation(location);
+    setEditAddress(captureFromFreeText(location.address));
     setEditForm({
       name: location.name,
       description: location.description ?? '',
@@ -113,12 +128,18 @@ export function MealDeliveryLocationsScreen({ spaceId }: MealDeliveryLocationsSc
     if (!editingLocation || !editForm.name.trim()) {
       return;
     }
+    if (addressCaptureIssue(editAddress) === 'selection') {
+      showToast(
+        t('locationCapture.selectionRequired', { defaultValue: 'Select a location from the suggestions.' }),
+      );
+      return;
+    }
     setSaving(true);
     try {
       await mealsApi.updateMealDeliveryLocation(spaceId, editingLocation.id, {
         name: editForm.name.trim(),
         description: editForm.description.trim() || undefined,
-        address: editForm.address.trim() || undefined,
+        address: composeStoredAddress(editAddress) || undefined,
         active: editForm.active,
       });
       setEditingLocation(null);
@@ -176,12 +197,7 @@ export function MealDeliveryLocationsScreen({ spaceId }: MealDeliveryLocationsSc
           onChangeText={setName}
           leadingIcon={MapPin}
         />
-        <FormInput
-          label={t('meals.deliveryLocations.addressLabel', { defaultValue: 'Address' })}
-          placeholder={t('meals.deliveryLocations.addressPlaceholder')}
-          value={address}
-          onChangeText={setAddress}
-        />
+        <AddressLocationFields value={addressCapture} onChange={setAddressCapture} />
         <FormInput
           label={t('meals.deliveryLocations.descriptionLabel', { defaultValue: 'Notes' })}
           placeholder={t('meals.deliveryLocations.descriptionPlaceholder')}
@@ -313,12 +329,7 @@ export function MealDeliveryLocationsScreen({ spaceId }: MealDeliveryLocationsSc
               onChangeText={value => setEditForm(prev => ({ ...prev, name: value }))}
               leadingIcon={MapPin}
             />
-            <FormInput
-              label={t('meals.deliveryLocations.addressLabel', { defaultValue: 'Address' })}
-              placeholder={t('meals.deliveryLocations.addressPlaceholder')}
-              value={editForm.address}
-              onChangeText={value => setEditForm(prev => ({ ...prev, address: value }))}
-            />
+            <AddressLocationFields value={editAddress} onChange={setEditAddress} />
             <FormInput
               label={t('meals.deliveryLocations.descriptionLabel', { defaultValue: 'Notes' })}
               placeholder={t('meals.deliveryLocations.descriptionPlaceholder')}
@@ -489,10 +500,11 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'flex-end',
   },
   modalSheet: {
+    ...shadows.raised,
     backgroundColor: colors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,

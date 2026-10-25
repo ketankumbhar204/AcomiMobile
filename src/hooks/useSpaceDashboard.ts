@@ -161,6 +161,65 @@ export function useSpaceDashboard(
   };
 }
 
+/**
+ * Financial cards for a month other than the live dashboard month.
+ * Property and meal sections stay on the current month.
+ */
+export function useDashboardMonthFinancial(
+  spaceId: UUID,
+  spaceType: SpaceType | undefined,
+  month: string,
+  enabled: boolean,
+) {
+  const current = currentMonthKey();
+  const active = enabled && Boolean(spaceType) && month !== current;
+  const [financial, setFinancial] = useState<DashboardFinancialSummary | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
+  const requestRef = useRef(0);
+
+  const reload = useCallback(() => {
+    setReloadToken(token => token + 1);
+  }, []);
+
+  useEffect(() => {
+    if (!active || !spaceType) {
+      setFinancial(null);
+      setLoading(false);
+      setError(false);
+      return;
+    }
+    const requestId = requestRef.current + 1;
+    requestRef.current = requestId;
+    setLoading(true);
+    setError(false);
+    setFinancial(null);
+    void fetchDashboardSummaryCached(spaceId, spaceType, month, { force: true })
+      .then(data => {
+        if (requestRef.current !== requestId) {
+          return;
+        }
+        setFinancial(data.financial ?? null);
+        setError(false);
+      })
+      .catch(() => {
+        if (requestRef.current !== requestId) {
+          return;
+        }
+        setFinancial(null);
+        setError(true);
+      })
+      .finally(() => {
+        if (requestRef.current === requestId) {
+          setLoading(false);
+        }
+      });
+  }, [active, month, reloadToken, spaceId, spaceType]);
+
+  return { financial, loading, error, reload, active };
+}
+
 /** @deprecated Use useSpaceDashboard */
 export function useMessOwnerDashboard(spaceId: UUID, enabled: boolean) {
   return useSpaceDashboard(spaceId, 'MESS', enabled);

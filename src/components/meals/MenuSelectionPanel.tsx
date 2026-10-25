@@ -52,6 +52,11 @@ import {
 import { persistItemPriceDraft } from '../../utils/itemSelectionPricing';
 import { agentDebugLog } from '../../utils/agentDebugLog';
 import { fetchSpaceMenuCatalog } from '../../utils/fetchSpaceMenuCatalog';
+import {
+  comboStubsFromOptions,
+  itemStubsFromOptions,
+  mergeCatalogRecords,
+} from '../../utils/menuSelectionHydration';
 import { formatComboIncludeLine } from '../../utils/comboIncludes';
 import { groupMenuHistoryItems, filterHistoryForMealType } from '../../utils/menuHistoryGroups';
 import { ComboPickerCard } from './ComboPickerCard';
@@ -163,8 +168,12 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
   const [activeTab, setActiveTab] = useState<MenuSelectionTab>('history');
   const [historyItems, setHistoryItems] = useState<MenuHistoryItemResponse[]>([]);
   const [historySearch, setHistorySearch] = useState('');
-  const [combos, setCombos] = useState<MealComboResponse[]>([]);
-  const [foodItems, setFoodItems] = useState<FoodItemResponse[]>([]);
+  const [combos, setCombos] = useState<MealComboResponse[]>(() =>
+    comboStubsFromOptions(initialOptions),
+  );
+  const [foodItems, setFoodItems] = useState<FoodItemResponse[]>(() =>
+    itemStubsFromOptions(initialOptions),
+  );
   const [categories, setCategories] = useState<FoodCategoryResponse[]>([]);
   const [selectedComboIds, setSelectedComboIds] = useState<string[]>(seed.selectedComboIds);
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>(seed.selectedItemIds);
@@ -177,6 +186,11 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
   const itemPriceSaveInFlightRef = useRef<Set<string>>(new Set());
   const comboPriceSaveInFlightRef = useRef<Set<string>>(new Set());
   const focusClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const catalogRequestRef = useRef(false);
+  const selectedComboIdsRef = useRef(selectedComboIds);
+  const selectedItemIdsRef = useRef(selectedItemIds);
+  selectedComboIdsRef.current = selectedComboIds;
+  selectedItemIdsRef.current = selectedItemIds;
 
   const handleTabChange = useCallback((tab: MenuSelectionTab) => {
     Keyboard.dismiss();
@@ -209,12 +223,29 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
   );
 
   const ensureCatalogLoaded = useCallback(async () => {
-    if (catalogLoaded || loadingCatalog) return;
+    if (catalogLoaded || catalogRequestRef.current) return;
+    catalogRequestRef.current = true;
     setLoadingCatalog(true);
     try {
       const catalog = await fetchSpaceMenuCatalog(spaceId);
-      setCombos(catalog.combos.filter(combo => combo.isActive));
-      setFoodItems(catalog.items.filter(item => item.isActive));
+      const activeCombos = catalog.combos.filter(combo => combo.isActive);
+      const activeItems = catalog.items.filter(item => item.isActive);
+      setCombos(current =>
+        mergeCatalogRecords(
+          current,
+          activeCombos,
+          selectedComboIdsRef.current,
+          combo => combo.comboId,
+        ),
+      );
+      setFoodItems(current =>
+        mergeCatalogRecords(
+          current,
+          activeItems,
+          selectedItemIdsRef.current,
+          item => item.itemId,
+        ),
+      );
       setCategories(catalog.categories.filter(category => category.isActive));
       setCatalogLoaded(true);
       agentDebugLog({
@@ -236,11 +267,11 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
         },
       });
     } catch {
-      // keep prior catalog state
+      catalogRequestRef.current = false;
     } finally {
       setLoadingCatalog(false);
     }
-  }, [catalogLoaded, loadingCatalog, spaceId]);
+  }, [catalogLoaded, spaceId]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -249,13 +280,17 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
     return () => clearTimeout(timer);
   }, [historySearch, loadHistory]);
 
-  // Initial history load is covered by historySearch effect (starts as '').
+  // Resolve saved selections on open. A later tab visit only retries a failed catalog load.
+  useEffect(() => {
+    void ensureCatalogLoaded();
+  }, [ensureCatalogLoaded]);
 
   useEffect(() => {
-    if (activeTab === 'combos' || activeTab === 'items') {
-      void ensureCatalogLoaded();
+    if (activeTab === 'history' || catalogLoaded) {
+      return;
     }
-  }, [activeTab, ensureCatalogLoaded]);
+    void ensureCatalogLoaded();
+  }, [activeTab, catalogLoaded, ensureCatalogLoaded]);
 
   useEffect(() => {
     if (!catalogLoaded) {
@@ -452,21 +487,35 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
     if (loadingHistory && activeTab === 'history') {
       return;
     }
-    if ((activeTab === 'combos' || activeTab === 'items') && !catalogLoaded) {
+    const missingCombo = selectedComboIds.some(id => !combos.some(combo => combo.comboId === id));
+    const missingItem = selectedItemIds.some(id => !foodItems.some(item => item.itemId === id));
+    if (missingCombo || missingItem) {
       return;
     }
     // Always sync selection (even before prices are filled) so Extras can list
     // items inside selected combos without waiting for Menu Library.
     onChange(buildSelectionResult);
-  }, [activeTab, buildSelectionResult, catalogLoaded, loadingHistory, onChange]);
+  }, [
+    activeTab,
+    buildSelectionResult,
+    combos,
+    foodItems,
+    loadingHistory,
+    onChange,
+    selectedComboIds,
+    selectedItemIds,
+  ]);
 
   const filteredCombos = useMemo(() => {
     const query = comboSearch.trim().toLowerCase();
+    const visible = combos.filter(
+      combo => combo.enabledForSpace !== false || selectedComboIds.includes(combo.comboId),
+    );
     if (!query) {
-      return combos;
+      return visible;
     }
-    return combos.filter(combo => combo.name.toLowerCase().includes(query));
-  }, [comboSearch, combos]);
+    return visible.filter(combo => combo.name.toLowerCase().includes(query));
+  }, [comboSearch, combos, selectedComboIds]);
 
   const historyGroups = useMemo(
     () => groupMenuHistoryItems(filterHistoryForMealType(historyItems, mealType)),
@@ -816,9 +865,23 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
         showToast(t('meals.planning.comboAdded', { name }));
       }
       const catalog = await fetchSpaceMenuCatalog(spaceId, { force: true });
-      setFoodItems(catalog.items.filter(item => item.isActive));
+      setFoodItems(current =>
+        mergeCatalogRecords(
+          current,
+          catalog.items.filter(item => item.isActive),
+          selectedItemIdsRef.current,
+          item => item.itemId,
+        ),
+      );
       setCategories(catalog.categories.filter(category => category.isActive));
-      setCombos(catalog.combos.filter(combo => combo.isActive));
+      setCombos(current =>
+        mergeCatalogRecords(
+          current,
+          catalog.combos.filter(combo => combo.isActive),
+          selectedComboIdsRef.current,
+          combo => combo.comboId,
+        ),
+      );
       setCatalogLoaded(true);
     } catch {
       showToast(t('meals.errors.saveFailed'));

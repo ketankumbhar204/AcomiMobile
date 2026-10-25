@@ -8,7 +8,8 @@ import {
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { colors, radius, spacing, typography } from '../../theme';
+import { X } from 'lucide-react-native';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { formatComboNameWithPrice } from '../../utils/comboPrice';
 
 type ComboItemsPopupProps = {
@@ -57,7 +58,7 @@ export function ComboItemsPopup({
               {formatComboNameWithPrice(comboName, price, currencyCode)}
             </Text>
             <Pressable onPress={onClose} hitSlop={12}>
-              <Text style={styles.closeBtn}>✕</Text>
+              <X size={18} color={colors.textPrimary} strokeWidth={2.2} />
             </Pressable>
           </View>
 
@@ -86,7 +87,7 @@ export function ComboItemsPopup({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: colors.overlayScrim,
     justifyContent: 'center',
     padding: spacing.lg,
   },
@@ -94,6 +95,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   sheet: {
+    ...shadows.raised,
     backgroundColor: colors.white,
     borderRadius: radius.card,
     padding: spacing.lg,

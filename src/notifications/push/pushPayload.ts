@@ -8,6 +8,7 @@ export type PushNotificationPayload = {
   spaceName?: string;
   title?: string;
   body?: string;
+  test?: string;
 };
 
 export function parsePushData(
@@ -22,7 +23,8 @@ export function parsePushData(
     entityType: data?.entityType,
     actionRoute: data?.actionRoute,
     spaceName: data?.spaceName,
-    title: notification?.title ?? undefined,
-    body: notification?.body ?? undefined,
+    title: notification?.title ?? data?.title,
+    body: notification?.body ?? data?.body,
+    test: data?.test,
   };
 }

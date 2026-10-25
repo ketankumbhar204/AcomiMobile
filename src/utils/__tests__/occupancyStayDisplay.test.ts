@@ -1,6 +1,7 @@
 import {
   formatOccupancyLocationHierarchy,
   getOccupiedDayCount,
+  occupancyLocationLines,
 } from '../occupancyRules';
 import type { CurrentOccupancySummaryResponse } from '../../api/types';
 
@@ -31,6 +32,33 @@ describe('formatOccupancyLocationHierarchy', () => {
       primary: 'Building 1',
       secondary: 'Unit 101',
     });
+  });
+});
+
+describe('occupancyLocationLines', () => {
+  it('labels each configured level and keeps alphabetic names', () => {
+    const summary = {
+      buildingName: 'Sunrise PG',
+      floorName: 'Floor 1',
+      unitName: 'Unit 101',
+      roomName: 'Room A',
+      bedName: 'A',
+    } as CurrentOccupancySummaryResponse;
+
+    expect(occupancyLocationLines(summary).map(line => line.value)).toEqual([
+      'Sunrise PG',
+      'Floor 1',
+      'Unit 101',
+      'Room A',
+      'A',
+    ]);
+    expect(occupancyLocationLines(summary).map(line => line.labelKey)).toEqual([
+      'occupancy.section.building',
+      'occupancy.section.floor',
+      'occupancy.section.unit',
+      'occupancy.section.room',
+      'occupancy.section.bed',
+    ]);
   });
 });
 

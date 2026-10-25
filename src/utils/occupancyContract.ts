@@ -358,7 +358,7 @@ export function formatContractAmount(
   if (value == null) {
     return notRecordedLabel;
   }
-  return `₹${value.toLocaleString('en-IN')}`;
+  return `₹${Math.round(value).toLocaleString('en-IN')}`;
 }
 
 export function computeOccupancyMonthlyTotal(
