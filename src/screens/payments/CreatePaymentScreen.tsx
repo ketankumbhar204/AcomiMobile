@@ -33,7 +33,7 @@ import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { canManagePayments } from '../../utils/dashboardFinancial';
-import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
+import { publishPaymentUpdated } from '../../utils/paymentUpdates';
 import {
   buildManualCharge,
   findCatalogChargeType,
@@ -44,7 +44,6 @@ import { getChargeTypeIcon } from '../../utils/chargeTypeIcons';
 import { rememberChargeType } from '../../utils/recentChargeTypes';
 import { isoDateToMonthKey, todayIsoDate } from '../../utils/mealDates';
 import { formatPaymentAmount } from '../../utils/paymentHistory';
-import { invalidatePaymentsMonthCaches } from '../../utils/paymentsMonthCache';
 import {
   paymentDetailContentGutter,
   paymentDetailScreenPadding,
@@ -199,8 +198,11 @@ export function CreatePaymentScreen() {
       try {
         const created = await paymentsApi.createPayment(spaceId, body);
         rememberChargeType(spaceId, selectedType.id).catch(() => undefined);
-        invalidateDashboardQueries();
-        invalidatePaymentsMonthCaches(spaceId, created.month || month);
+        publishPaymentUpdated({
+          ...created,
+          spaceId: created.spaceId || spaceId,
+          month: created.month || month,
+        });
         showToast(t('paymentCollection.addRecord.success'));
         navigation.goBack();
       } catch (error) {

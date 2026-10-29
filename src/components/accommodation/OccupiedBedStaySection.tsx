@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import {
   BarChart3,
   BedSingle,
+  Grid2x2,
   Calculator,
   CalendarDays,
   ChevronDown,
@@ -23,7 +24,7 @@ import { memberApi } from '../../api/memberApi';
 import { formatMemberContactNumber } from '../../utils/indianMobile';
 import { Button } from '../ui';
 import { ReferenceCode } from '../ui/ReferenceCode';
-import { useOccupiedBedStay } from '../../hooks/useOccupiedBedStay';
+import { useOccupiedBedStay, useOccupiedUnitStay } from '../../hooks/useOccupiedBedStay';
 import type { MainStackParamList } from '../../navigation/types';
 import { colors, pastels, radius, spacing, typography } from '../../theme';
 import { getOccupancyExitDate } from '../../utils/occupancyRules';
@@ -39,9 +40,11 @@ type Nav = NativeStackNavigationProp<MainStackParamList>;
 
 type OccupiedBedStaySectionProps = {
   spaceId: string;
-  bedId: string;
+  bedId?: string;
+  unitId?: string;
   bedNumber: string;
   locationLine?: string;
+  entity?: 'bed' | 'unit';
 };
 
 type DetailRowProps = {
@@ -178,12 +181,27 @@ function SectionCard({
 export function OccupiedBedStaySection({
   spaceId,
   bedId,
+  unitId,
   bedNumber,
   locationLine,
+  entity = 'bed',
 }: OccupiedBedStaySectionProps) {
   const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
-  const stay = useOccupiedBedStay(spaceId, bedId, true);
+  const bedStay = useOccupiedBedStay(spaceId, bedId, entity === 'bed' && Boolean(bedId));
+  const unitStay = useOccupiedUnitStay(spaceId, unitId, entity === 'unit' && Boolean(unitId));
+  const stay = entity === 'unit' ? unitStay : bedStay;
+  const numberLabel =
+    entity === 'unit'
+      ? t('accommodation.units.unitNumberLabel', { defaultValue: 'Unit number' })
+      : t('accommodation.stayPayment.bedNumber', { defaultValue: 'Bed number' });
+  const sectionTitle =
+    entity === 'unit'
+      ? t('accommodation.stayPayment.unitOccupancySection', {
+          defaultValue: 'Unit and occupancy',
+        })
+      : t('accommodation.stayPayment.occupancySection', { defaultValue: 'Bed and occupancy' });
+  const NumberIcon = entity === 'unit' ? Grid2x2 : BedSingle;
   const [mobile, setMobile] = useState<string | null>(null);
 
   useEffect(() => {
@@ -213,6 +231,9 @@ export function OccupiedBedStaySection({
   const moveIn = stay.occupancy?.actualMoveInAt || stay.occupancy?.moveInDate;
   const exitDate = getOccupancyExitDate(stay.occupancy);
   const mutedIcon = colors.textSecondary;
+  const linkedOccupant = Boolean(
+    stay.occupancy?.memberId && stay.occupancy.memberName?.trim(),
+  );
 
   return (
     <View style={styles.wrap}>
@@ -234,12 +255,12 @@ export function OccupiedBedStaySection({
       ) : null}
 
       <SectionCard
-        title={t('accommodation.stayPayment.occupancySection', { defaultValue: 'Bed and occupancy' })}
-        icon={<BedSingle size={14} color={pastels.blue.fg} strokeWidth={2.2} />}
+        title={sectionTitle}
+        icon={<NumberIcon size={14} color={pastels.blue.fg} strokeWidth={2.2} />}
         iconBg={pastels.blue.bg}>
         <DetailRow
-          icon={<BedSingle size={14} color={mutedIcon} strokeWidth={2.2} />}
-          label={t('accommodation.stayPayment.bedNumber', { defaultValue: 'Bed number' })}
+          icon={<NumberIcon size={14} color={mutedIcon} strokeWidth={2.2} />}
+          label={numberLabel}
           value={bedNumber || '—'}
         />
         <ReferenceCode value={stay.occupancy?.referenceCode} />
@@ -273,12 +294,12 @@ export function OccupiedBedStaySection({
             })}
           </Text>
         ) : null}
-        {!stay.loading && !stay.error && !stay.occupancy ? (
+        {!stay.loading && !stay.error && !linkedOccupant ? (
           <Text style={styles.empty}>
             {t('accommodation.stayPayment.noTenant', { defaultValue: 'No linked tenant' })}
           </Text>
         ) : null}
-        {stay.occupancy ? (
+        {linkedOccupant && stay.occupancy ? (
           <>
             <DetailRow
               icon={<UserRound size={14} color={mutedIcon} strokeWidth={2.2} />}

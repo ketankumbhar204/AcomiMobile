@@ -41,6 +41,7 @@ import { ModuleActionCard, useQuickActionSheet } from '../../components/ui';
 import type { QuickActionSheetOption } from '../../components/ui';
 import { Screen } from '../../components/ui/Screen';
 import { useDashboardAccommodationOperationsQuick } from '../../hooks/useDashboardAccommodationOperationsQuick';
+import { useUnitLevelOccupancyCounts } from '../../hooks/useUnitLevelOccupancyCounts';
 import { useLinkedMember } from '../../hooks/useLinkedMember';
 import { useNavigateFromSpaceTab } from '../../hooks/useNavigateFromSpaceTab';
 import { usePendingActions } from '../../hooks/usePendingActions';
@@ -57,7 +58,8 @@ import {
 } from '../../navigation/navigationRef';
 import { useSpaceStore } from '../../store/spaceStore';
 import { colors, spacing, typography } from '../../theme';
-import { isAccommodationApplicable } from '../../utils/accommodationProfile';
+import { getAccommodationUiProfile, isAccommodationApplicable, usesUnitLevelOccupancy } from '../../utils/accommodationProfile';
+import { applyUnitOccupancyCounts } from '../../utils/unitLevelOccupancy';
 import { canManagePayments, currentMonthKey } from '../../utils/dashboardFinancial';
 import { canViewInventory } from '../../utils/inventoryPermissions';
 import { canManageNotifications } from '../../utils/spaceOperator';
@@ -187,6 +189,22 @@ export function DashboardScreen() {
   );
   const accommodationOperations =
     dashboard.accommodationOperations ?? quickAccommodation.operations;
+  const unitLevel = usesUnitLevelOccupancy(
+    spaceType ? getAccommodationUiProfile(spaceType) : null,
+  );
+  const unitOccupancy = useUnitLevelOccupancyCounts(
+    spaceId,
+    showOwnerDashboard && unitLevel,
+  );
+  const displayAccommodationOperations = useMemo(() => {
+    if (!unitLevel) {
+      return accommodationOperations;
+    }
+    if (!accommodationOperations || !unitOccupancy.counts) {
+      return null;
+    }
+    return applyUnitOccupancyCounts(accommodationOperations, unitOccupancy.counts);
+  }, [accommodationOperations, unitLevel, unitOccupancy.counts]);
 
   const pendingActions =
     dashboard.pendingActions ??
@@ -239,13 +257,13 @@ export function DashboardScreen() {
   }, [livePendingActions.summary?.groups, showOwnerDashboard, t]);
 
   const hasOperationalSignal = useMemo(() => {
-    const occupied = accommodationOperations?.occupiedBeds ?? 0;
-    const moveIns = accommodationOperations?.moveInsThisMonth ?? 0;
+    const occupied = displayAccommodationOperations?.occupiedBeds ?? 0;
+    const moveIns = displayAccommodationOperations?.moveInsThisMonth ?? 0;
     const collected = dashboard.financial?.collected ?? 0;
     return occupied > 0 || moveIns > 0 || collected > 0;
   }, [
-    accommodationOperations?.moveInsThisMonth,
-    accommodationOperations?.occupiedBeds,
+    displayAccommodationOperations?.moveInsThisMonth,
+    displayAccommodationOperations?.occupiedBeds,
     dashboard.financial?.collected,
   ]);
 
@@ -311,8 +329,8 @@ export function DashboardScreen() {
       pendingActions?.groups?.find(g => g.actionType === 'PAYMENT_NEEDS_REVIEW')
         ?.count ?? 0;
     return {
-      occupiedBeds: accommodationOperations?.occupiedBeds ?? null,
-      vacantBeds: accommodationOperations?.vacantBeds ?? null,
+      occupiedBeds: displayAccommodationOperations?.occupiedBeds ?? null,
+      vacantBeds: displayAccommodationOperations?.vacantBeds ?? null,
       underReviewPaymentCount:
         reviewFromPending > 0
           ? reviewFromPending
@@ -321,8 +339,8 @@ export function DashboardScreen() {
             : 0,
     };
   }, [
-    accommodationOperations?.occupiedBeds,
-    accommodationOperations?.vacantBeds,
+    displayAccommodationOperations?.occupiedBeds,
+    displayAccommodationOperations?.vacantBeds,
     dashboard.financial,
     pendingActions?.groups,
   ]);
@@ -1100,9 +1118,10 @@ export function DashboardScreen() {
                 </View>
               ) : null}
 
-              {visibility.showAccommodationOps && !isMess && accommodationOperations ? (
+              {visibility.showAccommodationOps && !isMess && displayAccommodationOperations ? (
                 <DashboardAccommodationOperations
-                  operations={accommodationOperations}
+                  occupancyEntity={unitLevel ? 'units' : 'beds'}
+                  operations={displayAccommodationOperations}
                   onOccupiedPress={
                     showResidentsActions || permissions.canViewSpaceOccupancies
                       ? handleOccupiedBedsPress

@@ -336,6 +336,8 @@ export function navigateBootstrapResult(result: SpaceBootstrapResult): void {
     case 'CreateSpace':
       resetToCreateSpace();
       break;
+    case 'Offline':
+      break;
     case 'MySpaces':
     default:
       resetToMySpaces();

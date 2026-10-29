@@ -40,8 +40,7 @@ import {
   usesDayMealPayments,
   type PersonalSummaryFilter,
 } from '../../utils/personalPaymentSummary';
-import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
-import { invalidatePaymentsMonthCaches } from '../../utils/paymentsMonthCache';
+import { publishPaymentUpdated } from '../../utils/paymentUpdates';
 
 type Route = RouteProp<SpaceTabParamList, 'Payments'>;
 type Nav = CompositeNavigationProp<
@@ -189,10 +188,14 @@ export function TenantPaymentsTabScreen() {
       setSubmitting(true);
       try {
         const updated = await paymentsApi.submitProof(spaceId, updatePayment.paymentId, payload);
+        const patched = {
+          ...updated,
+          spaceId: updated.spaceId || spaceId,
+          month: updated.month || month,
+        };
         setUpdatePayment(null);
-        replacePayment(updated);
-        invalidatePaymentsMonthCaches(spaceId, month);
-        invalidateDashboardQueries();
+        replacePayment(patched);
+        publishPaymentUpdated(patched);
         showToast(t('paymentCollection.proof.submitted'));
         await reload();
       } catch (err) {

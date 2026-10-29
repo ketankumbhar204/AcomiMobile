@@ -16,8 +16,7 @@ import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { formatPaymentAmount } from '../../utils/paymentAmount';
-import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
-import { invalidatePaymentsMonthCaches } from '../../utils/paymentsMonthCache';
+import { publishPaymentsMonthChanged } from '../../utils/paymentUpdates';
 import { formatMenuDate } from '../../utils/mealDates';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'DayMealBulkPay'>;
@@ -117,11 +116,7 @@ export function DayMealBulkPayScreen() {
       } else {
         await mealsApi.submitBulkMealPollPaymentProof(spaceId, sortedDates, body);
       }
-      invalidateDashboardQueries();
-      const month = sortedDates[0]?.slice(0, 7);
-      if (month) {
-        invalidatePaymentsMonthCaches(spaceId, month);
-      }
+      publishPaymentsMonthChanged(spaceId, sortedDates[0]?.slice(0, 7));
       showToast(t('paymentCollection.proof.submitted'));
       navigation.goBack();
     } catch {

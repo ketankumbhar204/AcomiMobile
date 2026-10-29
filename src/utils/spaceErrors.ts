@@ -2,6 +2,14 @@ import { ApiError } from '../api/types';
 import { i18n } from '../i18n';
 import { getPermissionErrorMessage } from './permissionErrors';
 
+/** Network loss or a downed server. These must not be treated as "no spaces". */
+export function isStartupConnectionFailure(error: unknown): boolean {
+  if (!(error instanceof ApiError)) {
+    return false;
+  }
+  return error.isNetworkError || error.status === 0 || error.status >= 500;
+}
+
 export function getSpaceErrorMessage(error: unknown, fallbackKey?: string): string {
   if (!(error instanceof ApiError)) {
     return i18n.t(fallbackKey ?? 'common.errors.generic');

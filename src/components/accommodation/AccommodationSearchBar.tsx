@@ -8,18 +8,21 @@ type AccommodationSearchBarProps = {
   value: string;
   onChangeText: (text: string) => void;
   placeholder?: string;
+  /** Drop the bottom margin so the field can sit beside another action. */
+  embedded?: boolean;
 };
 
 export function AccommodationSearchBar({
   value,
   onChangeText,
   placeholder,
+  embedded = false,
 }: AccommodationSearchBarProps) {
   const { t } = useTranslation();
   const [focused, setFocused] = useState(false);
 
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, embedded && styles.wrapperEmbedded]}>
       <View style={[styles.searchWrap, focused && styles.searchWrapFocused]}>
         <Search
           size={16}
@@ -56,6 +59,10 @@ export function AccommodationSearchBar({
 const styles = StyleSheet.create({
   wrapper: {
     marginBottom: spacing.md,
+  },
+  wrapperEmbedded: {
+    flex: 1,
+    marginBottom: 0,
   },
   searchWrap: {
     minHeight: 48,

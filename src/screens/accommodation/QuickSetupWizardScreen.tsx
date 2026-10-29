@@ -41,6 +41,7 @@ import { FormInput, HeaderBackButton } from '../../components/ui';
 import { useQuickSetup } from '../../hooks/useQuickSetup';
 import { useBuildings } from '../../hooks/useBuildings';
 import { accommodationApi } from '../../api/accommodationApi';
+import { getSpaceTypeLabel } from '../../api/spaceTypes';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
 import {
   suggestBuildingCode,
@@ -708,7 +709,9 @@ export function QuickSetupWizardScreen() {
                 layoutModeLabel={
                   spaceType && isLayoutModeSelectable(spaceType)
                     ? t(getLayoutModeLabelKey(layoutMode))
-                    : undefined
+                    : isRental && spaceType
+                      ? getSpaceTypeLabel(spaceType)
+                      : undefined
                 }
               />
               {generating ? (
@@ -738,11 +741,6 @@ export function QuickSetupWizardScreen() {
             </View>
           ) : null}
 
-          {currentStep === 'preview' ? (
-            <Text style={styles.previewHint}>
-              {t('progressiveWorkflow.quickSetup.reviewPreviewHint')}
-            </Text>
-          ) : null}
           </ScrollView>
 
           <StickyFormActions
@@ -879,11 +877,6 @@ const styles = StyleSheet.create({
   warningText: {
     ...typography.body,
     color: '#B45309',
-  },
-  previewHint: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    marginTop: spacing.md,
   },
   creatingText: {
     ...typography.bodyStrong,

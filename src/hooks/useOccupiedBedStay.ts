@@ -6,6 +6,7 @@ import {
   stayPaymentRevision,
   subscribeStayPaymentCache,
   summaryForBed,
+  summaryForUnit,
 } from '../utils/stayChargeIndex';
 
 export type OccupiedBedStayState = {
@@ -63,6 +64,51 @@ export function useOccupiedBedStay(
       cancelled = true;
     };
   }, [bedId, enabled, revision, spaceId]);
+
+  return state;
+}
+
+export function useOccupiedUnitStay(
+  spaceId: string | undefined,
+  unitId: string | undefined,
+  enabled: boolean,
+): OccupiedBedStayState {
+  const [revision, setRevision] = useState(stayPaymentRevision);
+  const [state, setState] = useState<OccupiedBedStayState>(
+    enabled && spaceId && unitId ? { ...idle, loading: true } : idle,
+  );
+
+  useEffect(() => subscribeStayPaymentCache(() => setRevision(stayPaymentRevision())), []);
+
+  useEffect(() => {
+    if (!enabled || !spaceId || !unitId) {
+      setState(idle);
+      return;
+    }
+    let cancelled = false;
+    setState(current => ({ ...current, loading: true, error: false }));
+    void loadStayChargeIndex(spaceId)
+      .then(index => {
+        if (cancelled) {
+          return;
+        }
+        const next = summaryForUnit(index, unitId);
+        setState({
+          loading: false,
+          error: false,
+          occupancy: next.occupancy,
+          summary: next.summary,
+        });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setState({ loading: false, error: true, occupancy: null, summary: null });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, revision, spaceId, unitId]);
 
   return state;
 }

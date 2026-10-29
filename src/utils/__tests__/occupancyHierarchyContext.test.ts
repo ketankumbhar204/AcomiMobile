@@ -51,6 +51,24 @@ describe('buildConfirmedHierarchyContext', () => {
     });
   });
 
+  it('preselected unit is shown when there is no hierarchy step', () => {
+    expect(
+      buildConfirmedHierarchyContext(
+        {
+          ...buildingScope,
+          unitId: 'u1',
+          unitName: '101',
+        },
+        'Test CS1',
+        {},
+        { phase: 'hierarchy', currentHierarchyStep: null },
+      ),
+    ).toEqual({
+      buildingName: 'Test CS1',
+      unitName: '101',
+    });
+  });
+
   it('member phase shows full target including bed', () => {
     expect(
       buildConfirmedHierarchyContext(

@@ -4,6 +4,11 @@ import type {
   SpaceType,
 } from '../api/types';
 
+/** Matches backend MealAccessService: rental spaces do not run meal participation. */
+export function mealsApplicableForSpace(spaceType?: SpaceType | null): boolean {
+  return spaceType != null && spaceType !== 'RENTAL';
+}
+
 export function isReceivingMeals(
   participation?: MemberMealParticipationSummary | null,
 ): boolean {

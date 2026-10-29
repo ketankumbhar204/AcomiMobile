@@ -20,6 +20,7 @@ type ContractTermsFormProps = {
   onChange: (values: ContractTermsFormValues) => void;
   showRentDeposit?: boolean;
   rentRequired?: boolean;
+  rentError?: string | null;
   readOnlyRent?: number | null;
   readOnlyDeposit?: number | null;
   catalogRentHint?: number | null;
@@ -66,6 +67,7 @@ export function ContractTermsForm({
   onChange,
   showRentDeposit = true,
   rentRequired = true,
+  rentError,
   readOnlyRent,
   readOnlyDeposit,
   catalogRentHint,
@@ -76,7 +78,6 @@ export function ContractTermsForm({
   addonsFooter,
 }: ContractTermsFormProps) {
   const { t } = useTranslation();
-  const foodIncludedInRent = foodPolicy?.foodIncludedInRent ?? false;
   const monthlyTotal = computeMonthlyRentFoodTotal(values, foodPolicy);
   const monthlyTotalLabel = monthlyTotalLabelKey(
     monthlyTotalIncludesFoodFromForm(values, foodPolicy),
@@ -143,6 +144,7 @@ export function ContractTermsForm({
               onChangeText={rentSnapshot => onChange({ ...values, rentSnapshot })}
               placeholder={t('occupancy.contract.amountPlaceholder')}
               keyboardType="numeric"
+              error={rentError}
               hint={
                 catalogRentHint != null
                   ? t('occupancy.contract.catalogRentHint', {

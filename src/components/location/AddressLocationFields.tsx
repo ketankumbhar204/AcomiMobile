@@ -9,6 +9,7 @@ import {
   AUTOCOMPLETE_MIN_LENGTH,
   addressCaptureIssue,
   captureFromSuggestion,
+  keepTypedAddress,
   suggestionDetail,
   suggestionKey,
   suggestionTitle,
@@ -43,6 +44,7 @@ export function AddressLocationFields({
   const { t } = useTranslation();
   const [suggestions, setSuggestions] = useState<LocationAutocompleteSuggestion[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'empty' | 'error'>('idle');
+  const [listDismissed, setListDismissed] = useState(false);
   const issue = addressCaptureIssue(value, { required, requireBuilding, pincodeRequired, allowManual });
 
   useEffect(() => {
@@ -112,11 +114,34 @@ export function AddressLocationFields({
         editable={!disabled}
         autoCorrect={false}
         autoCapitalize="words"
-        onChangeText={query => onChange(withAddressQuery(value, query))}
+        onChangeText={query => {
+          setListDismissed(false);
+          onChange(withAddressQuery(value, query));
+        }}
         error={issue === 'selection' || issue === 'pincode' ? fieldError : error}
       />
-      {status !== 'idle' && !value.selected ? (
+      {status !== 'idle' && !value.selected && !listDismissed ? (
         <View style={styles.list}>
+          {allowManual && value.query.trim() ? (
+            <Pressable
+              onPress={() => {
+                setListDismissed(true);
+                onChange(keepTypedAddress(value));
+              }}
+              style={styles.keep}>
+              <Text style={styles.optionTitle}>
+                {t('locationCapture.useTyped', {
+                  query: value.query.trim(),
+                  defaultValue: 'Use “{{query}}”',
+                })}
+              </Text>
+              <Text style={styles.optionDetail}>
+                {t('locationCapture.useTypedHint', {
+                  defaultValue: 'Continue with this text. A suggestion is optional.',
+                })}
+              </Text>
+            </Pressable>
+          ) : null}
           {status === 'loading' ? (
             <Text style={styles.status}>
               {t('locationCapture.searching', { defaultValue: 'Searching locations...' })}
@@ -124,9 +149,13 @@ export function AddressLocationFields({
           ) : null}
           {status === 'empty' ? (
             <Text style={styles.status}>
-              {t('locationCapture.empty', {
-                defaultValue: 'No locations found. Try a road, area, locality or city.',
-              })}
+              {allowManual
+                ? t('locationCapture.emptyManual', {
+                    defaultValue: 'No matching places. You can continue with the location you typed.',
+                  })
+                : t('locationCapture.empty', {
+                    defaultValue: 'No locations found. Try a road, area, locality or city.',
+                  })}
             </Text>
           ) : null}
           {status === 'error' ? (
@@ -150,6 +179,52 @@ export function AddressLocationFields({
                 </Pressable>
               ))
             : null}
+        </View>
+      ) : null}
+      {allowManual && value.query.trim() && !value.selected && (listDismissed || status === 'idle') ? (
+        <View style={styles.manual}>
+          <Text style={styles.confirmTitle}>
+            {t('locationCapture.manualTitle', { defaultValue: 'Location details' })}
+          </Text>
+          <Text style={styles.optionDetail}>
+            {t('locationCapture.manualHint', {
+              query: value.query.trim(),
+              defaultValue: 'Optional. Add city, district and the other details for “{{query}}”.',
+            })}
+          </Text>
+          <FormInput
+            label={t('locationCapture.locality', { defaultValue: 'Locality' })}
+            value={value.locality}
+            editable={!disabled}
+            onChangeText={locality => onChange({ ...value, locality })}
+          />
+          <FormInput
+            label={t('locationCapture.city', { defaultValue: 'City' })}
+            value={value.city}
+            editable={!disabled}
+            onChangeText={city => onChange({ ...value, city })}
+          />
+          <FormInput
+            label={t('locationCapture.state', { defaultValue: 'State' })}
+            value={value.state}
+            editable={!disabled}
+            onChangeText={state => onChange({ ...value, state })}
+          />
+          <FormInput
+            label={t('locationCapture.district', { defaultValue: 'District' })}
+            value={value.district}
+            editable={!disabled}
+            onChangeText={district => onChange({ ...value, district })}
+          />
+          <FormInput
+            label={t('locationCapture.pincode', { defaultValue: 'Pincode' })}
+            value={value.pincode}
+            editable={!disabled}
+            keyboardType="number-pad"
+            maxLength={6}
+            onChangeText={text => onChange({ ...value, pincode: text.replace(/\D/g, '').slice(0, 6) })}
+            error={issue === 'pincode' ? fieldError : null}
+          />
         </View>
       ) : null}
       {value.selected ? (
@@ -202,6 +277,20 @@ const styles = StyleSheet.create({
   },
   status: { ...typography.body, color: colors.textSecondary, padding: spacing.md },
   errorText: { ...typography.body, color: colors.danger, padding: spacing.md },
+  keep: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.surfaceSecondary,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  manual: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.input,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
   option: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   optionTitle: { ...typography.body, color: colors.textPrimary, fontWeight: '600' },
   optionDetail: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },

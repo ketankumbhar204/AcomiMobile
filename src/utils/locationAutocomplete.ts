@@ -133,15 +133,38 @@ function finiteCoordinate(value: number | string | null | undefined): number | n
 }
 
 export function composeStoredAddress(
-  value: Pick<AddressCapture, 'buildingName' | 'address'>,
+  value: Pick<AddressCapture, 'buildingName' | 'address'> &
+    Partial<Pick<AddressCapture, 'query' | 'selected' | 'locality' | 'city' | 'district' | 'state' | 'pincode'>>,
   maxLength = 255,
 ): string {
+  const manual = value.selected === false;
+  let line = (manual ? value.query?.trim() || value.address : value.address).trim();
+  if (manual) {
+    for (const extra of [value.locality, value.city, value.district, value.state, value.pincode]) {
+      const part = extra?.trim() ?? '';
+      if (!part || line.toLowerCase().includes(part.toLowerCase())) continue;
+      line = line ? `${line}, ${part}` : part;
+    }
+  }
   const building = value.buildingName.trim();
-  const line = value.address.trim();
   if (!building) return line.slice(0, maxLength);
   if (!line) return building.slice(0, maxLength);
   if (line.toLowerCase().startsWith(building.toLowerCase())) return line.slice(0, maxLength);
   return `${building}, ${line}`.slice(0, maxLength);
+}
+
+/** Keeps the typed search text as the location when autocomplete has no match. */
+export function keepTypedAddress(current: AddressCapture): AddressCapture {
+  const query = current.query.trim();
+  return {
+    ...current,
+    query,
+    selected: false,
+    address: query,
+    latitude: null,
+    longitude: null,
+    mapUrl: '',
+  };
 }
 
 export function captureFromSuggestion(

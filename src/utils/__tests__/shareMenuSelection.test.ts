@@ -122,6 +122,9 @@ describe('buildShareMessageForSelection', () => {
     expect(text).toContain('3. Not available for Breakfast');
     expect(text).not.toContain('(not published)');
     expect(text).toContain('Eligible participants: 4');
+    expect(text).toContain(
+      'https://www.acomi.in/open.html',
+    );
   });
 });
 

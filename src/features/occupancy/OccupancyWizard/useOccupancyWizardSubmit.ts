@@ -41,11 +41,16 @@ type SubmitContext = {
   currentOccupancy?: OccupancyResponse | null;
   assignedAmenities?: AmenityAssignment[];
   onSuccess: () => void;
+  onInvalidContract?: (errorKey: string) => void;
 };
 
 export function useOccupancyWizardSubmit(spaceId: string) {
   const { t } = useTranslation();
   const showToast = useToastStore(state => state.showToast);
+  const showError = useCallback(
+    (message: string) => showToast(message, undefined, 'error'),
+    [showToast],
+  );
   const { allocate, reserve, moveIn, transfer, vacate, loading } =
     useOccupancyMutations(spaceId);
 
@@ -69,6 +74,7 @@ export function useOccupancyWizardSubmit(spaceId: string) {
         currentOccupancy,
         assignedAmenities,
         onSuccess,
+        onInvalidContract,
       } = ctx;
 
       const amenitiesPayload =
@@ -79,7 +85,7 @@ export function useOccupancyWizardSubmit(spaceId: string) {
       try {
         if (mode === 'ALLOCATE') {
           if (!contractValues) {
-            showToast(t('occupancy.errors.generic'));
+            showError(t('occupancy.errors.generic'));
             return;
           }
           const validationError = validateContractTerms(contractValues, {
@@ -88,7 +94,8 @@ export function useOccupancyWizardSubmit(spaceId: string) {
             foodPolicy,
           });
           if (validationError) {
-            showToast(t(validationError));
+            showError(t(validationError));
+            onInvalidContract?.(validationError);
             return;
           }
           const contract = buildContractSnapshotPayload(contractValues, { foodPolicy });
@@ -104,7 +111,7 @@ export function useOccupancyWizardSubmit(spaceId: string) {
             { remarks, contract, amenities: amenitiesPayload },
           );
           if (!body || errorKey) {
-            showToast(t(errorKey ?? 'occupancy.errors.generic'));
+            showError(t(errorKey ?? 'occupancy.errors.generic'));
             return;
           }
           // #region agent log
@@ -133,20 +140,20 @@ export function useOccupancyWizardSubmit(spaceId: string) {
             },
           );
           if (!body || errorKey) {
-            showToast(t(errorKey ?? 'occupancy.errors.generic'));
+            showError(t(errorKey ?? 'occupancy.errors.generic'));
             return;
           }
           await reserve(body);
         } else if (mode === 'MOVE_IN') {
           if (!occupancyId || !contractValues) {
-            showToast(t('occupancy.errors.noReserved'));
+            showError(t('occupancy.errors.noReserved'));
             return;
           }
           if (
             isMoveInDateInFuture(currentOccupancy?.moveInDate) &&
             !allowEarlyMoveIn
           ) {
-            showToast(t('occupancy.errors.moveInDateNotReached'));
+            showError(t('occupancy.errors.moveInDateNotReached'));
             return;
           }
           const validationError = validateContractTerms(contractValues, {
@@ -155,7 +162,8 @@ export function useOccupancyWizardSubmit(spaceId: string) {
             foodPolicy,
           });
           if (validationError) {
-            showToast(t(validationError));
+            showError(t(validationError));
+            onInvalidContract?.(validationError);
             return;
           }
           const contract = buildContractSnapshotPayload(contractValues, { foodPolicy });
@@ -170,7 +178,7 @@ export function useOccupancyWizardSubmit(spaceId: string) {
           });
         } else if (mode === 'TRANSFER') {
           if (!occupancyId || !contractValues) {
-            showToast(t('occupancy.errors.noActive'));
+            showError(t('occupancy.errors.noActive'));
             return;
           }
           const rentRequired =
@@ -182,7 +190,8 @@ export function useOccupancyWizardSubmit(spaceId: string) {
             foodPolicy,
           });
           if (validationError) {
-            showToast(t(validationError));
+            showError(t(validationError));
+            onInvalidContract?.(validationError);
             return;
           }
           const contract = buildTransferContractPayload(
@@ -201,13 +210,13 @@ export function useOccupancyWizardSubmit(spaceId: string) {
             { remarks, rentPolicy, contract, amenities: amenitiesPayload },
           );
           if (!body || errorKey) {
-            showToast(t(errorKey ?? 'occupancy.errors.generic'));
+            showError(t(errorKey ?? 'occupancy.errors.generic'));
             return;
           }
           await transfer(occupancyId, body);
         } else if (mode === 'VACATE') {
           if (!occupancyId) {
-            showToast(t('occupancy.errors.noActive'));
+            showError(t('occupancy.errors.noActive'));
             return;
           }
           await vacate(occupancyId, { remarks: remarks ?? null });
@@ -216,11 +225,11 @@ export function useOccupancyWizardSubmit(spaceId: string) {
         showToast(t('occupancy.success.updated'));
         onSuccess();
       } catch (err) {
-        showToast(getOccupancyErrorMessage(err));
+        showError(getOccupancyErrorMessage(err));
         throw err;
       }
     },
-    [allocate, moveIn, reserve, showToast, t, transfer, vacate],
+    [allocate, moveIn, reserve, showError, showToast, t, transfer, vacate],
   );
 
   return { submit, loading };

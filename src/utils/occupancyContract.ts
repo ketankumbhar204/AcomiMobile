@@ -63,7 +63,7 @@ export function isFoodBundledWithRent(
 
 export function emptyContractTermsFormValues(
   catalog?: TargetCatalogDefaults,
-  foodPolicy?: SpaceFoodPolicy,
+  _foodPolicy?: SpaceFoodPolicy,
 ): ContractTermsFormValues {
   return {
     rentSnapshot:
@@ -191,11 +191,8 @@ export function validateContractTerms(
 ): string | null {
   const foodIncludedInRent = options.foodPolicy?.foodIncludedInRent ?? false;
   const rentEntered = parseAmount(values.rentSnapshot);
-  const hasRent =
-    rentEntered != null ||
-    (options.catalogDefaultRent != null && options.catalogDefaultRent > 0);
 
-  if (options.rentRequired && !hasRent) {
+  if (options.rentRequired && rentEntered == null) {
     return 'occupancy.contract.errors.rentRequired';
   }
 
@@ -315,8 +312,6 @@ export function buildTransferContractPayload(
   | 'foodIncludedInRent'
   | 'otherCharges'
 > & { rentPolicy: TransferRentPolicy } {
-  const foodIncludedInRent = foodPolicy?.foodIncludedInRent ?? false;
-
   if (rentPolicy === 'KEEP') {
     const bundledFood = isFoodBundledWithRent(values, foodPolicy);
     return {

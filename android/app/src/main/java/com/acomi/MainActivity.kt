@@ -3,7 +3,6 @@ package com.acomi
 
 
 import android.content.Intent
-import android.graphics.Color
 
 import android.graphics.PixelFormat
 
@@ -41,9 +40,13 @@ class MainActivity : ReactActivity() {
 
     window.setFormat(PixelFormat.RGBA_8888)
 
-    window.decorView.setBackgroundColor(Color.parseColor("#ECFDF5"))
-
     super.onCreate(savedInstanceState)
+
+    // Drop the splash bitmap once the first frame is up so it cannot sit
+    // behind the tab bar after the React tree is showing.
+    window.decorView.post {
+      window.setBackgroundDrawableResource(R.color.app_background)
+    }
     deliverNotificationIntent(intent)
   }
 

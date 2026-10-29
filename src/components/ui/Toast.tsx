@@ -59,8 +59,10 @@ const styles = StyleSheet.create({
     zIndex: 9999,
   },
   toast: {
-    backgroundColor: colors.primaryDark,
-    borderRadius: radius.button,
+    backgroundColor: colors.guidance.surface,
+    borderRadius: radius.section,
+    borderWidth: 1,
+    borderColor: colors.guidance.border,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     maxWidth: '100%',
@@ -77,7 +79,7 @@ const styles = StyleSheet.create({
   },
   text: {
     ...typography.bodyStrong,
-    color: colors.white,
+    color: colors.guidance.text,
     textAlign: 'center',
   },
   textError: {

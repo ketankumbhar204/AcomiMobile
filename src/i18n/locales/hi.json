@@ -34,7 +34,7 @@
       "tabPolls": "पोल डिफ़ॉल्ट"
     },
     "quickSetup": {
-      "reviewPreviewHint": "नीचे की संरचना देखें, फिर उत्पन्न करें।"
+      "reviewPreviewHint": "भवन बनाने से पहले संरचना देखें और संपादित करें।"
     },
     "createSpace": {
       "essentialsTitle": "आवश्यक जानकारी",
@@ -859,7 +859,20 @@
       "saveMess": "Add Customer",
       "saveImport": "जोड़ें",
       "successToast": "Member added successfully.",
-      "importSuccessToast": "ग्राहक इस मेस में जोड़ा गया।",
+      "importSuccessToast": "{{person}} इस {{space}} में जोड़ा गया।",
+      "importPerson": {
+        "customer": "ग्राहक",
+        "member": "सदस्य"
+      },
+      "importSpace": {
+        "space": "स्पेस",
+        "mess": "मेस",
+        "pg": "PG",
+        "hostel": "हॉस्टल",
+        "coLiving": "को-लिविंग",
+        "rental": "रेंटल",
+        "corporateStay": "कॉर्पोरेट स्टे"
+      },
       "importFailed": "Could not import this customer. Please try again.",
       "reuseRequired": "Pick someone from another space, or create a new customer.",
       "selectedCustomer": "चयनित",

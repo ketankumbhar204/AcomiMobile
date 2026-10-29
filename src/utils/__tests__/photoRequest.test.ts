@@ -34,7 +34,7 @@ describe('photo request', () => {
       location: 'Hinjawadi',
     });
     expect(propertyEmpty).toBe(
-      "Hi, I'm interested in Sri Sai Venkateshwara PG. Could you please share some recent photos of the property and available rooms? Thank you.",
+      "Hi, I'm interested in Sri Sai Venkateshwara PG. Could you please share some recent photos of the property and available rooms? Thank you.\n\nYou can check in the ACOMI app: https://www.acomi.in/open.html",
     );
     expect(photoRequestTitle('property', false)).toBe('Request property photos');
     expect(propertyEmpty).not.toMatch(/null|undefined/);
@@ -65,7 +65,7 @@ describe('photo request', () => {
       name: 'Annapurna Mess',
     });
     expect(messEmpty).toBe(
-      "Hi, I'm interested in Annapurna Mess. Could you please share some recent photos of the menu, food, and service? Thank you.",
+      "Hi, I'm interested in Annapurna Mess. Could you please share some recent photos of the menu, food, and service? Thank you.\n\nYou can check in the ACOMI app: https://www.acomi.in/open.html",
     );
     expect(photoRequestTitle('mess', false)).toBe('Request mess photos');
     expect(messEmpty).not.toContain('bathroom');

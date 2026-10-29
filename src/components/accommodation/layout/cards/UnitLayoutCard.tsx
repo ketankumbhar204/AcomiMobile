@@ -19,6 +19,8 @@ type UnitLayoutCardProps = {
   onPress: () => void;
   onLongPress?: () => void;
   menu?: React.ReactNode;
+  /** Rental and corporate stay cards link through to the existing unit screen. */
+  showViewDetails?: boolean;
 };
 
 export function UnitLayoutCard({
@@ -27,6 +29,7 @@ export function UnitLayoutCard({
   onPress,
   onLongPress,
   menu,
+  showViewDetails = false,
 }: UnitLayoutCardProps) {
   const { t } = useTranslation();
   const inactive = !isAccommodationEntityActive(unit);
@@ -62,16 +65,23 @@ export function UnitLayoutCard({
       <Text style={styles.title} numberOfLines={2}>
         {unit.name}
       </Text>
-      <Text style={styles.meta}>
-        {t('accommodation.layout.dashboard.roomsAndBeds', {
-          rooms: unit.roomCount,
-          beds: unit.bedCount,
-        })}
-      </Text>
+      {unit.roomCount > 0 || unit.bedCount > 0 ? (
+        <Text style={styles.meta}>
+          {t('accommodation.layout.dashboard.roomsAndBeds', {
+            rooms: unit.roomCount,
+            beds: unit.bedCount,
+          })}
+        </Text>
+      ) : null}
       <View style={styles.footer}>
         {status ? <AccommodationStatusBadge status={status} /> : null}
         {!inactive ? <CircularOccupancyIndicator percent={percent} size={44} /> : null}
       </View>
+      {showViewDetails ? (
+        <Text style={styles.viewDetails}>
+          {t('accommodation.layout.dashboard.viewDetails', { defaultValue: 'View details' })}
+        </Text>
+      ) : null}
     </LayoutCardShell>
   );
 }
@@ -114,5 +124,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: 'auto',
+  },
+  viewDetails: {
+    ...typography.bodyStrong,
+    color: colors.primary,
+    fontSize: 14,
+    marginTop: spacing.sm,
   },
 });

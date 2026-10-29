@@ -8,7 +8,7 @@ import { MemberHomeScreen } from '../screens/MemberHomeScreen';
 import { MyEnquiriesScreen } from '../screens/MyEnquiriesScreen';
 import { MySpacesScreen } from '../screens/MySpacesScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
-import { useAccountEnquiryUnreadCount } from '../hooks/useAccountEnquiryUnreadCount';
+import { useEnquiryTabBadgeCount } from '../hooks/useEnquiryTabBadgeCount';
 import { useSpaceStore } from '../store/spaceStore';
 import { colors, tabBarOptions, tabHeaderOptions } from '../theme';
 import { getAccountIntent } from '../utils/accountIntent';
@@ -81,7 +81,7 @@ export function MemberTabNavigator() {
   const { t } = useTranslation();
   const mySpaces = useSpaceStore(state => state.mySpaces);
   const hasSpaces = mySpaces.length > 0;
-  const unreadEnquiries = useAccountEnquiryUnreadCount();
+  const unreadEnquiries = useEnquiryTabBadgeCount();
 
   const homeLabel = useMemo(
     () =>

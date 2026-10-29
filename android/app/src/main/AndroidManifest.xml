@@ -56,13 +56,38 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
-        <!-- Custom scheme deep links (e.g. acomi://enquiries/{enquiryId}). No HTTPS App Links yet. -->
+        <!-- Custom scheme deep links (e.g. acomi://enquiries/{enquiryId}). -->
         <intent-filter>
             <action android:name="android.intent.action.VIEW" />
             <category android:name="android.intent.category.DEFAULT" />
             <category android:name="android.intent.category.BROWSABLE" />
             <data android:scheme="acomi" android:host="enquiries" />
             <data android:scheme="acomi" android:host="enquiries" android:pathPrefix="/" />
+        </intent-filter>
+        <!--
+          Meal poll only. autoVerify applies to this filter, not the open-page filter.
+          Android opens the app only after https://app.acomi.in/.well-known/assetlinks.json
+          is live and lists the Play App Signing certificate. Until then the link stays
+          in the browser, which already returns to this page after login.
+        -->
+        <intent-filter android:autoVerify="true">
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data
+                android:scheme="https"
+                android:host="app.acomi.in"
+                android:pathPattern="/spaces/.*/meals/poll" />
+        </intent-filter>
+        <!-- WhatsApp app link. Unverified, so the website still handles Play Store fallback. -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" android:host="www.acomi.in" android:path="/open" />
+            <data android:scheme="https" android:host="www.acomi.in" android:path="/open.html" />
+            <data android:scheme="https" android:host="acomi.in" android:path="/open" />
+            <data android:scheme="https" android:host="acomi.in" android:path="/open.html" />
         </intent-filter>
       </activity>
     </application>

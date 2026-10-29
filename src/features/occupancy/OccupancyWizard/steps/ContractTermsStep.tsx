@@ -27,6 +27,7 @@ type ContractTermsStepProps = {
   mode: 'ALLOCATE' | 'TRANSFER' | 'MOVE_IN';
   values: ContractTermsFormValues;
   onChange: (values: ContractTermsFormValues) => void;
+  rentError?: string | null;
   catalogRent?: number | null;
   catalogDeposit?: number | null;
   rentPolicy?: TransferRentPolicy;
@@ -51,6 +52,7 @@ export function ContractTermsStep({
   mode,
   values,
   onChange,
+  rentError,
   catalogRent,
   catalogDeposit,
   rentPolicy = 'APPLY_NEW',
@@ -188,6 +190,7 @@ export function ContractTermsStep({
           values={values}
           onChange={onChange}
           showRentDeposit={showRentDeposit}
+          rentError={rentError}
           rentRequired={
             mode === 'ALLOCATE' ||
             mode === 'MOVE_IN' ||

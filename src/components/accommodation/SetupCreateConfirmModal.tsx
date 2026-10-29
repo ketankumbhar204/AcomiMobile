@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { Button } from '../ui/Button';
 import { formatPricingMoney } from '../../utils/commitBedPricing';
+import { visiblePositiveStructureCounts } from '../../utils/accommodationProfile';
 import type { SetupCreateSummary } from './setup-preview/summarizeSetupPricing';
 
 type SetupCreateConfirmModalProps = {
@@ -55,22 +56,11 @@ export function SetupCreateConfirmModal({
               <Text style={[styles.sectionLabel, styles.sectionSpacer]}>
                 {t('accommodation.setup.createConfirm.structure', { defaultValue: 'Structure' })}
               </Text>
-              {summary.totals.floors > 0 ? (
-                <Text style={styles.sectionValue}>
-                  {t('accommodation.setup.totals.floors', { count: summary.totals.floors })}
+              {visiblePositiveStructureCounts(summary.totals).map(part => (
+                <Text key={part} style={styles.sectionValue}>
+                  {t(`accommodation.setup.totals.${part}`, { count: summary.totals[part] })}
                 </Text>
-              ) : null}
-              {summary.totals.units > 0 ? (
-                <Text style={styles.sectionValue}>
-                  {t('accommodation.setup.totals.units', { count: summary.totals.units })}
-                </Text>
-              ) : null}
-              <Text style={styles.sectionValue}>
-                {t('accommodation.setup.totals.rooms', { count: summary.totals.rooms })}
-              </Text>
-              <Text style={styles.sectionValue}>
-                {t('accommodation.setup.totals.beds', { count: summary.totals.beds })}
-              </Text>
+              ))}
               <Text style={[styles.sectionLabel, styles.sectionSpacer]}>
                 {t('accommodation.setup.createConfirm.pricing', { defaultValue: 'Pricing' })}
               </Text>
@@ -90,16 +80,38 @@ export function SetupCreateConfirmModal({
                     {t('accommodation.fields.deposit')}:{' '}
                     {formatPricingMoney(summary.pricingGroups[0].deposit, notSet)}
                   </Text>
+                  <Text style={styles.sectionValue}>
+                    {t(
+                      summary.pricingSubject === 'units'
+                        ? 'accommodation.setup.createConfirm.appliesToUnits'
+                        : 'accommodation.setup.createConfirm.appliesToBeds',
+                      {
+                        count: summary.pricingGroups[0].bedCount,
+                        defaultValue:
+                          summary.pricingSubject === 'units'
+                            ? 'Applies to {{count}} units'
+                            : 'Applies to {{count}} beds',
+                      },
+                    )}
+                  </Text>
                 </>
               ) : (
                 summary.pricingGroups.map((group, index) => (
                   <View key={group.key} style={styles.pattern}>
                     <Text style={styles.patternTitle}>
-                      {t('accommodation.setup.createConfirm.pattern', {
-                        index: index + 1,
-                        count: group.bedCount,
-                        defaultValue: 'Pattern {{index}} · {{count}} beds',
-                      })}
+                      {t(
+                        summary.pricingSubject === 'units'
+                          ? 'accommodation.setup.createConfirm.unitPattern'
+                          : 'accommodation.setup.createConfirm.pattern',
+                        {
+                          index: index + 1,
+                          count: group.bedCount,
+                          defaultValue:
+                            summary.pricingSubject === 'units'
+                              ? 'Pattern {{index}} · {{count}} units'
+                              : 'Pattern {{index}} · {{count}} beds',
+                        },
+                      )}
                     </Text>
                     <Text style={styles.sectionValue}>
                       {t('accommodation.fields.rent')}: {formatPricingMoney(group.rent, notSet)}
@@ -111,13 +123,35 @@ export function SetupCreateConfirmModal({
                   </View>
                 ))
               )}
-              <Text style={styles.footnote}>
-                {t('accommodation.setup.createConfirm.footnote', {
-                  count: summary.totals.beds,
-                  defaultValue:
-                    'This will create {{count}} beds with the above pricing configuration.',
-                })}
-              </Text>
+              {summary.totals.beds > 0 ? (
+                <Text style={styles.footnote}>
+                  {summary.pricingGroups.length > 0
+                    ? t('accommodation.setup.createConfirm.footnote', {
+                        count: summary.totals.beds,
+                        defaultValue:
+                          'This will create {{count}} beds with the rent and deposit above.',
+                      })
+                    : t('accommodation.setup.createConfirm.bedsWithoutPricing', {
+                        count: summary.totals.beds,
+                        defaultValue:
+                          'This will create {{count}} beds. No rent or deposit will be saved.',
+                      })}
+                </Text>
+              ) : summary.totals.units > 0 ? (
+                <Text style={styles.footnote}>
+                  {summary.pricingGroups.length > 0
+                    ? t('accommodation.setup.createConfirm.unitsWithPricing', {
+                        count: summary.totals.units,
+                        defaultValue:
+                          'This will create {{count}} units with the rent and deposit above.',
+                      })
+                    : t('accommodation.setup.createConfirm.unitsWithoutPricing', {
+                        count: summary.totals.units,
+                        defaultValue:
+                          'This will create {{count}} units. No rent or deposit will be saved.',
+                      })}
+                </Text>
+              ) : null}
               <Text style={styles.continue}>
                 {t('accommodation.setup.createConfirm.continue', {
                   defaultValue: 'Are you sure you want to create this building?',

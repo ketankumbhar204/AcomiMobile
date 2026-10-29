@@ -18,6 +18,7 @@ import {
   AccommodationListFooter,
   AccommodationSearchBar,
   AccommodationStatusBadge,
+  PersistedUnitInteractionHost,
 } from '../../components/accommodation';
 import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
 import {
@@ -35,6 +36,7 @@ import { buildUnitOccupancyTarget, isOccupancyTargetSupported } from '../../util
 import { renameUnitName } from '../../utils/accommodationInlineRename';
 import { useToastStore } from '../../store/toastStore';
 import { useAccommodationUiProfile } from '../../hooks/useAccommodationUiProfile';
+import { usePersistedUnitInteraction } from '../../hooks/usePersistedUnitInteraction';
 import { devLog } from '../../utils/devLog';
 
 type UnitsNav = NativeStackNavigationProp<MainStackParamList, 'Units'>;
@@ -67,6 +69,18 @@ export function UnitsScreen() {
     buildingId,
     { searchQuery },
   );
+
+  const unitInteraction = usePersistedUnitInteraction({
+    spaceId,
+    buildingId,
+    buildingName: buildingName ?? '',
+    spaceType,
+    canEditStructure: canManage,
+    canManageOccupancy: canManageOccupancyActions,
+    onSuccess: () => {
+      void refresh();
+    },
+  });
 
   const occupancyFlow = useAccommodationOccupancyFlow({
     spaceId,
@@ -117,12 +131,7 @@ export function UnitsScreen() {
     devLog('[UnitsScreen] open unit', unit.unitId);
 
     if (isRental || !profile?.showRoomsUnderUnit) {
-      navigation.navigate('UnitDetail', {
-        spaceId,
-        buildingId,
-        buildingName,
-        unitId: unit.unitId,
-      });
+      unitInteraction.open(unit);
       return;
     }
 
@@ -243,6 +252,13 @@ export function UnitsScreen() {
           flow={occupancyFlow}
         />
       ) : null}
+      <PersistedUnitInteractionHost
+        interaction={unitInteraction}
+        spaceId={spaceId}
+        spaceType={spaceType}
+        buildingId={buildingId}
+        buildingName={buildingName}
+      />
 
       {showFab ? (
         <FAB

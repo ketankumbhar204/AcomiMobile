@@ -12,6 +12,7 @@ import { firstWhatsAppPhone } from '../utils/photoRequest';
 import { buildPaymentReminderMessage } from '../utils/paymentReminderMessage';
 import { openReminderWhatsApp } from '../utils/paymentReminderLaunch';
 import { invalidatePaymentsMonthCaches } from '../utils/paymentsMonthCache';
+import { publishPaymentUpdated } from '../utils/paymentUpdates';
 import { useTranslation } from 'react-i18next';
 
 export type OwnerCardProcessingAction = 'received' | 'reminder';
@@ -61,7 +62,12 @@ export function useOwnerPaymentCardActions({
       setProcessingAction('received');
       try {
         for (const payment of payments) {
-          await paymentsApi.markPaymentReceived(spaceId, payment.paymentId);
+          const updated = await paymentsApi.markPaymentReceived(spaceId, payment.paymentId);
+          publishPaymentUpdated({
+            ...updated,
+            spaceId: updated.spaceId || spaceId,
+            month: updated.month || payment.month || month,
+          });
         }
         setConfirmPayments([]);
         showToast(t('paymentCollection.received.success'));

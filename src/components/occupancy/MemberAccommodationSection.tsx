@@ -12,7 +12,6 @@ import type {
   SpaceType,
 } from '../../api/types';
 import { Button, Card, useConfirmDialog } from '../ui';
-import { StayTrailLine } from '../member/ContactAndStayMeta';
 import { MemberOccupancyStatusBadge } from '../member/MemberOccupancyStatusBadge';
 import { occupancyActionTint } from './occupancyActionTints';
 import type { MainStackParamList } from '../../navigation/types';
@@ -24,7 +23,6 @@ import { useMemberStore } from '../../store/memberStore';
 import { useToastStore } from '../../store/toastStore';
 import { useAuthStore } from '../../store/authStore';
 import { colors, radius, spacing, typography } from '../../theme';
-import { formatPaymentStayLabel } from '../../utils/stayTrail';
 import { isAccommodationApplicable } from '../../utils/accommodationProfile';
 import { supportsSpaceAmenities } from '../../utils/amenities';
 import {
@@ -80,33 +78,23 @@ function StayLocationBlock({
   if (lines.length === 0) {
     return null;
   }
-  const trail = formatPaymentStayLabel({
-    buildingName: occupancy.buildingName,
-    floorName: occupancy.floorName,
-    unitName: occupancy.unitName,
-    roomName: occupancy.roomName,
-    bedName: occupancy.bedName,
-  });
   return (
-    <View style={styles.locationBlock}>
-      {trail ? <StayTrailLine label={trail} textStyle={styles.locationValue} /> : null}
+    <View style={styles.detailBlock}>
       {lines.map(line => (
-        <View key={line.labelKey} style={styles.locationRow}>
-          <Text style={styles.locationLabel}>{t(line.labelKey)}</Text>
-          <Text style={styles.locationValue}>{line.value}</Text>
+        <View key={line.labelKey} style={styles.detailRow}>
+          <Text style={styles.detailLabel}>{t(line.labelKey)}</Text>
+          <Text style={styles.detailValue}>{line.value}</Text>
         </View>
       ))}
     </View>
   );
 }
 
-function TimelineCell({ label, value }: { label: string; value: string }) {
+function StayDetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <View style={styles.timelineCell}>
-      <Text style={styles.timelineLabel}>{label}</Text>
-      <Text style={styles.timelineValue} numberOfLines={2}>
-        {value}
-      </Text>
+    <View style={styles.detailRow}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={styles.detailValue}>{value}</Text>
     </View>
   );
 }
@@ -127,10 +115,10 @@ function StayTimeline({
   exitValue: string;
 }) {
   return (
-    <View style={styles.timelineRow}>
-      <TimelineCell label={moveInLabel} value={moveInValue} />
-      <TimelineCell label={middleLabel} value={middleValue} />
-      <TimelineCell label={exitLabel} value={exitValue} />
+    <View style={styles.detailBlock}>
+      <StayDetailRow label={moveInLabel} value={moveInValue} />
+      <StayDetailRow label={middleLabel} value={middleValue} />
+      <StayDetailRow label={exitLabel} value={exitValue} />
     </View>
   );
 }
@@ -453,42 +441,23 @@ const styles = StyleSheet.create({
     ...typography.bodyStrong,
     flexShrink: 1,
   },
-  locationBlock: {
-    gap: 6,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+  detailBlock: {
     gap: spacing.sm,
   },
-  locationLabel: {
-    ...typography.caption,
-    color: colors.muted,
-    width: 64,
-  },
-  locationValue: {
-    ...typography.bodyStrong,
-    color: colors.textPrimary,
-    flex: 1,
-  },
-  timelineRow: {
+  detailRow: {
     flexDirection: 'row',
-    gap: spacing.sm,
-    paddingTop: spacing.xs,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: spacing.md,
   },
-  timelineCell: {
-    flex: 1,
-    gap: 2,
-  },
-  timelineLabel: {
+  detailLabel: {
     ...typography.caption,
     color: colors.muted,
+    flex: 1,
   },
-  timelineValue: {
+  detailValue: {
     ...typography.bodyStrong,
-    fontSize: 13,
+    textAlign: 'right',
   },
   amenitiesBlock: {
     gap: spacing.sm,

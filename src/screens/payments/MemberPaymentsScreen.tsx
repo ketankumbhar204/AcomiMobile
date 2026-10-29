@@ -28,8 +28,7 @@ import {
   filterTenantPayments,
   type TenantPaymentFilter,
 } from '../../utils/tenantPaymentFilters';
-import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
-import { invalidatePaymentsMonthCaches } from '../../utils/paymentsMonthCache';
+import { publishPaymentUpdated } from '../../utils/paymentUpdates';
 import { currentMonthKey, canManagePayments } from '../../utils/dashboardFinancial';
 import {
   canOwnerMarkPaymentReceived,
@@ -157,10 +156,13 @@ export function MemberPaymentsScreen() {
       }
       setSubmitting(true);
       try {
-        await paymentsApi.submitProof(spaceId, updatePayment.paymentId, payload);
+        const updated = await paymentsApi.submitProof(spaceId, updatePayment.paymentId, payload);
         setUpdatePayment(null);
-        invalidatePaymentsMonthCaches(spaceId, updatePayment.month ?? currentMonthKey());
-        invalidateDashboardQueries();
+        publishPaymentUpdated({
+          ...updated,
+          spaceId: updated.spaceId || spaceId,
+          month: updated.month || updatePayment.month || currentMonthKey(),
+        });
         showToast(t('paymentCollection.proof.submitted'));
         await reload();
       } catch (err) {
