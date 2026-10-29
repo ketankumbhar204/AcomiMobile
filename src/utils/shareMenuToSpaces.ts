@@ -117,8 +117,23 @@ function mapOptionToTarget(
 }
 
 export type ShareToSpaceValidation =
-  | { ok: true; optionsByMeal: Partial<Record<MealType, MappedOption[]>>; notesByMeal: Partial<Record<MealType, string | null>> }
+  | {
+      ok: true;
+      optionsByMeal: Partial<Record<MealType, MappedOption[]>>;
+      notesByMeal: Partial<Record<MealType, string | null>>;
+      /** Extra labels left off this destination because it is not a mess. */
+      skippedExtras?: string[];
+      /**
+       * Catalog items this mess must mark as extras before the menu is saved.
+       * The source mess already treats them as extras; the destination has not.
+       */
+      extrasToEnable?: UUID[];
+    }
   | { ok: false; spaceName: string; missingLabels: string[]; reason: ShareBlockReason };
+
+function destinationSupportsMealExtras(space: MySpaceResponse): boolean {
+  return space.spaceType === 'MESS';
+}
 
 /** Validate that the target space can use the same shared menu ids. */
 export async function validateShareMenusToSpace(
@@ -148,6 +163,9 @@ export async function validateShareMenusToSpace(
   const optionsByMeal: Partial<Record<MealType, MappedOption[]>> = {};
   const notesByMeal: Partial<Record<MealType, string | null>> = {};
   const missingLabels: string[] = [];
+  const skippedExtras: string[] = [];
+  const extrasToEnable: UUID[] = [];
+  const supportsExtras = destinationSupportsMealExtras(targetSpace);
   let reason: ShareBlockReason = 'missing';
 
   for (const mealType of mealTypes) {
@@ -158,6 +176,10 @@ export async function validateShareMenusToSpace(
     }
     const mapped: MappedOption[] = [];
     for (const option of options) {
+      if (option.isExtra && !supportsExtras) {
+        skippedExtras.push(option.label);
+        continue;
+      }
       const result = mapOptionToTarget(option, combos, items);
       if (!result.ok) {
         missingLabels.push(result.missing);
@@ -165,6 +187,19 @@ export async function validateShareMenusToSpace(
           reason = 'hidden';
         }
         continue;
+      }
+      const packageItemIds = result.option.itemIds;
+      if (
+        supportsExtras &&
+        result.option.entryType === 'PACKAGE' &&
+        result.option.isExtra &&
+        packageItemIds?.length === 1
+      ) {
+        const itemId = packageItemIds[0];
+        const item = items.find(row => row.itemId === itemId);
+        if (item && item.isExtra !== true) {
+          extrasToEnable.push(itemId);
+        }
       }
       mapped.push(result.option);
     }
@@ -195,7 +230,13 @@ export async function validateShareMenusToSpace(
     };
   }
 
-  return { ok: true, optionsByMeal, notesByMeal };
+  return {
+    ok: true,
+    optionsByMeal,
+    notesByMeal,
+    skippedExtras: skippedExtras.length > 0 ? [...new Set(skippedExtras)] : undefined,
+    extrasToEnable: extrasToEnable.length > 0 ? [...new Set(extrasToEnable)] : undefined,
+  };
 }
 
 function validatedOptionsCount(options?: MappedOption[]): number {
@@ -247,6 +288,15 @@ export async function shareMenusToSpace(
     const options = validated.optionsByMeal[mealType];
     return Boolean(options && options.length > 0) && !open.has(mealType);
   });
+
+  if (pending.length > 0) {
+    const extrasToEnable = [...new Set(validated.extrasToEnable ?? [])];
+    await Promise.all(
+      extrasToEnable.map(itemId =>
+        mealsApi.updateFoodItemExtra(targetSpaceId, itemId, { isExtra: true }),
+      ),
+    );
+  }
 
   await Promise.all(
     pending.map(async mealType => {

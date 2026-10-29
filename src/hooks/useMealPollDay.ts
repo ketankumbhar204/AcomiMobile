@@ -21,6 +21,7 @@ import { hasPrepaidOverflow } from '../utils/mealPollPayment';
 import { isPastMenuDate } from '../utils/mealDates';
 import { resolvePreferredDeliveryLocationId } from '../utils/mealPollDeliveryLocations';
 import { mealPollSaveErrorMessage } from '../utils/mealPollSaveError';
+import { publishPaymentsMonthChanged } from '../utils/paymentUpdates';
 import { platesForSingleSelectOption } from '../utils/mealSelectionSummary';
 
 type SingleSelections = Partial<Record<MealType, UUID>>;
@@ -502,6 +503,7 @@ export function useMealPollDay(
       setSaving(true);
       try {
         const day = await mealsApi.submitMealPollPaymentProof(spaceId, menuDate, proofBody);
+        publishPaymentsMonthChanged(spaceId, menuDate.slice(0, 7));
         setPolls(day.polls);
         setMyPaymentStatus(day.myPaymentStatus ?? null);
         setMyRejectionReason(day.myRejectionReason ?? null);

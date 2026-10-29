@@ -188,7 +188,9 @@ function parseBuildingSection(
   root: AccommodationSetupSampleNode,
   totals: AccommodationSetupTotals,
 ): SetupPreviewFloor {
-  const units = childrenOfType(root.children, 'unit');
+  const nestedUnits = childrenOfType(root.children, 'unit');
+  // Rental dry-run returns the first unit as the sample root, not a building wrapper.
+  const units = nestedUnits.length > 0 || !isType(root, 'unit') ? nestedUnits : [root];
   const allRooms = units.flatMap(unit => childrenOfType(unit.children, 'room'));
   const allBeds = allRooms.flatMap(room => childrenOfType(room.children, 'bed'));
 

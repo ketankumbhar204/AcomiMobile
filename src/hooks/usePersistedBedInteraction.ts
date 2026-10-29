@@ -82,7 +82,7 @@ export function usePersistedBedInteraction(options: {
       }
       const nextNumber = draft.bedNumber.trim();
       if (!nextNumber) {
-        showToast(t('accommodation.beds.validationError'));
+        showToast(t('accommodation.beds.validationError'), undefined, 'error');
         return;
       }
 
@@ -101,7 +101,11 @@ export function usePersistedBedInteraction(options: {
           });
           await onSuccessRef.current?.();
         } catch (err) {
-          showToast(getAccommodationErrorMessage(err, 'accommodation.errors.saveBed'));
+          showToast(
+            getAccommodationErrorMessage(err, 'accommodation.errors.saveBed'),
+            undefined,
+            'error',
+          );
         } finally {
           setSaving(false);
         }

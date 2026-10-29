@@ -506,6 +506,12 @@ export function MenuSharePreviewScreen({
             count: extraShared,
           }),
         );
+        const extrasOmitted = readyTargets.filter(
+          row => (row.result.skippedExtras?.length ?? 0) > 0,
+        ).length;
+        if (extrasOmitted > 0) {
+          showToast(t('meals.planning.shareExtrasOmitted', { count: extrasOmitted }));
+        }
       }
 
       if (externalShare) {

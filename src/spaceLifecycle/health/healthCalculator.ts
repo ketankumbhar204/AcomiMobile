@@ -189,7 +189,9 @@ function scoreOperations(signals: HealthSignals): HealthCategoryBreakdown {
           id: 'ops.occupancy',
           category: 'operations',
           tone: fill >= 0.3 ? 'positive' : 'warning',
-          labelKey: 'dashboard.health.factors.occupancy',
+          labelKey: signals.unitLevel
+            ? 'dashboard.health.factors.occupancyUnits'
+            : 'dashboard.health.factors.occupancy',
           labelParams: {
             occupied: signals.occupiedBeds,
             total: signals.bedTotal,

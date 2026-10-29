@@ -173,9 +173,10 @@ export function CreateSpaceScreen() {
     if (!type) {
       errors.type = t('spaces.createSpace.typeRequired');
     }
-    if (addressCaptureIssue(location) === 'selection') {
-      errors.address = t('locationCapture.selectionRequired', {
-        defaultValue: 'Select a location from the suggestions.',
+    const locationIssue = addressCaptureIssue(location, { allowManual: true });
+    if (locationIssue === 'pincode') {
+      errors.address = t('locationCapture.pincodeRequired', {
+        defaultValue: 'Enter a valid 6-digit pincode.',
       });
     }
     setFieldErrors(errors);
@@ -384,6 +385,7 @@ export function CreateSpaceScreen() {
             <AddressLocationFields
               value={location}
               onChange={setLocation}
+              allowManual
               error={fieldErrors.address}
             />
 

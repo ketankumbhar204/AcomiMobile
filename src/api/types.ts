@@ -558,6 +558,7 @@ export interface SubmitMealPollSelection {
 export interface MealHeadcountMember {
   memberId: UUID;
   memberName: string;
+  mobileNumber?: string | null;
   quantity?: number;
   paymentStatus?: MealPollPaymentStatus | null;
   paymentProofImageUrl?: string | null;
@@ -973,6 +974,7 @@ export interface AdminSpaceEnquiryDetail extends AdminSpaceEnquiryListItem {
   spaceType?: SpaceType | null;
   spaceAddress?: string | null;
   requesterEmail: string;
+  requesterMobile?: string | null;
   reviewedAt?: string | null;
   sharedByAdminId?: UUID | null;
   rejectedAt?: string | null;

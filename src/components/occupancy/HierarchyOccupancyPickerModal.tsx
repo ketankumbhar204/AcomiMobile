@@ -221,6 +221,7 @@ export function HierarchyOccupancyPickerModal({
   const suppressAutoSelectRef = useRef(false);
   const memberAutoSelectSuppressRef = useRef(false);
   const memberAutoSelectKeyRef = useRef<string | null>(null);
+  const advancedPastEmptyHierarchyRef = useRef(false);
 
   const effectiveLayoutMode = building?.layoutMode ?? scope.layoutMode;
   const steps = useMemo(
@@ -346,8 +347,10 @@ export function HierarchyOccupancyPickerModal({
   }, [phase, postSteps, stepIndex, steps.length]);
 
   const stepTitle = useMemo(() => {
-    if (phase === 'hierarchy' && currentHierarchyStep) {
-      return t(hierarchyStepTitleKey(currentHierarchyStep));
+    if (phase === 'hierarchy') {
+      return currentHierarchyStep
+        ? t(hierarchyStepTitleKey(currentHierarchyStep))
+        : t('occupancy.hierarchy.selectUnit');
     }
     if (phase === 'member') {
       return t('occupancyWizard.steps.member');
@@ -409,6 +412,7 @@ export function HierarchyOccupancyPickerModal({
     suppressAutoSelectRef.current = false;
     memberAutoSelectSuppressRef.current = false;
     memberAutoSelectKeyRef.current = null;
+    advancedPastEmptyHierarchyRef.current = false;
     setPhase('hierarchy');
     setStepIndex(0);
     setError(null);
@@ -503,6 +507,47 @@ export function HierarchyOccupancyPickerModal({
     },
     [applyTargetDefaults],
   );
+
+  useEffect(() => {
+    if (
+      !visible ||
+      phase !== 'hierarchy' ||
+      steps.length > 0 ||
+      !scope.unitId ||
+      advancedPastEmptyHierarchyRef.current
+    ) {
+      return;
+    }
+    const unitOnly =
+      spaceType === 'RENTAL' ||
+      spaceType === 'CORPORATE_STAY' ||
+      effectiveLayoutMode === 'RENTAL';
+    if (!unitOnly) {
+      return;
+    }
+    advancedPastEmptyHierarchyRef.current = true;
+    void beginPostHierarchy(
+      {
+        targetType: 'UNIT',
+        buildingId: scope.buildingId,
+        buildingName: scope.buildingName,
+        unitId: scope.unitId,
+        unitName: scope.unitName,
+      },
+      [],
+    );
+  }, [
+    beginPostHierarchy,
+    effectiveLayoutMode,
+    phase,
+    scope.buildingId,
+    scope.buildingName,
+    scope.unitId,
+    scope.unitName,
+    spaceType,
+    steps.length,
+    visible,
+  ]);
 
   useEffect(() => {
     if (!visible) {
@@ -794,7 +839,11 @@ export function HierarchyOccupancyPickerModal({
       if (current < steps.length - 1) {
         return current + 1;
       }
-      if (spaceType === 'RENTAL' || spaceType === 'CORPORATE_STAY') {
+      if (
+        spaceType === 'RENTAL' ||
+        spaceType === 'CORPORATE_STAY' ||
+        effectiveLayoutMode === 'RENTAL'
+      ) {
         queueMicrotask(() => {
           void completeHierarchyForUnit(unit);
         });
@@ -864,7 +913,9 @@ export function HierarchyOccupancyPickerModal({
 
     if (
       currentHierarchyStep === 'unit' &&
-      (spaceType === 'RENTAL' || spaceType === 'CORPORATE_STAY') &&
+      (spaceType === 'RENTAL' ||
+        spaceType === 'CORPORATE_STAY' ||
+        effectiveLayoutMode === 'RENTAL') &&
       selectedUnit
     ) {
       await beginPostHierarchy(
@@ -1123,6 +1174,10 @@ export function HierarchyOccupancyPickerModal({
       return;
     }
     if (phase === 'member') {
+      if (steps.length === 0) {
+        handleClose();
+        return;
+      }
       suppressAutoSelectRef.current = true;
       setPhase('hierarchy');
       setStepIndex(Math.max(steps.length - 1, 0));
@@ -1383,10 +1438,14 @@ export function HierarchyOccupancyPickerModal({
               moveInDate={moveInDate}
               expectedExitDate={expectedExitDate}
               remarks={remarks}
-              onEditAccommodation={() => {
-                setPhase('hierarchy');
-                setStepIndex(0);
-              }}
+              onEditAccommodation={
+                steps.length === 0
+                  ? undefined
+                  : () => {
+                      setPhase('hierarchy');
+                      setStepIndex(0);
+                    }
+              }
               onEditContract={() => setPhase('contract')}
               onEditMember={() => setPhase('member')}
             />

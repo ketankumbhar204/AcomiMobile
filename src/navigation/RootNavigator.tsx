@@ -10,6 +10,7 @@ import { useAuthStore } from '../store/authStore';
 import { isPlatformAdmin, useAdminStore } from '../store/adminStore';
 import { useSpaceStore } from '../store/spaceStore';
 import { BrandSplash } from '../components/brand/BrandSplash';
+import { StartupOfflineScreen } from '../screens/StartupOfflineScreen';
 import { colors } from '../theme';
 import { AuthNavigator } from './AuthNavigator';
 import { AdminNavigator } from './AdminNavigator';
@@ -23,6 +24,7 @@ import type { RootStackParamList } from './types';
 import type { SpaceBootstrapResult } from '../store/spaceStore';
 import { usePushNotifications } from '../notifications/push/usePushNotifications';
 import { useUnseenEnquiryStartupRedirect } from '../notifications/push/useUnseenEnquiryStartupRedirect';
+import { useMealPollDeepLink } from './useMealPollDeepLink';
 import { devLog } from '../utils/devLog';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -41,6 +43,9 @@ const navigationTheme: Theme = {
 };
 
 function applyStartupNavigation(result: SpaceBootstrapResult) {
+  if (result.route === 'Offline') {
+    return true;
+  }
   if (!navigationRef.isReady()) {
     return false;
   }
@@ -63,7 +68,10 @@ export function RootNavigator() {
   const hydrateCurrentSpace = useSpaceStore(state => state.hydrateCurrentSpace);
 
   const pendingNavigationRef = useRef<SpaceBootstrapResult | null>(null);
-  const bootstrapStartedRef = useRef(false);
+  const startedAttemptRef = useRef<number | null>(null);
+  const startupAttempt = useSpaceStore(state => state.startupAttempt);
+  const startupOffline = useSpaceStore(state => state.startupRoute === 'Offline');
+  const retryStartupBootstrap = useSpaceStore(state => state.retryStartupBootstrap);
   const [navigationReady, setNavigationReady] = useState(false);
 
   const inAdminApp =
@@ -88,9 +96,13 @@ export function RootNavigator() {
     inAdminApp,
   });
 
-  useUnseenEnquiryStartupRedirect(
-    Boolean(isAuthenticated && navigationReady && spaceReady && !inAdminApp && !showBootstrap),
+  const canOpenMealPoll = Boolean(
+    isAuthenticated && navigationReady && spaceReady && !inAdminApp && !showBootstrap,
   );
+
+  useUnseenEnquiryStartupRedirect(canOpenMealPoll);
+
+  useMealPollDeepLink(canOpenMealPoll);
 
   useEffect(() => {
     bootstrap().then(() => {
@@ -103,17 +115,20 @@ export function RootNavigator() {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      bootstrapStartedRef.current = false;
+      startedAttemptRef.current = null;
       pendingNavigationRef.current = null;
     }
   }, [isAuthenticated]);
 
   useEffect(() => {
-    if (!isAuthenticated || isBootstrapping || bootstrapStartedRef.current || inAdminApp) {
+    if (!isAuthenticated || isBootstrapping || inAdminApp) {
+      return;
+    }
+    if (startedAttemptRef.current === startupAttempt) {
       return;
     }
 
-    bootstrapStartedRef.current = true;
+    startedAttemptRef.current = startupAttempt;
     let isActive = true;
 
     bootstrapSpaces().then(result => {
@@ -130,7 +145,7 @@ export function RootNavigator() {
     return () => {
       isActive = false;
     };
-  }, [bootstrapSpaces, inAdminApp, isAuthenticated, isBootstrapping]);
+  }, [bootstrapSpaces, inAdminApp, isAuthenticated, isBootstrapping, startupAttempt]);
 
   function handleNavigationReady() {
     setNavigationReady(true);
@@ -178,6 +193,11 @@ export function RootNavigator() {
           <BrandSplash />
         </View>
       ) : null}
+      {startupOffline && !showBootstrap ? (
+        <View style={styles.splashOverlay} pointerEvents="auto">
+          <StartupOfflineScreen onRetry={retryStartupBootstrap} />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -190,8 +210,6 @@ const styles = StyleSheet.create({
   splashOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
     zIndex: 100,
   },
 });

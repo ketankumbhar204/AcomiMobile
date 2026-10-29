@@ -21,6 +21,8 @@ import {
 } from 'react-native';
 import { accommodationApi } from '../../api/accommodationApi';
 import { getAccommodationInvalidationGeneration, subscribeAccommodationInvalidation } from '../../utils/accommodationQueryCache';
+import { getAccommodationUiProfile, usesUnitLevelOccupancy } from '../../utils/accommodationProfile';
+import { applyUnitOccupancyCounts } from '../../utils/unitLevelOccupancy';
 import type { BuildingResponse, BuildingSummaryResponse, SpaceType } from '../../api/types';
 import { AccommodationSearchBar, BuildingListCard } from '../../components/accommodation';
 import { AccommodationHomeSpeedDial } from '../../components/accommodation/AccommodationHomeSpeedDial';
@@ -28,6 +30,7 @@ import {
   AccommodationOpsFocusInventory,
   type RoomsOpsFocus,
 } from '../../components/accommodation/AccommodationOpsFocusInventory';
+import { UnitOpsFocusList } from '../../components/accommodation/UnitOpsFocusList';
 import {
   DashboardAccommodationOperations,
   type AccommodationOpsMetricId,
@@ -42,6 +45,7 @@ import { paymentsApi } from '../../api/paymentsApi';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useBuildings } from '../../hooks/useBuildings';
 import { useDashboardAccommodationOperationsQuick } from '../../hooks/useDashboardAccommodationOperationsQuick';
+import { useUnitLevelOccupancyCounts } from '../../hooks/useUnitLevelOccupancyCounts';
 import { useSpaceOccupancyList } from '../../hooks/useSpaceOccupancyList';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useSpaceLifecycle } from '../../hooks/useSpaceLifecycle';
@@ -130,6 +134,19 @@ export function AccommodationHomeScreen() {
     }
     return quickAccommodation.operations;
   }, [cachedAccommodationOps, quickAccommodation.operations]);
+  const unitLevel = usesUnitLevelOccupancy(
+    spaceType ? getAccommodationUiProfile(spaceType) : null,
+  );
+  const unitOccupancy = useUnitLevelOccupancyCounts(spaceId, unitLevel && isFocused);
+  const displayAccommodationOperations = useMemo(() => {
+    if (!unitLevel) {
+      return accommodationOperations;
+    }
+    if (!accommodationOperations || !unitOccupancy.counts) {
+      return null;
+    }
+    return applyUnitOccupancyCounts(accommodationOperations, unitOccupancy.counts);
+  }, [accommodationOperations, unitLevel, unitOccupancy.counts]);
 
   useEffect(() => {
     if (!accommodationOperations) return;
@@ -210,6 +227,30 @@ export function AccommodationHomeScreen() {
       for (const row of activeOccupanciesForPending.items) {
         if (row.bedId && pendingMemberIds.has(row.memberId)) {
           ids.add(row.bedId);
+        }
+      }
+    }
+    return ids;
+  }, [
+    activeOccupanciesForPending.items,
+    moveInsQuery.items,
+    opsFocus,
+    pendingMemberIds,
+  ]);
+
+  const focusedUnitIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (opsFocus === 'MOVE_INS_THIS_MONTH') {
+      for (const row of moveInsQuery.items) {
+        if (row.unitId) {
+          ids.add(row.unitId);
+        }
+      }
+    }
+    if (opsFocus === 'PENDING_PAYMENTS') {
+      for (const row of activeOccupanciesForPending.items) {
+        if (row.unitId && pendingMemberIds.has(row.memberId)) {
+          ids.add(row.unitId);
         }
       }
     }
@@ -346,10 +387,10 @@ export function AccommodationHomeScreen() {
   const onRefresh = useCallback(async () => {
     devLog('[AccommodationHomeScreen] pull to refresh');
     setRefreshing(true);
-    await Promise.all([refresh(), quickAccommodation.reload()]);
+    await Promise.all([refresh(), quickAccommodation.reload(), unitOccupancy.reload()]);
     setSummaryGeneration(getAccommodationInvalidationGeneration());
     setRefreshing(false);
-  }, [quickAccommodation, refresh]);
+  }, [quickAccommodation, refresh, unitOccupancy]);
 
   const handleOccupiedBedsPress = useCallback(() => {
     toggleOpsFocus('OCCUPIED');
@@ -437,9 +478,16 @@ export function AccommodationHomeScreen() {
                   {t('accommodation.home.title', { defaultValue: 'Rooms' })}
                 </Text>
                 <Text style={styles.pageSubtitle}>
-                  {t('accommodation.home.pageSubtitle', {
-                    defaultValue: 'Buildings, floors, rooms, and beds in one place',
-                  })}
+                  {t(
+                    unitLevel
+                      ? 'accommodation.home.pageSubtitleUnits'
+                      : 'accommodation.home.pageSubtitle',
+                    {
+                      defaultValue: unitLevel
+                        ? 'Buildings and units in one place'
+                        : 'Buildings, floors, rooms, and beds in one place',
+                    },
+                  )}
                 </Text>
               </View>
             ) : (
@@ -453,15 +501,22 @@ export function AccommodationHomeScreen() {
                     {t('accommodation.home.title', { defaultValue: 'Rooms' })}
                   </Text>
                   <Text style={styles.subheading} numberOfLines={1}>
-                    {t('accommodation.home.subtitle', {
-                      defaultValue: 'Buildings, floors, rooms, and beds in one place',
-                    })}
+                    {t(
+                      unitLevel
+                        ? 'accommodation.home.pageSubtitleUnits'
+                        : 'accommodation.home.subtitle',
+                      {
+                        defaultValue: unitLevel
+                          ? 'Buildings and units in one place'
+                          : 'Buildings, floors, rooms, and beds in one place',
+                      },
+                    )}
                   </Text>
                 </View>
               </View>
             )}
 
-            {accommodationOperations ? (
+            {displayAccommodationOperations ? (
               <>
                 <DashboardSectionTitle
                   title={t('dashboard.accommodationOps.title', {
@@ -473,7 +528,8 @@ export function AccommodationHomeScreen() {
                 />
                 <DashboardAccommodationOperations
                   hideTitle
-                  operations={accommodationOperations}
+                  occupancyEntity={unitLevel ? 'units' : 'beds'}
+                  operations={displayAccommodationOperations}
                   selectedMetricId={selectedOpsMetricId}
                   onOccupiedPress={
                     canOpenOccupancyDrilldown ? handleOccupiedBedsPress : undefined
@@ -531,13 +587,31 @@ export function AccommodationHomeScreen() {
                   resultsSectionMeasuredRef.current = true;
                   flushPendingOpsResultsScroll();
                 }}>
-                <AccommodationOpsFocusInventory
-                  spaceId={spaceId}
-                  opsFocus={opsFocus}
-                  focusedBedIds={focusedBedIds}
-                  onClear={() => setOpsFocus(null)}
-                  canManage={canManage}
-                />
+                {unitLevel ? (
+                  <UnitOpsFocusList
+                    spaceId={spaceId}
+                    status={
+                      opsFocus === 'OCCUPIED'
+                        ? 'OCCUPIED'
+                        : opsFocus === 'VACANT'
+                          ? 'AVAILABLE'
+                          : undefined
+                    }
+                    unitIds={
+                      opsFocus === 'MOVE_INS_THIS_MONTH' || opsFocus === 'PENDING_PAYMENTS'
+                        ? focusedUnitIds
+                        : null
+                    }
+                  />
+                ) : (
+                  <AccommodationOpsFocusInventory
+                    spaceId={spaceId}
+                    opsFocus={opsFocus}
+                    focusedBedIds={focusedBedIds}
+                    onClear={() => setOpsFocus(null)}
+                    canManage={canManage}
+                  />
+                )}
               </View>
             ) : !isEmpty ? (
               <>
@@ -545,9 +619,15 @@ export function AccommodationHomeScreen() {
                   title={t('accommodation.home.buildingsTitle', {
                     defaultValue: 'Buildings',
                   })}
-                  subtitle={t('accommodation.home.buildingsSubtitle', {
-                    defaultValue: 'Open a building to manage floors and beds',
-                  })}
+                  subtitle={
+                    unitLevel
+                      ? t('accommodation.home.buildingsSubtitleUnits', {
+                          defaultValue: 'Open a building to manage units',
+                        })
+                      : t('accommodation.home.buildingsSubtitle', {
+                          defaultValue: 'Open a building to manage floors and beds',
+                        })
+                  }
                 />
                 <AccommodationSearchBar
                   value={searchQuery}

@@ -37,6 +37,7 @@ import {
   bedCarouselScrollTarget,
 } from '../bedCarouselNav';
 import { BedPricingDisplay } from '../BedPricingDisplay';
+import { BedPricingFields } from '../BedPricingFields';
 import { getBedIllustration } from '../layout/illustrations/illustrationAssets';
 import { BedInteractionSheet } from '../BedInteractionSheet';
 import { BedPricingConfirmModal } from '../BedPricingConfirmModal';
@@ -119,7 +120,8 @@ type SetupRoomRow = {
   unitId: string | null;
   floor: EditableFloor | null;
   unit: EditableUnit | null;
-  room: EditableRoom;
+  /** Null for a rental-style unit that has no rooms or beds. */
+  room: EditableRoom | null;
 };
 
 type InlineEditTarget = 'floor' | 'unit' | 'room' | null;
@@ -137,10 +139,43 @@ function setupPathCrumbs(row: SetupRoomRow, buildingName: string): SetupPathCrum
   if (row.unit?.name.trim()) {
     crumbs.push({ level: 'unit', label: row.unit.name.trim() });
   }
-  if (row.room.name.trim()) {
+  if (row.room?.name.trim()) {
     crumbs.push({ level: 'room', label: row.room.name.trim() });
   }
   return crumbs;
+}
+
+function pushUnitRows(
+  rows: SetupRoomRow[],
+  buildingName: string,
+  floor: EditableFloor | null,
+  unit: EditableUnit,
+): void {
+  if (unit.rooms.length === 0) {
+    rows.push({
+      key: unit.id,
+      pathSegments: [buildingName, floor?.name, unit.name].filter((part): part is string => Boolean(part)),
+      floorId: floor?.id ?? null,
+      unitId: unit.id,
+      floor,
+      unit,
+      room: null,
+    });
+    return;
+  }
+  for (const room of unit.rooms) {
+    rows.push({
+      key: room.id,
+      pathSegments: [buildingName, floor?.name, unit.name, room.name].filter(
+        (part): part is string => Boolean(part),
+      ),
+      floorId: floor?.id ?? null,
+      unitId: unit.id,
+      floor,
+      unit,
+      room,
+    });
+  }
 }
 
 function flattenSetupRooms(structure: EditableSetupStructure): SetupRoomRow[] {
@@ -149,17 +184,7 @@ function flattenSetupRooms(structure: EditableSetupStructure): SetupRoomRow[] {
 
   if (structure.kind === 'building_units') {
     for (const unit of structure.units) {
-      for (const room of unit.rooms) {
-        rows.push({
-          key: room.id,
-          pathSegments: [buildingName, unit.name, room.name].filter(Boolean),
-          floorId: null,
-          unitId: unit.id,
-          floor: null,
-          unit,
-          room,
-        });
-      }
+      pushUnitRows(rows, buildingName, null, unit);
     }
     return rows;
   }
@@ -167,17 +192,7 @@ function flattenSetupRooms(structure: EditableSetupStructure): SetupRoomRow[] {
   if (structure.kind === 'floors_with_units') {
     for (const floor of structure.floors) {
       for (const unit of floor.units) {
-        for (const room of unit.rooms) {
-          rows.push({
-            key: room.id,
-            pathSegments: [buildingName, floor.name, unit.name, room.name].filter(Boolean),
-            floorId: floor.id,
-            unitId: unit.id,
-            floor,
-            unit,
-            room,
-          });
-        }
+        pushUnitRows(rows, buildingName, floor, unit);
       }
     }
     return rows;
@@ -386,6 +401,52 @@ function patchFloorInStructure(
   };
 }
 
+function listSetupUnits(structure: EditableSetupStructure): EditableUnit[] {
+  if (structure.kind === 'building_units') {
+    return structure.units;
+  }
+  return structure.floors.flatMap(floor => floor.units);
+}
+
+function sharedUnitPricing(structure: EditableSetupStructure): {
+  rent: number | null;
+  deposit: number | null;
+  mixed: boolean;
+} {
+  const units = listSetupUnits(structure);
+  if (units.length === 0) {
+    return { rent: null, deposit: null, mixed: false };
+  }
+  const rent = units[0].defaultRent ?? null;
+  const deposit = units[0].defaultDeposit ?? null;
+  const mixed = units.some(
+    unit => (unit.defaultRent ?? null) !== rent || (unit.defaultDeposit ?? null) !== deposit,
+  );
+  return {
+    rent: mixed ? null : rent,
+    deposit: mixed ? null : deposit,
+    mixed,
+  };
+}
+
+function applyPricingToAllUnits(
+  structure: EditableSetupStructure,
+  field: 'defaultRent' | 'defaultDeposit',
+  value: number | null,
+): EditableSetupStructure {
+  const patchUnit = (unit: EditableUnit): EditableUnit => ({ ...unit, [field]: value });
+  if (structure.kind === 'building_units') {
+    return { ...structure, units: structure.units.map(patchUnit) };
+  }
+  return {
+    ...structure,
+    floors: structure.floors.map(floor => ({
+      ...floor,
+      units: floor.units.map(patchUnit),
+    })),
+  };
+}
+
 function patchUnitInStructure(
   structure: EditableSetupStructure,
   floorId: string | null,
@@ -418,6 +479,116 @@ function patchUnitInStructure(
   };
 }
 
+function SetupUnitInventoryCard({
+  row,
+  structure,
+  onChangeStructure,
+  compact = false,
+}: {
+  row: SetupRoomRow;
+  structure: EditableSetupStructure;
+  onChangeStructure: (next: EditableSetupStructure) => void;
+  compact?: boolean;
+}) {
+  const { t } = useTranslation();
+  const unit = row.unit;
+  const [inlineEdit, setInlineEdit] = useState(false);
+  if (!unit) {
+    return null;
+  }
+
+  return (
+    <View style={compact ? styles.unitPreviewCard : styles.roomInventoryCard}>
+      <View style={styles.roomInventoryTitleRow}>
+        {compact ? null : (
+          <View style={styles.pathIcon}>
+            <Grid2x2 size={16} color={pastels.purple.fg} strokeWidth={2.2} />
+          </View>
+        )}
+        <View style={styles.pathRow}>
+          {compact ? (
+            <Text style={styles.unitPreviewName} numberOfLines={1}>
+              {unit.name}
+            </Text>
+          ) : (
+            setupPathCrumbs(row, structure.building.name).map((crumb, index) => (
+              <View key={`${crumb.level}-${crumb.label}`} style={styles.pathPart}>
+                {index > 0 ? (
+                  <ChevronRight
+                    size={14}
+                    color={colors.muted}
+                    strokeWidth={2.4}
+                    style={styles.pathChevron}
+                  />
+                ) : null}
+                <Text style={index === 0 ? styles.path : styles.pathLink} numberOfLines={1}>
+                  {crumb.label}
+                </Text>
+              </View>
+            ))
+          )}
+        </View>
+        <HeaderIconButton
+          onPress={() => setInlineEdit(value => !value)}
+          accessibilityLabel={t('accommodation.builder.editUnit', { defaultValue: 'Edit unit' })}>
+          <Pencil size={16} color={colors.info} strokeWidth={2.4} />
+        </HeaderIconButton>
+      </View>
+      <Text style={styles.roomTypeText}>
+        {compact
+          ? t('accommodation.status.AVAILABLE', { defaultValue: 'Available' })
+          : t('accommodation.setup.unitOnlyLine', { defaultValue: 'Unit only — no rooms or beds' })}
+      </Text>
+      {compact ? (
+        <Text style={styles.unitPricingLine}>
+          {unit.defaultRent != null || unit.defaultDeposit != null
+            ? t('accommodation.setup.unitPricingLine', {
+                rent: unit.defaultRent ?? '—',
+                deposit: unit.defaultDeposit ?? '—',
+                defaultValue: 'Rent ₹{{rent}} · Deposit ₹{{deposit}}',
+              })
+            : t('accommodation.setup.unitPricingNotSet', {
+                defaultValue: 'Rent and deposit optional',
+              })}
+        </Text>
+      ) : null}
+      {inlineEdit ? (
+        <>
+          <InlineEditableField
+            label={t('accommodation.setup.editor.unitName')}
+            value={unit.name}
+            onSave={name => {
+              onChangeStructure(patchUnitInStructure(structure, row.floorId, unit.id, { name }));
+              setInlineEdit(false);
+            }}
+          />
+          <InlineEditableField
+            label={t('accommodation.setup.editor.unitNumber')}
+            value={unit.number}
+            onSave={number => {
+              onChangeStructure(patchUnitInStructure(structure, row.floorId, unit.id, { number }));
+              setInlineEdit(false);
+            }}
+          />
+          {compact ? (
+            <BedPricingFields
+              editable
+              layout="stack"
+              rent={unit.defaultRent}
+              deposit={unit.defaultDeposit}
+              onCommit={(field, value) => {
+                onChangeStructure(
+                  patchUnitInStructure(structure, row.floorId, unit.id, { [field]: value }),
+                );
+              }}
+            />
+          ) : null}
+        </>
+      ) : null}
+    </View>
+  );
+}
+
 /**
  * Flat room inventory card — matches View Accommodation Layout
  * (Building > Floor > Unit > Room path + horizontal bed cards).
@@ -429,7 +600,7 @@ function SetupRoomInventoryCard({
   onChangeStructure,
   onEditBed,
 }: {
-  row: SetupRoomRow;
+  row: SetupRoomRow & { room: EditableRoom };
   structure: EditableSetupStructure;
   expandConfig: SetupStructureEditorProps['expandConfig'];
   onChangeStructure: (next: EditableSetupStructure) => void;
@@ -709,6 +880,7 @@ function SetupRoomInventoryCard({
       <ScrollView
         ref={bedScrollRef}
         horizontal
+        directionalLockEnabled
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.setupBedsRow}
         nestedScrollEnabled
@@ -840,19 +1012,31 @@ export function SetupStructureEditor({
   const [setupConfirming, setSetupConfirming] = useState(false);
   const totals = useMemo(() => computeStructureTotals(structure), [structure]);
   const roomRows = useMemo(() => flattenSetupRooms(structure), [structure]);
-  const visibleRooms = showAllRooms ? roomRows : roomRows.slice(0, INITIAL_VISIBLE_ROOMS);
-  const hasHiddenRooms = roomRows.length > INITIAL_VISIBLE_ROOMS;
+  const unitOnlyPreview = roomRows.length > 0 && roomRows.every(row => row.room == null);
+  const unitPricing = useMemo(
+    () => (unitOnlyPreview ? sharedUnitPricing(structure) : null),
+    [structure, unitOnlyPreview],
+  );
+  const visibleRooms =
+    showAllRooms || unitOnlyPreview ? roomRows : roomRows.slice(0, INITIAL_VISIBLE_ROOMS);
+  const hasHiddenRooms = !unitOnlyPreview && roomRows.length > INITIAL_VISIBLE_ROOMS;
   const layoutTitle = layoutModeLabel ?? t('accommodation.setup.previewScreenTitle');
 
   return (
     <View style={styles.root}>
-      <Text style={styles.previewTitle} accessibilityRole="header">
-        {t('accommodation.setup.previewScreenTitle')}
-      </Text>
+      {unitOnlyPreview ? null : (
+        <Text style={styles.previewTitle} accessibilityRole="header">
+          {t('accommodation.setup.previewScreenTitle')}
+        </Text>
+      )}
       <DashboardOwnerHero
-        spaceName={layoutTitle}
-        spaceTypeLabel={stepLabel}
-        subtitle={t('accommodation.setup.previewHeroSubtitle')}
+        spaceName={unitOnlyPreview ? structure.building.name : layoutTitle}
+        spaceTypeLabel={unitOnlyPreview ? (layoutModeLabel ?? stepLabel) : stepLabel}
+        subtitle={
+          unitOnlyPreview
+            ? t('accommodation.setup.totals.units', { count: totals.units })
+            : t('accommodation.setup.previewHeroSubtitle')
+        }
         showGreeting={false}
         icon={Building2}
       />
@@ -935,13 +1119,15 @@ export function SetupStructureEditor({
         accent={ACCENT.overview}
       />
       <View style={styles.summaryGrid}>
-        <DashboardStatCard
-          gridItem
-          icon={Layers3}
-          accent={ACCENT.floors}
-          value={String(totals.floors)}
-          label={t('accommodation.setup.summary.floors')}
-        />
+        {unitOnlyPreview ? null : (
+          <DashboardStatCard
+            gridItem
+            icon={Layers3}
+            accent={ACCENT.floors}
+            value={String(totals.floors)}
+            label={t('accommodation.setup.summary.floors')}
+          />
+        )}
         <DashboardStatCard
           gridItem
           icon={Grid2x2}
@@ -949,20 +1135,24 @@ export function SetupStructureEditor({
           value={String(totals.units)}
           label={t('accommodation.setup.summary.units')}
         />
-        <DashboardStatCard
-          gridItem
-          icon={DoorOpen}
-          accent={ACCENT.rooms}
-          value={String(totals.rooms)}
-          label={t('accommodation.setup.summary.rooms')}
-        />
-        <DashboardStatCard
-          gridItem
-          icon={BedDouble}
-          accent={ACCENT.beds}
-          value={String(totals.beds)}
-          label={t('accommodation.setup.summary.beds')}
-        />
+        {unitOnlyPreview ? null : (
+          <DashboardStatCard
+            gridItem
+            icon={DoorOpen}
+            accent={ACCENT.rooms}
+            value={String(totals.rooms)}
+            label={t('accommodation.setup.summary.rooms')}
+          />
+        )}
+        {unitOnlyPreview ? null : (
+          <DashboardStatCard
+            gridItem
+            icon={BedDouble}
+            accent={ACCENT.beds}
+            value={String(totals.beds)}
+            label={t('accommodation.setup.summary.beds')}
+          />
+        )}
       </View>
 
       <DashboardSectionHeader
@@ -971,17 +1161,66 @@ export function SetupStructureEditor({
         accent={ACCENT.structure}
       />
 
-      <View style={styles.structureList}>
-        {visibleRooms.map(row => (
-          <SetupRoomInventoryCard
-            key={row.key}
-            row={row}
-            structure={structure}
-            expandConfig={expandConfig}
-            onChangeStructure={onChange}
-            onEditBed={setEditingBed}
+      {unitOnlyPreview && unitPricing ? (
+        <View style={styles.unitPricingCard}>
+          <Text style={styles.unitPricingTitle}>
+            {t('accommodation.setup.unitPricingTitle', { defaultValue: 'Rent and deposit' })}
+          </Text>
+          <Text style={styles.unitPricingHint}>
+            {unitPricing.mixed
+              ? t('accommodation.setup.unitPricingMixedHint', {
+                  defaultValue:
+                    'Units currently have different amounts. Entering a value here updates every unit.',
+                })
+              : t('accommodation.setup.unitPricingOptionalHint', {
+                  defaultValue:
+                    'Optional. Leave blank to create the building without rent or deposit. A value here applies to every unit.',
+                })}
+          </Text>
+          <BedPricingFields
+            editable
+            rent={unitPricing.rent}
+            deposit={unitPricing.deposit}
+            onCommit={(field, value) => {
+              onChange(applyPricingToAllUnits(structure, field, value));
+            }}
           />
-        ))}
+        </View>
+      ) : null}
+
+      <Text style={styles.editHint}>{t('accommodation.setup.previewEditHint')}</Text>
+      <Text style={[styles.editHint, styles.reviewInstruction]}>
+        {unitOnlyPreview
+          ? t('accommodation.setup.reviewUnitsBeforeCreate', {
+              defaultValue: 'Review and edit your units before creating the building.',
+            })
+          : t('progressiveWorkflow.quickSetup.reviewPreviewHint')}
+      </Text>
+
+      <View style={unitOnlyPreview ? styles.unitGrid : styles.structureList}>
+        {visibleRooms.map(row => {
+          if (row.room) {
+            return (
+              <SetupRoomInventoryCard
+                key={row.key}
+                row={{ ...row, room: row.room }}
+                structure={structure}
+                expandConfig={expandConfig}
+                onChangeStructure={onChange}
+                onEditBed={setEditingBed}
+              />
+            );
+          }
+          return (
+            <SetupUnitInventoryCard
+              key={row.key}
+              compact={unitOnlyPreview}
+              row={row}
+              structure={structure}
+              onChangeStructure={onChange}
+            />
+          );
+        })}
         {hasHiddenRooms && !showAllRooms ? (
           <Button
             label={t('accommodation.setup.viewCompleteStructure')}
@@ -990,8 +1229,6 @@ export function SetupStructureEditor({
           />
         ) : null}
       </View>
-
-      <Text style={styles.editHint}>{t('accommodation.setup.previewEditHint')}</Text>
 
       <BedInteractionSheet
         visible={editingBed != null}
@@ -1164,6 +1401,28 @@ const styles = StyleSheet.create({
   },
   structureList: {
     gap: spacing.md,
+  },
+  unitGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  unitPreviewCard: {
+    width: '48%',
+    backgroundColor: colors.white,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
+    ...shadows.sm,
+  },
+  unitPreviewName: {
+    ...typography.bodyStrong,
+    color: colors.textPrimary,
+    flex: 1,
   },
   roomInventoryCard: {
     backgroundColor: colors.white,
@@ -1394,5 +1653,33 @@ const styles = StyleSheet.create({
     color: colors.muted,
     textAlign: 'center',
     marginTop: spacing.sm,
+  },
+  reviewInstruction: {
+    ...typography.body,
+    color: colors.textPrimary,
+    fontWeight: '600',
+    marginTop: 0,
+    marginBottom: spacing.xs,
+  },
+  unitPricingCard: {
+    backgroundColor: colors.white,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  unitPricingTitle: {
+    ...typography.bodyStrong,
+    color: colors.textPrimary,
+  },
+  unitPricingHint: {
+    ...typography.caption,
+    color: colors.muted,
+  },
+  unitPricingLine: {
+    ...typography.caption,
+    color: colors.textSecondary,
   },
 });

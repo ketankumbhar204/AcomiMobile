@@ -10,6 +10,8 @@ import {
 export type StayChargeIndex = {
   month: string;
   occupancyByBed: Map<string, OccupancyResponse>;
+  /** Unit-only stays. A stay that also has a bed stays on the bed index. */
+  occupancyByUnit: Map<string, OccupancyResponse>;
   payments: SpacePaymentResponse[];
 };
 
@@ -47,14 +49,21 @@ export function loadStayChargeIndex(spaceId: UUID, month = currentStayMonth()): 
     paymentsApi.listStayCharges(spaceId, month),
   ]).then(([occupancies, charges]) => {
     const occupancyByBed = new Map<string, OccupancyResponse>();
+    const occupancyByUnit = new Map<string, OccupancyResponse>();
     for (const occupancy of occupancies.content) {
-      if (occupancy.bedId && occupancy.status === 'ACTIVE') {
+      if (occupancy.status !== 'ACTIVE') {
+        continue;
+      }
+      if (occupancy.bedId) {
         occupancyByBed.set(occupancy.bedId, occupancy);
+      } else if (occupancy.unitId) {
+        occupancyByUnit.set(occupancy.unitId, occupancy);
       }
     }
     return {
       month: charges.month || month,
       occupancyByBed,
+      occupancyByUnit,
       payments: charges.payments,
     };
   });
@@ -68,11 +77,24 @@ export function loadStayChargeIndex(spaceId: UUID, month = currentStayMonth()): 
   return promise;
 }
 
+export function summaryForUnit(
+  index: StayChargeIndex,
+  unitId: string,
+): { occupancy: OccupancyResponse | null; summary: OccupantPaymentSummary } {
+  return summaryForOccupancy(index, index.occupancyByUnit.get(unitId) ?? null);
+}
+
 export function summaryForBed(
   index: StayChargeIndex,
   bedId: string,
 ): { occupancy: OccupancyResponse | null; summary: OccupantPaymentSummary } {
-  const occupancy = index.occupancyByBed.get(bedId) ?? null;
+  return summaryForOccupancy(index, index.occupancyByBed.get(bedId) ?? null);
+}
+
+function summaryForOccupancy(
+  index: StayChargeIndex,
+  occupancy: OccupancyResponse | null,
+): { occupancy: OccupancyResponse | null; summary: OccupantPaymentSummary } {
   if (!occupancy) {
     return {
       occupancy: null,

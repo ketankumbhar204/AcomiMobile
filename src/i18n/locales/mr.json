@@ -34,7 +34,7 @@
       "tabPolls": "पोल डिफॉल्ट"
     },
     "quickSetup": {
-      "reviewPreviewHint": "खालील रचना तपासा, मग तयार करा."
+      "reviewPreviewHint": "इमारत तयार करण्यापूर्वी रचना तपासा आणि संपादित करा."
     },
     "createSpace": {
       "essentialsTitle": "आवश्यक माहिती",
@@ -859,7 +859,20 @@
       "saveMess": "Add Customer",
       "saveImport": "जोडा",
       "successToast": "Member added successfully.",
-      "importSuccessToast": "ग्राहक या मेसमध्ये जोडला.",
+      "importSuccessToast": "{{person}} या {{space}}मध्ये जोडला.",
+      "importPerson": {
+        "customer": "ग्राहक",
+        "member": "सदस्य"
+      },
+      "importSpace": {
+        "space": "स्पेस",
+        "mess": "मेस",
+        "pg": "PG",
+        "hostel": "हॉस्टेल",
+        "coLiving": "को-लिव्हिंग",
+        "rental": "रेंटल",
+        "corporateStay": "कॉर्पोरेट स्टे"
+      },
       "importFailed": "Could not import this customer. Please try again.",
       "reuseRequired": "Pick someone from another space, or create a new customer.",
       "selectedCustomer": "निवडलेले",

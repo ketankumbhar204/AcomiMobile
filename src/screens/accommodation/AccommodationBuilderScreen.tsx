@@ -13,13 +13,14 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { Copy, Grid2x2, Layers } from 'lucide-react-native';
+import { Copy, Grid2x2, Layers, Plus } from 'lucide-react-native';
 import type {
   BedSpaceListItemResponse,
   FloorListItemResponse,
   SpaceType,
   UnitListItemResponse,
 } from '../../api/types';
+import { getSpaceTypeLabel } from '../../api/spaceTypes';
 import {
   AccommodationContextTrail,
   AccommodationEntityRow,
@@ -37,6 +38,7 @@ import {
   DuplicateFloorModal,
   HeaderMenuSlot,
   PersistedBedInteractionHost,
+  PersistedUnitInteractionHost,
   UNIT_GRID_NUM_COLUMNS,
 } from '../../components/accommodation';
 import type { MenuOption } from '../../components/accommodation/BuilderRowLifecycleMenu';
@@ -46,6 +48,7 @@ import { DashboardActionRow } from '../../components/dashboard/shared/DashboardA
 import { useHierarchyOccupancyPicker } from '../../hooks/useHierarchyOccupancyPicker';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useAccommodationUiProfile } from '../../hooks/useAccommodationUiProfile';
+import { useBuildings } from '../../hooks/useBuildings';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { canEditEntityPhoto } from '../../files/entityPhoto';
 import { EntityPhotoProvider } from '../../files/EntityPhotoContext';
@@ -58,6 +61,7 @@ import { useFloors } from '../../hooks/useFloors';
 import { useUnits } from '../../hooks/useUnits';
 import { useSpaceBedSearch } from '../../hooks/useSpaceBedSearch';
 import { usePersistedBedInteraction } from '../../hooks/usePersistedBedInteraction';
+import { usePersistedUnitInteraction } from '../../hooks/usePersistedUnitInteraction';
 import { resetToAccommodationHome } from '../../navigation/navigationRef';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
@@ -108,6 +112,8 @@ export function AccommodationBuilderScreen() {
   const showFab = permissions.canManageAccommodation;
   const hierarchyPicker = useHierarchyOccupancyPicker(spaceId, spaceType);
   const isRental = profile?.layoutMode === 'RENTAL';
+  const { buildings } = useBuildings(spaceId, { enabled: isRental });
+  const rentalBuildingActive = buildings.find(building => building.buildingId === buildingId)?.active;
 
   const { isLayout, setViewMode } = useAccommodationViewMode();
 
@@ -141,6 +147,19 @@ export function AccommodationBuilderScreen() {
     onSuccess: async () => {
       invalidateAccommodationQueries();
       await bedsHook.refresh();
+    },
+  });
+  const unitInteraction = usePersistedUnitInteraction({
+    spaceId,
+    buildingId,
+    buildingName: summary?.name ?? '',
+    spaceType,
+    canEditStructure: canManage,
+    canManageOccupancy: canManageOccupancyActions,
+    onSuccess: async () => {
+      invalidateAccommodationQueries();
+      await unitsHook.refresh();
+      await refreshSummary();
     },
   });
   const roomGroups = useMemo(
@@ -294,12 +313,7 @@ export function AccommodationBuilderScreen() {
 
   const openUnit = (unit: UnitListItemResponse) => {
     if (isRental || !profile?.showRoomsUnderUnit) {
-      navigation.navigate('UnitDetail', {
-        spaceId,
-        buildingId,
-        buildingName: summary?.name,
-        unitId: unit.unitId,
-      });
+      unitInteraction.open(unit);
       return;
     }
 
@@ -335,6 +349,8 @@ export function AccommodationBuilderScreen() {
         loading={summaryLoading && !summary}
         editableName={showFab}
         spaceId={spaceId}
+        typeLabel={isRental && spaceType ? getSpaceTypeLabel(spaceType) : undefined}
+        active={isRental && rentalBuildingActive != null ? rentalBuildingActive : undefined}
         canEditPhoto={canEditEntityPhoto(permissions.membershipRole)}
         onPhotoChanged={fileId => patchSummary({ photoFileId: fileId })}
         onSaveName={async name => {
@@ -351,10 +367,47 @@ export function AccommodationBuilderScreen() {
         }}
       />
 
-      <AccommodationContextTrail segments={trailSegments} onNavigate={onTrailNavigate} />
+      {isRental ? null : (
+        <AccommodationContextTrail segments={trailSegments} onNavigate={onTrailNavigate} />
+      )}
 
       <AccommodationViewModeToggle value={isLayout ? 'layout' : 'list'} onChange={setViewMode} />
 
+      {isRental ? (
+        <View style={styles.searchRow}>
+          <AccommodationSearchBar
+            embedded
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder={t('accommodation.builder.searchUnits', {
+              defaultValue: 'Search units (e.g. 101, 102, ...)',
+            })}
+          />
+          {canManage && profile?.showUnits ? (
+            <View style={styles.bulkColumn}>
+              <Pressable
+                onPress={() => setBulkUnitsVisible(true)}
+                style={({ pressed }) => [styles.bulkButton, pressed && styles.bulkButtonPressed]}
+                accessibilityRole="button"
+                accessibilityLabel={t('accommodation.bulk.units.action')}>
+                <Plus size={16} color={colors.white} strokeWidth={2.6} />
+                <Text
+                  style={styles.bulkTitle}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.85}>
+                  {t('accommodation.bulk.units.action')}
+                </Text>
+              </Pressable>
+              <Text style={styles.bulkHint}>
+                {t('accommodation.bulk.units.hint', {
+                  defaultValue: 'Add multiple units at once',
+                })}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      ) : (
       <AccommodationSearchBar
         value={searchQuery}
         onChangeText={setSearchQuery}
@@ -364,8 +417,10 @@ export function AccommodationBuilderScreen() {
             : undefined
         }
       />
+      )}
 
       {canManage &&
+      !isRental &&
       profile?.showUnits &&
       (spaceType === 'CO_LIVING' || spaceType === 'RENTAL' || spaceType === 'CORPORATE_STAY') ? (
         <DashboardActionRow
@@ -391,6 +446,7 @@ export function AccommodationBuilderScreen() {
         />
       ) : null}
 
+      {isRental && isLayout ? null : (
       <DashboardSectionTitle
         title={
           useInventoryList
@@ -400,11 +456,14 @@ export function AccommodationBuilderScreen() {
               : t('accommodation.units.title')
         }
         subtitle={
-          useInventoryList
-            ? t('accommodation.builder.inventorySubtitle')
-            : t('accommodation.builder.listSubtitle')
+          isRental
+            ? undefined
+            : useInventoryList
+              ? t('accommodation.builder.inventorySubtitle')
+              : t('accommodation.builder.listSubtitle')
         }
       />
+      )}
 
       {showListLoading ? <SkeletonCard /> : null}
     </View>
@@ -945,6 +1004,13 @@ export function AccommodationBuilderScreen() {
         spaceId={spaceId}
         spaceType={spaceType}
       />
+      <PersistedUnitInteractionHost
+        interaction={unitInteraction}
+        spaceId={spaceId}
+        spaceType={spaceType}
+        buildingId={buildingId}
+        buildingName={summary?.name}
+      />
       {hierarchyPicker.pickerModal}
     </View>
       </EntityPhotoProvider>
@@ -965,6 +1031,46 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: spacing.md,
     gap: spacing.sm,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  bulkColumn: {
+    width: 136,
+    alignItems: 'center',
+    gap: 4,
+  },
+  bulkButton: {
+    width: '100%',
+    minHeight: 48,
+    flexDirection: 'row',
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    gap: 4,
+  },
+  bulkButtonPressed: {
+    opacity: 0.9,
+  },
+  bulkTitle: {
+    ...typography.caption,
+    flexShrink: 1,
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '700',
+    color: colors.white,
+    textAlign: 'center',
+  },
+  bulkHint: {
+    ...typography.caption,
+    fontSize: 10,
+    lineHeight: 13,
+    color: colors.muted,
+    textAlign: 'center',
   },
   buildingLayoutTitle: {
     ...typography.bodyStrong,

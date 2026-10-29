@@ -9,6 +9,12 @@ import type {
 } from '../api/types';
 import { createRequestGuard } from '../modules/orchestrator';
 import type { HistoryReviewFilter, PendingReviewFilter } from '../utils/ownerPaymentFilters';
+import {
+  applyPaymentToReviewRows,
+  paymentAfterReview,
+  paymentMatchesReviewQueue,
+} from '../utils/paymentReviewRows';
+import { publishPaymentUpdated, subscribePaymentUpdates } from '../utils/paymentUpdates';
 
 const PAGE_SIZE = 20;
 
@@ -18,48 +24,6 @@ function queueForPending(filter: PendingReviewFilter): PaymentsReviewQueueParam 
 
 function queueForHistory(filter: HistoryReviewFilter): PaymentsReviewQueueParam {
   return filter === 'REJECTED' ? 'REJECTED' : 'PAID';
-}
-
-function paymentMatchesReviewQueue(
-  status: SpacePaymentResponse['paymentStatus'],
-  queue: PaymentsReviewQueueParam,
-): boolean {
-  switch (queue) {
-    case 'SUBMITTED':
-      return status === 'UNDER_REVIEW' || status === 'PROOF_UPLOADED';
-    case 'NEEDS_UPDATE':
-      return status === 'UPDATE_REQUESTED';
-    case 'PAID':
-      return status === 'PAID';
-    case 'REJECTED':
-      return status === 'REJECTED';
-    case 'PENDING_REVIEW':
-      return (
-        status === 'UNDER_REVIEW' ||
-        status === 'PROOF_UPLOADED' ||
-        status === 'UPDATE_REQUESTED'
-      );
-    case 'HISTORY':
-      return status === 'PAID' || status === 'REJECTED';
-    default:
-      return true;
-  }
-}
-
-/** Expected status after a successful review action (when response status is briefly stale). */
-function expectedStatusAfterAction(
-  action: PaymentReviewAction,
-): SpacePaymentResponse['paymentStatus'] {
-  switch (action) {
-    case 'APPROVE':
-      return 'PAID';
-    case 'REJECT':
-      return 'REJECTED';
-    case 'REQUEST_UPDATE':
-      return 'UPDATE_REQUESTED';
-    default:
-      return 'UNDER_REVIEW';
-  }
 }
 
 /**
@@ -86,30 +50,37 @@ export function usePaymentsReviewList(
   const hasDataRef = useRef(false);
   /** IDs removed locally after a successful review until a later refetch confirms. */
   const suppressedIdsRef = useRef(new Set<string>());
+  const paymentsRef = useRef<SpacePaymentResponse[]>([]);
+  paymentsRef.current = payments;
   const guard = useMemo(() => createRequestGuard(), []);
 
   const queue: PaymentsReviewQueueParam =
     section === 'history' ? queueForHistory(historyFilter) : queueForPending(pendingFilter);
+  const queueRef = useRef(queue);
+  queueRef.current = queue;
 
-  const applyReviewToList = useCallback(
-    (paymentId: UUID, action: PaymentReviewAction, updated: SpacePaymentResponse) => {
-      const status = updated.paymentStatus || expectedStatusAfterAction(action);
-      const patched: SpacePaymentResponse = {
-        ...updated,
-        paymentStatus: status,
-      };
-
-      if (paymentMatchesReviewQueue(status, queue)) {
-        setPayments(prev => prev.map(p => (p.paymentId === paymentId ? patched : p)));
-        return;
+  const applyIncomingPayment = useCallback((updated: SpacePaymentResponse) => {
+    if (updated.spaceId !== spaceId) {
+      return;
+    }
+    if (updated.month && updated.month !== month) {
+      return;
+    }
+    const currentQueue = queueRef.current;
+    const current = paymentsRef.current;
+    const result = applyPaymentToReviewRows(current, updated, currentQueue);
+    if (result.removed) {
+      suppressedIdsRef.current.add(updated.paymentId);
+      setTotalElements(count => Math.max(0, count - 1));
+    } else if (paymentMatchesReviewQueue(updated.paymentStatus, currentQueue)) {
+      suppressedIdsRef.current.delete(updated.paymentId);
+      if (!current.some(row => row.paymentId === updated.paymentId)) {
+        setTotalElements(count => count + 1);
       }
-
-      suppressedIdsRef.current.add(paymentId);
-      setPayments(prev => prev.filter(p => p.paymentId !== paymentId));
-      setTotalElements(prev => Math.max(0, prev - 1));
-    },
-    [queue],
-  );
+    }
+    paymentsRef.current = result.rows;
+    setPayments(result.rows);
+  }, [month, spaceId]);
 
   const load = useCallback(
     async (pageIndex: number, options?: { append?: boolean }) => {
@@ -151,7 +122,9 @@ export function usePaymentsReviewList(
           }
         }
         hasDataRef.current = true;
-        setPayments(prev => (options?.append ? [...prev, ...content] : content));
+        const nextPayments = options?.append ? [...paymentsRef.current, ...content] : content;
+        paymentsRef.current = nextPayments;
+        setPayments(nextPayments);
         setPage(response.page.page);
         setTotalElements(Math.max(0, response.page.totalElements - staleSuppressed));
         setError(null);
@@ -174,6 +147,22 @@ export function usePaymentsReviewList(
     },
     [enabled, guard, month, queue, section, spaceId],
   );
+
+  useEffect(() => {
+    if (!enabled) {
+      return undefined;
+    }
+    return subscribePaymentUpdates(update => {
+      if (update.kind === 'month') {
+        if (update.spaceId !== spaceId || (update.month && update.month !== month)) {
+          return;
+        }
+        void load(0);
+        return;
+      }
+      applyIncomingPayment(update.payment);
+    });
+  }, [applyIncomingPayment, enabled, load, month, spaceId]);
 
   // Reset suppression only when the queue context changes — not on every load identity change.
   useEffect(() => {
@@ -215,13 +204,18 @@ export function usePaymentsReviewList(
           remarks,
           rejectionCode,
         });
-        applyReviewToList(paymentId, action, updated);
-        return updated;
+        const patched = paymentAfterReview(updated, action);
+        publishPaymentUpdated({
+          ...patched,
+          spaceId: patched.spaceId || spaceId,
+          month: patched.month || month,
+        });
+        return patched;
       } finally {
         setReviewingId(null);
       }
     },
-    [applyReviewToList, spaceId],
+    [month, spaceId],
   );
 
   return {

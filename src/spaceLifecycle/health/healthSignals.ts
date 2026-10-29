@@ -1,3 +1,4 @@
+import { getAccommodationUiProfile, usesUnitLevelOccupancy } from '../../utils/accommodationProfile';
 import type { CalculateSpaceHealthInput, HealthSignals } from './types';
 
 /** Normalize lifecycle + dashboard extras into one signal bag for scoring. */
@@ -26,6 +27,7 @@ export function buildHealthSignals(
     occupiedBeds: occupied,
     vacantBeds: vacant,
     bedTotal,
+    unitLevel: usesUnitLevelOccupancy(getAccommodationUiProfile(evaluation.spaceType)),
     underReviewPaymentCount: Math.max(
       0,
       extras?.underReviewPaymentCount ?? 0,

@@ -1,6 +1,24 @@
 import type { UUID } from '../../../api/types';
 import { accommodationApi } from '../../../api/accommodationApi';
-import type { EditableSetupStructure } from './setupStructureTypes';
+import type { EditableSetupStructure, EditableUnit } from './setupStructureTypes';
+
+async function persistUnitPricing(
+  spaceId: UUID,
+  buildingId: UUID,
+  unitId: UUID,
+  unit: EditableUnit,
+): Promise<void> {
+  if (unit.defaultRent == null && unit.defaultDeposit == null) {
+    return;
+  }
+  await accommodationApi.updateUnit(spaceId, buildingId, unitId, {
+    name: unit.name.trim(),
+    unitNumber: unit.number.trim() || unit.name.trim(),
+    status: 'AVAILABLE',
+    defaultRent: unit.defaultRent ?? null,
+    defaultDeposit: unit.defaultDeposit ?? null,
+  });
+}
 
 async function createBedsForRoom(
   spaceId: UUID,
@@ -43,6 +61,7 @@ export async function executeSetupStructure(
         unitNumber: unit.number.trim() || unit.name.trim(),
         status: 'AVAILABLE',
       });
+      await persistUnitPricing(spaceId, building.buildingId, createdUnit.unitId, unit);
       units += 1;
 
       for (const room of unit.rooms) {
@@ -83,6 +102,7 @@ export async function executeSetupStructure(
             status: 'AVAILABLE',
           },
         );
+        await persistUnitPricing(spaceId, building.buildingId, createdUnit.unitId, unit);
         units += 1;
 
         for (const room of unit.rooms) {

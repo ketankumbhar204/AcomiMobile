@@ -34,6 +34,8 @@ function candidateToPickerItem(candidate: MemberImportCandidateResponse): Reside
 
 type UseResidentImportSearchOptions = {
   enabled?: boolean;
+  /** Import lists people already in the space. Move-in search hides them. */
+  includeUnavailable?: boolean;
 };
 
 /**
@@ -45,7 +47,7 @@ export function useResidentImportSearch(
   query: string,
   options: UseResidentImportSearchOptions = {},
 ) {
-  const { enabled = true } = options;
+  const { enabled = true, includeUnavailable = false } = options;
   const [members, setMembers] = useState<ResidentPickerItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +65,7 @@ export function useResidentImportSearch(
       }
       setMembers(
         data
-          .filter(item => item.availableForMoveIn)
+          .filter(item => includeUnavailable || item.availableForMoveIn)
           .map(candidateToPickerItem),
       );
     } catch (err) {
@@ -77,7 +79,7 @@ export function useResidentImportSearch(
         setLoading(false);
       }
     }
-  }, [query, spaceId]);
+  }, [includeUnavailable, query, spaceId]);
 
   useEffect(() => {
     if (!enabled) {

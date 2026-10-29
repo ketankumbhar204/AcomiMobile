@@ -40,8 +40,8 @@ import { paymentReminderToastKey } from '../../utils/paymentReminderFeedback';
 import { buildPaymentReminderMessage } from '../../utils/paymentReminderMessage';
 import { firstWhatsAppPhone } from '../../utils/photoRequest';
 import { openReminderWhatsApp } from '../../utils/paymentReminderLaunch';
-import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
-import { invalidatePaymentsMonthCaches } from '../../utils/paymentsMonthCache';
+import { paymentAfterReview } from '../../utils/paymentReviewRows';
+import { publishPaymentUpdated } from '../../utils/paymentUpdates';
 import {
   buildMealSummaryFromDayDetails,
   countMealSummaryDays,
@@ -194,10 +194,11 @@ export function PaymentDetailScreen() {
       const timelineResponse = await paymentsApi.getPaymentTimeline(spaceId, paymentId);
       setTimeline(timelineResponse.events);
       setProofVisible(false);
-      invalidateDashboardQueries();
-      if (updated.month) {
-        invalidatePaymentsMonthCaches(spaceId, updated.month);
-      }
+      publishPaymentUpdated({
+        ...updated,
+        spaceId: updated.spaceId || spaceId,
+        month: updated.month || payment?.month || '',
+      });
       showToast(
         proofModalMode === 'edit'
           ? t('paymentCollection.proof.updated')
@@ -241,13 +242,18 @@ export function PaymentDetailScreen() {
           remarks,
           rejectionCode: code,
         });
-        setPayment(updated);
+        const patched = paymentAfterReview(
+          {
+            ...updated,
+            spaceId: updated.spaceId || spaceId,
+            month: updated.month || payment?.month || '',
+          },
+          action,
+        );
+        setPayment(patched);
         const timelineResponse = await paymentsApi.getPaymentTimeline(spaceId, paymentId);
         setTimeline(timelineResponse.events);
-        invalidateDashboardQueries();
-        if (updated.month) {
-          invalidatePaymentsMonthCaches(spaceId, updated.month);
-        }
+        publishPaymentUpdated(patched);
         showToast(
           action === 'APPROVE'
             ? t('paymentCollection.review.approved')
@@ -265,20 +271,22 @@ export function PaymentDetailScreen() {
         setReviewing(false);
       }
     },
-    [paymentId, showToast, spaceId, t],
+    [payment, paymentId, showToast, spaceId, t],
   );
 
   const handleMarkReceived = useCallback(async () => {
     setMarkingReceived(true);
     try {
       const updated = await paymentsApi.markPaymentReceived(spaceId, paymentId);
-      setPayment(updated);
+      const patched = {
+        ...updated,
+        spaceId: updated.spaceId || spaceId,
+        month: updated.month || payment?.month || '',
+      };
+      setPayment(patched);
       const timelineResponse = await paymentsApi.getPaymentTimeline(spaceId, paymentId);
       setTimeline(timelineResponse.events);
-      invalidateDashboardQueries();
-      if (updated.month) {
-        invalidatePaymentsMonthCaches(spaceId, updated.month);
-      }
+      publishPaymentUpdated(patched);
       setReceivedVisible(false);
       showToast(t('paymentCollection.received.success'));
     } catch (err) {
@@ -290,7 +298,7 @@ export function PaymentDetailScreen() {
     } finally {
       setMarkingReceived(false);
     }
-  }, [paymentId, showToast, spaceId, t]);
+  }, [payment, paymentId, showToast, spaceId, t]);
 
   const handleSendReminder = useCallback(async () => {
     const message = reminderMessage.trim();

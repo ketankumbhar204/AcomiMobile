@@ -28,6 +28,7 @@ import {
   type AuthorizedImageSource,
 } from '../services/fileUploadService';
 import { useToastStore } from '../store/toastStore';
+import { withAcomiAppLink } from '../utils/acomiWhatsAppAppLink';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'InquiryCredits'>;
@@ -377,7 +378,9 @@ export function InquiryCreditsScreen() {
                   const full = digits.length === 10 ? `91${digits}` : digits;
                   void Linking.openURL(
                     `https://wa.me/${full}?text=${encodeURIComponent(
-                      'Hi, I paid for ACOMI inquiry credits. Sharing the payment screenshot.',
+                      withAcomiAppLink(
+                        'Hi, I paid for ACOMI inquiry credits. Sharing the payment screenshot.',
+                      ),
                     )}`,
                   );
                 }}

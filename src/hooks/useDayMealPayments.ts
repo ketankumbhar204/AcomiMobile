@@ -12,6 +12,7 @@ import {
   dayMealPaymentsMonthCache,
   invalidateDayMealPaymentsMonth,
 } from '../utils/paymentsMonthCache';
+import { subscribePaymentUpdates } from '../utils/paymentUpdates';
 import type { DayMealPaymentsMonthSnapshot } from './dayMealPaymentsTypes';
 
 function currentMonthKey(): string {
@@ -136,6 +137,20 @@ export function useDayMealPaymentsMonth(
   useEffect(() => {
     void load(month);
   }, [load, month]);
+
+  useEffect(() => {
+    if (!enabled) {
+      return undefined;
+    }
+    return subscribePaymentUpdates(update => {
+      const updateSpaceId = update.kind === 'payment' ? update.payment.spaceId : update.spaceId;
+      const updateMonth = update.kind === 'payment' ? update.payment.month : update.month;
+      if (updateSpaceId !== spaceId || (updateMonth && updateMonth !== month)) {
+        return;
+      }
+      void load(month, { force: true });
+    });
+  }, [enabled, load, month, spaceId]);
 
   const goToPreviousMonth = useCallback(() => {
     setMonth(prev => shiftMonthKey(prev, -1));

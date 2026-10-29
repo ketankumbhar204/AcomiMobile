@@ -34,7 +34,7 @@
       "tabPolls": "Poll defaults"
     },
     "quickSetup": {
-      "reviewPreviewHint": "Review the structure below, then generate."
+      "reviewPreviewHint": "Review and edit the structure before creating the building."
     },
     "createSpace": {
       "essentialsTitle": "Essentials",
@@ -666,7 +666,7 @@
       "saveMess": "Add Customer",
       "saveImport": "Add",
       "successToast": "Member added successfully.",
-      "importSuccessToast": "Customer added to this mess.",
+      "importSuccessToast": "{{person}} added to this {{space}}.",
       "importFailed": "Could not import this customer. Please try again.",
       "reuseRequired": "Pick someone from another space, or create a new customer.",
       "selectedCustomer": "Selected",

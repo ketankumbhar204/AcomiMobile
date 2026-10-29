@@ -2,7 +2,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import {
   defaultSpaceResponseToSpace,
-  mySpaceResponseToSpace,
   mySpacesApi,
   spaceApi,
   spaceDetailsResponseToSpace,
@@ -14,7 +13,7 @@ import type {
   UpdateSpaceRequest,
   UUID,
 } from '../api/types';
-import { getSpaceErrorMessage } from '../utils/spaceErrors';
+import { getSpaceErrorMessage, isStartupConnectionFailure } from '../utils/spaceErrors';
 import { resolveStartupSpace, type StartupSpaceResolution } from '../utils/resolveStartupSpace';
 import { navigateBootstrapResult } from '../navigation/navigationRef';
 import { devLog } from '../utils/devLog';
@@ -29,7 +28,8 @@ export type SpaceBootstrapRoute =
   | 'AcceptInvitations'
   | 'OnboardingChoice'
   | 'JoinSpace'
-  | 'MemberHome';
+  | 'MemberHome'
+  | 'Offline';
 
 export type SpaceBootstrapResult = {
   route: SpaceBootstrapRoute;
@@ -49,11 +49,14 @@ interface SpaceState {
   hasSpaceBootstrapped: boolean;
   /** Set during bootstrap so MainNavigator can open the correct first screen. */
   startupRoute: SpaceBootstrapRoute | null;
+  /** Bumped by retry so a failed launch can bootstrap again. */
+  startupAttempt: number;
 
   hydrateCurrentSpace: () => Promise<void>;
   bootstrapSpaces: () => Promise<SpaceBootstrapResult>;
   /** Re-check invitations and memberships; navigate when status changes. */
   refreshStartupNavigation: () => Promise<SpaceBootstrapResult>;
+  retryStartupBootstrap: () => void;
   loadMySpaces: () => Promise<void>;
   loadDefaultSpace: () => Promise<DefaultSpaceResponse | null>;
   searchSpaces: (query: string) => Promise<void>;
@@ -172,6 +175,7 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
   isSpaceBootstrapping: false,
   hasSpaceBootstrapped: false,
   startupRoute: null,
+  startupAttempt: 0,
 
   hydrateCurrentSpace: async () => {
     try {
@@ -229,16 +233,32 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
       return result;
     } catch (err) {
       const message = getSpaceErrorMessage(err, 'common.errors.loadSpaces');
-      console.error(`${LOG_TAG} bootstrapSpaces failed`, err);
+      const offline = isStartupConnectionFailure(err);
+      if (offline) {
+        console.log(`${LOG_TAG} bootstrapSpaces offline`, message);
+      } else {
+        console.error(`${LOG_TAG} bootstrapSpaces failed`, err);
+      }
       set({
         error: message,
-        startupRoute: 'MySpaces',
+        startupRoute: offline ? 'Offline' : 'MySpaces',
         hasSpaceBootstrapped: true,
         isSpaceBootstrapping: false,
         loading: false,
       });
-      return { route: 'MySpaces' };
+      return { route: offline ? 'Offline' : 'MySpaces' };
     }
+  },
+
+  retryStartupBootstrap: () => {
+    set(state => ({
+      error: null,
+      startupRoute: null,
+      hasSpaceBootstrapped: false,
+      isSpaceBootstrapping: false,
+      loading: false,
+      startupAttempt: state.startupAttempt + 1,
+    }));
   },
 
   refreshStartupNavigation: async () => {
@@ -269,6 +289,18 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
       return result;
     } catch (err) {
       const message = getSpaceErrorMessage(err, 'common.errors.loadSpaces');
+      const offline = isStartupConnectionFailure(err);
+      if (offline) {
+        console.log(`${LOG_TAG} refreshStartupNavigation offline`, message);
+        set({
+          loading: false,
+          error: message,
+          startupRoute: 'Offline',
+          hasSpaceBootstrapped: true,
+          isSpaceBootstrapping: false,
+        });
+        return { route: 'Offline' };
+      }
       console.error(`${LOG_TAG} refreshStartupNavigation failed`, err);
       set({ loading: false, error: message });
       return { route: 'MemberHome' };
@@ -544,6 +576,7 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
       isSpaceBootstrapping: false,
       hasSpaceBootstrapped: false,
       startupRoute: null,
+      startupAttempt: 0,
     });
     await persistCurrentSpace(null);
   },

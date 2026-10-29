@@ -1,4 +1,5 @@
 import type { SpacePaymentResponse } from '../api/types';
+import { withAcomiAppLink } from './acomiWhatsAppAppLink';
 import { formatPaymentAmount } from './paymentAmount';
 import { formatPaymentDueDate } from './paymentHistory';
 
@@ -57,5 +58,7 @@ export function buildPaymentReminderMessage(
   }
   const due = clean(payment.dueDate) ? formatPaymentDueDate(payment.dueDate as string) : '';
   const dueClause = due ? `, due on ${due}` : '';
-  return `Hi ${name}, this is a friendly reminder regarding your payment of ${amount} for ${description}${dueClause}. Please review and complete the payment when convenient. Thank you.`;
+  return withAcomiAppLink(
+    `Hi ${name}, this is a friendly reminder regarding your payment of ${amount} for ${description}${dueClause}. Please review and complete the payment when convenient. Thank you.`,
+  );
 }

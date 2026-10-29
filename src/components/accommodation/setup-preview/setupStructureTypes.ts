@@ -21,6 +21,9 @@ export type EditableUnit = {
   name: string;
   number: string;
   rooms: EditableRoom[];
+  /** Optional unit rent. Used when the layout has no beds to price. */
+  defaultRent?: number | null;
+  defaultDeposit?: number | null;
 };
 
 export type EditableFloor = {
