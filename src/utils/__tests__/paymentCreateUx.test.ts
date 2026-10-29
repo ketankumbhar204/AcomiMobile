@@ -35,7 +35,7 @@ describe('payment create UX', () => {
     expect(create).toContain('padding: paymentDetailScreenPadding');
     expect(create).toContain('paddingHorizontal: paymentDetailContentGutter');
     expect(create).not.toContain('padding: spacing.lg,\n    paddingBottom: 140');
-    expect(create).toContain('invalidatePaymentsMonthCaches');
+    expect(create).toContain('publishPaymentUpdated');
     expect(actions).toContain("t('paymentCollection.received.action')");
     expect(actions).toContain("t('paymentCollection.reminder.send')");
     expect(actions).not.toContain('onAddPayment');

@@ -5,11 +5,14 @@ import { colors, spacing } from '../../theme';
 export function BrandSplash() {
   return (
     <View style={styles.splash}>
-      <Image
-        source={require('../../assets/brand/icon-light.png')}
-        style={styles.mark}
-        accessibilityIgnoresInvertColors
-      />
+      <View style={styles.markFrame}>
+        <Image
+          source={require('../../assets/brand/icon-light.png')}
+          style={styles.mark}
+          resizeMode="contain"
+          accessibilityIgnoresInvertColors
+        />
+      </View>
       <Text style={styles.name}>ACOMI</Text>
       <Text style={styles.tagline}>Spaces · Meals · People belong</Text>
       <ActivityIndicator style={styles.spinner} size="small" color={colors.primary} />
@@ -25,10 +28,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
   },
+  markFrame: {
+    width: 112,
+    height: 112,
+    borderRadius: 26,
+    overflow: 'hidden',
+    backgroundColor: '#ECFDF5',
+  },
   mark: {
-    width: 96,
-    height: 96,
-    borderRadius: 22,
+    width: 112,
+    height: 112,
   },
   name: {
     marginTop: spacing.md,

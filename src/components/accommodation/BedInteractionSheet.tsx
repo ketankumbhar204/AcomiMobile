@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { BedSingle, X } from 'lucide-react-native';
+import { BedSingle, Grid2x2, X } from 'lucide-react-native';
 import type { AccommodationStatus, OccupancyResponse, SpaceType } from '../../api/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, pastels, radius, shadows, spacing, typography } from '../../theme';
@@ -56,6 +56,10 @@ export type BedInteractionSheetProps = {
   };
   onClose: () => void;
   onSave: (draft: BedInteractionDraft) => void | Promise<void>;
+  /** Unit drawers reuse this shell. Defaults keep the bed copy. */
+  entity?: 'bed' | 'unit';
+  fieldsLoading?: boolean;
+  onOpenDetails?: () => void;
 };
 
 export function BedInteractionSheet({
@@ -76,6 +80,9 @@ export function BedInteractionSheet({
   occupancy,
   onClose,
   onSave,
+  entity = 'bed',
+  fieldsLoading = false,
+  onOpenDetails,
 }: BedInteractionSheetProps) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -117,7 +124,10 @@ export function BedInteractionSheet({
   );
 
   const unchanged = isBedDraftUnchanged(current, draft);
-  const occupiedStay = mode === 'persisted' && status === 'OCCUPIED' && Boolean(spaceId && bedId);
+  const occupiedStay =
+    mode === 'persisted' &&
+    status === 'OCCUPIED' &&
+    (entity === 'unit' ? Boolean(spaceId) : Boolean(spaceId && bedId));
   const editable = canEditStructure && !inactive && !occupiedStay;
   const occupancySet = occupancyActionsForBedStatus(status, inactive);
   const showOccupancy =
@@ -135,9 +145,17 @@ export function BedInteractionSheet({
         title: t('accommodation.beds.unsavedTitle', {
           defaultValue: 'Discard changes?',
         }),
-        message: t('accommodation.beds.unsavedMessage', {
-          defaultValue: 'Your bed details have not been saved.',
-        }),
+        message: t(
+          entity === 'unit'
+            ? 'accommodation.units.unsavedMessage'
+            : 'accommodation.beds.unsavedMessage',
+          {
+            defaultValue:
+              entity === 'unit'
+                ? 'Your unit details have not been saved.'
+                : 'Your bed details have not been saved.',
+          },
+        ),
         confirmLabel: t('common.discard', { defaultValue: 'Discard' }),
         cancelLabel: t('common.cancel'),
         destructive: true,
@@ -188,7 +206,11 @@ export function BedInteractionSheet({
         <View style={[styles.card, { paddingBottom: spacing.lg + insets.bottom }]}>
           <View style={styles.header}>
             <View style={styles.iconWrap}>
-              <BedSingle size={18} color={pastels.green.fg} strokeWidth={2.2} />
+              {entity === 'unit' ? (
+                <Grid2x2 size={18} color={pastels.green.fg} strokeWidth={2.2} />
+              ) : (
+                <BedSingle size={18} color={pastels.green.fg} strokeWidth={2.2} />
+              )}
             </View>
             <View style={styles.headerText}>
               <Text style={styles.title} numberOfLines={2}>
@@ -217,20 +239,32 @@ export function BedInteractionSheet({
             showsVerticalScrollIndicator={false}
             style={[styles.scroll, { maxHeight: scrollMaxHeight }]}
             contentContainerStyle={styles.scrollContent}>
-            {occupiedStay && spaceId && bedId ? (
+            {occupiedStay && spaceId && (entity === 'unit' || bedId) ? (
               <OccupiedBedStaySection
                 spaceId={spaceId}
                 bedId={bedId}
+                unitId={entity === 'unit' ? occupancy?.target.unitId : undefined}
                 bedNumber={bedNumber}
                 locationLine={locationLine}
+                entity={entity}
               />
+            ) : fieldsLoading ? (
+              <Text style={styles.section}>
+                {t('common.loading', { defaultValue: 'Loading…' })}
+              </Text>
             ) : (
               <>
             <Text style={styles.section}>
-              {t('accommodation.beds.detailsSection', { defaultValue: 'Bed details' })}
+              {entity === 'unit'
+                ? t('accommodation.units.detailsSection', { defaultValue: 'Unit details' })
+                : t('accommodation.beds.detailsSection', { defaultValue: 'Bed details' })}
             </Text>
             <FormInput
-              label={t('accommodation.beds.bedNumberLabel')}
+              label={
+                entity === 'unit'
+                  ? t('accommodation.units.unitNumberLabel', { defaultValue: 'Unit number' })
+                  : t('accommodation.beds.bedNumberLabel')
+              }
               value={numberText}
               onChangeText={setNumberText}
               editable={editable}
@@ -304,6 +338,18 @@ export function BedInteractionSheet({
                 onBeforeReserve={validateOccupancyPricing}
                 onDismissBeforeFlow={onClose}
               />
+            ) : null}
+            {onOpenDetails ? (
+              <Pressable
+                onPress={onOpenDetails}
+                accessibilityRole="button"
+                style={styles.detailsLink}>
+                <Text style={styles.detailsLinkText}>
+                  {t('accommodation.layout.dashboard.viewDetails', {
+                    defaultValue: 'View details',
+                  })}
+                </Text>
+              </Pressable>
             ) : null}
           </ScrollView>
         </View>
@@ -401,5 +447,13 @@ const styles = StyleSheet.create({
   saveButton: {
     marginTop: spacing.xs,
     marginBottom: spacing.md,
+  },
+  detailsLink: {
+    alignSelf: 'center',
+    paddingVertical: spacing.sm,
+  },
+  detailsLinkText: {
+    ...typography.bodyStrong,
+    color: colors.primary,
   },
 });

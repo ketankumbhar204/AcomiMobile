@@ -341,9 +341,9 @@ export function EditSpaceScreen() {
 
   function validate(): boolean {
     const errors: FieldErrors = {};
-    if (addressCaptureIssue(location) === 'selection') {
-      errors.address = t('locationCapture.selectionRequired', {
-        defaultValue: 'Select a location from the suggestions.',
+    if (addressCaptureIssue(location, { allowManual: true }) === 'pincode') {
+      errors.address = t('locationCapture.pincodeRequired', {
+        defaultValue: 'Enter a valid 6-digit pincode.',
       });
     }
     if (!name.trim()) {
@@ -547,6 +547,7 @@ export function EditSpaceScreen() {
                   <AddressLocationFields
                     value={location}
                     onChange={setLocation}
+                    allowManual
                     error={fieldErrors.address}
                   />
 

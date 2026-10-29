@@ -1,6 +1,7 @@
 import {
   addDaysIsoDate,
   compareIsoDates,
+  splitMenuDateRange,
   headcountTitleKey,
   headcountTitleUsesDateParam,
   isEditableMenuDate,
@@ -42,6 +43,30 @@ describe('mealDates', () => {
     expect(relativeMenuDateKind(addDaysIsoDate(today, -1))).toBe('yesterday');
     expect(relativeMenuDateKind(addDaysIsoDate(today, 1))).toBe('tomorrow');
     expect(relativeMenuDateKind(addDaysIsoDate(today, -2))).toBeNull();
+  });
+
+  it('splits a 90-day copy-menu range into 31-day windows', () => {
+    const windows = splitMenuDateRange('2026-07-30', '2026-10-27');
+    expect(windows[0]?.from).toBe('2026-07-30');
+    expect(windows[windows.length - 1]?.to).toBe('2026-10-27');
+    expect(windows.length).toBeGreaterThan(1);
+    for (let index = 0; index < windows.length; index += 1) {
+      const window = windows[index];
+      const start = new Date(`${window.from}T12:00:00`);
+      const end = new Date(`${window.to}T12:00:00`);
+      const inclusive = Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
+      expect(inclusive).toBeLessThanOrEqual(31);
+      expect(inclusive).toBeGreaterThan(0);
+      if (index > 0) {
+        expect(window.from).toBe(addDaysIsoDate(windows[index - 1].to, 1));
+      }
+    }
+    expect(splitMenuDateRange('2026-10-01', '2026-10-31')).toEqual([
+      { from: '2026-10-01', to: '2026-10-31' },
+    ]);
+    expect(splitMenuDateRange('2026-10-28', '2026-10-27')).toEqual([
+      { from: '2026-10-28', to: '2026-10-27' },
+    ]);
   });
 
   it('headcountTitleKey matches relative date', () => {

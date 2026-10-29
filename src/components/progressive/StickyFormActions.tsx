@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
+import { spacing } from '../../theme';
 import { Button } from '../ui';
 import type { ProgressiveWorkflowAction } from './ProgressiveWorkflowFooter';
 import {
@@ -66,7 +67,8 @@ export function StickyFormActions({
               onPress={secondary.onPress}
               loading={secondary.loading}
               disabled={secondary.disabled}
-              style={stickyBarStackStyle.rowButton}
+              numberOfLines={1}
+              style={StyleSheet.flatten([stickyBarStackStyle.rowButton, styles.rowButton])}
             />
           ) : null}
           {primary ? (
@@ -75,7 +77,12 @@ export function StickyFormActions({
               onPress={primary.onPress}
               loading={primary.loading}
               disabled={primary.disabled}
-              style={StyleSheet.flatten([stickyBarStackStyle.rowButton, primary.style])}
+              numberOfLines={1}
+              style={StyleSheet.flatten([
+                stickyBarStackStyle.rowButton,
+                styles.rowButton,
+                primary.style,
+              ])}
             />
           ) : null}
         </View>
@@ -110,5 +117,8 @@ export function StickyFormActions({
 const styles = StyleSheet.create({
   bar: {
     ...stickyBarChrome,
+  },
+  rowButton: {
+    paddingHorizontal: spacing.sm,
   },
 });

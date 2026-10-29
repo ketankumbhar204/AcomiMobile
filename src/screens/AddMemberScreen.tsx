@@ -68,6 +68,7 @@ import { invalidateDashboardQueries } from '../utils/dashboardQueryCache';
 import { defaultRoleForSpaceType } from '../utils/memberRoles';
 import { isMemberGenderRequired } from '../utils/memberGender';
 import { isValidIndianMobile, normalizeIndianMobileDigits } from '../utils/indianMobile';
+import { importAddedToast } from '../utils/importAddedToast';
 import { getMembershipErrorMessage } from '../utils/membershipErrors';
 import { findMySpaceEntry } from '../utils/spacePermissions';
 import {
@@ -329,9 +330,7 @@ export function AddMemberScreen() {
       }
     }
     showToast(
-      usingImport
-        ? t('membership.add.importSuccessToast')
-        : t('membership.add.successToast'),
+      usingImport ? importAddedToast(t, spaceType) : t('membership.add.successToast'),
     );
     invalidateDashboardQueries();
     navigation.goBack();

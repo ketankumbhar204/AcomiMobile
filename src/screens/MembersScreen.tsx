@@ -61,7 +61,11 @@ import { useAccommodationActionSheetStore } from '../store/accommodationActionSh
 import { useMemberStore } from '../store/memberStore';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 import { memberAcomiBadgeLabel } from '../utils/memberAppStatus';
-import { getMemberListFoodLabel, isReceivingMealsForMember } from '../utils/mealAccess';
+import {
+  getMemberListFoodLabel,
+  isReceivingMealsForMember,
+  mealsApplicableForSpace,
+} from '../utils/mealAccess';
 import { getMemberStatusColor, getMemberStatusLabelKey } from '../utils/memberStatus';
 import { memberListStayLabel, stayLabelForMember } from '../utils/memberListStay';
 import type { StayLayoutMode } from '../utils/stayTrail';
@@ -206,7 +210,8 @@ export function MembersScreen() {
   const [stayByMemberId, setStayByMemberId] = useState<Map<string, string>>(() => new Map());
 
   const permissions = useSpacePermissions(spaceId);
-  const showMealAccess = permissions.canViewMeals === true;
+  const showMealAccess =
+    permissions.canViewMeals === true && mealsApplicableForSpace(permissions.spaceType);
   const canManageMeals = permissions.canManageMeals === true;
   const isMess = permissions.spaceType === 'MESS';
   const showTenantOccupancyStatus =

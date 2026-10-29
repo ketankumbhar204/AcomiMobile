@@ -36,12 +36,13 @@ describe('import choice eligibility', () => {
   const alreadyHere = { availableForMoveIn: true, alreadyInTargetSpace: true };
   const unavailable = { availableForMoveIn: false, alreadyInTargetSpace: false };
 
-  it('opens the form when there is nobody to import', () => {
+  it('counts people in other spaces and skips people already in this space', () => {
     expect(shouldOfferImportChoice(countImportableCandidates([]))).toBe(false);
-    expect(shouldOfferImportChoice(countImportableCandidates([unavailable]))).toBe(false);
+    expect(shouldOfferImportChoice(countImportableCandidates([unavailable]))).toBe(true);
     expect(shouldOfferImportChoice(countImportableCandidates([alreadyHere, alreadyHere]))).toBe(
       false,
     );
+    expect(countImportableCandidates([alreadyHere, eligible, unavailable])).toBe(2);
   });
 
   it('opens the choice when at least one person can be imported', () => {

@@ -2,6 +2,7 @@ import {
   addressCaptureIssue,
   captureFromSuggestion,
   composeStoredAddress,
+  keepTypedAddress,
   withAddressQuery,
   EMPTY_ADDRESS_CAPTURE,
   type LocationAutocompleteSuggestion,
@@ -55,5 +56,24 @@ describe('address capture', () => {
     expect(next.city).toBe('');
     expect(next.buildingName).toBe('Sunrise Residency');
     expect(addressCaptureIssue(next, { required: true })).toBe('selection');
+    expect(addressCaptureIssue(next, { required: true, allowManual: true })).toBeNull();
+  });
+
+  it('stores a typed address when autocomplete has no match', () => {
+    const typed = keepTypedAddress({
+      ...EMPTY_ADDRESS_CAPTURE,
+      buildingName: 'Test corporate stay',
+      query: 'Mukai Nagar Hinjawadi',
+      locality: 'Hinjawadi',
+      city: 'Pune',
+      state: 'Maharashtra',
+    });
+
+    expect(typed.selected).toBe(false);
+    expect(typed.latitude).toBeNull();
+    expect(addressCaptureIssue(typed, { allowManual: true })).toBeNull();
+    expect(composeStoredAddress(typed)).toBe(
+      'Test corporate stay, Mukai Nagar Hinjawadi, Pune, Maharashtra',
+    );
   });
 });

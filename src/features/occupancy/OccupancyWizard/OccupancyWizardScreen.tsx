@@ -57,7 +57,9 @@ import {
 import { fetchPrefilledAllocationTarget } from '../../../utils/fetchPrefilledAllocationTarget';
 import {
   emptyContractTermsFormValues,
+  parseContractAmount,
   resolveContractFoodPolicy,
+  validateContractTerms,
   type ContractTermsFormValues,
 } from '../../../utils/occupancyContract';
 import { agentDebugLog } from '../../../utils/agentDebugLog';
@@ -205,6 +207,7 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
     }),
   );
   const [formError, setFormError] = useState<string | null>(null);
+  const [contractRentError, setContractRentError] = useState<string | null>(null);
   const [memberPickerMode, setMemberPickerMode] = useState<MemberPickerMode>('search');
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberMobile, setNewMemberMobile] = useState('');
@@ -740,6 +743,17 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
         currentOccupancy,
         assignedAmenities,
         onSuccess: handleOccupancySuccess,
+        onInvalidContract: errorKey => {
+          const message = t(errorKey);
+          setFormError(message);
+          if (errorKey === 'occupancy.contract.errors.rentRequired') {
+            setContractRentError(message);
+          }
+          const contractIndex = steps.indexOf('contract');
+          if (contractIndex >= 0) {
+            setStepIndex(contractIndex);
+          }
+        },
       });
     } catch (err) {
       setFormError(getOccupancyErrorMessage(err));
@@ -766,14 +780,45 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
     roomId,
     spaceId,
     spaceType,
+    steps,
     submit,
     t,
     targetSelection,
     unitId,
   ]);
 
+  const contractRentRequired =
+    mode === 'ALLOCATE' ||
+    mode === 'MOVE_IN' ||
+    rentPolicy === 'CUSTOM' ||
+    (mode === 'TRANSFER' && rentPolicy === 'APPLY_NEW');
+
+  const rejectInvalidContract = useCallback(() => {
+    const validationError = validateContractTerms(contractValues, {
+      rentRequired: contractRentRequired,
+      foodPolicy: effectiveFoodPolicy,
+    });
+    if (!validationError) {
+      setContractRentError(null);
+      return false;
+    }
+    const message = t(validationError);
+    setContractRentError(
+      validationError === 'occupancy.contract.errors.rentRequired' ? message : null,
+    );
+    setFormError(message);
+    const contractIndex = steps.indexOf('contract');
+    if (contractIndex >= 0) {
+      setStepIndex(contractIndex);
+    }
+    return true;
+  }, [contractRentRequired, contractValues, effectiveFoodPolicy, steps, t]);
+
   const handlePrimary = useCallback(() => {
     if (currentStep === 'review' || currentStep === 'vacate_confirm') {
+      if (currentStep === 'review' && rejectInvalidContract()) {
+        return;
+      }
       void handleConfirm();
       return;
     }
@@ -794,7 +839,11 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
       setFormError(t('occupancy.errors.moveInDateRequired'));
       return;
     }
+    if (currentStep === 'contract' && rejectInvalidContract()) {
+      return;
+    }
     setFormError(null);
+    setContractRentError(null);
     goNext();
   }, [
     currentStep,
@@ -804,6 +853,7 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
     member,
     memberPickerMode,
     moveInDate,
+    rejectInvalidContract,
     t,
   ]);
 
@@ -1097,7 +1147,13 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
                 spaceId={spaceId}
                 mode={mode === 'TRANSFER' ? 'TRANSFER' : mode === 'MOVE_IN' ? 'MOVE_IN' : 'ALLOCATE'}
                 values={contractValues}
-                onChange={setContractValues}
+                rentError={contractRentError}
+                onChange={next => {
+                  setContractValues(next);
+                  if (parseContractAmount(next.rentSnapshot) != null) {
+                    setContractRentError(null);
+                  }
+                }}
                 catalogRent={catalogRent}
                 catalogDeposit={catalogDeposit}
                 rentPolicy={rentPolicy}

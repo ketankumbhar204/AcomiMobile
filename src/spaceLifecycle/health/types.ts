@@ -70,6 +70,8 @@ export type HealthSignals = {
   occupiedBeds: number;
   vacantBeds: number;
   bedTotal: number;
+  /** True when the space occupies units rather than beds. */
+  unitLevel: boolean;
   underReviewPaymentCount: number;
   buildingCount: number;
 };

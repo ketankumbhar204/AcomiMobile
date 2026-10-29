@@ -5,6 +5,7 @@ import type { BuildingSummaryResponse, UnitListItemResponse } from '../../../api
 import { spacing, typography } from '../../../theme';
 import { matchesAccommodationSearch } from '../../../utils/accommodationLayoutSearch';
 import { chunkIntoRows } from './visual/planLayoutUtils';
+import { RentalUnitsOverview } from './RentalUnitsOverview';
 import { LayoutSummaryCard } from './cards/LayoutSummaryCard';
 import { UnitLayoutCard } from './cards/UnitLayoutCard';
 import { LayoutEntityPhoto } from './cards/LayoutEntityPhoto';
@@ -33,11 +34,13 @@ export function BuildingUnitElevation({
   buildingName,
   buildingSummary,
   units,
+  layoutMode,
   searchQuery,
   onUnitPress,
   onUnitLongPress,
   renderUnitMenu,
 }: BuildingUnitElevationProps) {  const { t } = useTranslation();
+  const unitOnly = layoutMode === 'RENTAL';
   const rows = useMemo(() => chunkIntoRows(units, GRID_COLUMNS), [units]);
 
   const totals = useMemo(() => {
@@ -62,6 +65,17 @@ export function BuildingUnitElevation({
   const statusCounts = buildingSummary
     ? buildingSummaryToStatusCounts(buildingSummary)
     : aggregateUnitStatusCounts(units);
+
+  if (unitOnly) {
+    return (
+      <RentalUnitsOverview
+        buildingSummary={buildingSummary}
+        units={units}
+        onUnitPress={onUnitPress}
+        renderUnitMenu={renderUnitMenu}
+      />
+    );
+  }
 
   return (
     <View style={styles.root}>

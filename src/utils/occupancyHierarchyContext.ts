@@ -60,6 +60,15 @@ export function buildConfirmedHierarchyContext(
   const step = options.currentHierarchyStep;
 
   if (!step) {
+    if (floorName) {
+      ctx.floorName = floorName;
+    }
+    if (unitName) {
+      ctx.unitName = unitName;
+    }
+    if (roomName) {
+      ctx.roomName = roomName;
+    }
     return ctx;
   }
 

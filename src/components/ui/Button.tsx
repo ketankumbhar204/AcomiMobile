@@ -87,9 +87,12 @@ export function Button({
           <ActivityIndicator color={spinnerColor} />
           <Text
             numberOfLines={numberOfLines}
+            adjustsFontSizeToFit={numberOfLines === 1}
+            minimumFontScale={0.8}
             style={[
               styles.label,
               styles[`${variant}Label`],
+              numberOfLines === 1 && styles.singleLineLabel,
               tint && { color: tint.fg },
             ]}>
             {label}
@@ -100,9 +103,12 @@ export function Button({
           {Icon ? <Icon size={18} color={iconColor} strokeWidth={2.3} /> : null}
           <Text
             numberOfLines={numberOfLines}
+            adjustsFontSizeToFit={numberOfLines === 1}
+            minimumFontScale={0.8}
             style={[
               styles.label,
               styles[`${variant}Label`],
+              numberOfLines === 1 && styles.singleLineLabel,
               tint && { color: tint.fg },
             ]}>
             {label}
@@ -146,6 +152,10 @@ const styles = StyleSheet.create({
   label: {
     ...typography.bodyStrong,
     fontSize: 15,
+  },
+  singleLineLabel: {
+    flexShrink: 1,
+    textAlign: 'center',
   },
   primaryLabel: {
     color: colors.white,

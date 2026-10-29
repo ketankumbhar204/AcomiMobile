@@ -4,13 +4,12 @@ export type ImportCandidateEligibility = {
 };
 
 /**
- * Same people the import screen can actually add.
- * `availableForMoveIn` is the import-candidates filter.
- * People already in the current space stay listed there with Add disabled,
- * so they are not a real import choice.
+ * People the import screen can add.
+ * Someone already in the destination stays listed with Add hidden.
+ * An active stay in another space can still be copied; move-in uses availableForMoveIn.
  */
 export function isImportableCandidate(candidate: ImportCandidateEligibility): boolean {
-  return candidate.availableForMoveIn !== false && candidate.alreadyInTargetSpace !== true;
+  return candidate.alreadyInTargetSpace !== true;
 }
 
 export function countImportableCandidates(

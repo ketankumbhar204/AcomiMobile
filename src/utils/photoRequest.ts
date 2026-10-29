@@ -1,3 +1,5 @@
+import { withAcomiAppLink } from './acomiWhatsAppAppLink';
+
 export type PhotoRequestKind = 'property' | 'mess';
 
 const INDIAN_MOBILE = /^[6-9]\d{9}$/;
@@ -74,10 +76,14 @@ export function buildPhotoRequestMessage(input: {
   const more = input.hasPhotos ? 'more ' : '';
   if (input.kind === 'mess') {
     const subject = name || 'your mess';
-    return `Hi, I'm interested in ${subject}. Could you please share some ${more}recent photos of the menu, food, and service? Thank you.`;
+    return withAcomiAppLink(
+      `Hi, I'm interested in ${subject}. Could you please share some ${more}recent photos of the menu, food, and service? Thank you.`,
+    );
   }
   const subject = name || 'this property';
-  return `Hi, I'm interested in ${subject}. Could you please share some ${more}recent photos of the property and available rooms? Thank you.`;
+  return withAcomiAppLink(
+    `Hi, I'm interested in ${subject}. Could you please share some ${more}recent photos of the property and available rooms? Thank you.`,
+  );
 }
 
 /** Digits for wa.me. Indian locals become 91XXXXXXXXXX. Existing country codes are kept. */

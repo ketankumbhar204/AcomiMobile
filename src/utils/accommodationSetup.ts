@@ -23,7 +23,7 @@ export function buildSetupRequest(
   };
   if (spaceType === 'PG' || spaceType === 'HOSTEL') {
     req.floors = pgHostel;
-  } else if (spaceType === 'CO_LIVING' || spaceType === 'RENTAL') {
+  } else if (spaceType === 'CO_LIVING' || spaceType === 'RENTAL' || spaceType === 'CORPORATE_STAY') {
     req.units = units;
   }
   return req;

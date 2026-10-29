@@ -17,19 +17,36 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { Bell, ChevronDown, Clock, Mail, MapPin, MessageCircle, Phone, Search, UserRound, X } from 'lucide-react-native';
+import {
+  ArrowUpDown,
+  Bell,
+  ChevronDown,
+  ChevronRight,
+  CircleCheck,
+  Clock,
+  Mail,
+  MapPin,
+  MessageCircle,
+  Phone,
+  Search,
+  UserRound,
+  X,
+} from 'lucide-react-native';
 import { enquiryApi } from '../api/enquiryApi';
 import type { EnquiryInboxListing, ReceivedEnquiry, ReceivedEnquirySummary, SpaceEnquiryStatus } from '../api/types';
+import { DiscoverListingCover } from '../components/discovery/DiscoverListingCover';
 import { Button, EmptyState } from '../components/ui';
 import { ReferenceCode } from '../components/ui/ReferenceCode';
 import type { MainStackParamList } from '../navigation/types';
 import { useAuthStore } from '../store/authStore';
+import { publishOwnerPendingEnquiryCount } from '../store/ownerPendingEnquiryStore';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 import { dedupeById, enquiryInitials, listingMatchesQuery } from '../utils/receivedEnquiryList';
 import { displayPhone, mailtoHref, telHref } from '../utils/serviceContactLinks';
 
 const PAGE_SIZE = 20;
 const STATUSES: Array<SpaceEnquiryStatus | ''> = ['', 'PENDING', 'SHARED', 'REJECTED', 'EXPIRED', 'CANCELLED'];
+const CLOSED_STATUSES: SpaceEnquiryStatus[] = ['REJECTED', 'EXPIRED', 'CANCELLED'];
 
 type Nav = NativeStackNavigationProp<MainStackParamList>;
 
@@ -95,7 +112,11 @@ export function ReceivedEnquiriesScreen({ listings }: { listings: EnquiryInboxLi
 
   const loadSummary = useCallback(async () => {
     try {
-      setSummary(await enquiryApi.receivedSummary(spaceId || undefined));
+      const next = await enquiryApi.receivedSummary(spaceId || undefined);
+      setSummary(next);
+      if (!spaceId) {
+        publishOwnerPendingEnquiryCount(next.pending ?? 0);
+      }
     } catch {
       setSummary(EMPTY_SUMMARY);
     }
@@ -140,6 +161,9 @@ export function ReceivedEnquiriesScreen({ listings }: { listings: EnquiryInboxLi
     [listingQuery, listings],
   );
   const filtersActive = Boolean(spaceId || status || debouncedSearch);
+  const { width } = useWindowDimensions();
+  const summaryGap = width < 360 ? spacing.xs : spacing.sm;
+  const summaryPad = width < 360 ? spacing.md : spacing.lg;
   const contextLine = useCallback((item: ReceivedEnquiry) => {
     if (item.spaceType === 'MESS') return item.foodIncludedLabel?.trim() || '';
     return item.sharingNotes?.trim() || '';
@@ -172,34 +196,38 @@ export function ReceivedEnquiriesScreen({ listings }: { listings: EnquiryInboxLi
           defaultValue: 'Manage enquiries for your properties and mess services',
         })}
       </Text>
-      <View style={styles.summaryRow}>
+      <View style={[styles.summaryRow, { gap: summaryGap, paddingHorizontal: summaryPad }]}>
         <SummaryCard
           label={t('spaces.enquiries.summaryTotal', { defaultValue: 'Total enquiries' })}
           value={summary.total}
           selected={status === ''}
           onPress={() => setStatus('')}
-          icon={<Mail size={14} color={colors.tealDark} />}
+          tone={SUMMARY_TONES.total}
+          icon={<CircleCheck size={15} color={SUMMARY_TONES.total.fg} />}
         />
         <SummaryCard
           label={t('spaces.enquiries.status.PENDING', { defaultValue: 'Pending' })}
           value={summary.pending}
           selected={status === 'PENDING'}
           onPress={() => setStatus('PENDING')}
-          icon={<View style={[styles.dot, { backgroundColor: colors.success }]} />}
+          tone={SUMMARY_TONES.pending}
+          icon={<Clock size={15} color={SUMMARY_TONES.pending.fg} />}
         />
         <SummaryCard
-          label={t('spaces.enquiries.status.SHARED', { defaultValue: 'Shared' })}
+          label={t('spaces.enquiries.summaryShared', { defaultValue: 'Contact details shared' })}
           value={summary.shared}
           selected={status === 'SHARED'}
           onPress={() => setStatus('SHARED')}
-          icon={<MessageCircle size={14} color="#1D4ED8" />}
+          tone={SUMMARY_TONES.shared}
+          icon={<MessageCircle size={15} color={SUMMARY_TONES.shared.fg} />}
         />
         <SummaryCard
           label={t('spaces.enquiries.summaryClosed', { defaultValue: 'Closed' })}
           value={summary.closed}
-          selected={false}
+          selected={CLOSED_STATUSES.includes(status as SpaceEnquiryStatus)}
           onPress={() => setStatusOpen(true)}
-          icon={<Clock size={14} color="#B45309" />}
+          tone={SUMMARY_TONES.closed}
+          icon={<CircleCheck size={15} color={SUMMARY_TONES.closed.fg} />}
         />
       </View>
       <View style={styles.searchBox}>
@@ -254,12 +282,18 @@ export function ReceivedEnquiriesScreen({ listings }: { listings: EnquiryInboxLi
             defaultValue: '{{count}} enquiries',
           })}
         </Text>
-        {filtersActive ? (
-          <Pressable onPress={resetFilters} accessibilityRole="button">
-            <Text style={styles.reset}>{t('spaces.enquiries.clearFilters', { defaultValue: 'Clear filters' })}</Text>
-          </Pressable>
-        ) : null}
+        <View style={styles.sortLabel} accessibilityRole="text">
+          <ArrowUpDown size={14} color={colors.tealDark} />
+          <Text style={styles.sortText}>
+            {t('spaces.enquiries.sortLatest', { defaultValue: 'Latest first' })}
+          </Text>
+        </View>
       </View>
+      {filtersActive ? (
+        <Pressable onPress={resetFilters} accessibilityRole="button" style={styles.resetWrap}>
+          <Text style={styles.reset}>{t('spaces.enquiries.clearFilters', { defaultValue: 'Clear filters' })}</Text>
+        </Pressable>
+      ) : null}
 
       {loading && rows.length === 0 ? (
         <ActivityIndicator color={colors.primary} style={styles.loader} />
@@ -393,6 +427,10 @@ function EnquiryCard({
   const initials = enquiryInitials(item.requesterName);
   const tone = statusTone(item.status);
   const type = typeLabel(t, item.spaceType);
+  const statusLabel = item.status === 'SHARED'
+    ? t('spaces.enquiries.summaryShared', { defaultValue: 'Contact details shared' })
+    : t(`spaces.enquiries.status.${item.status}`, { defaultValue: item.status });
+  const age = formatAge(item.requestedAt, t);
   return (
     <Pressable onPress={onPress} style={styles.card} accessibilityRole="button">
       <View style={styles.cardTop}>
@@ -402,16 +440,28 @@ function EnquiryCard({
         <View style={styles.cardBody}>
           <View style={styles.nameRow}>
             <Text style={styles.name} numberOfLines={1}>{name}</Text>
-            <Text style={[styles.status, { backgroundColor: tone.bg, color: tone.fg }]}>
-              {t(`spaces.enquiries.status.${item.status}`, { defaultValue: item.status })}
+            <Text style={[styles.status, { backgroundColor: tone.bg, color: tone.fg }]} numberOfLines={2}>
+              {statusLabel}
             </Text>
           </View>
           {context ? <Text style={styles.message} numberOfLines={2}>{context}</Text> : null}
           <SenderSummary item={item} />
-          <Text style={styles.time}>{formatAge(item.requestedAt, t)}</Text>
+          {age ? (
+            <View style={styles.timeRow}>
+              <Clock size={12} color={colors.muted} />
+              <Text style={styles.time}>{age}</Text>
+            </View>
+          ) : null}
         </View>
       </View>
       <View style={styles.listingRow}>
+        <DiscoverListingCover
+          listingId={item.spaceId}
+          spaceType={item.spaceType}
+          showRepresentativeLabel={false}
+          accessibilityName={item.spaceName}
+          style={styles.listingThumb}
+        />
         <View style={styles.listingCopy}>
           <Text style={styles.listingName} numberOfLines={1}>{item.spaceName}</Text>
           <ReferenceCode value={item.referenceCode} />
@@ -428,7 +478,10 @@ function EnquiryCard({
           ) : null}
           {type ? <Text style={styles.typeChip}>{type}</Text> : null}
         </View>
-        <Text style={styles.viewLink}>{t('spaces.enquiries.viewEnquiry', { defaultValue: 'View enquiry' })}</Text>
+        <View style={styles.viewLink}>
+          <Text style={styles.viewLinkText}>{t('spaces.enquiries.viewEnquiry', { defaultValue: 'View enquiry' })}</Text>
+          <ChevronRight size={14} color="#128C4A" />
+        </View>
       </View>
     </Pressable>
   );
@@ -493,12 +546,22 @@ function EnquiryDetail({ enquiry, onClose }: { enquiry: ReceivedEnquiry; onClose
 function SenderSummary({ item }: { item: ReceivedEnquiry }) {
   const phone = displayPhone(item.requesterMobile);
   const email = item.requesterEmail?.trim();
-  const line = [phone, email].filter(Boolean).join(' · ');
-  if (!line) return null;
+  if (!phone && !email) return null;
   return (
-    <Text style={styles.message} numberOfLines={1}>
-      {line}
-    </Text>
+    <View style={styles.contactRow}>
+      {phone ? (
+        <View style={styles.contactItem}>
+          <Phone size={12} color={colors.muted} />
+          <Text style={styles.contactText} numberOfLines={1}>{phone}</Text>
+        </View>
+      ) : null}
+      {email ? (
+        <View style={styles.contactItem}>
+          <Mail size={12} color={colors.muted} />
+          <Text style={[styles.contactText, styles.contactEmail]} numberOfLines={1}>{email}</Text>
+        </View>
+      ) : null}
+    </View>
   );
 }
 
@@ -600,21 +663,30 @@ function SummaryCard({
   selected,
   onPress,
   icon,
+  tone,
 }: {
   label: string;
   value: number;
   selected: boolean;
   onPress: () => void;
   icon: React.ReactNode;
+  tone: { bg: string; border: string; fg: string };
 }) {
   return (
     <Pressable
       onPress={onPress}
-      style={[styles.summaryCard, selected && styles.summaryCardOn]}
+      style={[
+        styles.summaryCard,
+        { backgroundColor: tone.bg, borderColor: selected ? tone.fg : tone.border },
+      ]}
       accessibilityRole="button"
       accessibilityState={{ selected }}>
-      <View style={styles.summaryIcon}>{icon}</View>
-      <Text style={styles.summaryValue}>{value}</Text>
+      <View style={styles.summaryTop}>
+        {icon}
+        <Text style={[styles.summaryValue, { color: tone.fg }]} numberOfLines={1}>
+          {value}
+        </Text>
+      </View>
       <Text style={styles.summaryLabel} numberOfLines={2}>{label}</Text>
     </Pressable>
   );
@@ -656,10 +728,19 @@ function typeLabel(t: (key: string, options?: { defaultValue: string }) => strin
       return t('spaces.types.rental.label', { defaultValue: 'Rental' });
     case 'MESS':
       return t('spaces.types.mess.label', { defaultValue: 'Mess' });
+    case 'CORPORATE_STAY':
+      return t('spaces.types.corporateStay.label', { defaultValue: 'Corporate Stay' });
     default:
       return null;
   }
 }
+
+const SUMMARY_TONES = {
+  total: { bg: '#E7F8EE', border: '#B7E7C8', fg: '#128C4A' },
+  pending: { bg: '#FFF6E8', border: '#F3D7A8', fg: '#C2410C' },
+  shared: { bg: '#EEF4FF', border: '#C9D8F8', fg: '#1D4ED8' },
+  closed: { bg: '#FFF1E6', border: '#F0D0B8', fg: '#9A3412' },
+};
 
 function statusTone(status: string): { bg: string; fg: string } {
   switch (status) {
@@ -707,24 +788,30 @@ const styles = StyleSheet.create({
   headerBell: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   summaryRow: {
     flexDirection: 'row',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
   },
   summaryCard: {
     flex: 1,
-    backgroundColor: colors.white,
-    borderRadius: radius.card,
+    minWidth: 0,
+    borderRadius: radius.button,
     borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.sm,
-    minHeight: 72,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.sm,
+    minHeight: 64,
   },
-  summaryCardOn: { borderColor: colors.primary, backgroundColor: colors.mintSubtle },
-  summaryIcon: { marginBottom: 2 },
-  summaryValue: { ...typography.body, fontWeight: '800', color: colors.textPrimary },
-  summaryLabel: { ...typography.caption, color: colors.textSecondary, fontSize: 10 },
-  dot: { width: 8, height: 8, borderRadius: 4, margin: 3 },
+  summaryTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  summaryValue: { ...typography.body, fontWeight: '800', flexShrink: 1 },
+  summaryLabel: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontSize: 11,
+    lineHeight: 14,
+    marginTop: 2,
+  },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -737,6 +824,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     paddingHorizontal: spacing.md,
     minHeight: 44,
+    ...shadows.sm,
   },
   searchInput: { flex: 1, ...typography.body, color: colors.textPrimary, paddingVertical: 8 },
   filterRow: {
@@ -747,7 +835,7 @@ const styles = StyleSheet.create({
   },
   filterButton: {
     flex: 1,
-    minHeight: 40,
+    minHeight: 44,
     borderRadius: radius.full,
     borderWidth: 1,
     borderColor: colors.border,
@@ -757,6 +845,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.xs,
+    ...shadows.sm,
   },
   filterText: { ...typography.caption, fontWeight: '700', color: colors.textPrimary, flex: 1 },
   metaRow: {
@@ -766,10 +855,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
   },
-  count: { ...typography.caption, color: colors.textSecondary },
+  count: { ...typography.caption, color: colors.textSecondary, flexShrink: 1 },
+  sortLabel: { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0 },
+  sortText: { ...typography.caption, color: colors.tealDark, fontWeight: '700' },
+  resetWrap: { alignSelf: 'flex-end', paddingHorizontal: spacing.lg, paddingTop: 2 },
   reset: { ...typography.caption, color: colors.tealDark, fontWeight: '700' },
   loader: { marginTop: spacing.xl },
-  list: { padding: spacing.lg, paddingBottom: spacing.section, flexGrow: 1, gap: spacing.sm },
+  list: { padding: spacing.lg, paddingBottom: spacing.section + spacing.lg, flexGrow: 1, gap: spacing.sm },
   card: {
     backgroundColor: colors.white,
     borderRadius: radius.card,
@@ -777,6 +869,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: spacing.md,
     gap: spacing.sm,
+    ...shadows.sm,
   },
   cardTop: { flexDirection: 'row', gap: spacing.sm },
   avatar: {
@@ -790,14 +883,18 @@ const styles = StyleSheet.create({
   avatarText: { ...typography.caption, fontWeight: '800', color: colors.tealDark },
   cardBody: { flex: 1, minWidth: 0 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  name: { ...typography.body, fontWeight: '800', color: colors.textPrimary, flex: 1 },
+  name: { ...typography.body, fontWeight: '800', color: colors.textPrimary, flex: 1, minWidth: 0 },
   status: {
     overflow: 'hidden',
     borderRadius: radius.full,
     paddingHorizontal: 8,
     paddingVertical: 2,
     fontSize: 11,
+    lineHeight: 14,
     fontWeight: '700',
+    flexShrink: 1,
+    maxWidth: '52%',
+    textAlign: 'center',
   },
   message: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },
   senderBox: {
@@ -822,8 +919,14 @@ const styles = StyleSheet.create({
   senderValue: { ...typography.body, fontWeight: '700', color: colors.textPrimary },
   senderActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   miniBtn: { minHeight: 36, paddingHorizontal: spacing.md, paddingVertical: 6 },
-  time: { ...typography.caption, color: colors.muted, marginTop: 2 },
+  timeRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  time: { ...typography.caption, color: colors.muted },
+  contactRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm, marginTop: 2 },
+  contactItem: { flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: '100%', flexShrink: 1 },
+  contactText: { ...typography.caption, color: colors.textSecondary },
+  contactEmail: { flexShrink: 1 },
   listingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  listingThumb: { width: 64, height: 64, borderRadius: radius.sm },
   listingCopy: { flex: 1, minWidth: 0, gap: 2 },
   listingName: { ...typography.body, fontWeight: '700', color: colors.textPrimary },
   locationLine: { flexDirection: 'row', alignItems: 'center', gap: 4 },
@@ -840,7 +943,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
   },
-  viewLink: { ...typography.caption, color: colors.tealDark, fontWeight: '800' },
+  viewLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    flexShrink: 0,
+    backgroundColor: '#E7F8EE',
+    borderRadius: radius.full,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  viewLinkText: { ...typography.caption, color: '#128C4A', fontWeight: '800', fontSize: 11 },
   emptyWrap: { padding: spacing.lg, gap: spacing.md },
   modalFill: { flex: 1, justifyContent: 'flex-end', backgroundColor: colors.overlayScrim },
   backdrop: { ...StyleSheet.absoluteFillObject },

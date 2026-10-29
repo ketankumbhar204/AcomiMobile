@@ -6,6 +6,7 @@ jest.mock('../../api/mealsApi', () => ({
     upsertDailyMenu: jest.fn(),
     publishDailyMenu: jest.fn(),
     openMealPoll: jest.fn(),
+    updateFoodItemExtra: jest.fn(),
   },
 }));
 
@@ -41,6 +42,7 @@ describe('shareMenusToSpace', () => {
     (mealsApi.upsertDailyMenu as jest.Mock).mockResolvedValue({});
     (mealsApi.publishDailyMenu as jest.Mock).mockResolvedValue({});
     (mealsApi.openMealPoll as jest.Mock).mockResolvedValue({ status: 'OPEN' });
+    (mealsApi.updateFoodItemExtra as jest.Mock).mockResolvedValue({});
   });
 
   it('writes meals together and opens each poll once', async () => {
@@ -70,5 +72,91 @@ describe('shareMenusToSpace', () => {
     expect(mealsApi.openMealPoll).toHaveBeenCalledTimes(1);
     expect(mealsApi.openMealPoll).toHaveBeenCalledWith('space-2', '2026-10-11', 'LUNCH');
     expect(result.opened).toEqual(['BREAKFAST', 'LUNCH']);
+  });
+
+  it('does not treat a failed destination save as success', async () => {
+    (mealsApi.upsertDailyMenu as jest.Mock).mockRejectedValue(
+      new Error('Combo is not active'),
+    );
+
+    await expect(
+      shareMenusToSpace('space-2', '2026-10-11', ['LUNCH'], validated),
+    ).rejects.toThrow('Combo is not active');
+    expect(mealsApi.publishDailyMenu).not.toHaveBeenCalled();
+    expect(mealsApi.openMealPoll).not.toHaveBeenCalled();
+  });
+
+  it('turns on missing library extras before saving the menu', async () => {
+    const order: string[] = [];
+    (mealsApi.updateFoodItemExtra as jest.Mock).mockImplementation(async () => {
+      order.push('enable');
+      return {};
+    });
+    (mealsApi.upsertDailyMenu as jest.Mock).mockImplementation(async () => {
+      order.push('upsert');
+      return {};
+    });
+
+    await shareMenusToSpace('mess-b', '2026-10-27', ['BREAKFAST', 'DINNER'], {
+      ok: true,
+      optionsByMeal: {
+        BREAKFAST: [
+          {
+            entryType: 'PACKAGE',
+            itemIds: ['item-bhurji'],
+            label: 'Egg Bhurji',
+            sortOrder: 1,
+            isAvailable: true,
+            isExtra: true,
+          },
+        ],
+        DINNER: [
+          {
+            entryType: 'PACKAGE',
+            itemIds: ['item-bhurji'],
+            label: 'Egg Bhurji',
+            sortOrder: 1,
+            isAvailable: true,
+            isExtra: true,
+          },
+        ],
+      },
+      notesByMeal: {},
+      extrasToEnable: ['item-bhurji', 'item-bhurji'],
+    });
+
+    expect(mealsApi.updateFoodItemExtra).toHaveBeenCalledTimes(1);
+    expect(mealsApi.updateFoodItemExtra).toHaveBeenCalledWith('mess-b', 'item-bhurji', {
+      isExtra: true,
+    });
+    expect(order).toEqual(['enable', 'upsert', 'upsert']);
+  });
+
+  it('does not save the menu when enabling the extra fails', async () => {
+    (mealsApi.updateFoodItemExtra as jest.Mock).mockRejectedValue(
+      new Error('Meal extras are only supported for Mess spaces'),
+    );
+
+    await expect(
+      shareMenusToSpace('pg-c', '2026-10-27', ['BREAKFAST'], {
+        ok: true,
+        optionsByMeal: {
+          BREAKFAST: [
+            {
+              entryType: 'PACKAGE',
+              itemIds: ['item-bhurji'],
+              label: 'Egg Bhurji',
+              sortOrder: 1,
+              isAvailable: true,
+              isExtra: true,
+            },
+          ],
+        },
+        notesByMeal: {},
+        extrasToEnable: ['item-bhurji'],
+      }),
+    ).rejects.toThrow('Meal extras are only supported for Mess spaces');
+    expect(mealsApi.upsertDailyMenu).not.toHaveBeenCalled();
+    expect(mealsApi.publishDailyMenu).not.toHaveBeenCalled();
   });
 });

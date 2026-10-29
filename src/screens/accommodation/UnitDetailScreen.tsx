@@ -215,6 +215,22 @@ export function UnitDetailScreen() {
                 value={t(`accommodation.status.${unit.status}`)}
               />
               <AccommodationDetailRow
+                label={t('occupancy.contract.rent')}
+                value={
+                  unit.defaultRent != null
+                    ? `₹${unit.defaultRent.toLocaleString('en-IN')}`
+                    : t('occupancy.contract.notSet', { defaultValue: 'Not set' })
+                }
+              />
+              <AccommodationDetailRow
+                label={t('occupancy.contract.deposit')}
+                value={
+                  unit.defaultDeposit != null
+                    ? `₹${unit.defaultDeposit.toLocaleString('en-IN')}`
+                    : t('occupancy.contract.notSet', { defaultValue: 'Not set' })
+                }
+              />
+              <AccommodationDetailRow
                 label={t('accommodation.fields.created')}
                 value={formatAccommodationDate(unit.createdAt)}
               />

@@ -131,8 +131,9 @@ function logError(error: AxiosError<ApiErrorBody>): void {
       JSON.stringify(error.response.data, null, 2),
     );
   } else {
-    console.error(`${LOG_TAG} ✗ Network error ${method} ${url}`);
-    console.error(`${LOG_TAG}   Message:`, error.message);
+    // Expected when the device is offline. console.error opens the dev LogBox.
+    console.log(`${LOG_TAG} ✗ Network error ${method} ${url}`);
+    console.log(`${LOG_TAG}   Message:`, error.message);
   }
 }
 

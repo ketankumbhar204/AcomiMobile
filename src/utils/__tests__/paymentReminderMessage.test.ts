@@ -19,6 +19,9 @@ describe('buildPaymentReminderMessage', () => {
     expect(message).toContain('October 2026');
     expect(message).toContain('due on');
     expect(message).toContain('Thank you.');
+    expect(message).toContain(
+      'https://www.acomi.in/open.html',
+    );
   });
 
   it('omits a due date that is not available', () => {

@@ -23,6 +23,12 @@ describe('occupancyContract food toggle', () => {
     };
 
     expect(validateContractTerms(values, { rentRequired: true, foodPolicy: bundledPolicy })).toBeNull();
+    expect(
+      validateContractTerms(
+        { ...values, rentSnapshot: '' },
+        { rentRequired: true, catalogDefaultRent: 7000, foodPolicy: bundledPolicy },
+      ),
+    ).toBe('occupancy.contract.errors.rentRequired');
     expect(isFoodBundledWithRent(values, bundledPolicy)).toBe(true);
     expect(
       buildContractSnapshotPayload(values, { foodPolicy: bundledPolicy }),

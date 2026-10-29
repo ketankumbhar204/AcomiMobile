@@ -134,6 +134,35 @@ export function addDaysIsoDate(isoDate: string, days: number): string {
   return toIsoDate(date);
 }
 
+/** Daily-menu list endpoint rejects ranges longer than this, counting both ends. */
+export const MAX_MENU_RANGE_DAYS = 31;
+
+/**
+ * Splits an inclusive calendar range into windows the daily-menu API accepts.
+ * An inverted range is left as one window so the API can reject it.
+ */
+export function splitMenuDateRange(
+  from: string,
+  to: string,
+  maxInclusiveDays = MAX_MENU_RANGE_DAYS,
+): Array<{ from: string; to: string }> {
+  if (!from || !to || compareIsoDates(from, to) > 0 || maxInclusiveDays < 1) {
+    return [{ from, to }];
+  }
+  const windows: Array<{ from: string; to: string }> = [];
+  let cursor = from;
+  while (compareIsoDates(cursor, to) <= 0) {
+    const windowEnd = addDaysIsoDate(cursor, maxInclusiveDays - 1);
+    const end = compareIsoDates(windowEnd, to) < 0 ? windowEnd : to;
+    windows.push({ from: cursor, to: end });
+    if (compareIsoDates(end, to) >= 0) {
+      break;
+    }
+    cursor = addDaysIsoDate(end, 1);
+  }
+  return windows;
+}
+
 export function isoDateToMonthKey(isoDate: string): string {
   return isoDate.slice(0, 7);
 }

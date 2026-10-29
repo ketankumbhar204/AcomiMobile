@@ -5,6 +5,7 @@ export type MealResponseFilter = 'eligible' | 'responded' | 'not_responded';
 export type MealResponseMemberRow = {
   memberId: string;
   memberName: string;
+  mobileNumber: string | null;
   /** Chosen menu option when this member has responded. */
   choice: string | null;
   responded: boolean;
@@ -36,6 +37,7 @@ export function buildMealResponseLists(
         respondedById.set(member.memberId, {
           memberId: member.memberId,
           memberName: member.memberName?.trim() || 'Member',
+          mobileNumber: member.mobileNumber?.trim() || null,
           choice,
           responded: true,
         });
@@ -56,6 +58,7 @@ export function buildMealResponseLists(
     .map(member => ({
       memberId: member.memberId,
       memberName: member.memberName?.trim() || 'Member',
+      mobileNumber: member.mobileNumber?.trim() || null,
       choice: null,
       responded: false,
     }))
@@ -73,4 +76,43 @@ export function buildMealResponseLists(
     responded,
     notResponded,
   };
+}
+
+/** Client-side match against a name or mobile already on the row. */
+export function matchesMealResponseSearch(row: MealResponseMemberRow, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) {
+    return true;
+  }
+  if (row.memberName.toLowerCase().includes(q)) {
+    return true;
+  }
+  const mobile = row.mobileNumber ?? '';
+  if (mobile.toLowerCase().includes(q)) {
+    return true;
+  }
+  const digits = q.replace(/\D/g, '');
+  if (!digits) {
+    return false;
+  }
+  const stored = mobile.replace(/\D/g, '');
+  if (stored.includes(digits)) {
+    return true;
+  }
+  const withoutCountry = digits.startsWith('91') ? digits.slice(2) : digits.replace(/^0+/, '');
+  return withoutCountry.length > 0 && stored.includes(withoutCountry);
+}
+
+/**
+ * Badge for the card. Responded comes from the row, not from the meal name.
+ * Eligible vs not-responded follows the list the member is being viewed in.
+ */
+export function mealResponseCardStatus(
+  row: MealResponseMemberRow,
+  filter: MealResponseFilter,
+): MealResponseFilter {
+  if (row.responded) {
+    return 'responded';
+  }
+  return filter === 'not_responded' ? 'not_responded' : 'eligible';
 }

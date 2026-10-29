@@ -18,6 +18,10 @@ import { useSpaceOccupancyList } from '../../hooks/useSpaceOccupancyList';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../../navigation/types';
 import { spacing } from '../../theme';
+import { UnitOpsFocusList } from '../../components/accommodation/UnitOpsFocusList';
+import { useUnitLevelOccupancyCounts } from '../../hooks/useUnitLevelOccupancyCounts';
+import { getAccommodationUiProfile, usesUnitLevelOccupancy } from '../../utils/accommodationProfile';
+import { applyUnitOccupancyCounts } from '../../utils/unitLevelOccupancy';
 import { bedIsSelectableForMoveIn } from '../../utils/moveInEntry';
 import { persistedTargetFromSpaceBed } from '../../utils/persistedBedTarget';
 import { invalidateAccommodationQueries } from '../../utils/accommodationQueryCache';
@@ -146,12 +150,31 @@ export function DashboardBedInventoryScreen() {
     return new Set(moveInsByBedId.keys());
   }, [moveInsByBedId, opsFocus]);
 
+  const unitLevel = usesUnitLevelOccupancy(getAccommodationUiProfile(spaceType));
+  const unitOccupancy = useUnitLevelOccupancyCounts(spaceId, unitLevel);
+  const displayOperations =
+    unitLevel && dashboard.accommodationOperations && unitOccupancy.counts
+      ? applyUnitOccupancyCounts(dashboard.accommodationOperations, unitOccupancy.counts)
+      : dashboard.accommodationOperations;
+  const moveInUnitIds = useMemo(() => {
+    if (!unitLevel || opsFocus !== 'moveIns') {
+      return null;
+    }
+    return new Set(
+      moveIns.items.map(row => row.unitId).filter((id): id is string => Boolean(id)),
+    );
+  }, [moveIns.items, opsFocus, unitLevel]);
+
   const screenTitle =
     opsFocus === 'moveIns'
       ? t('dashboard.drilldown.moveInsTitle')
-      : opsFocus === 'occupied'
-        ? t('dashboard.drilldown.occupiedBedsTitle')
-        : t('dashboard.drilldown.vacantBedsTitle');
+      : unitLevel && opsFocus === 'occupied'
+        ? t('dashboard.accommodationOperations.occupiedUnits', { defaultValue: 'Occupied units' })
+        : unitLevel
+          ? t('dashboard.accommodationOperations.availableUnits', { defaultValue: 'Available units' })
+        : opsFocus === 'occupied'
+          ? t('dashboard.drilldown.occupiedBedsTitle')
+          : t('dashboard.drilldown.vacantBedsTitle');
 
   const switchFocus = useCallback(
     (next: PropertyOpsFocus) => {
@@ -171,6 +194,46 @@ export function DashboardBedInventoryScreen() {
     navigation.setOptions({ title: screenTitle });
   }, [navigation, screenTitle]);
 
+  if (unitLevel) {
+    return (
+      <Screen style={styles.screen} contentStyle={styles.content}>
+        {showOpsCards && displayOperations ? (
+          <DashboardAccommodationOperations
+            hideTitle
+            occupancyEntity="units"
+            operations={displayOperations}
+            selectedMetricId={opsFocus}
+            onOccupiedPress={() => switchFocus('occupied')}
+            onVacantPress={() => switchFocus('vacant')}
+            onMoveInsPress={() => switchFocus('moveIns')}
+          />
+        ) : null}
+        <UnitOpsFocusList
+          spaceId={spaceId}
+          status={
+            opsFocus === 'moveIns'
+              ? undefined
+              : opsFocus === 'occupied'
+                ? 'OCCUPIED'
+                : 'AVAILABLE'
+          }
+          unitIds={moveInUnitIds}
+          onAllocate={
+            selectingForAllocate && canManageOccupancy
+              ? unit =>
+                  navigation.navigate('OccupancyWizard', {
+                    spaceId,
+                    mode: 'ALLOCATE',
+                    unitId: unit.unitId,
+                    buildingId: unit.buildingId,
+                  })
+              : undefined
+          }
+        />
+      </Screen>
+    );
+  }
+
   return (
     <Screen style={styles.screen} contentStyle={styles.content}>
       <BedInventoryFaceProvider moveInsByBedId={moveInsByBedId}>
@@ -189,10 +252,10 @@ export function DashboardBedInventoryScreen() {
         refreshTrigger={refreshToken}
         showSubtitle={false}
         headerAccessory={
-          showOpsCards && dashboard.accommodationOperations ? (
+          showOpsCards && displayOperations ? (
             <DashboardAccommodationOperations
               hideTitle
-              operations={dashboard.accommodationOperations}
+              operations={displayOperations}
               selectedMetricId={opsFocus}
               onOccupiedPress={() => switchFocus('occupied')}
               onVacantPress={() => switchFocus('vacant')}

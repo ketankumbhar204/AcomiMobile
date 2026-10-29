@@ -66,6 +66,47 @@ describe('getHierarchySteps', () => {
     ).toEqual(['bed']);
   });
 
+  it('RENTAL building scope asks only for a unit', () => {
+    expect(
+      getHierarchySteps('RENTAL', 'RENTAL', {
+        buildingId: 'b1',
+        buildingName: 'Test Rental',
+        layoutMode: 'RENTAL',
+      }),
+    ).toEqual(['unit']);
+  });
+
+  it('RENTAL unit scope has no hierarchy steps', () => {
+    expect(
+      getHierarchySteps('RENTAL', 'RENTAL', {
+        buildingId: 'b1',
+        buildingName: 'Test Rental',
+        layoutMode: 'RENTAL',
+        unitId: 'u1',
+        unitName: '101',
+      }),
+    ).toEqual([]);
+  });
+
+  it('CORPORATE_STAY uses the rental unit flow', () => {
+    expect(
+      getHierarchySteps('CORPORATE_STAY', 'RENTAL', {
+        buildingId: 'b1',
+        buildingName: 'Test CS1',
+        layoutMode: 'RENTAL',
+      }),
+    ).toEqual(['unit']);
+    expect(
+      getHierarchySteps('CORPORATE_STAY', 'RENTAL', {
+        buildingId: 'b1',
+        buildingName: 'Test CS1',
+        layoutMode: 'RENTAL',
+        unitId: 'u1',
+        unitName: '101',
+      }),
+    ).toEqual([]);
+  });
+
   it('CORRIDOR_PG floor scope: room → bed (no units)', () => {
     expect(
       getHierarchySteps('PG', 'CORRIDOR_PG', {

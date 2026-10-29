@@ -59,6 +59,39 @@ export async function renameUnitName(
       unitNumber: unit.unitNumber,
       status: unit.status,
       unitKind: unit.unitKind ?? undefined,
+      defaultRent: unit.defaultRent ?? null,
+      defaultDeposit: unit.defaultDeposit ?? null,
+    });
+  } catch (err) {
+    throw new Error(getAccommodationErrorMessage(err, 'accommodation.errors.saveUnit'));
+  }
+}
+
+/** One GET + one PUT. Omitted pricing fields keep the current persisted values. */
+export async function updateUnitDetails(
+  spaceId: UUID,
+  unitId: UUID,
+  patch: {
+    name?: string;
+    unitNumber?: string;
+    status?: import('../api/types').AccommodationStatus;
+    defaultRent?: number | null;
+    defaultDeposit?: number | null;
+  },
+): Promise<import('../api/types').UnitResponse> {
+  try {
+    const unit = await accommodationApi.getUnitById(spaceId, unitId);
+    return await accommodationApi.updateUnitById(spaceId, unitId, {
+      name: patch.name ?? unit.name,
+      unitNumber: patch.unitNumber ?? unit.unitNumber,
+      status: patch.status ?? unit.status,
+      unitKind: unit.unitKind ?? undefined,
+      defaultRent:
+        patch.defaultRent !== undefined ? patch.defaultRent : (unit.defaultRent ?? null),
+      defaultDeposit:
+        patch.defaultDeposit !== undefined
+          ? patch.defaultDeposit
+          : (unit.defaultDeposit ?? null),
     });
   } catch (err) {
     throw new Error(getAccommodationErrorMessage(err, 'accommodation.errors.saveUnit'));

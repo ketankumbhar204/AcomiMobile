@@ -11,6 +11,7 @@ import type { AdminStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, spacing, typography } from '../../theme';
 import { adminEnquiryShareErrorMessage } from '../../utils/adminEnquiryShareError';
+import { displayPhone } from '../../utils/serviceContactLinks';
 
 type Props = NativeStackScreenProps<AdminStackParamList, 'AdminEnquiryDetail'>;
 
@@ -102,6 +103,10 @@ export function AdminEnquiryDetailScreen({ route }: Props) {
             }`}
           />
           <AdminDetailField label={t('admin.enquiries.email')} value={detail.requesterEmail} />
+          <AdminDetailField
+            label={t('admin.enquiries.requesterMobile', { defaultValue: 'Requester mobile' })}
+            value={displayPhone(detail.requesterMobile) || t('admin.labels.emDash')}
+          />
           <AdminDetailField
             label={t('admin.enquiries.columns.requested')}
             value={new Date(detail.requestedAt).toLocaleString()}

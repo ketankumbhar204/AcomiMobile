@@ -9,6 +9,7 @@ import {
   ownerPaymentsMonthCache,
 } from '../utils/paymentsMonthCache';
 import { publishPaymentsUnderReviewCount } from '../utils/paymentsReviewAttentionCache';
+import { subscribePaymentUpdates } from '../utils/paymentUpdates';
 
 function resolveErrorKey(error: unknown): string {
   if (error instanceof PaymentServiceUnavailableError) {
@@ -154,6 +155,20 @@ export function usePaymentsSummary(spaceId: UUID, enabled: boolean) {
     ownerPaymentsMonthCache.invalidate(ownerPaymentsMonthCache.key(['summary', spaceId, month]));
     await load(month, { force: true });
   }, [load, month, spaceId]);
+
+  useEffect(() => {
+    if (!enabled) {
+      return undefined;
+    }
+    return subscribePaymentUpdates(update => {
+      const updateSpaceId = update.kind === 'payment' ? update.payment.spaceId : update.spaceId;
+      const updateMonth = update.kind === 'payment' ? update.payment.month : update.month;
+      if (updateSpaceId !== spaceId || (updateMonth && updateMonth !== month)) {
+        return;
+      }
+      void reload();
+    });
+  }, [enabled, month, reload, spaceId]);
 
   /** Immediate KPI/tab bump after approve / reject / request-update — reload reconciles from server. */
   const applyReviewOutcome = useCallback(

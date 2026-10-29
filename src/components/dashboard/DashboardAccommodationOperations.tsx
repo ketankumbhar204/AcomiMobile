@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Bed, IndianRupee, UserPlus, Users } from 'lucide-react-native';
+import { Bed, Building2, IndianRupee, UserPlus, Users } from 'lucide-react-native';
 import type { DashboardAccommodationOperations } from '../../api/types';
 import { pastels, spacing } from '../../theme';
 import { DashboardSectionTitle } from './DashboardSectionTitle';
@@ -12,6 +12,8 @@ export type AccommodationOpsMetricId = 'occupied' | 'vacant' | 'moveIns' | 'pend
 type DashboardAccommodationOperationsProps = {
   operations: DashboardAccommodationOperations;
   hideTitle?: boolean;
+  /** Unit-only spaces (rental, corporate stay) count units, not beds. */
+  occupancyEntity?: 'beds' | 'units';
   onOccupiedPress?: () => void;
   onVacantPress?: () => void;
   onMoveInsPress?: () => void;
@@ -29,9 +31,18 @@ export function DashboardAccommodationOperations({
   onMoveInsPress,
   onPendingPress,
   selectedMetricId = null,
+  occupancyEntity = 'beds',
 }: DashboardAccommodationOperationsProps) {
   const { t } = useTranslation();
   const showPending = typeof onPendingPress === 'function';
+  const unitLevel = occupancyEntity === 'units';
+  const occupiedLabel = unitLevel
+    ? t('dashboard.accommodationOperations.occupiedUnits', { defaultValue: 'Occupied units' })
+    : t('dashboard.accommodationOperations.occupiedBeds');
+  const vacantLabel = unitLevel
+    ? t('dashboard.accommodationOperations.availableUnits', { defaultValue: 'Available units' })
+    : t('dashboard.accommodationOperations.vacantBeds');
+  const VacantIcon = unitLevel ? Building2 : Bed;
 
   return (
     <View style={styles.wrap}>
@@ -45,19 +56,19 @@ export function DashboardAccommodationOperations({
           surface={pastels.mint.bg}
           surfaceBorder={pastels.mint.border}
           value={String(operations.occupiedBeds)}
-          label={t('dashboard.accommodationOperations.occupiedBeds')}
+          label={occupiedLabel}
           onPress={onOccupiedPress}
           selected={selectedMetricId === 'occupied'}
           selectionColor={pastels.mint.fg}
           gridItem={showPending}
         />
         <DashboardStatCard
-          icon={Bed}
+          icon={VacantIcon}
           accent={pastels.purple.fg}
           surface={pastels.purple.bg}
           surfaceBorder={pastels.purple.border}
           value={String(operations.vacantBeds)}
-          label={t('dashboard.accommodationOperations.vacantBeds')}
+          label={vacantLabel}
           onPress={onVacantPress}
           selected={selectedMetricId === 'vacant'}
           selectionColor={pastels.purple.fg}

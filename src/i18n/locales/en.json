@@ -35,7 +35,7 @@
       "tabPolls": "Poll defaults"
     },
     "quickSetup": {
-      "reviewPreviewHint": "Review the structure below, then generate."
+      "reviewPreviewHint": "Review and edit the structure before creating the building."
     },
     "createSpace": {
       "essentialsTitle": "Essentials",
@@ -115,6 +115,8 @@
       "network": "Unable to connect. Check your internet connection.",
       "authRequired": "Session not found. Please log in again.",
       "loadSpaces": "Failed to load spaces. Please try again.",
+      "startupOfflineTitle": "Can't reach ACOMI",
+      "startupOfflineMessage": "The server is unavailable right now. Check your connection and try again.",
       "createSpace": "Failed to create space. Please try again.",
       "sendOtp": "We couldn't send the OTP right now. Please try again later.",
       "verifyOtp": "We couldn't verify the OTP right now. Please try again.",
@@ -983,7 +985,20 @@
       "saveMess": "Add Customer",
       "saveImport": "Add",
       "successToast": "Member added successfully.",
-      "importSuccessToast": "Customer added to this mess.",
+      "importSuccessToast": "{{person}} added to this {{space}}.",
+      "importPerson": {
+        "customer": "Customer",
+        "member": "Member"
+      },
+      "importSpace": {
+        "space": "space",
+        "mess": "mess",
+        "pg": "PG",
+        "hostel": "hostel",
+        "coLiving": "co-living",
+        "rental": "rental",
+        "corporateStay": "corporate stay"
+      },
       "importFailed": "Could not import this customer. Please try again.",
       "reuseRequired": "Pick someone from another space, or create a new customer.",
       "selectedCustomer": "Selected",
@@ -1441,6 +1456,8 @@
       "addBuildingDescription": "Full control over your structure.",
       "operationsGlance": "Property operations at a glance",
       "pageSubtitle": "Buildings, floors, rooms, and beds in one place",
+      "pageSubtitleUnits": "Buildings and units in one place",
+      "buildingsSubtitleUnits": "Open a building to manage units",
       "quickSetupHint": "Guided building structure setup",
       "addBuildingHint": "Create a building step by step",
       "addManually": "Add Manually",
@@ -1506,6 +1523,12 @@
       "structurePreview": "Structure Preview",
       "editBuilding": "Edit",
       "previewEditHint": "You can edit details anytime after creation",
+      "reviewUnitsBeforeCreate": "Review and edit your units before creating the building.",
+      "unitPricingTitle": "Rent and deposit",
+      "unitPricingOptionalHint": "Optional. Leave blank to create the building without rent or deposit. A value here applies to every unit.",
+      "unitPricingMixedHint": "Units currently have different amounts. Entering a value here updates every unit.",
+      "unitPricingLine": "Rent ₹{{rent}} · Deposit ₹{{deposit}}",
+      "unitPricingNotSet": "Rent and deposit optional",
       "viewCompleteStructure": "View complete structure",
       "summary": {
         "floors": "Total floors",
@@ -1587,7 +1610,13 @@
         "pricing": "Pricing",
         "noPricing": "No rent or deposit set.",
         "pattern": "Pattern {{index}} · {{count}} beds",
-        "footnote": "This will create {{count}} beds with the above pricing configuration.",
+        "unitPattern": "Pattern {{index}} · {{count}} units",
+        "appliesToBeds": "Applies to {{count}} beds",
+        "appliesToUnits": "Applies to {{count}} units",
+        "footnote": "This will create {{count}} beds with the rent and deposit above.",
+        "bedsWithoutPricing": "This will create {{count}} beds. No rent or deposit will be saved.",
+        "unitsWithPricing": "This will create {{count}} units with the rent and deposit above.",
+        "unitsWithoutPricing": "This will create {{count}} units. No rent or deposit will be saved.",
         "continue": "Are you sure you want to create this building?",
         "confirm": "Create Building",
         "creating": "Creating building..."
@@ -2459,6 +2488,7 @@
         "propertyReady": "Property layout started",
         "residentsActive": "{{count}} residents active",
         "occupancy": "{{occupied}} of {{total}} beds occupied",
+        "occupancyUnits": "{{occupied}} of {{total}} units occupied",
         "attentionClear": "No pending actions",
         "pendingActions": "{{count}} pending actions",
         "pendingPayments": "{{count}} payments under review"
@@ -2709,6 +2739,8 @@
       "title": "Property operations",
       "occupiedBeds": "Occupied beds",
       "vacantBeds": "Vacant beds",
+      "occupiedUnits": "Occupied units",
+      "availableUnits": "Available units",
       "moveInsThisMonth": "Move-ins this month",
       "pendingPayments": "Pending payments"
     },
@@ -3796,6 +3828,7 @@
       "shareComboHidden": "{{space}} has hidden: {{items}}. Turn the combo on in that space’s menu library, then try again.",
       "shareToSpaceFailed": "Could not copy menu to {{space}}. Current space was still shared.",
       "shareToSpacesSuccess": "Also shared to {{count}} other space(s)",
+      "shareExtrasOmitted": "Meal extras were not copied to {{count}} non-mess space(s). Mess spaces still receive them.",
       "savingMenu": "Saving menu…",
       "sharingToSpaces": "Sharing to other spaces…",
       "checkingSpacesProgress": "Checking {{completed}} of {{total}}",
@@ -5773,6 +5806,7 @@
       "view": "View",
       "detailTitle": "Enquiry details",
       "email": "Requester email",
+      "requesterMobile": "Requester mobile",
       "expires": "Expires",
       "ownerContact": "Owner contact information",
       "ownerName": "Owner",

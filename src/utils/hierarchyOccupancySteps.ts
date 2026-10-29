@@ -26,7 +26,11 @@ export function getHierarchySteps(
   }
   const steps: HierarchyStep[] = [];
 
-  if (spaceType === 'RENTAL') {
+  const unitOnly =
+    spaceType === 'RENTAL' ||
+    spaceType === 'CORPORATE_STAY' ||
+    layoutMode === 'RENTAL';
+  if (unitOnly) {
     if (!scope.unitId) {
       steps.push('unit');
     }

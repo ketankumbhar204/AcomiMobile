@@ -109,14 +109,14 @@ export function ReviewStep({
       {contractValues && mode !== 'RESERVE' ? (
         <Card style={styles.card}>
           <SectionHeader title={t('occupancy.contract.title')} onEdit={onEditContract} />
-          {contractValues.rentSnapshot ? (
-            <View style={styles.lineRow}>
-              <Text style={styles.lineLabel}>{t('occupancy.contract.rent')}</Text>
-              <Text style={styles.lineValue}>
-                {formatContractAmount(Number(contractValues.rentSnapshot))}
-              </Text>
-            </View>
-          ) : null}
+          <View style={styles.lineRow}>
+            <Text style={styles.lineLabel}>{t('occupancy.contract.rent')}</Text>
+            <Text style={styles.lineValue}>
+              {contractValues.rentSnapshot
+                ? formatContractAmount(Number(contractValues.rentSnapshot))
+                : t('occupancy.contract.notSet', { defaultValue: 'Not set' })}
+            </Text>
+          </View>
           <View style={styles.lineRow}>
             <Text style={styles.lineLabel}>{t('occupancy.contract.deposit')}</Text>
             <Text style={styles.lineValue}>

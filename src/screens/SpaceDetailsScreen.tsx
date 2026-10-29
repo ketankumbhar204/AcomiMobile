@@ -33,6 +33,8 @@ import {
   type LucideIcon,
 } from 'lucide-react-native';
 import { getSpaceTypeLabel } from '../api';
+import { useUnitLevelOccupancyCounts } from '../hooks/useUnitLevelOccupancyCounts';
+import { getAccommodationUiProfile, usesUnitLevelOccupancy } from '../utils/accommodationProfile';
 import type { Space } from '../api/types';
 import { HeaderBackButton, Screen, Skeleton } from '../components/ui';
 import { ReferenceCode } from '../components/ui/ReferenceCode';
@@ -195,6 +197,10 @@ export function SpaceDetailsScreen() {
     () => (space ? peekDashboardSummary(spaceId) : null),
     [space, spaceId],
   );
+  const unitLevel = usesUnitLevelOccupancy(
+    space?.type ? getAccommodationUiProfile(space.type) : null,
+  );
+  const unitOccupancy = useUnitLevelOccupancyCounts(spaceId, unitLevel);
 
   const kpis = useMemo(() => {
     if (!summary) {
@@ -205,14 +211,20 @@ export function SpaceDetailsScreen() {
     const mess = summary.messOperations;
     const fin = summary.financial;
 
-    if (acc) {
+    if (acc && (!unitLevel || unitOccupancy.counts)) {
+      const occupied = unitLevel ? unitOccupancy.counts?.occupied ?? 0 : acc.occupiedBeds;
+      const vacant = unitLevel ? unitOccupancy.counts?.available ?? 0 : acc.vacantBeds;
       items.push({
-        label: t('spaces.details.kpi.occupiedBeds', { defaultValue: 'Occupied beds' }),
-        value: String(acc.occupiedBeds),
+        label: unitLevel
+          ? t('dashboard.accommodationOperations.occupiedUnits', { defaultValue: 'Occupied units' })
+          : t('spaces.details.kpi.occupiedBeds', { defaultValue: 'Occupied beds' }),
+        value: String(occupied),
       });
       items.push({
-        label: t('spaces.details.kpi.vacantBeds', { defaultValue: 'Vacant beds' }),
-        value: String(acc.vacantBeds),
+        label: unitLevel
+          ? t('dashboard.accommodationOperations.availableUnits', { defaultValue: 'Available units' })
+          : t('spaces.details.kpi.vacantBeds', { defaultValue: 'Vacant beds' }),
+        value: String(vacant),
       });
     }
     if (mess) {
@@ -240,7 +252,7 @@ export function SpaceDetailsScreen() {
       }
     }
     return items;
-  }, [summary, t]);
+  }, [summary, t, unitLevel, unitOccupancy.counts]);
 
   const activityGroups = useMemo<TimelineGroup[]>(() => {
     if (!space) {

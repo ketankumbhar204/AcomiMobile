@@ -7,6 +7,7 @@ import {
   invalidateTenantPaymentsMonth,
   tenantPaymentsMonthCache,
 } from '../utils/paymentsMonthCache';
+import { subscribePaymentUpdates } from '../utils/paymentUpdates';
 
 /**
  * Tenant universal (monthly) payments — single month SoT.
@@ -138,6 +139,41 @@ export function useTenantPaymentsMonth(
   useEffect(() => {
     void load(month);
   }, [load, month]);
+
+  useEffect(() => {
+    if (!spaceId || !enabled) {
+      return undefined;
+    }
+    return subscribePaymentUpdates(update => {
+      if (update.kind === 'month') {
+        if (update.spaceId !== spaceId || (update.month && update.month !== month)) {
+          return;
+        }
+        void load(month, { force: true });
+        return;
+      }
+      const payment = update.payment;
+      if (payment.spaceId !== spaceId) {
+        return;
+      }
+      if (memberId && payment.memberId !== memberId) {
+        return;
+      }
+      if (payment.month && payment.month !== month) {
+        return;
+      }
+      if (loadedMonthRef.current !== month) {
+        void load(month, { force: true });
+        return;
+      }
+      const current = paymentsRef.current;
+      const exists = current.some(row => row.paymentId === payment.paymentId);
+      const next = exists
+        ? current.map(row => (row.paymentId === payment.paymentId ? { ...row, ...payment } : row))
+        : [payment, ...current];
+      commit(next, month);
+    });
+  }, [commit, enabled, load, memberId, month, spaceId]);
 
   const setMonth = useCallback((next: string) => {
     setMonthState(next);

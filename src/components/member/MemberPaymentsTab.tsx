@@ -27,8 +27,8 @@ import { useUniversalPayments } from '../../hooks/useUniversalPayments';
 import type { MainStackParamList } from '../../navigation/types';
 import { colors, spacing, typography } from '../../theme';
 import { canManagePayments, currentMonthKey } from '../../utils/dashboardFinancial';
-import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
-import { invalidatePaymentsMonthCaches } from '../../utils/paymentsMonthCache';
+import { paymentAfterReview } from '../../utils/paymentReviewRows';
+import { publishPaymentUpdated } from '../../utils/paymentUpdates';
 import { isAwaitingOwnerReview, isPaymentProofEditable } from '../../utils/paymentStatus';
 import {
   formatDuesAmount,
@@ -184,9 +184,17 @@ export function MemberPaymentsTab({ spaceId, member }: MemberPaymentsTabProps) {
     ) => {
       setReviewingId(paymentId);
       try {
-        await paymentsApi.reviewPayment(spaceId, paymentId, { action, remarks, rejectionCode });
-        invalidatePaymentsMonthCaches(spaceId, month);
-        invalidateDashboardQueries();
+        const updated = await paymentsApi.reviewPayment(spaceId, paymentId, {
+          action,
+          remarks,
+          rejectionCode,
+        });
+        const patched = paymentAfterReview(updated, action);
+        publishPaymentUpdated({
+          ...patched,
+          spaceId: patched.spaceId || spaceId,
+          month: patched.month || month,
+        });
         showToast(
           t(
             action === 'APPROVE'
@@ -431,9 +439,13 @@ export function MemberPaymentsTab({ spaceId, member }: MemberPaymentsTabProps) {
             .submitProof(spaceId, openPayment.paymentId, payload)
             .then(async updated => {
               setProofOpen(false);
-              setDetailsPayment(updated);
-              invalidatePaymentsMonthCaches(spaceId, updated.month || month);
-              invalidateDashboardQueries();
+              const patched = {
+                ...updated,
+                spaceId: updated.spaceId || spaceId,
+                month: updated.month || month,
+              };
+              setDetailsPayment(patched);
+              publishPaymentUpdated(patched);
               showToast(t('paymentCollection.proof.updated'));
               await reload();
             })

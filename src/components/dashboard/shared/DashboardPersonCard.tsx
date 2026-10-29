@@ -106,6 +106,8 @@ export type DashboardPersonCardProps = {
   actionLabel: string;
   onAdd: () => void;
   disabled?: boolean;
+  /** Hide Add when the person is already in the destination space. */
+  showAction?: boolean;
   selected?: boolean;
 };
 
@@ -121,6 +123,7 @@ export function DashboardPersonCard({
   actionLabel,
   onAdd,
   disabled = false,
+  showAction = true,
   selected = false,
 }: DashboardPersonCardProps) {
   return (
@@ -142,17 +145,19 @@ export function DashboardPersonCard({
         </View>
         <View style={styles.footerRow}>
           <DashboardRoleChip label={roleLabel} tone={roleTone} />
-          <Pressable
-            onPress={onAdd}
-            disabled={disabled}
-            style={({ pressed }) => [
-              styles.addBtn,
-              pressed && !disabled && styles.addBtnPressed,
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={actionLabel}>
-            <Text style={styles.addBtnText}>{actionLabel}</Text>
-          </Pressable>
+          {showAction ? (
+            <Pressable
+              onPress={onAdd}
+              disabled={disabled}
+              style={({ pressed }) => [
+                styles.addBtn,
+                pressed && !disabled && styles.addBtnPressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={actionLabel}>
+              <Text style={styles.addBtnText}>{actionLabel}</Text>
+            </Pressable>
+          ) : null}
         </View>
       </View>
     </View>

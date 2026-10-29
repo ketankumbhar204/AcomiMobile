@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { Users } from 'lucide-react-native';
 import { enrollMemberInFullMeals } from '../api/mealsApi';
 import { memberApi } from '../api/memberApi';
+import { useSpacePermissions } from '../hooks/useSpacePermissions';
 import {
   DashboardInfoBanner,
 } from '../components/dashboard/shared/DashboardGuidedCards';
@@ -34,6 +35,8 @@ import type { MainStackParamList } from '../navigation/types';
 import { useToastStore } from '../store/toastStore';
 import { colors, spacing, typography } from '../theme';
 import { invalidateDashboardQueries } from '../utils/dashboardQueryCache';
+import { mealsApplicableForSpace } from '../utils/mealAccess';
+import { importAddedToast } from '../utils/importAddedToast';
 import { getMembershipErrorMessage } from '../utils/membershipErrors';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'ImportExistingPeople'>;
@@ -87,13 +90,18 @@ export function ImportExistingPeopleScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { spaceId } = route.params;
+  const { spaceType } = useSpacePermissions(spaceId);
+  const mealsSupported = mealsApplicableForSpace(spaceType);
   const showToast = useToastStore(state => state.showToast);
 
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<PeopleFilter>('all');
   const [addingId, setAddingId] = useState<string | null>(null);
 
-  const importSearch = useResidentImportSearch(spaceId, query, { enabled: true });
+  const importSearch = useResidentImportSearch(spaceId, query, {
+    enabled: true,
+    includeUnavailable: true,
+  });
 
   const filtered = useMemo(() => {
     if (filter === 'all') {
@@ -142,6 +150,9 @@ export function ImportExistingPeopleScreen() {
 
   const handleAdd = useCallback(
     async (item: ResidentPickerItem) => {
+      if (item.alreadyInTargetSpace) {
+        return;
+      }
       const key = item.sourceSpaceId
         ? `${item.sourceSpaceId}:${item.memberId}`
         : item.memberId;
@@ -154,13 +165,15 @@ export function ImportExistingPeopleScreen() {
           });
           memberId = imported.memberId;
         }
-        try {
-          await enrollMemberInFullMeals(spaceId, memberId);
-        } catch {
-          // Meal enroll is best-effort; member record still created.
+        if (mealsSupported) {
+          try {
+            await enrollMemberInFullMeals(spaceId, memberId);
+          } catch {
+            // Meal enroll is best-effort; member record still created.
+          }
         }
         invalidateDashboardQueries();
-        showToast(t('membership.add.importSuccessToast'));
+        showToast(importAddedToast(t, spaceType));
         await importSearch.refetch();
       } catch (err) {
         showToast(getMembershipErrorMessage(err, 'membership.add.importFailed'));
@@ -168,7 +181,7 @@ export function ImportExistingPeopleScreen() {
         setAddingId(null);
       }
     },
-    [importSearch, showToast, spaceId, t],
+    [importSearch, mealsSupported, showToast, spaceId, spaceType, t],
   );
 
   return (
@@ -217,7 +230,9 @@ export function ImportExistingPeopleScreen() {
               mobile={item.mobileNumber}
               sourceLabel={
                 item.alreadyInTargetSpace
-                  ? t('membership.add.reuseCard.alreadyHere')
+                  ? t('membership.add.reuseCard.alreadyInSpace', {
+                      defaultValue: 'Already in this space',
+                    })
                   : t('membership.add.reuseCard.fromSpace', {
                       space: item.sourceSpaceName ?? '',
                     })
@@ -230,7 +245,8 @@ export function ImportExistingPeopleScreen() {
                 busy ? t('common.pleaseWait') : t('membership.add.reuseCard.addAction')
               }
               onAdd={() => void handleAdd(item)}
-              disabled={busy || item.alreadyInTargetSpace}
+              showAction={!item.alreadyInTargetSpace}
+              disabled={busy}
             />
           );
         }}

@@ -4,6 +4,7 @@ import { enquiryApi } from '../../api/enquiryApi';
 import { navigateMainStack } from '../../navigation/mainStackNavigation';
 import { navigationRef } from '../../navigation/navigationRef';
 import { refreshAccountEnquiryUnread } from '../../store/accountEnquiryUnreadStore';
+import { refreshOwnerPendingEnquiryCount } from '../../store/ownerPendingEnquiryStore';
 import { devLog } from '../../utils/devLog';
 import { getMessagingSafe } from './firebaseMessaging';
 import { peekPendingPushPayload } from './pendingPush';
@@ -40,8 +41,9 @@ async function shouldSkipUnseenEnquiryRedirect(): Promise<boolean> {
 }
 
 /**
- * If the customer has unread enquiry notifications on a normal cold start,
- * land on the Enquiries tab. Deep links / FCM take precedence.
+ * On a normal cold start, land on the Enquiries tab when there is something to handle.
+ * Owners use pending received enquiries (the Pending card). Customers use unread
+ * enquiry notifications. Deep links and push notifications take precedence.
  */
 export function useUnseenEnquiryStartupRedirect(enabled: boolean): void {
   const ranRef = useRef(false);
@@ -58,6 +60,18 @@ export function useUnseenEnquiryStartupRedirect(enabled: boolean): void {
       try {
         if (await shouldSkipUnseenEnquiryRedirect()) {
           devLog(`${LOG_TAG} skip — deep link or push`);
+          return;
+        }
+        const pending = await refreshOwnerPendingEnquiryCount();
+        if (cancelled) {
+          return;
+        }
+        if (pending != null) {
+          if (pending <= 0 || !navigationRef.isReady()) {
+            return;
+          }
+          devLog(`${LOG_TAG} redirect to Enquiries (pending=${pending})`);
+          navigateMainStack('MemberTabs', { screen: 'Enquiries' });
           return;
         }
         await refreshAccountEnquiryUnread();
