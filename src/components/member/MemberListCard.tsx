@@ -13,6 +13,8 @@ type MemberListCardProps = {
   contactLabel?: string;
   stayLabel?: string | null;
   statusChip?: React.ReactNode;
+  /** Compact stay-type chip shown under the occupancy status on the right. */
+  stayTypeChip?: React.ReactNode;
   statusLabel?: string;
   statusColor?: string;
   acomiLabel?: string;
@@ -34,6 +36,7 @@ export function MemberListCard({
   contactLabel,
   stayLabel,
   statusChip,
+  stayTypeChip,
   statusLabel,
   statusColor = colors.textSecondary,
   acomiLabel,
@@ -57,7 +60,7 @@ export function MemberListCard({
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
-      <DashboardAvatar initial={iconLabel} />
+      <DashboardAvatar label={iconLabel} />
       <View style={styles.body}>
         <View style={styles.titleRow}>
           <View style={styles.identity}>
@@ -67,11 +70,16 @@ export function MemberListCard({
             {roleChip}
           </View>
           <View style={styles.trailing}>
-            {statusChip}
+            <View style={styles.trailingChips}>
+              {statusChip}
+              {stayTypeChip}
+            </View>
             <ChevronRight size={16} color={colors.muted} />
           </View>
         </View>
-        {contactLabel ? <ContactNumberLine label={contactLabel} /> : null}
+        {contactLabel ? (
+          <ContactNumberLine label={contactLabel} value={contactLabel} name={title} />
+        ) : null}
         {stayLabel ? <StayTrailLine label={stayLabel} /> : null}
         {showMeta ? (
           <View style={styles.metaRow}>
@@ -169,10 +177,15 @@ const styles = StyleSheet.create({
   },
   trailing: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 2,
     flexShrink: 0,
     paddingTop: 1,
+  },
+  trailingChips: {
+    alignItems: 'flex-end',
+    gap: 4,
+    maxWidth: 120,
   },
   metaRow: {
     flexDirection: 'row',

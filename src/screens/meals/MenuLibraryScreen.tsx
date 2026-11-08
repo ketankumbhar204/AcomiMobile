@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, InteractionManager, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   CompositeNavigationProp,
   useFocusEffect,
@@ -8,21 +8,20 @@ import {
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { BookOpen, FolderOpen, PlusCircle, UtensilsCrossed } from 'lucide-react-native';
+import { CalendarDays, FolderOpen, PlusCircle } from 'lucide-react-native';
 import { mealsApi } from '../../api/mealsApi';
 import type { FoodCategoryResponse, FoodItemResponse, FoodType, MealComboResponse, UUID } from '../../api/types';
 import {
-  CategoryChipRail,
-  ComboChipRail,
-  ComboPreviewBar,
-  ItemChipGrid,
-  MealFormHero,
+  LibraryComboSection,
+  LibraryItemSection,
+  LibraryManageCategoriesSheet,
+  LibrarySummaryStrip,
   MenuLibraryTabBar,
+  type LibrarySummaryFocus,
   type MenuLibraryTab,
-} from '../../components/meals';
+} from '../../components/meals/library';
 import { ConfigureLibraryExtrasSheet } from '../../components/meals/ConfigureLibraryExtrasSheet';
 import { MenuLibraryReadyTip } from '../../components/meals/MenuLibraryReadyTip';
-import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
 import { DashboardActionRow } from '../../components/dashboard/shared/DashboardActionRow';
 import { EmptyState, PermissionDeniedScreen } from '../../components/ui';
 import { Screen } from '../../components/ui/Screen';
@@ -34,7 +33,7 @@ import { canEditEntityPhoto } from '../../files/entityPhoto';
 import type { MainStackParamList, SpaceTabParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
-import { colors, shadows, spacing, typography } from '../../theme';
+import { colors, spacing, typography } from '../../theme';
 
 type MenuLibraryScreenProps = {
   spaceId: UUID;
@@ -68,17 +67,18 @@ export function MenuLibraryScreen({ spaceId, initialTab }: MenuLibraryScreenProp
     selectedCategory,
     selectedComboId,
     setSelectedComboId,
-    selectedCombo,
-    filteredItems,
     extraItems,
     extraCategories,
     stats,
     reload,
     patchItem,
+    filteredItems,
   } = useMenuLibrary(spaceId);
 
   const [inlineEditor, setInlineEditor] = useState<InlineEditor>(null);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [draftAddCategoryId, setDraftAddCategoryId] = useState<string | null>(null);
+  const [manageCategoriesOpen, setManageCategoriesOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<MenuLibraryTab>(() => {
     if (initialTab === 'extras' && !mealPricing.requiresMealPrices) {
       return 'items';
@@ -88,7 +88,6 @@ export function MenuLibraryScreen({ spaceId, initialTab }: MenuLibraryScreenProp
   const [configureExtrasOpen, setConfigureExtrasOpen] = useState(false);
   const libraryHasContent = stats.itemCount > 0 || stats.comboCount > 0;
 
-  // Seeded defaults unlock planning — refresh progressive-access signals once catalog is loaded.
   useEffect(() => {
     if (!loading && !loadFailed && libraryHasContent) {
       invalidateDashboardQueries();
@@ -126,11 +125,24 @@ export function MenuLibraryScreen({ spaceId, initialTab }: MenuLibraryScreenProp
     return extraItems.filter(item => item.categoryId === extrasSelectedCategoryId);
   }, [extraItems, extrasSelectedCategoryId]);
 
-  const extrasSelectedCategory = useMemo(
-    () =>
-      extraCategories.find(category => category.categoryId === extrasSelectedCategoryId) ?? null,
-    [extraCategories, extrasSelectedCategoryId],
-  );
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const item of items) {
+      if (!item.isActive) {
+        continue;
+      }
+      counts[item.categoryId] = (counts[item.categoryId] ?? 0) + 1;
+    }
+    return counts;
+  }, [items]);
+
+  const extraCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const item of extraItems) {
+      counts[item.categoryId] = (counts[item.categoryId] ?? 0) + 1;
+    }
+    return counts;
+  }, [extraItems]);
 
   useFocusEffect(
     useCallback(() => {
@@ -141,24 +153,55 @@ export function MenuLibraryScreen({ spaceId, initialTab }: MenuLibraryScreenProp
   const canManage = permissions.canManageMeals === true;
   const canEditPhoto = canEditEntityPhoto(permissions.membershipRole);
   const inlineBusy = inlineEditor !== null || editingItemId !== null;
+  const catalogReady = !loading && !loadFailed;
 
   const closeInlineEditors = useCallback(() => {
     setInlineEditor(null);
     setEditingItemId(null);
   }, []);
 
-  const statsSummary = useMemo(() => {
-    if (activeTab === 'combos') {
-      return t('meals.library.statsCombos', { combos: stats.comboCount });
-    }
-    if (activeTab === 'extras') {
-      return t('meals.library.statsExtras', { count: stats.extraCount });
-    }
-    return t('meals.library.statsItems', {
-      categories: stats.categoryCount,
-      items: stats.itemCount,
-    });
-  }, [activeTab, stats.categoryCount, stats.comboCount, stats.extraCount, stats.itemCount, t]);
+  const handleSummarySelect = useCallback(
+    (focus: LibrarySummaryFocus) => {
+      closeInlineEditors();
+      if (focus === 'combos') {
+        setManageCategoriesOpen(false);
+        setActiveTab('combos');
+        return;
+      }
+      if (focus === 'categories') {
+        setActiveTab('items');
+        if (canManage) {
+          setManageCategoriesOpen(true);
+        }
+        return;
+      }
+      setManageCategoriesOpen(false);
+      setActiveTab('items');
+    },
+    [canManage, closeInlineEditors],
+  );
+
+  const updateCategory = useCallback(
+    async (category: FoodCategoryResponse, name: string) => {
+      try {
+        await mealsApi.updateFoodCategory(spaceId, category.categoryId, { name });
+        showToast(t('meals.library.categoryUpdateSuccess'));
+        await reload();
+      } catch (error) {
+        showToast(t('meals.errors.actionFailed'));
+        throw error;
+      }
+    },
+    [reload, showToast, spaceId, t],
+  );
+
+  const summarySelected: LibrarySummaryFocus | null = !catalogReady
+    ? null
+    : manageCategoriesOpen
+      ? 'categories'
+      : activeTab === 'combos'
+        ? 'combos'
+        : 'items';
 
   const handleTabChange = useCallback(
     (tab: MenuLibraryTab) => {
@@ -197,13 +240,14 @@ export function MenuLibraryScreen({ spaceId, initialTab }: MenuLibraryScreenProp
   );
 
   const saveItem = useCallback(
-    async (name: string, foodType: FoodType = 'VEG') => {
-      if (!selectedCategoryId) {
+    async (name: string, foodType: FoodType = 'VEG', categoryId?: string) => {
+      const targetCategoryId = categoryId || selectedCategoryId;
+      if (!targetCategoryId) {
         return;
       }
       try {
         await mealsApi.createFoodItem(spaceId, {
-          categoryId: selectedCategoryId,
+          categoryId: targetCategoryId,
           name,
           foodType,
           ...(activeTab === 'extras' ? { isExtra: true } : {}),
@@ -372,261 +416,280 @@ export function MenuLibraryScreen({ spaceId, initialTab }: MenuLibraryScreenProp
     [closeInlineEditors, navigation, spaceId],
   );
 
+  const selectCategory = useCallback(
+    (categoryId: string) => {
+      closeInlineEditors();
+      setSelectedCategoryId(categoryId);
+    },
+    [closeInlineEditors, setSelectedCategoryId],
+  );
+
+  const selectAllCategories = useCallback(() => {
+    closeInlineEditors();
+    setSelectedCategoryId(null);
+  }, [closeInlineEditors, setSelectedCategoryId]);
+
+  const startAddItem = useCallback(() => {
+    closeInlineEditors();
+    setDraftAddCategoryId(selectedCategoryId ?? activeCategories[0]?.categoryId ?? null);
+    setInlineEditor('item-add');
+  }, [activeCategories, closeInlineEditors, selectedCategoryId]);
+
   if (!permissions.canViewMeals) {
     return <PermissionDeniedScreen spaceId={spaceId} />;
   }
 
   return (
     <>
-    <Screen scrollable contentStyle={styles.content}>
-      <MealFormHero
-        icon={BookOpen}
-        accent="#0D9488"
-        soft="#F0FDFA"
-        border="#99F6E4"
-        eyebrow={t('meals.library.setupSteps')}
-        heading={t('meals.library.title')}
-        subheading={t('meals.library.subtitle')}
-      />
+      <Screen scrollable contentStyle={styles.content}>
+        {loading ? <ActivityIndicator color={colors.primary} style={styles.loader} /> : null}
 
-      {!loading && !loadFailed && libraryHasContent ? (
-        <MenuLibraryReadyTip
-          spaceId={spaceId}
-          visible
-          onContinuePlanning={() => {
-            navigateMain('MenuPlanning', { spaceId });
-          }}
-        />
-      ) : null}
+        {loadFailed ? (
+          <View style={styles.banner}>
+            <Text style={styles.bannerTitle}>{t('meals.library.backendPending')}</Text>
+            <Text style={styles.bannerBody}>{t('meals.library.backendPendingHint')}</Text>
+          </View>
+        ) : null}
 
-      {loading ? <ActivityIndicator color={colors.primary} style={styles.loader} /> : null}
+        {catalogReady && stats.itemCount === 0 ? (
+          <View style={styles.banner}>
+            <Text style={styles.bannerTitle}>{t('meals.library.seedHint')}</Text>
+            <Text style={styles.bannerBody}>{t('meals.library.seedHintBody')}</Text>
+          </View>
+        ) : null}
 
-      {loadFailed ? (
-        <View style={styles.banner}>
-          <Text style={styles.bannerTitle}>{t('meals.library.backendPending')}</Text>
-          <Text style={styles.bannerBody}>{t('meals.library.backendPendingHint')}</Text>
-        </View>
-      ) : null}
+        {catalogReady ? (
+          <LibrarySummaryStrip
+            categoryCount={stats.categoryCount}
+            itemCount={stats.itemCount}
+            comboCount={stats.comboCount}
+            categoriesLabel={t('meals.library.categories')}
+            itemsLabel={t('meals.library.tabItems')}
+            combosLabel={t('meals.library.tabCombos')}
+            selected={summarySelected}
+            onSelect={handleSummarySelect}
+          />
+        ) : null}
 
-      {!loading && !loadFailed && stats.itemCount === 0 ? (
-        <View style={styles.banner}>
-          <Text style={styles.bannerTitle}>{t('meals.library.seedHint')}</Text>
-          <Text style={styles.bannerBody}>{t('meals.library.seedHintBody')}</Text>
-        </View>
-      ) : null}
+        {catalogReady && libraryHasContent ? (
+          <MenuLibraryReadyTip
+            spaceId={spaceId}
+            visible
+            onContinuePlanning={() => {
+              navigateMain('MenuPlanning', { spaceId });
+            }}
+          />
+        ) : null}
 
-      {!loading && !loadFailed ? (
-        <>
-          <Text style={styles.statsSummary}>{statsSummary}</Text>
+        {catalogReady ? (
           <MenuLibraryTabBar
             activeTab={activeTab}
             onTabChange={handleTabChange}
             showExtras={showExtrasTab}
+            counts={{
+              items: stats.itemCount,
+              combos: stats.comboCount,
+              extras: stats.extraCount,
+            }}
           />
-        </>
-      ) : null}
+        ) : null}
 
-      {!loading && !loadFailed && activeTab === 'items' && (activeCategories.length > 0 || canManage) ? (
-        <>
-          <DashboardSectionTitle
-            title={t('meals.library.categories')}
-            subtitle={t('meals.library.categoriesHint')}
-          />
-          <CategoryChipRail
+        {catalogReady && activeTab === 'items' && (activeCategories.length > 0 || canManage) ? (
+          <LibraryItemSection
+            items={filteredItems}
             categories={activeCategories}
             selectedCategoryId={selectedCategoryId}
-            onSelect={categoryId => {
-              closeInlineEditors();
-              setSelectedCategoryId(categoryId);
-            }}
+            totalItemCount={stats.itemCount}
+            countByCategoryId={categoryCounts}
             canManage={canManage}
-            isAdding={inlineEditor === 'category'}
-            addDisabled={inlineBusy && inlineEditor !== 'category'}
-            onStartAdd={() => {
-              closeInlineEditors();
-              setInlineEditor('category');
-            }}
+            spaceId={spaceId}
+            canEditPhoto={canEditPhoto}
+            isAdding={inlineEditor === 'item-add'}
+            editingItemId={editingItemId}
+            addDisabled={inlineBusy && inlineEditor !== 'item-add'}
+            showCategoryTools
+            showAddItem={activeCategories.length > 0}
+            includeAll
+            removeLabel={t('meals.library.removeItem')}
+            emptyLabel={
+              activeCategories.length === 0
+                ? t('meals.library.categoriesEmpty')
+                : t('meals.library.itemsEmptyCategory')
+            }
+            formatTitle={count =>
+              selectedCategory
+                ? t('meals.library.categoryItemsTitle', {
+                    category: selectedCategory.name,
+                    count,
+                  })
+                : t('meals.library.allMenuItems', { count })
+            }
+            onSelectCategory={selectCategory}
+            onSelectAll={selectAllCategories}
+            onManageCategories={() => setManageCategoriesOpen(true)}
+            onStartAdd={startAddItem}
             onCancelAdd={closeInlineEditors}
-            onSaveCategory={saveCategory}
+            onSaveItem={saveItem}
+            onStartEdit={item => {
+              setInlineEditor(null);
+              setEditingItemId(item.itemId);
+            }}
+            onCancelEdit={closeInlineEditors}
+            onUpdateItem={updateItem}
+            onRemoveItem={canManage ? removeItem : undefined}
             onRemoveCategory={canManage ? removeCategory : undefined}
+            onPhotoChanged={() => void reload()}
+            addCategoryId={selectedCategoryId ?? draftAddCategoryId}
+            isAddingCategory={inlineEditor === 'category'}
+            onSaveCategory={saveCategory}
+            onCancelCategory={closeInlineEditors}
           />
+        ) : null}
 
-          {activeCategories.length > 0 ? (
-            <ItemChipGrid
-              items={filteredItems}
-              categoryName={selectedCategory?.name}
-              canManage={canManage}
-              spaceId={spaceId}
-              canEditPhoto={canEditPhoto}
-              onPhotoChanged={() => void reload()}
-              onRemoveCategory={
-                selectedCategory && canManage
-                  ? () => removeCategory(selectedCategory)
-                  : undefined
-              }
-              isAdding={inlineEditor === 'item-add'}
-              editingItemId={editingItemId}
-              addDisabled={inlineBusy && inlineEditor !== 'item-add'}
-              onStartAdd={() => {
-                closeInlineEditors();
-                setInlineEditor('item-add');
-              }}
-              onCancelAdd={closeInlineEditors}
-              onSaveItem={saveItem}
-              onStartEdit={item => {
-                setInlineEditor(null);
-                setEditingItemId(item.itemId);
-              }}
-              onCancelEdit={closeInlineEditors}
-              onUpdateItem={updateItem}
-              onRemoveItem={canManage ? removeItem : undefined}
+        {catalogReady && activeTab === 'items' && activeCategories.length === 0 && !canManage ? (
+          <EmptyState title={t('meals.library.categoriesEmpty')} Icon={FolderOpen} />
+        ) : null}
+
+        {catalogReady && activeTab === 'combos' ? (
+          <LibraryComboSection
+            combos={activeCombos}
+            selectedComboId={selectedComboId}
+            canManage={canManage}
+            spaceId={spaceId}
+            canEditPhoto={canEditPhoto}
+            onSelect={setSelectedComboId}
+            onAdd={() => openComboForm('create')}
+            onEdit={combo => openComboForm('edit', combo.comboId)}
+            onToggle={canManage ? toggleComboInSpace : undefined}
+            onRemove={canManage ? removeCombo : undefined}
+            onPhotoChanged={() => void reload()}
+          />
+        ) : null}
+
+        {catalogReady && showExtrasTab && activeTab === 'extras' ? (
+          <>
+            {stats.extraCount === 0 ? (
+              <>
+                <EmptyState
+                  title={t('meals.library.extrasEmpty')}
+                  description={t('meals.library.extrasEmptyBody')}
+                  Icon={PlusCircle}
+                />
+                {canManage ? (
+                  <Pressable
+                    style={styles.configureExtrasButton}
+                    onPress={() => setConfigureExtrasOpen(true)}
+                    accessibilityRole="button">
+                    <Text style={styles.configureExtrasButtonText}>
+                      {t('meals.library.configureExtrasCta')}
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </>
+            ) : (
+              <>
+                {canManage ? (
+                  <Pressable
+                    style={styles.configureExtrasButtonSecondary}
+                    onPress={() => setConfigureExtrasOpen(true)}
+                    accessibilityRole="button">
+                      <Text style={styles.configureExtrasButtonSecondaryText}>
+                        {t('meals.library.configureExtrasManageCta')}
+                      </Text>
+                  </Pressable>
+                ) : null}
+                <LibraryItemSection
+                  items={extrasVisibleItems}
+                  categories={extraCategories}
+                  selectedCategoryId={extrasSelectedCategoryId}
+                  totalItemCount={stats.extraCount}
+                  countByCategoryId={extraCounts}
+                  canManage={canManage}
+                  spaceId={spaceId}
+                  canEditPhoto={canEditPhoto}
+                  isAdding={false}
+                  editingItemId={editingItemId}
+                  addDisabled
+                  showCategoryTools={false}
+                  showAddItem={false}
+                  includeAll={false}
+                  removeLabel={t('meals.library.removeExtra')}
+                  emptyLabel={t('meals.library.itemsEmptyCategory')}
+                  formatTitle={count => {
+                    const category = extraCategories.find(
+                      row => row.categoryId === extrasSelectedCategoryId,
+                    );
+                    return category
+                      ? t('meals.library.categoryItemsTitle', {
+                          category: category.name,
+                          count,
+                        })
+                      : t('meals.library.extrasHeading', { count });
+                  }}
+                  onSelectCategory={selectCategory}
+                  onCancelAdd={closeInlineEditors}
+                  onSaveItem={saveItem}
+                  onStartEdit={item => {
+                    setInlineEditor(null);
+                    setEditingItemId(item.itemId);
+                  }}
+                  onCancelEdit={closeInlineEditors}
+                  onUpdateItem={updateItem}
+                  onRemoveItem={canManage ? removeExtra : undefined}
+                  onPhotoChanged={() => void reload()}
+                  addCategoryId={extrasSelectedCategoryId}
+                />
+              </>
+            )}
+          </>
+        ) : null}
+
+        {canManage ? (
+          <View style={styles.links} testID="library-subscription">
+            <DashboardActionRow
+              icon={CalendarDays}
+              accent="#0D9488"
+              title={t('meals.subscriptionPlans.title')}
+              subtitle={t('meals.subscriptionPlans.ownerSubtitle')}
+              onPress={() => navigateMain('SubscriptionPlans', { spaceId })}
             />
-          ) : null}
-        </>
-      ) : null}
+          </View>
+        ) : null}
 
-      {!loading && !loadFailed && activeTab === 'items' && activeCategories.length === 0 && !canManage ? (
-        <EmptyState
-          title={t('meals.library.categoriesEmpty')}
-          Icon={FolderOpen}
+        <Text style={styles.footerHint}>{t('meals.library.dailyMenuLaterHint')}</Text>
+      </Screen>
+
+      {canManage ? (
+        <LibraryManageCategoriesSheet
+          visible={manageCategoriesOpen}
+          categories={activeCategories}
+          countByCategoryId={categoryCounts}
+          onClose={() => setManageCategoriesOpen(false)}
+          onAdd={() => {
+            setManageCategoriesOpen(false);
+            closeInlineEditors();
+            setInlineEditor('category');
+          }}
+          onEdit={updateCategory}
+          onRemove={category => {
+            setManageCategoriesOpen(false);
+            InteractionManager.runAfterInteractions(() => {
+              removeCategory(category);
+            });
+          }}
         />
       ) : null}
 
-      {!loading && !loadFailed && activeTab === 'combos' ? (
-        <>
-          <DashboardSectionTitle
-            title={t('meals.library.combos')}
-            subtitle={t('meals.library.combosHint')}
-          />
-          <ComboChipRail
-            combos={activeCombos}
-            selectedComboId={selectedComboId}
-            onSelect={setSelectedComboId}
-            canManage={canManage}
-            hideTitle
-            spaceId={spaceId}
-            canEditPhoto={canEditPhoto}
-            onPhotoChanged={() => void reload()}
-            onAddCombo={() => openComboForm('create')}
-            onEditCombo={combo => openComboForm('edit', combo.comboId)}
-            onToggleCombo={canManage ? toggleComboInSpace : undefined}
-            onRemoveCombo={canManage ? removeCombo : undefined}
-          />
-          <ComboPreviewBar
-            combo={selectedCombo}
-            canManage={canManage}
-            onEdit={
-              selectedCombo
-                ? () => openComboForm('edit', selectedCombo.comboId)
-                : undefined
-            }
-            onRemove={selectedCombo && canManage ? () => removeCombo(selectedCombo) : undefined}
-          />
-        </>
+      {showExtrasTab && configureExtrasOpen ? (
+        <ConfigureLibraryExtrasSheet
+          visible
+          spaceId={spaceId}
+          items={items}
+          categories={activeCategories}
+          onClose={() => setConfigureExtrasOpen(false)}
+          onItemUpdated={patchItem}
+        />
       ) : null}
-
-      {!loading && !loadFailed && showExtrasTab && activeTab === 'extras' ? (
-        <>
-          <DashboardSectionTitle
-            title={t('meals.library.tabExtras')}
-            subtitle={t('meals.library.extrasTabHint')}
-          />
-
-          {stats.extraCount === 0 ? (
-            <>
-              <EmptyState
-                title={t('meals.library.extrasEmpty')}
-                description={t('meals.library.extrasEmptyBody')}
-                Icon={PlusCircle}
-              />
-              {canManage ? (
-                <Pressable
-                  style={styles.configureExtrasButton}
-                  onPress={() => setConfigureExtrasOpen(true)}
-                  accessibilityRole="button">
-                  <Text style={styles.configureExtrasButtonText}>
-                    {t('meals.library.configureExtrasCta')}
-                  </Text>
-                </Pressable>
-              ) : null}
-            </>
-          ) : (
-            <>
-              {canManage ? (
-                <Pressable
-                  style={styles.configureExtrasButtonSecondary}
-                  onPress={() => setConfigureExtrasOpen(true)}
-                  accessibilityRole="button">
-                  <Text style={styles.configureExtrasButtonSecondaryText}>
-                    {t('meals.library.configureExtrasManageCta')}
-                  </Text>
-                </Pressable>
-              ) : null}
-
-              {extraCategories.length > 0 ? (
-                <>
-                  <CategoryChipRail
-                    categories={extraCategories}
-                    selectedCategoryId={extrasSelectedCategoryId}
-                    onSelect={categoryId => {
-                      closeInlineEditors();
-                      setSelectedCategoryId(categoryId);
-                    }}
-                    canManage={false}
-                  />
-
-                  {extrasSelectedCategoryId ? (
-                    <ItemChipGrid
-                      items={extrasVisibleItems}
-                      categoryName={extrasSelectedCategory?.name}
-                      canManage={canManage}
-                      spaceId={spaceId}
-                      canEditPhoto={canEditPhoto}
-                      onPhotoChanged={() => void reload()}
-                      isAdding={false}
-                      editingItemId={editingItemId}
-                      onCancelAdd={closeInlineEditors}
-                      onSaveItem={saveItem}
-                      onStartEdit={item => {
-                        setInlineEditor(null);
-                        setEditingItemId(item.itemId);
-                      }}
-                      onCancelEdit={closeInlineEditors}
-                      onUpdateItem={updateItem}
-                      onRemoveItem={canManage ? removeExtra : undefined}
-                    />
-                  ) : null}
-                </>
-              ) : null}
-            </>
-          )}
-        </>
-      ) : null}
-
-      {canManage ? (
-        <View style={styles.links}>
-          <DashboardActionRow
-            icon={UtensilsCrossed}
-            accent="#0D9488"
-            title={t('meals.subscriptionPlans.title')}
-            onPress={() => navigateMain('SubscriptionPlans', { spaceId })}
-          />
-        </View>
-      ) : null}
-
-      <Text style={styles.footerHint}>{t('meals.library.dailyMenuLaterHint')}</Text>
-    </Screen>
-
-    {showExtrasTab && configureExtrasOpen ? (
-      <ConfigureLibraryExtrasSheet
-        visible
-        spaceId={spaceId}
-        items={items}
-        categories={activeCategories}
-        onClose={() => setConfigureExtrasOpen(false)}
-        onItemUpdated={patchItem}
-      />
-    ) : null}
     </>
   );
 }
@@ -636,22 +699,15 @@ const styles = StyleSheet.create({
   loader: { marginBottom: spacing.sm },
   banner: {
     backgroundColor: colors.white,
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.lg,
+    padding: spacing.md,
     marginBottom: spacing.md,
     gap: spacing.xxs,
-    ...shadows.sm,
   },
   bannerTitle: { ...typography.bodyStrong },
   bannerBody: { ...typography.caption, color: colors.muted },
-  statsSummary: {
-    ...typography.caption,
-    color: colors.muted,
-    fontWeight: '600',
-    marginBottom: spacing.md,
-  },
   configureExtrasButton: {
     marginTop: spacing.xs,
     backgroundColor: colors.primary,
@@ -683,7 +739,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   links: {
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
     gap: spacing.xxs,
   },
 });

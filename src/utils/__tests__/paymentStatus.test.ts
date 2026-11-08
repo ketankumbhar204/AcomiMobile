@@ -5,6 +5,7 @@ import {
   isPaymentActionable,
   isPaymentProofEditable,
   isSubmittedForReview,
+  remainingRefundableAmount,
   showsPaymentOverdueCue,
 } from '../paymentStatus';
 
@@ -63,5 +64,24 @@ describe('paymentStatus', () => {
     expect(isOwnerReviewActionable('REJECTED')).toBe(true);
     expect(isOwnerReviewActionable('PAID')).toBe(false);
     expect(isOwnerReviewActionable('PENDING')).toBe(false);
+  });
+
+  it('computes remaining refundable after refunds and retains', () => {
+    expect(
+      remainingRefundableAmount({
+        amount: 5000,
+        paidAmount: 5000,
+        refundedAmount: 2000,
+        retainedAmount: 1000,
+      }),
+    ).toBe(2000);
+    expect(
+      remainingRefundableAmount({
+        amount: 5000,
+        paidAmount: 5000,
+        refundedAmount: 5000,
+        retainedAmount: 0,
+      }),
+    ).toBe(0);
   });
 });

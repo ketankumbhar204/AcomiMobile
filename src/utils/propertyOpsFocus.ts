@@ -1,4 +1,4 @@
-export type PropertyOpsFocus = 'occupied' | 'vacant' | 'moveIns';
+export type PropertyOpsFocus = 'occupied' | 'vacant' | 'reserved' | 'moveIns';
 
 export function propertyOpsFocusFromInventory(
   status: string | null | undefined,
@@ -6,6 +6,9 @@ export function propertyOpsFocusFromInventory(
 ): PropertyOpsFocus | null {
   if (focus === 'moveIns') {
     return 'moveIns';
+  }
+  if (focus === 'reserved' || status === 'RESERVED') {
+    return 'reserved';
   }
   if (status === 'AVAILABLE') {
     return 'vacant';
@@ -18,8 +21,14 @@ export function propertyOpsFocusFromInventory(
 
 export function bedStatusForPropertyOpsFocus(
   focus: PropertyOpsFocus,
-): 'AVAILABLE' | 'OCCUPIED' {
-  return focus === 'vacant' ? 'AVAILABLE' : 'OCCUPIED';
+): 'AVAILABLE' | 'OCCUPIED' | 'RESERVED' {
+  if (focus === 'vacant') {
+    return 'AVAILABLE';
+  }
+  if (focus === 'reserved') {
+    return 'RESERVED';
+  }
+  return 'OCCUPIED';
 }
 
 export function filterBedsById<T extends { bedId: string }>(

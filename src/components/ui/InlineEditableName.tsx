@@ -17,6 +17,11 @@ type InlineEditableNameProps = {
   displayValue?: string;
   editable?: boolean;
   onSave?: (value: string) => Promise<void>;
+  /**
+   * When set, the pencil opens this action (e.g. Edit Building form) instead of
+   * inline rename. Prefer this when a full edit screen already exists.
+   */
+  onEditPress?: () => void;
   onTitlePress?: () => void;
   placeholder?: string;
 };
@@ -26,6 +31,7 @@ export function InlineEditableName({
   displayValue,
   editable = false,
   onSave,
+  onEditPress,
   onTitlePress,
   placeholder,
 }: InlineEditableNameProps) {
@@ -83,11 +89,40 @@ export function InlineEditableName({
     }
   }
 
-  if (!editable || !onSave) {
+  if (!editable || (!onSave && !onEditPress)) {
     return (
       <Text style={styles.title} numberOfLines={2}>
         {visibleValue}
       </Text>
+    );
+  }
+
+  if (onEditPress && !isEditing) {
+    const titleNode = (
+      <Text style={styles.title} numberOfLines={2}>
+        {visibleValue}
+      </Text>
+    );
+    return (
+      <View style={styles.nameRow}>
+        {onTitlePress ? (
+          <Pressable onPress={onTitlePress} style={styles.titleWrap}>
+            {titleNode}
+          </Pressable>
+        ) : (
+          <View style={styles.titleWrap}>{titleNode}</View>
+        )}
+        <Pressable
+          style={styles.editIconBtn}
+          onPress={onEditPress}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={t('accommodation.builder.editBuilding', {
+            defaultValue: 'Edit building',
+          })}>
+          <Pencil size={14} color={colors.primaryDark} strokeWidth={2.2} />
+        </Pressable>
+      </View>
     );
   }
 
@@ -120,7 +155,7 @@ export function InlineEditableName({
             {saving ? (
               <ActivityIndicator size="small" color={colors.white} />
             ) : (
-              <Check size={16} color={colors.primaryDark} strokeWidth={2.4} />
+              <Check size={16} color="#FFFFFF" strokeWidth={3} />
             )}
           </Pressable>
         </View>

@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.mintSubtle,
   },
   placeholder: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.mintSubtle,

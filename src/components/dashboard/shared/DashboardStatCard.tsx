@@ -40,6 +40,8 @@ export type DashboardStatCardProps = {
    * Used by screens that explicitly opted into the wider card.
    */
   horizontal?: boolean;
+  /** When false, hides the trailing/corner chevron even if onPress is set. */
+  showChevron?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -61,6 +63,7 @@ export const DashboardStatCard = memo(function DashboardStatCard({
   selected = false,
   selectionColor,
   horizontal = false,
+  showChevron = true,
   style,
 }: DashboardStatCardProps) {
   const body = horizontal ? (
@@ -83,7 +86,9 @@ export const DashboardStatCard = memo(function DashboardStatCard({
           {label}
         </Text>
       </View>
-      {onPress ? <ChevronRight size={16} color={colors.muted} strokeWidth={2.2} /> : null}
+      {onPress && showChevron ? (
+        <ChevronRight size={16} color={colors.muted} strokeWidth={2.2} />
+      ) : null}
     </>
   ) : (
     <>
@@ -112,7 +117,7 @@ export const DashboardStatCard = memo(function DashboardStatCard({
       <Text style={[styles.label, compact && styles.labelCompact]} numberOfLines={2}>
         {label}
       </Text>
-      {onPress && !compact ? (
+      {onPress && showChevron && !compact ? (
         <View style={styles.chevron} pointerEvents="none">
           <ChevronRight size={14} color={colors.muted} strokeWidth={2.4} />
         </View>
@@ -204,6 +209,7 @@ const styles = StyleSheet.create({
   gridItem: {
     flexGrow: 1,
     flexBasis: '47%',
+    maxWidth: '48.5%',
   },
   pressable: {},
   pressed: {

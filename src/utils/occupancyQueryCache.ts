@@ -1,6 +1,7 @@
 import type { OccupancyListFilters, UUID } from '../api/types';
 import { invalidateAccommodationQueries } from './accommodationQueryCache';
 import { invalidateDashboardQueries } from './dashboardQueryCache';
+import { publishPaymentsMonthChanged } from './paymentUpdates';
 import { invalidateStayPaymentCache } from './stayChargeIndex';
 
 export const occupancyKeys = {
@@ -31,10 +32,18 @@ export function subscribeOccupancyInvalidation(listener: InvalidationListener): 
   return () => listeners.delete(listener);
 }
 
-/** Refresh accommodation lists, bed occupant cards, and occupancy caches after allocate/transfer/vacate. */
-export function invalidateAfterOccupancyChange(): void {
+/**
+ * Refresh occupancy, bed cards, dashboard, the bed stay-charge index, and the
+ * owner payment month lists. Pass the space id so payment screens reload.
+ * Query names: occupancy listener, accommodation lists, dashboard, stay-charge
+ * index, and owner/tenant payment month caches (`summary|spaceId|month`).
+ */
+export function invalidateAfterOccupancyChange(spaceId?: string): void {
   invalidateOccupancyQueries();
   invalidateAccommodationQueries();
   invalidateDashboardQueries();
   invalidateStayPaymentCache();
+  if (spaceId) {
+    publishPaymentsMonthChanged(spaceId);
+  }
 }

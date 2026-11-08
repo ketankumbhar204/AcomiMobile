@@ -22,6 +22,10 @@ export const MAX_OTHER_CHARGES = 10;
 export type ContractTermsFormValues = {
   rentSnapshot: string;
   depositSnapshot: string;
+  /** Reservation-only: portion of first-period rent (not an extra charge). */
+  bookingAdvanceAmount: string;
+  /** When true, backend creates the advance obligation as PAID. */
+  bookingAdvanceCollected: boolean;
   foodEnabled: boolean;
   foodChargeSnapshot: string;
   otherCharges: OccupancyChargeLine[];
@@ -74,6 +78,8 @@ export function emptyContractTermsFormValues(
       catalog?.defaultDeposit != null && catalog.defaultDeposit > 0
         ? String(catalog.defaultDeposit)
         : '0',
+    bookingAdvanceAmount: '',
+    bookingAdvanceCollected: true,
     foodEnabled: true,
     foodChargeSnapshot: '',
     otherCharges: [],
@@ -88,6 +94,11 @@ export function contractTermsFromOccupancy(
       occupancy.rentSnapshot != null ? String(occupancy.rentSnapshot) : '',
     depositSnapshot:
       occupancy.depositSnapshot != null ? String(occupancy.depositSnapshot) : '0',
+    bookingAdvanceAmount:
+      occupancy.bookingAdvanceAmount != null && occupancy.bookingAdvanceAmount > 0
+        ? String(occupancy.bookingAdvanceAmount)
+        : '',
+    bookingAdvanceCollected: false,
     foodEnabled: occupancy.foodIncludedInRent
       ? true
       : Boolean(occupancy.foodEnabled),
@@ -356,9 +367,23 @@ export function formatContractAmount(
   return `₹${Math.round(value).toLocaleString('en-IN')}`;
 }
 
+/**
+ * OPEN_ENDED daily-rate stays: rentSnapshot is a DAILY rate and rent payment rows are
+ * generated only after the billing period closes (or on vacate).
+ */
+export function isOpenEndedDailyRate(
+  occupancy?: Pick<OccupancyResponse, 'stayKind' | 'pricingBasis'> | null,
+): boolean {
+  return occupancy?.stayKind === 'OPEN_ENDED' && occupancy?.pricingBasis === 'DAILY_RATE';
+}
+
 export function computeOccupancyMonthlyTotal(
   occupancy: OccupancyResponse,
 ): number | null {
+  // Daily rate is not a monthly rent — never present it as one.
+  if (isOpenEndedDailyRate(occupancy)) {
+    return null;
+  }
   if (occupancy.rentSnapshot == null) {
     return null;
   }
@@ -400,10 +425,50 @@ export function isOccupancyBillableInMonth(
   return occupancy.status === 'ACTIVE' || occupancy.status === 'VACATED';
 }
 
+/**
+ * Accrued (not yet billed) rent for an OPEN_ENDED daily-rate stay in a calendar month:
+ * daily rate × inclusive billable days. Labeled-display only — never an outstanding amount.
+ */
+export function computeOpenEndedAccruedRentForMonth(
+  occupancy: OccupancyResponse,
+  month: string,
+): number | null {
+  if (
+    !isOpenEndedDailyRate(occupancy) ||
+    occupancy.rentSnapshot == null ||
+    !isOccupancyBillableInMonth(occupancy, month)
+  ) {
+    return null;
+  }
+  const [year, monthNum] = month.split('-').map(Number);
+  const daysInMonth = new Date(year, monthNum, 0).getDate();
+  const monthStart = `${month}-01`;
+  const monthEnd = `${month}-${String(daysInMonth).padStart(2, '0')}`;
+  const startDate = (occupancy.actualMoveInAt ?? occupancy.moveInDate)?.slice(0, 10);
+  if (!startDate) {
+    return null;
+  }
+  const vacatedDate = occupancy.vacatedAt?.slice(0, 10) ?? null;
+  const periodStart = startDate > monthStart ? startDate : monthStart;
+  const periodEnd = vacatedDate && vacatedDate < monthEnd ? vacatedDate : monthEnd;
+  if (periodStart > periodEnd) {
+    return null;
+  }
+  const start = new Date(`${periodStart}T00:00:00`);
+  const end = new Date(`${periodEnd}T00:00:00`);
+  const billableDays =
+    Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+  return Math.round(occupancy.rentSnapshot * billableDays * 100) / 100;
+}
+
 export function computeOccupancyMonthlyTotalForMonth(
   occupancy: OccupancyResponse,
   month: string,
 ): number | null {
+  // No payable row exists until the period closes; do not invent a monthly bill.
+  if (isOpenEndedDailyRate(occupancy)) {
+    return null;
+  }
   if (!isOccupancyBillableInMonth(occupancy, month)) {
     return null;
   }
@@ -443,6 +508,7 @@ export function hasContractSnapshot(occupancy: OccupancyResponse): boolean {
   return (
     occupancy.status === 'ACTIVE' &&
     (occupancy.rentSnapshot != null ||
+      occupancy.agreedTotal != null ||
       occupancy.depositSnapshot != null ||
       Boolean(occupancy.foodEnabled) ||
       Boolean(occupancy.foodIncludedInRent) ||

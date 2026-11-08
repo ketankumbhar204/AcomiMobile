@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { MemberPaymentStatus } from '../../api/types';
 import {
   FilterCheckboxRow,
   FilterDrawerDivider,
@@ -11,8 +10,9 @@ import {
 import { toggleSetValue } from '../../utils/filterCount';
 import {
   defaultPaymentListFilters,
-  PAYMENT_STATUSES,
+  PAYMENT_RECORD_STATUSES,
   type PaymentListFilterState,
+  type PaymentRecordStatusFilter,
   type PaymentSortOption,
 } from '../../utils/paymentLedger';
 
@@ -47,16 +47,22 @@ export function PaymentsFilterDrawer({
     { id: 'name_desc', label: t('list.sort.nameDesc') },
   ];
 
-  const statusLabel = (status: MemberPaymentStatus) => {
+  const statusLabel = (status: PaymentRecordStatusFilter) => {
     switch (status) {
       case 'PAID':
         return t('payments.filterDrawer.paid');
       case 'PENDING':
         return t('payments.filterDrawer.pending');
-      case 'PARTIAL':
-        return t('payments.filterDrawer.partial');
       case 'UNDER_REVIEW':
         return t('payments.filterDrawer.underReview');
+      case 'UPDATE_REQUESTED':
+        return t('payments.status.needsUpdate');
+      case 'REJECTED':
+        return t('payments.status.rejected');
+      case 'REFUNDED':
+        return t('payments.filterDrawer.refunded', { defaultValue: 'Refunded' });
+      case 'CANCELLED':
+        return t('payments.filterDrawer.cancelled', { defaultValue: 'Cancelled' });
       default:
         return status;
     }
@@ -76,7 +82,7 @@ export function PaymentsFilterDrawer({
         onClose();
       }}>
       <FilterDrawerSection title={t('payments.filterDrawer.statusSection')}>
-        {PAYMENT_STATUSES.map(status => (
+        {PAYMENT_RECORD_STATUSES.map(status => (
           <FilterCheckboxRow
             key={status}
             label={statusLabel(status)}

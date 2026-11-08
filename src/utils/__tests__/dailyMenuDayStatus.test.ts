@@ -14,16 +14,16 @@ function menu(
   optionCount: number,
 ): DailyMenuResponse {
   return {
-    menuId: `${mealType}-id`,
     menuDate: '2026-07-05',
     mealType,
     status,
     options: Array.from({ length: optionCount }, (_, index) => ({
       optionId: `${mealType}-opt-${index}`,
+      label: 'Option',
       isAvailable: true,
       sortOrder: index,
     })),
-  } as DailyMenuResponse;
+  };
 }
 
 describe('dailyMenuDayStatus', () => {
@@ -98,23 +98,23 @@ describe('resolveDayShareAction', () => {
 
   it('keeps sharing status independent of a saved menu', () => {
     expect(
-      resolveDayShareVisual({ published: 0, modified: 0, draft: 2, notPlanned: 1 }),
+      resolveDayShareVisual({ published: 0, modified: 0, draft: 2 }),
     ).toBe('not_shared');
     expect(
-      resolveDayShareVisual({ published: 2, modified: 0, draft: 0, notPlanned: 1 }),
+      resolveDayShareVisual({ published: 2, modified: 0, draft: 0 }),
     ).toBe('shared');
     expect(
-      resolveDayShareVisual({ published: 1, modified: 1, draft: 0, notPlanned: 1 }),
+      resolveDayShareVisual({ published: 1, modified: 1, draft: 0 }),
     ).toBe('updated');
     expect(
       resolveDayShareVisual(
-        { published: 0, modified: 0, draft: 1, notPlanned: 2 },
+        { published: 0, modified: 0, draft: 1 },
         { shareFailed: true },
       ),
     ).toBe('failed');
     expect(
       resolveDayShareVisual(
-        { published: 2, modified: 0, draft: 0, notPlanned: 1 },
+        { published: 2, modified: 0, draft: 0 },
         { shareFailed: true },
       ),
     ).toBe('shared');

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import type { FoodType } from '../../../api/types';
 import { colors, radius, spacing, typography } from '../../../theme';
 import { FoodTypeIcon } from '../../ui/FoodTypeIcon';
@@ -16,8 +16,9 @@ type MenuChipProps = {
   foodType?: FoodType | null;
   onPress?: () => void;
   onLongPress?: () => void;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   leading?: React.ReactNode;
+  testID?: string;
 };
 
 export function MenuChip({
@@ -31,6 +32,7 @@ export function MenuChip({
   onLongPress,
   style,
   leading,
+  testID,
 }: MenuChipProps) {
   const isAdd = variant === 'add';
   const isSelected =
@@ -44,6 +46,7 @@ export function MenuChip({
       onPress={onPress}
       onLongPress={onLongPress}
       disabled={!onPress && !onLongPress}
+      testID={testID}
       style={({ pressed }) => [
         styles.base,
         isCompact && styles.compact,

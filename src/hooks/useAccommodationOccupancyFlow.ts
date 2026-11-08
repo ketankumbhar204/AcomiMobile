@@ -12,6 +12,11 @@ import { useToastStore } from '../store/toastStore';
 import { fetchTargetOccupancy } from '../utils/fetchTargetOccupancy';
 import { isOccupancyTargetSupported } from '../utils/buildOccupancyTarget';
 import type { OccupancyTargetSelection } from '../utils/occupancyRules';
+import {
+  createExtensionIdempotencyKey,
+  defaultMonthlyRenewalEndDate,
+} from '../utils/extendStay';
+import type { ExtendOccupancyRequest } from '../api/types';
 
 export type OccupancyFlowContext = {
   target: OccupancyTargetSelection;
@@ -38,9 +43,18 @@ export function useAccommodationOccupancyFlow({
   const { t } = useTranslation();
   const showToast = useToastStore(state => state.showToast);
   const { showConfirm } = useConfirmDialog();
-  const { cancelReservation, loading, error, clearError } = useOccupancyMutations(spaceId);
+  const { cancelReservation, extendStay, loading, error, clearError } = useOccupancyMutations(spaceId);
 
   const [flowContext, setFlowContext] = useState<OccupancyFlowContext | null>(null);
+  const [extendSession, setExtendSession] = useState<{
+    occupancyId: string;
+    idempotencyKey: string;
+    stayKind?: 'MONTHLY' | 'SHORT' | 'OPEN_ENDED' | null;
+    moveInDate?: string | null;
+    variant: 'extend' | 'renewal' | 'reviseOpenEnded';
+    initialExpectedExitDate: string;
+    currentDailyRent?: number | null;
+  } | null>(null);
   const [resolvingOccupancy, setResolvingOccupancy] = useState(false);
 
   const target = flowContext?.target ?? null;
@@ -106,27 +120,9 @@ export function useAccommodationOccupancyFlow({
     [spaceId],
   );
 
-  const confirmCancelReservation = useCallback(() => {
-    showConfirm({
-      title: t('occupancy.cancelReservation.title'),
-      message: t('occupancy.cancelReservation.message'),
-      confirmLabel: t('occupancy.actions.cancelReservation'),
-      destructive: true,
-      onConfirm: async () => {
-        const occupancyId = occupancy?.occupancyId;
-        if (!occupancyId) {
-          showToast(t('occupancy.errors.noReserved'));
-          return;
-        }
-        try {
-          await cancelReservation(occupancyId);
-          await afterMutation();
-        } catch {
-          // surfaced via hook
-        }
-      },
-    });
-  }, [afterMutation, cancelReservation, occupancy?.occupancyId, showConfirm, showToast, t]);
+  const [cancelSettlementOccupancyId, setCancelSettlementOccupancyId] = useState<string | null>(
+    null,
+  );
 
   const startReserve = useCallback(
     (context: OccupancyFlowContext): boolean => {
@@ -172,10 +168,16 @@ export function useAccommodationOccupancyFlow({
 
   const startCancelReservation = useCallback(
     async (context: OccupancyFlowContext) => {
-      await ensureContext(context);
-      confirmCancelReservation();
+      const resolved = await ensureContext(context);
+      const occupancyId =
+        resolved.occupancy?.occupancyId ?? context.occupancy?.occupancyId ?? null;
+      if (!occupancyId) {
+        showToast(t('occupancy.errors.noReserved'));
+        return;
+      }
+      setCancelSettlementOccupancyId(occupancyId);
     },
-    [confirmCancelReservation, ensureContext],
+    [ensureContext, showToast, t],
   );
 
   const startVacate = useCallback(
@@ -191,6 +193,131 @@ export function useAccommodationOccupancyFlow({
     [clearError, ensureContext, openWizard, showToast, t],
   );
 
+  const startExtend = useCallback(
+    async (context: OccupancyFlowContext) => {
+      clearError();
+      const resolved = await ensureContext(context);
+      if (!resolved.occupancy?.occupancyId) {
+        showToast(t('occupancy.errors.noActive'));
+        return;
+      }
+      if (resolved.occupancy.stayKind === 'OPEN_ENDED') {
+        setExtendSession({
+          occupancyId: resolved.occupancy.occupancyId,
+          idempotencyKey: createExtensionIdempotencyKey(),
+          stayKind: 'OPEN_ENDED',
+          moveInDate: resolved.occupancy.moveInDate ?? null,
+          variant: 'reviseOpenEnded',
+          initialExpectedExitDate: '',
+          currentDailyRent: resolved.occupancy.rentSnapshot ?? null,
+        });
+        return;
+      }
+      setExtendSession({
+        occupancyId: resolved.occupancy.occupancyId,
+        idempotencyKey: createExtensionIdempotencyKey(),
+        stayKind: resolved.occupancy.stayKind ?? null,
+        moveInDate: resolved.occupancy.moveInDate ?? null,
+        variant: 'extend',
+        initialExpectedExitDate: '',
+      });
+    },
+    [clearError, ensureContext, showToast, t],
+  );
+
+  /** OPEN_ENDED: revise daily rent without changing planned end or stayKind. */
+  const startReviseOpenEndedRent = useCallback(
+    async (context: OccupancyFlowContext) => {
+      clearError();
+      const resolved = await ensureContext(context);
+      if (!resolved.occupancy?.occupancyId) {
+        showToast(t('occupancy.errors.noActive'));
+        return;
+      }
+      if (resolved.occupancy.stayKind !== 'OPEN_ENDED') {
+        showToast(
+          t('occupancy.reviseRent.onlyOpenEnded', {
+            defaultValue: 'Daily rent revision is only for No Fixed Move-Out Date stays.',
+          }),
+        );
+        return;
+      }
+      setExtendSession({
+        occupancyId: resolved.occupancy.occupancyId,
+        idempotencyKey: createExtensionIdempotencyKey(),
+        stayKind: 'OPEN_ENDED',
+        moveInDate: resolved.occupancy.moveInDate ?? null,
+        variant: 'reviseOpenEnded',
+        initialExpectedExitDate: '',
+        currentDailyRent: resolved.occupancy.rentSnapshot ?? null,
+      });
+    },
+    [clearError, ensureContext, showToast, t],
+  );
+
+  /** Monthly renewal uses the same extend API (D-11 / D-15) with a +1 month preset. */
+  const startRenewMonthly = useCallback(
+    async (context: OccupancyFlowContext) => {
+      clearError();
+      const resolved = await ensureContext(context);
+      if (!resolved.occupancy?.occupancyId) {
+        showToast(t('occupancy.errors.noActive'));
+        return;
+      }
+      if (resolved.occupancy.stayKind === 'SHORT') {
+        showToast(
+          t('occupancy.extend.renewalNotForShort', {
+            defaultValue: 'Short stays use Extend stay, not monthly renewal.',
+          }),
+        );
+        return;
+      }
+      if (resolved.occupancy.stayKind === 'OPEN_ENDED') {
+        await startReviseOpenEndedRent(resolved);
+        return;
+      }
+      setExtendSession({
+        occupancyId: resolved.occupancy.occupancyId,
+        idempotencyKey: createExtensionIdempotencyKey(),
+        stayKind: resolved.occupancy.stayKind ?? null,
+        moveInDate: resolved.occupancy.moveInDate ?? null,
+        variant: 'renewal',
+        initialExpectedExitDate: defaultMonthlyRenewalEndDate(
+          resolved.occupancy.expectedExitDate,
+        ),
+      });
+    },
+    [clearError, ensureContext, showToast, startReviseOpenEndedRent, t],
+  );
+
+  const closeExtend = useCallback(() => {
+    if (loading) {
+      return;
+    }
+    setExtendSession(null);
+  }, [loading]);
+
+  const submitExtend = useCallback(
+    async (body: ExtendOccupancyRequest) => {
+      if (!extendSession) {
+        return;
+      }
+      await extendStay(extendSession.occupancyId, body);
+      setExtendSession(null);
+      await afterMutation();
+    },
+    [afterMutation, extendSession, extendStay],
+  );
+
+  const closeCancelSettlement = useCallback(() => {
+    setCancelSettlementOccupancyId(null);
+  }, []);
+
+  const completeCancelSettlement = useCallback(async () => {
+    setCancelSettlementOccupancyId(null);
+    await afterMutation();
+  }, [afterMutation]);
+
   return {
     isEnabled,
     loading: loading || resolvingOccupancy,
@@ -198,11 +325,20 @@ export function useAccommodationOccupancyFlow({
     target,
     accommodationStatus,
     occupancy,
+    extendSession,
+    cancelSettlementOccupancyId,
+    closeCancelSettlement,
+    completeCancelSettlement,
     startReserve,
     startWalkIn,
     startMoveIn,
     startTransfer,
     startCancelReservation,
     startVacate,
+    startExtend,
+    startRenewMonthly,
+    startReviseOpenEndedRent,
+    closeExtend,
+    submitExtend,
   };
 }

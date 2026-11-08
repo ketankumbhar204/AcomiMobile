@@ -1,13 +1,14 @@
 import React, { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Building2, ChevronRight, Grid2x2 } from 'lucide-react-native';
+import { Building2, Grid2x2 } from 'lucide-react-native';
 import type { BuildingSummaryResponse, UnitListItemResponse } from '../../../api/types';
 import { colors, pastels, radius, shadows, spacing, typography } from '../../../theme';
 import { countInactiveEntities, isAccommodationEntityActive } from '../../../utils/accommodationEntityActive';
-import { AccommodationInactiveBadge } from '../AccommodationInactiveBadge';
-import { AccommodationStatusBadge } from '../AccommodationStatusBadge';
-import { chunkIntoRows } from './visual/planLayoutUtils';
+import {
+  InventoryListingCard,
+  InventoryListingCardGrid,
+} from '../InventoryListingCard';
 import { aggregateUnitStatusCounts } from './layoutSummaryStats';
 import { CircularOccupancyIndicator } from './cards/CircularOccupancyIndicator';
 import { calcOccupancyPercent, occupancyPercentFromStatus } from './cards/occupancyUtils';
@@ -40,8 +41,6 @@ export function RentalUnitsOverview({
   const unitCount = buildingSummary?.visibleUnitCount ?? units.length;
   const occupied = statusCounts.occupied ?? 0;
   const occupancyPercent = calcOccupancyPercent(occupied, unitCount);
-
-  const rows = useMemo(() => chunkIntoRows(units, 2), [units]);
 
   const counts = {
     available: statusCounts.available ?? 0,
@@ -113,21 +112,25 @@ export function RentalUnitsOverview({
         })}
       </Text>
 
-      <View style={styles.grid}>
-        {rows.map((row, rowIndex) => (
-          <View key={`row-${rowIndex}`} style={styles.gridRow}>
-            {row.map(unit => (
-              <RentalUnitCard
-                key={unit.unitId}
-                unit={unit}
-                menu={renderUnitMenu?.(unit)}
-                onPress={() => onUnitPress(unit)}
-              />
-            ))}
-            {row.length < 2 ? <View style={styles.gridSpacer} /> : null}
-          </View>
-        ))}
-      </View>
+      <InventoryListingCardGrid
+        items={units}
+        keyExtractor={unit => unit.unitId}
+        renderCard={unit => {
+          const inactive = !isAccommodationEntityActive(unit);
+          return (
+            <InventoryListingCard
+              kind="unit"
+              title={unit.name}
+              status={inactive ? null : unit.status}
+              inactive={inactive}
+              occupancyPercent={inactive ? 0 : occupancyPercentFromStatus(unit.status)}
+              menu={renderUnitMenu?.(unit)}
+              onPressDetails={() => onUnitPress(unit)}
+              onPressCard={() => onUnitPress(unit)}
+            />
+          );
+        }}
+      />
     </View>
   );
 }
@@ -169,51 +172,6 @@ function MetricTile({
       <Text style={styles.tileLabel} numberOfLines={2}>
         {label}
       </Text>
-    </View>
-  );
-}
-
-function RentalUnitCard({
-  unit,
-  menu,
-  onPress,
-}: {
-  unit: UnitListItemResponse;
-  menu?: React.ReactNode;
-  onPress: () => void;
-}) {
-  const { t } = useTranslation();
-  const inactive = !isAccommodationEntityActive(unit);
-  const status = inactive ? null : unit.status;
-  const percent = inactive ? 0 : occupancyPercentFromStatus(unit.status);
-
-  return (
-    <View style={[styles.card, inactive && styles.cardInactive]}>
-      <View style={styles.cardTop}>
-        <View style={styles.unitIcon}>
-          <Building2 size={16} color={pastels.green.fg} strokeWidth={2.2} />
-        </View>
-        <Text style={styles.unitName} numberOfLines={1}>
-          {unit.name}
-        </Text>
-        {menu ? <View style={styles.menu}>{menu}</View> : null}
-      </View>
-      <View style={styles.statusRow}>
-        {inactive ? <AccommodationInactiveBadge /> : status ? <AccommodationStatusBadge status={status} /> : null}
-        <Text style={styles.percent}>{percent}%</Text>
-      </View>
-      <Pressable
-        onPress={onPress}
-        style={({ pressed }) => [styles.detailsButton, pressed && styles.detailsPressed]}
-        accessibilityRole="button"
-        accessibilityLabel={t('accommodation.layout.dashboard.viewDetails', {
-          defaultValue: 'View details',
-        })}>
-        <Text style={styles.detailsLabel}>
-          {t('accommodation.layout.dashboard.viewDetails', { defaultValue: 'View details' })}
-        </Text>
-        <ChevronRight size={16} color={colors.primary} strokeWidth={2.4} />
-      </Pressable>
     </View>
   );
 }
@@ -313,94 +271,5 @@ const styles = StyleSheet.create({
     ...typography.h3,
     fontSize: 16,
     color: colors.textPrimary,
-  },
-  grid: {
-    gap: spacing.sm,
-  },
-  gridRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  gridSpacer: {
-    flex: 1,
-  },
-  card: {
-    flex: 1,
-    backgroundColor: colors.white,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.md,
-    gap: spacing.sm,
-    ...shadows.sm,
-  },
-  cardInactive: {
-    opacity: 0.7,
-  },
-  cardTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  unitIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: pastels.green.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  unitName: {
-    ...typography.bodyStrong,
-    flex: 1,
-    minWidth: 0,
-    fontSize: 16,
-    color: colors.textPrimary,
-  },
-  menu: {
-    marginRight: -4,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 4,
-  },
-  meta: {
-    ...typography.caption,
-    fontSize: 11,
-    color: colors.textSecondary,
-    marginRight: 4,
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  percent: {
-    ...typography.caption,
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textSecondary,
-  },
-  detailsButton: {
-    minHeight: 36,
-    borderRadius: radius.button,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-    paddingHorizontal: spacing.sm,
-  },
-  detailsPressed: {
-    backgroundColor: colors.mintSubtle,
-  },
-  detailsLabel: {
-    ...typography.bodyStrong,
-    fontSize: 13,
-    color: colors.primary,
   },
 });

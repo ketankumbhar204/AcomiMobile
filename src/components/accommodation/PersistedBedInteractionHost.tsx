@@ -40,6 +40,7 @@ export function PersistedBedInteractionHost({
         label={displayLabel}
         bedId={target?.bedId}
         spaceId={spaceId}
+        name={target?.name ?? target?.label ?? ''}
         bedNumber={target?.bedNumber ?? ''}
         status={target?.status}
         locationLine={target?.locationLine}

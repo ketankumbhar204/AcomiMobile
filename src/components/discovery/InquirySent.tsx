@@ -96,6 +96,7 @@ export function InquirySentDetails({ listingId }: { listingId: string }) {
         created.emailDeliveredAt || created.contactEmailSentAt || created.requestedAt || new Date().toISOString();
       markInquired(listingId, 'EMAIL', { sentToEmail: address || null, sentAt });
       showEnquiryToast({
+        tone: 'success',
         title: t('spaces.findPlace.enquire.sentToastTitle', { defaultValue: 'Enquiry sent!' }),
         body: address
           ? t('spaces.findPlace.enquire.sentToastBody', {

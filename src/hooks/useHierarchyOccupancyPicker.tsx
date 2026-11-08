@@ -4,6 +4,7 @@ import type { BuildingResponse, SpaceType } from '../api/types';
 import { BuildingPickerModal } from '../components/occupancy/BuildingPickerModal';
 import { HierarchyOccupancyPickerModal } from '../components/occupancy/HierarchyOccupancyPickerModal';
 import type { MenuOption } from '../components/accommodation/BuilderRowLifecycleMenu';
+import { openOccupancyWizardFromRef } from '../features/occupancy/OccupancyWizard';
 import type { HierarchyOccupancyScope } from '../utils/hierarchyOccupancySteps';
 
 type PickerState =
@@ -27,15 +28,47 @@ function buildingToScope(building: BuildingResponse): HierarchyOccupancyScope {
   };
 }
 
+function isUnitOnlyScope(scope: HierarchyOccupancyScope, spaceType: SpaceType | undefined): boolean {
+  return (
+    spaceType === 'RENTAL' ||
+    spaceType === 'CORPORATE_STAY' ||
+    scope.layoutMode === 'RENTAL'
+  );
+}
+
+/** Route single allocate/reserve into OccupancyWizard; keep hierarchy modal for bulk only. */
+function openScopedWizard(
+  spaceId: string,
+  mode: 'ALLOCATE' | 'RESERVE',
+  scope: HierarchyOccupancyScope,
+  spaceType: SpaceType | undefined,
+): boolean {
+  const unitOnly = isUnitOnlyScope(scope, spaceType);
+  return openOccupancyWizardFromRef({
+    spaceId,
+    mode,
+    buildingId: scope.buildingId,
+    floorId: scope.floorId,
+    // Pin unit as target only for unit-only layouts; otherwise filter the bed picker.
+    unitId: unitOnly ? scope.unitId : undefined,
+    filterUnitId: unitOnly ? undefined : scope.unitId,
+    roomId: scope.roomId,
+    bedId: undefined,
+  });
+}
+
 export function useHierarchyOccupancyPicker(spaceId: string, spaceType: SpaceType | undefined) {
   const { t } = useTranslation();
   const [pickerState, setPickerState] = useState<PickerState | null>(null);
 
   const openPicker = useCallback(
     (scope: HierarchyOccupancyScope, mode: 'ALLOCATE' | 'RESERVE', bulk = false) => {
+      if (!bulk && openScopedWizard(spaceId, mode, scope, spaceType)) {
+        return;
+      }
       setPickerState({ step: 'hierarchy', scope, mode, bulk });
     },
-    [],
+    [spaceId, spaceType],
   );
 
   const openFromSpace = useCallback(
@@ -49,19 +82,26 @@ export function useHierarchyOccupancyPicker(spaceId: string, spaceType: SpaceTyp
     setPickerState(null);
   }, []);
 
-  const handleBuildingSelect = useCallback((building: BuildingResponse) => {
-    setPickerState(current => {
-      if (!current || current.step !== 'building') {
-        return current;
-      }
-      return {
-        step: 'hierarchy',
-        scope: buildingToScope(building),
-        mode: current.mode,
-        bulk: current.bulk,
-      };
-    });
-  }, []);
+  const handleBuildingSelect = useCallback(
+    (building: BuildingResponse) => {
+      setPickerState(current => {
+        if (!current || current.step !== 'building') {
+          return current;
+        }
+        const scope = buildingToScope(building);
+        if (!current.bulk && openScopedWizard(spaceId, current.mode, scope, spaceType)) {
+          return null;
+        }
+        return {
+          step: 'hierarchy',
+          scope,
+          mode: current.mode,
+          bulk: current.bulk,
+        };
+      });
+    },
+    [spaceId, spaceType],
+  );
 
   const buildMenuOptions = useCallback(
     (scope: HierarchyOccupancyScope, onViewOccupancy?: () => void): MenuOption[] => {

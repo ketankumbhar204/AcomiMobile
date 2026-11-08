@@ -121,6 +121,7 @@ export function navigateFromNotificationType(
       navigateMainStack('InquiryCredits', undefined);
       return;
     case 'PAYMENT_REMINDER_SENT':
+    case 'PAYMENT_GENERATED':
       if (entityId) {
         navigateMainStack('PaymentDetail', { spaceId, paymentId: entityId });
       } else {
@@ -141,6 +142,13 @@ export function navigateFromNotificationType(
       return;
     case 'MOVE_OUT_SCHEDULED_TODAY':
     case 'MOVE_OUT_COMPLETED':
+      if (isOperator) {
+        navigateMainStack('DashboardOccupancyList', { spaceId, mode: 'active' });
+      } else {
+        navigateMainStack('SpaceTabs', { spaceId, screen: 'Dashboard', params: { spaceId } });
+      }
+      return;
+    case 'STAY_OVERDUE_ACTIVE':
       if (isOperator) {
         navigateMainStack('DashboardOccupancyList', { spaceId, mode: 'active' });
       } else {

@@ -9,7 +9,7 @@ export function countSetFilter<T>(
   selected: ReadonlySet<T> | T[],
   allOptions: readonly T[],
 ): number {
-  const size = selected instanceof Set ? selected.size : selected.length;
+  const size = Array.isArray(selected) ? selected.length : selected.size;
   if (size === 0 || size >= allOptions.length) {
     return 0;
   }

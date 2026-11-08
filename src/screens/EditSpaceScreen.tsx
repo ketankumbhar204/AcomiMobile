@@ -277,6 +277,7 @@ export function EditSpaceScreen() {
           setContactNumber(loaded.contactNumber ?? '');
           setTypeLabel(formatSpaceType(loaded.type));
           setSpaceType(loaded.type);
+          // shortStayEnabled may still be present on the API response; stay type is per-occupancy now.
           setAmenities(normalizeAmenityAssignments(loaded.amenities ?? []));
           setGenderPolicy(loaded.genderPolicy ?? null);
 
@@ -377,6 +378,7 @@ export function EditSpaceScreen() {
       contactNumber: contactNumber.trim() || undefined,
       amenities: showAmenities ? normalizeAmenityAssignments(amenities) : undefined,
       genderPolicy: showPropertyCategory ? genderPolicy : undefined,
+      // Omit shortStayEnabled: stay type is chosen per occupancy; do not flip the space flag.
     });
 
     if (!updated) {

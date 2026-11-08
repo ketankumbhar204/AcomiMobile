@@ -54,6 +54,8 @@ export type DashboardBedInventoryFiltersBarHandle = {
   closeDropdown: () => void;
 };
 
+type FilterChoice = { value?: string; label: string };
+
 type DashboardBedInventoryFiltersBarProps = {
   spaceId: UUID;
   spaceType: SpaceType;
@@ -392,7 +394,7 @@ export const DashboardBedInventoryFiltersBar = forwardRef<
   ]);
 
   const buildingOptions = useMemo(
-    () => [
+    (): FilterChoice[] => [
       { label: t('dashboard.drilldown.allBuildings') },
       ...buildings.map(b => ({ value: b.buildingId, label: b.name })),
     ],
@@ -400,7 +402,7 @@ export const DashboardBedInventoryFiltersBar = forwardRef<
   );
 
   const floorOptions = useMemo(
-    () => [
+    (): FilterChoice[] => [
       { label: t('dashboard.drilldown.allFloors') },
       ...floors.map(f => ({ value: f.floorId, label: f.name })),
     ],
@@ -408,7 +410,7 @@ export const DashboardBedInventoryFiltersBar = forwardRef<
   );
 
   const unitOptions = useMemo(
-    () => [
+    (): FilterChoice[] => [
       { label: t('dashboard.drilldown.allUnits') },
       ...units.map(u => ({ value: u.unitId, label: u.name })),
     ],
@@ -722,7 +724,7 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 998,
     backgroundColor: colors.overlayScrim,
   },

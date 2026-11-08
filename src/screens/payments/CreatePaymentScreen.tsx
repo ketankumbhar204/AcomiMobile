@@ -201,7 +201,7 @@ export function CreatePaymentScreen() {
         publishPaymentUpdated({
           ...created,
           spaceId: created.spaceId || spaceId,
-          month: created.month || month,
+          month: created.month || month || created.month,
         });
         showToast(t('paymentCollection.addRecord.success'));
         navigation.goBack();
@@ -328,7 +328,11 @@ export function CreatePaymentScreen() {
               numberOfLines={1}>
               {member?.fullName || t('paymentCollection.addRecord.searchPlaceholder')}
             </Text>
-            <ContactNumberLine value={member?.mobileNumber} textStyle={styles.memberMeta} />
+            <ContactNumberLine
+              value={member?.mobileNumber}
+              name={member?.fullName}
+              textStyle={styles.memberMeta}
+            />
           </View>
           {memberLocked ? null : (
             <ChevronDown size={18} color={colors.muted} strokeWidth={2.2} />

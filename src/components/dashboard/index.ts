@@ -10,6 +10,10 @@ export { DashboardCustomerQuickActions } from './customer/DashboardCustomerQuick
 export { DashboardStatCard } from './shared/DashboardStatCard';
 export { DashboardActionRow } from './shared/DashboardActionRow';
 export { DashboardOwnerHero } from './shared/DashboardOwnerHero';
+export { DashboardPropertyOverviewCard } from './DashboardPropertyOverviewCard';
+export { DashboardPendingPaymentsBanner } from './DashboardPendingPaymentsBanner';
+export { DashboardRecentActivity } from './DashboardRecentActivity';
+export { DashboardSetupQuickActions } from './DashboardSetupQuickActions';
 export { DashboardSectionHeader } from './shared/DashboardSectionHeader';
 export { DashboardSetupProgressCard } from './DashboardSetupProgressCard';
 export { DashboardOwnerLoadingSkeleton } from './DashboardOwnerLoadingSkeleton';

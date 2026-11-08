@@ -1,4 +1,4 @@
-import type { DailyMenuResponse, MySpaceResponse } from '../../api/types';
+import type { DailyMenuResponse, FoodItemResponse, MySpaceResponse } from '../../api/types';
 import { mealsApi } from '../../api/mealsApi';
 import { validateShareMenusToSpace } from '../shareMenuToSpaces';
 
@@ -8,6 +8,18 @@ jest.mock('../../api/mealsApi', () => ({
     getFoodItems: jest.fn(),
   },
 }));
+
+function foodItem(
+  partial: Pick<FoodItemResponse, 'itemId' | 'name'> & Partial<FoodItemResponse>,
+): FoodItemResponse {
+  return {
+    categoryId: 'category-1',
+    scope: 'SPACE',
+    isCustom: false,
+    isActive: true,
+    ...partial,
+  };
+}
 
 function space(partial: Partial<MySpaceResponse> & Pick<MySpaceResponse, 'spaceId' | 'spaceName'>): MySpaceResponse {
   return {
@@ -123,7 +135,6 @@ describe('validateShareMenusToSpace', () => {
         sortOrder: 2,
         isAvailable: true,
         isExtra: true,
-        itemIds: undefined,
         packageItems: [{ itemId: 'item-papad', name: 'Papad' }],
       },
     ],
@@ -134,7 +145,7 @@ describe('validateShareMenusToSpace', () => {
       { comboId: 'combo-1', name: 'Chicken Thali', isActive: true, enabledForSpace: true },
     ]);
     jest.mocked(mealsApi.getFoodItems).mockResolvedValue([
-      { itemId: 'item-papad', name: 'Papad', isActive: true },
+      foodItem({ itemId: 'item-papad', name: 'Papad' }),
     ]);
 
     const result = await validateShareMenusToSpace(
@@ -170,7 +181,7 @@ describe('validateShareMenusToSpace', () => {
       { comboId: 'combo-1', name: 'Chicken Thali', isActive: true, enabledForSpace: true },
     ]);
     jest.mocked(mealsApi.getFoodItems).mockResolvedValue([
-      { itemId: 'item-papad', name: 'Papad', isActive: true, isExtra: true },
+      foodItem({ itemId: 'item-papad', name: 'Papad', isExtra: true }),
     ]);
 
     const result = await validateShareMenusToSpace(
@@ -235,9 +246,9 @@ describe('validateShareMenusToSpace', () => {
       { comboId: 'combo-1', name: 'Chicken Thali', isActive: true, enabledForSpace: true },
     ]);
     jest.mocked(mealsApi.getFoodItems).mockResolvedValue([
-      { itemId: 'item-papad', name: 'Papad', isActive: true, isExtra: true },
-      { itemId: 'item-bhurji', name: 'Egg Bhurji', isActive: true, isExtra: false },
-      { itemId: 'item-idli', name: 'Idli', isActive: true, isExtra: false },
+      foodItem({ itemId: 'item-papad', name: 'Papad', isExtra: true }),
+      foodItem({ itemId: 'item-bhurji', name: 'Egg Bhurji', isExtra: false }),
+      foodItem({ itemId: 'item-idli', name: 'Idli', isExtra: false }),
     ]);
 
     const result = await validateShareMenusToSpace(
@@ -299,7 +310,7 @@ describe('validateShareMenusToSpace', () => {
       { comboId: 'combo-1', name: 'Chicken Thali', isActive: true, enabledForSpace: true },
     ]);
     jest.mocked(mealsApi.getFoodItems).mockResolvedValue([
-      { itemId: 'item-papad', name: 'Papad', isActive: true },
+      foodItem({ itemId: 'item-papad', name: 'Papad' }),
     ]);
 
     const source = space({

@@ -578,7 +578,7 @@
         "occupiedBeds": "Occupied beds",
         "openPolls": "Open polls",
         "pending": "Pending",
-        "vacantBeds": "Vacant beds"
+        "vacantBeds": "Available beds"
       },
       "share": "Share",
       "statusActive": "Active",
@@ -1573,16 +1573,18 @@
       "selectedAccommodation": "Selected accommodation"
     },
     "steps": {
-      "member": "Select member",
-      "memberHint": "Search by name or mobile number",
-      "target": "Select accommodation",
-      "targetHint": "Browse units and rooms, then select a bed",
-      "contract": "Contract terms",
-      "reserveDates": "Reservation details",
-      "reserveDatesHint": "No charges are collected when reserving.",
-      "transferCurrent": "Current accommodation",
-      "vacate": "Confirm vacate",
-      "review": "Review & confirm"
+      "member": "సభ్యుని ఎంచుకోండి",
+      "memberHint": "పేరు లేదా మొబైల్‌తో వెతకండి",
+      "target": "వసతిని ఎంచుకోండి",
+      "targetHint": "యూనిట్ మరియు గదులను చూసి బెడ్ ఎంచుకోండి",
+      "stayType": "నివాస రకాన్ని ఎంచుకోండి",
+      "stayDetails": "నివాస వివరాలు నమోదు చేయండి",
+      "contract": "ఒప్పంద నిబంధనలు",
+      "reserveDates": "రిజర్వేషన్ వివరాలు",
+      "reserveDatesHint": "రిజర్వ్ చేసేటప్పుడు ఎలాంటి ఛార్జీలు వసూలు చేయబడవు.",
+      "transferCurrent": "ప్రస్తుత వసతి",
+      "vacate": "ఖాళీ చేయడాన్ని నిర్ధారించండి",
+      "review": "సమీక్ష మరియు నిర్ధారణ"
     },
     "review": {
       "member": "Member",
@@ -1634,6 +1636,12 @@
       "occupiedDays_one": "{{count}} day",
       "occupiedDays_other": "{{count}} days",
       "expectedMoveOut": "Expected move-out",
+      "shortStayChoice": "షార్ట్ స్టే",
+      "monthlyStayChoice": "నెలవారీ",
+      "openEndedStayChoice": "నేను వెళ్లే వరకు",
+      "agreedTotal": "అంగీకరించిన మొత్తం",
+      "shortStayPreview": "మునుజూపు. పూర్తి చేసినప్పుడు ఈ మొత్తం సేవ్ అవుతుంది.",
+      "shortStaySetting": "షార్ట్ స్టే ఆన్ చేయండి",
       "reservedOn": "Reserved on",
       "reservedOnShort": "Reserved",
       "timelineEmpty": "—",
@@ -1672,6 +1680,7 @@
       "cancelReservation": "Cancel reservation",
       "cancelShort": "Cancel",
       "transfer": "Transfer",
+      "extend": "బసను పొడిగించండి",
       "vacate": "Vacate",
       "viewHistory": "View occupancy history",
       "viewHistoryShort": "View History"
@@ -1889,7 +1898,19 @@
       "RESERVATION_CANCELLED": "Reservation cancelled"
     },
     "success": {
-      "updated": "Occupancy updated."
+      "updated": "ఆక్యుపెన్సీ నవీకరించబడింది.",
+      "title": "విజయం",
+      "allocatedHeadline": "అద్దెదారు విజయవంతంగా కేటాయించబడ్డారు!",
+      "allocatedDetail": "{{name}} ను {{location}} కు కేటాయించారు.",
+      "reservedHeadline": "వసతి విజయవంతంగా రిజర్వ్ చేయబడింది!",
+      "reservedDetail": "{{name}} కు {{location}} వద్ద రిజర్వేషన్ ఉంది.",
+      "transferredHeadline": "అద్దెదారు విజయవంతంగా బదిలీ చేయబడ్డారు!",
+      "transferredDetail": "{{name}} ను {{location}} కు బదిలీ చేశారు.",
+      "movedInHeadline": "మూవ్-ఇన్ విజయవంతంగా పూర్తయింది!",
+      "movedInDetail": "{{name}} {{location}} లోకి ప్రవేశించారు.",
+      "viewDetails": "వివరాలు చూడండి",
+      "viewStay": "నివాసం చూడండి",
+      "viewReservation": "రిజర్వేషన్ చూడండి"
     },
     "errors": {
       "generic": "Occupancy action failed. Please try again.",
@@ -1917,6 +1938,8 @@
       "targetMaintenance": "This target is under maintenance and cannot be selected.",
       "targetBlocked": "This target is blocked and cannot be selected.",
       "targetUnavailable": "This target is not available.",
+      "stayOverlap": "This stay overlaps another stay on that bed, room, or unit.",
+      "plannedEndMismatch": "The planned end dates do not match. Send one date.",
       "invalidTargetType": "This allocation type is not allowed for this space.",
       "bedRequired": "Select a bed.",
       "roomRequired": "Select a room.",
@@ -1925,7 +1948,8 @@
       "codes": {
         "RENT_SNAPSHOT_REQUIRED": "Monthly rent is required when activating.",
         "FOOD_CHARGE_REQUIRED": "Food charge is required when food is enabled.",
-        "FOOD_CHARGE_NOT_ALLOWED": "Food charge cannot be set when food is included in rent."
+        "FOOD_CHARGE_NOT_ALLOWED": "Food charge cannot be set when food is included in rent.",
+        "STAY_OVERLAP": "This stay overlaps another stay on that bed, room, or unit."
       }
     },
     "occupancyStatus": {
@@ -2028,7 +2052,7 @@
       },
       "recommendedAction": "Recommended Action",
       "actions": {
-        "improveOccupancy": "Improve occupancy by allocating vacant beds"
+        "improveOccupancy": "Improve occupancy by allocating available beds"
       },
       "factors": {
         "setupComplete": "Required setup complete",
@@ -2284,7 +2308,7 @@
     "accommodationOperations": {
       "title": "Property operations",
       "occupiedBeds": "Occupied beds",
-      "vacantBeds": "Vacant beds",
+      "vacantBeds": "Available beds",
       "moveInsThisMonth": "Move-ins this month",
       "pendingPayments": "Pending payments"
     },
@@ -2301,7 +2325,7 @@
     "drilldown": {
       "occupiedBedsTitle": "Occupied beds",
       "occupiedBedsSubtitle": "Active residents and their bed assignments.",
-      "vacantBedsTitle": "Vacant beds",
+      "vacantBedsTitle": "Available beds",
       "vacantBedsSubtitle": "Available beds you can allocate or reserve.",
       "moveInsTitle": "Move-ins this month",
       "moveInsSubtitle": "Residents who moved in during the current month.",
@@ -2309,7 +2333,7 @@
       "searchResidents": "Search residents or location…",
       "moveInLine": "Move-in {{date}}",
       "emptyOccupiedBeds": "No occupied beds",
-      "emptyVacantBeds": "No vacant beds",
+      "emptyVacantBeds": "No available beds",
       "emptyMoveIns": "No move-ins this month",
       "emptyBedsDescription": "Counts update when beds are allocated, reserved, or vacated.",
       "emptyOccupancyDescription": "Active occupancies appear here after move-in.",
@@ -3703,7 +3727,7 @@
       "title": "Menu library",
       "subtitle": "Defaults are ready to use — edit anytime, or continue to plan menus.",
       "readyTipTitle": "Your menu library is ready",
-      "readyTipBody": "Sample items and combos are already here. You can edit the library now, or continue to menu planning and customize later.",
+      "readyTipBody": "Edit your items and combos anytime.",
       "readyTipContinue": "Continue to menu planning",
       "readyTipStay": "Stay and edit library",
       "setupSteps": "Build your catalog",

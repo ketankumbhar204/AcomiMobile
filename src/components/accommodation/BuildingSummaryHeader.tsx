@@ -25,6 +25,8 @@ type BuildingSummaryHeaderProps = {
   canEditPhoto?: boolean;
   onPhotoChanged?: (fileId: string | null) => void;
   onSaveName?: (name: string) => Promise<void>;
+  /** Pencil opens Edit Building (or equivalent) instead of inline rename. */
+  onEditPress?: () => void;
   actions?: React.ReactNode;
   /** Space-type name for rental and corporate stay. Other types keep the layout label. */
   typeLabel?: string;
@@ -41,6 +43,7 @@ export function BuildingSummaryHeader({
   canEditPhoto = false,
   onPhotoChanged,
   onSaveName,
+  onEditPress,
   actions,
   typeLabel,
   active,
@@ -137,7 +140,8 @@ export function BuildingSummaryHeader({
             <InlineEditableName
               value={summary.name}
               editable={editableName}
-              onSave={onSaveName}
+              onSave={onEditPress ? undefined : onSaveName}
+              onEditPress={onEditPress}
             />
             <Text style={styles.rentalType}>
               {typeLabel ?? t(getLayoutModeLabelKey(summary.layoutMode))}
@@ -208,7 +212,8 @@ export function BuildingSummaryHeader({
           <InlineEditableName
             value={summary.name}
             editable={editableName}
-            onSave={onSaveName}
+            onSave={onEditPress ? undefined : onSaveName}
+            onEditPress={onEditPress}
           />
           <Text style={styles.metadata}>
             {typeLabel ?? t(getLayoutModeLabelKey(summary.layoutMode))}

@@ -82,6 +82,19 @@ describe('tenantPaymentFilters', () => {
     expect(countTenantPaymentFilter(sample, 'PAID')).toBe(1);
   });
 
+  it('matches refunded and cancelled filters and history section', () => {
+    const withClosed = [
+      ...sample,
+      { ...sample[0], paymentId: '5', paymentStatus: 'REFUNDED' as const },
+      { ...sample[0], paymentId: '6', paymentStatus: 'CANCELLED' as const },
+    ];
+    expect(matchesTenantPaymentFilter('REFUNDED', 'REFUNDED')).toBe(true);
+    expect(matchesTenantPaymentFilter('CANCELLED', 'CANCELLED')).toBe(true);
+    expect(filterTenantPayments(withClosed, 'REFUNDED')).toHaveLength(1);
+    expect(filterTenantPayments(withClosed, 'CANCELLED')).toHaveLength(1);
+    expect(countTenantPaymentSection(withClosed, 'history')).toBe(3);
+  });
+
   it('groups into action / under review / history sections', () => {
     expect(countTenantPaymentSection(sample, 'actionNeeded')).toBe(2);
     expect(countTenantPaymentSection(sample, 'underReview')).toBe(1);

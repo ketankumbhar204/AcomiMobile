@@ -99,9 +99,12 @@ export function resolvePaymentStatusVariant(
     case 'PENDING_APPROVAL':
       return 'underReview';
     case 'PARTIAL':
+    case 'REFUNDED':
       return 'partial';
     case 'PENDING':
       return 'pending';
+    case 'CANCELLED':
+      return 'neutral';
     default:
       return 'neutral';
   }
@@ -127,6 +130,10 @@ export function getPaymentStatusLabelKey(status: PaymentStatusSource | null | un
       return 'payments.status.partial';
     case 'PENDING':
       return 'payments.status.pending';
+    case 'REFUNDED':
+      return 'payments.status.refunded';
+    case 'CANCELLED':
+      return 'payments.status.cancelled';
     default:
       return 'payments.status.none';
   }
@@ -153,6 +160,11 @@ export function resolveTimelineEventVariant(eventType: string): PaymentStatusVar
       return 'underReview';
     case 'CREATED':
       return 'pending';
+    case 'REFUNDED':
+      return 'partial';
+    case 'CANCELLED':
+    case 'RETAINED':
+      return 'neutral';
     default:
       return 'neutral';
   }

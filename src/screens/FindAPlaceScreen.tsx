@@ -37,7 +37,7 @@ import {
 import type { ListFilterChipOption } from '../components/ui/ListFilterChips';
 import type { MainStackParamList, MemberTabParamList } from '../navigation/types';
 import { useFavoriteIds } from '../hooks/useFavorites';
-import { colors, radius, shadows, spacing, typography } from '../theme';
+import { colors, pageContentGutter, radius, shadows, spacing, typography } from '../theme';
 import {
   formatDiscoverLocationLabel,
   matchLocationRecord,
@@ -1002,7 +1002,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   listContent: {
-    padding: spacing.xxl,
+    paddingHorizontal: pageContentGutter,
+    paddingTop: spacing.xxl,
     paddingBottom: spacing.section,
     flexGrow: 1,
   },

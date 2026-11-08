@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeftRight, History, LogOut } from 'lucide-react-native';
+import { ArrowLeftRight, CalendarClock, CalendarPlus, History, LogOut } from 'lucide-react-native';
 import type {
   CurrentOccupancySummaryResponse,
   MemberDetailsResponse,
@@ -11,7 +11,7 @@ import type {
   OccupancyResponse,
   SpaceType,
 } from '../../api/types';
-import { Button, Card, useConfirmDialog } from '../ui';
+import { Button, Card } from '../ui';
 import { MemberOccupancyStatusBadge } from '../member/MemberOccupancyStatusBadge';
 import { occupancyActionTint } from './occupancyActionTints';
 import type { MainStackParamList } from '../../navigation/types';
@@ -37,6 +37,13 @@ import {
   getOccupancyExitDate,
 } from '../../utils/occupancyRules';
 import { OccupancyContractSnapshotCard } from './OccupancyContractSnapshotCard';
+import { ExtendStayModal } from './ExtendStayModal';
+import { ReservationCancellationSettlementModal } from './ReservationCancellationSettlementModal';
+import { ReviseOpenEndedRentModal } from './ReviseOpenEndedRentModal';
+import {
+  createExtensionIdempotencyKey,
+  defaultMonthlyRenewalEndDate,
+} from '../../utils/extendStay';
 
 type Nav = NativeStackNavigationProp<MainStackParamList>;
 
@@ -154,7 +161,6 @@ export function MemberAccommodationSection({
   const navigation = useNavigation<Nav>();
   const showToast = useToastStore(state => state.showToast);
   const refreshMember = useMemberStore(state => state.refreshMember);
-  const { showConfirm } = useConfirmDialog();
   const viewerUserId = useAuthStore(state => state.userId);
   const spacePermissions = useSpacePermissions(spaceId);
 
@@ -174,7 +180,12 @@ export function MemberAccommodationSection({
   const { data: occupancyData } = useMemberOccupancies(spaceId, member.memberId, {
     enabled: showSection,
   });
-  const { cancelReservation, loading, error } = useOccupancyMutations(spaceId);
+  const { extendStay, loading, error } = useOccupancyMutations(spaceId);
+  const [extendSession, setExtendSession] = useState<{
+    key: string;
+    variant: 'extend' | 'renewal' | 'reviseOpenEnded';
+    initialExpectedExitDate: string;
+  } | null>(null);
 
   if (!showSection || !spaceType) {
     return null;
@@ -218,14 +229,25 @@ export function MemberAccommodationSection({
 
   const dash = t('occupancy.section.timelineEmpty');
 
+  // Member summary can mark RESERVED before / without reservedOccupancy bundle — prefer either id.
+  const resolvedReservedOccupancyId =
+    reservedOccupancyId ??
+    (member.currentOccupancy?.occupancyStatus === 'RESERVED'
+      ? member.currentOccupancy.occupancyId
+      : undefined);
+
   function openWizard(mode: 'ALLOCATE' | 'RESERVE' | 'MOVE_IN' | 'TRANSFER' | 'VACATE') {
+    if (mode === 'MOVE_IN' && !resolvedReservedOccupancyId) {
+      showToast(t('occupancy.errors.noReserved'));
+      return;
+    }
     openOccupancyWizardFromRef({
       spaceId,
       mode,
       memberId: member.memberId,
       occupancyId:
         mode === 'MOVE_IN'
-          ? reservedOccupancyId
+          ? resolvedReservedOccupancyId
           : mode === 'TRANSFER' || mode === 'VACATE'
             ? activeOccupancyId
             : undefined,
@@ -237,25 +259,14 @@ export function MemberAccommodationSection({
     showToast(t('occupancy.success.updated'));
   }
 
+  const [cancelSettlementOpen, setCancelSettlementOpen] = useState(false);
+
   function confirmCancelReservation() {
-    showConfirm({
-      title: t('occupancy.cancelReservation.title'),
-      message: t('occupancy.cancelReservation.message'),
-      confirmLabel: t('occupancy.actions.cancelReservation'),
-      destructive: true,
-      onConfirm: async () => {
-        if (!reservedOccupancyId) {
-          showToast(t('occupancy.errors.noReserved'));
-          return;
-        }
-        try {
-          await cancelReservation(reservedOccupancyId);
-          await afterMutation();
-        } catch {
-          // error surfaced via hook
-        }
-      },
-    });
+    if (!resolvedReservedOccupancyId) {
+      showToast(t('occupancy.errors.noReserved'));
+      return;
+    }
+    setCancelSettlementOpen(true);
   }
 
   const moveInRaw =
@@ -353,8 +364,65 @@ export function MemberAccommodationSection({
                   disabled={loading}
                   style={styles.actionBtn}
                 />
+                {activeOccupancy?.stayKind === 'OPEN_ENDED' ? (
+                  <Button
+                    label={t('occupancy.actions.reviseOpenEnded', {
+                      defaultValue: 'Update Daily Rent',
+                    })}
+                    tint={occupancyActionTint.transfer}
+                    icon={CalendarClock}
+                    onPress={() =>
+                      setExtendSession({
+                        key: createExtensionIdempotencyKey(),
+                        variant: 'reviseOpenEnded',
+                        initialExpectedExitDate: '',
+                      })
+                    }
+                    disabled={loading || !activeOccupancyId}
+                    style={styles.actionBtn}
+                  />
+                ) : (
+                  <>
+                    <Button
+                      label={t('occupancy.actions.extend', { defaultValue: 'Extend stay' })}
+                      tint={occupancyActionTint.transfer}
+                      icon={CalendarPlus}
+                      onPress={() =>
+                        setExtendSession({
+                          key: createExtensionIdempotencyKey(),
+                          variant: 'extend',
+                          initialExpectedExitDate: '',
+                        })
+                      }
+                      disabled={loading || !activeOccupancyId}
+                      style={styles.actionBtn}
+                    />
+                    {activeOccupancy?.stayKind !== 'SHORT' ? (
+                      <Button
+                        label={t('occupancy.actions.renewMonthly', {
+                          defaultValue: 'Monthly renewal',
+                        })}
+                        tint={occupancyActionTint.transfer}
+                        icon={CalendarClock}
+                        onPress={() =>
+                          setExtendSession({
+                            key: createExtensionIdempotencyKey(),
+                            variant: 'renewal',
+                            initialExpectedExitDate: defaultMonthlyRenewalEndDate(
+                              activeOccupancy?.expectedExitDate,
+                            ),
+                          })
+                        }
+                        disabled={loading || !activeOccupancyId}
+                        style={styles.actionBtn}
+                      />
+                    ) : null}
+                  </>
+                )}
                 <Button
-                  label={t('occupancy.actions.vacate')}
+                  label={t('occupancy.actions.checkout', {
+                    defaultValue: t('occupancy.actions.vacate'),
+                  })}
                   tint={occupancyActionTint.vacate}
                   icon={LogOut}
                   onPress={() => openWizard('VACATE')}
@@ -414,6 +482,57 @@ export function MemberAccommodationSection({
           style={styles.historyBtn}
         />
       </Card>
+      <ExtendStayModal
+        visible={extendSession != null && extendSession.variant !== 'reviseOpenEnded'}
+        idempotencyKey={extendSession?.key ?? ''}
+        stayKind={activeOccupancy?.stayKind}
+        moveInDate={activeOccupancy?.moveInDate}
+        variant={extendSession?.variant === 'renewal' ? 'renewal' : 'extend'}
+        initialExpectedExitDate={extendSession?.initialExpectedExitDate ?? ''}
+        submitting={loading}
+        onClose={() => {
+          if (!loading) {
+            setExtendSession(null);
+          }
+        }}
+        onSubmit={async body => {
+          if (!activeOccupancyId) {
+            return;
+          }
+          await extendStay(activeOccupancyId, body);
+          setExtendSession(null);
+          await afterMutation();
+        }}
+      />
+      <ReviseOpenEndedRentModal
+        visible={extendSession?.variant === 'reviseOpenEnded'}
+        idempotencyKey={extendSession?.key ?? ''}
+        currentDailyRent={activeOccupancy?.rentSnapshot}
+        submitting={loading}
+        onClose={() => {
+          if (!loading) {
+            setExtendSession(null);
+          }
+        }}
+        onSubmit={async body => {
+          if (!activeOccupancyId) {
+            return;
+          }
+          await extendStay(activeOccupancyId, body);
+          setExtendSession(null);
+          await afterMutation();
+        }}
+      />
+      <ReservationCancellationSettlementModal
+        visible={cancelSettlementOpen}
+        spaceId={spaceId}
+        occupancyId={resolvedReservedOccupancyId}
+        onClose={() => setCancelSettlementOpen(false)}
+        onCancelled={async () => {
+          setCancelSettlementOpen(false);
+          await afterMutation();
+        }}
+      />
     </View>
   );
 }

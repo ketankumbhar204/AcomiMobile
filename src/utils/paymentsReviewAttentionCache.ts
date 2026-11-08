@@ -71,8 +71,8 @@ export function peekPaymentsUnderReviewCount(
 
   const summaryCache = ownerPaymentsMonthCache.get(
     ownerPaymentsMonthCache.key(['summary', spaceId, month]),
-  ) as { counts?: { submitted?: number } } | null;
-  if (summaryCache?.counts?.submitted != null) {
+  );
+  if (summaryCache?.counts.submitted != null) {
     return Math.max(0, summaryCache.counts.submitted);
   }
 

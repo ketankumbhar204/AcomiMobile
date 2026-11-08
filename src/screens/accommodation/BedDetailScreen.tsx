@@ -14,27 +14,24 @@ import { accommodationApi } from '../../api/accommodationApi';
 import type { BedResponse } from '../../api/types';
 import {
   AccommodationContextTrail,
-  AccommodationDetailRow,
+  AccommodationInventoryOverview,
+  AccommodationStayTypeCard,
   BedDetailHero,
-  BedPricingDisplay,
   BuilderRowLifecycleMenu,
   formatAccommodationDate,
   HeaderMenuSlot,
   PersistedBedInteractionHost,
 } from '../../components/accommodation';
-import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
 import {
   AccommodationOccupantSection,
   AccommodationOccupancyActions,
 } from '../../components/occupancy';
 import {
-  Card,
   HeaderBackButton,
   RequireAccommodationAccess,
   Screen,
   SkeletonCard,
 } from '../../components/ui';
-import { ReferenceCode } from '../../components/ui/ReferenceCode';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { usePersistedBedInteraction } from '../../hooks/usePersistedBedInteraction';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
@@ -43,7 +40,7 @@ import { EntityPhotoProvider } from '../../files/EntityPhotoContext';
 import { useTargetOccupancy } from '../../hooks/useTargetOccupancy';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
-import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { spacing, typography } from '../../theme';
 import { buildAccommodationTrail } from '../../utils/accommodationContext';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
 import { buildBedOccupancyTarget } from '../../utils/buildOccupancyTarget';
@@ -100,12 +97,12 @@ export function BedDetailScreen() {
   );
 
   const occupancyTarget = useMemo(() => {
-    if (!bed) {
+    if (!bed || !buildingId) {
       return null;
     }
     return buildBedOccupancyTarget({
       buildingId,
-      buildingName,
+      buildingName: buildingName ?? '',
       floorId,
       floorName: parentType === 'floor' ? parentName : undefined,
       unitId,
@@ -208,7 +205,9 @@ export function BedDetailScreen() {
       persistedTargetFromRoomBed({
         bedId: bed.bedId,
         roomId,
-        label: bed.bedNumber || bed.name,
+        label: bed.name || bed.bedNumber,
+        name: bed.name || bed.bedNumber,
+        bedNumber: bed.bedNumber || bed.name,
         status: bed.status,
         rent: bed.defaultRent,
         deposit: bed.defaultDeposit,
@@ -349,13 +348,16 @@ export function BedDetailScreen() {
               onEdit={canManage ? openBedEditor : undefined}
             />
 
-            <View style={styles.pricingCard}>
-              <BedPricingDisplay
-                rent={bed.defaultRent}
-                deposit={bed.defaultDeposit}
-                layout="row"
-              />
-            </View>
+            <AccommodationInventoryOverview
+              kind="bed"
+              referenceCode={bed.referenceCode}
+              status={bed.status}
+              inactive={bed.active === false}
+              rent={bed.defaultRent}
+              deposit={bed.defaultDeposit}
+              createdAt={bed.createdAt}
+              updatedAt={bed.updatedAt}
+            />
 
             {showsOccupant && canViewOccupant ? (
               <AccommodationOccupantSection
@@ -364,6 +366,13 @@ export function BedDetailScreen() {
                 occupancy={occupancy}
                 loading={!hasBedOccupant && occupancyLoading}
                 error={!hasBedOccupant ? occupancyError : null}
+              />
+            ) : null}
+
+            {showsOccupant && canViewOccupant ? (
+              <AccommodationStayTypeCard
+                occupancy={occupancy}
+                stayKind={bed.occupant?.stayKind}
               />
             ) : null}
 
@@ -384,57 +393,6 @@ export function BedDetailScreen() {
                 }}
               />
             ) : null}
-
-            <DashboardSectionTitle
-              title={t('accommodation.setup.propertyOverview')}
-            />
-            <Card style={styles.infoCard}>
-              <AccommodationDetailRow
-                label={t('accommodation.fields.name')}
-                value={bed.name}
-              />
-              <AccommodationDetailRow
-                label={t('accommodation.beds.bedNumberLabel')}
-                value={bed.bedNumber}
-              />
-              <ReferenceCode value={bed.referenceCode} />
-              <AccommodationDetailRow
-                label={t('accommodation.status.label')}
-                value={t(`accommodation.status.${bed.status}`)}
-              />
-              {roomName ? (
-                <AccommodationDetailRow
-                  label={t('occupancy.section.room')}
-                  value={roomName}
-                />
-              ) : null}
-              {trailContext.unitName ? (
-                <AccommodationDetailRow
-                  label={t('occupancy.section.unit')}
-                  value={trailContext.unitName}
-                />
-              ) : null}
-              {trailContext.floorName ? (
-                <AccommodationDetailRow
-                  label={t('occupancy.section.floor')}
-                  value={trailContext.floorName}
-                />
-              ) : null}
-              {buildingName ? (
-                <AccommodationDetailRow
-                  label={t('occupancy.section.building')}
-                  value={buildingName}
-                />
-              ) : null}
-              <AccommodationDetailRow
-                label={t('accommodation.fields.created')}
-                value={formatAccommodationDate(bed.createdAt)}
-              />
-              <AccommodationDetailRow
-                label={t('accommodation.fields.updated')}
-                value={formatAccommodationDate(bed.updatedAt)}
-              />
-            </Card>
           </>
         ) : null}
         <PersistedBedInteractionHost
@@ -450,55 +408,7 @@ export function BedDetailScreen() {
 
 const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: spacing.xxxl },
-  infoCard: { borderRadius: 18, marginBottom: spacing.xl },
   gap: { height: spacing.md },
-  pricingCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.white,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    marginBottom: spacing.md,
-    ...shadows.sm,
-  },
-  pricingCol: {
-    flex: 1,
-    minWidth: 0,
-    gap: spacing.xs,
-  },
-  pricingDivider: {
-    width: StyleSheet.hairlineWidth,
-    alignSelf: 'stretch',
-    backgroundColor: colors.border,
-    marginHorizontal: spacing.md,
-  },
-  pricingLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  pricingIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pricingLabel: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    fontWeight: '600',
-  },
-  pricingValue: {
-    ...typography.h3,
-    fontSize: 20,
-    lineHeight: 26,
-    color: colors.textPrimary,
-    paddingLeft: 36,
-  },
   errorBanner: {
     backgroundColor: '#FEF2F2',
     borderWidth: 1,

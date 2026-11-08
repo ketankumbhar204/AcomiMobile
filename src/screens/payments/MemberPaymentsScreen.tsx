@@ -20,6 +20,7 @@ import { useToastStore } from '../../store/toastStore';
 import { useMealPaymentActivitySummaries } from '../../hooks/useMealPaymentActivitySummaries';
 import { useOwnerPaymentCardActions } from '../../hooks/useOwnerPaymentCardActions';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
+import { useMemberOccupancies } from '../../hooks/useMemberOccupancies';
 import { useUniversalPayments } from '../../hooks/useUniversalPayments';
 import type { MainStackParamList } from '../../navigation/types';
 import { colors, spacing, typography } from '../../theme';
@@ -28,6 +29,7 @@ import {
   filterTenantPayments,
   type TenantPaymentFilter,
 } from '../../utils/tenantPaymentFilters';
+import { isOpenEndedDailyRate } from '../../utils/occupancyContract';
 import { publishPaymentUpdated } from '../../utils/paymentUpdates';
 import { currentMonthKey, canManagePayments } from '../../utils/dashboardFinancial';
 import {
@@ -56,6 +58,13 @@ export function MemberPaymentsScreen() {
     memberId,
     payments,
   );
+  // OPEN_ENDED daily rent is billed after the period closes: an empty open month is
+  // "not yet billed", not "no payments".
+  const { data: occupancyData } = useMemberOccupancies(spaceId, memberId);
+  const openEndedUnbilled =
+    isOpenEndedDailyRate(occupancyData?.currentOccupancy) &&
+    !payments.some(payment => payment.paymentType === 'RENT') &&
+    (!routeMonth || routeMonth >= currentMonthKey());
   const cardActions = useOwnerPaymentCardActions({
     spaceId,
     month: routeMonth ?? currentMonthKey(),
@@ -129,10 +138,20 @@ export function MemberPaymentsScreen() {
           ['PAID', 'paymentCollection.tenantFilters.paid'],
           ['REJECTED', 'paymentCollection.tenantFilters.rejected'],
           ['PENDING', 'paymentCollection.tenantFilters.pending'],
+          ['REFUNDED', 'paymentCollection.tenantFilters.refunded'],
+          ['CANCELLED', 'paymentCollection.tenantFilters.cancelled'],
         ] as const
       ).map(([id, key]) => ({
         id,
-        label: t(key, { count: countTenantPaymentFilter(payments, id) }),
+        label: t(key, {
+          count: countTenantPaymentFilter(payments, id),
+          defaultValue:
+            id === 'REFUNDED'
+              ? `Refunded (${countTenantPaymentFilter(payments, id)})`
+              : id === 'CANCELLED'
+                ? `Cancelled (${countTenantPaymentFilter(payments, id)})`
+                : undefined,
+        }),
       })),
     [payments, t],
   );
@@ -217,8 +236,19 @@ export function MemberPaymentsScreen() {
 
         {!serviceUnavailable && !loading && visiblePayments.length === 0 ? (
           <EmptyState
-            title={t('paymentCollection.memberPayments.emptyTitle')}
-            description={t('paymentCollection.memberPayments.emptyDescription')}
+            title={
+              openEndedUnbilled
+                ? t('paymentCollection.notYetBilled.title', { defaultValue: 'Not yet billed' })
+                : t('paymentCollection.memberPayments.emptyTitle')
+            }
+            description={
+              openEndedUnbilled
+                ? t('paymentCollection.notYetBilled.description', {
+                    defaultValue:
+                      'Rent for this open-ended stay is billed after the billing period closes or on move-out.',
+                  })
+                : t('paymentCollection.memberPayments.emptyDescription')
+            }
             Icon={CreditCard}
           />
         ) : null}

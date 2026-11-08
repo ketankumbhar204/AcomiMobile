@@ -16,14 +16,13 @@ import { Grid2x2 } from 'lucide-react-native';
 import type { UnitListItemResponse } from '../../api/types';
 import {
   AccommodationContextTrail,
-  AccommodationEntityRow,
   AccommodationListFooter,
   AccommodationSearchBar,
-  AccommodationStatusBadge,
   AccommodationViewModeToggle,
   ApartmentFloorPlanLayout,
   AccommodationMetadataCard,
   BuilderRowLifecycleMenu,
+  InventoryListingCard,
 } from '../../components/accommodation';
 import { EmptyState, FAB, HeaderBackButton, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
 import { useHierarchyOccupancyPicker } from '../../hooks/useHierarchyOccupancyPicker';
@@ -36,7 +35,7 @@ import { canEditEntityPhoto } from '../../files/entityPhoto';
 import { EntityPhotoProvider } from '../../files/EntityPhotoContext';
 import { useUnitsByFloor } from '../../hooks/useUnitsByFloor';
 import type { MainStackParamList } from '../../navigation/types';
-import { colors, spacing, typography } from '../../theme';
+import { colors, pageContentGutter, spacing, typography } from '../../theme';
 import { formatFloorHeaderTitle } from '../../utils/accommodationLabels';
 import {
   buildAccommodationTrail,
@@ -46,8 +45,8 @@ import {
   accommodationTrailContextFromParent,
   handleAccommodationTrailPress,
 } from '../../utils/accommodationNavigation';
-import { renameUnitName } from '../../utils/accommodationInlineRename';
-import { useToastStore } from '../../store/toastStore';
+import { isAccommodationEntityActive } from '../../utils/accommodationEntityActive';
+import { occupancyPercentFromStatus } from '../../components/accommodation/layout/cards/occupancyUtils';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'AccommodationFloorApartments'>;
 type Route = NativeStackScreenProps<MainStackParamList, 'AccommodationFloorApartments'>['route'];
@@ -64,7 +63,6 @@ export function AccommodationFloorApartmentsScreen() {
   const showFab = permissions.canManageAccommodation;
   const canManage = permissions.canManageAccommodation;
   const canManageOccupancyActions = permissions.canManageOccupancy;
-  const showToast = useToastStore(state => state.showToast);
   const hierarchyPicker = useHierarchyOccupancyPicker(spaceId, spaceType);
 
   const { profile } = useAccommodationUiProfile(spaceId, spaceType, buildingId);
@@ -82,7 +80,6 @@ export function AccommodationFloorApartmentsScreen() {
     hasMore,
     refresh,
     loadMore,
-    patchUnit,
   } = useUnitsByFloor(spaceId, buildingId, floorId, { searchQuery });
 
   const listRef = useAccommodationSearchScroll(
@@ -192,25 +189,27 @@ export function AccommodationFloorApartmentsScreen() {
     );
   };
 
-  const renderItem = ({ item }: { item: UnitListItemResponse }) => (
-    <AccommodationEntityRow
-      title={item.name}
-      subtitle={t('accommodation.listItem.unit', {
-        roomCount: item.roomCount,
-        bedCount: item.bedCount,
-      })}
-      hierarchyLevel="unit"
-      badge={<AccommodationStatusBadge status={item.status} />}
-      editableName={canManage}
-      onSaveName={async name => {
-        await renameUnitName(spaceId, buildingId, item.unitId, name);
-        patchUnit(item.unitId, { name });
-        showToast(t('accommodation.units.updateSuccess'));
-      }}
-      onPress={() => openUnitRooms(item)}
-      menu={renderUnitMenu(item)}
-    />
-  );
+  const renderItem = ({ item }: { item: UnitListItemResponse }) => {
+    const inactive = !isAccommodationEntityActive(item);
+    return (
+      <View style={styles.gridItem}>
+        <InventoryListingCard
+          kind="unit"
+          title={item.name}
+          subtitle={t('accommodation.listItem.unit', {
+            roomCount: item.roomCount,
+            bedCount: item.bedCount,
+          })}
+          status={inactive ? null : item.status}
+          inactive={inactive}
+          occupancyPercent={inactive ? 0 : occupancyPercentFromStatus(item.status)}
+          menu={renderUnitMenu(item)}
+          onPressDetails={() => openUnitRooms(item)}
+          onPressCard={() => openUnitRooms(item)}
+        />
+      </View>
+    );
+  };
 
   const showLoading = loading && !refreshing && units.length === 0;
 
@@ -259,8 +258,10 @@ export function AccommodationFloorApartmentsScreen() {
       <FlatList
         ref={listRef}
         data={showLoading || isLayout ? [] : units}
-        key={isLayout ? 'floor-plan' : 'unit-list'}
+        key={isLayout ? 'floor-plan' : 'unit-grid'}
         keyExtractor={item => item.unitId}
+        numColumns={isLayout ? 1 : 2}
+        columnWrapperStyle={isLayout ? undefined : styles.columnWrapper}
         renderItem={renderItem}
         ListHeaderComponent={
           <>
@@ -318,9 +319,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   listContent: {
-    padding: spacing.xl,
+    paddingHorizontal: pageContentGutter,
+    paddingTop: spacing.xl,
     paddingBottom: 96,
     flexGrow: 1,
+  },
+  columnWrapper: {
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  gridItem: {
+    flex: 1,
+    minWidth: 0,
   },
   header: {
     marginBottom: spacing.md,

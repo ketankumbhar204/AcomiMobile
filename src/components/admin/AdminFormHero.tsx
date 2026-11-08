@@ -1,25 +1,30 @@
 import React from 'react';
-import { Text, View } from 'react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { colors } from '../../theme';
-import { adminHero } from './adminStyles';
+import { CompactPageBanner } from '../ui/CompactPageBanner';
 
 type AdminFormHeroProps = {
   icon: LucideIcon;
+  /** Kept for call-site compatibility; no longer rendered (title is sufficient). */
   eyebrow: string;
   heading: string;
   subheading?: string;
 };
 
-export function AdminFormHero({ icon: Icon, eyebrow, heading, subheading }: AdminFormHeroProps) {
+export function AdminFormHero({
+  icon,
+  heading,
+  subheading,
+}: AdminFormHeroProps) {
   return (
-    <View style={adminHero.wrap}>
-      <View style={adminHero.iconWrap}>
-        <Icon size={18} color={colors.primaryDark} strokeWidth={2.2} />
-      </View>
-      <Text style={adminHero.eyebrow}>{eyebrow}</Text>
-      <Text style={adminHero.heading}>{heading}</Text>
-      {subheading ? <Text style={adminHero.subheading}>{subheading}</Text> : null}
-    </View>
+    <CompactPageBanner
+      icon={icon}
+      title={heading}
+      subtitle={subheading}
+      accent={colors.primaryDark}
+      soft={colors.successTint}
+      border={`${colors.primary}33`}
+      testID="admin-form-hero"
+    />
   );
 }

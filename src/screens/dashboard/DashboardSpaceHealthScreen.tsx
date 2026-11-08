@@ -118,7 +118,7 @@ export function DashboardSpaceHealthScreen() {
   const sectionY = useRef<Partial<Record<HealthCategoryId, number>>>({});
 
   const pendingActionCount = spaceId
-    ? peekPendingActions(spaceId)?.length ?? 0
+    ? peekPendingActions(spaceId)?.totalCount ?? 0
     : 0;
   const summary = spaceId
     ? peekDashboardSummary(spaceId, currentMonthKey())
@@ -904,7 +904,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
   },
   dialogBackdropTap: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   dialogCard: {
     backgroundColor: colors.white,

@@ -1,15 +1,18 @@
 import React, { memo, useMemo } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { ChevronRight, Plus } from 'lucide-react-native';
 import type { AccommodationStatus } from '../../api/types';
 import { BedPricingDisplay } from './BedPricingDisplay';
 import { OccupiedBedPaymentFace } from './OccupiedBedPaymentFace';
+import { StayTypeBadge } from './StayTypeBadge';
 import { getBedIllustration } from './layout/illustrations/illustrationAssets';
 import { useMoveInBedFace } from '../dashboard/bedInventoryFace';
+import { useOccupiedBedStay } from '../../hooks/useOccupiedBedStay';
 import { colors, pastels, spacing, typography } from '../../theme';
 import { formatBedDisplayLabel } from '../../utils/formatBedDisplayLabel';
 import { getAccommodationStatusColor } from '../../utils/accommodationStatus';
+import type { StayChoice } from '../../utils/shortStay';
 
 /** Fields both the room list and the building inventory list provide. */
 export type InventoryBedCardModel = {
@@ -88,6 +91,12 @@ function BuildingInventoryBedCardComponent({
   const { t } = useTranslation();
   const displayLabel = formatBedDisplayLabel(bed.label, t);
   const moveIn = useMoveInBedFace(bed.bedId);
+  const showStayBadges =
+    Boolean(moveIn) || bed.status === 'OCCUPIED' || bed.status === 'RESERVED';
+  const showStayLookup = Boolean(spaceId) && showStayBadges;
+  const occupiedStay = useOccupiedBedStay(spaceId, bed.bedId, showStayLookup);
+  const stayKind: StayChoice | null | undefined =
+    moveIn?.stayKind ?? occupiedStay.occupancy?.stayKind ?? null;
   const surface = useMemo(() => {
     if (moveIn) {
       return {
@@ -102,88 +111,108 @@ function BuildingInventoryBedCardComponent({
 
   return (
     <View style={styles.slot}>
-    <Pressable
-      onPress={onPress}
-      onLongPress={onLongPress}
-      disabled={!onPress}
-      style={({ pressed }) => [
-        styles.card,
-        {
-          backgroundColor: surface.bg,
-          borderColor: highlighted ? colors.primary : surface.border,
-          borderWidth: highlighted ? 1.5 : 1,
-        },
-        bed.active === false ? styles.cardInactive : null,
-        pressed && onPress ? styles.cardPressed : null,
-      ]}
-      accessibilityRole={onPress ? 'button' : undefined}
-      accessibilityLabel={displayLabel}>
-      <View style={styles.header}>
-        <View style={[styles.iconWrap, { backgroundColor: surface.iconBg }]}>
-          <Image
-            source={getBedIllustration(bed.status)}
-            style={styles.bedArt}
-            resizeMode="contain"
-            fadeDuration={0}
-          />
-        </View>
-        <View style={styles.titleWrap}>
+      <Pressable
+        onPress={onPress}
+        onLongPress={onLongPress}
+        disabled={!onPress}
+        style={({ pressed }) => [
+          styles.card,
+          {
+            backgroundColor: surface.bg,
+            borderColor: highlighted ? colors.primary : surface.border,
+            borderWidth: highlighted ? 1.5 : 1,
+          },
+          bed.active === false ? styles.cardInactive : null,
+          pressed && onPress ? styles.cardPressed : null,
+        ]}
+        accessibilityRole={onPress ? 'button' : undefined}
+        accessibilityLabel={displayLabel}>
+        <View style={styles.header}>
+          <View style={[styles.iconWrap, { backgroundColor: surface.iconBg }]}>
+            <Image
+              source={getBedIllustration(bed.status)}
+              style={styles.bedArt}
+              resizeMode="contain"
+              fadeDuration={0}
+            />
+          </View>
           <Text style={styles.label} numberOfLines={1}>
             {displayLabel}
           </Text>
-          <View
-            style={[
-              styles.statusPill,
-              {
-                backgroundColor: `${surface.accent}18`,
-                borderColor: `${surface.accent}44`,
-              },
-            ]}>
-            <View style={[styles.statusDot, { backgroundColor: surface.accent }]} />
-            <Text style={[styles.statusText, { color: surface.accent }]} numberOfLines={1}>
-              {moveIn
-                ? t('dashboard.drilldown.movedIn', { defaultValue: 'Moved in' })
-                : t(`accommodation.status.${bed.status}`, { defaultValue: bed.status })}
-            </Text>
-          </View>
+          {onEdit ? (
+            <Pressable
+              onPress={event => {
+                event.stopPropagation?.();
+                onEdit();
+              }}
+              hitSlop={8}
+              style={({ pressed }) => [styles.editBtn, pressed && styles.cardPressed]}
+              accessibilityRole="button"
+              accessibilityLabel={t('accommodation.builder.editBed', { defaultValue: 'Edit bed' })}>
+              <ChevronRight size={18} color={colors.info} strokeWidth={2.4} />
+            </Pressable>
+          ) : menu ? (
+            <View style={styles.menuSlot}>{menu}</View>
+          ) : null}
         </View>
-        {onEdit ? (
-          <Pressable
-            onPress={event => {
-              event.stopPropagation?.();
-              onEdit();
-            }}
-            hitSlop={8}
-            style={({ pressed }) => [styles.editBtn, pressed && styles.cardPressed]}
-            accessibilityRole="button"
-            accessibilityLabel={t('accommodation.builder.editBed', { defaultValue: 'Edit bed' })}>
-            <ChevronRight size={18} color={colors.info} strokeWidth={2.4} />
-          </Pressable>
-        ) : menu ? (
-          <View style={styles.menuSlot}>{menu}</View>
-        ) : null}
-      </View>
-      <View style={styles.pricing}>
-        {moveIn ? (
-          <>
-            {moveIn.moveInDate ? (
-              <Text style={styles.moveInLine} numberOfLines={1}>
-                {t('dashboard.drilldown.moveInLine', { date: moveIn.moveInDate })}
+
+        {showStayBadges ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            bounces={false}
+            contentContainerStyle={styles.badgeRow}>
+            <View
+              style={[
+                styles.statusPill,
+                {
+                  backgroundColor: `${surface.accent}18`,
+                  borderColor: `${surface.accent}44`,
+                },
+              ]}>
+              <View style={[styles.statusDot, { backgroundColor: surface.accent }]} />
+              <Text style={[styles.statusText, { color: surface.accent }]} numberOfLines={1}>
+                {moveIn
+                  ? t('dashboard.drilldown.movedIn', { defaultValue: 'Moved in' })
+                  : t(`accommodation.status.${bed.status}`, { defaultValue: bed.status })}
               </Text>
-            ) : null}
-            <Text style={styles.moveInMember} numberOfLines={1}>
-              {moveIn.memberName}
-            </Text>
-            <BedPricingDisplay rent={moveIn.rent} deposit={moveIn.deposit} layout="stack" />
-          </>
-        ) : bed.status === 'OCCUPIED' ? (
-          <OccupiedBedPaymentFace spaceId={spaceId} bedId={bed.bedId} />
-        ) : (
-          <BedPricingDisplay rent={bed.defaultRent} deposit={bed.defaultDeposit} layout="stack" />
-        )}
-      </View>
-      {footer}
-    </Pressable>
+            </View>
+            <StayTypeBadge stayKind={stayKind} />
+          </ScrollView>
+        ) : null}
+
+        {showStayBadges ? <View style={styles.divider} /> : null}
+
+        <View style={styles.pricing}>
+          {moveIn ? (
+            <>
+              {moveIn.moveInDate ? (
+                <Text style={styles.moveInLine} numberOfLines={1}>
+                  {t('dashboard.drilldown.moveInLine', { date: moveIn.moveInDate })}
+                </Text>
+              ) : null}
+              <Text style={styles.moveInMember} numberOfLines={1}>
+                {moveIn.memberName}
+              </Text>
+              <BedPricingDisplay
+                rent={moveIn.rent}
+                deposit={moveIn.deposit}
+                stayKind={moveIn.stayKind}
+                layout="inline"
+              />
+            </>
+          ) : bed.status === 'OCCUPIED' || bed.status === 'RESERVED' ? (
+            <OccupiedBedPaymentFace spaceId={spaceId} bedId={bed.bedId} />
+          ) : (
+            <BedPricingDisplay
+              rent={bed.defaultRent}
+              deposit={bed.defaultDeposit}
+              layout="inline"
+            />
+          )}
+        </View>
+        {footer}
+      </Pressable>
     </View>
   );
 }
@@ -196,18 +225,18 @@ export function BuildingInventoryAddBedCard({ onPress }: BuildingInventoryAddBed
   const { t } = useTranslation();
   return (
     <View style={styles.slot}>
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [styles.addCard, pressed && styles.cardPressed]}
-      accessibilityRole="button"
-      accessibilityLabel={t('accommodation.builder.addBed', { defaultValue: 'Add Bed' })}>
-      <View style={styles.addIconWrap}>
-        <Plus size={20} color={colors.primary} strokeWidth={2.6} />
-      </View>
-      <Text style={styles.addLabel}>
-        {t('accommodation.builder.addBed', { defaultValue: 'Add Bed' })}
-      </Text>
-    </Pressable>
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [styles.addCard, pressed && styles.cardPressed]}
+        accessibilityRole="button"
+        accessibilityLabel={t('accommodation.builder.addBed', { defaultValue: 'Add Bed' })}>
+        <View style={styles.addIconWrap}>
+          <Plus size={20} color={colors.primary} strokeWidth={2.6} />
+        </View>
+        <Text style={styles.addLabel}>
+          {t('accommodation.builder.addBed', { defaultValue: 'Add Bed' })}
+        </Text>
+      </Pressable>
     </View>
   );
 }
@@ -236,7 +265,7 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: spacing.xs,
     width: '100%',
   },
@@ -252,25 +281,29 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
   },
-  titleWrap: {
-    flex: 1,
-    minWidth: 0,
-    gap: 5,
-  },
   label: {
     ...typography.bodyStrong,
+    flex: 1,
+    minWidth: 0,
     fontSize: 14,
     color: colors.textPrimary,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
+    alignItems: 'center',
+    gap: 6,
+    paddingRight: 2,
   },
   statusPill: {
     borderRadius: 999,
     borderWidth: 1,
     paddingHorizontal: 7,
     paddingVertical: 2,
-    alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    flexShrink: 0,
   },
   statusDot: {
     width: 6,
@@ -282,6 +315,12 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
   },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+    width: '100%',
+    marginTop: 1,
+  },
   editBtn: {
     width: 32,
     height: 32,
@@ -291,11 +330,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#EFF6FF',
     borderWidth: 1,
     borderColor: '#BFDBFE',
-    marginTop: -2,
     marginRight: -2,
   },
   menuSlot: {
-    marginTop: -6,
     marginRight: -6,
   },
   moveInLine: {
@@ -310,7 +347,6 @@ const styles = StyleSheet.create({
   pricing: {
     minWidth: 0,
     width: '100%',
-    marginTop: 2,
   },
   addCard: {
     flex: 1,

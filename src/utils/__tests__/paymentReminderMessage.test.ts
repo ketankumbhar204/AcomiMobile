@@ -28,7 +28,11 @@ describe('buildPaymentReminderMessage', () => {
     const message = buildPaymentReminderMessage({
       memberName: 'Rahul Kumar',
       amount: 500,
+      currencyCode: 'INR',
       title: 'Rent',
+      paymentType: 'RENT',
+      dueDate: '',
+      month: '',
     });
     expect(message).not.toContain('due on');
   });

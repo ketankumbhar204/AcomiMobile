@@ -131,7 +131,11 @@ export function OccupancyMemberPickerModal({
                 <View style={styles.rowBody}>
                   <Text style={styles.rowTitle}>{member.fullName}</Text>
                   <View style={styles.rowSubLine}>
-                    <ContactNumberLine value={member.mobileNumber} textStyle={styles.rowSub} />
+                    <ContactNumberLine
+                      value={member.mobileNumber}
+                      name={member.fullName}
+                      textStyle={styles.rowSub}
+                    />
                     <Text style={styles.rowSub}>
                       {` · ${t(membershipRoleLabelKey(member.role, permissions.spaceType))}`}
                     </Text>

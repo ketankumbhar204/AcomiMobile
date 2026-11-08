@@ -131,7 +131,7 @@ export function useCompleteProfile(): UseCompleteProfileResult {
               state: payload.state,
               pincode: payload.pincode,
               profileCompleted: true,
-              profileStatus: 'COMPLETED',
+              profileStatus: 'COMPLETED' as const,
               profileCompletedAt: new Date().toISOString(),
               profileCompletionPercentage: 100,
             };

@@ -1,6 +1,7 @@
 import React, { type ComponentType } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Building2, User } from 'lucide-react-native';
+import { ContactNumberLine } from '../../member/ContactAndStayMeta';
 import { colors, radius, shadows, spacing, typography } from '../../../theme';
 
 type IconProps = {
@@ -136,7 +137,7 @@ export function DashboardPersonCard({
           </Text>
           <DashboardStatusChip label={statusLabel} tone={statusTone} />
         </View>
-        <Text style={styles.mobile}>{mobile}</Text>
+        <ContactNumberLine value={mobile} name={name} textStyle={styles.mobile} />
         <View style={styles.metaRow}>
           <Building2 size={12} color={colors.muted} strokeWidth={2.2} />
           <Text style={styles.source} numberOfLines={1}>

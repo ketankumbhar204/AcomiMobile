@@ -27,6 +27,8 @@ describe('paymentStatusTheme', () => {
     expect(resolveTimelineEventVariant('UPDATE_REQUESTED')).toBe('needsUpdate');
     expect(resolveTimelineEventVariant('PAID')).toBe('paid');
     expect(resolveTimelineEventVariant('REJECTED')).toBe('rejected');
-    expect(resolveTimelineEventVariant('REFUNDED')).toBe('neutral');
+    expect(resolveTimelineEventVariant('REFUNDED')).toBe('partial');
+    expect(resolveTimelineEventVariant('CANCELLED')).toBe('neutral');
+    expect(resolveTimelineEventVariant('RETAINED')).toBe('neutral');
   });
 });

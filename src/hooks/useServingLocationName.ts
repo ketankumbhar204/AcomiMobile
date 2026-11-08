@@ -11,7 +11,7 @@ export function useServingLocationName(spaceId: UUID | null | undefined) {
   const [loading, setLoading] = useState(false);
 
   const defaultName =
-    (selectedSpace?.id === spaceId ? selectedSpace.name : null) ??
+    (selectedSpace != null && selectedSpace.id === spaceId ? selectedSpace.name : null) ??
     findMySpaceEntry(mySpaces, spaceId ?? undefined)?.spaceName ??
     '';
 

@@ -11,22 +11,30 @@ import {
   CalendarDays,
   ChevronDown,
   ChevronUp,
+  Hash,
   History,
   IndianRupee,
   MapPin,
   Phone,
   RefreshCw,
+  Tag,
   UserRound,
   Wallet,
   WalletCards,
 } from 'lucide-react-native';
 import { memberApi } from '../../api/memberApi';
 import { formatMemberContactNumber } from '../../utils/indianMobile';
+import { ContactNumberLine } from '../member/ContactAndStayMeta';
 import { Button } from '../ui';
 import { ReferenceCode } from '../ui/ReferenceCode';
 import { useOccupiedBedStay, useOccupiedUnitStay } from '../../hooks/useOccupiedBedStay';
 import type { MainStackParamList } from '../../navigation/types';
 import { colors, pastels, radius, spacing, typography } from '../../theme';
+import type { OccupancyResponse } from '../../api/types';
+import {
+  computeOpenEndedAccruedRentForMonth,
+  isOpenEndedDailyRate,
+} from '../../utils/occupancyContract';
 import { getOccupancyExitDate } from '../../utils/occupancyRules';
 import { formatPaymentAmount } from '../../utils/paymentHistory';
 import { formatBillingPeriod } from '../../utils/paymentProofPolicy';
@@ -35,6 +43,11 @@ import {
   type OccupantPaymentSummary,
   type StayPaymentStatus,
 } from '../../utils/occupantPaymentSummary';
+import { resolveOccupancyStayKind } from '../../utils/stayFinancialDisplay';
+import {
+  stayChoiceDefaultLabel,
+  stayChoiceLabelKey,
+} from '../../utils/shortStay';
 
 type Nav = NativeStackNavigationProp<MainStackParamList>;
 
@@ -104,6 +117,7 @@ function paymentBadgeColors(status: StayPaymentStatus): { bg: string; fg: string
 function paymentStatusLabel(
   status: StayPaymentStatus,
   t: (key: string, options?: { defaultValue?: string }) => string,
+  notYetBilled = false,
 ): string {
   switch (status) {
     case 'PAID':
@@ -115,7 +129,9 @@ function paymentStatusLabel(
     case 'UNDER_REVIEW':
       return t('accommodation.stayPayment.underReview', { defaultValue: 'Under review' });
     case 'NO_RECORD':
-      return t('accommodation.stayPayment.noRecord', { defaultValue: 'No payment record' });
+      return notYetBilled
+        ? t('accommodation.stayPayment.notYetBilled', { defaultValue: 'Not yet billed' })
+        : t('accommodation.stayPayment.noRecord', { defaultValue: 'No payment record' });
     default:
       return t('accommodation.stayPayment.unavailable', {
         defaultValue: 'Payment status unavailable',
@@ -203,11 +219,13 @@ export function OccupiedBedStaySection({
       : t('accommodation.stayPayment.occupancySection', { defaultValue: 'Bed and occupancy' });
   const NumberIcon = entity === 'unit' ? Grid2x2 : BedSingle;
   const [mobile, setMobile] = useState<string | null>(null);
+  const [memberName, setMemberName] = useState<string | null>(null);
 
   useEffect(() => {
     const memberId = stay.occupancy?.memberId;
     if (!memberId) {
       setMobile(null);
+      setMemberName(null);
       return;
     }
     let cancelled = false;
@@ -215,18 +233,20 @@ export function OccupiedBedStaySection({
       .getMember(spaceId, memberId)
       .then(member => {
         if (!cancelled) {
-          setMobile(formatMemberContactNumber(member.mobileNumber));
+          setMobile(member.mobileNumber ?? null);
+          setMemberName(member.fullName ?? stay.occupancy?.memberName ?? null);
         }
       })
       .catch(() => {
         if (!cancelled) {
           setMobile(null);
+          setMemberName(stay.occupancy?.memberName ?? null);
         }
       });
     return () => {
       cancelled = true;
     };
-  }, [spaceId, stay.occupancy?.memberId]);
+  }, [spaceId, stay.occupancy?.memberId, stay.occupancy?.memberName]);
 
   const moveIn = stay.occupancy?.actualMoveInAt || stay.occupancy?.moveInDate;
   const exitDate = getOccupancyExitDate(stay.occupancy);
@@ -263,12 +283,35 @@ export function OccupiedBedStaySection({
           label={numberLabel}
           value={bedNumber || '—'}
         />
-        <ReferenceCode value={stay.occupancy?.referenceCode} />
+        {stay.occupancy?.referenceCode ? (
+          <DetailRow
+            icon={<Hash size={14} color={mutedIcon} strokeWidth={2.2} />}
+            label={t('occupancy.section.stayId', { defaultValue: 'Stay ID' })}
+            accessory={<ReferenceCode value={stay.occupancy.referenceCode} />}
+          />
+        ) : null}
         {locationLine ? (
           <DetailRow
             icon={<MapPin size={14} color={mutedIcon} strokeWidth={2.2} />}
             label={t('accommodation.stayPayment.location', { defaultValue: 'Location' })}
             value={locationLine}
+          />
+        ) : null}
+        {stay.occupancy ? (
+          <DetailRow
+            icon={<Tag size={14} color={mutedIcon} strokeWidth={2.2} />}
+            label={t('occupancyWizard.steps.stayType', { defaultValue: 'Stay type' })}
+            value={t(stayChoiceLabelKey(resolveOccupancyStayKind(stay.occupancy)), {
+              defaultValue: stayChoiceDefaultLabel(resolveOccupancyStayKind(stay.occupancy)),
+            })}
+          />
+        ) : null}
+        {stay.occupancy?.bookingAdvanceAmount != null &&
+        stay.occupancy.bookingAdvanceAmount > 0 ? (
+          <DetailRow
+            icon={<IndianRupee size={14} color={mutedIcon} strokeWidth={2.2} />}
+            label={t('occupancy.bookingAdvance.label', { defaultValue: 'Booking advance' })}
+            value={formatPaymentAmount(stay.occupancy.bookingAdvanceAmount)}
           />
         ) : null}
         {moveIn ? (
@@ -310,7 +353,14 @@ export function OccupiedBedStaySection({
               <DetailRow
                 icon={<Phone size={14} color={mutedIcon} strokeWidth={2.2} />}
                 label={t('accommodation.stayPayment.contact', { defaultValue: 'Contact' })}
-                value={mobile}
+                value={formatMemberContactNumber(mobile) ?? mobile}
+                accessory={
+                  <ContactNumberLine
+                    value={mobile}
+                    name={memberName ?? stay.occupancy?.memberName}
+                    showIcon={false}
+                  />
+                }
               />
             ) : null}
             <DetailRow
@@ -339,7 +389,7 @@ export function OccupiedBedStaySection({
         ) : null}
       </SectionCard>
 
-      <PaymentCard summary={stay.summary} loading={stay.loading} />
+      <PaymentCard summary={stay.summary} loading={stay.loading} occupancy={stay.occupancy} />
     </View>
   );
 }
@@ -347,9 +397,11 @@ export function OccupiedBedStaySection({
 function PaymentCard({
   summary,
   loading,
+  occupancy,
 }: {
   summary: OccupantPaymentSummary | null;
   loading: boolean;
+  occupancy: OccupancyResponse | null;
 }) {
   const { t } = useTranslation();
   if (!summary) {
@@ -388,6 +440,12 @@ function PaymentCard({
           .join(' · ')
       : null;
 
+  const openEnded = isOpenEndedDailyRate(occupancy);
+  // Accrued rent is informational only: no payable row exists until the period closes.
+  const accrued =
+    openEnded && occupancy && !summary.rent
+      ? computeOpenEndedAccruedRentForMonth(occupancy, summary.month)
+      : null;
   const muted = colors.textSecondary;
   return (
     <SectionCard
@@ -405,13 +463,22 @@ function PaymentCard({
         label={t('accommodation.stayPayment.status', { defaultValue: 'Payment status' })}
         accessory={
           <StatusBadge
-            label={paymentStatusLabel(summary.status, t)}
+            label={paymentStatusLabel(summary.status, t, openEnded)}
             bg={badge.bg}
             fg={badge.fg}
             border={badge.border}
           />
         }
       />
+      {accrued != null ? (
+        <DetailRow
+          icon={<IndianRupee size={14} color={muted} strokeWidth={2.2} />}
+          label={t('accommodation.stayPayment.accruedNotBilled', {
+            defaultValue: 'Accrued (not billed)',
+          })}
+          value={money(accrued)}
+        />
+      ) : null}
       {summary.rent ? (
         <DetailRow
           icon={<IndianRupee size={14} color={muted} strokeWidth={2.2} />}

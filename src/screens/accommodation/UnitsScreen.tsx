@@ -17,7 +17,7 @@ import type { UnitListItemResponse } from '../../api/types';
 import {
   AccommodationListFooter,
   AccommodationSearchBar,
-  AccommodationStatusBadge,
+  InventoryListingCard,
   PersistedUnitInteractionHost,
 } from '../../components/accommodation';
 import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
@@ -25,16 +25,16 @@ import {
   AccommodationOccupancyFlowModals,
   AccommodationOccupancyQuickActions,
 } from '../../components/occupancy';
-import { EmptyState, FAB, HeaderBackButton, ListCard, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
+import { EmptyState, FAB, HeaderBackButton, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
 import { useAccommodationOccupancyFlow } from '../../hooks/useAccommodationOccupancyFlow';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import { useUnits } from '../../hooks/useUnits';
 import type { MainStackParamList } from '../../navigation/types';
 import { colors, radius, spacing, typography } from '../../theme';
+import { isAccommodationEntityActive } from '../../utils/accommodationEntityActive';
 import { buildUnitOccupancyTarget, isOccupancyTargetSupported } from '../../utils/buildOccupancyTarget';
-import { renameUnitName } from '../../utils/accommodationInlineRename';
-import { useToastStore } from '../../store/toastStore';
+import { occupancyPercentFromStatus } from '../../components/accommodation/layout/cards/occupancyUtils';
 import { useAccommodationUiProfile } from '../../hooks/useAccommodationUiProfile';
 import { usePersistedUnitInteraction } from '../../hooks/usePersistedUnitInteraction';
 import { devLog } from '../../utils/devLog';
@@ -59,12 +59,10 @@ export function UnitsScreen() {
   const supportsUnitOccupancy = Boolean(
     spaceType && isOccupancyTargetSupported(spaceType, 'UNIT'),
   );
-  const showToast = useToastStore(state => state.showToast);
-
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
-  const { units, loading, loadingMore, error, hasMore, refresh, loadMore, patchUnit } = useUnits(
+  const { units, loading, loadingMore, error, hasMore, refresh, loadMore } = useUnits(
     spaceId,
     buildingId,
     { searchQuery },
@@ -156,7 +154,7 @@ export function UnitsScreen() {
 
   const unitSubtitle = (unit: UnitListItemResponse) => {
     if (isRental) {
-      return t(`accommodation.status.${unit.status}`);
+      return null;
     }
     return t('accommodation.listItem.unit', {
       roomCount: unit.roomCount,
@@ -194,6 +192,8 @@ export function UnitsScreen() {
       <FlatList
         data={showLoading ? [] : units}
         keyExtractor={item => item.unitId}
+        numColumns={2}
+        columnWrapperStyle={styles.columnWrapper}
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
@@ -207,42 +207,36 @@ export function UnitsScreen() {
           }
         }}
         onEndReachedThreshold={0.3}
-        renderItem={({ item: unit }) => (
-          <View style={styles.listItem}>
-            <View style={styles.badgeRow}>
-              <AccommodationStatusBadge status={unit.status} />
-            </View>
-            <ListCard
-              title={unit.name}
-              subtitle={unitSubtitle(unit)}
-              iconLabel={unit.name.charAt(0).toUpperCase()}
-              editableName={canManage}
-              onSaveName={async name => {
-                await renameUnitName(spaceId, buildingId, unit.unitId, name);
-                patchUnit(unit.unitId, { name });
-                showToast(t('accommodation.units.updateSuccess'));
-              }}
-              onPress={() => openUnit(unit)}
-              onLongPress={() => openUnitDetail(unit)}
-              style={styles.unitCard}
-            />
-            {supportsUnitOccupancy && spaceType && canManageOccupancyActions ? (
-              <AccommodationOccupancyQuickActions
-                spaceType={spaceType}
-                accommodationStatus={unit.status}
-                context={buildUnitContext(unit)}
-                flow={occupancyFlow}
-                canManage={canManageOccupancyActions}
-                layout="compact"
-                onViewOccupant={
-                  unit.status === 'AVAILABLE'
-                    ? undefined
-                    : () => openUnitDetail(unit)
-                }
+        renderItem={({ item: unit }) => {
+          const inactive = !isAccommodationEntityActive(unit);
+          return (
+            <View style={styles.gridItem}>
+              <InventoryListingCard
+                kind="unit"
+                title={unit.name}
+                subtitle={unitSubtitle(unit)}
+                status={inactive ? null : unit.status}
+                inactive={inactive}
+                occupancyPercent={inactive ? 0 : occupancyPercentFromStatus(unit.status)}
+                onPressDetails={() => openUnitDetail(unit)}
+                onPressCard={() => openUnit(unit)}
               />
-            ) : null}
-          </View>
-        )}
+              {supportsUnitOccupancy && spaceType && canManageOccupancyActions ? (
+                <AccommodationOccupancyQuickActions
+                  spaceType={spaceType}
+                  accommodationStatus={unit.status}
+                  context={buildUnitContext(unit)}
+                  flow={occupancyFlow}
+                  canManage={canManageOccupancyActions}
+                  layout="compact"
+                  onViewOccupant={
+                    unit.status === 'AVAILABLE' ? undefined : () => openUnitDetail(unit)
+                  }
+                />
+              ) : null}
+            </View>
+          );
+        }}
       />
 
       {spaceType ? (
@@ -290,7 +284,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#DC2626',
   },
-  listItem: { gap: spacing.xs, marginBottom: spacing.md },
-  badgeRow: { marginBottom: spacing.xs },
-  unitCard: { borderRadius: 18 },
+  columnWrapper: {
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  gridItem: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacing.xs,
+  },
 });

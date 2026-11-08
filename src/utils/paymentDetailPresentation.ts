@@ -1,10 +1,16 @@
 import type { SpacePaymentResponse, UniversalPaymentStatus } from '../api/types';
-import { displayPaymentStatus, showsPaymentOverdueCue } from './paymentStatus';
+import { showsPaymentOverdueCue } from './paymentStatus';
 import type { PaymentStatusSource } from './paymentStatusTheme';
 import { formatPaymentAmount } from './paymentAmount';
 import { formatPaymentSubmittedAt } from './paymentHistory';
 import { formatBillingPeriod } from './paymentProofPolicy';
 import { resolvePaymentReferenceDisplay } from './paymentReference';
+import {
+  formatPaymentListTitle,
+  isRefundTransaction,
+  paymentListBadgeStatus,
+  paymentListDisplayStatus,
+} from './paymentRefundDisplay';
 
 const EN_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -19,7 +25,7 @@ const SUBMITTED_STATUSES = new Set<UniversalPaymentStatus>([
 export type PaymentDetailMoneyTone = 'default' | 'positive' | 'danger';
 
 export type PaymentDetailFigure = {
-  key: 'base' | 'paid' | 'outstanding' | 'deposit';
+  key: 'base' | 'paid' | 'outstanding' | 'deposit' | 'refunded' | 'netCollected' | 'retained';
   labelKey: string;
   value: string;
   tone: PaymentDetailMoneyTone;
@@ -118,14 +124,17 @@ export function paymentDetailInitial(name: string): string {
 }
 
 /**
- * Submitted proofs stay Under review. Overdue wins only for customer-action dues.
- * A settled payment keeps Paid even if the overdue flag is stale.
+ * Detail badge status. REFUND cash-out rows show Refunded; partial refunds
+ * show Partially Refunded. Overdue is suppressed for settled/refund rows.
  */
 export function paymentDetailStatus(payment: {
   isOverdue?: boolean | null;
   paymentStatus: UniversalPaymentStatus;
+  paymentCategory?: string | null;
+  partiallyRefunded?: boolean | null;
+  refundedAmount?: number | null;
 }): PaymentStatusSource {
-  return displayPaymentStatus(payment);
+  return paymentListBadgeStatus(paymentListDisplayStatus(payment));
 }
 
 function monthPeriodLabel(month: string | null | undefined, locale?: string): string | null {
@@ -175,8 +184,12 @@ export function buildPaymentDetailPresentation(
   const currency = payment.currencyCode;
   const tenantName = (options?.memberName?.trim() || payment.memberName || '').trim();
   const periodForTitle = monthPeriodLabel(payment.month, locale);
-  const titleSource = options?.title?.trim() || payment.title || '';
-  const showOverdue = showsPaymentOverdueCue(payment);
+  const titleSource =
+    options?.title?.trim() ||
+    formatPaymentListTitle(payment) ||
+    payment.title ||
+    '';
+  const showOverdue = showsPaymentOverdueCue(payment) && !isRefundTransaction(payment);
   const outstandingLabel = formatPaymentAmount(payment.outstandingAmount, currency);
   const paidLabel = formatPaymentAmount(payment.paidAmount, currency);
 
@@ -218,6 +231,49 @@ export function buildPaymentDetailPresentation(
       labelKey: 'paymentCollection.memberPayments.summary.outstanding',
       value: outstandingLabel,
       tone: outstanding > 0 ? 'danger' : 'positive',
+    });
+  }
+  const refundedLabel = formatPaymentAmount(payment.refundedAmount, currency);
+  if (refundedLabel && Number(payment.refundedAmount) > 0) {
+    figures.push({
+      key: 'refunded',
+      labelKey: 'paymentCollection.detail.fields.refunded',
+      value: refundedLabel,
+      tone: 'default',
+    });
+  }
+  if (isRefundTransaction(payment)) {
+    const refundAmountLabel = formatPaymentAmount(payment.amount, currency);
+    if (refundAmountLabel) {
+      figures.push({
+        key: 'refunded',
+        labelKey: 'paymentCollection.detail.fields.refunded',
+        value: refundAmountLabel,
+        tone: 'default',
+      });
+    }
+  }
+  const netCollectedLabel = formatPaymentAmount(payment.netCollectedAmount, currency);
+  if (
+    netCollectedLabel &&
+    (payment.paymentStatus === 'PAID' ||
+      payment.paymentStatus === 'REFUNDED' ||
+      Number(payment.refundedAmount ?? 0) > 0)
+  ) {
+    figures.push({
+      key: 'netCollected',
+      labelKey: 'paymentCollection.detail.fields.netCollected',
+      value: netCollectedLabel,
+      tone: 'positive',
+    });
+  }
+  const retainedLabel = formatPaymentAmount(payment.retainedAmount, currency);
+  if (retainedLabel && Number(payment.retainedAmount) > 0) {
+    figures.push({
+      key: 'retained',
+      labelKey: 'paymentCollection.detail.fields.retained',
+      value: retainedLabel,
+      tone: 'default',
     });
   }
 

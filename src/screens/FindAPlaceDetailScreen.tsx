@@ -44,8 +44,9 @@ import { listingPriceSuffix } from '../utils/priceBasis';
 async function startDirectContactReveal(spaceId: string): Promise<OwnerContactResponse | RevealPhase> {
   try {
     const quota = await inquiryCreditsApi.getQuota();
-    if (directContactDecision(quota) !== 'reveal') {
-      return directContactDecision(quota);
+    const decision = directContactDecision(quota);
+    if (decision !== 'reveal') {
+      return decision;
     }
     const created = await enquiryApi.create(spaceId, { deliveryChannel: 'VIEW_HERE' });
     markInquired(created.spaceId || spaceId, null, {

@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     minHeight: 132,
   },
   decorClip: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     overflow: 'hidden',
   },
   decorClipHalf: {

@@ -1,13 +1,13 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Bed, Building2, IndianRupee, UserPlus, Users } from 'lucide-react-native';
+import { Bed, Building2, CalendarCheck2, Users } from 'lucide-react-native';
 import type { DashboardAccommodationOperations } from '../../api/types';
 import { pastels, spacing } from '../../theme';
 import { DashboardSectionTitle } from './DashboardSectionTitle';
 import { DashboardStatCard } from './shared/DashboardStatCard';
 
-export type AccommodationOpsMetricId = 'occupied' | 'vacant' | 'moveIns' | 'pendingPay';
+export type AccommodationOpsMetricId = 'occupied' | 'vacant' | 'reserved' | 'moveIns' | 'pendingPay';
 
 type DashboardAccommodationOperationsProps = {
   operations: DashboardAccommodationOperations;
@@ -16,40 +16,67 @@ type DashboardAccommodationOperationsProps = {
   occupancyEntity?: 'beds' | 'units';
   onOccupiedPress?: () => void;
   onVacantPress?: () => void;
+  onReservedPress?: () => void;
+  /** @deprecated Prefer Recent Activity move-ins; kept for Rooms ops parity. */
   onMoveInsPress?: () => void;
-  /** When set, shows Pending payments card (Rooms home parity with Web). */
-  onPendingPress?: () => void;
+  /** When set with showMoveIns, shows the legacy move-ins KPI. */
+  showMoveIns?: boolean;
   /** Highlights the active Rooms ops filter card. */
   selectedMetricId?: AccommodationOpsMetricId | null;
+  subtitle?: string;
 };
 
+/**
+ * Property Operations filter KPI row: Occupied / Available / Reserved.
+ * Click handlers are owned by the caller — this component never invents navigation.
+ */
 export function DashboardAccommodationOperations({
   operations,
   hideTitle = false,
   onOccupiedPress,
   onVacantPress,
+  onReservedPress,
   onMoveInsPress,
-  onPendingPress,
+  showMoveIns = false,
   selectedMetricId = null,
   occupancyEntity = 'beds',
+  subtitle,
 }: DashboardAccommodationOperationsProps) {
   const { t } = useTranslation();
-  const showPending = typeof onPendingPress === 'function';
   const unitLevel = occupancyEntity === 'units';
-  const occupiedLabel = unitLevel
-    ? t('dashboard.accommodationOperations.occupiedUnits', { defaultValue: 'Occupied units' })
-    : t('dashboard.accommodationOperations.occupiedBeds');
-  const vacantLabel = unitLevel
-    ? t('dashboard.accommodationOperations.availableUnits', { defaultValue: 'Available units' })
-    : t('dashboard.accommodationOperations.vacantBeds');
+  // Filter cards use short labels to match the Rooms reference (Occupied / Available / Reserved).
+  const occupiedLabel = t('dashboard.accommodationOperations.occupiedBedsShort', {
+    defaultValue: 'Occupied',
+  });
+  const vacantLabel = t('dashboard.accommodationOperations.vacantBedsShort', {
+    defaultValue: 'Available',
+  });
+  const reservedLabel = unitLevel
+    ? t('dashboard.accommodationOperations.reservedUnits', {
+        defaultValue: 'Reserved',
+      })
+    : t('dashboard.accommodationOperations.reservedBeds', {
+        defaultValue: 'Reserved',
+      });
   const VacantIcon = unitLevel ? Building2 : Bed;
+  const reservedCount = operations.reservedBeds ?? 0;
 
   return (
     <View style={styles.wrap}>
       {hideTitle ? null : (
-        <DashboardSectionTitle title={t('dashboard.accommodationOperations.title')} />
+        <DashboardSectionTitle
+          title={t('dashboard.accommodationOps.title', {
+            defaultValue: 'Property Operations',
+          })}
+          subtitle={
+            subtitle ??
+            t('dashboard.accommodationOps.subtitleBeds', {
+              defaultValue: 'Current bed status across all buildings',
+            })
+          }
+        />
       )}
-      <View style={[styles.row, showPending && styles.rowWrap]}>
+      <View style={[styles.row, showMoveIns && styles.rowWrap]}>
         <DashboardStatCard
           icon={Users}
           accent={pastels.mint.fg}
@@ -60,7 +87,9 @@ export function DashboardAccommodationOperations({
           onPress={onOccupiedPress}
           selected={selectedMetricId === 'occupied'}
           selectionColor={pastels.mint.fg}
-          gridItem={showPending}
+          showChevron={false}
+          gridItem={showMoveIns}
+          style={styles.filterCard}
         />
         <DashboardStatCard
           icon={VacantIcon}
@@ -72,30 +101,36 @@ export function DashboardAccommodationOperations({
           onPress={onVacantPress}
           selected={selectedMetricId === 'vacant'}
           selectionColor={pastels.purple.fg}
-          gridItem={showPending}
+          showChevron={false}
+          gridItem={showMoveIns}
+          style={styles.filterCard}
         />
         <DashboardStatCard
-          icon={UserPlus}
-          accent={pastels.blue.fg}
-          surface={pastels.blue.bg}
-          surfaceBorder={pastels.blue.border}
-          value={String(operations.moveInsThisMonth)}
-          label={t('dashboard.accommodationOperations.moveInsThisMonth')}
-          onPress={onMoveInsPress}
-          selected={selectedMetricId === 'moveIns'}
-          selectionColor={pastels.blue.fg}
-          gridItem={showPending}
+          icon={CalendarCheck2}
+          accent={pastels.orange.fg}
+          surface={pastels.orange.bg}
+          surfaceBorder={pastels.orange.border}
+          value={String(reservedCount)}
+          label={reservedLabel}
+          onPress={onReservedPress}
+          selected={selectedMetricId === 'reserved'}
+          selectionColor={pastels.orange.fg}
+          showChevron={false}
+          gridItem={showMoveIns}
+          style={styles.filterCard}
         />
-        {showPending ? (
+        {showMoveIns ? (
           <DashboardStatCard
-            icon={IndianRupee}
-            accent={pastels.orange.fg}
-            surface={pastels.orange.bg}
-            surfaceBorder={pastels.orange.border}
-            value={String(operations.pendingPaymentsCount)}
-            label={t('dashboard.accommodationOperations.pendingPayments')}
-            onPress={onPendingPress}
-            selected={selectedMetricId === 'pendingPay'}
+            icon={Users}
+            accent={pastels.blue.fg}
+            surface={pastels.blue.bg}
+            surfaceBorder={pastels.blue.border}
+            value={String(operations.moveInsThisMonth)}
+            label={t('dashboard.accommodationOperations.moveInsThisMonth')}
+            onPress={onMoveInsPress}
+            selected={selectedMetricId === 'moveIns'}
+            selectionColor={pastels.blue.fg}
+            showChevron={false}
             gridItem
           />
         ) : null}
@@ -106,7 +141,7 @@ export function DashboardAccommodationOperations({
 
 const styles = StyleSheet.create({
   wrap: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.sm,
   },
   row: {
     flexDirection: 'row',
@@ -114,5 +149,9 @@ const styles = StyleSheet.create({
   },
   rowWrap: {
     flexWrap: 'wrap',
+  },
+  filterCard: {
+    minHeight: 88,
+    paddingVertical: spacing.md,
   },
 });

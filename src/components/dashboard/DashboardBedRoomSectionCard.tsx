@@ -23,6 +23,9 @@ type DashboardBedRoomSectionCardProps = BedSectionFlowProps & {
   onAllocate?: (bed: BedSpaceListItemResponse) => void;
   onReserve?: (bed: BedSpaceListItemResponse) => void;
   onPathCrumbPress?: (crumb: RoomPathCrumb) => void;
+  /** Same Add Bed card as building inventory rooms. */
+  showAddBed?: boolean;
+  onAddBed?: () => void;
 };
 
 function DashboardBedRoomSectionCardComponent({
@@ -36,6 +39,8 @@ function DashboardBedRoomSectionCardComponent({
   flowAction = 'dashboard',
   onFlowAction,
   onPathCrumbPress,
+  showAddBed = false,
+  onAddBed,
 }: DashboardBedRoomSectionCardProps) {
   const { t } = useTranslation();
 
@@ -44,6 +49,8 @@ function DashboardBedRoomSectionCardComponent({
       spaceId={spaceId}
       group={group}
       title={formatRoomGroupPathWithBuilding(group)}
+      showAddBed={showAddBed}
+      onAddBed={onAddBed}
       onPathCrumbPress={onPathCrumbPress}
       onBedPress={bed => {
         if (flowAction !== 'dashboard' && bed.status === 'AVAILABLE' && onFlowAction) {

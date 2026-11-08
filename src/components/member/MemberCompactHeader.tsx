@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Phone, UtensilsCrossed } from 'lucide-react-native';
+import { UtensilsCrossed } from 'lucide-react-native';
 import type { MemberDetailsResponse, SpaceType } from '../../api/types';
 import { setMemberMealAccess } from '../../api/mealsApi';
 import {
@@ -17,8 +17,8 @@ import {
   contextualMembershipRole,
   type DisplayMembershipRole,
 } from '../../utils/memberRoles';
-import { formatMemberContactNumber } from '../../utils/indianMobile';
 import { getMemberStatusColor, getMemberStatusLabelKey } from '../../utils/memberStatus';
+import { ContactNumberLine } from './ContactAndStayMeta';
 
 type MemberCompactHeaderProps = {
   member: MemberDetailsResponse;
@@ -119,10 +119,11 @@ export function MemberCompactHeader({
 
       <View style={styles.factRow}>
         <View style={styles.fact}>
-          <Phone size={13} color={colors.muted} strokeWidth={2.2} />
-          <Text style={styles.factText} numberOfLines={1}>
-            {formatMemberContactNumber(member.mobileNumber) ?? member.mobileNumber}
-          </Text>
+          <ContactNumberLine
+            value={member.mobileNumber}
+            name={member.fullName}
+            textStyle={styles.factText}
+          />
         </View>
         <View style={styles.factDivider} />
         <Text style={styles.factText} numberOfLines={1}>

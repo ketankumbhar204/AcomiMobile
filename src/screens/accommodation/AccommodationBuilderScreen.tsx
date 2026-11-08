@@ -22,18 +22,19 @@ import type {
 } from '../../api/types';
 import { getSpaceTypeLabel } from '../../api/spaceTypes';
 import {
-  AccommodationContextTrail,
   AccommodationEntityRow,
   AccommodationListFooter,
   AccommodationSearchBar,
-  AccommodationStatusBadge,
   AccommodationViewModeToggle,
   BuildingElevationLayout,
+  BuildingInventoryRoomListSection,
   BuildingInventoryRoomSection,
   BuildingSummaryHeader,
   BuildingUnitElevation,
   BuilderRowLifecycleMenu,
   BulkUnitsModal,
+  InventoryListingCard,
+  InventoryStatusFilterCapsules,
   DuplicateBuildingModal,
   DuplicateFloorModal,
   HeaderMenuSlot,
@@ -41,10 +42,16 @@ import {
   PersistedUnitInteractionHost,
   UNIT_GRID_NUM_COLUMNS,
 } from '../../components/accommodation';
+import {
+  countBedsByInventoryStatus,
+  filterRoomGroupsByInventoryStatus,
+  type InventoryStatusFilter,
+} from '../../utils/inventoryStatusFilter';
 import type { MenuOption } from '../../components/accommodation/BuilderRowLifecycleMenu';
 import { EmptyState, FAB, HeaderBackButton, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
 import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
 import { DashboardActionRow } from '../../components/dashboard/shared/DashboardActionRow';
+import { occupancyPercentFromStatus } from '../../components/accommodation/layout/cards/occupancyUtils';
 import { useHierarchyOccupancyPicker } from '../../hooks/useHierarchyOccupancyPicker';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useAccommodationUiProfile } from '../../hooks/useAccommodationUiProfile';
@@ -66,18 +73,20 @@ import { resetToAccommodationHome } from '../../navigation/navigationRef';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, spacing, typography } from '../../theme';
-import { buildAccommodationTrail } from '../../utils/accommodationContext';
-import { handleAccommodationTrailPress, navigateToRoomGroupEntityEdit } from '../../utils/accommodationNavigation';
+import { navigateToRoomGroupEntityEdit } from '../../utils/accommodationNavigation';
 import { invalidateAccommodationQueries } from '../../utils/accommodationQueryCache';
 import {
-  renameBuildingName,
   renameFloorName,
   renameUnitName,
 } from '../../utils/accommodationInlineRename';
 import { persistedTargetFromSpaceBed } from '../../utils/persistedBedTarget';
 import { isAccommodationEntityActive } from '../../utils/accommodationEntityActive';
 import { applyAccommodationInactiveLifecycle } from '../../utils/accommodationInactiveLifecycle';
-import { groupBedsByRoom, roomGroupPathCrumbs, type BedRoomGroup } from '../../utils/groupBedsByRoom';
+import {
+  roomGroupPathCrumbs,
+  type BedRoomGroup,
+  type RoomPathCrumb,
+} from '../../utils/groupBedsByRoom';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'AccommodationBuilder'>;
 type Route = NativeStackScreenProps<MainStackParamList, 'AccommodationBuilder'>['route'];
@@ -86,6 +95,10 @@ type ListItem = FloorListItemResponse | UnitListItemResponse;
 
 function isFloorItem(item: ListItem): item is FloorListItemResponse {
   return 'floorId' in item;
+}
+
+function isRoomGroup(item: ListItem | BedRoomGroup): item is BedRoomGroup {
+  return 'beds' in item && 'key' in item;
 }
 
 export function AccommodationBuilderScreen() {
@@ -115,9 +128,10 @@ export function AccommodationBuilderScreen() {
   const { buildings } = useBuildings(spaceId, { enabled: isRental });
   const rentalBuildingActive = buildings.find(building => building.buildingId === buildingId)?.active;
 
-  const { isLayout, setViewMode } = useAccommodationViewMode();
+  const { isLayout, isList, setViewMode } = useAccommodationViewMode();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<InventoryStatusFilter>('ALL');
   const [refreshing, setRefreshing] = useState(false);
 
   const floorsHook = useFloors(spaceId, buildingId, {
@@ -162,12 +176,21 @@ export function AccommodationBuilderScreen() {
       await refreshSummary();
     },
   });
-  const roomGroups = useMemo(
-    () => groupBedsByRoom(bedsHook.items),
+  const inventoryStatusCounts = useMemo(
+    () => countBedsByInventoryStatus(bedsHook.items),
     [bedsHook.items],
   );
-  /** Same inventory mock for List and Layout (elevation layout kept for non-bed modes). */
+  const roomGroups = useMemo(
+    () => filterRoomGroupsByInventoryStatus(bedsHook.items, statusFilter),
+    [bedsHook.items, statusFilter],
+  );
+  /** Bed inventory uses shared room groups for List + Layout; elevation stays for non-bed modes. */
   const useInventoryList = inventoryEnabled;
+  const useUnitGridEarly =
+    !useInventoryList && !isLayout && Boolean(profile?.showUnits) && !profile?.showFloors;
+  /** Sticky search needs chrome rows in FlatList data; unit-grid (numColumns>1) keeps ListHeader. */
+  const useStickySearch = !useUnitGridEarly;
+  const stickyChromeCount = 3;
 
   const listHook = profile?.showFloors ? floorsHook : unitsHook;
   const {
@@ -180,34 +203,27 @@ export function AccommodationBuilderScreen() {
   } = listHook;
 
   const items: ListItem[] = profile?.showFloors ? floorsHook.floors : unitsHook.units;
+  const searchScrollItems: Array<ListItem | BedRoomGroup> = useInventoryList
+    ? roomGroups
+    : items;
 
-  const listRef = useAccommodationSearchScroll(
-    items,
+  const listRef = useAccommodationSearchScroll<ListItem | BedRoomGroup>(
+    searchScrollItems,
     searchQuery,
-    useCallback((item: ListItem) => item.name, []),
+    useCallback(
+      (item: ListItem | BedRoomGroup) => ('name' in item ? item.name : item.roomName),
+      [],
+    ),
+    useStickySearch ? stickyChromeCount : 0,
   );
 
-  const trailContext = useMemo(
-    () => ({
+  const openEditBuilding = useCallback(() => {
+    navigation.navigate('BuildingForm', {
       spaceId,
       buildingId,
-      buildingName: summary?.name,
-      layoutMode: profile?.layoutMode,
-    }),
-    [buildingId, profile?.layoutMode, spaceId, summary?.name],
-  );
-
-  const trailSegments = useMemo(
-    () => buildAccommodationTrail(trailContext, 'building'),
-    [trailContext],
-  );
-
-  const onTrailNavigate = useCallback(
-    (level: Parameters<typeof handleAccommodationTrailPress>[2]) => {
-      handleAccommodationTrailPress(navigation, trailContext, level, canManage);
-    },
-    [canManage, navigation, trailContext],
-  );
+      mode: 'edit',
+    });
+  }, [buildingId, navigation, spaceId]);
 
   const duplicateBuildingHook = useDuplicateBuilding();
   const duplicateFloorHook = useDuplicateFloor();
@@ -333,10 +349,11 @@ export function AccommodationBuilderScreen() {
     ? bedsHook.loading && !refreshing && roomGroups.length === 0
     : listLoading && !refreshing && items.length === 0;
   const error = summaryError ?? (useInventoryList ? bedsHook.error : listError);
-  const useUnitGrid = isLayout && !useInventoryList && profile?.showUnits;
+  // Two-column approved unit cards in list mode when this building is unit-centric (no floor list).
+  const useUnitGrid = useUnitGridEarly;
 
-  const listHeader = (
-    <View style={styles.header}>
+  const headerBeforeSearch = (
+    <View style={styles.headerTop}>
       {error ? (
         <View style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>{error}</Text>
@@ -353,26 +370,23 @@ export function AccommodationBuilderScreen() {
         active={isRental && rentalBuildingActive != null ? rentalBuildingActive : undefined}
         canEditPhoto={canEditEntityPhoto(permissions.membershipRole)}
         onPhotoChanged={fileId => patchSummary({ photoFileId: fileId })}
-        onSaveName={async name => {
-          await renameBuildingName(
-            spaceId,
-            buildingId,
-            name,
-            summary
-              ? { code: summary.code, layoutMode: summary.layoutMode }
-              : undefined,
-          );
-          patchSummary({ name });
-          showToast(t('accommodation.buildings.updateSuccess'));
-        }}
+        onEditPress={showFab ? openEditBuilding : undefined}
       />
 
-      {isRental ? null : (
-        <AccommodationContextTrail segments={trailSegments} onNavigate={onTrailNavigate} />
-      )}
+      {useInventoryList ? (
+        <InventoryStatusFilterCapsules
+          value={statusFilter}
+          counts={inventoryStatusCounts}
+          onChange={setStatusFilter}
+        />
+      ) : null}
 
       <AccommodationViewModeToggle value={isLayout ? 'layout' : 'list'} onChange={setViewMode} />
+    </View>
+  );
 
+  const searchBarBlock = (
+    <View style={styles.stickySearch}>
       {isRental ? (
         <View style={styles.searchRow}>
           <AccommodationSearchBar
@@ -408,17 +422,21 @@ export function AccommodationBuilderScreen() {
           ) : null}
         </View>
       ) : (
-      <AccommodationSearchBar
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-        placeholder={
-          useInventoryList
-            ? t('accommodation.builder.searchRooms', { defaultValue: 'Search rooms...' })
-            : undefined
-        }
-      />
+        <AccommodationSearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder={
+            useInventoryList
+              ? t('accommodation.builder.searchRooms', { defaultValue: 'Search rooms...' })
+              : undefined
+          }
+        />
       )}
+    </View>
+  );
 
+  const headerAfterSearch = (
+    <View style={styles.headerBottom}>
       {canManage &&
       !isRental &&
       profile?.showUnits &&
@@ -447,25 +465,33 @@ export function AccommodationBuilderScreen() {
       ) : null}
 
       {isRental && isLayout ? null : (
-      <DashboardSectionTitle
-        title={
-          useInventoryList
-            ? t('accommodation.builder.allRooms', { defaultValue: 'All Rooms' })
-            : profile?.showFloors
-              ? t('accommodation.floors.title')
-              : t('accommodation.units.title')
-        }
-        subtitle={
-          isRental
-            ? undefined
-            : useInventoryList
-              ? t('accommodation.builder.inventorySubtitle')
-              : t('accommodation.builder.listSubtitle')
-        }
-      />
+        <DashboardSectionTitle
+          title={
+            useInventoryList
+              ? t('accommodation.builder.allRooms', { defaultValue: 'All Rooms' })
+              : profile?.showFloors
+                ? t('accommodation.floors.title')
+                : t('accommodation.units.title')
+          }
+          subtitle={
+            isRental
+              ? undefined
+              : useInventoryList
+                ? t('accommodation.builder.inventorySubtitle')
+                : t('accommodation.builder.listSubtitle')
+          }
+        />
       )}
 
       {showListLoading ? <SkeletonCard /> : null}
+    </View>
+  );
+
+  const listHeader = (
+    <View style={styles.header}>
+      {headerBeforeSearch}
+      {searchBarBlock}
+      {headerAfterSearch}
     </View>
   );
 
@@ -620,16 +646,24 @@ export function AccommodationBuilderScreen() {
       <EmptyState
         title={
           useInventoryList
-            ? t('accommodation.rooms.emptyTitle', { defaultValue: 'No rooms yet' })
+            ? statusFilter !== 'ALL'
+              ? t('accommodation.rooms.emptyFilteredTitle', {
+                  defaultValue: 'No matching beds',
+                })
+              : t('accommodation.rooms.emptyTitle', { defaultValue: 'No rooms yet' })
             : profile?.showFloors
               ? t('accommodation.floors.emptyTitle')
               : t('accommodation.units.emptyTitle')
         }
         description={
           useInventoryList
-            ? t('accommodation.rooms.emptyDescription', {
-                defaultValue: 'Add floors and rooms to see beds here.',
-              })
+            ? statusFilter !== 'ALL'
+              ? t('accommodation.rooms.emptyFilteredDescription', {
+                  defaultValue: 'Try another status filter or clear search.',
+                })
+              : t('accommodation.rooms.emptyDescription', {
+                  defaultValue: 'Add floors and rooms to see beds here.',
+                })
             : profile?.showFloors
               ? t('accommodation.floors.emptyDescription')
               : t('accommodation.units.emptyDescription')
@@ -654,7 +688,10 @@ export function AccommodationBuilderScreen() {
     });
   };
 
-  const renderRoomMenu = (group: BedRoomGroup) => {
+  const renderRoomMenu = (
+    group: BedRoomGroup,
+    triggerVariant: 'pencil' | 'more' = 'pencil',
+  ) => {
     if (!canManage) {
       return undefined;
     }
@@ -715,7 +752,7 @@ export function AccommodationBuilderScreen() {
         role={permissions.membershipRole}
         prependOptions={prependOptions}
         hierarchyOnly
-        triggerVariant="pencil"
+        triggerVariant={triggerVariant}
         forceShowTrigger
         onEdit={() =>
           navigation.navigate('RoomForm', {
@@ -734,46 +771,78 @@ export function AccommodationBuilderScreen() {
     );
   };
 
-  const renderInventoryItem = ({ item }: { item: BedRoomGroup }) => (
-    <BuildingInventoryRoomSection
-      spaceId={spaceId}
-      group={item}
-      pathCrumbs={roomGroupPathCrumbs(item, {
+  const openRoomBeds = (item: BedRoomGroup) => {
+    navigation.navigate('AccommodationBeds', {
+      spaceId,
+      buildingId,
+      roomId: item.roomId,
+      roomName: item.roomName,
+      buildingName: item.buildingName,
+      parentName: item.unitName ?? item.floorName ?? undefined,
+      parentType: item.unitId ? 'unit' : 'floor',
+      floorId: item.floorId ?? undefined,
+      unitId: item.unitId ?? undefined,
+    });
+  };
+
+  const inventoryPathCrumbs = useCallback(
+    (item: BedRoomGroup) =>
+      roomGroupPathCrumbs(item, {
         includeBuilding: true,
         includeUnit: Boolean(profile?.showUnits || profile?.showUnitsOnFloor),
-      })}
-      showAddBed={canManage}
-      menu={renderRoomMenu(item)}
-      onPathCrumbPress={
-        canManage
-          ? crumb => navigateToRoomGroupEntityEdit(navigation, spaceId, item, crumb.level)
-          : undefined
-      }
-      onRoomPress={() =>
-        navigation.navigate('AccommodationBeds', {
-          spaceId,
-          buildingId,
-          roomId: item.roomId,
-          roomName: item.roomName,
-          buildingName: item.buildingName,
-          parentName: item.unitName ?? item.floorName ?? undefined,
-          parentType: item.unitId ? 'unit' : 'floor',
-          floorId: item.floorId ?? undefined,
-          unitId: item.unitId ?? undefined,
-        })
-      }
-      onBedPress={openBedDetail}
-      onEditBed={canManage ? bed => bedInteraction.open(persistedTargetFromSpaceBed(bed)) : undefined}
-      onAddBed={() =>
-        navigation.navigate('BedForm', {
-          spaceId,
-          buildingId,
-          roomId: item.roomId,
-          mode: 'create',
-        })
-      }
-    />
+      }),
+    [profile?.showUnits, profile?.showUnitsOnFloor],
   );
+
+  const onInventoryPathCrumbPress = useCallback(
+    (item: BedRoomGroup) =>
+      canManage
+        ? (crumb: RoomPathCrumb) =>
+            navigateToRoomGroupEntityEdit(navigation, spaceId, item, crumb.level)
+        : undefined,
+    [canManage, navigation, spaceId],
+  );
+
+  const renderInventoryItem = ({ item }: { item: BedRoomGroup }) => {
+    const pathCrumbs = inventoryPathCrumbs(item);
+    const onPathCrumbPress = onInventoryPathCrumbPress(item);
+
+    if (isList) {
+      return (
+        <BuildingInventoryRoomListSection
+          spaceId={spaceId}
+          group={item}
+          pathCrumbs={pathCrumbs}
+          menu={renderRoomMenu(item, 'more')}
+          onRoomPress={() => openRoomBeds(item)}
+          onPathCrumbPress={onPathCrumbPress}
+          onBedPress={openBedDetail}
+        />
+      );
+    }
+
+    return (
+      <BuildingInventoryRoomSection
+        spaceId={spaceId}
+        group={item}
+        pathCrumbs={pathCrumbs}
+        showAddBed={canManage && statusFilter === 'ALL'}
+        menu={renderRoomMenu(item, 'pencil')}
+        onPathCrumbPress={onPathCrumbPress}
+        onRoomPress={() => openRoomBeds(item)}
+        onBedPress={openBedDetail}
+        onEditBed={canManage ? bed => bedInteraction.open(persistedTargetFromSpaceBed(bed)) : undefined}
+        onAddBed={() =>
+          navigation.navigate('BedForm', {
+            spaceId,
+            buildingId,
+            roomId: item.roomId,
+            mode: 'create',
+          })
+        }
+      />
+    );
+  };
 
   const renderItem = ({ item }: { item: ListItem }) => {
     if (isFloorItem(item)) {
@@ -801,30 +870,29 @@ export function AccommodationBuilderScreen() {
 
     const unit = item as UnitListItemResponse;
     const unitMenu = renderUnitMenu(unit);
+    const inactive = !isAccommodationEntityActive(unit);
 
     return (
-      <AccommodationEntityRow
-        title={unit.name}
-        subtitle={
-          isRental
-            ? t(`accommodation.status.${unit.status}`)
-            : t('accommodation.listItem.unit', {
-                roomCount: unit.roomCount,
-                bedCount: unit.bedCount,
-              })
-        }
-        hierarchyLevel="unit"
-        badge={isRental && isAccommodationEntityActive(unit) ? <AccommodationStatusBadge status={unit.status} /> : undefined}
-        editableName={showFab}
-        onSaveName={async name => {
-          await renameUnitName(spaceId, buildingId, unit.unitId, name);
-          unitsHook.patchUnit(unit.unitId, { name });
-          showToast(t('accommodation.units.updateSuccess'));
-        }}
-        active={unit.active}
-        onPress={() => openUnit(unit)}
-        menu={unitMenu}
-      />
+      <View style={useUnitGrid ? styles.unitGridItem : styles.unitListItem}>
+        <InventoryListingCard
+          kind="unit"
+          title={unit.name}
+          subtitle={
+            isRental
+              ? null
+              : t('accommodation.listItem.unit', {
+                  roomCount: unit.roomCount,
+                  bedCount: unit.bedCount,
+                })
+          }
+          status={inactive ? null : unit.status}
+          inactive={inactive}
+          occupancyPercent={inactive ? 0 : occupancyPercentFromStatus(unit.status)}
+          menu={unitMenu}
+          onPressDetails={() => openUnit(unit)}
+          onPressCard={() => openUnit(unit)}
+        />
+      </View>
     );
   };
 
@@ -843,17 +911,31 @@ export function AccommodationBuilderScreen() {
         canEdit={canEditEntityPhoto(permissions.membershipRole)}>
     <View style={styles.root}>
       <FlatList
-        ref={listRef}
+        ref={listRef as React.RefObject<FlatList<any>>}
         data={
-          showListLoading || (!useInventoryList && isLayout)
-            ? []
-            : useInventoryList
-              ? roomGroups
-              : items
+          useStickySearch
+            ? ([
+                { kind: 'before' as const },
+                { kind: 'search' as const },
+                { kind: 'after' as const },
+                ...(showListLoading || (!useInventoryList && isLayout)
+                  ? []
+                  : (useInventoryList ? roomGroups : items).map(entry => ({
+                      kind: 'data' as const,
+                      entry,
+                    }))),
+              ] as const)
+            : showListLoading || (!useInventoryList && isLayout)
+              ? []
+              : useInventoryList
+                ? roomGroups
+                : items
         }
         key={
           useInventoryList
-            ? 'building-inventory-rooms'
+            ? isList
+              ? `building-inventory-list-${statusFilter}`
+              : `building-inventory-layout-${statusFilter}`
             : isLayout
               ? 'accommodation-layout'
               : useUnitGrid
@@ -864,29 +946,43 @@ export function AccommodationBuilderScreen() {
         columnWrapperStyle={
           !useInventoryList && !isLayout && useUnitGrid ? styles.unitGridRow : undefined
         }
-        keyExtractor={item =>
-          useInventoryList
-            ? (item as BedRoomGroup).key
-            : isFloorItem(item as ListItem)
-              ? (item as FloorListItemResponse).floorId
-              : (item as UnitListItemResponse).unitId
-        }
+        stickyHeaderIndices={useStickySearch ? [1] : undefined}
+        keyExtractor={(item: any) => {
+          if (item?.kind === 'before' || item?.kind === 'search' || item?.kind === 'after') {
+            return item.kind;
+          }
+          const row = item?.kind === 'data' ? item.entry : item;
+          if (isRoomGroup(row)) {
+            return row.key;
+          }
+          return isFloorItem(row) ? row.floorId : row.unitId;
+        }}
         removeClippedSubviews={false}
         contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
         ListHeaderComponent={
-          <>
-            {listHeader}
-            {layoutVisual}
-          </>
+          useStickySearch ? null : (
+            <>
+              {listHeader}
+              {layoutVisual}
+            </>
+          )
         }
-        ListEmptyComponent={listEmpty}
+        ListEmptyComponent={useStickySearch ? null : listEmpty}
         ListFooterComponent={
-          <AccommodationListFooter
-            loadingMore={useInventoryList ? bedsHook.loadingMore : loadingMore}
-          />
+          <>
+            {useStickySearch &&
+            !(showListLoading || (!useInventoryList && isLayout)) &&
+            (useInventoryList ? roomGroups : items).length === 0
+              ? listEmpty
+              : null}
+            <AccommodationListFooter
+              loadingMore={useInventoryList ? bedsHook.loadingMore : loadingMore}
+            />
+          </>
         }
         onEndReached={() => {
           if (useInventoryList) {
@@ -897,11 +993,24 @@ export function AccommodationBuilderScreen() {
           }
         }}
         onEndReachedThreshold={0.3}
-        renderItem={
-          useInventoryList
-            ? (renderInventoryItem as never)
-            : (renderItem as never)
-        }
+        renderItem={({ item }: { item: any }) => {
+          if (item?.kind === 'before') {
+            return headerBeforeSearch;
+          }
+          if (item?.kind === 'search') {
+            return searchBarBlock;
+          }
+          if (item?.kind === 'after') {
+            return (
+              <View>
+                {headerAfterSearch}
+                {layoutVisual}
+              </View>
+            );
+          }
+          const row = item?.kind === 'data' ? item.entry : item;
+          return isRoomGroup(row) ? renderInventoryItem({ item: row }) : renderItem({ item: row });
+        }}
       />
 
       {showFab ? (
@@ -1032,6 +1141,19 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     gap: spacing.sm,
   },
+  headerTop: {
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  headerBottom: {
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  stickySearch: {
+    backgroundColor: colors.background,
+    paddingBottom: spacing.sm,
+    zIndex: 2,
+  },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -1086,6 +1208,13 @@ const styles = StyleSheet.create({
   },
   unitGridRow: {
     gap: spacing.sm,
+  },
+  unitGridItem: {
+    flex: 1,
+    minWidth: 0,
+  },
+  unitListItem: {
+    marginBottom: spacing.sm,
   },
   centered: {
     flex: 1,

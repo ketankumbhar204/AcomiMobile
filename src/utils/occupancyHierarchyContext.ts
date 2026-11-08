@@ -30,7 +30,13 @@ export function withSpaceHierarchyContext(
   };
 }
 
-type FlowPhase = 'hierarchy' | 'member' | 'contract' | 'reserve_dates' | 'review';
+type FlowPhase =
+  | 'hierarchy'
+  | 'member'
+  | 'stay_type'
+  | 'contract'
+  | 'reserve_dates'
+  | 'review';
 
 export function buildConfirmedHierarchyContext(
   scope: HierarchyOccupancyScope,

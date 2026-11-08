@@ -25,6 +25,8 @@ export function PaymentHistoryScreen() {
   const { spaceId, paymentId } = route.params;
 
   const [events, setEvents] = useState<PaymentTimelineEventResponse[]>([]);
+  const [paymentAmount, setPaymentAmount] = useState<number | null>(null);
+  const [currencyCode, setCurrencyCode] = useState('INR');
   const [loading, setLoading] = useState(true);
   const [serviceUnavailable, setServiceUnavailable] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,8 +36,15 @@ export function PaymentHistoryScreen() {
     setError(null);
     setServiceUnavailable(false);
     try {
-      const response = await paymentsApi.getPaymentTimeline(spaceId, paymentId);
+      const [response, payment] = await Promise.all([
+        paymentsApi.getPaymentTimeline(spaceId, paymentId),
+        paymentsApi.getPayment(spaceId, paymentId).catch(() => null),
+      ]);
       setEvents(response.events);
+      if (payment) {
+        setPaymentAmount(payment.amount ?? null);
+        setCurrencyCode(payment.currencyCode || 'INR');
+      }
     } catch (err) {
       if (err instanceof PaymentServiceUnavailableError) {
         setServiceUnavailable(true);
@@ -99,7 +108,11 @@ export function PaymentHistoryScreen() {
         />
       ) : (
         <ScrollView showsVerticalScrollIndicator={false}>
-          <PaymentHistoryTimeline events={events} />
+          <PaymentHistoryTimeline
+            events={events}
+            paymentAmount={paymentAmount}
+            currencyCode={currencyCode}
+          />
         </ScrollView>
       )}
     </Screen>

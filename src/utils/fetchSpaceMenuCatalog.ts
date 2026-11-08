@@ -28,7 +28,11 @@ async function withNetworkRetry<T>(run: () => Promise<T>): Promise<T> {
     if (!isNetwork) {
       throw error;
     }
-    await new Promise(resolve => setTimeout(resolve, 400));
+    await new Promise<void>(resolve => {
+      setTimeout(() => {
+        resolve();
+      }, 400);
+    });
     return run();
   }
 }

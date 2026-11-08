@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   },
   name: {
     ...typography.bodyStrong,
-    color: colors.text,
+    color: colors.textPrimary,
     flexShrink: 1,
   },
   nameSelected: {
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
   },
   price: {
     ...typography.bodyStrong,
-    color: colors.text,
+    color: colors.textPrimary,
     marginLeft: spacing.xs,
   },
 });

@@ -175,8 +175,42 @@ export function AccommodationOccupancyQuickActions({
               disabled={disabled}
               compact={compact}
             />
+            {context.occupancy?.stayKind === 'OPEN_ENDED' ? (
+              <QuickButton
+                label={t('occupancy.actions.reviseOpenEnded', {
+                  defaultValue: 'Update Daily Rent',
+                })}
+                tint={occupancyActionTint.transfer}
+                onPress={() => void flow.startReviseOpenEndedRent(context)}
+                disabled={disabled}
+                compact={compact}
+              />
+            ) : (
+              <>
+                <QuickButton
+                  label={t('occupancy.actions.extend', { defaultValue: 'Extend stay' })}
+                  tint={occupancyActionTint.transfer}
+                  onPress={() => void flow.startExtend(context)}
+                  disabled={disabled}
+                  compact={compact}
+                />
+                {context.occupancy?.stayKind !== 'SHORT' ? (
+                  <QuickButton
+                    label={t('occupancy.actions.renewMonthly', {
+                      defaultValue: 'Monthly renewal',
+                    })}
+                    tint={occupancyActionTint.transfer}
+                    onPress={() => void flow.startRenewMonthly(context)}
+                    disabled={disabled}
+                    compact={compact}
+                  />
+                ) : null}
+              </>
+            )}
             <QuickButton
-              label={t('occupancy.actions.vacate')}
+              label={t('occupancy.actions.checkout', {
+                defaultValue: t('occupancy.actions.vacate'),
+              })}
               tint={occupancyActionTint.vacate}
               onPress={() => void flow.startVacate(context)}
               disabled={disabled}

@@ -35,11 +35,17 @@ import {
   DashboardAccommodationOperations,
   type AccommodationOpsMetricId,
 } from '../../components/dashboard/DashboardAccommodationOperations';
+import { DashboardPendingPaymentsBanner } from '../../components/dashboard/DashboardPendingPaymentsBanner';
 import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
 import { DashboardActionRow } from '../../components/dashboard/shared/DashboardActionRow';
 import { SetupActionCard } from '../../components/accommodation/SetupActionCard';
 import { CoachmarkAnchor, CoachmarkSequence } from '../../components/coachmarks';
-import { InventoryListSkeleton, RequireAccommodationAccess, SkeletonCard } from '../../components/ui';
+import {
+  CompactPageBanner,
+  InventoryListSkeleton,
+  RequireAccommodationAccess,
+  SkeletonCard,
+} from '../../components/ui';
 import { ENABLE_SETUP_COACHMARKS } from '../../coachmarks';
 import { paymentsApi } from '../../api/paymentsApi';
 import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
@@ -54,7 +60,7 @@ import { useSpaceTabHeader } from '../../hooks/useSpaceTabHeader';
 import type { MainStackParamList, SpaceTabParamList } from '../../navigation/types';
 import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
-import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { colors, pageContentGutter, radius, shadows, spacing, typography } from '../../theme';
 import { matchesSearch } from '../../utils/accommodationSearch';
 import {
   isInlineOpsResultsFocus,
@@ -265,6 +271,7 @@ export function AccommodationHomeScreen() {
   const selectedOpsMetricId = useMemo((): AccommodationOpsMetricId | null => {
     if (opsFocus === 'OCCUPIED') return 'occupied';
     if (opsFocus === 'VACANT') return 'vacant';
+    if (opsFocus === 'RESERVED') return 'reserved';
     if (opsFocus === 'MOVE_INS_THIS_MONTH') return 'moveIns';
     if (opsFocus === 'PENDING_PAYMENTS') return 'pendingPay';
     return null;
@@ -400,8 +407,8 @@ export function AccommodationHomeScreen() {
     toggleOpsFocus('VACANT');
   }, [toggleOpsFocus]);
 
-  const handleMoveInsPress = useCallback(() => {
-    toggleOpsFocus('MOVE_INS_THIS_MONTH');
+  const handleReservedBedsPress = useCallback(() => {
+    toggleOpsFocus('RESERVED');
   }, [toggleOpsFocus]);
 
   const handlePendingPaymentsPress = useCallback(() => {
@@ -491,29 +498,24 @@ export function AccommodationHomeScreen() {
                 </Text>
               </View>
             ) : (
-              <View style={styles.hero}>
-                <View style={styles.decorBlob} pointerEvents="none" />
-                <View style={styles.heroIconWrap} accessibilityElementsHidden>
-                  <Building2 size={16} color="#2563EB" strokeWidth={2.2} />
-                </View>
-                <View style={styles.heroText}>
-                  <Text style={styles.heading} numberOfLines={1}>
-                    {t('accommodation.home.title', { defaultValue: 'Rooms' })}
-                  </Text>
-                  <Text style={styles.subheading} numberOfLines={1}>
-                    {t(
-                      unitLevel
-                        ? 'accommodation.home.pageSubtitleUnits'
-                        : 'accommodation.home.subtitle',
-                      {
-                        defaultValue: unitLevel
-                          ? 'Buildings and units in one place'
-                          : 'Buildings, floors, rooms, and beds in one place',
-                      },
-                    )}
-                  </Text>
-                </View>
-              </View>
+              <CompactPageBanner
+                icon={Building2}
+                title={t('accommodation.home.title', { defaultValue: 'Rooms' })}
+                subtitle={t(
+                  unitLevel
+                    ? 'accommodation.home.pageSubtitleUnits'
+                    : 'accommodation.home.subtitle',
+                  {
+                    defaultValue: unitLevel
+                      ? 'Buildings and units in one place'
+                      : 'Buildings, floors, rooms, and beds in one place',
+                  },
+                )}
+                accent="#1D4ED8"
+                soft="#EFF6FF"
+                border="#BFDBFE"
+                testID="rooms-home-banner"
+              />
             )}
 
             {displayAccommodationOperations ? (
@@ -522,9 +524,15 @@ export function AccommodationHomeScreen() {
                   title={t('dashboard.accommodationOps.title', {
                     defaultValue: 'Property operations',
                   })}
-                  subtitle={t('dashboard.accommodationOps.subtitle', {
-                    defaultValue: 'Occupancy at a glance',
-                  })}
+                  subtitle={
+                    unitLevel
+                      ? t('dashboard.accommodationOps.subtitleUnits', {
+                          defaultValue: 'Current unit status across all buildings',
+                        })
+                      : t('dashboard.accommodationOps.subtitleBeds', {
+                          defaultValue: 'Current bed status across all buildings',
+                        })
+                  }
                 />
                 <DashboardAccommodationOperations
                   hideTitle
@@ -537,10 +545,13 @@ export function AccommodationHomeScreen() {
                   onVacantPress={
                     canOpenOccupancyDrilldown ? handleVacantBedsPress : undefined
                   }
-                  onMoveInsPress={
-                    canOpenOccupancyDrilldown ? handleMoveInsPress : undefined
+                  onReservedPress={
+                    canOpenOccupancyDrilldown ? handleReservedBedsPress : undefined
                   }
-                  onPendingPress={
+                />
+                <DashboardPendingPaymentsBanner
+                  count={displayAccommodationOperations.pendingPaymentsCount}
+                  onPress={
                     canOpenOccupancyDrilldown ? handlePendingPaymentsPress : undefined
                   }
                 />
@@ -595,7 +606,9 @@ export function AccommodationHomeScreen() {
                         ? 'OCCUPIED'
                         : opsFocus === 'VACANT'
                           ? 'AVAILABLE'
-                          : undefined
+                          : opsFocus === 'RESERVED'
+                            ? 'RESERVED'
+                            : undefined
                     }
                     unitIds={
                       opsFocus === 'MOVE_INS_THIS_MONTH' || opsFocus === 'PENDING_PAYMENTS'
@@ -747,61 +760,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: spacing.lg,
+    paddingHorizontal: pageContentGutter,
+    paddingTop: spacing.lg,
     paddingBottom: 120,
-  },
-  hero: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: 18,
-    backgroundColor: '#EFF6FF',
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-    overflow: 'hidden',
-    position: 'relative',
-    ...shadows.sm,
-  },
-  decorBlob: {
-    position: 'absolute',
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: 'rgba(37, 99, 235, 0.12)',
-    top: -48,
-    right: -28,
-  },
-  heroIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.sm,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1,
-  },
-  heroText: {
-    flex: 1,
-    minWidth: 0,
-    zIndex: 1,
-    gap: 1,
-  },
-  heading: {
-    ...typography.bodyStrong,
-    fontSize: 16,
-    lineHeight: 20,
-    fontWeight: '700',
-    color: '#1D4ED8',
-  },
-  subheading: {
-    ...typography.caption,
-    fontSize: 12,
-    color: colors.muted,
   },
   errorBanner: {
     backgroundColor: '#FEF2F2',

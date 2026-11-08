@@ -8,6 +8,7 @@ import type {
   TransferOccupancyRequest,
   UUID,
   VacateOccupancyRequest,
+  ExtendOccupancyRequest,
 } from '../api/types';
 import { getOccupancyErrorMessage } from '../utils/occupancyErrors';
 import { invalidateAfterOccupancyChange } from '../utils/occupancyQueryCache';
@@ -22,7 +23,7 @@ export function useOccupancyMutations(spaceId: UUID) {
       setError(null);
       try {
         const result = await occupancyApi.allocateMember(spaceId, body);
-        invalidateAfterOccupancyChange();
+        invalidateAfterOccupancyChange(spaceId);
         return result;
       } catch (err) {
         const message = getOccupancyErrorMessage(err, 'occupancy.errors.allocate');
@@ -41,7 +42,7 @@ export function useOccupancyMutations(spaceId: UUID) {
       setError(null);
       try {
         const result = await occupancyApi.reserveOccupancy(spaceId, body);
-        invalidateAfterOccupancyChange();
+        invalidateAfterOccupancyChange(spaceId);
         return result;
       } catch (err) {
         const message = getOccupancyErrorMessage(err, 'occupancy.errors.reserve');
@@ -60,7 +61,7 @@ export function useOccupancyMutations(spaceId: UUID) {
       setError(null);
       try {
         const result = await occupancyApi.moveInOccupancy(spaceId, occupancyId, body);
-        invalidateAfterOccupancyChange();
+        invalidateAfterOccupancyChange(spaceId);
         return result;
       } catch (err) {
         const message = getOccupancyErrorMessage(err, 'occupancy.errors.moveIn');
@@ -79,7 +80,7 @@ export function useOccupancyMutations(spaceId: UUID) {
       setError(null);
       try {
         const result = await occupancyApi.cancelReservation(spaceId, occupancyId, body);
-        invalidateAfterOccupancyChange();
+        invalidateAfterOccupancyChange(spaceId);
         return result;
       } catch (err) {
         const message = getOccupancyErrorMessage(err, 'occupancy.errors.cancelReservation');
@@ -98,7 +99,7 @@ export function useOccupancyMutations(spaceId: UUID) {
       setError(null);
       try {
         const result = await occupancyApi.transferOccupancy(spaceId, occupancyId, body);
-        invalidateAfterOccupancyChange();
+        invalidateAfterOccupancyChange(spaceId);
         return result;
       } catch (err) {
         const message = getOccupancyErrorMessage(err, 'occupancy.errors.transfer');
@@ -117,12 +118,27 @@ export function useOccupancyMutations(spaceId: UUID) {
       setError(null);
       try {
         const result = await occupancyApi.vacateOccupancy(spaceId, occupancyId, body);
-        invalidateAfterOccupancyChange();
+        invalidateAfterOccupancyChange(spaceId);
         return result;
       } catch (err) {
         const message = getOccupancyErrorMessage(err, 'occupancy.errors.vacate');
         setError(message);
         throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [spaceId],
+  );
+
+  const extendStay = useCallback(
+    async (occupancyId: UUID, body: ExtendOccupancyRequest) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const result = await occupancyApi.extendOccupancy(spaceId, occupancyId, body);
+        invalidateAfterOccupancyChange(spaceId);
+        return result;
       } finally {
         setLoading(false);
       }
@@ -139,6 +155,7 @@ export function useOccupancyMutations(spaceId: UUID) {
     cancelReservation,
     transfer,
     vacate,
+    extendStay,
     loading,
     error,
     clearError,

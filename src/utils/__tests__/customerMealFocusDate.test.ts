@@ -1,4 +1,5 @@
 import { mealsApi } from '../../api/mealsApi';
+import type { MealPollDayResponse } from '../../api/types';
 import {
   pollCardSelectPromptKey,
   pollCardTitleKey,
@@ -9,6 +10,27 @@ import {
   CUSTOMER_MEAL_DATE_MIN_OFFSET,
   resolveCustomerMealFocusDate,
 } from '../customerMealFocusDate';
+
+function emptyPollDay(menuDate: string): MealPollDayResponse {
+  return { pollDate: menuDate, polls: [] };
+}
+
+function plannedPollDay(menuDate: string): MealPollDayResponse {
+  return {
+    pollDate: menuDate,
+    polls: [
+      {
+        id: '1',
+        pollDate: menuDate,
+        mealType: 'LUNCH',
+        status: 'OPEN',
+        dailyMenuId: 'menu-1',
+        options: [],
+        responseCount: 0,
+      },
+    ],
+  };
+}
 
 describe('customer meal date helpers', () => {
   it('uses today title when polls are for today', () => {
@@ -39,15 +61,10 @@ describe('customer meal date helpers', () => {
     const getMealPolls = jest
       .spyOn(mealsApi, 'getMealPolls')
       .mockImplementation(async (_spaceId, menuDate) => {
-        if (menuDate === '2026-07-12') {
-          return { polls: [] } as Awaited<ReturnType<typeof mealsApi.getMealPolls>>;
-        }
         if (menuDate === '2026-07-13') {
-          return {
-            polls: [{ id: '1' }],
-          } as Awaited<ReturnType<typeof mealsApi.getMealPolls>>;
+          return plannedPollDay(menuDate);
         }
-        return { polls: [] } as Awaited<ReturnType<typeof mealsApi.getMealPolls>>;
+        return emptyPollDay(menuDate);
       });
     await expect(resolveCustomerMealFocusDate('space-1', 'MESS')).resolves.toBe('2026-07-13');
     getMealPolls.mockRestore();

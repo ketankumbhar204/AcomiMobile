@@ -19,6 +19,8 @@ export type PersistedBedTarget = {
   roomId: string;
   bedId: string;
   label: string;
+  /** API bed name; falls back to label when omitted. */
+  name?: string;
   bedNumber: string;
   status: AccommodationStatus;
   rent?: number | null;
@@ -73,6 +75,7 @@ export function usePersistedBedInteraction(options: {
         return;
       }
       const current: BedInteractionDraft = {
+        name: (target.name ?? target.label ?? target.bedNumber).trim(),
         bedNumber: target.bedNumber,
         rent: target.rent ?? null,
         deposit: target.deposit ?? null,
@@ -81,7 +84,8 @@ export function usePersistedBedInteraction(options: {
         return;
       }
       const nextNumber = draft.bedNumber.trim();
-      if (!nextNumber) {
+      const nextName = draft.name.trim() || nextNumber;
+      if (!nextNumber || !nextName) {
         showToast(t('accommodation.beds.validationError'), undefined, 'error');
         return;
       }
@@ -90,11 +94,12 @@ export function usePersistedBedInteraction(options: {
         setSaving(true);
         try {
           await updateBedDetails(options.spaceId, target.roomId, target.bedId, {
-            name: nextNumber,
+            name: nextName,
             bedNumber: nextNumber,
           });
           showToast(t('accommodation.beds.updateSuccess'));
           keepOpenWithSavedDraft({
+            name: nextName,
             bedNumber: nextNumber,
             rent: target.rent ?? null,
             deposit: target.deposit ?? null,
@@ -113,6 +118,7 @@ export function usePersistedBedInteraction(options: {
       }
 
       savedDraftRef.current = {
+        name: nextName,
         bedNumber: nextNumber,
         rent: draft.rent,
         deposit: draft.deposit,
@@ -120,12 +126,12 @@ export function usePersistedBedInteraction(options: {
       pricingCommit.request({
         roomId: target.roomId,
         bedId: target.bedId,
-        bedLabel: formatBedDisplayLabel(target.label || nextNumber, t),
+        bedLabel: formatBedDisplayLabel(nextName || nextNumber, t),
         currentRent: target.rent,
         currentDeposit: target.deposit,
         nextRent: draft.rent,
         nextDeposit: draft.deposit,
-        name: nextNumber,
+        name: nextName,
         bedNumber: nextNumber,
       });
     },

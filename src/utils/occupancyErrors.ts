@@ -44,12 +44,20 @@ const MESSAGE_PATTERNS: Array<{ pattern: RegExp; key: string }> = [
     key: 'occupancy.errors.genderMismatch',
   },
   {
-    pattern: /not available|status:\s*MAINTENANCE/i,
+    pattern: /status:\s*maintenance/i,
     key: 'occupancy.errors.targetMaintenance',
   },
   {
-    pattern: /status:\s*BLOCKED|blocked/i,
+    pattern: /status:\s*blocked/i,
     key: 'occupancy.errors.targetBlocked',
+  },
+  {
+    pattern: /expectedexitdate and expectedcheckoutdate must be the same planned end date/i,
+    key: 'occupancy.errors.plannedEndMismatch',
+  },
+  {
+    pattern: /overlaps another stay/i,
+    key: 'occupancy.errors.stayOverlap',
   },
   {
     pattern: /not available|occupied|reserved/i,
@@ -85,7 +93,19 @@ export function getOccupancyErrorMessage(
   }
 
   if (error.message) {
-    return mapKnownMessage(error.message) ?? error.message;
+    const mapped = mapKnownMessage(error.message);
+    if (mapped) {
+      return mapped;
+    }
+    // Preserve server copy for short-stay / extension messages that are already owner-facing.
+    if (
+      /short stay|agreed total|extension|calendar month|additional amount|planned end/i.test(
+        error.message,
+      )
+    ) {
+      return error.message;
+    }
+    return i18n.t(fallbackKey);
   }
 
   switch (error.status) {

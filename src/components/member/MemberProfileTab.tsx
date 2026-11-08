@@ -29,6 +29,7 @@ import { MemberDocumentsSection } from './MemberDocumentsSection';
 import { ProfileDisclosure } from './ProfileDisclosure';
 import { MemberProfileCorrectionSection } from '../profile/MemberProfileCorrectionSection';
 import { UserProfileFields } from '../profile/UserProfileFields';
+import { ContactNumberLine } from './ContactAndStayMeta';
 import { MemberDetailRow } from './MemberDetailRow';
 import { MemberMealBillingPanel } from './MemberMealBillingPanel';
 import { MemberNotesSection } from './MemberNotesSection';
@@ -233,6 +234,13 @@ export function MemberProfileTab({
             <MemberDetailRow
               label={t('membership.details.mobile')}
               value={formatMemberContactNumber(member.mobileNumber) ?? member.mobileNumber}
+              valueNode={
+                <ContactNumberLine
+                  value={member.mobileNumber}
+                  name={member.fullName}
+                  textStyle={styles.detailContact}
+                />
+              }
             />
             <MemberDetailRow label={t('membership.details.gender')} value={genderLabel} isLast />
           </ProfileDisclosure>
@@ -250,6 +258,16 @@ export function MemberProfileTab({
               value={
                 formatMemberContactNumber(member.emergencyContactMobile) ??
                 t('membership.details.notProvided')
+              }
+              valueNode={
+                member.emergencyContactMobile ? (
+                  <ContactNumberLine
+                    value={member.emergencyContactMobile}
+                    name={member.emergencyContactName ?? member.fullName}
+                    roleLabel={t('membership.emergency.heading')}
+                    textStyle={styles.detailContact}
+                  />
+                ) : undefined
               }
               isLast
             />
@@ -460,6 +478,10 @@ const styles = StyleSheet.create({
   card: {
     marginBottom: spacing.md,
     borderRadius: 18,
+  },
+  detailContact: {
+    ...typography.bodyStrong,
+    color: colors.primaryDark,
   },
   actionsStack: {
     gap: spacing.sm,

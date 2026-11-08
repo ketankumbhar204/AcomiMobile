@@ -3,18 +3,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { UUID } from '../../../api/types';
 import type { MainStackParamList } from '../../../navigation/types';
 import { navigationRef } from '../../../navigation/navigationRef';
-import type { OccupancyWizardMode } from './types';
 
-export type OccupancyWizardNavParams = {
-  spaceId: UUID;
-  mode: OccupancyWizardMode;
-  memberId?: UUID;
-  bedId?: UUID;
-  roomId?: UUID;
-  unitId?: UUID;
-  buildingId?: UUID;
-  occupancyId?: UUID;
-};
+export type OccupancyWizardNavParams = MainStackParamList['OccupancyWizard'];
 
 export function navigateToMemberDetailsAfterOccupancy(
   navigation: NativeStackNavigationProp<MainStackParamList>,

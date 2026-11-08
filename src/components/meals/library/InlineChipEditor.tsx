@@ -87,7 +87,7 @@ export function InlineChipEditor({
           onPress={() => void handleSave()}
           hitSlop={6}
           accessibilityLabel={t('common.save')}>
-          <Check size={14} color={colors.primaryDark} strokeWidth={2.6} />
+          <Check size={16} color="#FFFFFF" strokeWidth={3} />
         </Pressable>
       )}
       <Pressable

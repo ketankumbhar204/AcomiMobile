@@ -8,6 +8,7 @@ import {
   QuickActionSheetProvider,
   Toast,
 } from './src/components/ui';
+import { ContactOptionsProvider } from './src/components/contact';
 import { EnquiryResultToast } from './src/components/discovery/EnquiryResultToast';
 import { CoachmarkProvider } from './src/coachmarks';
 import { AccommodationActionSheet } from './src/components/accommodation';
@@ -31,7 +32,11 @@ function App() {
   }, []);
 
   if (!isI18nReady) {
-    return <BrandSplash />;
+    return (
+      <SafeAreaProvider>
+        <BrandSplash />
+      </SafeAreaProvider>
+    );
   }
 
   return (
@@ -40,13 +45,15 @@ function App() {
         <ConfirmDialogProvider>
           <OverflowMenuProvider>
             <QuickActionSheetProvider>
-              <CoachmarkProvider>
-                <RootNavigator />
-                <AccommodationActionSheet />
-                <Toast />
-                <EnquiryResultToast />
-                <MemberMealActivityDaySheetHost />
-              </CoachmarkProvider>
+              <ContactOptionsProvider>
+                <CoachmarkProvider>
+                  <RootNavigator />
+                  <AccommodationActionSheet />
+                  <Toast />
+                  <EnquiryResultToast />
+                  <MemberMealActivityDaySheetHost />
+                </CoachmarkProvider>
+              </ContactOptionsProvider>
             </QuickActionSheetProvider>
           </OverflowMenuProvider>
         </ConfirmDialogProvider>

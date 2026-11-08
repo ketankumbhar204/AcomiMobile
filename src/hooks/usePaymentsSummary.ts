@@ -63,12 +63,10 @@ export function usePaymentsSummary(spaceId: UUID, enabled: boolean) {
 
       const cacheKey = ownerPaymentsMonthCache.key(['summary', spaceId, requestMonth]);
       if (!options?.force) {
-        const cached = ownerPaymentsMonthCache.get(cacheKey) as
-          | { financial: DashboardFinancialSummary; counts: OwnerPaymentsMonthCounts }
-          | null;
-        if (cached) {
+        const cached = ownerPaymentsMonthCache.get(cacheKey);
+        if (cached && 'financial' in cached) {
           const submitted = cached.counts.submitted ?? 0;
-          const underReviewAmount = cached.financial?.underReview ?? 0;
+          const underReviewAmount = cached.financial.underReview ?? 0;
           // Stale client cache: review queue has items but Under Review KPI is empty.
           if (submitted > 0 && !(underReviewAmount > 0)) {
             ownerPaymentsMonthCache.invalidate(cacheKey);

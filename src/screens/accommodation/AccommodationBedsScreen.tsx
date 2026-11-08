@@ -47,7 +47,7 @@ import { useBulkBeds } from '../../hooks/useBulkBeds';
 import { usePersistedBedInteraction } from '../../hooks/usePersistedBedInteraction';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
-import { colors, spacing, typography } from '../../theme';
+import { colors, pageContentGutter, spacing, typography } from '../../theme';
 import { buildAccommodationTrail } from '../../utils/accommodationContext';
 import { handleAccommodationTrailPress } from '../../utils/accommodationNavigation';
 import { invalidateAccommodationQueries } from '../../utils/accommodationQueryCache';
@@ -559,6 +559,8 @@ export function AccommodationBedsScreen() {
         <FlatList
           data={hasBlockingError || showLoading ? [] : beds}
           keyExtractor={item => item.bedId}
+          numColumns={2}
+          columnWrapperStyle={styles.bedColumnWrapper}
           contentContainerStyle={styles.content}
           refreshControl={
             !hasBlockingError ? (
@@ -575,37 +577,39 @@ export function AccommodationBedsScreen() {
           }}
           onEndReachedThreshold={0.3}
           renderItem={({ item: bed }) => (
-            <BedInventoryListRow
-              bed={bed}
-              spaceId={spaceId}
-              spaceType={spaceType ?? 'PG'}
-              flow={occupancyFlow}
-              buildingId={buildingId}
-              buildingName={buildingName}
-              roomId={roomId}
-              roomName={resolvedRoomName}
-              floorId={floorId}
-              unitId={unitId}
-              parentName={parentName}
-              parentType={parentType}
-              canManageLifecycle={canManage}
-              canManageOccupancyActions={canManageOccupancyActions}
-              onEdit={canManage ? () => openBedEditor(bed) : undefined}
-              onPress={() => openBedDetail(bed)}
-              lifecycleMenuProps={{
-                spaceId,
-                buildingId,
-                entityType: 'bed',
-                entityId: bed.bedId,
-                roomId,
-                role: permissions.membershipRole,
-                onEdit: () => openBedEditor(bed),
-                onSuccess: (action, entityType) => {
-                  applyBedLifecycle(action, bed);
-                  handleLifecycleSuccess(action, entityType);
-                },
-              }}
-            />
+            <View style={styles.bedGridItem}>
+              <BedInventoryListRow
+                bed={bed}
+                spaceId={spaceId}
+                spaceType={spaceType ?? 'PG'}
+                flow={occupancyFlow}
+                buildingId={buildingId}
+                buildingName={buildingName}
+                roomId={roomId}
+                roomName={resolvedRoomName}
+                floorId={floorId}
+                unitId={unitId}
+                parentName={parentName}
+                parentType={parentType}
+                canManageLifecycle={canManage}
+                canManageOccupancyActions={canManageOccupancyActions}
+                onEdit={canManage ? () => openBedEditor(bed) : undefined}
+                onPress={() => openBedDetail(bed)}
+                lifecycleMenuProps={{
+                  spaceId,
+                  buildingId,
+                  entityType: 'bed',
+                  entityId: bed.bedId,
+                  roomId,
+                  role: permissions.membershipRole,
+                  onEdit: () => openBedEditor(bed),
+                  onSuccess: (action, entityType) => {
+                    applyBedLifecycle(action, bed);
+                    handleLifecycleSuccess(action, entityType);
+                  },
+                }}
+              />
+            </View>
           )}
         />
       )}
@@ -670,8 +674,20 @@ export function AccommodationBedsScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.xl, paddingBottom: 96, flexGrow: 1 },
+  content: {
+    paddingHorizontal: pageContentGutter,
+    paddingTop: spacing.xl,
+    paddingBottom: 96,
+    flexGrow: 1,
+  },
   header: { marginBottom: spacing.md },
+  bedColumnWrapper: {
+    gap: spacing.sm,
+  },
+  bedGridItem: {
+    flex: 1,
+    minWidth: 0,
+  },
   roomCard: { marginBottom: spacing.lg },
   roomCardHeader: {
     flexDirection: 'row',

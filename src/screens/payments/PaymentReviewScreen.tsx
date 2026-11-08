@@ -105,8 +105,30 @@ export function PaymentReviewScreen() {
         badge: summary.counts.rejected ?? 0,
         tone: 'danger' as const,
       },
+      {
+        id: 'REFUNDED' as const,
+        label: t('paymentCollection.review.chips.refundedLabel', {
+          defaultValue: 'Refunded',
+        }),
+        badge: summary.counts.refunded ?? 0,
+        tone: 'warning' as const,
+      },
+      {
+        id: 'CANCELLED' as const,
+        label: t('paymentCollection.review.chips.cancelledLabel', {
+          defaultValue: 'Cancelled',
+        }),
+        badge: summary.counts.cancelled ?? 0,
+        tone: 'info' as const,
+      },
     ],
-    [summary.counts.paid, summary.counts.rejected, t],
+    [
+      summary.counts.cancelled,
+      summary.counts.paid,
+      summary.counts.refunded,
+      summary.counts.rejected,
+      t,
+    ],
   );
 
   const afterReview = useCallback(async () => {

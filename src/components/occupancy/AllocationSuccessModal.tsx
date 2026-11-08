@@ -5,16 +5,62 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '../ui';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 
+export type OccupancySuccessOperation = 'ALLOCATE' | 'RESERVE' | 'TRANSFER' | 'MOVE_IN';
+
 type AllocationSuccessModalProps = {
   visible: boolean;
+  operation?: OccupancySuccessOperation;
   memberName: string;
   locationLabel: string;
   onViewDetails: () => void;
   onDone: () => void;
 };
 
+function headlineKey(operation: OccupancySuccessOperation): string {
+  switch (operation) {
+    case 'RESERVE':
+      return 'occupancy.success.reservedHeadline';
+    case 'TRANSFER':
+      return 'occupancy.success.transferredHeadline';
+    case 'MOVE_IN':
+      return 'occupancy.success.movedInHeadline';
+    case 'ALLOCATE':
+    default:
+      return 'occupancy.success.allocatedHeadline';
+  }
+}
+
+function detailKey(operation: OccupancySuccessOperation): string {
+  switch (operation) {
+    case 'RESERVE':
+      return 'occupancy.success.reservedDetail';
+    case 'TRANSFER':
+      return 'occupancy.success.transferredDetail';
+    case 'MOVE_IN':
+      return 'occupancy.success.movedInDetail';
+    case 'ALLOCATE':
+    default:
+      return 'occupancy.success.allocatedDetail';
+  }
+}
+
+function primaryActionKey(operation: OccupancySuccessOperation): string {
+  switch (operation) {
+    case 'RESERVE':
+      return 'occupancy.success.viewReservation';
+    case 'TRANSFER':
+      return 'occupancy.success.viewStay';
+    case 'MOVE_IN':
+      return 'occupancy.success.viewStay';
+    case 'ALLOCATE':
+    default:
+      return 'occupancy.success.viewDetails';
+  }
+}
+
 export function AllocationSuccessModal({
   visible,
+  operation = 'ALLOCATE',
   memberName,
   locationLabel,
   onViewDetails,
@@ -36,15 +82,41 @@ export function AllocationSuccessModal({
             </View>
           </View>
           <Text style={styles.title}>{t('occupancy.success.title')}</Text>
-          <Text style={styles.headline}>{t('occupancy.success.allocatedHeadline')}</Text>
+          <Text style={styles.headline}>
+            {t(headlineKey(operation), {
+              defaultValue:
+                operation === 'RESERVE'
+                  ? 'Accommodation reserved successfully!'
+                  : operation === 'TRANSFER'
+                    ? 'Tenant transferred successfully!'
+                    : operation === 'MOVE_IN'
+                      ? 'Move-in completed successfully!'
+                      : 'Tenant allocated successfully!',
+            })}
+          </Text>
           <Text style={styles.detail}>
-            {t('occupancy.success.allocatedDetail', {
+            {t(detailKey(operation), {
               name: memberName,
               location: locationLabel,
+              defaultValue:
+                operation === 'RESERVE'
+                  ? '{{name}} has a reservation at {{location}}.'
+                  : operation === 'TRANSFER'
+                    ? '{{name}} has been transferred to {{location}}.'
+                    : operation === 'MOVE_IN'
+                      ? '{{name}} has moved into {{location}}.'
+                      : '{{name}} has been allocated to {{location}}.',
             })}
           </Text>
           <Button
-            label={t('occupancy.success.viewDetails')}
+            label={t(primaryActionKey(operation), {
+              defaultValue:
+                operation === 'RESERVE'
+                  ? 'View reservation'
+                  : operation === 'ALLOCATE'
+                    ? 'View details'
+                    : 'View stay',
+            })}
             onPress={onViewDetails}
             style={styles.primaryBtn}
           />

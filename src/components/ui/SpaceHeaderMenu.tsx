@@ -61,7 +61,7 @@ export function SpaceHeaderMenu({ spaceId }: SpaceHeaderMenuProps) {
   const moreItems = useMemo(
     () =>
       spaceMoreItemsForPermissions({
-        canManageMeals: permissions.canManageMeals,
+        canManageMeals: permissions.canManageMeals === true,
       }),
     [permissions.canManageMeals],
   );

@@ -3,7 +3,7 @@ import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { WifiOff } from 'lucide-react-native';
 import { Button } from '../components/ui';
-import { colors, spacing, typography } from '../theme';
+import { colors, pageContentGutter, spacing, typography } from '../theme';
 
 type StartupOfflineScreenProps = {
   onRetry: () => void;
@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: pageContentGutter,
   },
   markWrap: {
     width: 120,

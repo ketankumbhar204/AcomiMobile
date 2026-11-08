@@ -3,8 +3,9 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { Check, ChevronRight, Clock, Phone, Search, UserRound, Utensils, Users } from 'lucide-react-native';
+import { Check, ChevronRight, Clock, Search, UserRound, Utensils, Users } from 'lucide-react-native';
 import type { MealType, UUID } from '../../api/types';
+import { ContactNumberLine } from '../../components/member/ContactAndStayMeta';
 import { ListFilterChips } from '../../components/ui/ListFilterChips';
 import { EmptyState, Screen, SkeletonCard } from '../../components/ui';
 import { useMealHeadcountDetail } from '../../hooks/useMealHeadcountDetail';
@@ -294,12 +295,11 @@ function ResponseCard({
           {row.memberName}
         </Text>
         {phone ? (
-          <View style={styles.phoneRow}>
-            <Phone size={12} color={colors.muted} strokeWidth={2.2} />
-            <Text style={styles.phone} numberOfLines={1}>
-              {phone}
-            </Text>
-          </View>
+          <ContactNumberLine
+            value={row.mobileNumber}
+            name={row.memberName}
+            textStyle={styles.phone}
+          />
         ) : null}
       </View>
       <View style={styles.divider} />

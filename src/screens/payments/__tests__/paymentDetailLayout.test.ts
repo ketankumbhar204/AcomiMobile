@@ -6,8 +6,8 @@ import {
 } from '../paymentDetailLayout';
 
 describe('payment detail layout', () => {
-  it('uses the same single gutter as the dashboard', () => {
-    expect(paymentDetailHorizontalInset()).toBe(spacing.xxl);
+  it('uses the same single gutter as Rooms / page content', () => {
+    expect(paymentDetailHorizontalInset()).toBe(spacing.lg);
   });
 
   it('does not stack screen padding on top of the content gutter', () => {

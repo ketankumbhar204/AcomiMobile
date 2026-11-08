@@ -4,6 +4,7 @@ export type PaymentLedgerFilter = 'all' | 'pending' | 'collected' | 'underReview
 
 export type PaymentSortOption = 'due_desc' | 'name_asc' | 'name_desc';
 
+/** Member-ledger row statuses (aggregate per member). */
 export const PAYMENT_STATUSES: MemberPaymentStatus[] = [
   'PAID',
   'PENDING',
@@ -11,15 +12,29 @@ export const PAYMENT_STATUSES: MemberPaymentStatus[] = [
   'UNDER_REVIEW',
 ];
 
+/** Individual payment-record statuses for Payments list filters (includes refund/cancel). */
+export const PAYMENT_RECORD_STATUSES = [
+  'PENDING',
+  'UNDER_REVIEW',
+  'UPDATE_REQUESTED',
+  'PAID',
+  'REJECTED',
+  'REFUNDED',
+  'CANCELLED',
+] as const;
+
+export type PaymentRecordStatusFilter = (typeof PAYMENT_RECORD_STATUSES)[number];
+
 export const PAYMENT_SORT_OPTIONS: PaymentSortOption[] = ['due_desc', 'name_asc', 'name_desc'];
 
 export const PAYMENT_FILTER_OPTION_COUNT =
-  PAYMENT_STATUSES.length + PAYMENT_SORT_OPTIONS.length;
+  PAYMENT_RECORD_STATUSES.length + PAYMENT_SORT_OPTIONS.length;
 
 export const DEFAULT_PAYMENT_SORT: PaymentSortOption = 'due_desc';
 
 export type PaymentListFilterState = {
-  statuses: Set<MemberPaymentStatus>;
+  /** Selected individual payment statuses (or member-ledger statuses when filtering members). */
+  statuses: Set<string>;
   sort: PaymentSortOption;
   /** Snapshot shortcuts from the financial summary cards. */
   preset?: 'collected' | 'pending' | 'underReview' | null;
@@ -91,7 +106,7 @@ export function isCollectedPaymentRow(row: MemberPaymentLedgerRow): boolean {
 
 function matchesPaymentStatus(
   row: MemberPaymentLedgerRow,
-  selected: Set<MemberPaymentStatus>,
+  selected: Set<string>,
 ): boolean {
   if (selected.size === 0 || selected.size >= PAYMENT_STATUSES.length) {
     return row.status !== 'NONE';

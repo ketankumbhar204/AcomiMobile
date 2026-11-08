@@ -2,6 +2,8 @@ import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import {
+  ChevronLeft,
+  ChevronRight,
   Clock,
   IndianRupee,
   Inbox,
@@ -11,7 +13,6 @@ import type { DashboardFinancialSummary } from '../../api/types';
 import { colors, pastels, radius, spacing, typography } from '../../theme';
 import { formatPaymentAmount } from '../../utils/paymentAmount';
 import { formatMonthYear, isFutureMonth, shiftMonthKey } from '../../utils/dashboardFinancial';
-import { DashboardSectionTitle } from './DashboardSectionTitle';
 import { DashboardStatCard } from './shared/DashboardStatCard';
 
 type DashboardFinancialSnapshotProps = {
@@ -84,8 +85,6 @@ export function DashboardFinancialSnapshot({
     prepaid?.balanceConsumed != null ||
     prepaid?.balanceRemaining != null ||
     prepaid?.amountCollected != null;
-  // Owner dashboards always keep This month visible (show — when empty).
-  // Prepaid Mess spaces keep prepaid cards; others use expected/collected/pending.
   const showPayPerMealCards =
     mixed || (!prepaidOnly && (alwaysShow || hasPayPerMealAmounts));
   const showPrepaidCards = prepaidOnly && (alwaysShow || hasPrepaidAmounts);
@@ -122,38 +121,42 @@ export function DashboardFinancialSnapshot({
       ? t('dashboard.financial.mealsCount', { count: prepaid.balanceRemaining ?? 0 })
       : formatMoneyOrZero(prepaid?.balanceRemaining, prepaid?.currencyCode ?? currencyCode);
 
+  const nextDisabled = month ? isFutureMonth(shiftMonthKey(month, 1)) : true;
+
   return (
     <View style={styles.wrap}>
-      <DashboardSectionTitle title={title ?? t('dashboard.financial.title')} />
-      {month && onMonthChange ? (
-        <View style={styles.monthRow}>
-          <Pressable
-            style={styles.monthBtn}
-            onPress={() => onMonthChange(shiftMonthKey(month, -1))}
-            accessibilityRole="button"
-            accessibilityLabel={t('dashboard.financial.previousMonth')}>
-            <Text style={styles.monthBtnText}>◀</Text>
-          </Pressable>
-          <View style={styles.monthCenter}>
+      <View style={styles.headerRow}>
+        <Text style={styles.title} numberOfLines={1}>
+          {title ?? t('dashboard.financial.title')}
+        </Text>
+        {month && onMonthChange ? (
+          <View style={styles.monthRow}>
+            <Pressable
+              style={styles.monthBtn}
+              onPress={() => onMonthChange(shiftMonthKey(month, -1))}
+              accessibilityRole="button"
+              accessibilityLabel={t('dashboard.financial.previousMonth')}>
+              <ChevronLeft size={16} color={colors.primaryDark} strokeWidth={2.4} />
+            </Pressable>
             <Text style={styles.monthLabel} numberOfLines={1}>
               {formatMonthYear(month, i18n.language)}
             </Text>
+            <Pressable
+              style={[styles.monthBtn, nextDisabled && styles.monthBtnDisabled]}
+              onPress={() => {
+                const next = shiftMonthKey(month, 1);
+                if (!isFutureMonth(next)) {
+                  onMonthChange(next);
+                }
+              }}
+              disabled={nextDisabled}
+              accessibilityRole="button"
+              accessibilityLabel={t('dashboard.financial.nextMonth')}>
+              <ChevronRight size={16} color={colors.primaryDark} strokeWidth={2.4} />
+            </Pressable>
           </View>
-          <Pressable
-            style={[styles.monthBtn, isFutureMonth(shiftMonthKey(month, 1)) && styles.monthBtnDisabled]}
-            onPress={() => {
-              const next = shiftMonthKey(month, 1);
-              if (!isFutureMonth(next)) {
-                onMonthChange(next);
-              }
-            }}
-            disabled={isFutureMonth(shiftMonthKey(month, 1))}
-            accessibilityRole="button"
-            accessibilityLabel={t('dashboard.financial.nextMonth')}>
-            <Text style={styles.monthBtnText}>▶</Text>
-          </Pressable>
-        </View>
-      ) : null}
+        ) : null}
+      </View>
       {hint && !loading ? <Text style={styles.emptyHint}>{hint}</Text> : null}
       {error && !loading ? (
         <Pressable onPress={onRetry} accessibilityRole="button">
@@ -165,9 +168,10 @@ export function DashboardFinancialSnapshot({
       {loading ? (
         <ActivityIndicator color={colors.primary} style={styles.loader} />
       ) : showPrepaidCards && !showPayPerMealCards ? (
-        <View style={styles.row}>
+        <View style={styles.grid}>
           <DashboardStatCard
             compact
+            gridItem
             icon={Wallet}
             accent={TILE.expected.fg}
             surface={TILE.expected.bg}
@@ -178,6 +182,7 @@ export function DashboardFinancialSnapshot({
           />
           <DashboardStatCard
             compact
+            gridItem
             icon={Inbox}
             accent={TILE.collected.fg}
             surface={TILE.collected.bg}
@@ -188,6 +193,7 @@ export function DashboardFinancialSnapshot({
           />
           <DashboardStatCard
             compact
+            gridItem
             icon={IndianRupee}
             accent={TILE.pending.fg}
             surface={TILE.pending.bg}
@@ -198,9 +204,10 @@ export function DashboardFinancialSnapshot({
           />
         </View>
       ) : (
-        <View style={styles.row}>
+        <View style={styles.grid}>
           <DashboardStatCard
             compact
+            gridItem
             icon={Wallet}
             accent={TILE.expected.fg}
             surface={TILE.expected.bg}
@@ -211,6 +218,7 @@ export function DashboardFinancialSnapshot({
           />
           <DashboardStatCard
             compact
+            gridItem
             icon={Inbox}
             accent={TILE.collected.fg}
             surface={TILE.collected.bg}
@@ -221,6 +229,7 @@ export function DashboardFinancialSnapshot({
           />
           <DashboardStatCard
             compact
+            gridItem
             icon={Clock}
             accent={TILE.underReview.fg}
             surface={TILE.underReview.bg}
@@ -231,6 +240,7 @@ export function DashboardFinancialSnapshot({
           />
           <DashboardStatCard
             compact
+            gridItem
             icon={IndianRupee}
             accent={TILE.pending.fg}
             surface={TILE.pending.bg}
@@ -249,6 +259,46 @@ const styles = StyleSheet.create({
   wrap: {
     marginBottom: spacing.lg,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+    minHeight: 28,
+  },
+  title: {
+    ...typography.h3,
+    flexShrink: 1,
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  monthRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    flexShrink: 0,
+  },
+  monthBtn: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  monthBtnDisabled: {
+    opacity: 0.35,
+  },
+  monthLabel: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    fontSize: 13,
+    lineHeight: 16,
+    fontWeight: '700',
+    minWidth: 110,
+    textAlign: 'center',
+  },
   emptyHint: {
     ...typography.caption,
     color: colors.textSecondary,
@@ -258,54 +308,14 @@ const styles = StyleSheet.create({
   loader: {
     marginVertical: spacing.sm,
   },
-  monthRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: spacing.sm,
-    marginTop: -spacing.xs,
-    minHeight: 36,
-  },
-  monthBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.button,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.white,
-  },
-  monthBtnDisabled: {
-    opacity: 0.35,
-  },
-  monthBtnText: {
-    ...typography.bodyStrong,
-    color: colors.primaryDark,
-    fontSize: 12,
-  },
-  monthCenter: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 0,
-  },
-  monthLabel: {
-    ...typography.caption,
-    color: colors.primaryDark,
-    fontSize: 13,
-    lineHeight: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
   errorText: {
     ...typography.caption,
     color: colors.danger,
     marginBottom: spacing.sm,
   },
-  row: {
+  grid: {
     flexDirection: 'row',
-    gap: spacing.xs,
-    width: '100%',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
 });

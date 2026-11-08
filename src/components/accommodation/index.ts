@@ -2,6 +2,10 @@ export { BedDetailHero } from './BedDetailHero';
 export { AccommodationEntityHero } from './AccommodationEntityHero';
 export { AccommodationFormHero } from './AccommodationFormHero';
 export { AccommodationDetailRow, formatAccommodationDate } from './AccommodationDetailRows';
+export { AccommodationInventoryOverview } from './AccommodationInventoryOverview';
+export type { InventoryOverviewKind } from './AccommodationInventoryOverview';
+export { AccommodationStayTypeCard } from './AccommodationStayTypeCard';
+export { StayTypeBadge } from './StayTypeBadge';
 export { AccommodationListFooter } from './AccommodationListFooter';
 export { AccommodationSearchBar } from './AccommodationSearchBar';
 export {
@@ -21,7 +25,14 @@ export { BedPricingConfirmModal } from './BedPricingConfirmModal';
 export { SetupCreateConfirmModal } from './SetupCreateConfirmModal';
 export { BuildingInventoryBedCard, BuildingInventoryAddBedCard } from './BuildingInventoryBedCard';
 export { BuildingInventoryRoomSection } from './BuildingInventoryRoomSection';
+export { BuildingInventoryRoomListSection } from './BuildingInventoryRoomListSection';
 export { BuildingInventoryFloorSection } from './BuildingInventoryFloorSection';
+export { InventoryStatusFilterCapsules } from './InventoryStatusFilterCapsules';
+export {
+  InventoryListingCard,
+  InventoryListingCardGrid,
+} from './InventoryListingCard';
+export type { InventoryListingCardProps, InventoryListingKind } from './InventoryListingCard';
 export { AccommodationStatusBadge } from './AccommodationStatusBadge';
 export { AccommodationStatusPicker } from './AccommodationStatusPicker';
 export { RoomTypePicker } from './RoomTypePicker';

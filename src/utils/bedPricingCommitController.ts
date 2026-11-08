@@ -46,11 +46,21 @@ type RequestBase = {
   status?: import('../api/types').AccommodationStatus;
 };
 
-export type BedPricingRequestInput = RequestBase &
-  (
-    | { field: PricingField; value: number | null }
-    | { nextRent: number | null; nextDeposit: number | null }
-  );
+export type BedPricingRequestInput =
+  | (RequestBase & { field: PricingField; value: number | null })
+  | (RequestBase & { nextRent: number | null; nextDeposit: number | null });
+
+export type BedPricingCommitRequest =
+  | (Omit<RequestBase, 'spaceId'> & {
+      spaceId?: string;
+      field: PricingField;
+      value: number | null;
+    })
+  | (Omit<RequestBase, 'spaceId'> & {
+      spaceId?: string;
+      nextRent: number | null;
+      nextDeposit: number | null;
+    });
 
 function resolveSubmitted(input: BedPricingRequestInput): {
   defaultRent: number | null;

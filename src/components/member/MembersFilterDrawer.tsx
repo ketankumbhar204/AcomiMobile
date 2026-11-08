@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { MembershipRole, MemberStatus, SpaceType } from '../../api/types';
+import type { SpaceType } from '../../api/types';
 import {
   FilterCheckboxRow,
   FilterDrawerDivider,
@@ -10,8 +10,9 @@ import {
 } from '../ui';
 import {
   defaultMemberListFilters,
-  MEMBER_STATUSES,
+  memberListStatusLabelKey,
   rolesForSpace,
+  statusesForSpace,
   type MemberListFilterState,
   type MemberSortOption,
 } from '../../utils/memberListQuery';
@@ -56,6 +57,7 @@ export function MembersFilterDrawer({
   }, [applied, visible]);
 
   const roleOptions = rolesForSpace(spaceType);
+  const statusOptions = statusesForSpace(spaceType);
 
   const sortOptions: { id: MemberSortOption; label: string }[] = [
     { id: 'name_asc', label: t('list.sort.nameAsc') },
@@ -100,10 +102,10 @@ export function MembersFilterDrawer({
         <>
           <FilterDrawerDivider />
           <FilterDrawerSection title={t('list.filters.status')}>
-            {MEMBER_STATUSES.map(status => (
+            {statusOptions.map(status => (
               <FilterCheckboxRow
                 key={status}
-                label={t(`membership.status.${status}`)}
+                label={t(memberListStatusLabelKey(status, spaceType))}
                 checked={draft.statuses.has(status)}
                 onToggle={() =>
                   setDraft(prev => ({

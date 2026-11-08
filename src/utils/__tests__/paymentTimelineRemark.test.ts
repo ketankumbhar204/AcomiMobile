@@ -38,26 +38,26 @@ describe('paymentTimelineRemarkKind', () => {
 
 describe('distinctPaymentTimelineEvents', () => {
   it('keeps separate reminder failures and drops a repeated event id', () => {
-    const created = {
+    const created: PaymentTimelineEventResponse = {
       eventId: 'evt-created',
       paymentId: 'pay-1',
       eventType: 'CREATED',
       performedAt: '2026-10-03T14:35:00.000Z',
-    } as PaymentTimelineEventResponse;
-    const firstFailure = {
+    };
+    const firstFailure: PaymentTimelineEventResponse = {
       eventId: 'evt-fail-1',
       paymentId: 'pay-1',
       eventType: 'REMINDER_FAILED',
       performedAt: '2026-10-09T16:23:00.000Z',
       remarks: 'WHATSAPP_PROVIDER_NOT_CONFIGURED',
-    } as PaymentTimelineEventResponse;
-    const secondFailure = {
+    };
+    const secondFailure: PaymentTimelineEventResponse = {
       eventId: 'evt-fail-2',
       paymentId: 'pay-1',
       eventType: 'REMINDER_FAILED',
       performedAt: '2026-10-11T09:38:00.000Z',
       remarks: 'WHATSAPP_PROVIDER_NOT_CONFIGURED',
-    } as PaymentTimelineEventResponse;
+    };
 
     expect(
       distinctPaymentTimelineEvents([created, firstFailure, firstFailure, secondFailure]).map(

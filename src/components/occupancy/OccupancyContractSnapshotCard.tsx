@@ -5,12 +5,10 @@ import type { OccupancyResponse } from '../../api/types';
 import { Card } from '../ui';
 import { colors, spacing, typography } from '../../theme';
 import {
-  computeOccupancyMonthlyTotal,
   formatContractAmount,
   hasContractSnapshot,
-  monthlyTotalIncludesFoodFromOccupancy,
-  monthlyTotalLabelKey,
 } from '../../utils/occupancyContract';
+import { buildStayFinancialPresentation } from '../../utils/stayFinancialDisplay';
 import { formatOccupancyAllocatedDate } from '../../utils/occupancyRules';
 
 type OccupancyContractSnapshotCardProps = {
@@ -18,22 +16,6 @@ type OccupancyContractSnapshotCardProps = {
   /** Render rows without an extra card (for nesting inside Current Stay). */
   embedded?: boolean;
 };
-
-function foodDisplay(
-  occupancy: OccupancyResponse,
-  t: (key: string, options?: Record<string, unknown>) => string,
-): string {
-  if (occupancy.foodIncludedInRent) {
-    return t('occupancy.contract.foodYes');
-  }
-  if (!occupancy.foodEnabled) {
-    return t('occupancy.contract.foodNo');
-  }
-  return formatContractAmount(
-    occupancy.foodChargeSnapshot,
-    t('occupancy.contract.foodIncludedNoAmount'),
-  );
-}
 
 export function OccupancyContractSnapshotCard({
   occupancy,
@@ -46,10 +28,7 @@ export function OccupancyContractSnapshotCard({
   }
 
   const notRecorded = t('occupancy.contract.notRecorded');
-  const monthlyTotal = computeOccupancyMonthlyTotal(occupancy);
-  const monthlyTotalLabel = monthlyTotalLabelKey(
-    monthlyTotalIncludesFoodFromOccupancy(occupancy),
-  );
+  const presentation = buildStayFinancialPresentation(occupancy, { notRecorded });
 
   const body = (
     <>
@@ -63,23 +42,32 @@ export function OccupancyContractSnapshotCard({
       ) : null}
 
       <View style={styles.row}>
-        <Text style={styles.label}>{t('occupancy.contract.rent')}</Text>
+        <Text style={styles.label}>
+          {t('occupancyWizard.steps.stayType', { defaultValue: 'Stay type' })}
+        </Text>
         <Text style={styles.value}>
-          {formatContractAmount(occupancy.rentSnapshot, notRecorded)}
+          {t(presentation.stayTypeLabelKey, {
+            defaultValue: presentation.stayTypeLabelDefault,
+          })}
         </Text>
       </View>
 
-      <View style={styles.row}>
-        <Text style={styles.label}>{t('occupancy.contract.foodIncluded')}</Text>
-        <Text style={styles.value}>{foodDisplay(occupancy, t)}</Text>
-      </View>
-
-      <View style={styles.row}>
-        <Text style={styles.label}>{t('occupancy.contract.deposit')}</Text>
-        <Text style={styles.value}>
-          {formatContractAmount(occupancy.depositSnapshot ?? 0, notRecorded)}
-        </Text>
-      </View>
+      {presentation.rows.map(row => {
+        const value =
+          row.key === 'food'
+            ? row.value === 'yes'
+              ? t('common.yes', { defaultValue: 'Yes' })
+              : t('common.no', { defaultValue: 'No' })
+            : row.value;
+        return (
+          <View key={row.key} style={row.emphasize ? styles.totalRow : styles.row}>
+            <Text style={row.emphasize ? styles.totalLabel : styles.label}>
+              {t(row.labelKey, { defaultValue: row.labelDefault })}
+            </Text>
+            <Text style={row.emphasize ? styles.totalValue : styles.value}>{value}</Text>
+          </View>
+        );
+      })}
 
       {occupancy.otherCharges && occupancy.otherCharges.length > 0 ? (
         <View style={styles.chargesBlock}>
@@ -92,15 +80,6 @@ export function OccupancyContractSnapshotCard({
               </Text>
             </View>
           ))}
-        </View>
-      ) : null}
-
-      {monthlyTotal != null ? (
-        <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>{t(monthlyTotalLabel)}</Text>
-          <Text style={styles.totalValue}>
-            {formatContractAmount(monthlyTotal, notRecorded)}
-          </Text>
         </View>
       ) : null}
 

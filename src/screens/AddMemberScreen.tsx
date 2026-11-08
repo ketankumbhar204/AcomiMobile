@@ -14,7 +14,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { StackActions, useNavigation, useRoute } from '@react-navigation/native';
 import type {
   NativeStackNavigationProp,
   NativeStackScreenProps,
@@ -36,6 +36,7 @@ import {
   MemberMealBillingTypeSection,
   type MemberMealBillingSelection,
 } from '../components/member/MemberMealBillingTypeSection';
+import { ContactNumberLine } from '../components/member/ContactAndStayMeta';
 import { MemberSubscriptionSetupFields } from '../components/member/MemberSubscriptionSetupFields';
 import {
   ProgressiveWorkflowFooter,
@@ -43,7 +44,13 @@ import {
   progressiveSectionHighlightStyle,
 } from '../components/progressive';
 import { AddPersonChoiceSheet } from '../components/membership/AddPersonChoiceSheet';
-import { FormInput, GenderPicker, HeaderBackButton, RolePicker } from '../components/ui';
+import {
+  CompactPageBanner,
+  FormInput,
+  GenderPicker,
+  HeaderBackButton,
+  RolePicker,
+} from '../components/ui';
 import {
   addPersonNoun,
   countImportableCandidates,
@@ -97,6 +104,7 @@ export function AddMemberScreen() {
   const route = useRoute<AddMemberRoute>();
   const { spaceId } = route.params;
   const initialMode = route.params.initialMode;
+  const returnToMembers = route.params.returnToMembers === true;
   const mySpaces = useSpaceStore(state => state.mySpaces);
   const spaceType = findMySpaceEntry(mySpaces, spaceId)?.spaceType;
   const addMember = useMemberStore(state => state.addMember);
@@ -333,6 +341,12 @@ export function AddMemberScreen() {
       usingImport ? importAddedToast(t, spaceType) : t('membership.add.successToast'),
     );
     invalidateDashboardQueries();
+    if (returnToMembers) {
+      navigation.dispatch(
+        StackActions.popTo('SpaceTabs', { spaceId, screen: 'Members' }, { merge: true }),
+      );
+      return;
+    }
     navigation.goBack();
   }
 
@@ -448,20 +462,13 @@ export function AddMemberScreen() {
             scrollEventThrottle={16}
             onScrollBeginDrag={messProgressiveEnabled ? onMealsScrollBeginDrag : undefined}
             onScroll={messProgressiveEnabled ? handleScroll : undefined}>
-            <View style={styles.hero}>
-              <View style={styles.decorBlob} pointerEvents="none" />
-              <View style={styles.decorRing} pointerEvents="none" />
-              <View style={styles.heroIconWrap} accessibilityElementsHidden>
-                <UserPlus size={18} color={colors.primaryDark} strokeWidth={2.2} />
-              </View>
-              <Text style={styles.eyebrow}>{t('membership.add.eyebrow')}</Text>
-              <Text style={styles.heading}>
-                {isMess ? t('membership.add.headingMess') : t('membership.add.heading')}
-              </Text>
-              <Text style={styles.subheading}>
-                {isMess ? t('membership.add.subheadingMess') : t('membership.add.subheading')}
-              </Text>
-            </View>
+            <CompactPageBanner
+              icon={UserPlus}
+              title={isMess ? t('membership.add.headingMess') : t('membership.add.heading')}
+              subtitle={
+                isMess ? t('membership.add.subheadingMess') : t('membership.add.subheading')
+              }
+            />
             <View style={styles.inviteInsteadRow}>
               <Text style={styles.inviteInsteadText}>
                 {t('membership.add.inviteInstead')}{' '}
@@ -603,11 +610,11 @@ export function AddMemberScreen() {
               <View style={styles.selectedCard}>
                 <Text style={styles.selectedLabel}>{t('membership.add.selectedCustomer')}</Text>
                 <Text style={styles.selectedName}>{selectedImport.fullName}</Text>
-                <Text style={styles.selectedMeta}>
-                  {t('occupancyWizard.residentCard.mobile', {
-                    mobile: selectedImport.mobileNumber,
-                  })}
-                </Text>
+                <ContactNumberLine
+                  value={selectedImport.mobileNumber}
+                  name={selectedImport.fullName}
+                  textStyle={styles.selectedMeta}
+                />
                 {selectedImport.sourceSpaceName ? (
                   <Text style={styles.selectedMeta}>
                     {selectedImport.alreadyInTargetSpace
@@ -785,69 +792,6 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.lg,
     paddingBottom: spacing.xxl,
-  },
-  hero: {
-    marginBottom: spacing.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.section,
-    backgroundColor: colors.successTint,
-    borderWidth: 1,
-    borderColor: `${colors.primary}33`,
-    overflow: 'hidden',
-    position: 'relative',
-    ...shadows.sm,
-  },
-  decorBlob: {
-    position: 'absolute',
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: `${colors.primary}1F`,
-    top: -48,
-    right: -28,
-  },
-  decorRing: {
-    position: 'absolute',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 8,
-    borderColor: `${colors.primary}14`,
-    bottom: -16,
-    right: 40,
-  },
-  heroIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.sm,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: `${colors.primary}33`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
-    zIndex: 1,
-  },
-  eyebrow: {
-    ...typography.eyebrow,
-    marginBottom: 2,
-    zIndex: 1,
-  },
-  heading: {
-    ...typography.h2,
-    fontSize: 22,
-    lineHeight: 28,
-    fontWeight: '600',
-    color: colors.primaryDark,
-    marginBottom: 2,
-    zIndex: 1,
-  },
-  subheading: {
-    ...typography.caption,
-    fontSize: 12,
-    color: colors.muted,
-    zIndex: 1,
   },
   inviteInsteadRow: {
     flexDirection: 'row',

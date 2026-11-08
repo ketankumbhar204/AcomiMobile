@@ -1,16 +1,16 @@
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import type { OccupancyResponse } from '../../api/types';
 import { useOccupiedBedStay } from '../../hooks/useOccupiedBedStay';
 import { colors, typography } from '../../theme';
 import {
   bedCardBalanceFace,
-  type BedCardBalanceFace,
   type OccupantPaymentSummary,
-  type StayChargeKind,
-  type StayChargeSummary,
 } from '../../utils/occupantPaymentSummary';
+import { isOpenEndedDailyRate } from '../../utils/occupancyContract';
 import { formatPaymentAmount } from '../../utils/paymentHistory';
+import { formatOccupancyRentRate } from '../../utils/stayFinancialDisplay';
 
 function money(amount: number): string {
   return formatPaymentAmount(amount);
@@ -18,7 +18,7 @@ function money(amount: number): string {
 
 function dueLine(
   t: (key: string, options?: { defaultValue?: string }) => string,
-  charge: StayChargeSummary | null,
+  charge: OccupantPaymentSummary['rent'],
   labelKey: string,
   fallback: string,
 ): string | null {
@@ -115,14 +115,14 @@ export function OccupiedBedPaymentFace({ spaceId, bedId }: OccupiedBedPaymentFac
   }
   if (stay.error || !stay.summary) {
     return (
-      <Text style={styles.title}>
+      <Text style={styles.note}>
         {t('accommodation.stayPayment.unavailable', { defaultValue: 'Payment status unavailable' })}
       </Text>
     );
   }
   if (!stay.occupancy) {
     return (
-      <Text style={styles.title}>
+      <Text style={styles.note}>
         {t('accommodation.stayPayment.noTenant', {
           defaultValue: 'No linked tenant',
         })}
@@ -130,47 +130,84 @@ export function OccupiedBedPaymentFace({ spaceId, bedId }: OccupiedBedPaymentFac
     );
   }
 
-  return <BedBalanceSummary summary={stay.summary} />;
+  return (
+    <BedBalanceSummary
+      summary={stay.summary}
+      occupancy={stay.occupancy}
+      notYetBilled={isOpenEndedDailyRate(stay.occupancy)}
+    />
+  );
 }
 
-function chargeLabel(
-  kind: StayChargeKind,
-  compactDeposit: boolean,
+function BalanceDueLine({ label, value }: { label: string; value: string }) {
+  return (
+    <Text style={styles.balanceLine} numberOfLines={1}>
+      <Text style={styles.balanceLabel}>{label}: </Text>
+      <Text style={styles.balanceAmount}>{value}</Text>
+    </Text>
+  );
+}
+
+function MetaLine({ text }: { text: string }) {
+  return (
+    <Text style={styles.metaLine} numberOfLines={1}>
+      {text}
+    </Text>
+  );
+}
+
+function occupancyRentLine(
+  occupancy: OccupancyResponse,
   t: (key: string, options?: { defaultValue?: string }) => string,
-): string {
-  if (kind === 'RENT') {
-    return t('accommodation.fields.rent', { defaultValue: 'Rent' });
-  }
-  if (kind === 'DEPOSIT') {
-    return compactDeposit
-      ? t('accommodation.stayPayment.depositShort', { defaultValue: 'Dep' })
-      : t('accommodation.fields.deposit', { defaultValue: 'Deposit' });
-  }
-  return t('accommodation.stayPayment.otherShort', { defaultValue: 'Other' });
-}
-
-function balanceSecondary(
-  face: Extract<BedCardBalanceFace, { kind: 'balance' }>,
-  t: (key: string, options?: { defaultValue?: string; amount?: string }) => string,
 ): string | null {
-  const parts: string[] = [];
-  if (face.paid != null) {
-    parts.push(
-      t('accommodation.stayPayment.paidAmount', {
-        defaultValue: '{{amount}} paid',
-        amount: money(face.paid),
-      }),
-    );
+  const notRecorded = t('accommodation.pricingConfirm.notSet', { defaultValue: 'Not set' });
+  const rate = formatOccupancyRentRate(occupancy, notRecorded);
+  if (!rate.value || rate.value === notRecorded) {
+    return null;
   }
-  for (const line of face.lines) {
-    parts.push(`${chargeLabel(line.kind, face.paid != null, t)} ${money(line.amount)}`);
-  }
-  return parts.length > 0 ? parts.join(' · ') : null;
+  const label = t(rate.labelKey, { defaultValue: rate.labelDefault });
+  return `${label}: ${rate.value}`;
 }
 
-function BedBalanceSummary({ summary }: { summary: OccupantPaymentSummary }) {
+function occupancyDepositLine(
+  occupancy: OccupancyResponse,
+  t: (key: string, options?: { defaultValue?: string }) => string,
+): string | null {
+  if (occupancy.depositSnapshot == null) {
+    return null;
+  }
+  return `${t('accommodation.fields.deposit', { defaultValue: 'Deposit' })}: ${money(
+    occupancy.depositSnapshot,
+  )}`;
+}
+
+function BedBalanceSummary({
+  summary,
+  occupancy,
+  notYetBilled = false,
+}: {
+  summary: OccupantPaymentSummary;
+  occupancy: OccupancyResponse;
+  /** OPEN_ENDED daily-rate: rent is billed after the period closes, so no row yet is not "settled". */
+  notYetBilled?: boolean;
+}) {
   const { t } = useTranslation();
   const face = bedCardBalanceFace(summary);
+  const rentUnbilled = notYetBilled && summary.rent == null;
+  const rentLine = occupancyRentLine(occupancy, t);
+  const depositLine = occupancyDepositLine(occupancy, t);
+
+  if (rentUnbilled) {
+    const title = t('accommodation.stayPayment.notYetBilled', { defaultValue: 'Not Yet Billed' });
+    return (
+      <View style={styles.balance} accessibilityRole="text" accessibilityLabel={`Balance Due: ${title}`}>
+        <BalanceDueLine
+          label={t('accommodation.stayPayment.balanceDue', { defaultValue: 'Balance Due' })}
+          value={title}
+        />
+      </View>
+    );
+  }
 
   if (face.kind === 'note') {
     const title =
@@ -199,73 +236,59 @@ function BedBalanceSummary({ summary }: { summary: OccupantPaymentSummary }) {
         accessibilityRole="text"
         accessibilityLabel={[paidLabel, paidDetail].filter(Boolean).join(', ')}>
         <Text style={styles.paidLabel}>{paidLabel}</Text>
-        {paidDetail ? (
-          <Text style={styles.paidAmount} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
-            {paidDetail}
-          </Text>
-        ) : null}
+        {paidDetail ? <MetaLine text={paidDetail} /> : null}
       </View>
     );
   }
 
-  const balanceLabel = t('accommodation.stayPayment.balanceDue', { defaultValue: 'Balance due' });
+  const balanceLabel = t('accommodation.stayPayment.balanceDue', { defaultValue: 'Balance Due' });
   const amount = money(face.outstanding);
-  const secondary = balanceSecondary(face, t);
   return (
     <View
       style={styles.balance}
       accessibilityRole="text"
-      accessibilityLabel={[balanceLabel, amount, secondary].filter(Boolean).join(', ')}>
-      <Text style={styles.balanceLabel}>{balanceLabel}</Text>
-      <Text
-        style={styles.balanceAmount}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.7}>
-        {amount}
-      </Text>
-      {secondary ? <Text style={styles.secondary}>{secondary}</Text> : null}
+      accessibilityLabel={[balanceLabel, amount, rentLine, depositLine].filter(Boolean).join(', ')}>
+      <BalanceDueLine label={balanceLabel} value={amount} />
+      {rentLine ? <MetaLine text={rentLine} /> : null}
+      {depositLine ? <MetaLine text={depositLine} /> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  loader: { alignSelf: 'flex-start', marginVertical: 4 },
-  title: { ...typography.caption, fontWeight: '700', color: colors.textPrimary },
+  loader: { marginVertical: 4 },
   note: { ...typography.caption, fontWeight: '700', color: colors.textPrimary },
-  balance: { gap: 1, minWidth: 0, width: '100%', backgroundColor: 'transparent' },
+  balance: {
+    gap: 2,
+    width: '100%',
+    minWidth: 0,
+  },
+  balanceLine: {
+    ...typography.caption,
+    color: colors.textPrimary,
+    fontWeight: '600',
+    fontSize: 12,
+    lineHeight: 16,
+  },
   balanceLabel: {
     ...typography.caption,
-    fontSize: 11,
-    lineHeight: 14,
-    fontWeight: '700',
-    color: colors.danger,
+    color: colors.textPrimary,
+    fontWeight: '600',
+    fontSize: 12,
   },
   balanceAmount: {
-    ...typography.bodyStrong,
-    fontSize: 18,
-    lineHeight: 22,
-    color: colors.danger,
+    ...typography.caption,
+    color: colors.textPrimary,
+    fontWeight: '800',
+    fontSize: 12,
     fontVariant: ['tabular-nums'],
   },
-  secondary: {
+  paidLabel: { ...typography.caption, fontWeight: '700', color: colors.success },
+  metaLine: {
     ...typography.caption,
+    color: colors.textSecondary,
+    fontWeight: '500',
     fontSize: 11,
     lineHeight: 15,
-    color: colors.textSecondary,
-    width: '100%',
-    flexShrink: 1,
-  },
-  paidLabel: {
-    ...typography.caption,
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.success,
-  },
-  paidAmount: {
-    ...typography.bodyStrong,
-    fontSize: 16,
-    color: colors.textPrimary,
-    fontVariant: ['tabular-nums'],
   },
 });

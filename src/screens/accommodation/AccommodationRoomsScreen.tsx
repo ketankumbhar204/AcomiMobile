@@ -47,7 +47,7 @@ import { useRoomsByFloor } from '../../hooks/useRoomsByFloor';
 import { useRoomsByUnit } from '../../hooks/useRoomsByUnit';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
-import { colors, spacing, typography } from '../../theme';
+import { colors, pageContentGutter, spacing, typography } from '../../theme';
 import { formatFloorHeaderTitle } from '../../utils/accommodationLabels';
 import {
   roomBundleFromRoom,
@@ -556,7 +556,12 @@ export function AccommodationRoomsScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.xl, paddingBottom: 96, flexGrow: 1 },
+  content: {
+    paddingHorizontal: pageContentGutter,
+    paddingTop: spacing.xl,
+    paddingBottom: 96,
+    flexGrow: 1,
+  },
   header: { marginBottom: spacing.md },
   secondaryAction: { marginBottom: spacing.md },
   errorText: { ...typography.body, color: '#DC2626', marginBottom: spacing.lg },

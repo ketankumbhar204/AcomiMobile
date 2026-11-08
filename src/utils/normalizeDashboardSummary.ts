@@ -13,6 +13,35 @@ import type {
 } from '../api/types';
 import { computePending } from './dashboardFinancial';
 
+/** JSON numeric fields may arrive as strings. `undefined` is absent. */
+type JsonNum = number | string | null | undefined;
+
+type WidenNumbers<T> = T extends null | undefined
+  ? T
+  : T extends number
+    ? JsonNum
+    : T extends readonly (infer U)[]
+      ? WidenNumbers<U>[]
+      : T extends object
+        ? { [K in keyof T]: WidenNumbers<T[K]> }
+        : T;
+
+/**
+ * An explicit null pending means the API found no unpaid obligation.
+ * Do not turn that into expected − collected. Only an omitted field uses the residual fallback.
+ */
+function pendingFromApi(
+  raw: object,
+  expectedCharges: number | null,
+  collected: number | null,
+  underReview: number | null,
+): number | null {
+  if ('pending' in raw) {
+    return toNumber((raw as { pending?: unknown }).pending);
+  }
+  return computePending(expectedCharges, collected, underReview);
+}
+
 function toNumber(value: unknown): number | null {
   if (value == null) {
     return null;
@@ -61,8 +90,7 @@ export function normalizeFinancialSummary(raw: unknown): DashboardFinancialSumma
     underReview: usePrepaidOnly ? null : toNumber(row.underReview),
     pending: usePrepaidOnly
       ? null
-      : toNumber(row.pending)
-        ?? computePending(expectedCharges, collectedAmount, toNumber(row.underReview)),
+      : pendingFromApi(row, expectedCharges, collectedAmount, toNumber(row.underReview)),
     currencyCode: typeof row.currencyCode === 'string' ? row.currencyCode : 'INR',
     source: row.source as DashboardFinancialSummary['source'],
     mealBillingType,
@@ -156,16 +184,24 @@ export function normalizePendingActionsSummary(raw: unknown): PendingActionsSumm
   };
 }
 
-export function normalizeDashboardSummary(raw: DashboardSummaryResponse): DashboardSummaryResponse {
-  const messOperations = raw.messOperations
+export function normalizeDashboardSummary(
+  raw: WidenNumbers<DashboardSummaryResponse>,
+): DashboardSummaryResponse {
+  const messSource = raw.messOperations;
+  const messOperations = messSource
     ? {
-        ...raw.messOperations,
-        todaysHeadcount: raw.messOperations.todaysHeadcount ?? null,
+        membersReceivingMeals: toNumber(messSource.membersReceivingMeals) ?? 0,
+        menusPublishedThisMonth: toNumber(messSource.menusPublishedThisMonth) ?? 0,
+        openPollsCount: toNumber(messSource.openPollsCount) ?? 0,
+        todaysHeadcount: toNumber(messSource.todaysHeadcount),
+        pollRespondedCount: toNumber(messSource.pollRespondedCount) ?? 0,
+        pollEligibleCount: toNumber(messSource.pollEligibleCount) ?? 0,
       }
     : null;
 
   return {
-    ...raw,
+    spaceType: raw.spaceType,
+    month: raw.month,
     financial: normalizeFinancialSummary(raw.financial),
     messOperations,
     accommodationOperations: normalizeAccommodationOperations(raw.accommodationOperations),
@@ -176,26 +212,33 @@ export function normalizeDashboardSummary(raw: DashboardSummaryResponse): Dashbo
   };
 }
 
-function normalizeLedgerRow(raw: MemberPaymentLedgerRow): MemberPaymentLedgerRow {
+function normalizeLedgerRow(raw: WidenNumbers<MemberPaymentLedgerRow>): MemberPaymentLedgerRow {
   const expectedCharges = toNumber(raw.expectedCharges);
   const collected = toNumber(raw.collected);
   const underReview = toNumber(raw.underReview);
   return {
-    ...raw,
+    memberId: raw.memberId,
+    memberName: raw.memberName,
     expectedCharges,
     collected,
     underReview,
-    pending: toNumber(raw.pending) ?? computePending(expectedCharges, collected, underReview),
+    pending: pendingFromApi(raw, expectedCharges, collected, underReview),
     currencyCode: raw.currencyCode ?? 'INR',
+    status: raw.status,
+    mealBillingType: raw.mealBillingType,
     mealBalanceRemaining: toNumber(raw.mealBalanceRemaining),
     mealBalancePurchased: toNumber(raw.mealBalancePurchased),
     mealBalanceConsumed: toNumber(raw.mealBalanceConsumed),
+    mealBalanceUnit: raw.mealBalanceUnit,
   };
 }
 
-export function normalizePaymentLedger(raw: MemberPaymentLedgerResponse): MemberPaymentLedgerResponse {
+export function normalizePaymentLedger(
+  raw: WidenNumbers<MemberPaymentLedgerResponse>,
+): MemberPaymentLedgerResponse {
   return {
-    ...raw,
+    month: raw.month,
+    spaceType: raw.spaceType,
     summary: normalizeFinancialSummary(raw.summary),
     members: (raw.members ?? []).map(normalizeLedgerRow),
   };

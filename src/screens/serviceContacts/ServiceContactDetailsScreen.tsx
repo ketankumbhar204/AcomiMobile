@@ -7,6 +7,8 @@ import { useTranslation } from 'react-i18next';
 import { Mail, MapPin, Phone, StickyNote, UserRound } from 'lucide-react-native';
 import { serviceContactsApi, type ServiceContact } from '../../api/serviceContactsApi';
 import { ApiError } from '../../api/types';
+import { useOptionalContactOptions } from '../../components/contact';
+import { ContactNumberLine } from '../../components/member/ContactAndStayMeta';
 import { Button, EmptyState } from '../../components/ui';
 import type { MainStackParamList } from '../../navigation/types';
 import { useAuthStore } from '../../store/authStore';
@@ -23,6 +25,7 @@ export function ServiceContactDetailsScreen() {
   const route = useRoute<Route>();
   const userId = useAuthStore(state => state.userId);
   const showToast = useToastStore(state => state.showToast);
+  const { openContactOptions } = useOptionalContactOptions();
   const [contact, setContact] = useState<ServiceContact | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -103,9 +106,40 @@ export function ServiceContactDetailsScreen() {
         <Text style={styles.name}>{contact.businessName}</Text>
         <Text style={styles.meta}>{contact.categoryLabel}</Text>
         {contact.contactPersonName ? <Line icon={<UserRound size={16} color={colors.primaryDark} />} text={contact.contactPersonName} /> : null}
-        {phone ? <Line icon={<Phone size={16} color={colors.primaryDark} />} text={phone} /> : null}
-        {alternate ? <Line icon={<Phone size={16} color={colors.primaryDark} />} text={alternate} /> : null}
-        {whatsapp ? <Line icon={<Phone size={16} color={colors.primaryDark} />} text={`${t('serviceContacts.whatsapp')} ${whatsapp}`} /> : null}
+        {phone ? (
+          <View style={styles.line}>
+            <Phone size={16} color={colors.primaryDark} />
+            <ContactNumberLine
+              value={contact.primaryPhone}
+              name={contact.contactPersonName || contact.businessName}
+              showIcon={false}
+              textStyle={styles.lineText}
+            />
+          </View>
+        ) : null}
+        {alternate ? (
+          <View style={styles.line}>
+            <Phone size={16} color={colors.primaryDark} />
+            <ContactNumberLine
+              value={contact.alternatePhone}
+              name={contact.contactPersonName || contact.businessName}
+              showIcon={false}
+              textStyle={styles.lineText}
+            />
+          </View>
+        ) : null}
+        {whatsapp ? (
+          <View style={styles.line}>
+            <Phone size={16} color={colors.primaryDark} />
+            <ContactNumberLine
+              value={contact.whatsappPhone}
+              name={contact.contactPersonName || contact.businessName}
+              label={`${t('serviceContacts.whatsapp')} ${whatsapp}`}
+              showIcon={false}
+              textStyle={styles.lineText}
+            />
+          </View>
+        ) : null}
         {contact.email ? <Line icon={<Mail size={16} color={colors.primaryDark} />} text={contact.email} /> : null}
         {contact.address ? <Line icon={<MapPin size={16} color={colors.primaryDark} />} text={contact.address} /> : null}
         {contact.description ? <Text style={styles.body}>{contact.description}</Text> : null}
@@ -119,14 +153,28 @@ export function ServiceContactDetailsScreen() {
         </Text>
       </View>
       <View style={styles.actions}>
-        {telHref(contact.primaryPhone) ? (
-          <Button label={t('serviceContacts.call')} variant="secondary" onPress={() => void openUrl(telHref(contact.primaryPhone))} />
+        {telHref(contact.primaryPhone) || whatsappHref(contact.whatsappPhone || contact.primaryPhone) ? (
+          <Button
+            label={t('serviceContacts.call')}
+            variant="secondary"
+            onPress={() =>
+              openContactOptions({
+                phoneNumber: contact.primaryPhone || contact.whatsappPhone || '',
+                displayName: contact.contactPersonName || contact.businessName,
+              })
+            }
+          />
         ) : null}
         {whatsappHref(contact.whatsappPhone || contact.primaryPhone) ? (
           <Button
             label={t('serviceContacts.whatsapp')}
             variant="secondary"
-            onPress={() => void openUrl(whatsappHref(contact.whatsappPhone || contact.primaryPhone))}
+            onPress={() =>
+              openContactOptions({
+                phoneNumber: contact.whatsappPhone || contact.primaryPhone || '',
+                displayName: contact.contactPersonName || contact.businessName,
+              })
+            }
           />
         ) : null}
         {mailtoHref(contact.email) ? (
@@ -170,5 +218,6 @@ const styles = StyleSheet.create({
   meta: { ...typography.body, color: colors.textSecondary },
   body: { ...typography.body, color: colors.textPrimary, flex: 1 },
   line: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  lineText: { ...typography.body, color: colors.primaryDark, flex: 1, fontWeight: '600' },
   actions: { gap: spacing.sm },
 });

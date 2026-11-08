@@ -2,6 +2,7 @@ import React, { type ComponentType } from 'react';
 import {
   ActivityIndicator,
   Pressable,
+  StyleProp,
   StyleSheet,
   Text,
   ViewStyle,
@@ -30,7 +31,7 @@ type ButtonProps = {
   tint?: ButtonTint;
   loading?: boolean;
   disabled?: boolean;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   /** Optional Lucide leading icon. */
   icon?: ComponentType<IconProps>;
   accessibilityLabel?: string;

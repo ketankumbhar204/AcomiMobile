@@ -82,7 +82,10 @@ export function MemberMealActivityDayCard({
   const visibleSlots = MEAL_TYPES.map(mealType => {
     const slot = (day.slots ?? []).find(row => row.mealType === mealType);
     return slot ?? null;
-  }).filter(slot => slot != null && slot.status !== 'INACTIVE' && slot.status !== 'NO_MENU');
+  }).filter(
+    (slot): slot is NonNullable<typeof slot> =>
+      slot != null && slot.status !== 'INACTIVE' && slot.status !== 'NO_MENU',
+  );
 
   const payment = formatPaymentLine(day, todayIso, paymentLabels);
   const pollClosedLabel = t('meals.poll.pollClosed');

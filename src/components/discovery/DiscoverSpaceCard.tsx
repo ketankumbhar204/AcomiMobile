@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   mediaPress: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   mediaFill: {
     position: 'absolute',

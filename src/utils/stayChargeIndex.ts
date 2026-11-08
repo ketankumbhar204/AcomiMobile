@@ -46,20 +46,29 @@ export function loadStayChargeIndex(spaceId: UUID, month = currentStayMonth()): 
   }
   const promise = Promise.all([
     occupancyApi.listOccupancies(spaceId, { status: 'ACTIVE', size: 500 }),
+    // Reserved stays carry stayKind for bed/member chips; payments still month-scoped.
+    occupancyApi.listOccupancies(spaceId, { status: 'RESERVED', size: 500 }),
     paymentsApi.listStayCharges(spaceId, month),
-  ]).then(([occupancies, charges]) => {
+  ]).then(([activePage, reservedPage, charges]) => {
     const occupancyByBed = new Map<string, OccupancyResponse>();
     const occupancyByUnit = new Map<string, OccupancyResponse>();
-    for (const occupancy of occupancies.content) {
-      if (occupancy.status !== 'ACTIVE') {
-        continue;
+    const indexOccupancy = (occupancy: OccupancyResponse) => {
+      if (occupancy.status !== 'ACTIVE' && occupancy.status !== 'RESERVED') {
+        return;
       }
       if (occupancy.bedId) {
-        occupancyByBed.set(occupancy.bedId, occupancy);
+        // Prefer ACTIVE when both somehow exist for the same bed.
+        if (occupancy.status === 'ACTIVE' || !occupancyByBed.has(occupancy.bedId)) {
+          occupancyByBed.set(occupancy.bedId, occupancy);
+        }
       } else if (occupancy.unitId) {
-        occupancyByUnit.set(occupancy.unitId, occupancy);
+        if (occupancy.status === 'ACTIVE' || !occupancyByUnit.has(occupancy.unitId)) {
+          occupancyByUnit.set(occupancy.unitId, occupancy);
+        }
       }
-    }
+    };
+    activePage.content.forEach(indexOccupancy);
+    reservedPage.content.forEach(indexOccupancy);
     return {
       month: charges.month || month,
       occupancyByBed,

@@ -38,7 +38,7 @@ import { invalidateAccommodationQueries } from "../utils/accommodationQueryCache
 import type { MainStackParamList, MemberTabParamList } from "../navigation/types";
 import { useSpaceStore } from "../store/spaceStore";
 import { useToastStore } from "../store/toastStore";
-import { colors, radius, spacing, typography } from "../theme";
+import { colors, pageContentGutter, radius, spacing, typography } from "../theme";
 import { formatSpaceDisplayName } from "../utils/spaceLabels";
 import { isConsumerMembershipRole } from "../utils/profileCompletion";
 import { membershipRoleLabelKey } from "../utils/memberRoles";
@@ -243,7 +243,6 @@ export function MySpacesScreen() {
   useLayoutEffect(() => {
     navigation.setOptions({
       title: t("navigation.mySpaces"),
-      headerBackVisible: false,
       headerRight: undefined,
     });
   }, [navigation, t, i18n.language]);
@@ -735,7 +734,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   content: {
-    padding: spacing.xxl,
+    paddingHorizontal: pageContentGutter,
+    paddingTop: spacing.xxl,
     paddingBottom: 96,
   },
   hero: {

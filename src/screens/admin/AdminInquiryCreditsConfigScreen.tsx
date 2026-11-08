@@ -854,7 +854,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: spacing.lg,
   },
-  qrBackdropTap: { ...StyleSheet.absoluteFillObject },
+  qrBackdropTap: { ...StyleSheet.absoluteFill },
   qrFull: { width: '100%', height: '70%' },
   qrActions: { flex: 1, gap: spacing.sm },
   secondaryBtn: {

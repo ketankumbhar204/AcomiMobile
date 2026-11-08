@@ -1,4 +1,5 @@
-import type { HealthCategoryId, HealthFactor } from './types';
+import type { HealthCategoryId } from './healthWeights';
+import type { HealthFactor } from './types';
 import type { RecommendedAction, SetupNavigationTarget } from '../types';
 
 export type HealthNavAction =
