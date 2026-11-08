@@ -229,16 +229,27 @@ export function MemberAccommodationSection({
 
   const dash = t('occupancy.section.timelineEmpty');
 
-  // Member summary can mark RESERVED before / without reservedOccupancy bundle — prefer either id.
+  // Prefer reservedOccupancy bundle, then member summary, then any RESERVED row in the list.
   const resolvedReservedOccupancyId =
     reservedOccupancyId ??
     (member.currentOccupancy?.occupancyStatus === 'RESERVED'
       ? member.currentOccupancy.occupancyId
-      : undefined);
+      : undefined) ??
+    occupancyData?.occupancies?.find(row => row.status === 'RESERVED')?.occupancyId;
 
   function openWizard(mode: 'ALLOCATE' | 'RESERVE' | 'MOVE_IN' | 'TRANSFER' | 'VACATE') {
-    if (mode === 'MOVE_IN' && !resolvedReservedOccupancyId) {
-      showToast(t('occupancy.errors.noReserved'));
+    if (mode === 'MOVE_IN') {
+      // Wizard can resolve the RESERVED occupancy from memberId when the id is briefly missing.
+      if (!resolvedReservedOccupancyId && member.occupancyStatus !== 'RESERVED') {
+        showToast(t('occupancy.errors.noReserved'));
+        return;
+      }
+      openOccupancyWizardFromRef({
+        spaceId,
+        mode: 'MOVE_IN',
+        memberId: member.memberId,
+        occupancyId: resolvedReservedOccupancyId,
+      });
       return;
     }
     openOccupancyWizardFromRef({
@@ -246,11 +257,7 @@ export function MemberAccommodationSection({
       mode,
       memberId: member.memberId,
       occupancyId:
-        mode === 'MOVE_IN'
-          ? resolvedReservedOccupancyId
-          : mode === 'TRANSFER' || mode === 'VACATE'
-            ? activeOccupancyId
-            : undefined,
+        mode === 'TRANSFER' || mode === 'VACATE' ? activeOccupancyId : undefined,
     });
   }
 
@@ -526,7 +533,7 @@ export function MemberAccommodationSection({
       <ReservationCancellationSettlementModal
         visible={cancelSettlementOpen}
         spaceId={spaceId}
-        occupancyId={resolvedReservedOccupancyId}
+        occupancyId={resolvedReservedOccupancyId ?? null}
         onClose={() => setCancelSettlementOpen(false)}
         onCancelled={async () => {
           setCancelSettlementOpen(false);

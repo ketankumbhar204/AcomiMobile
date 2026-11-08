@@ -64,13 +64,18 @@ import { useMemberStore } from '../store/memberStore';
 import { colors, pageContentGutter, radius, shadows, spacing, typography } from '../theme';
 import { memberAcomiBadgeLabel } from '../utils/memberAppStatus';
 import {
-  canEnableMealsForMember,
   getMemberListFoodLabel,
   isReceivingMealsForMember,
   mealsApplicableForSpace,
+  shouldShowMealAccessForMember,
 } from '../utils/mealAccess';
 import { getMemberStatusColor, getMemberStatusLabelKey } from '../utils/memberStatus';
 import { memberListStayLabel, stayLabelForMember } from '../utils/memberListStay';
+import {
+  buildMemberListStayDateInfo,
+  preferredOccupancyForMemberListDates,
+  type MemberListStayDateSource,
+} from '../utils/memberListStayDates';
 import type { StayLayoutMode } from '../utils/stayTrail';
 import {
   countMemberListFilters,
@@ -214,6 +219,9 @@ export function MembersScreen() {
   const [stayKindByMemberId, setStayKindByMemberId] = useState<Map<string, StayChoice>>(
     () => new Map(),
   );
+  const [stayDateByMemberId, setStayDateByMemberId] = useState<
+    Map<string, MemberListStayDateSource>
+  >(() => new Map());
 
   const permissions = useSpacePermissions(spaceId);
   const showMealAccess =
@@ -228,6 +236,7 @@ export function MembersScreen() {
     if (!showTenantOccupancyStatus) {
       setStayByMemberId(new Map());
       setStayKindByMemberId(new Map());
+      setStayDateByMemberId(new Map());
       return;
     }
     try {
@@ -248,6 +257,7 @@ export function MembersScreen() {
       };
       const next = new Map<string, string>();
       const nextKinds = new Map<string, StayChoice>();
+      const nextDates = new Map<string, MemberListStayDateSource>();
       const memberIds = new Set(occupancies.map(row => row.memberId));
       memberIds.forEach(memberId => {
         const label = stayLabelForMember(memberId, occupancies, stayOptions);
@@ -262,9 +272,18 @@ export function MembersScreen() {
         if (kind === 'MONTHLY' || kind === 'SHORT' || kind === 'OPEN_ENDED') {
           nextKinds.set(memberId, kind);
         }
+        const dateSource = preferredOccupancyForMemberListDates(
+          memberId,
+          rows,
+          reservedRows,
+        );
+        if (dateSource) {
+          nextDates.set(memberId, dateSource);
+        }
       });
       setStayByMemberId(next);
       setStayKindByMemberId(nextKinds);
+      setStayDateByMemberId(nextDates);
     } catch (loadError) {
       devLog('[MembersScreen] stay load failed', loadError);
     }
@@ -676,9 +695,10 @@ export function MembersScreen() {
                   showMealAccess &&
                   ((isMess && member.role === 'CUSTOMER') ||
                     (!isMess && member.role === 'TENANT')) &&
-                  canEnableMealsForMember({
+                  shouldShowMealAccessForMember({
                     spaceType: permissions.spaceType,
                     occupancyStatus: member.occupancyStatus,
+                    memberStatus: member.status,
                   });
                 const receiving = isReceivingMealsForMember(participation, {
                   spaceType: permissions.spaceType,
@@ -704,6 +724,7 @@ export function MembersScreen() {
                       formatMemberContactNumber(member.mobileNumber) ??
                       t('membership.members.mobileNotAvailable')
                     }
+                    contactValue={member.mobileNumber}
                     statusChip={buildMemberStatusChip(member, showTenantOccupancyStatus)}
                     stayTypeChip={
                       showTenantOccupancyStatus ? (
@@ -717,6 +738,10 @@ export function MembersScreen() {
                     stayLabel={memberListStayLabel(
                       member,
                       stayByMemberId.get(member.memberId) ?? member.stayLabel,
+                    )}
+                    stayDates={buildMemberListStayDateInfo(
+                      stayDateByMemberId.get(member.memberId),
+                      t,
                     )}
                     paymentLine={paymentLineFor(member.memberId)}
                     onPaymentPress={() => openMemberDetails(member, 'payments')}
@@ -737,6 +762,7 @@ export function MembersScreen() {
                                 canManage={canManageMeals}
                                 spaceType={permissions.spaceType}
                                 occupancyStatus={member.occupancyStatus}
+                                memberStatus={member.status}
                                 onParticipationChanged={() =>
                                   reloadParticipations().catch(() => undefined)
                                 }

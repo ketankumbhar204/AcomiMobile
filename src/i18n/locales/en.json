@@ -2080,11 +2080,13 @@
       "bed": "Bed",
       "allocatedOn": "Allocated On",
       "moveInDate": "Move-in date",
+      "plannedMoveIn": "Planned move-in",
       "movedIn": "Moved in",
       "occupiedFor": "Occupied for",
       "occupiedDays_one": "{{count}} day",
       "occupiedDays_other": "{{count}} days",
       "expectedMoveOut": "Expected move-out",
+      "noFixedDate": "No fixed date",
       "shortStayChoice": "Daily",
       "monthlyStayChoice": "Monthly",
       "openEndedStayChoice": "No Fixed Move-Out Date",
@@ -4476,7 +4478,13 @@
       "label": "Food included",
       "notIncluded": "Food not included",
       "noActiveStay": "No active stay. Food is set when the tenant moves in.",
-      "activeStayHint": "Also set during move-in. Turning off stops menu sharing."
+      "activeStayHint": "Also set during move-in. Turning off stops menu sharing.",
+      "confirmEnableTitle": "Enable Food Included?",
+      "confirmEnableMessage": "Are you sure you want to include food for this tenant? This will update the tenant's food inclusion setting.",
+      "confirmEnableAction": "Confirm & Enable",
+      "confirmDisableTitle": "Disable Food Included?",
+      "confirmDisableMessage": "Are you sure you want to exclude food for this tenant? This will update the tenant's food inclusion setting.",
+      "confirmDisableAction": "Confirm & Disable"
     },
     "accessStatus": {
       "label": "Status",

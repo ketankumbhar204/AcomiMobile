@@ -1,5 +1,13 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle } from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
+} from 'react-native';
 import { BedSingle, Phone } from 'lucide-react-native';
 import { colors, typography } from '../../theme';
 import { formatMemberContactNumber } from '../../utils/indianMobile';
@@ -12,6 +20,8 @@ type ContactNumberLineProps = {
   /** Already formatted, including a "not available" fallback. */
   label?: string | null;
   textStyle?: StyleProp<TextStyle>;
+  /** Outer row style, e.g. to share a line with the role chip. */
+  containerStyle?: StyleProp<ViewStyle>;
   /** Person name for the contact sheet title. */
   name?: string | null;
   roleLabel?: string | null;
@@ -24,6 +34,7 @@ export function ContactNumberLine({
   value,
   label,
   textStyle,
+  containerStyle,
   name,
   roleLabel,
   interactive = true,
@@ -55,7 +66,7 @@ export function ContactNumberLine({
   );
 
   if (!canOpen) {
-    return <View style={styles.row}>{content}</View>;
+    return <View style={[styles.row, containerStyle]}>{content}</View>;
   }
 
   return (
@@ -68,7 +79,7 @@ export function ContactNumberLine({
           roleLabel,
         });
       }}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.row, containerStyle, pressed && styles.pressed]}
       accessibilityRole="button"
       accessibilityLabel={text}
       hitSlop={6}>

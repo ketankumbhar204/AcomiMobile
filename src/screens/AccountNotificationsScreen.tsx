@@ -9,7 +9,7 @@ import { EmptyState } from '../components/ui';
 import type { MainStackParamList } from '../navigation/types';
 import { refreshAccountEnquiryUnread } from '../store/accountEnquiryUnreadStore';
 import { isPhotoRequestNotification } from '../utils/photoRequest';
-import { colors, spacing, typography } from '../theme';
+import { colors, pageContentGutter, spacing, typography } from '../theme';
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -110,7 +110,11 @@ export function AccountNotificationsScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   loader: { marginTop: spacing.xl },
-  list: { padding: spacing.md, paddingBottom: spacing.xxl },
+  list: {
+    paddingHorizontal: pageContentGutter,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xxl,
+  },
   card: {
     marginBottom: spacing.sm,
     padding: spacing.md,

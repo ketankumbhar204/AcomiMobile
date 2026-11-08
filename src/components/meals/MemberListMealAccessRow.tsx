@@ -5,9 +5,11 @@ import { setMemberMealAccess } from '../../api/mealsApi';
 import type {
   MemberMealParticipationSummary,
   MemberOccupancyStatus,
+  MemberStatus,
   SpaceType,
   UUID,
 } from '../../api/types';
+import { useConfirmDialog } from '../ui';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, spacing, typography } from '../../theme';
 import {
@@ -43,6 +45,7 @@ type MemberListMealAccessProps = {
   labelKey?: string;
   spaceType?: SpaceType;
   occupancyStatus?: MemberOccupancyStatus | null;
+  memberStatus?: MemberStatus | string | null;
 };
 
 function useMemberMealAccessToggle({
@@ -53,18 +56,19 @@ function useMemberMealAccessToggle({
   onParticipationChanged,
   spaceType,
   occupancyStatus,
+  memberStatus,
 }: MemberListMealAccessProps) {
   const { t } = useTranslation();
   const showToast = useToastStore(state => state.showToast);
+  const { showConfirm } = useConfirmDialog();
   const [loading, setLoading] = useState(false);
 
   const receiving = isReceivingMealsForMember(participation, { spaceType, occupancyStatus });
-  const canEnable = canEnableMealsForMember({ spaceType, occupancyStatus });
+  const canEnable = canEnableMealsForMember({ spaceType, occupancyStatus, memberStatus });
 
-  const onToggle = useCallback(
+  const persistToggle = useCallback(
     async (enabled: boolean) => {
-      if (enabled && !canEnable) {
-        showToast(t('meals.errors.foodRequiresMoveIn'));
+      if (!canEnable || loading) {
         return;
       }
       setLoading(true);
@@ -82,6 +86,7 @@ function useMemberMealAccessToggle({
     },
     [
       canEnable,
+      loading,
       memberId,
       onParticipationChanged,
       participation,
@@ -91,14 +96,51 @@ function useMemberMealAccessToggle({
     ],
   );
 
-  return { canManage, canEnable, loading, onToggle, receiving, t };
+  const requestToggle = useCallback(
+    (enabled: boolean) => {
+      if (!canEnable || loading) {
+        return;
+      }
+      showConfirm({
+        title: enabled
+          ? t('meals.foodIncluded.confirmEnableTitle', {
+              defaultValue: 'Enable Food Included?',
+            })
+          : t('meals.foodIncluded.confirmDisableTitle', {
+              defaultValue: 'Disable Food Included?',
+            }),
+        message: enabled
+          ? t('meals.foodIncluded.confirmEnableMessage', {
+              defaultValue:
+                "Are you sure you want to include food for this tenant? This will update the tenant's food inclusion setting.",
+            })
+          : t('meals.foodIncluded.confirmDisableMessage', {
+              defaultValue:
+                "Are you sure you want to exclude food for this tenant? This will update the tenant's food inclusion setting.",
+            }),
+        confirmLabel: enabled
+          ? t('meals.foodIncluded.confirmEnableAction', {
+              defaultValue: 'Confirm & Enable',
+            })
+          : t('meals.foodIncluded.confirmDisableAction', {
+              defaultValue: 'Confirm & Disable',
+            }),
+        cancelLabel: t('common.cancel'),
+        destructive: !enabled,
+        onConfirm: () => persistToggle(enabled),
+      });
+    },
+    [canEnable, loading, persistToggle, showConfirm, t],
+  );
+
+  return { canManage, canEnable, loading, requestToggle, receiving, t };
 }
 
 export function MemberListMealAccessToggle({
   labelKey = 'meals.mealAccess.label',
   ...props
 }: MemberListMealAccessProps) {
-  const { canManage, canEnable, loading, onToggle, receiving, t } =
+  const { canManage, canEnable, loading, requestToggle, receiving, t } =
     useMemberMealAccessToggle(props);
 
   return (
@@ -112,8 +154,8 @@ export function MemberListMealAccessToggle({
         ) : (
           <Switch
             value={receiving}
-            disabled={!canEnable && !receiving}
-            onValueChange={value => void onToggle(value)}
+            disabled={!canEnable}
+            onValueChange={value => requestToggle(value)}
             accessibilityLabel={t(labelKey)}
           />
         )
@@ -128,7 +170,7 @@ export function MemberListMealAccessSwitch({
   labelKey = 'meals.foodIncluded.label',
   ...props
 }: MemberListMealAccessProps) {
-  const { canManage, canEnable, loading, onToggle, receiving, t } =
+  const { canManage, canEnable, loading, requestToggle, receiving, t } =
     useMemberMealAccessToggle({ labelKey, ...props });
 
   if (!canManage) {
@@ -142,8 +184,8 @@ export function MemberListMealAccessSwitch({
   return (
     <Switch
       value={receiving}
-      disabled={!canEnable && !receiving}
-      onValueChange={value => void onToggle(value)}
+      disabled={!canEnable}
+      onValueChange={value => requestToggle(value)}
       accessibilityLabel={t(labelKey)}
       style={styles.inlineSwitch}
     />
