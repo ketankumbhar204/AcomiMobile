@@ -17,7 +17,7 @@ import { useSpaceDashboard } from '../../hooks/useSpaceDashboard';
 import { useSpaceOccupancyList } from '../../hooks/useSpaceOccupancyList';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../../navigation/types';
-import { spacing } from '../../theme';
+import { pageContentGutter, spacing } from '../../theme';
 import { UnitOpsFocusList } from '../../components/accommodation/UnitOpsFocusList';
 import { useUnitLevelOccupancyCounts } from '../../hooks/useUnitLevelOccupancyCounts';
 import { getAccommodationUiProfile, usesUnitLevelOccupancy } from '../../utils/accommodationProfile';
@@ -36,9 +36,9 @@ type Route = {
   name: 'DashboardBedInventory';
   params: {
     spaceId: UUID;
-    status: 'AVAILABLE' | 'OCCUPIED';
+    status: 'AVAILABLE' | 'OCCUPIED' | 'RESERVED';
     focus?: PropertyOpsFocus;
-    intent?: 'allocate';
+    intent?: 'allocate' | 'reserve';
   };
 };
 
@@ -51,6 +51,14 @@ export function DashboardBedInventoryScreen() {
   const { spaceId, status, intent, focus: focusParam } = route.params;
   const opsFocus = propertyOpsFocusFromInventory(status, focusParam);
   const selectingForAllocate = intent === 'allocate' && opsFocus === 'vacant';
+  const selectingForReserve = intent === 'reserve' && opsFocus === 'vacant';
+  const selectingVacantForWizard = selectingForAllocate || selectingForReserve;
+  const wizardMode = selectingForReserve ? 'RESERVE' : 'ALLOCATE';
+  const flowAction = selectingForReserve
+    ? 'reserve'
+    : selectingForAllocate
+      ? 'allocate'
+      : 'dashboard';
 
   const permissions = useSpacePermissions(spaceId);
   const canManageOccupancy = permissions.canManageOccupancy;
@@ -88,14 +96,14 @@ export function DashboardBedInventoryScreen() {
       }
       navigation.navigate('OccupancyWizard', {
         spaceId,
-        mode: 'ALLOCATE',
+        mode: wizardMode,
         bedId: bed.bedId,
         roomId: bed.roomId,
         unitId: bed.unitId ?? undefined,
         buildingId: bed.buildingId,
       });
     },
-    [canManageOccupancy, navigation, spaceId],
+    [canManageOccupancy, navigation, spaceId, wizardMode],
   );
 
   const handleBedPress = useCallback(
@@ -139,6 +147,7 @@ export function DashboardBedInventoryScreen() {
         moveInDate: row.moveInDate ?? row.actualMoveInAt?.slice(0, 10) ?? null,
         rent: row.rentSnapshot ?? null,
         deposit: row.depositSnapshot ?? null,
+        stayKind: row.stayKind ?? null,
       });
     }
     return map;
@@ -168,6 +177,10 @@ export function DashboardBedInventoryScreen() {
   const screenTitle =
     opsFocus === 'moveIns'
       ? t('dashboard.drilldown.moveInsTitle')
+      : opsFocus === 'reserved'
+        ? t('dashboard.drilldown.reservedBedsTitle', {
+            defaultValue: unitLevel ? 'Reserved units' : 'Reserved beds',
+          })
       : unitLevel && opsFocus === 'occupied'
         ? t('dashboard.accommodationOperations.occupiedUnits', { defaultValue: 'Occupied units' })
         : unitLevel
@@ -196,7 +209,7 @@ export function DashboardBedInventoryScreen() {
 
   if (unitLevel) {
     return (
-      <Screen style={styles.screen} contentStyle={styles.content}>
+      <Screen scrollable style={styles.screen} contentStyle={styles.content}>
         {showOpsCards && displayOperations ? (
           <DashboardAccommodationOperations
             hideTitle
@@ -205,7 +218,7 @@ export function DashboardBedInventoryScreen() {
             selectedMetricId={opsFocus}
             onOccupiedPress={() => switchFocus('occupied')}
             onVacantPress={() => switchFocus('vacant')}
-            onMoveInsPress={() => switchFocus('moveIns')}
+            onReservedPress={() => switchFocus('reserved')}
           />
         ) : null}
         <UnitOpsFocusList
@@ -215,15 +228,17 @@ export function DashboardBedInventoryScreen() {
               ? undefined
               : opsFocus === 'occupied'
                 ? 'OCCUPIED'
-                : 'AVAILABLE'
+                : opsFocus === 'reserved'
+                  ? 'RESERVED'
+                  : 'AVAILABLE'
           }
           unitIds={moveInUnitIds}
           onAllocate={
-            selectingForAllocate && canManageOccupancy
+            selectingVacantForWizard && canManageOccupancy
               ? unit =>
                   navigation.navigate('OccupancyWizard', {
                     spaceId,
-                    mode: 'ALLOCATE',
+                    mode: wizardMode,
                     unitId: unit.unitId,
                     buildingId: unit.buildingId,
                   })
@@ -244,13 +259,14 @@ export function DashboardBedInventoryScreen() {
         opsFocus={opsFocus}
         bedIdAllowList={moveInBedIds}
         listPending={opsFocus === 'moveIns' && moveIns.loading && moveIns.items.length === 0}
-        flowAction={selectingForAllocate && canManageOccupancy ? 'allocate' : 'dashboard'}
-        onFlowAction={selectingForAllocate && canManageOccupancy ? handleAllocateBed : undefined}
+        flowAction={selectingVacantForWizard && canManageOccupancy ? flowAction : 'dashboard'}
+        onFlowAction={selectingVacantForWizard && canManageOccupancy ? handleAllocateBed : undefined}
         canManageOccupancy={canManageOccupancy}
-        onBedPress={selectingForAllocate ? () => undefined : handleBedPress}
+        onBedPress={selectingVacantForWizard ? () => undefined : handleBedPress}
         onEditBed={canManage ? bed => bedInteraction.open(persistedTargetFromSpaceBed(bed)) : undefined}
         refreshTrigger={refreshToken}
         showSubtitle={false}
+        unifiedScroll
         headerAccessory={
           showOpsCards && displayOperations ? (
             <DashboardAccommodationOperations
@@ -259,7 +275,7 @@ export function DashboardBedInventoryScreen() {
               selectedMetricId={opsFocus}
               onOccupiedPress={() => switchFocus('occupied')}
               onVacantPress={() => switchFocus('vacant')}
-              onMoveInsPress={() => switchFocus('moveIns')}
+              onReservedPress={() => switchFocus('reserved')}
             />
           ) : null
         }
@@ -279,8 +295,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: spacing.xxl,
+    paddingHorizontal: pageContentGutter,
     paddingTop: spacing.md,
-    flex: 1,
+    paddingBottom: spacing.xxxl,
   },
 });

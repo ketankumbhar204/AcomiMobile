@@ -49,7 +49,7 @@ describe('fileUploadService', () => {
     });
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
-      blob: async () => new Blob([new Uint8Array([1, 2, 3])]),
+      blob: async () => new Blob(['abc']),
     }) as never;
 
     const fileId = await uploadLocalFile(
@@ -82,7 +82,7 @@ describe('fileUploadService', () => {
       .fn()
       .mockResolvedValueOnce({
         ok: true,
-        blob: async () => new Blob([new Uint8Array([1])]),
+        blob: async () => new Blob(['a']),
       })
       .mockResolvedValueOnce({ ok: true });
     global.fetch = fetchMock as never;

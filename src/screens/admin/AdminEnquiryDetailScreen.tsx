@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { adminEnquiryApi } from '../../api/enquiryApi';
 import type { AdminSpaceEnquiryDetail } from '../../api/types';
 import { AdminDetailField, AdminDetailSection } from '../../components/admin';
+import { ContactNumberLine } from '../../components/member/ContactAndStayMeta';
 import { FormInput } from '../../components/ui';
 import { StickyFormActions } from '../../components/progressive';
 import type { AdminStackParamList } from '../../navigation/types';
@@ -106,6 +107,15 @@ export function AdminEnquiryDetailScreen({ route }: Props) {
           <AdminDetailField
             label={t('admin.enquiries.requesterMobile', { defaultValue: 'Requester mobile' })}
             value={displayPhone(detail.requesterMobile) || t('admin.labels.emDash')}
+            valueNode={
+              detail.requesterMobile ? (
+                <ContactNumberLine
+                  value={detail.requesterMobile}
+                  name={detail.requesterName}
+                  showIcon={false}
+                />
+              ) : undefined
+            }
           />
           <AdminDetailField
             label={t('admin.enquiries.columns.requested')}
@@ -148,14 +158,41 @@ export function AdminEnquiryDetailScreen({ route }: Props) {
           <AdminDetailField
             label={t('admin.enquiries.mobile')}
             value={contact.mobileNumber || t('admin.labels.emDash')}
+            valueNode={
+              contact.mobileNumber ? (
+                <ContactNumberLine
+                  value={contact.mobileNumber}
+                  name={contact.ownerName}
+                  showIcon={false}
+                />
+              ) : undefined
+            }
           />
           <AdminDetailField
             label={t('admin.enquiries.alternateMobile')}
             value={contact.alternateMobileNumber || t('admin.labels.emDash')}
+            valueNode={
+              contact.alternateMobileNumber ? (
+                <ContactNumberLine
+                  value={contact.alternateMobileNumber}
+                  name={contact.ownerName}
+                  showIcon={false}
+                />
+              ) : undefined
+            }
           />
           <AdminDetailField
             label={t('admin.enquiries.additionalContact')}
             value={contact.additionalMobileNumber || t('admin.labels.emDash')}
+            valueNode={
+              contact.additionalMobileNumber ? (
+                <ContactNumberLine
+                  value={contact.additionalMobileNumber}
+                  name={contact.ownerName}
+                  showIcon={false}
+                />
+              ) : undefined
+            }
           />
           <AdminDetailField
             label={t('admin.enquiries.ownerEmail')}

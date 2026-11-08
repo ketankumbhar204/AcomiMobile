@@ -87,6 +87,14 @@ export function buildReserveRequest(
     expectedCheckoutDate?: string;
     memberCategory?: MemberCategory;
     remarks?: string;
+    rentSnapshot?: number | null;
+    bookingAdvanceAmount?: number | null;
+    bookingAdvanceCollected?: boolean | null;
+    bookingAdvancePaymentMethod?: ReserveOccupancyRequest['bookingAdvancePaymentMethod'];
+    depositSnapshot?: number | null;
+    foodEnabled?: boolean;
+    foodIncludedInRent?: boolean;
+    foodChargeSnapshot?: number | null;
   },
 ): { body: ReserveOccupancyRequest | null; errorKey: string | null } {
   const errorKey = validateTargetSelection(spaceType, targetType, ids);
@@ -107,6 +115,14 @@ export function buildReserveRequest(
       expectedExitDate: getExpectedExitDate(options),
       memberCategory: options.memberCategory ?? null,
       remarks: options.remarks?.trim() || null,
+      rentSnapshot: options.rentSnapshot ?? undefined,
+      bookingAdvanceAmount: options.bookingAdvanceAmount ?? undefined,
+      bookingAdvanceCollected: options.bookingAdvanceCollected ?? undefined,
+      bookingAdvancePaymentMethod: options.bookingAdvancePaymentMethod ?? undefined,
+      depositSnapshot: options.depositSnapshot ?? undefined,
+      foodEnabled: options.foodEnabled,
+      foodIncludedInRent: options.foodIncludedInRent,
+      foodChargeSnapshot: options.foodChargeSnapshot ?? undefined,
     },
     errorKey: null,
   };
@@ -118,6 +134,7 @@ export function buildAllocateRequest(
   targetType: AllocationTargetType,
   ids: { bedId?: string; roomId?: string; unitId?: string },
   options?: {
+    moveInDate?: string;
     expectedCheckoutDate?: string;
     expectedExitDate?: string;
     remarks?: string;
@@ -129,6 +146,7 @@ export function buildAllocateRequest(
   if (errorKey) {
     return { body: null, errorKey };
   }
+  const moveInDate = options?.moveInDate?.trim() || undefined;
   return {
     body: {
       memberId,
@@ -136,6 +154,7 @@ export function buildAllocateRequest(
       bedId: targetType === 'BED' ? ids.bedId : null,
       roomId: targetType === 'ROOM' ? ids.roomId : null,
       unitId: targetType === 'UNIT' ? ids.unitId : null,
+      ...(moveInDate ? { moveInDate } : {}),
       expectedCheckoutDate: getExpectedExitDate(options),
       expectedExitDate: getExpectedExitDate(options),
       remarks: options?.remarks?.trim() || null,

@@ -10,14 +10,19 @@ describe('occupied bed card payment layout', () => {
   const inventory = source('src/components/accommodation/BuildingInventoryBedCard.tsx');
   const layout = source('src/components/accommodation/layout/cards/BedLayoutCard.tsx');
 
-  it('renders the compact balance on the tinted card, not an inset payment panel', () => {
+  it('renders Balance Due on one line with rent/deposit meta under a divider', () => {
     expect(face).toContain("t('accommodation.stayPayment.balanceDue'");
-    expect(face).toContain('backgroundColor: \'transparent\'');
+    expect(face).toContain('BalanceDueLine');
+    expect(face).toContain('occupancyRentLine');
+    expect(face).toContain('occupancyDepositLine');
     expect(face).not.toContain('backgroundColor: colors.white');
-    expect(inventory).toContain("bed.status === 'OCCUPIED'");
+    expect(inventory).toContain("bed.status === 'OCCUPIED' || bed.status === 'RESERVED'");
     expect(inventory).toContain('<OccupiedBedPaymentFace');
-    expect(inventory).toContain('<BedPricingDisplay');
+    expect(inventory).toContain("layout=\"inline\"");
+    expect(inventory).toContain('styles.divider');
+    expect(inventory).toContain('ScrollView');
     expect(layout).toContain('<OccupiedBedPaymentFace');
+    expect(layout).toContain('styles.divider');
   });
 });
 

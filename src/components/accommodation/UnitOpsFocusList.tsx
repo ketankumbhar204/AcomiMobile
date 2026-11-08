@@ -1,14 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { accommodationApi } from '../../api/accommodationApi';
 import type { AccommodationStatus, UUID, UnitListItemResponse } from '../../api/types';
 import type { MainStackParamList } from '../../navigation/types';
-import { colors, radius, spacing, typography } from '../../theme';
+import { spacing } from '../../theme';
+import { isAccommodationEntityActive } from '../../utils/accommodationEntityActive';
+import { occupancyPercentFromStatus } from './layout/cards/occupancyUtils';
 import { EmptyState } from '../ui';
-import { AccommodationStatusBadge } from './AccommodationStatusBadge';
+import {
+  InventoryListingCard,
+  InventoryListingCardGrid,
+} from './InventoryListingCard';
 
 type UnitRow = UnitListItemResponse & {
   buildingId: UUID;
@@ -86,6 +91,19 @@ export function UnitOpsFocusList({
     return true;
   });
 
+  const openUnit = (unit: UnitRow) => {
+    if (onAllocate) {
+      onAllocate(unit);
+      return;
+    }
+    navigation.navigate('UnitDetail', {
+      spaceId,
+      buildingId: unit.buildingId,
+      unitId: unit.unitId,
+      buildingName: unit.buildingName,
+    });
+  };
+
   if (loading) {
     return null;
   }
@@ -103,29 +121,25 @@ export function UnitOpsFocusList({
 
   return (
     <View style={styles.list}>
-      {visible.map(unit => (
-        <Pressable
-          key={unit.unitId}
-          style={styles.row}
-          onPress={() => {
-            if (onAllocate) {
-              onAllocate(unit);
-              return;
-            }
-            navigation.navigate('UnitDetail', {
-              spaceId,
-              buildingId: unit.buildingId,
-              unitId: unit.unitId,
-              buildingName: unit.buildingName,
-            });
-          }}>
-          <View style={styles.copy}>
-            <Text style={styles.name}>{unit.name}</Text>
-            <Text style={styles.building}>{unit.buildingName}</Text>
-          </View>
-          <AccommodationStatusBadge status={unit.status} />
-        </Pressable>
-      ))}
+      <InventoryListingCardGrid
+        items={visible}
+        keyExtractor={unit => unit.unitId}
+        renderCard={unit => {
+          const inactive = !isAccommodationEntityActive(unit);
+          return (
+            <InventoryListingCard
+              kind="unit"
+              title={unit.name}
+              subtitle={unit.buildingName}
+              status={inactive ? null : unit.status}
+              inactive={inactive}
+              occupancyPercent={inactive ? 0 : occupancyPercentFromStatus(unit.status)}
+              onPressDetails={() => openUnit(unit)}
+              onPressCard={() => openUnit(unit)}
+            />
+          );
+        }}
+      />
     </View>
   );
 }
@@ -133,27 +147,5 @@ export function UnitOpsFocusList({
 const styles = StyleSheet.create({
   list: {
     gap: spacing.sm,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.white,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.md,
-  },
-  copy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  name: {
-    ...typography.bodyStrong,
-    color: colors.textPrimary,
-  },
-  building: {
-    ...typography.caption,
-    color: colors.muted,
   },
 });

@@ -64,4 +64,28 @@ describe('ownerPaymentFilters', () => {
     expect(filterReviewPayments(payments, 'PENDING', 'SUBMITTED', 'PAID')).toHaveLength(1);
     expect(filterReviewPayments(payments, 'PENDING', 'NEEDS_UPDATE', 'PAID')).toHaveLength(1);
   });
+
+  it('counts and filters refunded and cancelled history queues', () => {
+    const payments = [
+      payment({ paymentStatus: 'PAID' }),
+      payment({ paymentId: 'p2', paymentStatus: 'REFUNDED' }),
+      payment({ paymentId: 'p3', paymentStatus: 'CANCELLED' }),
+      payment({ paymentId: 'p4', paymentStatus: 'REJECTED' }),
+      payment({
+        paymentId: 'p5',
+        paymentStatus: 'PAID',
+        partiallyRefunded: true,
+        refundedAmount: 1000,
+        retainedAmount: 4500,
+      }),
+    ];
+    const counts = computeOwnerPaymentCounts(payments, []);
+    expect(counts.paid).toBe(1);
+    expect(counts.refunded).toBe(2);
+    expect(counts.cancelled).toBe(1);
+    expect(counts.history).toBe(5);
+    expect(filterReviewPayments(payments, 'HISTORY', 'SUBMITTED', 'REFUNDED')).toHaveLength(2);
+    expect(filterReviewPayments(payments, 'HISTORY', 'SUBMITTED', 'CANCELLED')).toHaveLength(1);
+    expect(filterReviewPayments(payments, 'HISTORY', 'SUBMITTED', 'PAID')).toHaveLength(1);
+  });
 });

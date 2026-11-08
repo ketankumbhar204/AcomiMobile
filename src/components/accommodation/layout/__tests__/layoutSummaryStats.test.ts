@@ -1,4 +1,4 @@
-import type { BuildingSummaryResponse } from '../../../api/types';
+import type { BuildingSummaryResponse } from '../../../../api/types';
 import {
   aggregateUnitBedStatusCounts,
   aggregateUnitStatusCounts,

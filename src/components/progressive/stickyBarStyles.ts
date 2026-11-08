@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Keyboard, Platform, StyleSheet, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing } from '../../theme';
+import { colors, pageContentGutter, spacing } from '../../theme';
 
 /** Shared sticky bar chrome — ProgressiveWorkflowFooter + StickyFormActions. */
 export const stickyBarChrome = {
   borderTopWidth: 1,
   borderTopColor: colors.border,
   backgroundColor: colors.white,
-  paddingHorizontal: spacing.xxl,
+  paddingHorizontal: pageContentGutter,
   paddingTop: spacing.sm,
 } as const;
 

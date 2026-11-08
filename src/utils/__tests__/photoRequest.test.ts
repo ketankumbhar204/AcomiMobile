@@ -95,7 +95,7 @@ describe('photo request', () => {
   });
 
   it('opens WhatsApp with the edited message after the notification is saved', async () => {
-    const openUrl = jest.fn(async () => undefined);
+    const openUrl = jest.fn(async (_url: string) => undefined);
     const request = jest.fn(async () => ({
       notificationPersisted: true,
       notificationDuplicate: false,

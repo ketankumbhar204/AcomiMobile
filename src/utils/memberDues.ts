@@ -15,7 +15,9 @@ export type MemberDuesSnapshot = {
 export type MemberDuesCue =
   | { kind: 'due'; amount: number }
   | { kind: 'review'; amount: number }
-  | { kind: 'clear' };
+  | { kind: 'clear' }
+  /** OPEN_ENDED daily rent: period still open, no rent row yet. Not clear, not overdue. */
+  | { kind: 'notBilled' };
 
 export type MemberPaymentDuesFilter = 'all' | 'pending' | 'clear';
 
@@ -30,9 +32,13 @@ function positive(amount: number | null | undefined): number | null {
 
 export function memberDuesCue(
   row: MemberDuesSnapshot | null | undefined,
+  options?: {
+    /** OPEN_ENDED daily-rate stay whose open period has no RENT payment row yet. */
+    openEndedUnbilled?: boolean;
+  },
 ): MemberDuesCue | null {
   if (!row) {
-    return null;
+    return options?.openEndedUnbilled ? { kind: 'notBilled' } : null;
   }
   const pending = positive(row.pending);
   if (pending != null) {
@@ -41,6 +47,9 @@ export function memberDuesCue(
   const underReview = positive(row.underReview);
   if (underReview != null) {
     return { kind: 'review', amount: underReview };
+  }
+  if (options?.openEndedUnbilled) {
+    return { kind: 'notBilled' };
   }
   if (positive(row.expectedCharges) != null) {
     return { kind: 'clear' };

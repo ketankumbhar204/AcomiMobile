@@ -4,7 +4,7 @@ import { accommodationApi } from '../api/accommodationApi';
 import { useToastStore } from '../store/toastStore';
 import {
   BedPricingCommitController,
-  type BedPricingRequestInput,
+  type BedPricingCommitRequest,
   type PendingBedPricing,
 } from '../utils/bedPricingCommitController';
 import { updateBedDetails } from '../utils/accommodationInlineRename';
@@ -54,14 +54,23 @@ export function useConfirmBedPricingCommit(options: {
 
   const request = useCallback(
     (
-      input: Omit<BedPricingRequestInput, 'spaceId'> & {
-        spaceId?: string;
-      },
+      input: BedPricingCommitRequest,
     ) => {
-      const done = controller.request({
-        ...input,
-        spaceId: input.spaceId ?? spaceIdRef.current,
-      } as BedPricingRequestInput);
+      const spaceId = input.spaceId ?? spaceIdRef.current;
+      const done =
+        'nextRent' in input
+          ? controller.request({
+              ...input,
+              spaceId,
+              nextRent: input.nextRent,
+              nextDeposit: input.nextDeposit,
+            })
+          : controller.request({
+              ...input,
+              spaceId,
+              field: input.field,
+              value: input.value,
+            });
       rerender();
       void done.then(() => rerender());
     },

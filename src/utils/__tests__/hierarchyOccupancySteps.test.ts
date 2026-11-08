@@ -120,14 +120,30 @@ describe('getHierarchySteps', () => {
 });
 
 describe('post hierarchy wizard steps', () => {
-  it('allocate adds member, contract, and review', () => {
-    expect(getPostHierarchyWizardSteps('ALLOCATE')).toEqual(['member', 'contract', 'review']);
+  it('allocate puts stay type before member, then contract and review', () => {
+    expect(getPostHierarchyWizardSteps('ALLOCATE')).toEqual([
+      'stay_type',
+      'member',
+      'contract',
+      'review',
+    ]);
   });
 
-  it('reserve adds member, dates, and review', () => {
+  it('ignores shortStayEnabled flag and always inserts stay type first', () => {
+    expect(
+      getPostHierarchyWizardSteps('ALLOCATE', { shortStayEnabled: false }),
+    ).toEqual(['stay_type', 'member', 'contract', 'review']);
+    expect(
+      getPostHierarchyWizardSteps('RESERVE', { shortStayEnabled: false }),
+    ).toEqual(['stay_type', 'member', 'reserve_dates', 'contract', 'review']);
+  });
+
+  it('reserve puts stay type before member, then dates, contract and review', () => {
     expect(getPostHierarchyWizardSteps('RESERVE')).toEqual([
+      'stay_type',
       'member',
       'reserve_dates',
+      'contract',
       'review',
     ]);
   });
@@ -138,6 +154,7 @@ describe('post hierarchy wizard steps', () => {
       floorId: 'f1',
       floorName: 'Floor 1',
     });
-    expect(getTotalAllocationFlowSteps(hierarchy, 'ALLOCATE')).toBe(6);
+    // hierarchy: unit → room → bed (3) + stay_type, member, contract, review (4) = 7
+    expect(getTotalAllocationFlowSteps(hierarchy, 'ALLOCATE')).toBe(7);
   });
 });

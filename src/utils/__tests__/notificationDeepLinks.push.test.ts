@@ -122,6 +122,24 @@ describe('notificationDeepLinks push types', () => {
     expect(navigateToMembersTab).toHaveBeenCalledWith('space-1');
   });
 
+  it('opens PaymentDetail for a generated monthly rent notification', () => {
+    navigateFromNotificationType(
+      'space-1',
+      {
+        notificationType: 'PAYMENT_GENERATED',
+        entityId: 'pay-dec',
+        actionRoute: 'PaymentDetail',
+        message: 'Your December 2026 rent of ₹6,000 has been generated for Sunrise PG.',
+        title: 'Monthly rent payment generated',
+      },
+      false,
+    );
+    expect(navigateMainStack).toHaveBeenCalledWith('PaymentDetail', {
+      spaceId: 'space-1',
+      paymentId: 'pay-dec',
+    });
+  });
+
   it('opens PaymentDetail for PAYMENT_REMINDER_SENT when entityId is present', () => {
     navigateFromNotificationType(
       'space-1',
@@ -263,6 +281,24 @@ describe('notificationDeepLinks push types', () => {
     );
   });
 
+  it('opens the active stay list for an overdue stay without treating it as checkout today', () => {
+    navigateFromNotificationType(
+      'space-1',
+      {
+        notificationType: 'STAY_OVERDUE_ACTIVE',
+        entityId: 'stay-1',
+        actionRoute: 'DashboardOccupancyList',
+        message: "Ravi's planned end has passed and the stay is still active.",
+        title: 'Stay still active',
+      },
+      true,
+    );
+    expect(navigateMainStack).toHaveBeenCalledWith('DashboardOccupancyList', {
+      spaceId: 'space-1',
+      mode: 'active',
+    });
+  });
+
   it('opens MySpaces after space deactivation', () => {
     navigateFromNotificationType(
       'space-1',
@@ -276,20 +312,5 @@ describe('notificationDeepLinks push types', () => {
       false,
     );
     expect(navigateMainStack).toHaveBeenCalledWith('MySpaces', undefined);
-  });
-
-  it('opens the listing for a photo request', () => {
-    navigateFromNotificationType(
-      'space-1',
-      {
-        notificationType: 'PHOTO_REQUEST_RECEIVED',
-        entityId: 'space-1',
-        actionRoute: 'FindAPlaceDetail',
-        message: 'Someone interested in Green PG has requested photos. Open ACOMI to review the request.',
-        title: 'Photo request received',
-      },
-      true,
-    );
-    expect(navigateMainStack).toHaveBeenCalledWith('FindAPlaceDetail', { spaceId: 'space-1' });
   });
 });

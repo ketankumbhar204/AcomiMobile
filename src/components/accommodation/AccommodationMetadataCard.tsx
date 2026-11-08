@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Card, InlineEditableName, Skeleton } from '../ui';
 import { colors, spacing, typography } from '../../theme';
 

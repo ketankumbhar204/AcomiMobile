@@ -1,8 +1,10 @@
 import React, {
   createContext,
+  forwardRef,
   useCallback,
   useContext,
   useEffect,
+  useImperativeHandle,
   useMemo,
   useRef,
   useState,
@@ -17,7 +19,7 @@ import {
   type LayoutRectangle,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { MoreVertical } from 'lucide-react-native';
+import { MoreVertical, type LucideIcon } from 'lucide-react-native';
 import { navigationRef } from '../../navigation/navigationRef';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 
@@ -31,6 +33,11 @@ export type HeaderOverflowMenuItem = {
   /** Defaults to true */
   visible?: boolean;
   destructive?: boolean;
+  icon?: LucideIcon;
+};
+
+export type HeaderOverflowMenuHandle = {
+  open: () => void;
 };
 
 type OverflowMenuState = {
@@ -139,7 +146,9 @@ export function OverflowMenuProvider({ children }: OverflowMenuProviderProps) {
                 },
               ]}
               onPress={event => event.stopPropagation()}>
-              {menuState.items.map((item, index) => (
+              {menuState.items.map((item, index) => {
+                const Icon = item.icon;
+                return (
                 <Pressable
                   key={item.id}
                   onPress={() => handleSelect(item)}
@@ -149,6 +158,13 @@ export function OverflowMenuProvider({ children }: OverflowMenuProviderProps) {
                     pressed && styles.menuItemPressed,
                   ]}
                   accessibilityRole="menuitem">
+                  {Icon ? (
+                    <Icon
+                      size={16}
+                      color={item.destructive ? '#DC2626' : colors.textPrimary}
+                      strokeWidth={2.2}
+                    />
+                  ) : null}
                   <Text
                     style={[
                       styles.menuItemLabel,
@@ -157,7 +173,8 @@ export function OverflowMenuProvider({ children }: OverflowMenuProviderProps) {
                     {item.label}
                   </Text>
                 </Pressable>
-              ))}
+                );
+              })}
             </Pressable>
           ) : null}
         </Pressable>
@@ -187,12 +204,12 @@ function computeMenuPosition(anchor: LayoutRectangle): {
 type HeaderOverflowMenuProps = {
   items: HeaderOverflowMenuItem[];
   accessibilityLabel: string;
+  /** Header trigger sits in the app bar. Inline trigger sits on a catalogue row. */
+  variant?: 'header' | 'inline';
 };
 
-export function HeaderOverflowMenu({
-  items,
-  accessibilityLabel,
-}: HeaderOverflowMenuProps) {
+export const HeaderOverflowMenu = forwardRef<HeaderOverflowMenuHandle, HeaderOverflowMenuProps>(
+  function HeaderOverflowMenu({ items, accessibilityLabel, variant = 'header' }, ref) {
   const { isMenuOpen, openMenu, closeMenu } = useOverflowMenuContext();
   const triggerRef = useRef<View>(null);
 
@@ -210,7 +227,7 @@ export function HeaderOverflowMenu({
     return () => subscription.remove();
   }, [closeMenu, isMenuOpen]);
 
-  const handleOpen = () => {
+  const handleOpen = useCallback(() => {
     if (isMenuOpen) {
       closeMenu();
       return;
@@ -232,22 +249,34 @@ export function HeaderOverflowMenu({
         openMenu(anchor, visibleItems);
       });
     });
-  };
+  }, [closeMenu, isMenuOpen, openMenu, visibleItems]);
+
+  useImperativeHandle(ref, () => ({ open: handleOpen }), [handleOpen]);
+
+  const isInline = variant === 'inline';
 
   return (
     <View ref={triggerRef} collapsable={false}>
       <Pressable
         onPress={handleOpen}
-        style={({ pressed }) => [styles.trigger, pressed && styles.triggerPressed]}
+        style={({ pressed }) => [
+          styles.trigger,
+          isInline && styles.triggerInline,
+          pressed && styles.triggerPressed,
+        ]}
         hitSlop={8}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
         accessibilityState={{ expanded: isMenuOpen }}>
-        <MoreVertical size={22} color={colors.textPrimary} strokeWidth={2.4} />
+        <MoreVertical
+          size={isInline ? 18 : 22}
+          color={colors.textPrimary}
+          strokeWidth={2.4}
+        />
       </Pressable>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   backdrop: {
@@ -264,10 +293,12 @@ const styles = StyleSheet.create({
     ...shadows.raised,
   },
   menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     minHeight: 48,
-    justifyContent: 'center',
     backgroundColor: colors.white,
   },
   menuItemBorder: {
@@ -280,6 +311,7 @@ const styles = StyleSheet.create({
   menuItemLabel: {
     ...typography.body,
     color: colors.textPrimary,
+    flexShrink: 1,
   },
   menuItemDestructive: {
     color: '#DC2626',
@@ -291,6 +323,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.sm,
+  },
+  triggerInline: {
+    marginRight: 0,
+    minWidth: 36,
+    width: 36,
+    height: 36,
+    paddingHorizontal: 0,
   },
   triggerPressed: {
     opacity: 0.5,

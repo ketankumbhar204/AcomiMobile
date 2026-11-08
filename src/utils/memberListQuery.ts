@@ -1,11 +1,13 @@
 import type {
+  MemberOccupancyStatus,
   MemberResponse,
   MembershipRole,
   MemberStatus,
   PendingInvitationResponse,
   SpaceType,
 } from '../api/types';
-import { compareByCreatedAt, type CreatedDateSortOption } from './listSort';
+import { isAccommodationApplicable } from './accommodationProfile';
+import { compareByCreatedAt } from './listSort';
 import {
   matchesPaymentDuesFilter,
   memberDuesCue,
@@ -20,12 +22,22 @@ export type MemberSortOption =
   | 'created_asc'
   | 'role';
 
+/** Account status options (mess / staff / KPI Active). */
 export const MEMBER_STATUSES: MemberStatus[] = [
   'ACTIVE',
   'VACATED',
   'SUSPENDED',
   'BLACKLISTED',
 ];
+
+/** Stay status options shown on accommodation member cards. */
+export const ACCOMMODATION_STAY_STATUSES: MemberOccupancyStatus[] = [
+  'ALLOCATED',
+  'RESERVED',
+  'VACATED',
+];
+
+export type MemberListStatusOption = MemberStatus | MemberOccupancyStatus;
 
 const ROLE_SORT_ORDER: Record<MembershipRole, number> = {
   OWNER: 0,
@@ -39,7 +51,7 @@ export const DEFAULT_MEMBER_SORT: MemberSortOption = 'name_asc';
 
 export type MemberListFilterState = {
   roles: Set<MembershipRole>;
-  statuses: Set<MemberStatus>;
+  statuses: Set<MemberListStatusOption>;
   sort: MemberSortOption;
   /** When true, only members whose createdAt falls in the current calendar month. */
   joinedThisMonthOnly?: boolean;
@@ -72,6 +84,30 @@ export function rolesForSpace(spaceType: SpaceType | undefined): MembershipRole[
   return ['TENANT', 'STAFF', 'MANAGER', 'OWNER'];
 }
 
+/** Status chips in the filter drawer — stay status for lodging, account status for mess. */
+export function statusesForSpace(spaceType: SpaceType | undefined): MemberListStatusOption[] {
+  if (spaceType != null && isAccommodationApplicable(spaceType)) {
+    return [...ACCOMMODATION_STAY_STATUSES];
+  }
+  return [...MEMBER_STATUSES];
+}
+
+export function memberListStatusLabelKey(
+  status: MemberListStatusOption,
+  spaceType: SpaceType | undefined,
+): string {
+  if (spaceType != null && isAccommodationApplicable(spaceType)) {
+    if (
+      status === 'ALLOCATED' ||
+      status === 'RESERVED' ||
+      status === 'VACATED'
+    ) {
+      return `occupancy.memberStatus.${status}`;
+    }
+  }
+  return `membership.status.${status}`;
+}
+
 const MEMBER_SORT_OPTIONS: MemberSortOption[] = [
   'name_asc',
   'name_desc',
@@ -81,7 +117,11 @@ const MEMBER_SORT_OPTIONS: MemberSortOption[] = [
 ];
 
 export function memberFilterOptionCount(spaceType: SpaceType | undefined): number {
-  return rolesForSpace(spaceType).length + MEMBER_STATUSES.length + MEMBER_SORT_OPTIONS.length;
+  return (
+    rolesForSpace(spaceType).length +
+    statusesForSpace(spaceType).length +
+    MEMBER_SORT_OPTIONS.length
+  );
 }
 
 export function countMemberListFilters(
@@ -89,11 +129,12 @@ export function countMemberListFilters(
   spaceType: SpaceType | undefined,
 ): number {
   const allRoles = rolesForSpace(spaceType);
+  const allStatuses = statusesForSpace(spaceType);
   let count = 0;
   if (filters.roles.size > 0 && filters.roles.size < allRoles.length) {
     count += 1;
   }
-  if (filters.statuses.size > 0 && filters.statuses.size < MEMBER_STATUSES.length) {
+  if (filters.statuses.size > 0 && filters.statuses.size < allStatuses.length) {
     count += 1;
   }
   if (filters.sort !== DEFAULT_MEMBER_SORT) {
@@ -131,11 +172,46 @@ function matchesRoleFilter(
   return selected.has(role);
 }
 
-function matchesStatusFilter(status: MemberStatus, selected: Set<MemberStatus>): boolean {
-  if (selected.size === 0 || selected.size >= MEMBER_STATUSES.length) {
+/**
+ * Accommodation tenants are filtered by stay (Moved in / Reserved / Vacated),
+ * matching the badge on the card. Other roles and mess use account status.
+ * KPI "Active" still passes account status ACTIVE.
+ */
+function matchesStatusFilter(
+  member: MemberResponse,
+  selected: Set<MemberListStatusOption>,
+  spaceType: SpaceType | undefined,
+): boolean {
+  const allStatuses = statusesForSpace(spaceType);
+  if (selected.size === 0) {
     return true;
   }
-  return selected.has(status);
+  const onlySpaceOptions = [...selected].every(status =>
+    (allStatuses as string[]).includes(status),
+  );
+  if (onlySpaceOptions && selected.size >= allStatuses.length) {
+    return true;
+  }
+
+  const usesStayFilter =
+    spaceType != null &&
+    isAccommodationApplicable(spaceType) &&
+    member.role === 'TENANT' &&
+    [...selected].some(
+      status =>
+        status === 'ALLOCATED' || status === 'RESERVED' || status === 'VACATED',
+    ) &&
+    ![...selected].some(
+      status =>
+        status === 'ACTIVE' || status === 'SUSPENDED' || status === 'BLACKLISTED',
+    );
+
+  if (usesStayFilter) {
+    const stay = member.occupancyStatus ?? 'VACATED';
+    return selected.has(stay);
+  }
+
+  return selected.has(member.status ?? 'ACTIVE');
 }
 
 export function filterAndSortMembers(
@@ -156,7 +232,7 @@ export function filterAndSortMembers(
     if (!matchesRoleFilter(member.role, options.filters.roles, allRoles)) {
       return false;
     }
-    if (!matchesStatusFilter(member.status ?? 'ACTIVE', options.filters.statuses)) {
+    if (!matchesStatusFilter(member, options.filters.statuses, options.spaceType)) {
       return false;
     }
     if (options.filters.joinedThisMonthOnly && !isJoinedThisMonth(member.createdAt)) {

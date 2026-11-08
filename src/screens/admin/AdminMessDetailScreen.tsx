@@ -9,6 +9,7 @@ import {
   AdminDetailSection,
   AdminRegistrationContactEditor,
 } from '../../components/admin';
+import { ContactNumberLine } from '../../components/member/ContactAndStayMeta';
 import { Button, Card, useConfirmDialog } from '../../components/ui';
 import { StickyFormActions } from '../../components/progressive';
 import type { AdminStackParamList } from '../../navigation/types';
@@ -109,11 +110,28 @@ export function AdminMessDetailScreen({ navigation, route }: Props) {
           ) : (
             <>
               <AdminDetailField label={t('admin.common.owner')} value={detail.ownerName} />
-              <AdminDetailField label={t('admin.common.mobile')} value={detail.mobileNumber} />
+              <AdminDetailField
+                label={t('admin.common.mobile')}
+                value={detail.mobileNumber}
+                valueNode={
+                  <ContactNumberLine
+                    value={detail.mobileNumber}
+                    name={detail.ownerName}
+                    showIcon={false}
+                  />
+                }
+              />
               {detail.alternateMobileNumber ? (
                 <AdminDetailField
                   label={t('admin.common.alternateMobile')}
                   value={detail.alternateMobileNumber}
+                  valueNode={
+                    <ContactNumberLine
+                      value={detail.alternateMobileNumber}
+                      name={detail.ownerName}
+                      showIcon={false}
+                    />
+                  }
                 />
               ) : null}
               <Button

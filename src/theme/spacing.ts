@@ -9,3 +9,10 @@ export const spacing = {
   xxxl: 32,
   section: 40,
 } as const;
+
+/**
+ * Standard page-level left/right content margin.
+ * Reference: Rooms (`AccommodationHomeScreen`) uses `spacing.lg` (16).
+ * Prefer this over inventing per-screen horizontal padding values.
+ */
+export const pageContentGutter = spacing.lg;

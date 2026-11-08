@@ -14,6 +14,10 @@ import { getAccommodationHierarchyAccent } from '../../utils/accommodationHierar
 import { EntityPhoto } from '../files/EntityPhoto';
 import type { EntityPhotoKind } from '../../files/entityPhoto';
 import { getBuildingIllustration } from './layout/illustrations/illustrationAssets';
+import {
+  AccommodationInactiveBadge,
+  accommodationInactiveCardStyle,
+} from './AccommodationInactiveBadge';
 
 type BuildingListCardProps = {
   building: BuildingResponse;

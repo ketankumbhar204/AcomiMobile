@@ -1,4 +1,5 @@
 import type { SpacePaymentResponse, UniversalPaymentStatus } from '../api/types';
+import { isPurePaidPayment, isRefundRelatedPayment } from './paymentRefundDisplay';
 
 /** Primary tabs on the tenant Payments screen (mirrors owner Pending Review / History chrome). */
 export type TenantPaymentsSection = 'actionNeeded' | 'underReview' | 'history';
@@ -9,17 +10,36 @@ export type TenantPaymentFilter =
   | 'UNDER_REVIEW'
   | 'PAID'
   | 'REJECTED'
-  | 'PENDING';
+  | 'PENDING'
+  | 'REFUNDED'
+  | 'CANCELLED';
 
 const UNDER_REVIEW: ReadonlySet<UniversalPaymentStatus> = new Set([
   'UNDER_REVIEW',
   'PROOF_UPLOADED',
 ]);
 
+const HISTORY_STATUSES: ReadonlySet<UniversalPaymentStatus> = new Set([
+  'PAID',
+  'REFUNDED',
+  'CANCELLED',
+  'REJECTED',
+]);
+
 export function matchesTenantPaymentFilter(
-  status: UniversalPaymentStatus,
+  statusOrPayment:
+    | UniversalPaymentStatus
+    | Pick<
+        SpacePaymentResponse,
+        'paymentStatus' | 'paymentCategory' | 'partiallyRefunded' | 'refundedAmount'
+      >,
   filter: TenantPaymentFilter,
 ): boolean {
+  const payment =
+    typeof statusOrPayment === 'string'
+      ? { paymentStatus: statusOrPayment }
+      : statusOrPayment;
+  const status = (payment.paymentStatus || 'PENDING') as UniversalPaymentStatus;
   switch (filter) {
     case 'ALL':
       return true;
@@ -28,11 +48,15 @@ export function matchesTenantPaymentFilter(
     case 'UNDER_REVIEW':
       return status === 'UNDER_REVIEW' || status === 'PROOF_UPLOADED';
     case 'PAID':
-      return status === 'PAID';
+      return isPurePaidPayment(payment);
     case 'REJECTED':
       return status === 'REJECTED';
     case 'PENDING':
       return status === 'PENDING';
+    case 'REFUNDED':
+      return isRefundRelatedPayment(payment);
+    case 'CANCELLED':
+      return status === 'CANCELLED';
     default:
       return true;
   }
@@ -54,7 +78,7 @@ export function paymentsInTenantSection(
       case 'underReview':
         return UNDER_REVIEW.has(status);
       case 'history':
-        return status === 'PAID';
+        return HISTORY_STATUSES.has(status);
       default:
         return false;
     }
@@ -94,7 +118,7 @@ export function filterTenantPayments(
   payments: SpacePaymentResponse[],
   filter: TenantPaymentFilter,
 ): SpacePaymentResponse[] {
-  return payments.filter(payment => matchesTenantPaymentFilter(payment.paymentStatus, filter));
+  return payments.filter(payment => matchesTenantPaymentFilter(payment, filter));
 }
 
 export function filterTenantPaymentsInSection(

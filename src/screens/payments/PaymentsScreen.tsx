@@ -70,7 +70,9 @@ type LegacyReviewSection =
   | 'submitted'
   | 'changesRequested'
   | 'paid'
-  | 'rejected';
+  | 'rejected'
+  | 'refunded'
+  | 'cancelled';
 
 function shiftMonth(month: string, delta: number): string {
   const [year, monthNum] = month.split('-').map(Number);
@@ -81,7 +83,7 @@ function shiftMonth(month: string, delta: number): string {
 function resolveDeepLinkDestination(initialSection: LegacyReviewSection | undefined): {
   kind: 'home' | 'review' | 'history';
   pendingFilter?: 'SUBMITTED' | 'NEEDS_UPDATE';
-  historyFilter?: 'PAID' | 'REJECTED';
+  historyFilter?: 'PAID' | 'REJECTED' | 'REFUNDED' | 'CANCELLED';
 } {
   switch (initialSection) {
     case 'pendingReview':
@@ -94,6 +96,10 @@ function resolveDeepLinkDestination(initialSection: LegacyReviewSection | undefi
       return { kind: 'history', historyFilter: 'PAID' };
     case 'rejected':
       return { kind: 'history', historyFilter: 'REJECTED' };
+    case 'refunded':
+      return { kind: 'history', historyFilter: 'REFUNDED' };
+    case 'cancelled':
+      return { kind: 'history', historyFilter: 'CANCELLED' };
     default:
       return { kind: 'home' };
   }
@@ -163,7 +169,7 @@ export function PaymentsScreen() {
     (opts?: {
       section?: 'pendingReview' | 'history';
       pendingFilter?: 'SUBMITTED' | 'NEEDS_UPDATE';
-      historyFilter?: 'PAID' | 'REJECTED';
+      historyFilter?: 'PAID' | 'REJECTED' | 'REFUNDED' | 'CANCELLED';
     }) => {
       navigation.navigate('PaymentReview', {
         spaceId,
@@ -360,86 +366,93 @@ export function PaymentsScreen() {
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
+        stickyHeaderIndices={showFullPageError ? undefined : [1]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} />
         }>
-        <View style={styles.headingRow}>
-          <Text style={styles.heading}>{t('payments.title')}</Text>
-          <Button
-            label={t('paymentCollection.addRecord.createAction')}
-            icon={Plus}
-            onPress={() =>
-              navigation.navigate('CreatePayment', { spaceId, month: summary.month })
-            }
-            style={styles.createButton}
-          />
+        <View style={styles.scrollTop}>
+          <View style={styles.headingRow}>
+            <Text style={styles.heading}>{t('payments.title')}</Text>
+            <Button
+              label={t('paymentCollection.addRecord.createAction')}
+              icon={Plus}
+              onPress={() =>
+                navigation.navigate('CreatePayment', { spaceId, month: summary.month })
+              }
+              style={styles.createButton}
+            />
+          </View>
+
+          {showPaymentsSoftTip && paymentsAccess?.reasonKey ? (
+            <View style={styles.softTip}>
+              <DashboardTipCard icon={Info} message={t(paymentsAccess.reasonKey)} />
+            </View>
+          ) : null}
+
+          <MonthlySummaryHeader
+            month={summary.month}
+            onPreviousMonth={handlePrevMonth}
+            onNextMonth={handleNextMonth}
+            disableNext={isCurrentMonth}
+            onMonthSelect={summary.setMonth}
+            maxMonth={currentMonthKey()}>
+            <PaymentsSummaryFilters
+              loading={summary.loading}
+              financial={summary.financial}
+              activeFilter={activeSummaryFilter}
+              onFilterPress={handleFilterNavigate}
+            />
+          </MonthlySummaryHeader>
+
+          {showFullPageError ? (
+            <EmptyState
+              title={
+                summary.serviceUnavailable
+                  ? t('paymentCollection.serviceUnavailable.title')
+                  : t('payments.errors.title')
+              }
+              description={t(summary.error ?? 'payments.errors.loadLedger')}
+              Icon={AlertTriangle}
+            />
+          ) : (
+            <>
+              {submittedCount > 0 ? (
+                <Pressable
+                  onPress={() =>
+                    openReviewQueue({ section: 'pendingReview', pendingFilter: 'SUBMITTED' })
+                  }
+                  style={({ pressed }) => [styles.attentionBanner, pressed && styles.pressed]}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('payments.attention.a11y', { count: submittedCount })}>
+                  <View style={styles.attentionIcon}>
+                    <Users size={18} color={colors.primaryDark} strokeWidth={2.2} />
+                  </View>
+                  <View style={styles.attentionBody}>
+                    <Text style={styles.attentionTitle}>
+                      {t('payments.attention.title', { count: submittedCount })}
+                    </Text>
+                    <Text style={styles.attentionSubtitle}>
+                      {t('payments.attention.subtitle')}
+                    </Text>
+                  </View>
+                  <ChevronRight size={18} color={colors.primaryDark} strokeWidth={2.2} />
+                </Pressable>
+              ) : null}
+
+              {(summary.refreshError || records.refreshError) ? (
+                <Text style={styles.refreshError} onPress={() => void handleRefresh()}>
+                  {t(summary.refreshError ?? records.refreshError ?? '')} ·{' '}
+                  {t('common.retry', { defaultValue: 'Tap to retry' })}
+                </Text>
+              ) : null}
+            </>
+          )}
         </View>
 
-        {showPaymentsSoftTip && paymentsAccess?.reasonKey ? (
-          <View style={styles.softTip}>
-            <DashboardTipCard icon={Info} message={t(paymentsAccess.reasonKey)} />
-          </View>
-        ) : null}
-
-        <MonthlySummaryHeader
-          month={summary.month}
-          onPreviousMonth={handlePrevMonth}
-          onNextMonth={handleNextMonth}
-          disableNext={isCurrentMonth}
-          onMonthSelect={summary.setMonth}
-          maxMonth={currentMonthKey()}>
-          <PaymentsSummaryFilters
-            loading={summary.loading}
-            financial={summary.financial}
-            activeFilter={activeSummaryFilter}
-            onFilterPress={handleFilterNavigate}
-          />
-        </MonthlySummaryHeader>
-
-        {showFullPageError ? (
-          <EmptyState
-            title={
-              summary.serviceUnavailable
-                ? t('paymentCollection.serviceUnavailable.title')
-                : t('payments.errors.title')
-            }
-            description={t(summary.error ?? 'payments.errors.loadLedger')}
-            Icon={AlertTriangle}
-          />
-        ) : (
-          <>
-            {submittedCount > 0 ? (
-              <Pressable
-                onPress={() =>
-                  openReviewQueue({ section: 'pendingReview', pendingFilter: 'SUBMITTED' })
-                }
-                style={({ pressed }) => [styles.attentionBanner, pressed && styles.pressed]}
-                accessibilityRole="button"
-                accessibilityLabel={t('payments.attention.a11y', { count: submittedCount })}>
-                <View style={styles.attentionIcon}>
-                  <Users size={18} color={colors.primaryDark} strokeWidth={2.2} />
-                </View>
-                <View style={styles.attentionBody}>
-                  <Text style={styles.attentionTitle}>
-                    {t('payments.attention.title', { count: submittedCount })}
-                  </Text>
-                  <Text style={styles.attentionSubtitle}>
-                    {t('payments.attention.subtitle')}
-                  </Text>
-                </View>
-                <ChevronRight size={18} color={colors.primaryDark} strokeWidth={2.2} />
-              </Pressable>
-            ) : null}
-
-            {(summary.refreshError || records.refreshError) ? (
-              <Text style={styles.refreshError} onPress={() => void handleRefresh()}>
-                {t(summary.refreshError ?? records.refreshError ?? '')} ·{' '}
-                {t('common.retry', { defaultValue: 'Tap to retry' })}
-              </Text>
-            ) : null}
-
+        {showFullPageError ? null : (
+          <View style={styles.stickySearch}>
             <ListSearchFilterBar
               searchValue={search}
               onSearchChange={setSearch}
@@ -448,7 +461,11 @@ export function PaymentsScreen() {
               activeFilterCount={activeFilterCount}
               showFilterButton={shouldUseFilterDrawer(PAYMENT_FILTER_OPTION_COUNT)}
             />
+          </View>
+        )}
 
+        {showFullPageError ? null : (
+          <View style={styles.scrollList}>
             <View style={styles.listHeader}>
               <Text style={styles.listTitle}>{t('payments.records.heading')}</Text>
               <Text style={styles.listCount}>
@@ -491,7 +508,7 @@ export function PaymentsScreen() {
                 />
               ))
             )}
-          </>
+          </View>
         )}
       </ScrollView>
 
@@ -569,6 +586,17 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.lg,
     paddingBottom: spacing.section,
+  },
+  scrollTop: {
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  stickySearch: {
+    backgroundColor: colors.background,
+    paddingBottom: spacing.xs,
+    zIndex: 2,
+  },
+  scrollList: {
     gap: spacing.sm,
   },
   headingRow: {

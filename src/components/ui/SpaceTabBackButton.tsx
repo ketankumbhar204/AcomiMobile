@@ -1,10 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet } from 'react-native';
-import {
-  NavigationProp,
-  ParamListBase,
-  useNavigation,
-} from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { resetToMySpaces } from '../../navigation/navigationRef';
 import {
@@ -27,9 +23,15 @@ const MAX_BACK_ANCESTORS = 8;
  * not switch to Dashboard (tab backBehavior is firstRoute). Hardware back
  * still uses the navigator history and is unchanged.
  */
-function goBackAboveSpaceTabs(navigation: NavigationProp<ParamListBase>): boolean {
+type SpaceTabAncestor = {
+  getState(): { type?: string; index?: number } | undefined;
+  getParent(): SpaceTabAncestor | undefined;
+  goBack(): void;
+};
+
+function goBackAboveSpaceTabs(navigation: { getParent(): SpaceTabAncestor | undefined }): boolean {
   const ancestors: SpaceTabBackAncestor[] = [];
-  const navigators: NavigationProp<ParamListBase>[] = [];
+  const navigators: SpaceTabAncestor[] = [];
   let parent = navigation.getParent();
 
   while (parent && ancestors.length < MAX_BACK_ANCESTORS) {

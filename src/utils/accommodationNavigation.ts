@@ -177,8 +177,10 @@ export function navigateToAccommodationTrailSegment(
   }
 }
 
+type MainStackNavigate = Pick<NavigationProp<MainStackParamList>, 'navigate'>;
+
 export function navigateToAccommodationEntityEdit(
-  navigation: NavigationProp<MainStackParamList>,
+  navigation: MainStackNavigate,
   context: AccommodationTrailContext,
   level: AccommodationTrailLevel,
 ): void {
@@ -186,7 +188,7 @@ export function navigateToAccommodationEntityEdit(
 }
 
 export function navigateToRoomGroupEntityEdit(
-  navigation: NavigationProp<MainStackParamList>,
+  navigation: MainStackNavigate,
   spaceId: UUID,
   group: RoomGroupEditTarget,
   level: RoomGroupEditLevel,

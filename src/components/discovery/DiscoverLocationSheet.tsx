@@ -564,7 +564,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.overlayScrim,
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   sheetLift: {
     position: 'absolute',

@@ -101,7 +101,6 @@ export function MemberTabNavigator() {
         return {
           ...tabHeaderOptions,
           ...tabBarOptions,
-          headerBackVisible: false,
           tabBarIcon: ({ color, focused }) =>
             renderMemberTabIcon(routeName, { color, focused }, hasSpaces),
           tabBarIconStyle: {

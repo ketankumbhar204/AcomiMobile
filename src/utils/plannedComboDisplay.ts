@@ -74,7 +74,6 @@ export async function resolveMenuOptionItemNames(
 
   if (entryType === 'PACKAGE') {
     const ids =
-      option.itemIds ??
       option.packageItems?.map(item => item.itemId).filter((id): id is string => Boolean(id)) ??
       [];
     if (ids.length === 0) {

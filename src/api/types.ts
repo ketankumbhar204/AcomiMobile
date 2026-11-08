@@ -63,6 +63,8 @@ export interface SpaceDetailsResponse {
   foodIncludedInRent?: boolean;
   /** Default separate food charge when food is not bundled in rent. */
   defaultFoodCharge?: number | null;
+  /** When true, this space can create a short stay. */
+  shortStayEnabled?: boolean;
   /** Mess billing mode — pay per meal or prepaid balance. */
   mealBillingType?: MealBillingType;
   prepaidBalanceUnit?: PrepaidBalanceUnit | null;
@@ -223,6 +225,10 @@ export interface UpdateFoodItemDefaultPriceRequest {
 }
 
 export interface CreateFoodCategoryRequest {
+  name: string;
+}
+
+export interface UpdateFoodCategoryRequest {
   name: string;
 }
 
@@ -1035,6 +1041,7 @@ export interface UpdateSpaceRequest {
   defaultFoodCharge?: number | null;
   genderPolicy?: GenderPolicy | null;
   amenities?: AmenityAssignment[];
+  shortStayEnabled?: boolean;
 }
 
 export interface CreateMemberRequest {
@@ -1075,9 +1082,9 @@ export interface UpdateMemberStatusRequest {
 }
 
 export interface UpdateEmergencyContactRequest {
-  emergencyContactName: string;
-  emergencyContactRelation: string;
-  emergencyContactMobile: string;
+  emergencyContactName: string | null;
+  emergencyContactRelation: string | null;
+  emergencyContactMobile: string | null;
 }
 
 export interface UpdateDepositRequest {
@@ -1254,8 +1261,10 @@ export interface Space {
   longitude?: number | null;
   contactNumber: string | null;
   isActive: boolean;
+  photoFileId?: UUID | null;
   foodIncludedInRent?: boolean;
   defaultFoodCharge?: number | null;
+  shortStayEnabled?: boolean;
   mealBillingType?: MealBillingType;
   prepaidBalanceUnit?: PrepaidBalanceUnit | null;
   prepaidFallbackToPayPerMeal?: boolean;
@@ -1612,6 +1621,8 @@ export interface BedOccupantSummaryResponse {
   memberId: UUID;
   memberName: string;
   occupancyStatus: OccupancyStatus;
+  /** From persisted occupancy; null for legacy rows. */
+  stayKind?: 'MONTHLY' | 'SHORT' | 'OPEN_ENDED' | null;
 }
 
 export interface BedResponse {
@@ -2037,7 +2048,16 @@ export interface OccupancyResponse {
   vacatedBy?: UUID | null;
   status: OccupancyStatus;
   remarks?: string | null;
+  stayKind?: 'MONTHLY' | 'SHORT' | 'OPEN_ENDED' | null;
+  /** FIXED_TOTAL | DAILY_RATE | null (monthly / legacy OPEN_ENDED). */
+  pricingBasis?: string | null;
+  agreedTotal?: number | null;
   rentSnapshot?: number | null;
+  /** Reservation booking advance (portion of first-period rent). */
+  bookingAdvanceAmount?: number | null;
+  priorRentSnapshot?: number | null;
+  /** Current rate effective-from date (day-level for OPEN_ENDED revisions). */
+  rentEffectiveMonth?: string | null;
   depositSnapshot?: number | null;
   foodEnabled?: boolean;
   foodChargeSnapshot?: number | null;
@@ -2080,6 +2100,8 @@ export interface MemberOccupancyListResponse {
 export interface CurrentOccupancySummaryResponse {
   occupancyId?: UUID;
   occupancyStatus?: OccupancyStatus;
+  /** From persisted occupancy; null for legacy rows. */
+  stayKind?: 'MONTHLY' | 'SHORT' | 'OPEN_ENDED' | null;
   targetType: AllocationTargetType;
   buildingId: UUID;
   buildingName: string;
@@ -2102,6 +2124,19 @@ export interface ReserveOccupancyRequest {
   unitId?: UUID | null;
   moveInDate: string;
   expectedExitDate?: string | null;
+  expectedCheckoutDate?: string | null;
+  stayKind?: 'MONTHLY' | 'SHORT' | 'OPEN_ENDED' | null;
+  agreedTotal?: number | null;
+  /** Monthly rent or Until I Leave daily rent; ignored for SHORT. */
+  rentSnapshot?: number | null;
+  /** Reservation-only portion of first-period rent (not an extra charge). */
+  bookingAdvanceAmount?: number | null;
+  bookingAdvanceCollected?: boolean | null;
+  bookingAdvancePaymentMethod?: UniversalPaymentMethod | null;
+  depositSnapshot?: number | null;
+  foodEnabled?: boolean;
+  foodIncludedInRent?: boolean;
+  foodChargeSnapshot?: number | null;
   memberCategory?: MemberCategory | null;
   remarks?: string | null;
 }
@@ -2109,9 +2144,12 @@ export interface ReserveOccupancyRequest {
 export interface MoveInOccupancyRequest {
   moveInDate?: string | null;
   expectedExitDate?: string | null;
+  expectedCheckoutDate?: string | null;
   allowEarlyMoveIn?: boolean;
   agreementSigned?: boolean;
   remarks?: string | null;
+  stayKind?: 'MONTHLY' | 'SHORT' | 'OPEN_ENDED' | null;
+  agreedTotal?: number | null;
   rentSnapshot?: number | null;
   depositSnapshot?: number | null;
   foodEnabled?: boolean;
@@ -2122,8 +2160,82 @@ export interface MoveInOccupancyRequest {
   amenities?: AmenityAssignment[];
 }
 
+export type PaymentSettlementAction =
+  | 'CANCEL_UNPAID'
+  | 'FULL_REFUND'
+  | 'PARTIAL_REFUND'
+  | 'RETAIN';
+
+export type PaymentFinancialDisposition =
+  | 'OPEN'
+  | 'CANCELLED_UNPAID'
+  | 'COLLECTED_UNSETTLED'
+  | 'FULLY_REFUNDED'
+  | 'PARTIALLY_REFUNDED'
+  | 'FULLY_RETAINED';
+
+export interface ReservationPaymentSettlementDecision {
+  paymentId: UUID;
+  action: PaymentSettlementAction;
+  refundAmount?: number | null;
+  retainedAmount?: number | null;
+  reason?: string | null;
+}
+
 export interface CancelReservationRequest {
   remarks?: string | null;
+  settlements?: ReservationPaymentSettlementDecision[] | null;
+}
+
+export interface ReservationCancellationPreviewPayment {
+  paymentId: UUID;
+  title: string;
+  paymentType: string;
+  paymentCategory: string;
+  amount: number;
+  currencyCode?: string | null;
+  paymentStatus: string;
+  collected: boolean;
+  refundableAmount: number;
+  alreadyRefundedAmount: number;
+  alreadyRetainedAmount: number;
+  disposition: PaymentFinancialDisposition;
+  allowedActions: PaymentSettlementAction[];
+}
+
+export interface ReservationCancellationPreviewResponse {
+  occupancyId: UUID;
+  memberId?: UUID | null;
+  memberName?: string | null;
+  payments: ReservationCancellationPreviewPayment[];
+  requiresCollectedSettlement: boolean;
+}
+
+export interface SettleSpacePaymentRequest {
+  action: Exclude<PaymentSettlementAction, 'CANCEL_UNPAID'>;
+  refundAmount?: number | null;
+  retainedAmount?: number | null;
+  reason?: string | null;
+  refundMethod?: UniversalPaymentMethod | null;
+  refundDate?: string | null;
+  refundReference?: string | null;
+}
+
+export interface CancelSpacePaymentRequest {
+  reason?: string | null;
+}
+
+export interface PaymentSettlementResponse {
+  settlementId: UUID;
+  paymentId: UUID;
+  occupancyId?: UUID | null;
+  action: PaymentSettlementAction;
+  refundAmount: number;
+  retainedAmount: number;
+  reason?: string | null;
+  refundPaymentId?: UUID | null;
+  performedBy?: UUID | null;
+  performedAt?: string | null;
 }
 
 export interface AllocateOccupancyRequest {
@@ -2132,9 +2244,13 @@ export interface AllocateOccupancyRequest {
   bedId?: UUID | null;
   roomId?: UUID | null;
   unitId?: UUID | null;
+  /** Optional historical or same-day move-in (YYYY-MM-DD). Server defaults to today when omitted. */
+  moveInDate?: string | null;
   expectedCheckoutDate?: string | null;
   expectedExitDate?: string | null;
   remarks?: string | null;
+  stayKind?: 'MONTHLY' | 'SHORT' | 'OPEN_ENDED' | null;
+  agreedTotal?: number | null;
   rentSnapshot?: number | null;
   depositSnapshot?: number | null;
   foodEnabled?: boolean;
@@ -2152,6 +2268,10 @@ export interface TransferOccupancyRequest {
   unitId?: UUID | null;
   remarks?: string | null;
   rentPolicy?: TransferRentPolicy;
+  stayKind?: 'MONTHLY' | 'SHORT' | 'OPEN_ENDED' | null;
+  agreedTotal?: number | null;
+  expectedExitDate?: string | null;
+  expectedCheckoutDate?: string | null;
   rentSnapshot?: number | null;
   depositSnapshot?: number | null;
   foodEnabled?: boolean;
@@ -2163,6 +2283,23 @@ export interface TransferOccupancyRequest {
 
 export interface VacateOccupancyRequest {
   remarks?: string | null;
+}
+
+export interface ExtendOccupancyRequest {
+  /** Required for MONTHLY/SHORT extend; omit for OPEN_ENDED rent-only revision. */
+  expectedExitDate?: string;
+  idempotencyKey: string;
+  additionalAmount?: number | null;
+  rentSnapshot?: number | null;
+  /** Effective-from date (YYYY-MM-DD). Day-level for OPEN_ENDED. */
+  rentEffectiveMonth?: string | null;
+  /** Optional reason for OPEN_ENDED rent revision. */
+  reason?: string | null;
+}
+
+export interface ExtendOccupancyResponse {
+  occupancy: OccupancyResponse;
+  chargeId?: string | null;
 }
 
 export interface OccupancyListFilters {
@@ -2264,6 +2401,7 @@ export type NotificationType =
   | 'PAYMENT_REJECTED'
   | 'PAYMENT_UPDATE_REQUESTED'
   | 'PAYMENT_REMINDER_SENT'
+  | 'PAYMENT_GENERATED'
   | 'MEAL_POLL_NOT_PUBLISHED'
   | 'MEAL_RESPONSES_BELOW_THRESHOLD'
   | 'MENU_NOT_PLANNED'
@@ -2279,6 +2417,7 @@ export type NotificationType =
   | 'RESERVATION_STARTING_TODAY'
   | 'MOVE_IN_SCHEDULED_TODAY'
   | 'MOVE_OUT_SCHEDULED_TODAY'
+  | 'STAY_OVERDUE_ACTIVE'
   | 'VACANT_RESERVED_BED'
   | 'EXPIRED_RESERVATION'
   | 'RESERVATION_CREATED'
@@ -2577,7 +2716,9 @@ export type UniversalPaymentStatus =
   | 'UNDER_REVIEW'
   | 'PAID'
   | 'REJECTED'
-  | 'UPDATE_REQUESTED';
+  | 'UPDATE_REQUESTED'
+  | 'CANCELLED'
+  | 'REFUNDED';
 
 /** Reporting sub-category; valid combinations depend on paymentType. */
 export type PaymentCategory =
@@ -2608,7 +2749,11 @@ export type PaymentTimelineEventType =
   | 'RESUBMITTED'
   | 'PAID'
   | 'REFUNDED'
-  | 'UPDATE_REQUESTED';
+  | 'UPDATE_REQUESTED'
+  | 'REMINDER_SENT'
+  | 'REMINDER_FAILED'
+  | 'CANCELLED'
+  | 'RETAINED';
 
 export interface SpacePaymentResponse {
   paymentId: UUID;
@@ -2617,6 +2762,8 @@ export interface SpacePaymentResponse {
   memberName: string;
   memberMobile?: string | null;
   occupancyId?: UUID | null;
+  /** From linked occupancy; null when unlinked or legacy null stay_kind. */
+  stayKind?: 'MONTHLY' | 'SHORT' | 'OPEN_ENDED' | null;
   paymentType: UniversalPaymentType;
   paymentCategory: PaymentCategory;
   title: string;
@@ -2665,6 +2812,11 @@ export interface SpacePaymentResponse {
   daysOverdue?: number | null;
   reminderEligible?: boolean | null;
   settlementStatus?: 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' | null;
+  refundedAmount?: number | null;
+  retainedAmount?: number | null;
+  netCollectedAmount?: number | null;
+  partiallyRefunded?: boolean | null;
+  financialDisposition?: PaymentFinancialDisposition | null;
 }
 
 export interface SpacePaymentListResponse {
@@ -2678,6 +2830,8 @@ export interface OwnerPaymentsMonthCounts {
   changesRequested: number;
   paid: number;
   rejected: number;
+  refunded?: number;
+  cancelled?: number;
   history: number;
   pendingMembers: number;
 }
@@ -2711,6 +2865,8 @@ export type PaymentsReviewQueueParam =
   | 'PENDING_REVIEW'
   | 'PAID'
   | 'REJECTED'
+  | 'REFUNDED'
+  | 'CANCELLED'
   | 'HISTORY';
 
 export interface PaymentsCardsPageResponse {

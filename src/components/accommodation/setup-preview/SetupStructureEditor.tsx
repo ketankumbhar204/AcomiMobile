@@ -754,7 +754,11 @@ function SetupRoomInventoryCard({
                   </Text>
                 ) : (
                   <Pressable
-                    onPress={() => setInlineEdit(crumb.level)}
+                    onPress={() => {
+                      if (crumb.level !== 'building') {
+                        setInlineEdit(crumb.level);
+                      }
+                    }}
                     hitSlop={4}
                     accessibilityRole="link"
                     accessibilityLabel={crumb.label}>
@@ -1238,6 +1242,7 @@ export function SetupStructureEditor({
             ? formatBedDisplayLabel(editingBed.label, t)
             : t('occupancy.section.bed')
         }
+        name={editingBed?.label ?? ''}
         bedNumber={editingBed?.label ?? ''}
         status="AVAILABLE"
         rent={editingBed?.defaultRent}
@@ -1251,6 +1256,7 @@ export function SetupStructureEditor({
         onSave={draft => {
           if (!editingBed || isBedDraftUnchanged(
             {
+              name: editingBed.label,
               bedNumber: editingBed.label,
               rent: editingBed.defaultRent ?? null,
               deposit: editingBed.defaultDeposit ?? null,
@@ -1270,7 +1276,7 @@ export function SetupStructureEditor({
               renameSetupBed(
                 structure,
                 editingBed.id,
-                draft.bedNumber.trim() || editingBed.label,
+                draft.name.trim() || draft.bedNumber.trim() || editingBed.label,
               ),
             );
             setEditingBed(null);

@@ -34,6 +34,7 @@ describe('profileCompletion', () => {
         spaceName: 'Test PG',
         spaceType: 'PG',
         membershipRole: 'TENANT',
+        isDefault: false,
         joinedAt: '2026-01-01T00:00:00Z',
       },
     ];
@@ -77,6 +78,7 @@ describe('profileCompletion', () => {
           spaceName: 'Mess',
           spaceType: 'MESS',
           membershipRole: 'CUSTOMER',
+          isDefault: false,
           joinedAt: '2026-01-01T00:00:00Z',
         },
       ]),

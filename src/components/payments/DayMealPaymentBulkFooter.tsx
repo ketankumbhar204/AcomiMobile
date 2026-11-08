@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, pageContentGutter, radius, spacing, typography } from '../../theme';
 import { formatPaymentAmount } from '../../utils/paymentAmount';
 
 type DayMealPaymentBulkFooterProps = {
@@ -54,7 +54,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
     backgroundColor: colors.white,
-    paddingHorizontal: spacing.xxl,
+    paddingHorizontal: pageContentGutter,
     paddingVertical: spacing.md,
     gap: spacing.sm,
   },

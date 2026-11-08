@@ -3,27 +3,126 @@ import {
   shouldBlockOccupancyWizardBoot,
   shouldRefetchAllocationTarget,
 } from '../../../../utils/occupancyWizardBoot';
+import { pricingDefaultsForStayChoice } from '../../../../utils/shortStay';
 import fs from 'fs';
 import path from 'path';
 
 describe('occupancyWizardSteps', () => {
-  it('keeps allocate member step when a bed is already chosen', () => {
+  it('puts stay type before member when a bed is already chosen (ALLOCATE)', () => {
+    expect(getWizardSteps('ALLOCATE', { bedId: 'bed-1' })).toEqual([
+      'stay_type',
+      'member',
+      'stay_details',
+      'contract',
+      'review',
+    ]);
+  });
+
+  it('puts stay type before member for RESERVE', () => {
+    expect(getWizardSteps('RESERVE', { bedId: 'bed-1' })).toEqual([
+      'stay_type',
+      'member',
+      'reserve_dates',
+      'contract',
+      'review',
+    ]);
+  });
+
+  it('keeps stay type first when member is already known', () => {
+    expect(getWizardSteps('ALLOCATE', { bedId: 'bed-1', memberId: 'm1' })).toEqual([
+      'stay_type',
+      'stay_details',
+      'contract',
+      'review',
+    ]);
+  });
+
+  it('always includes stay type (shortStayEnabled option ignored)', () => {
     expect(
-      getWizardSteps('ALLOCATE', { bedId: 'bed-1' }),
-    ).toEqual(['member', 'contract', 'review']);
+      getWizardSteps('ALLOCATE', { bedId: 'bed-1' }, { shortStayEnabled: false }),
+    ).toEqual(['stay_type', 'member', 'stay_details', 'contract', 'review']);
+    expect(
+      getWizardSteps('ALLOCATE', { bedId: 'bed-1' }, { shortStayEnabled: true }),
+    ).toEqual(['stay_type', 'member', 'stay_details', 'contract', 'review']);
   });
 
   it('uses Move In today title for allocate', () => {
     expect(getWizardTitleKey('ALLOCATE')).toBe('occupancyWizard.title.allocate');
   });
 
-  it('reserves through the same wizard once a bed is chosen', () => {
-    expect(getWizardSteps('RESERVE', { bedId: 'bed-1' })).toEqual([
-      'member',
-      'reserve_dates',
+  it('includes stay type for move-in and transfer before destination pricing', () => {
+    expect(getWizardSteps('MOVE_IN', { occupancyId: 'occ-1' })).toEqual([
+      'stay_type',
+      'stay_details',
+      'contract',
       'review',
     ]);
-    expect(getWizardTitleKey('RESERVE')).toBe('occupancyWizard.title.reserve');
+    expect(getWizardSteps('TRANSFER', { memberId: 'm1' })).toEqual([
+      'transfer_current',
+      'target',
+      'stay_type',
+      'stay_details',
+      'contract',
+      'review',
+    ]);
+  });
+
+  it('places target before stay type when bed is not preselected', () => {
+    expect(getWizardSteps('ALLOCATE', {})).toEqual([
+      'target',
+      'stay_type',
+      'member',
+      'stay_details',
+      'contract',
+      'review',
+    ]);
+  });
+});
+
+describe('pricingDefaultsForStayChoice', () => {
+  it('prefills monthly rent and deposit from bed catalog', () => {
+    expect(
+      pricingDefaultsForStayChoice({
+        choice: 'MONTHLY',
+        catalogRent: 6000,
+        catalogDeposit: 3000,
+      }),
+    ).toEqual({
+      rentSnapshot: '6000',
+      depositSnapshot: '3000',
+      agreedTotal: '',
+      clearExpectedExit: false,
+    });
+  });
+
+  it('does not prefill monthly catalog rent for Until I Leave daily rent', () => {
+    expect(
+      pricingDefaultsForStayChoice({
+        choice: 'OPEN_ENDED',
+        catalogRent: 6000,
+        catalogDeposit: 3000,
+      }),
+    ).toEqual({
+      rentSnapshot: '',
+      depositSnapshot: '3000',
+      agreedTotal: '',
+      clearExpectedExit: true,
+    });
+  });
+
+  it('does not carry monthly rent into Short Stay; deposit stays separate', () => {
+    expect(
+      pricingDefaultsForStayChoice({
+        choice: 'SHORT',
+        catalogRent: 6000,
+        catalogDeposit: 3000,
+      }),
+    ).toEqual({
+      rentSnapshot: '',
+      depositSnapshot: '3000',
+      agreedTotal: '',
+      clearExpectedExit: true,
+    });
   });
 });
 

@@ -1,14 +1,14 @@
 import React, { type RefObject } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, View, ViewStyle } from 'react-native';
+import { RefreshControl, ScrollView, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { useScreenBackButton } from '../../hooks/useScreenBackButton';
-import { colors, spacing } from '../../theme';
+import { colors, pageContentGutter, spacing } from '../../theme';
 
 type ScreenProps = {
   children: React.ReactNode;
   scrollable?: boolean;
   showBack?: boolean;
-  style?: ViewStyle;
-  contentStyle?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
+  contentStyle?: StyleProp<ViewStyle>;
   refreshing?: boolean;
   onRefresh?: () => void;
   scrollRef?: RefObject<ScrollView | null>;
@@ -63,6 +63,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: spacing.xxl,
+    // Horizontal: Rooms-aligned page gutter. Vertical kept at legacy Screen default.
+    paddingHorizontal: pageContentGutter,
+    paddingVertical: spacing.xxl,
   },
 });

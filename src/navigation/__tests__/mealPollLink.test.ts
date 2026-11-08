@@ -1,4 +1,5 @@
 import { Linking } from 'react-native';
+import EventEmitter from 'react-native/Libraries/vendor/emitter/EventEmitter';
 import { act } from 'react-test-renderer';
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
@@ -160,8 +161,9 @@ describe('useMealPollDeepLink', () => {
     (navigationRef.isReady as jest.Mock).mockReturnValue(true);
     jest.spyOn(Linking, 'getInitialURL').mockResolvedValue(null);
     jest.spyOn(Linking, 'addEventListener').mockImplementation((_type, listener) => {
-      listeners.push(listener as (event: { url: string }) => void);
-      return { remove: jest.fn() };
+      listeners.push(listener);
+      const emitter = new EventEmitter();
+      return emitter.addListener('url', () => undefined);
     });
   });
 

@@ -1,7 +1,16 @@
 import type { SpacePaymentResponse } from '../api/types';
 import type { PaymentListFilterState, PaymentSortOption } from './paymentLedger';
+import {
+  isPurePaidPayment,
+  isRefundRelatedPayment,
+  isRefundTransaction,
+  matchesPaymentRecordStatusFilter,
+} from './paymentRefundDisplay';
 
 export function individualPaymentStatus(payment: SpacePaymentResponse): string {
+  if (isRefundRelatedPayment(payment)) {
+    return 'REFUNDED';
+  }
   return payment.paymentStatus || 'PENDING';
 }
 
@@ -14,12 +23,20 @@ export function matchesIndividualPayment(
   }
   const status = options.status?.trim();
   if (status) {
-    const current = individualPaymentStatus(payment);
-    if (status === 'UNDER_REVIEW') {
+    if (status === 'REFUNDED') {
+      if (!isRefundRelatedPayment(payment)) {
+        return false;
+      }
+    } else if (status === 'PAID') {
+      if (!isPurePaidPayment(payment)) {
+        return false;
+      }
+    } else if (status === 'UNDER_REVIEW') {
+      const current = individualPaymentStatus(payment);
       if (current !== 'UNDER_REVIEW' && current !== 'PROOF_UPLOADED') {
         return false;
       }
-    } else if (current !== status) {
+    } else if (individualPaymentStatus(payment) !== status) {
       return false;
     }
   }
@@ -48,8 +65,10 @@ function matchesPreset(
   }
   const status = individualPaymentStatus(payment);
   if (preset === 'collected') {
-    return status === 'PAID';
+    // Gross collections only — REFUND cash-out rows are not income.
+    return payment.paymentStatus === 'PAID' && !isRefundTransaction(payment);
   }
+  // note: collected KPI still includes partial-refund originals (money was collected).
   if (preset === 'pending') {
     return status === 'PENDING';
   }
@@ -60,14 +79,7 @@ function matchesPreset(
 }
 
 function matchesStatusSet(payment: SpacePaymentResponse, statuses: Set<string>): boolean {
-  if (statuses.size === 0) {
-    return true;
-  }
-  const status = individualPaymentStatus(payment);
-  if (statuses.has(status)) {
-    return true;
-  }
-  return statuses.has('UNDER_REVIEW') && status === 'PROOF_UPLOADED';
+  return matchesPaymentRecordStatusFilter(payment, statuses);
 }
 
 function comparePayments(

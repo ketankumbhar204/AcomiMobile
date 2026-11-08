@@ -51,7 +51,11 @@ export function PaymentRecordDetails({
         </View>
         <View style={styles.identityText}>
           <Text style={styles.name}>{name}</Text>
-          <ContactNumberLine value={payment.memberMobile} textStyle={styles.meta} />
+          <ContactNumberLine
+            value={payment.memberMobile}
+            name={payment.memberName}
+            textStyle={styles.meta}
+          />
           {stayTrail ? (
             <StayTrailLine label={place} textStyle={styles.meta} />
           ) : spaceName ? (
@@ -62,7 +66,18 @@ export function PaymentRecordDetails({
 
       <View style={styles.titleRow}>
         <Text style={styles.title}>{heading}</Text>
-        <PaymentStatusBadge status={displayPaymentStatus(payment)} />
+        <View style={styles.statusStack}>
+          <PaymentStatusBadge status={displayPaymentStatus(payment)} />
+          {payment.partiallyRefunded ||
+          (payment.paymentStatus === 'PAID' && Number(payment.refundedAmount ?? 0) > 0) ? (
+            <PaymentStatusBadge
+              label={t('payments.status.partiallyRefunded', {
+                defaultValue: 'Partially refunded',
+              })}
+              status="PARTIAL"
+            />
+          ) : null}
+        </View>
       </View>
       {amount ? <Text style={styles.amount}>{amount}</Text> : null}
 
@@ -206,6 +221,11 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: spacing.sm,
+  },
+  statusStack: {
+    alignItems: 'flex-end',
+    gap: 4,
+    flexShrink: 0,
   },
   title: {
     ...typography.h3,

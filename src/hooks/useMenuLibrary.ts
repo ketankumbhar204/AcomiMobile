@@ -7,6 +7,24 @@ import type {
 } from '../api/types';
 import { fetchSpaceMenuCatalog, patchSpaceMenuCatalogItem } from '../utils/fetchSpaceMenuCatalog';
 
+/**
+ * Null means "All categories". A specific id is kept only while that category
+ * is still active, so dismissing a filter or removing a category does not
+ * jump the owner to a different group.
+ */
+export function resolveSelectedCategoryId(
+  current: string | null,
+  categoryIds: readonly string[],
+): string | null {
+  if (categoryIds.length === 0) {
+    return null;
+  }
+  if (current && categoryIds.includes(current)) {
+    return current;
+  }
+  return null;
+}
+
 export function useMenuLibrary(spaceId: UUID) {
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -68,17 +86,8 @@ export function useMenuLibrary(spaceId: UUID) {
   );
 
   useEffect(() => {
-    if (activeCategories.length === 0) {
-      setSelectedCategoryId(null);
-      return;
-    }
-
-    setSelectedCategoryId(current => {
-      if (current && activeCategories.some(category => category.categoryId === current)) {
-        return current;
-      }
-      return activeCategories[0].categoryId;
-    });
+    const categoryIds = activeCategories.map(category => category.categoryId);
+    setSelectedCategoryId(current => resolveSelectedCategoryId(current, categoryIds));
   }, [activeCategories]);
 
   useEffect(() => {
@@ -107,7 +116,7 @@ export function useMenuLibrary(spaceId: UUID) {
 
   const filteredItems = useMemo(() => {
     if (!selectedCategoryId) {
-      return [];
+      return items;
     }
     return items.filter(item => item.categoryId === selectedCategoryId);
   }, [items, selectedCategoryId]);

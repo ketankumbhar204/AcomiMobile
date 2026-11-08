@@ -28,16 +28,19 @@ export function useDashboardAccommodationOperationsQuick(
 
     setLoading(true);
     try {
-      const [availablePage, occupiedPage] = await Promise.all([
+      const [availablePage, occupiedPage, reservedPage] = await Promise.all([
         accommodationApi
           .searchBeds(spaceId, { status: 'AVAILABLE', page: 0, size: 1 })
           .catch(() => null),
         accommodationApi
           .searchBeds(spaceId, { status: 'OCCUPIED', page: 0, size: 1 })
           .catch(() => null),
+        accommodationApi
+          .searchBeds(spaceId, { status: 'RESERVED', page: 0, size: 1 })
+          .catch(() => null),
       ]);
 
-      if (!availablePage && !occupiedPage) {
+      if (!availablePage && !occupiedPage && !reservedPage) {
         setOperations(null);
         return;
       }
@@ -45,7 +48,7 @@ export function useDashboardAccommodationOperationsQuick(
       setOperations({
         occupiedBeds: occupiedPage?.totalElements ?? 0,
         vacantBeds: availablePage?.totalElements ?? 0,
-        reservedBeds: 0,
+        reservedBeds: reservedPage?.totalElements ?? 0,
         moveInsThisMonth: 0,
         pendingPaymentsCount: 0,
       });

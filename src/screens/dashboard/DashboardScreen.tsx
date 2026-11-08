@@ -31,11 +31,16 @@ import {
   DashboardFinancialSnapshot,
   DashboardMealOperations,
   DashboardOwnerLoadingSkeleton,
+  DashboardPendingPaymentsBanner,
+  DashboardPropertyOverviewCard,
+  DashboardRecentActivity,
   DashboardSectionTitle,
   DashboardSetupProgressCard,
+  DashboardSetupQuickActions,
 } from '../../components/dashboard';
 import { DashboardActionRow } from '../../components/dashboard/shared/DashboardActionRow';
 import { DashboardOwnerHero } from '../../components/dashboard/shared/DashboardOwnerHero';
+import { canEditEntityPhoto } from '../../files/entityPhoto';
 import { DashboardCustomerMealsSection } from '../../components/meals/DashboardCustomerMealsSection';
 import { ModuleActionCard, useQuickActionSheet } from '../../components/ui';
 import type { QuickActionSheetOption } from '../../components/ui';
@@ -57,7 +62,7 @@ import {
   navigateToPaymentsTab,
 } from '../../navigation/navigationRef';
 import { useSpaceStore } from '../../store/spaceStore';
-import { colors, spacing, typography } from '../../theme';
+import { colors, pageContentGutter, spacing, typography } from '../../theme';
 import { getAccommodationUiProfile, isAccommodationApplicable, usesUnitLevelOccupancy } from '../../utils/accommodationProfile';
 import { applyUnitOccupancyCounts } from '../../utils/unitLevelOccupancy';
 import { canManagePayments, currentMonthKey } from '../../utils/dashboardFinancial';
@@ -140,6 +145,7 @@ export function DashboardScreen() {
   const route = useRoute<DashboardRoute>();
   const spaceId = useActiveSpaceId(route.params.spaceId);
   const mySpaces = useSpaceStore(state => state.mySpaces);
+  const selectedSpace = useSpaceStore(state => state.selectedSpace);
   const spaceEntry = findMySpaceEntry(mySpaces, spaceId);
   const permissions = useSpacePermissions(spaceId);
   const spaceType = permissions.spaceType ?? spaceEntry?.spaceType;
@@ -541,9 +547,37 @@ export function DashboardScreen() {
     navigateFromTab('DashboardBedInventory', { spaceId, status: 'AVAILABLE', focus: 'vacant' });
   }, [navigateFromTab, spaceId]);
 
+  const handleReservedBedsPress = useCallback(() => {
+    navigateFromTab('DashboardBedInventory', {
+      spaceId,
+      status: 'RESERVED',
+      focus: 'reserved',
+    });
+  }, [navigateFromTab, spaceId]);
+
   const handleMoveInsPress = useCallback(() => {
     navigateFromTab('DashboardBedInventory', { spaceId, status: 'OCCUPIED', focus: 'moveIns' });
   }, [navigateFromTab, spaceId]);
+
+  const handlePendingPaymentsBannerPress = useCallback(() => {
+    handlePaymentsNavigate('pending');
+  }, [handlePaymentsNavigate]);
+
+  const handleEditSpacePress = useCallback(() => {
+    navigateFromTab('EditSpace', { spaceId });
+  }, [navigateFromTab, spaceId]);
+
+  const handleStartSetupPress = useCallback(() => {
+    navigateFromTab('QuickSetupWizard', { spaceId });
+  }, [navigateFromTab, spaceId]);
+
+  const handleAddBuildingPress = useCallback(() => {
+    navigateFromTab('BuildingForm', { spaceId, mode: 'create' });
+  }, [navigateFromTab, spaceId]);
+
+  const handleRecentActivityViewAll = useCallback(() => {
+    navigateFromTab('GlobalActivityList', undefined);
+  }, [navigateFromTab]);
 
   const handleMealsPress = useCallback(() => {
     const tomorrow = tomorrowIsoDate();
@@ -628,7 +662,7 @@ export function DashboardScreen() {
           navigateFromTab('DashboardBedInventory', {
             spaceId,
             status: 'AVAILABLE',
-            intent: 'allocate',
+            intent: 'reserve',
           }),
       },
       {
@@ -912,9 +946,21 @@ export function DashboardScreen() {
       </View>
     ) : null;
 
+  const accommodationSetupQuickActions =
+    showOwnerDashboard &&
+    !isMess &&
+    accommodationApplicable &&
+    permissions.canManageAccommodation ? (
+      <DashboardSetupQuickActions
+        onStartSetup={handleStartSetupPress}
+        onAddBuilding={handleAddBuildingPress}
+      />
+    ) : null;
+
   const ownerQuickActions = visibility.showFullQuickActions
-    ? fullQuickActions
+    ? accommodationSetupQuickActions ?? fullQuickActions
     : messSetupQuickActions ??
+      accommodationSetupQuickActions ??
       (pendingActionsCard ? (
         <View style={styles.quickStack}>{pendingActionsCard}</View>
       ) : null);
@@ -1000,6 +1046,14 @@ export function DashboardScreen() {
       visibility.showAccommodationOps ||
       visibility.showMealOps);
 
+  const showPropertyOverview =
+    showOwnerDashboardBody &&
+    !isMess &&
+    accommodationApplicable &&
+    spaceEntry != null &&
+    lifecycleContext != null;
+  const showMessHero = showOwnerDashboardBody && isMess && spaceEntry != null;
+
   return (
     <Screen
       scrollable
@@ -1012,7 +1066,36 @@ export function DashboardScreen() {
           showMealOps={showMealOperations}
         />
       ) : null}
-      {showOwnerDashboardBody && spaceEntry ? (
+      {showPropertyOverview && spaceEntry && lifecycleContext ? (
+        <DashboardPropertyOverviewCard
+          spaceId={spaceId}
+          spaceName={spaceEntry.spaceName}
+          spaceType={spaceType}
+          spaceTypeLabel={
+            spaceType ? getSpaceTypeLabel(spaceType) : formatSpaceType(spaceEntry.spaceType)
+          }
+          photoFileId={spaceEntry.photoFileId ?? selectedSpace?.photoFileId}
+          membershipRole={permissions.membershipRole}
+          isActive={selectedSpace?.isActive ?? true}
+          floors={lifecycleContext.floorCount}
+          rooms={lifecycleContext.roomCount}
+          beds={lifecycleContext.bedCount}
+          units={lifecycleContext.unitCount}
+          occupancyEntity={unitLevel ? 'units' : 'beds'}
+          occupied={displayAccommodationOperations?.occupiedBeds ?? 0}
+          available={displayAccommodationOperations?.vacantBeds ?? 0}
+          reserved={displayAccommodationOperations?.reservedBeds ?? 0}
+          onEditPress={
+            canEditEntityPhoto(permissions.membershipRole) || permissions.canManageAccommodation
+              ? handleEditSpacePress
+              : undefined
+          }
+          onPress={
+            spaceId ? () => navigateFromTab('SpaceDetails', { spaceId }) : undefined
+          }
+        />
+      ) : null}
+      {showMessHero && spaceEntry ? (
         <DashboardOwnerHero
           spaceName={spaceEntry.spaceName}
           spaceTypeLabel={spaceType ? getSpaceTypeLabel(spaceType) : undefined}
@@ -1119,25 +1202,44 @@ export function DashboardScreen() {
               ) : null}
 
               {visibility.showAccommodationOps && !isMess && displayAccommodationOperations ? (
-                <DashboardAccommodationOperations
-                  occupancyEntity={unitLevel ? 'units' : 'beds'}
-                  operations={displayAccommodationOperations}
-                  onOccupiedPress={
-                    showResidentsActions || permissions.canViewSpaceOccupancies
-                      ? handleOccupiedBedsPress
-                      : undefined
-                  }
-                  onVacantPress={
-                    showResidentsActions || permissions.canViewSpaceOccupancies
-                      ? handleVacantBedsPress
-                      : undefined
-                  }
-                  onMoveInsPress={
-                    showResidentsActions || permissions.canViewSpaceOccupancies
-                      ? handleMoveInsPress
-                      : undefined
-                  }
-                />
+                <>
+                  <DashboardAccommodationOperations
+                    occupancyEntity={unitLevel ? 'units' : 'beds'}
+                    operations={displayAccommodationOperations}
+                    subtitle={
+                      unitLevel
+                        ? t('dashboard.accommodationOps.subtitleUnits', {
+                            defaultValue: 'Current unit status across all buildings',
+                          })
+                        : t('dashboard.accommodationOps.subtitleBeds', {
+                            defaultValue: 'Current bed status across all buildings',
+                          })
+                    }
+                    onOccupiedPress={
+                      showResidentsActions || permissions.canViewSpaceOccupancies
+                        ? handleOccupiedBedsPress
+                        : undefined
+                    }
+                    onVacantPress={
+                      showResidentsActions || permissions.canViewSpaceOccupancies
+                        ? handleVacantBedsPress
+                        : undefined
+                    }
+                    onReservedPress={
+                      showResidentsActions || permissions.canViewSpaceOccupancies
+                        ? handleReservedBedsPress
+                        : undefined
+                    }
+                  />
+                  <DashboardPendingPaymentsBanner
+                    count={displayAccommodationOperations.pendingPaymentsCount}
+                    onPress={
+                      showPaymentsQuickAction
+                        ? handlePendingPaymentsBannerPress
+                        : undefined
+                    }
+                  />
+                </>
               ) : null}
 
               {visibility.showMealOps && showMealOperations ? (
@@ -1147,6 +1249,25 @@ export function DashboardScreen() {
                   guidedEmpty={isMess && Boolean(showSetupCard)}
                 />
               ) : null}
+
+              {visibility.showAccommodationOps && !isMess && displayAccommodationOperations ? (
+                <DashboardRecentActivity
+                  moveInsThisMonth={displayAccommodationOperations.moveInsThisMonth}
+                  reservedCount={displayAccommodationOperations.reservedBeds ?? 0}
+                  moveOutsThisMonth={null}
+                  onMoveInsPress={
+                    showResidentsActions || permissions.canViewSpaceOccupancies
+                      ? handleMoveInsPress
+                      : undefined
+                  }
+                  onReservationsPress={
+                    showResidentsActions || permissions.canViewSpaceOccupancies
+                      ? handleReservedBedsPress
+                      : undefined
+                  }
+                  onViewAllPress={handleRecentActivityViewAll}
+                />
+              ) : null}
             </>
           ) : null}
         </>
@@ -1154,9 +1275,15 @@ export function DashboardScreen() {
 
       {showQuickSection ? (
         <View style={styles.quickSection}>
-          <DashboardSectionTitle title={t('dashboard.quickActions.title')} />
-          {quickActions ?? (
-            <View style={styles.quickStack}>{pendingActionsCard}</View>
+          {accommodationSetupQuickActions ? (
+            quickActions
+          ) : (
+            <>
+              <DashboardSectionTitle title={t('dashboard.quickActions.title')} />
+              {quickActions ?? (
+                <View style={styles.quickStack}>{pendingActionsCard}</View>
+              )}
+            </>
           )}
         </View>
       ) : null}
@@ -1166,9 +1293,10 @@ export function DashboardScreen() {
 
 const styles = StyleSheet.create({
   content: {
-    // Override Screen's uniform 24dp padding for tighter AppBar → Hero (12dp).
+    // Override Screen vertical default for tighter AppBar → Hero (12dp).
+    // Horizontal matches Rooms (`pageContentGutter`).
     paddingTop: spacing.md,
-    paddingHorizontal: spacing.xxl,
+    paddingHorizontal: pageContentGutter,
     paddingBottom: spacing.section,
   },
   spaceDetails: { marginBottom: spacing.lg },

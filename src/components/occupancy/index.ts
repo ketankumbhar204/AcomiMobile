@@ -9,8 +9,7 @@ export { MoveInModal, type MoveInFormValues } from './MoveInModal';
 export { BedInventoryListRow } from './BedInventoryListRow';
 export { OccupancyMemberPickerModal } from './OccupancyMemberPickerModal';
 export {
-  OccupancyTargetPickerModal,
-  type OccupancyPickerExtras,
-  type OccupancyPickerMode,
-} from './OccupancyTargetPickerModal';
+  AllocationSuccessModal,
+  type OccupancySuccessOperation,
+} from './AllocationSuccessModal';
 export type { OccupancyTargetSelection } from '../../utils/occupancyRules';

@@ -13,7 +13,7 @@ import { useFavoriteIds, useToggleFavorite } from '../hooks/useFavorites';
 import type { MainStackParamList } from '../navigation/types';
 import { useAuthStore } from '../store/authStore';
 import { loadFavoriteListings } from '../state/favoriteListings';
-import { colors, radius, spacing, typography } from '../theme';
+import { colors, pageContentGutter, radius, spacing, typography } from '../theme';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'Favorites'>;
 
@@ -75,7 +75,7 @@ export function FavoritesScreen() {
     : [];
 
   return (
-    <Screen>
+    <Screen contentStyle={styles.screenContent}>
       <View style={styles.filters}>
         {([
           ['all', t('spaces.favorites.all', { defaultValue: 'All' })],
@@ -160,10 +160,15 @@ export function FavoritesScreen() {
 }
 
 const styles = StyleSheet.create({
+  // Own horizontal gutter — avoid Screen + child double inset.
+  screenContent: {
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+  },
   filters: {
     flexDirection: 'row',
     gap: spacing.sm,
-    paddingHorizontal: spacing.xxl,
+    paddingHorizontal: pageContentGutter,
     paddingTop: spacing.lg,
   },
   filterChip: {
@@ -201,6 +206,16 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   loader: { marginTop: spacing.section },
-  empty: { padding: spacing.xxl, gap: spacing.md },
-  list: { padding: spacing.xxl, paddingBottom: spacing.section, flexGrow: 1, gap: spacing.md },
+  empty: {
+    paddingHorizontal: pageContentGutter,
+    paddingVertical: spacing.xxl,
+    gap: spacing.md,
+  },
+  list: {
+    paddingHorizontal: pageContentGutter,
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.section,
+    flexGrow: 1,
+    gap: spacing.md,
+  },
 });

@@ -6,13 +6,20 @@ type MemberDetailRowProps = {
   label: string;
   value: string;
   isLast?: boolean;
+  /** When set, replaces the plain value text (e.g. interactive contact number). */
+  valueNode?: React.ReactNode;
 };
 
-export function MemberDetailRow({ label, value, isLast = false }: MemberDetailRowProps) {
+export function MemberDetailRow({
+  label,
+  value,
+  isLast = false,
+  valueNode,
+}: MemberDetailRowProps) {
   return (
     <View style={[styles.row, isLast && styles.rowLast]}>
       <Text style={styles.label}>{label}</Text>
-      <Text style={styles.value}>{value}</Text>
+      {valueNode ?? <Text style={styles.value}>{value}</Text>}
     </View>
   );
 }

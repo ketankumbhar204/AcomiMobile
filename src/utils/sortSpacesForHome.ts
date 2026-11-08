@@ -1,4 +1,4 @@
-import type { MySpaceResponse } from '../../api/types';
+import type { MySpaceResponse } from '../api/types';
 
 /** Home space list: default first, then spaces with attention, then name. */
 export function sortSpacesForHome(

@@ -26,7 +26,7 @@ import type { ListFilterChipOption } from '../../components/ui/ListFilterChips';
 import { MealFormHero } from '../../components/meals/MealFormHero';
 import { useSpaceNotifications } from '../../hooks/useSpaceNotifications';
 import type { MainStackParamList } from '../../navigation/types';
-import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { colors, pageContentGutter, radius, shadows, spacing, typography } from '../../theme';
 import { navigateFromNotificationType } from '../../utils/notificationDeepLinks';
 import { canManageNotifications } from '../../utils/spaceOperator';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
@@ -230,7 +230,7 @@ export function SpaceNotificationsScreen() {
 
   return (
     <Screen scrollable={false} contentStyle={styles.flexContent}>
-      <View style={styles.header}>
+      <View>
         <MealFormHero
           icon={Bell}
           eyebrow={t('notifications.eyebrow', { defaultValue: 'Space' })}
@@ -313,14 +313,12 @@ export function SpaceNotificationsScreen() {
 const styles = StyleSheet.create({
   flexContent: {
     flex: 1,
-    padding: 0,
-  },
-  header: {
-    paddingHorizontal: spacing.lg,
+    // Match Dashboard / Rooms page margins (single gutter, no nested re-padding).
+    paddingHorizontal: pageContentGutter,
     paddingTop: spacing.md,
+    paddingBottom: 0,
   },
   loadingWrap: {
-    paddingHorizontal: spacing.lg,
     gap: spacing.sm,
   },
   skeletonCard: {
@@ -338,7 +336,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   listContent: {
-    paddingHorizontal: spacing.lg,
     paddingBottom: spacing.section,
     gap: spacing.lg,
   },

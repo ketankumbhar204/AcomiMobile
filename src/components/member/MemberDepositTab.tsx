@@ -136,19 +136,19 @@ export function MemberDepositTab({ spaceId, member, canEdit }: MemberDepositTabP
       <Card style={styles.card}>
         <MemberDetailRow
           label={t('membership.deposit.amount')}
-          value={formatPaymentAmount(member.depositAmount ?? 0)}
+          value={formatPaymentAmount(member.depositAmount ?? 0) ?? ''}
         />
         <MemberDetailRow
           label={t('membership.deposit.paid')}
-          value={formatPaymentAmount(member.depositPaid ?? 0)}
+          value={formatPaymentAmount(member.depositPaid ?? 0) ?? ''}
         />
         <MemberDetailRow
           label={t('membership.deposit.refunded')}
-          value={formatPaymentAmount(member.depositRefunded ?? 0)}
+          value={formatPaymentAmount(member.depositRefunded ?? 0) ?? ''}
         />
         <MemberDetailRow
           label={t('membership.deposit.balance')}
-          value={formatPaymentAmount(member.depositBalance ?? 0)}
+          value={formatPaymentAmount(member.depositBalance ?? 0) ?? ''}
           isLast
         />
       </Card>

@@ -195,16 +195,18 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
   bootstrapSpaces: async () => {
     if (get().isSpaceBootstrapping) {
       devLog(`${LOG_TAG} bootstrapSpaces skipped — already in flight`);
+      const route = get().startupRoute ?? 'MySpaces';
       return {
-        route: get().startupRoute ?? 'MySpaces',
+        route,
         spaceId: get().selectedSpaceId ?? undefined,
       };
     }
 
-    if (get().hasSpaceBootstrapped && get().startupRoute) {
+    const existingRoute = get().startupRoute;
+    if (get().hasSpaceBootstrapped && existingRoute) {
       devLog(`${LOG_TAG} bootstrapSpaces skipped — already resolved`);
       return {
-        route: get().startupRoute,
+        route: existingRoute,
         spaceId: get().selectedSpaceId ?? undefined,
       };
     }

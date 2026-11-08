@@ -163,6 +163,7 @@ export function LoginScreen() {
           <Image
             source={require('../../assets/brand/icon-light.png')}
             style={styles.logo}
+            resizeMode="contain"
             accessibilityIgnoresInvertColors
           />
           <Text style={styles.appName}>{t('common.appName')}</Text>
@@ -370,6 +371,8 @@ const styles = StyleSheet.create({
     height: 88,
     borderRadius: 22,
     marginBottom: spacing.md,
+    backgroundColor: '#000000',
+    overflow: 'hidden',
   },
   appName: {
     fontSize: 24,

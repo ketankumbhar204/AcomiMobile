@@ -33,6 +33,7 @@ import {
   type LucideIcon,
 } from 'lucide-react-native';
 import { getSpaceTypeLabel } from '../api';
+import { ContactNumberLine } from '../components/member/ContactAndStayMeta';
 import { useUnitLevelOccupancyCounts } from '../hooks/useUnitLevelOccupancyCounts';
 import { getAccommodationUiProfile, usesUnitLevelOccupancy } from '../utils/accommodationProfile';
 import type { Space } from '../api/types';
@@ -79,11 +80,13 @@ function InfoRow({
   label,
   value,
   accent,
+  valueNode,
 }: {
   icon: LucideIcon;
   label: string;
   value: string;
   accent: string;
+  valueNode?: React.ReactNode;
 }) {
   return (
     <View style={styles.infoRow}>
@@ -92,7 +95,7 @@ function InfoRow({
       </View>
       <View style={styles.infoText}>
         <Text style={styles.infoLabel}>{label}</Text>
-        <Text style={styles.infoValue}>{value}</Text>
+        {valueNode ?? <Text style={styles.infoValue}>{value}</Text>}
       </View>
     </View>
   );
@@ -223,7 +226,7 @@ export function SpaceDetailsScreen() {
       items.push({
         label: unitLevel
           ? t('dashboard.accommodationOperations.availableUnits', { defaultValue: 'Available units' })
-          : t('spaces.details.kpi.vacantBeds', { defaultValue: 'Vacant beds' }),
+          : t('spaces.details.kpi.vacantBeds', { defaultValue: 'Available beds' }),
         value: String(vacant),
       });
     }
@@ -464,6 +467,16 @@ export function SpaceDetailsScreen() {
             label={t('spaces.details.contact')}
             value={space.contactNumber ?? t('spaces.details.notProvided')}
             accent={accent}
+            valueNode={
+              space.contactNumber ? (
+                <ContactNumberLine
+                  value={space.contactNumber}
+                  name={space.name}
+                  showIcon={false}
+                  textStyle={styles.infoValue}
+                />
+              ) : undefined
+            }
           />
           <InfoRow
             icon={MapPin}

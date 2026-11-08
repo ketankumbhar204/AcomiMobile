@@ -74,7 +74,7 @@ export function PaymentReceivedConfirmModal({
                 return (
                   <View key={payment.paymentId}>
                     <Text style={styles.line}>{payment.title}</Text>
-                    <ConfirmStayLine payment={payment} textStyle={styles.line} />
+                    <ConfirmStayLine payment={payment} />
                     {period ? <Text style={styles.line}>{period}</Text> : null}
                     <Text style={styles.line}>
                       {formatPaymentAmount(outstanding, payment.currencyCode)}

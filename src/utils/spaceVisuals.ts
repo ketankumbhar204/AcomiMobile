@@ -100,7 +100,8 @@ export function getNotificationIcon(
     type.startsWith('RESERVATION') ||
     type === 'ALLOCATION_CREATED' ||
     type === 'VACANT_RESERVED_BED' ||
-    type === 'EXPIRED_RESERVATION'
+    type === 'EXPIRED_RESERVATION' ||
+    type === 'STAY_OVERDUE_ACTIVE'
   ) {
     return CalendarClock;
   }

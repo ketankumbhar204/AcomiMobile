@@ -14,9 +14,16 @@ import {
   distinctPaymentTimelineEvents,
   paymentTimelineRemarkContent,
 } from '../../utils/paymentTimelineRemark';
+import {
+  formatTimelineAmount,
+  paymentTimelineAmountInfo,
+} from '../../utils/paymentTimelineAmount';
 
 type PaymentHistoryTimelineProps = {
   events: PaymentTimelineEventResponse[];
+  /** Obligation amount used when an event does not encode its own amount. */
+  paymentAmount?: number | null;
+  currencyCode?: string | null;
 };
 
 const REMARK_FALLBACK: Record<string, string> = {
@@ -56,7 +63,11 @@ function formatEventTime(value: string): string {
   );
 }
 
-export function PaymentHistoryTimeline({ events }: PaymentHistoryTimelineProps) {
+export function PaymentHistoryTimeline({
+  events,
+  paymentAmount = null,
+  currencyCode = 'INR',
+}: PaymentHistoryTimelineProps) {
   const { t } = useTranslation();
   const rows = distinctPaymentTimelineEvents(events);
 
@@ -70,13 +81,18 @@ export function PaymentHistoryTimeline({ events }: PaymentHistoryTimelineProps) 
         const { variant, Icon } = eventVisual(event.eventType);
         const theme = PAYMENT_STATUS_THEME[variant];
         const isLast = index === rows.length - 1;
-        const remark = paymentTimelineRemarkContent(event.remarks);
+        const amountInfo = paymentTimelineAmountInfo(event, paymentAmount);
+        const remark = paymentTimelineRemarkContent(amountInfo.note);
         const message = remark.messageKey
           ? t(remark.messageKey, { defaultValue: REMARK_FALLBACK[remark.messageKey] })
           : remark.text;
         const diagnostic =
           remark.diagnostic && remark.diagnostic !== message ? remark.diagnostic : null;
         const key = event.eventId?.trim() || `${event.eventType}-${event.performedAt}-${index}`;
+        const amountLabel =
+          amountInfo.amount != null
+            ? formatTimelineAmount(amountInfo.amount, currencyCode || 'INR')
+            : null;
 
         return (
           <View key={key} style={styles.row}>
@@ -91,9 +107,14 @@ export function PaymentHistoryTimeline({ events }: PaymentHistoryTimelineProps) 
               {!isLast ? <View style={styles.line} /> : null}
             </View>
             <View style={styles.card}>
-              <Text style={styles.eventType}>
-                {t(`paymentCollection.timeline.${event.eventType}`)}
-              </Text>
+              <View style={styles.titleRow}>
+                <Text style={styles.eventType}>
+                  {t(`paymentCollection.timeline.${event.eventType}`, {
+                    defaultValue: event.eventType,
+                  })}
+                </Text>
+                {amountLabel ? <Text style={styles.amount}>{amountLabel}</Text> : null}
+              </View>
               <Text style={styles.time}>{formatEventTime(event.performedAt)}</Text>
               {message ? <Text style={styles.remarks}>{message}</Text> : null}
               {diagnostic ? <Text style={styles.diagnostic}>{diagnostic}</Text> : null}
@@ -146,10 +167,23 @@ const styles = StyleSheet.create({
     gap: spacing.xxs,
     ...shadows.sm,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
   eventType: {
     ...typography.bodyStrong,
     fontSize: 15,
     color: colors.textPrimary,
+    flex: 1,
+  },
+  amount: {
+    ...typography.bodyStrong,
+    fontSize: 15,
+    color: colors.textPrimary,
+    flexShrink: 0,
   },
   time: {
     ...typography.caption,

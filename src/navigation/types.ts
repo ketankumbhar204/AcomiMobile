@@ -39,7 +39,9 @@ export type SpaceTabParamList = {
       | 'submitted'
       | 'changesRequested'
       | 'paid'
-      | 'rejected';
+      | 'rejected'
+      | 'refunded'
+      | 'cancelled';
   };
   Complaints: { spaceId: UUID };
 };
@@ -90,15 +92,27 @@ export type MainStackParamList = {
   ServiceContactDetails: { contactId: UUID };
   SpaceDetails: { spaceId: UUID };
   EditSpace: { spaceId: UUID };
-  /** Parent space id + optional nested tab target (soft navigate; avoid CommonActions.reset). */
-  SpaceTabs: { spaceId: UUID } & NavigatorScreenParams<SpaceTabParamList>;
+  /**
+   * Parent space id plus an optional nested tab.
+   * `screen` may be omitted; the tab navigator then opens its default route.
+   */
+  SpaceTabs: {
+    spaceId: UUID;
+    screen?: keyof SpaceTabParamList;
+    params?: SpaceTabParamList[keyof SpaceTabParamList];
+  };
   InviteMembers: {
     spaceId: UUID;
     mobileNumber?: string;
     role?: MembershipRole;
     memberName?: string;
   };
-  AddMember: { spaceId: UUID; initialMode?: 'new' | 'search' };
+  AddMember: {
+    spaceId: UUID;
+    initialMode?: 'new' | 'search';
+    /** After create, leave Import and land on the Members tab. */
+    returnToMembers?: boolean;
+  };
   AddCustomersHub: { spaceId: UUID };
   ImportExistingPeople: { spaceId: UUID };
   MemberDetails: { spaceId: UUID; memberId: UUID; initialTab?: 'profile' | 'payments' | 'meals' | 'history' | 'deposit' };
@@ -212,6 +226,9 @@ export type MainStackParamList = {
     roomId?: UUID;
     unitId?: UUID;
     buildingId?: UUID;
+    floorId?: UUID;
+    /** Hierarchy filter only — does not skip the target step (unlike unitId). */
+    filterUnitId?: UUID;
     occupancyId?: UUID;
     /** Bed already shown in the details modal. Skips another bed/room/building fetch. */
     prefilledTarget?: {
@@ -292,11 +309,11 @@ export type MainStackParamList = {
   };
   DashboardBedInventory: {
     spaceId: UUID;
-    status: 'AVAILABLE' | 'OCCUPIED';
+    status: 'AVAILABLE' | 'OCCUPIED' | 'RESERVED';
     /** Property-operations card that opened this screen. */
-    focus?: 'occupied' | 'vacant' | 'moveIns';
-    /** Choosing an available bed continues into the Allocate wizard. */
-    intent?: 'allocate';
+    focus?: 'occupied' | 'vacant' | 'reserved' | 'moveIns';
+    /** Choosing an available bed continues into Allocate or Reserve wizard. */
+    intent?: 'allocate' | 'reserve';
   };
   MemberPayments: {
     spaceId: UUID;
@@ -337,7 +354,7 @@ export type MainStackParamList = {
     month?: string;
     section?: 'pendingReview' | 'history';
     pendingFilter?: 'SUBMITTED' | 'NEEDS_UPDATE';
-    historyFilter?: 'PAID' | 'REJECTED';
+    historyFilter?: 'PAID' | 'REJECTED' | 'REFUNDED' | 'CANCELLED';
   };
   PaymentHistory: { spaceId: UUID; paymentId: UUID };
   SpaceNotifications: { spaceId: UUID };
@@ -387,7 +404,7 @@ export type AdminStackParamList = {
 export type RootStackParamList = {
   Bootstrap: undefined;
   Auth: undefined;
-  Main: undefined;
+  Main: NavigatorScreenParams<MainStackParamList> | undefined;
   Admin: NavigatorScreenParams<AdminStackParamList> | undefined;
 };
 

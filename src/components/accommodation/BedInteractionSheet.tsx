@@ -38,6 +38,8 @@ export type BedInteractionSheetProps = {
   label: string;
   bedId?: string;
   spaceId?: string;
+  /** Bed display name. Defaults to `label` when omitted. */
+  name?: string;
   bedNumber: string;
   status?: AccommodationStatus;
   locationLine?: string;
@@ -68,6 +70,7 @@ export function BedInteractionSheet({
   label,
   bedId,
   spaceId,
+  name,
   bedNumber,
   status,
   locationLine,
@@ -89,6 +92,8 @@ export function BedInteractionSheet({
   const { height: windowHeight } = useWindowDimensions();
   const scrollMaxHeight = Math.max(240, windowHeight * 0.88 - insets.bottom - 148);
   const { showConfirm } = useConfirmDialog();
+  const resolvedName = (name ?? label).trim() ? (name ?? label) : bedNumber;
+  const [nameText, setNameText] = useState(resolvedName);
   const [numberText, setNumberText] = useState(bedNumber);
   const [rentText, setRentText] = useState(moneyToDraftText(rent));
   const [depositText, setDepositText] = useState(moneyToDraftText(deposit));
@@ -97,30 +102,33 @@ export function BedInteractionSheet({
 
   useEffect(() => {
     if (visible) {
+      setNameText((name ?? label).trim() ? (name ?? label) : bedNumber);
       setNumberText(bedNumber);
       setRentText(moneyToDraftText(rent));
       setDepositText(moneyToDraftText(deposit));
       setRentError(null);
       setDepositError(null);
     }
-  }, [bedNumber, deposit, rent, visible]);
+  }, [bedNumber, deposit, label, name, rent, visible]);
 
   const current: BedInteractionDraft = useMemo(
     () => ({
+      name: resolvedName,
       bedNumber,
       rent: rent ?? null,
       deposit: deposit ?? null,
     }),
-    [bedNumber, deposit, rent],
+    [bedNumber, deposit, rent, resolvedName],
   );
 
   const draft: BedInteractionDraft = useMemo(
     () => ({
+      name: nameText,
       bedNumber: numberText,
       rent: parseBedMoneyText(rentText),
       deposit: parseBedMoneyText(depositText),
     }),
-    [depositText, numberText, rentText],
+    [depositText, nameText, numberText, rentText],
   );
 
   const unchanged = isBedDraftUnchanged(current, draft);
@@ -171,7 +179,9 @@ export function BedInteractionSheet({
     const depositMissing = isOccupancyMoneyMissing(depositText);
     setRentError(
       rentMissing
-        ? t('accommodation.fields.rentRequired', { defaultValue: 'Rent is required' })
+        ? t('accommodation.fields.rentRequired', {
+            defaultValue: 'Monthly rent is required',
+          })
         : null,
     );
     setDepositError(
@@ -213,15 +223,22 @@ export function BedInteractionSheet({
               )}
             </View>
             <View style={styles.headerText}>
-              <Text style={styles.title} numberOfLines={2}>
-                {label}
-              </Text>
+              <View style={styles.titleRow}>
+                <Text style={styles.title} numberOfLines={2}>
+                  {entity === 'unit'
+                    ? t('accommodation.units.namedTitle', {
+                        defaultValue: 'Unit {{number}}',
+                        number: (bedNumber || label).trim() || '—',
+                      })
+                    : label}
+                </Text>
+                {status ? <AccommodationStatusBadge status={status} /> : null}
+              </View>
               {locationLine ? (
                 <Text style={styles.location} numberOfLines={1}>
                   {locationLine}
                 </Text>
               ) : null}
-              {status ? <AccommodationStatusBadge status={status} /> : null}
             </View>
             <Pressable
               onPress={requestClose}
@@ -259,6 +276,14 @@ export function BedInteractionSheet({
                 ? t('accommodation.units.detailsSection', { defaultValue: 'Unit details' })
                 : t('accommodation.beds.detailsSection', { defaultValue: 'Bed details' })}
             </Text>
+            {entity === 'bed' ? (
+              <FormInput
+                label={t('accommodation.fields.name', { defaultValue: 'Bed name' })}
+                value={nameText}
+                onChangeText={setNameText}
+                editable={editable}
+              />
+            ) : null}
             <FormInput
               label={
                 entity === 'unit'
@@ -403,11 +428,18 @@ const styles = StyleSheet.create({
     minWidth: 0,
     gap: spacing.xs,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
   title: {
     ...typography.h3,
     fontSize: 18,
     lineHeight: 22,
     color: colors.textPrimary,
+    flexShrink: 1,
   },
   location: {
     ...typography.caption,

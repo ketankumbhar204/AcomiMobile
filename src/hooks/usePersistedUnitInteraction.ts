@@ -121,6 +121,7 @@ export function usePersistedUnitInteraction(options: {
         return;
       }
       const current: BedInteractionDraft = {
+        name: target.label,
         bedNumber: target.unitNumber,
         rent: target.rent ?? null,
         deposit: target.deposit ?? null,

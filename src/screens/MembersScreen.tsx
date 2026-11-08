@@ -36,6 +36,8 @@ import { formatMemberContactNumber } from '../utils/indianMobile';
 import { ContactNumberLine } from '../components/member/ContactAndStayMeta';
 import { MemberListCard } from '../components/member/MemberListCard';
 import { MemberOccupancyStatusBadge, MemberStatusBadge } from '../components/member';
+import { StayTypeBadge } from '../components/accommodation/StayTypeBadge';
+import type { StayChoice } from '../utils/shortStay';
 import { MemberListMealAccessSwitch } from '../components/meals/MemberListMealAccessRow';
 import {
   EmptyState,
@@ -59,15 +61,21 @@ import { useSpaceTabHeader } from '../hooks/useSpaceTabHeader';
 import type { MainStackParamList, SpaceTabParamList } from '../navigation/types';
 import { useAccommodationActionSheetStore } from '../store/accommodationActionSheetStore';
 import { useMemberStore } from '../store/memberStore';
-import { colors, radius, shadows, spacing, typography } from '../theme';
+import { colors, pageContentGutter, radius, shadows, spacing, typography } from '../theme';
 import { memberAcomiBadgeLabel } from '../utils/memberAppStatus';
 import {
   getMemberListFoodLabel,
   isReceivingMealsForMember,
   mealsApplicableForSpace,
+  shouldShowMealAccessForMember,
 } from '../utils/mealAccess';
 import { getMemberStatusColor, getMemberStatusLabelKey } from '../utils/memberStatus';
 import { memberListStayLabel, stayLabelForMember } from '../utils/memberListStay';
+import {
+  buildMemberListStayDateInfo,
+  preferredOccupancyForMemberListDates,
+  type MemberListStayDateSource,
+} from '../utils/memberListStayDates';
 import type { StayLayoutMode } from '../utils/stayTrail';
 import {
   countMemberListFilters,
@@ -208,6 +216,12 @@ export function MembersScreen() {
   const [spacePending, setSpacePending] = useState<number | null>(null);
   const [duesState, setDuesState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [stayByMemberId, setStayByMemberId] = useState<Map<string, string>>(() => new Map());
+  const [stayKindByMemberId, setStayKindByMemberId] = useState<Map<string, StayChoice>>(
+    () => new Map(),
+  );
+  const [stayDateByMemberId, setStayDateByMemberId] = useState<
+    Map<string, MemberListStayDateSource>
+  >(() => new Map());
 
   const permissions = useSpacePermissions(spaceId);
   const showMealAccess =
@@ -221,15 +235,18 @@ export function MembersScreen() {
   const loadStays = useCallback(async () => {
     if (!showTenantOccupancyStatus) {
       setStayByMemberId(new Map());
+      setStayKindByMemberId(new Map());
+      setStayDateByMemberId(new Map());
       return;
     }
     try {
-      const [rows, vacatedRows, buildings] = await Promise.all([
+      const [rows, reservedRows, vacatedRows, buildings] = await Promise.all([
         loadOccupancyPages(spaceId, 'ACTIVE'),
+        loadOccupancyPages(spaceId, 'RESERVED'),
         loadOccupancyPages(spaceId, 'VACATED'),
         accommodationApi.getBuildings(spaceId).catch(() => []),
       ]);
-      const occupancies = [...rows, ...vacatedRows];
+      const occupancies = [...rows, ...reservedRows, ...vacatedRows];
       const activeBuildings = buildings.filter(building => building.active);
       const layoutByBuildingId = new Map<string, StayLayoutMode>(
         activeBuildings.map(building => [building.buildingId, building.layoutMode]),
@@ -239,14 +256,34 @@ export function MembersScreen() {
         layoutByBuildingId,
       };
       const next = new Map<string, string>();
+      const nextKinds = new Map<string, StayChoice>();
+      const nextDates = new Map<string, MemberListStayDateSource>();
       const memberIds = new Set(occupancies.map(row => row.memberId));
       memberIds.forEach(memberId => {
         const label = stayLabelForMember(memberId, occupancies, stayOptions);
         if (label) {
           next.set(memberId, label);
         }
+        // Prefer ACTIVE, then RESERVED, for stay-type chip (skip vacated).
+        const preferred =
+          rows.find(row => row.memberId === memberId) ??
+          reservedRows.find(row => row.memberId === memberId);
+        const kind = preferred?.stayKind;
+        if (kind === 'MONTHLY' || kind === 'SHORT' || kind === 'OPEN_ENDED') {
+          nextKinds.set(memberId, kind);
+        }
+        const dateSource = preferredOccupancyForMemberListDates(
+          memberId,
+          rows,
+          reservedRows,
+        );
+        if (dateSource) {
+          nextDates.set(memberId, dateSource);
+        }
       });
       setStayByMemberId(next);
+      setStayKindByMemberId(nextKinds);
+      setStayDateByMemberId(nextDates);
     } catch (loadError) {
       devLog('[MembersScreen] stay load failed', loadError);
     }
@@ -340,7 +377,7 @@ export function MembersScreen() {
   const showInviteAction = permissions.canManageMembers;
   const showCancelInvitation = permissions.canManageMembers;
 
-  const inviteHeaderAction = useMemo(
+  const inviteSectionAction = useMemo(
     () =>
       showInviteAction ? (
         <Pressable
@@ -362,7 +399,6 @@ export function MembersScreen() {
   );
 
   useSpaceTabHeader(spaceId, {
-    headerRightExtra: inviteHeaderAction,
     showLanguage: false,
   });
 
@@ -524,6 +560,7 @@ export function MembersScreen() {
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
+        stickyHeaderIndices={[1]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         refreshControl={
@@ -534,93 +571,99 @@ export function MembersScreen() {
             colors={[colors.primary]}
           />
         }>
-        {error ? (
-          <View style={styles.errorBanner}>
-            <Text style={styles.errorBannerText}>{error}</Text>
-          </View>
-        ) : null}
+        <View style={styles.scrollTop}>
+          {error ? (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorBannerText}>{error}</Text>
+            </View>
+          ) : null}
 
-        <View style={styles.kpiGrid}>
-          <DashboardStatCard
-            horizontal
-            label={t('membership.kpi.total', { defaultValue: 'Total Members' })}
-            value={String(kpi.total)}
-            icon={Users}
-            accent={colors.primaryDark}
-            style={styles.kpiCard}
-            selected={kpiFocus === 'total'}
-            onPress={() => applyKpiFocus('total')}
-          />
-          <DashboardStatCard
-            horizontal
-            label={t('membership.kpi.active', { defaultValue: 'Active Members' })}
-            value={String(kpi.active)}
-            icon={UserCheck}
-            accent="#2563EB"
-            style={styles.kpiCard}
-            selected={kpiFocus === 'active'}
-            onPress={() => applyKpiFocus('active')}
-          />
-          <DashboardStatCard
-            horizontal
-            label={t('membership.kpi.pending', { defaultValue: 'Pending Invitations' })}
-            value={String(kpi.pending)}
-            icon={Mail}
-            accent="#D97706"
-            style={styles.kpiCard}
-            selected={kpiFocus === 'pending'}
-            onPress={() => applyKpiFocus('pending')}
-          />
-          <DashboardStatCard
-            horizontal
-            label={t('membership.kpi.joinedThisMonth', { defaultValue: 'Joined This Month' })}
-            value={String(kpi.joinedThisMonth)}
-            icon={CalendarDays}
-            accent="#7C3AED"
-            style={styles.kpiCard}
-            selected={kpiFocus === 'joinedThisMonth'}
-            onPress={() => applyKpiFocus('joinedThisMonth')}
-          />
-          {canSeeDues ? (
+          <View style={styles.kpiGrid}>
             <DashboardStatCard
               horizontal
-              label={t('membership.dues.summary', { defaultValue: 'Pending Payments' })}
-              value={pendingPaymentsValue}
-              icon={IndianRupee}
-              accent="#D97706"
-              style={styles.kpiCardWide}
-              selected={kpiFocus === 'pendingPayments'}
-              onPress={() => applyKpiFocus('pendingPayments')}
+              label={t('membership.kpi.total', { defaultValue: 'Total Members' })}
+              value={String(kpi.total)}
+              icon={Users}
+              accent={colors.primaryDark}
+              style={styles.kpiCard}
+              selected={kpiFocus === 'total'}
+              onPress={() => applyKpiFocus('total')}
             />
-          ) : null}
+            <DashboardStatCard
+              horizontal
+              label={t('membership.kpi.active', { defaultValue: 'Active Members' })}
+              value={String(kpi.active)}
+              icon={UserCheck}
+              accent="#2563EB"
+              style={styles.kpiCard}
+              selected={kpiFocus === 'active'}
+              onPress={() => applyKpiFocus('active')}
+            />
+            <DashboardStatCard
+              horizontal
+              label={t('membership.kpi.pending', { defaultValue: 'Pending Invitations' })}
+              value={String(kpi.pending)}
+              icon={Mail}
+              accent="#D97706"
+              style={styles.kpiCard}
+              selected={kpiFocus === 'pending'}
+              onPress={() => applyKpiFocus('pending')}
+            />
+            <DashboardStatCard
+              horizontal
+              label={t('membership.kpi.joinedThisMonth', { defaultValue: 'Joined This Month' })}
+              value={String(kpi.joinedThisMonth)}
+              icon={CalendarDays}
+              accent="#7C3AED"
+              style={styles.kpiCard}
+              selected={kpiFocus === 'joinedThisMonth'}
+              onPress={() => applyKpiFocus('joinedThisMonth')}
+            />
+            {canSeeDues ? (
+              <DashboardStatCard
+                horizontal
+                label={t('membership.dues.summary', { defaultValue: 'Pending Payments' })}
+                value={pendingPaymentsValue}
+                icon={IndianRupee}
+                accent="#D97706"
+                style={styles.kpiCardWide}
+                selected={kpiFocus === 'pendingPayments'}
+                onPress={() => applyKpiFocus('pendingPayments')}
+              />
+            ) : null}
+          </View>
+
+          <DashboardSectionTitle
+            title={
+              activeTab === 'members'
+                ? t('membership.tabs.members')
+                : t('membership.tabs.pending')
+            }
+            subtitle={
+              activeTab === 'members'
+                ? t('membership.members.listSubtitle')
+                : t('membership.pending.listSubtitle')
+            }
+            trailing={inviteSectionAction}
+          />
         </View>
 
-        <DashboardSectionTitle
-          title={
-            activeTab === 'members'
-              ? t('membership.tabs.members')
-              : t('membership.tabs.pending')
-          }
-          subtitle={
-            activeTab === 'members'
-              ? t('membership.members.listSubtitle')
-              : t('membership.pending.listSubtitle')
-          }
-        />
+        <View style={styles.stickySearch}>
+          <ListSearchFilterBar
+            searchValue={searchQuery}
+            onSearchChange={setSearchQuery}
+            searchPlaceholder={
+              activeTab === 'members'
+                ? t('list.search.members')
+                : t('list.search.pendingInvitations')
+            }
+            onFilterPress={() => setFilterDrawerOpen(true)}
+            activeFilterCount={activeFilterCount}
+            showFilterButton={useMembersFilterDrawer}
+          />
+        </View>
 
-        <ListSearchFilterBar
-          searchValue={searchQuery}
-          onSearchChange={setSearchQuery}
-          searchPlaceholder={
-            activeTab === 'members'
-              ? t('list.search.members')
-              : t('list.search.pendingInvitations')
-          }
-          onFilterPress={() => setFilterDrawerOpen(true)}
-          activeFilterCount={activeFilterCount}
-          showFilterButton={useMembersFilterDrawer}
-        />
-
+        <View style={styles.scrollList}>
         {activeTab === 'members' ? (
           showLoading ? (
             <>
@@ -651,7 +694,12 @@ export function MembersScreen() {
                 const showFoodLine =
                   showMealAccess &&
                   ((isMess && member.role === 'CUSTOMER') ||
-                    (!isMess && member.role === 'TENANT'));
+                    (!isMess && member.role === 'TENANT')) &&
+                  shouldShowMealAccessForMember({
+                    spaceType: permissions.spaceType,
+                    occupancyStatus: member.occupancyStatus,
+                    memberStatus: member.status,
+                  });
                 const receiving = isReceivingMealsForMember(participation, {
                   spaceType: permissions.spaceType,
                   occupancyStatus: member.occupancyStatus,
@@ -676,7 +724,13 @@ export function MembersScreen() {
                       formatMemberContactNumber(member.mobileNumber) ??
                       t('membership.members.mobileNotAvailable')
                     }
+                    contactValue={member.mobileNumber}
                     statusChip={buildMemberStatusChip(member, showTenantOccupancyStatus)}
+                    stayTypeChip={
+                      showTenantOccupancyStatus ? (
+                        <StayTypeBadge stayKind={stayKindByMemberId.get(member.memberId)} />
+                      ) : null
+                    }
                     statusLabel={t(getMemberStatusLabelKey(member.status ?? 'ACTIVE'))}
                     statusColor={getMemberStatusColor(member.status ?? 'ACTIVE')}
                     acomiLabel={memberAcomiBadgeLabel(member, t)}
@@ -684,6 +738,10 @@ export function MembersScreen() {
                     stayLabel={memberListStayLabel(
                       member,
                       stayByMemberId.get(member.memberId) ?? member.stayLabel,
+                    )}
+                    stayDates={buildMemberListStayDateInfo(
+                      stayDateByMemberId.get(member.memberId),
+                      t,
                     )}
                     paymentLine={paymentLineFor(member.memberId)}
                     onPaymentPress={() => openMemberDetails(member, 'payments')}
@@ -704,6 +762,7 @@ export function MembersScreen() {
                                 canManage={canManageMeals}
                                 spaceType={permissions.spaceType}
                                 occupancyStatus={member.occupancyStatus}
+                                memberStatus={member.status}
                                 onParticipationChanged={() =>
                                   reloadParticipations().catch(() => undefined)
                                 }
@@ -788,6 +847,7 @@ export function MembersScreen() {
             ))}
           </View>
         )}
+        </View>
       </ScrollView>
 
       {showAddFab ? (
@@ -830,8 +890,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: spacing.xl,
+    paddingHorizontal: pageContentGutter,
+    paddingTop: spacing.xl,
     paddingBottom: 96,
+  },
+  scrollTop: {
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  stickySearch: {
+    backgroundColor: colors.background,
+    paddingBottom: spacing.sm,
+    zIndex: 2,
+  },
+  scrollList: {
     gap: spacing.md,
   },
   kpiGrid: {
@@ -948,10 +1020,9 @@ const styles = StyleSheet.create({
     color: '#DC2626',
   },
   inviteButton: {
-    marginRight: spacing.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    minHeight: 40,
+    minHeight: 36,
     borderRadius: radius.button,
     backgroundColor: colors.lightGreen,
     borderWidth: 1,

@@ -19,6 +19,8 @@ import {
   type ServiceContactSort,
 } from '../../api/serviceContactsApi';
 import { ApiError } from '../../api/types';
+import { useOptionalContactOptions } from '../../components/contact';
+import { ContactNumberLine } from '../../components/member/ContactAndStayMeta';
 import { Button, EmptyState, ListFilterChips, ListSearchBar } from '../../components/ui';
 import type { MainStackParamList } from '../../navigation/types';
 import { useAuthStore } from '../../store/authStore';
@@ -32,6 +34,7 @@ type Nav = NativeStackNavigationProp<MainStackParamList, 'ServiceContacts'>;
 export function ServiceContactsScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
+  const { openContactOptions } = useOptionalContactOptions();
   const userId = useAuthStore(state => state.userId);
   const spaces = useSpaceStore(state => state.mySpaces);
   const canManage = canManageServiceContacts(spaces);
@@ -214,10 +217,11 @@ export function ServiceContactsScreen() {
               </View>
             ) : null}
             {displayPhone(item.primaryPhone) ? (
-              <View style={styles.row}>
-                <Phone size={15} color={colors.primaryDark} />
-                <Text style={styles.rowText}>{displayPhone(item.primaryPhone)}</Text>
-              </View>
+              <ContactNumberLine
+                value={item.primaryPhone}
+                name={item.contactPersonName || item.businessName}
+                textStyle={styles.rowText}
+              />
             ) : null}
             {item.email ? (
               <View style={styles.row}>
@@ -229,18 +233,28 @@ export function ServiceContactsScreen() {
               <Text style={styles.meta}>{item.spaces.map(space => space.name).join(', ')}</Text>
             ) : null}
             <View style={styles.actions}>
-              {telHref(item.primaryPhone) ? (
+              {telHref(item.primaryPhone) || whatsappHref(item.whatsappPhone || item.primaryPhone) ? (
                 <Button
                   label={t('serviceContacts.call')}
                   variant="secondary"
-                  onPress={() => void openUrl(telHref(item.primaryPhone))}
+                  onPress={() =>
+                    openContactOptions({
+                      phoneNumber: item.primaryPhone || item.whatsappPhone || '',
+                      displayName: item.contactPersonName || item.businessName,
+                    })
+                  }
                 />
               ) : null}
               {whatsappHref(item.whatsappPhone || item.primaryPhone) ? (
                 <Button
                   label={t('serviceContacts.whatsapp')}
                   variant="secondary"
-                  onPress={() => void openUrl(whatsappHref(item.whatsappPhone || item.primaryPhone))}
+                  onPress={() =>
+                    openContactOptions({
+                      phoneNumber: item.whatsappPhone || item.primaryPhone || '',
+                      displayName: item.contactPersonName || item.businessName,
+                    })
+                  }
                 />
               ) : null}
             </View>

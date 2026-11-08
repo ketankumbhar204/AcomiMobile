@@ -13,8 +13,12 @@ type CategoryChipRailProps = {
   onSelect: (categoryId: string) => void;
   /** When true, shows an "All" chip; selected when `selectedCategoryId` is null. */
   includeAll?: boolean;
+  allCount?: number;
+  countByCategoryId?: Record<string, number>;
   onSelectAll?: () => void;
   canManage?: boolean;
+  /** Long-press remove stays available. The hint is hidden when removal has another visible entry. */
+  showRemoveHint?: boolean;
   isAdding?: boolean;
   addDisabled?: boolean;
   onStartAdd?: () => void;
@@ -28,8 +32,11 @@ export function CategoryChipRail({
   selectedCategoryId,
   onSelect,
   includeAll = false,
+  allCount,
+  countByCategoryId,
   onSelectAll,
   canManage = false,
+  showRemoveHint = true,
   isAdding = false,
   addDisabled = false,
   onStartAdd,
@@ -54,22 +61,38 @@ export function CategoryChipRail({
       <ScrollableChipRail>
         {includeAll ? (
           <MenuChip
-            label={t('meals.library.categoryFilterAll')}
+            label={
+              allCount == null
+                ? t('meals.library.categoryFilterAll')
+                : t('meals.library.categoryFilterAllCount', { count: allCount })
+            }
             variant="filter"
             selected={selectedCategoryId == null}
             onPress={() => onSelectAll?.()}
+            testID="library-category-all"
           />
         ) : null}
-        {activeCategories.map(category => (
-          <MenuChip
-            key={category.categoryId}
-            label={category.name}
-            variant="filter"
-            selected={selectedCategoryId === category.categoryId}
-            onPress={() => onSelect(category.categoryId)}
-            onLongPress={() => openCategoryActions(category)}
-          />
-        ))}
+        {activeCategories.map(category => {
+          const count =
+            countByCategoryId == null
+              ? undefined
+              : (countByCategoryId[category.categoryId] ?? 0);
+          return (
+            <MenuChip
+              key={category.categoryId}
+              label={
+                count == null
+                  ? category.name
+                  : t('meals.library.chipWithCount', { name: category.name, count })
+              }
+              variant="filter"
+              selected={selectedCategoryId === category.categoryId}
+              onPress={() => onSelect(category.categoryId)}
+              onLongPress={() => openCategoryActions(category)}
+              testID={`library-category-${category.categoryId}`}
+            />
+          );
+        })}
         {canManage && !isAdding && onStartAdd ? (
           <MenuChip
             label={t('meals.library.chipAddCategory')}
@@ -91,7 +114,7 @@ export function CategoryChipRail({
         </View>
       ) : null}
 
-      {canManage ? (
+      {canManage && showRemoveHint ? (
         <Text style={styles.hint}>{t('meals.library.categoryManageHint')}</Text>
       ) : null}
     </View>

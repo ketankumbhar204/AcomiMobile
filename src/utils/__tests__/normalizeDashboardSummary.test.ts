@@ -115,8 +115,8 @@ describe('normalizePaymentLedger', () => {
       ],
     });
 
-    expect(result.summary.pending).toBe(8000);
-    expect(result.members[0].pending).toBe(8000);
+    expect(result.summary.pending).toBeNull();
+    expect(result.members[0].pending).toBeNull();
   });
 });
 
@@ -128,6 +128,7 @@ describe('normalizeDashboardSummary', () => {
       financial: {
         expectedCharges: '1500',
         collected: '500',
+        pending: null,
         currencyCode: 'INR',
         source: 'MEAL_ACTIVITY',
       },
@@ -150,7 +151,7 @@ describe('normalizeDashboardSummary', () => {
       ],
     });
 
-    expect(result.financial.pending).toBe(1000);
+    expect(result.financial.pending).toBeNull();
     expect(result.messOperations?.todaysHeadcount).toBeNull();
     expect(result.attention[0].overdueCount).toBe(2);
   });

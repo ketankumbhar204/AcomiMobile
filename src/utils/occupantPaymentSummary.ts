@@ -66,29 +66,30 @@ export function selectStayCharges(
 
 export function linePaymentStatus(payment: StayPaymentInput): StayPaymentStatus {
   const status = payment.paymentStatus ?? '';
+  if (status === 'CANCELLED' || status === 'REFUNDED') {
+    // Cancelled obligations and full refunds are not dues; treat as settled/unavailable.
+    return status === 'REFUNDED' ? 'PAID' : 'UNAVAILABLE';
+  }
   if (UNDER_REVIEW.has(status)) {
     return 'UNDER_REVIEW';
   }
   if (payment.settlementStatus === 'PAID' || status === 'PAID') {
     return 'PAID';
   }
-  if (payment.settlementStatus === 'PARTIALLY_PAID') {
-    return 'PARTIALLY_PAID';
-  }
-  const paid = asMoney(payment.paidAmount);
+  // D-18: whole rows only. Do not invent PARTIALLY_PAID from paidAmount/outstanding
+  // or from an unreachable settlementStatus value.
   const outstanding = asMoney(payment.outstandingAmount);
-  if (paid != null && paid > 0.009 && outstanding != null && outstanding > 0.009) {
-    return 'PARTIALLY_PAID';
-  }
   if (outstanding != null && outstanding > 0.009) {
     return 'PENDING';
   }
   if (
     payment.settlementStatus === 'UNPAID' ||
+    payment.settlementStatus === 'PARTIALLY_PAID' ||
     status === 'PENDING' ||
     status === 'REJECTED' ||
     status === 'UPDATE_REQUESTED'
   ) {
+    const paid = asMoney(payment.paidAmount);
     return outstanding == null && paid == null ? 'UNAVAILABLE' : 'PENDING';
   }
   return 'UNAVAILABLE';
@@ -130,15 +131,9 @@ function rollup(statuses: StayPaymentStatus[]): StayPaymentStatus {
   if (statuses.every(status => status === 'PAID')) {
     return 'PAID';
   }
-  if (statuses.some(status => status === 'PARTIALLY_PAID')) {
-    return 'PARTIALLY_PAID';
-  }
-  const pending = statuses.some(status => status === 'PENDING');
-  const settled = statuses.some(status => status === 'PAID');
-  if (pending && settled) {
-    return 'PARTIALLY_PAID';
-  }
-  if (pending) {
+  // Mixed paid + unpaid rows means outstanding work remains — PENDING, not a
+  // invented "partially paid" collection state (D-18 / roadmap §12).
+  if (statuses.some(status => status === 'PENDING' || status === 'PARTIALLY_PAID')) {
     return 'PENDING';
   }
   if (statuses.some(status => status === 'UNDER_REVIEW')) {

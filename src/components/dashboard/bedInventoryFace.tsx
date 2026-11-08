@@ -5,6 +5,7 @@ export type MoveInBedFace = {
   moveInDate: string | null;
   rent: number | null;
   deposit: number | null;
+  stayKind?: 'MONTHLY' | 'SHORT' | 'OPEN_ENDED' | null;
 };
 
 type BedInventoryFaceValue = {

@@ -9,6 +9,7 @@ import type {
   CreateMealPlanRequest,
   CreateMealParticipationRequest,
   CreateFoodCategoryRequest,
+  UpdateFoodCategoryRequest,
   CreateFoodItemRequest,
   CreateMealComboRequest,
   DailyMenuResponse,
@@ -309,6 +310,22 @@ export const mealsApi = {
     );
     clearAllMenuCatalogs();
     return created;
+  },
+
+  updateFoodCategory: async (
+    spaceId: UUID,
+    categoryId: UUID,
+    body: UpdateFoodCategoryRequest,
+  ): Promise<FoodCategoryResponse> => {
+    devLog(`${LOG_TAG} PUT /spaces/${spaceId}/food-categories/${categoryId}`, body);
+    const updated = await unwrapApiResponse(
+      apiClient.put<ApiResponse<FoodCategoryResponse>>(
+        `/spaces/${spaceId}/food-categories/${categoryId}`,
+        body,
+      ),
+    );
+    clearAllMenuCatalogs();
+    return updated;
   },
 
   deactivateFoodCategory: async (spaceId: UUID, categoryId: UUID): Promise<void> => {

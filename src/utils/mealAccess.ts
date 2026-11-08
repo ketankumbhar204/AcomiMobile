@@ -1,6 +1,7 @@
 import type {
   MemberMealParticipationSummary,
   MemberOccupancyStatus,
+  MemberStatus,
   SpaceType,
 } from '../api/types';
 
@@ -21,6 +22,20 @@ export function isTenantMovedIn(
   return occupancyStatus === 'ALLOCATED';
 }
 
+/** Reserved or moved-in — food can be managed for these stays. */
+export function isTenantOnActiveStay(
+  occupancyStatus?: MemberOccupancyStatus | null,
+): boolean {
+  return occupancyStatus === 'ALLOCATED' || occupancyStatus === 'RESERVED';
+}
+
+function isMemberStatusEligibleForMeals(
+  memberStatus?: MemberStatus | string | null,
+): boolean {
+  const status = memberStatus ?? 'ACTIVE';
+  return status === 'ACTIVE';
+}
+
 export function isReceivingMealsForMember(
   participation?: MemberMealParticipationSummary | null,
   options?: {
@@ -35,7 +50,8 @@ export function isReceivingMealsForMember(
     return true;
   }
   if (options?.spaceType) {
-    return isTenantMovedIn(options.occupancyStatus);
+    // Reflect food-included state for reserved and moved-in tenants.
+    return isTenantOnActiveStay(options.occupancyStatus);
   }
   return true;
 }
@@ -43,11 +59,28 @@ export function isReceivingMealsForMember(
 export function canEnableMealsForMember(options?: {
   spaceType?: SpaceType;
   occupancyStatus?: MemberOccupancyStatus | null;
+  memberStatus?: MemberStatus | string | null;
 }): boolean {
+  if (!isMemberStatusEligibleForMeals(options?.memberStatus)) {
+    return false;
+  }
   if (!options?.spaceType || options.spaceType === 'MESS') {
     return true;
   }
-  return isTenantMovedIn(options.occupancyStatus);
+  return isTenantOnActiveStay(options.occupancyStatus);
+}
+
+/**
+ * Food / meal toggle on member list cards.
+ * Visible for reserved + moved-in tenants (and mess customers).
+ * Hidden for vacated occupancy and vacated / blacklisted / suspended / inactive members.
+ */
+export function shouldShowMealAccessForMember(options?: {
+  spaceType?: SpaceType;
+  occupancyStatus?: MemberOccupancyStatus | null;
+  memberStatus?: MemberStatus | string | null;
+}): boolean {
+  return canEnableMealsForMember(options);
 }
 
 export function getMemberListFoodLabel(

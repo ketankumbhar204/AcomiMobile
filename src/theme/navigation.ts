@@ -1,3 +1,4 @@
+import type { BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationOptions } from '@react-navigation/native-stack';
 import { colors } from './colors';
 import { typography } from './typography';
@@ -10,17 +11,11 @@ export const stackHeaderOptions: NativeStackNavigationOptions = {
     fontSize: 17,
   },
   headerShadowVisible: false,
-  headerBackTitleVisible: false,
   headerBackVisible: false,
-  headerLeftContainerStyle: {
-    paddingLeft: 4,
-    justifyContent: 'center',
-  },
-  headerRightContainerStyle: { paddingRight: 8 },
   contentStyle: { backgroundColor: colors.background },
 };
 
-export const tabHeaderOptions = {
+export const tabHeaderOptions: BottomTabNavigationOptions = {
   headerStyle: { backgroundColor: colors.white },
   headerTintColor: colors.primary,
   headerTitleStyle: {

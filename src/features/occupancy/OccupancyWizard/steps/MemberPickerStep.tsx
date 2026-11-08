@@ -10,6 +10,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import type { MemberOccupancyStatus } from '../../../../api/types';
 import { AccommodationSearchBar } from '../../../../components/accommodation/AccommodationSearchBar';
+import { ContactNumberLine } from '../../../../components/member/ContactAndStayMeta';
 import { Button, FormInput } from '../../../../components/ui';
 import type { ResidentPickerItem } from '../../../../hooks/useResidentImportSearch';
 import { colors, radius, spacing, typography } from '../../../../theme';
@@ -51,6 +52,8 @@ type MemberPickerStepProps = {
    * Use when the wizard already owns the only vertical ScrollView.
    */
   embedInParentScroll?: boolean;
+  /** Inline validation near the picker (not a detached footer banner). */
+  selectionError?: string | null;
   onSelect: (member: ResidentPickerItem) => void;
   onCreateNewPress?: () => void;
 };
@@ -117,6 +120,7 @@ export function MemberPickerStep({
   hideTitle = false,
   hideModeToggle = false,
   embedInParentScroll = false,
+  selectionError = null,
   onSelect,
   onCreateNewPress,
 }: MemberPickerStepProps) {
@@ -166,13 +170,11 @@ export function MemberPickerStep({
             </View>
           ) : null}
           <Text style={styles.name}>{item.fullName}</Text>
-          <Text style={styles.mobile}>
-            {customerMeta
-              ? item.mobileNumber
-              : t('occupancyWizard.residentCard.mobile', {
-                  mobile: item.mobileNumber,
-                })}
-          </Text>
+          <ContactNumberLine
+            value={item.mobileNumber}
+            name={item.fullName}
+            textStyle={styles.mobile}
+          />
           {customerMeta ? (
             <>
               <Text style={styles.meta}>{customerMeta.fromLine}</Text>
@@ -261,6 +263,12 @@ export function MemberPickerStep({
               {addNewModeLabel}
             </Text>
           </Pressable>
+        </View>
+      ) : null}
+
+      {selectionError ? (
+        <View style={styles.selectionError} accessibilityLiveRegion="polite">
+          <Text style={styles.selectionErrorText}>{selectionError}</Text>
         </View>
       ) : null}
 
@@ -394,28 +402,46 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#DC2626',
   },
+  selectionError: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: radius.button,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  selectionErrorText: {
+    ...typography.caption,
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#DC2626',
+  },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: spacing.sm,
     backgroundColor: colors.white,
-    borderRadius: 18,
-    borderWidth: 1,
+    borderRadius: radius.card,
+    borderWidth: 1.5,
     borderColor: colors.border,
-    padding: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.md,
+    minHeight: 72,
   },
   cardSelected: {
     borderColor: colors.primary,
-    backgroundColor: colors.lightGreen,
+    backgroundColor: `${colors.primary}12`,
   },
   cardDisabled: { opacity: 0.45 },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: colors.successTint,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   avatarText: {
     ...typography.bodyStrong,
@@ -440,8 +466,8 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: colors.primary,
   },
-  cardBody: { flex: 1, gap: 2 },
-  cardAside: { alignItems: 'flex-end', gap: spacing.xs },
+  cardBody: { flex: 1, minWidth: 0, gap: 2 },
+  cardAside: { alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   typeChipWrap: {
     alignSelf: 'flex-start',
     marginBottom: 2,

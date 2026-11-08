@@ -1,4 +1,4 @@
-import type { MealParticipationStatus, MealPlanCode } from '../../api/types';
+import type { MealParticipationStatus, MealPlanCode } from '../api/types';
 
 export function mealPlanLabelKey(code: MealPlanCode): string {
   return `meals.plan.${code.toLowerCase()}`;

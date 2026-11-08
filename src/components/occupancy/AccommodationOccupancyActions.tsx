@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ArrowLeftRight,
   CalendarClock,
+  CalendarPlus,
   LogIn,
   LogOut,
   UserPlus,
@@ -266,11 +267,63 @@ export function AccommodationOccupancyActions({
               border: pastels.blue.border,
               onPress: () => void flow.startTransfer(context),
             },
+            ...(occupancy?.stayKind === 'OPEN_ENDED'
+              ? [
+                  {
+                    key: 'reviseOpenEnded',
+                    title: t('occupancy.actions.reviseOpenEnded', {
+                      defaultValue: 'Update Daily Rent',
+                    }),
+                    subtitle: t('occupancy.bedQuickActions.reviseOpenEndedHint', {
+                      defaultValue: 'Change the daily rate from a chosen effective date',
+                    }),
+                    icon: CalendarClock,
+                    accent: pastels.blue.fg,
+                    well: pastels.blue.bg,
+                    border: pastels.blue.border,
+                    onPress: () => void flow.startReviseOpenEndedRent(context),
+                  },
+                ]
+              : [
+                  {
+                    key: 'extend',
+                    title: t('occupancy.actions.extend', { defaultValue: 'Extend stay' }),
+                    subtitle: t('occupancy.bedQuickActions.extendHint', {
+                      defaultValue: 'Change the planned end date',
+                    }),
+                    icon: CalendarPlus,
+                    accent: pastels.green.fg,
+                    well: pastels.green.bg,
+                    border: pastels.green.border,
+                    onPress: () => void flow.startExtend(context),
+                  },
+                  ...(occupancy?.stayKind !== 'SHORT'
+                    ? [
+                        {
+                          key: 'renew',
+                          title: t('occupancy.actions.renewMonthly', {
+                            defaultValue: 'Monthly renewal',
+                          }),
+                          subtitle: t('occupancy.bedQuickActions.renewHint', {
+                            defaultValue: 'Extend one month on the same stay; optional new rent',
+                          }),
+                          icon: CalendarClock,
+                          accent: pastels.blue.fg,
+                          well: pastels.blue.bg,
+                          border: pastels.blue.border,
+                          onPress: () => void flow.startRenewMonthly(context),
+                        },
+                      ]
+                    : []),
+                ]),
             {
               key: 'vacate',
-              title: t('occupancy.actions.vacate'),
-              subtitle: t('occupancy.bedQuickActions.vacateHint', {
-                defaultValue: 'End the current occupancy',
+              title: t('occupancy.actions.checkout', {
+                defaultValue: t('occupancy.actions.vacate'),
+              }),
+              subtitle: t('occupancy.bedQuickActions.checkoutHint', {
+                defaultValue:
+                  'Record checkout now. Inventory is released; no automatic refund (D-17).',
               }),
               icon: LogOut,
               accent: colors.danger,
@@ -355,8 +408,45 @@ export function AccommodationOccupancyActions({
                 disabled={flow.loading}
                 style={styles.actionBtn}
               />
+              {occupancy?.stayKind === 'OPEN_ENDED' ? (
+                <Button
+                  label={t('occupancy.actions.reviseOpenEnded', {
+                    defaultValue: 'Update Daily Rent',
+                  })}
+                  tint={occupancyActionTint.transfer}
+                  icon={CalendarClock}
+                  onPress={() => void flow.startReviseOpenEndedRent(context)}
+                  disabled={flow.loading}
+                  style={styles.actionBtn}
+                />
+              ) : (
+                <>
+                  <Button
+                    label={t('occupancy.actions.extend', { defaultValue: 'Extend stay' })}
+                    tint={occupancyActionTint.transfer}
+                    icon={CalendarPlus}
+                    onPress={() => void flow.startExtend(context)}
+                    disabled={flow.loading}
+                    style={styles.actionBtn}
+                  />
+                  {occupancy?.stayKind !== 'SHORT' ? (
+                    <Button
+                      label={t('occupancy.actions.renewMonthly', {
+                        defaultValue: 'Monthly renewal',
+                      })}
+                      tint={occupancyActionTint.transfer}
+                      icon={CalendarClock}
+                      onPress={() => void flow.startRenewMonthly(context)}
+                      disabled={flow.loading}
+                      style={styles.actionBtn}
+                    />
+                  ) : null}
+                </>
+              )}
               <Button
-                label={t('occupancy.actions.vacate')}
+                label={t('occupancy.actions.checkout', {
+                  defaultValue: t('occupancy.actions.vacate'),
+                })}
                 tint={occupancyActionTint.vacate}
                 icon={LogOut}
                 onPress={() => void flow.startVacate(context)}

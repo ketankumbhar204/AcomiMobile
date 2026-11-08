@@ -58,20 +58,32 @@ export function getHierarchySteps(
   return steps;
 }
 
+export type PostHierarchyWizardStep =
+  | 'member'
+  | 'stay_type'
+  | 'contract'
+  | 'reserve_dates'
+  | 'review';
+
 export function getPostHierarchyWizardSteps(
   mode: 'ALLOCATE' | 'RESERVE',
-): Array<'member' | 'contract' | 'reserve_dates' | 'review'> {
+  /** @deprecated shortStayEnabled is ignored; stay_type is always included. */
+  _options: { shortStayEnabled?: boolean } = {},
+): PostHierarchyWizardStep[] {
+  // Stay type first so pricing/dates follow the chosen kind (same as OccupancyWizard).
   if (mode === 'RESERVE') {
-    return ['member', 'reserve_dates', 'review'];
+    return ['stay_type', 'member', 'reserve_dates', 'contract', 'review'];
   }
-  return ['member', 'contract', 'review'];
+  return ['stay_type', 'member', 'contract', 'review'];
 }
 
 export function getTotalAllocationFlowSteps(
   hierarchySteps: HierarchyStep[],
   mode: 'ALLOCATE' | 'RESERVE',
+  /** @deprecated shortStayEnabled is ignored; stay_type is always included. */
+  options: { shortStayEnabled?: boolean } = {},
 ): number {
-  return hierarchySteps.length + getPostHierarchyWizardSteps(mode).length;
+  return hierarchySteps.length + getPostHierarchyWizardSteps(mode, options).length;
 }
 
 export function hierarchyStepTitleKey(step: HierarchyStep): string {

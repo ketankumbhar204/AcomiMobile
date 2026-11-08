@@ -1,11 +1,11 @@
 import { createMonthCache } from '../modules/orchestrator';
 import { invalidateStayPaymentCache } from './stayChargeIndex';
-import type { OwnerPaymentsMonthSnapshot } from '../hooks/ownerPaymentsTypes';
+import type { OwnerPaymentsCacheValue } from '../hooks/ownerPaymentsTypes';
 import type { SpacePaymentResponse } from '../api/types';
 import type { DayMealPaymentsMonthSnapshot } from '../hooks/dayMealPaymentsTypes';
 
 /** Owner Payments month snapshot cache — one SoT per space+month. */
-export const ownerPaymentsMonthCache = createMonthCache<OwnerPaymentsMonthSnapshot>({
+export const ownerPaymentsMonthCache = createMonthCache<OwnerPaymentsCacheValue>({
   ttlMs: 90_000,
 });
 

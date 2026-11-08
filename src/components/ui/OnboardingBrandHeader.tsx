@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { colors } from '../../theme';
 
@@ -9,9 +9,12 @@ export function OnboardingBrandHeader() {
 
   return (
     <View style={styles.row} accessibilityRole="header">
-      <View style={styles.mark}>
-        <Text style={styles.markLetter}>A</Text>
-      </View>
+      <Image
+        source={require('../../assets/brand/icon-light.png')}
+        style={styles.mark}
+        resizeMode="contain"
+        accessibilityIgnoresInvertColors
+      />
       <Text style={styles.wordmark}>{t('common.appName')}</Text>
     </View>
   );
@@ -27,15 +30,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 10,
-    backgroundColor: colors.teal,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  markLetter: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '800',
-    includeFontPadding: false,
+    backgroundColor: '#000000',
   },
   wordmark: {
     color: colors.teal,

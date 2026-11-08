@@ -18,6 +18,8 @@ export {
 } from './QuickActionSheetProvider';
 export type { QuickActionSheetOption } from './QuickActionSheetModal';
 export { Card } from './Card';
+export { CompactPageBanner } from './CompactPageBanner';
+export type { CompactPageBannerProps } from './CompactPageBanner';
 export { EmptyState } from './EmptyState';
 export { HeaderBackButton } from './HeaderBackButton';
 export { StackTitleWithSubtitle } from './StackTitleWithSubtitle';

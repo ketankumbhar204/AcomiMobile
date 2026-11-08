@@ -113,7 +113,7 @@ export function buildDayMealPaymentListItems(
   }
 
   return activity.days
-    .map(day => {
+    .map((day): DayMealPaymentListItem | null => {
       const payable = resolveDayMealPayableAmount(day);
       const amount = payable.amount;
       const mealTypes = acceptedMealTypes(day);
@@ -141,7 +141,7 @@ export function buildDayMealPaymentListItems(
         paymentBatchId: day.paymentBatchId ?? null,
         paymentReference: day.paymentReference ?? null,
         paymentId: null,
-      } satisfies DayMealPaymentListItem;
+      };
     })
     .filter((row): row is DayMealPaymentListItem => row != null)
     .sort((a, b) => b.date.localeCompare(a.date));
