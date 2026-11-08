@@ -26,7 +26,9 @@ export function PaymentStatusBadge({
 }: PaymentStatusBadgeProps) {
   const { t } = useTranslation();
   const variant = resolvePaymentStatusVariant(status);
-  if (variant === 'neutral' && !showNeutral) {
+  // Cancelled is themed as neutral but must still render as a visible status chip.
+  const forceShow = status === 'CANCELLED';
+  if (variant === 'neutral' && !showNeutral && !forceShow) {
     return null;
   }
 

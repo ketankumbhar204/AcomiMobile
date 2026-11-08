@@ -1,8 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,6 +16,7 @@ import {
   FileText,
   Home,
   LogOut,
+  Tag,
   UserRound,
 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
@@ -30,17 +29,23 @@ import type {
   OccupancyResponse,
   TransferRentPolicy,
 } from '../../../api/types';
-import { ProgressiveWorkflowFooter, StickyFormActions } from '../../../components/progressive';
+import { AllocationSuccessModal } from '../../../components/occupancy/AllocationSuccessModal';
+import { ContactNumberLine } from '../../../components/member/ContactAndStayMeta';
+import { StickyFormActions } from '../../../components/progressive';
+import { DateField } from '../../../components/ui';
 import { Screen } from '../../../components/ui/Screen';
+import {
+  formatOccupancyInventoryPath,
+  formatOccupancyInventoryTitle,
+} from '../../../utils/formatOccupancyInventoryTitle';
 import { useMemberSearch } from '../../../hooks/useMemberSearch';
-import { useProgressiveSectionReview } from '../../../hooks/useProgressiveSectionReview';
 import {
   useResidentImportSearch,
   type ResidentPickerItem,
 } from '../../../hooks/useResidentImportSearch';
 import type { MainStackParamList } from '../../../navigation/types';
 import { useSpaceStore } from '../../../store/spaceStore';
-import { colors, radius, shadows, spacing, typography } from '../../../theme';
+import { colors, radius, spacing, typography } from '../../../theme';
 import { buildBedOccupancyTarget } from '../../../utils/buildOccupancyTarget';
 import { fetchTargetCatalogDefaults } from '../../../utils/fetchTargetCatalogDefaults';
 import {
@@ -62,12 +67,15 @@ import {
   validateContractTerms,
   type ContractTermsFormValues,
 } from '../../../utils/occupancyContract';
-import { agentDebugLog } from '../../../utils/agentDebugLog';
-import type { OccupancyTargetSelection } from '../../../utils/occupancyRules';
+import {
+  formatTodayIsoDate,
+  type OccupancyTargetSelection,
+} from '../../../utils/occupancyRules';
 import { hierarchyContextFromTarget, resolveOccupancySpaceTypeLabel, withSpaceHierarchyContext } from '../../../utils/occupancyHierarchyContext';
 import { HeaderBackButton } from '../../../components/ui/HeaderBackButton';
 import { useBuildings } from '../../../hooks/useBuildings';
 import { OccupancyWizardStepHeader } from '../../../components/occupancy/OccupancyWizardStepHeader';
+import { OccupancyWizardHeroBanner } from '../../../components/occupancy/OccupancyWizardHeroBanner';
 import { getWizardSteps, getWizardStepTitleKey, getWizardTitleKey } from './occupancyWizardSteps';
 import { navigateToMemberDetailsAfterOccupancy } from './navigation';
 import { ContractTermsStep } from './steps/ContractTermsStep';
@@ -80,13 +88,22 @@ import {
 } from '../../../utils/validateNewMemberFields';
 import { MemberPickerStep, type MemberPickerMode } from './steps/MemberPickerStep';
 import { ReserveDatesStep } from './steps/ReserveDatesStep';
+import { ShortStayChoice } from './ShortStayChoice';
+import { stayTypesAvailableForSpace } from '../../../utils/accommodationStaySupport';
+import {
+  pricingDefaultsForStayChoice,
+  shortStayNightCount,
+  stayChoiceDefaultLabel,
+  stayChoiceLabelKey,
+  type StayChoice,
+} from '../../../utils/shortStay';
+import { mealsApplicableForSpace } from '../../../utils/mealAccess';
 import { ReviewStep } from './steps/ReviewStep';
 import { TargetPickerStep } from './steps/TargetPickerStep';
 import { TransferCurrentStep } from './steps/TransferCurrentStep';
 import { VacateConfirmStep } from './steps/VacateConfirmStep';
 import { useOccupancyWizardSubmit } from './useOccupancyWizardSubmit';
 import type { OccupancyWizardStep } from './types';
-import { resolveProgressivePhase } from '../../../utils/progressivePhase';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'OccupancyWizard'>;
 
@@ -113,6 +130,10 @@ function getWizardStepIcon(step: OccupancyWizardStep): LucideIcon {
       return UserRound;
     case 'target':
       return BedDouble;
+    case 'stay_type':
+      return Tag;
+    case 'stay_details':
+      return CalendarDays;
     case 'contract':
       return FileText;
     case 'reserve_dates':
@@ -128,6 +149,22 @@ function getWizardStepIcon(step: OccupancyWizardStep): LucideIcon {
   }
 }
 
+function locationLabelFromHierarchy(
+  context: {
+    spaceName?: string;
+    buildingName?: string;
+    floorName?: string;
+    unitName?: string;
+    roomName?: string;
+    bedName?: string;
+  },
+  translate: (key: string, opts?: { label?: string; defaultValue?: string }) => string,
+): string {
+  const title = formatOccupancyInventoryTitle(context, translate as never);
+  const path = formatOccupancyInventoryPath(context);
+  return [title, path].filter(Boolean).join(' · ');
+}
+
 export function OccupancyWizardScreen({ navigation, route }: Props) {
   const { t } = useTranslation();
   const {
@@ -138,6 +175,8 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
     roomId,
     unitId,
     buildingId,
+    floorId,
+    filterUnitId,
     occupancyId: initialOccupancyId,
   } = route.params;
 
@@ -151,19 +190,30 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
     [mySpaces, spaceId],
   );
 
+  // Stay types are stay-level (not space.shortStayEnabled). Available for all accommodation types.
+  const stayTypesAvailable = stayTypesAvailableForSpace(spaceType);
   const steps = useMemo(
     () =>
-      getWizardSteps(mode, {
-        memberId: initialMemberId,
-        bedId,
-        roomId,
-        unitId,
-        occupancyId: initialOccupancyId,
-      }),
-    [bedId, initialMemberId, initialOccupancyId, mode, roomId, unitId],
+      getWizardSteps(
+        mode,
+        {
+          memberId: initialMemberId,
+          bedId,
+          roomId,
+          unitId,
+          occupancyId: initialOccupancyId,
+        },
+        { spaceType },
+      ),
+    [bedId, initialMemberId, initialOccupancyId, mode, roomId, spaceType, unitId],
   );
 
   const [stepIndex, setStepIndex] = useState(0);
+  useEffect(() => {
+    if (stepIndex >= steps.length) {
+      setStepIndex(Math.max(0, steps.length - 1));
+    }
+  }, [stepIndex, steps.length]);
   const currentStep: OccupancyWizardStep = steps[stepIndex] ?? 'review';
 
   const [member, setMember] = useState<MemberResponse | null>(null);
@@ -193,12 +243,72 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
     defaultFoodCharge: null,
   });
   const [rentPolicy, setRentPolicy] = useState<TransferRentPolicy>('APPLY_NEW');
-  const [moveInDate, setMoveInDate] = useState('');
+  const [moveInDate, setMoveInDate] = useState(() => formatTodayIsoDate());
   const [expectedExitDate, setExpectedExitDate] = useState('');
+  const [stayChoice, setStayChoice] = useState<StayChoice>('MONTHLY');
+  const [agreedTotalText, setAgreedTotalText] = useState('');
+  const [moveInDateError, setMoveInDateError] = useState<string | null>(null);
+  const [expectedExitError, setExpectedExitError] = useState<string | null>(null);
+  const [agreedTotalError, setAgreedTotalError] = useState<string | null>(null);
+  const moveInDateAnchorRef = useRef<View>(null);
+  const expectedExitAnchorRef = useRef<View>(null);
+  const contractRentAnchorRef = useRef<View>(null);
+  const handleStayChoiceChange = useCallback(
+    (next: StayChoice) => {
+      setStayChoice(prev => {
+        if (prev === next) {
+          return prev;
+        }
+        const defaults = pricingDefaultsForStayChoice({
+          choice: next,
+          catalogRent,
+          catalogDeposit,
+        });
+        setAgreedTotalText(defaults.agreedTotal);
+        setAgreedTotalError(null);
+        setExpectedExitError(null);
+        setContractValues(current => ({
+          ...current,
+          rentSnapshot: defaults.rentSnapshot,
+          depositSnapshot: defaults.depositSnapshot,
+        }));
+        if (defaults.clearExpectedExit) {
+          setExpectedExitDate('');
+        }
+        return next;
+      });
+    },
+    [catalogDeposit, catalogRent],
+  );
   const [remarks, setRemarks] = useState('');
   const [agreementSigned, setAgreementSigned] = useState(false);
   const [allowEarlyMoveIn, setAllowEarlyMoveIn] = useState(false);
   const [currentOccupancy, setCurrentOccupancy] = useState<OccupancyResponse | null>(null);
+  const [successPayload, setSuccessPayload] = useState<{
+    operation: 'ALLOCATE' | 'RESERVE' | 'TRANSFER' | 'MOVE_IN';
+    memberId: string;
+    memberName: string;
+    locationLabel: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!currentOccupancy || (mode !== 'TRANSFER' && mode !== 'MOVE_IN')) {
+      return;
+    }
+    if (currentOccupancy.stayKind === 'SHORT' || currentOccupancy.stayKind === 'OPEN_ENDED') {
+      setStayChoice(currentOccupancy.stayKind);
+    } else {
+      setStayChoice('MONTHLY');
+    }
+    if (currentOccupancy.agreedTotal != null) {
+      setAgreedTotalText(String(currentOccupancy.agreedTotal));
+    }
+    const exit =
+      currentOccupancy.expectedExitDate ?? currentOccupancy.expectedCheckoutDate ?? '';
+    if (exit) {
+      setExpectedExitDate(exit);
+    }
+  }, [currentOccupancy, mode]);
   const [occupancyId, setOccupancyId] = useState(initialOccupancyId);
   const [bootLoading, setBootLoading] = useState(() =>
     shouldBlockOccupancyWizardBoot({
@@ -220,6 +330,25 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
   const memberAutoSelectKeyRef = useRef<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
+  const scrollToAnchor = useCallback((anchor: View | null) => {
+    if (!scrollRef.current) {
+      return;
+    }
+    if (!anchor) {
+      scrollRef.current.scrollTo({ y: 0, animated: true });
+      return;
+    }
+    anchor.measureLayout(
+      scrollRef.current as unknown as number,
+      (_x, y) => {
+        scrollRef.current?.scrollTo({ y: Math.max(0, y - 24), animated: true });
+      },
+      () => {
+        scrollRef.current?.scrollTo({ y: 0, animated: true });
+      },
+    );
+  }, []);
+
   const allowAddNewMember = mode === 'ALLOCATE' || mode === 'RESERVE';
 
   const memberSearchStatus =
@@ -234,7 +363,9 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
     enabled: currentStep === 'member' && allowAddNewMember && memberPickerMode === 'search',
   });
 
-  const members = allowAddNewMember ? importMemberSearch.members : localMemberSearch.members;
+  const members: ResidentPickerItem[] = allowAddNewMember
+    ? importMemberSearch.members
+    : localMemberSearch.members;
   const membersLoading = allowAddNewMember
     ? importMemberSearch.loading
     : localMemberSearch.loading;
@@ -290,14 +421,24 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
     return withSpaceHierarchyContext(base, spaceName, spaceTypeLabel);
   }, [currentOccupancy, spaceName, spaceTypeLabel, targetSelection]);
 
-  const showMemberContext = Boolean(member && currentStep !== 'member');
+  // Tenant strip removed — member appears in compact inventory summary when needed
+  // (avoids repeating name/mobile above the stepper on every step).
+  const showMemberContext = false;
   const isTargetStep = currentStep === 'target';
   const stepTitle = t(getWizardStepTitleKey(currentStep));
-  const showStepHeader =
-    currentStep !== 'review' && currentStep !== 'vacate_confirm' && !isTargetStep;
+  const stepLabels = useMemo(
+    () => steps.map(step => t(getWizardStepTitleKey(step))),
+    [steps, t],
+  );
+  const showStepHeader = currentStep !== 'vacate_confirm' && !isTargetStep;
   const ModeIcon = getWizardModeIcon(mode);
   const StepIcon = getWizardStepIcon(currentStep);
   const wizardTitle = t(getWizardTitleKey(mode));
+  const stayTypeBannerLabel = stayTypesAvailable
+    ? t(stayChoiceLabelKey(stayChoice), {
+        defaultValue: stayChoiceDefaultLabel(stayChoice),
+      })
+    : null;
 
   const spaceContextLine = useMemo(() => {
     const parts = [spaceName, spaceTypeLabel].filter(Boolean);
@@ -347,67 +488,67 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
           }
         }
 
+        const applyLoadedOccupancy = (occ: OccupancyResponse) => {
+          setCurrentOccupancy(occ);
+          setOccupancyId(occ.occupancyId);
+          if (occ.amenities?.length) {
+            setAssignedAmenities(occ.amenities);
+          }
+          if (!initialMemberId) {
+            setMember({
+              memberId: occ.memberId,
+              fullName: occ.memberName,
+              mobileNumber: '',
+              role: 'TENANT',
+              linkedUser: false,
+              status: 'ACTIVE',
+              createdAt: '',
+            });
+          }
+          if (mode === 'MOVE_IN') {
+            setTargetSelection({
+              targetType: occ.targetType,
+              buildingId: occ.buildingId,
+              buildingName: occ.buildingName,
+              floorId: occ.floorId ?? undefined,
+              floorName: occ.floorName ?? undefined,
+              unitId: occ.unitId ?? undefined,
+              unitName: occ.unitName ?? undefined,
+              roomId: occ.roomId ?? undefined,
+              roomName: occ.roomName ?? undefined,
+              bedId: occ.bedId ?? undefined,
+              bedName: occ.bedName ?? undefined,
+            });
+            setCatalogRent(occ.rentSnapshot ?? null);
+            setContractValues(
+              emptyContractTermsFormValues(
+                {
+                  defaultRent: occ.rentSnapshot,
+                  defaultDeposit: occ.depositSnapshot,
+                },
+                policy,
+              ),
+            );
+          }
+        };
+
         if (initialOccupancyId) {
           const occ = await occupancyApi.getOccupancy(spaceId, initialOccupancyId);
           if (!cancelled) {
-            setCurrentOccupancy(occ);
-            setOccupancyId(occ.occupancyId);
-            if (occ.amenities?.length) {
-              setAssignedAmenities(occ.amenities);
-            }
-            if (!initialMemberId) {
-              setMember({
-                memberId: occ.memberId,
-                fullName: occ.memberName,
-                mobileNumber: '',
-                role: 'TENANT',
-                linkedUser: false,
-                status: 'ACTIVE',
-                createdAt: '',
-              });
-            }
-            if (mode === 'MOVE_IN') {
-              setTargetSelection({
-                targetType: occ.targetType,
-                buildingId: occ.buildingId,
-                buildingName: occ.buildingName,
-                floorId: occ.floorId ?? undefined,
-                floorName: occ.floorName ?? undefined,
-                unitId: occ.unitId ?? undefined,
-                unitName: occ.unitName ?? undefined,
-                roomId: occ.roomId ?? undefined,
-                roomName: occ.roomName ?? undefined,
-                bedId: occ.bedId ?? undefined,
-                bedName: occ.bedName ?? undefined,
-              });
-              setCatalogRent(occ.rentSnapshot ?? null);
-              setContractValues(
-                emptyContractTermsFormValues(
-                  {
-                    defaultRent: occ.rentSnapshot,
-                    defaultDeposit: occ.depositSnapshot,
-                  },
-                  policy,
-                ),
-              );
-              // #region agent log
-              agentDebugLog({
-                hypothesisId: 'D',
-                location: 'OccupancyWizardScreen.tsx:bootstrap',
-                message: 'move-in contract bootstrapped',
-                data: {
-                  foodIncludedInRent: policy.foodIncludedInRent,
-                  foodEnabled: emptyContractTermsFormValues(
-                    {
-                      defaultRent: occ.rentSnapshot,
-                      defaultDeposit: occ.depositSnapshot,
-                    },
-                    policy,
-                  ).foodEnabled,
-                },
-                runId: 'movein-food',
-              });
-              // #endregion
+            applyLoadedOccupancy(occ);
+          }
+        } else if (mode === 'MOVE_IN' && initialMemberId) {
+          // Member profile can open Complete move-in with memberId only; resolve RESERVED row.
+          const bundle = await occupancyApi.getMemberOccupancies(spaceId, initialMemberId);
+          const reserved =
+            bundle.reservedOccupancy ??
+            bundle.occupancies?.find(item => item.status === 'RESERVED') ??
+            null;
+          if (!cancelled) {
+            if (reserved) {
+              applyLoadedOccupancy(reserved);
+            } else {
+              setFormError(t('occupancy.errors.noReserved'));
             }
           }
         }
@@ -457,6 +598,7 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
     roomId,
     route.params.catalogKnown,
     spaceId,
+    t,
     unitId,
   ]);
 
@@ -636,15 +778,29 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
   }, [goNext, newMemberMobile, newMemberName, spaceId]);
 
   const handleOccupancySuccess = useCallback(() => {
-    if ((mode === 'ALLOCATE' || mode === 'RESERVE') && member?.memberId) {
-      navigateToMemberDetailsAfterOccupancy(navigation, spaceId, member.memberId);
+    if (
+      (mode === 'ALLOCATE' || mode === 'RESERVE' || mode === 'TRANSFER' || mode === 'MOVE_IN') &&
+      member
+    ) {
+      setSuccessPayload({
+        operation: mode,
+        memberId: member.memberId,
+        memberName: member.fullName,
+        locationLabel: locationLabelFromHierarchy(hierarchyContext, t) || spaceName || '',
+      });
       return;
     }
     navigation.goBack();
-  }, [member?.memberId, mode, navigation, spaceId]);
+  }, [hierarchyContext, member, mode, navigation, spaceName]);
 
   const handleConfirm = useCallback(async () => {
     setFormError(null);
+
+    // Complete move-in activates an existing RESERVED row — never walk-in allocate.
+    if (mode === 'MOVE_IN' && !occupancyId) {
+      setFormError(t('occupancy.errors.noReserved'));
+      return;
+    }
 
     if (!spaceType || !member) {
       if (mode === 'VACATE' && member && occupancyId) {
@@ -736,6 +892,9 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
         rentPolicy,
         moveInDate,
         expectedExitDate,
+        stayChoice,
+        agreedTotal: parseContractAmount(agreedTotalText),
+        shortStayEnabled: stayTypesAvailable,
         remarks,
         agreementSigned,
         allowEarlyMoveIn,
@@ -759,6 +918,7 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
       setFormError(getOccupancyErrorMessage(err));
     }
   }, [
+    agreedTotalText,
     bedId,
     buildingId,
     catalogRent,
@@ -780,6 +940,8 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
     roomId,
     spaceId,
     spaceType,
+    stayChoice,
+    stayTypesAvailable,
     steps,
     submit,
     t,
@@ -811,12 +973,19 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
     if (contractIndex >= 0) {
       setStepIndex(contractIndex);
     }
+    requestAnimationFrame(() => scrollToAnchor(contractRentAnchorRef.current));
     return true;
-  }, [contractRentRequired, contractValues, effectiveFoodPolicy, steps, t]);
+  }, [contractRentRequired, contractValues, effectiveFoodPolicy, scrollToAnchor, steps, t]);
 
   const handlePrimary = useCallback(() => {
+    // Do not let Complete move-in advance/submit without a reserved occupancy id.
+    if (mode === 'MOVE_IN' && !occupancyId) {
+      setFormError(t('occupancy.errors.noReserved'));
+      return;
+    }
     if (currentStep === 'review' || currentStep === 'vacate_confirm') {
-      if (currentStep === 'review' && rejectInvalidContract()) {
+      const skipRentCheck = stayTypesAvailable && stayChoice === 'SHORT';
+      if (currentStep === 'review' && !skipRentCheck && rejectInvalidContract()) {
         return;
       }
       void handleConfirm();
@@ -835,68 +1004,91 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
       goNext();
       return;
     }
-    if (currentStep === 'reserve_dates' && !moveInDate.trim()) {
-      setFormError(t('occupancy.errors.moveInDateRequired'));
-      return;
+    if (currentStep === 'stay_details' || currentStep === 'reserve_dates') {
+      setMoveInDateError(null);
+      setExpectedExitError(null);
+      setAgreedTotalError(null);
+      if (!moveInDate.trim()) {
+        const message = t('occupancy.errors.moveInDateRequired', {
+          defaultValue: 'Please select a move-in date.',
+        });
+        setMoveInDateError(message);
+        setFormError(message);
+        requestAnimationFrame(() => scrollToAnchor(moveInDateAnchorRef.current));
+        return;
+      }
+      if (stayTypesAvailable && stayChoice === 'SHORT' && !expectedExitDate.trim()) {
+        const message = t('occupancy.errors.checkoutRequired', {
+          defaultValue: 'Checkout date must be set for short stay.',
+        });
+        setExpectedExitError(message);
+        setFormError(message);
+        requestAnimationFrame(() => scrollToAnchor(expectedExitAnchorRef.current));
+        return;
+      }
+      if (
+        stayTypesAvailable &&
+        stayChoice === 'SHORT' &&
+        expectedExitDate.trim() &&
+        moveInDate.trim() &&
+        expectedExitDate.trim() <= moveInDate.trim()
+      ) {
+        const message = t('occupancy.errors.checkoutAfterMoveIn', {
+          defaultValue:
+            'A short stay checkout must be after the check-in date. The same date is not a stay.',
+        });
+        setExpectedExitError(message);
+        setFormError(message);
+        requestAnimationFrame(() => scrollToAnchor(expectedExitAnchorRef.current));
+        return;
+      }
+      // Daily rent is collected on Contract Terms (not Reservation details).
     }
-    if (currentStep === 'contract' && rejectInvalidContract()) {
-      return;
+    if (currentStep === 'contract') {
+      if (stayTypesAvailable && stayChoice === 'SHORT') {
+        if (parseContractAmount(contractValues.rentSnapshot) == null) {
+          const message = t('occupancy.errors.dailyRentRequired', {
+            defaultValue: 'Please enter the daily rent.',
+          });
+          setAgreedTotalError(message);
+          setContractRentError(message);
+          setFormError(message);
+          requestAnimationFrame(() => scrollToAnchor(contractRentAnchorRef.current));
+          return;
+        }
+      } else if (rejectInvalidContract()) {
+        return;
+      }
     }
     setFormError(null);
     setContractRentError(null);
+    setMoveInDateError(null);
+    setExpectedExitError(null);
+    setAgreedTotalError(null);
     goNext();
   }, [
+    agreedTotalText,
+    contractValues.rentSnapshot,
     currentStep,
+    expectedExitDate,
     goNext,
     handleConfirm,
     handleCreateNewMember,
     member,
     memberPickerMode,
+    mode,
     moveInDate,
+    occupancyId,
     rejectInvalidContract,
+    scrollToAnchor,
+    stayTypesAvailable,
+    stayChoice,
     t,
   ]);
 
   const usesListStep = currentStep === 'member' || currentStep === 'target';
-  const autoAdvanceStep = currentStep === 'member' && memberPickerMode === 'search';
-  const showPrimaryButton = !autoAdvanceStep && currentStep !== 'target';
-  const isContractStep = currentStep === 'contract';
-  const showContractRent =
-    mode !== 'TRANSFER' || rentPolicy === 'APPLY_NEW' || rentPolicy === 'CUSTOM';
-  const contractProgressiveEnabled =
-    isContractStep && (showContractRent || spaceAmenities.length > 0);
-
-  const {
-    reviewed: addonsReviewed,
-    highlighted: addonsHighlighted,
-    onSectionLayout: onAddonsLayout,
-    onScroll: onAddonsScroll,
-    onScrollBeginDrag: onAddonsScrollBeginDrag,
-    continueToSection: continueToAddons,
-    clearReviewed: clearAddonsReviewed,
-  } = useProgressiveSectionReview({
-    enabled: contractProgressiveEnabled,
-  });
-
-  useEffect(() => {
-    if (isContractStep) {
-      clearAddonsReviewed();
-    }
-  }, [clearAddonsReviewed, isContractStep, rentPolicy]);
-
-  const contractFooterPhase = resolveProgressivePhase({
-    enabled: contractProgressiveEnabled,
-    prerequisiteMet: true,
-    sectionReviewed: addonsReviewed,
-  });
-
-  const handleContractScroll = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const { contentOffset, layoutMeasurement } = event.nativeEvent;
-      onAddonsScroll(contentOffset.y, layoutMeasurement.height);
-    },
-    [onAddonsScroll],
-  );
+  // Always show Continue on intermediate steps (mock design). Member search still auto-advances on tap.
+  const showPrimaryButton = currentStep !== 'target';
 
   if (!spaceType || bootLoading) {
     return (
@@ -933,21 +1125,23 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
       {isTargetStep ? (
         <View style={styles.targetStepRoot}>
           <View style={styles.targetStepHeader}>
-            <View style={styles.hero}>
-              <View style={styles.decorBlob} pointerEvents="none" />
-              <View style={styles.decorRing} pointerEvents="none" />
-              <View style={styles.heroIconWrap} accessibilityElementsHidden>
-                <ModeIcon size={18} color={colors.primaryDark} strokeWidth={2.2} />
-              </View>
-              <Text style={styles.heading}>{wizardTitle}</Text>
-            </View>
+            <OccupancyWizardHeroBanner
+              title={wizardTitle}
+              Icon={ModeIcon}
+              stayTypeLabel={stayTypeBannerLabel}
+            />
             {member ? (
               <View style={styles.memberContext}>
                 <Text style={styles.memberLabel}>{t('occupancyWizard.context.member')}</Text>
-                <Text style={styles.memberValue}>
-                  {member.fullName}
-                  {member.mobileNumber ? ` · ${member.mobileNumber}` : ''}
-                </Text>
+                <Text style={styles.memberValue}>{member.fullName}</Text>
+                {member.mobileNumber ? (
+                  <ContactNumberLine
+                    value={member.mobileNumber}
+                    name={member.fullName}
+                    textStyle={styles.memberMobile}
+                    showIcon={false}
+                  />
+                ) : null}
               </View>
             ) : null}
           </View>
@@ -958,6 +1152,11 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
               spaceType={spaceType}
               mode={mode}
               spaceContextLine={spaceContextLine}
+              scopeFilters={{
+                buildingId: buildingId ?? undefined,
+                floorId: floorId ?? undefined,
+                unitId: filterUnitId ?? (unitId && !bedId ? unitId : undefined),
+              }}
               onBedAction={bed => {
                 void applyBedSelection(bed);
               }}
@@ -971,6 +1170,7 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
           ) : null}
 
           <StickyFormActions
+            style={styles.wizardFooter}
             secondary={{
               label: t('common.back'),
               onPress: goBack,
@@ -986,31 +1186,51 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
             showsVerticalScrollIndicator={false}>
-            <View style={styles.hero}>
-              <View style={styles.decorBlob} pointerEvents="none" />
-              <View style={styles.decorRing} pointerEvents="none" />
-              <View style={styles.heroIconWrap} accessibilityElementsHidden>
-                <ModeIcon size={18} color={colors.primaryDark} strokeWidth={2.2} />
-              </View>
-              <Text style={styles.heading}>{wizardTitle}</Text>
-            </View>
+            <OccupancyWizardHeroBanner
+              title={wizardTitle}
+              Icon={ModeIcon}
+              stayTypeLabel={stayTypeBannerLabel}
+            />
 
             {showMemberContext && member ? (
               <View style={styles.memberContext}>
                 <Text style={styles.memberLabel}>{t('occupancyWizard.context.member')}</Text>
-                <Text style={styles.memberValue}>
-                  {member.fullName}
-                  {member.mobileNumber ? ` · ${member.mobileNumber}` : ''}
-                </Text>
+                <Text style={styles.memberValue}>{member.fullName}</Text>
+                {member.mobileNumber ? (
+                  <ContactNumberLine
+                    value={member.mobileNumber}
+                    name={member.fullName}
+                    textStyle={styles.memberMobile}
+                    showIcon={false}
+                  />
+                ) : null}
               </View>
             ) : null}
 
             {showStepHeader ? (
               <OccupancyWizardStepHeader
                 stepProgress={{ current: stepIndex + 1, total: steps.length }}
+                stepLabels={stepLabels}
                 stepTitle={stepTitle}
+                stepHint={
+                  currentStep === 'stay_type'
+                    ? t('occupancyWizard.hints.chooseStayType', {
+                        defaultValue:
+                          'Select how long the member will stay and the pricing basis.',
+                      })
+                    : undefined
+                }
                 Icon={StepIcon}
                 hierarchyContext={hierarchyContext}
+                compactInventory={currentStep !== 'review'}
+                showMemberSummary={
+                  Boolean(member) &&
+                  (currentStep === 'stay_details' ||
+                    currentStep === 'contract' ||
+                    currentStep === 'reserve_dates')
+                }
+                memberName={member?.fullName}
+                memberMobile={member?.mobileNumber}
               />
             ) : null}
 
@@ -1049,11 +1269,12 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
                 newMemberErrors={newMemberErrors}
                 creatingMember={creatingMember}
                 selectedMemberId={member?.memberId}
+                selectionError={formError}
                 onSelect={handleMemberSelect}
               />
             ) : null}
 
-            {formError ? (
+            {formError && currentStep !== 'member' ? (
               <View style={styles.errorBanner}>
                 <Text style={styles.errorBannerText}>{formError}</Text>
               </View>
@@ -1062,6 +1283,8 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
 
           {showPrimaryButton ? (
             <StickyFormActions
+              layout="row"
+              style={styles.wizardFooter}
               primary={{
                 label: primaryLabel,
                 onPress: handlePrimary,
@@ -1076,6 +1299,8 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
             />
           ) : (
             <StickyFormActions
+              layout="row"
+              style={styles.wizardFooter}
               secondary={{
                 label: t('common.back'),
                 onPress: goBack,
@@ -1091,47 +1316,205 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
             style={styles.formStepScroll}
             contentContainerStyle={styles.formStepScrollContent}
             keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            scrollEventThrottle={16}
-            onScrollBeginDrag={isContractStep ? onAddonsScrollBeginDrag : undefined}
-            onScroll={isContractStep ? handleContractScroll : undefined}>
-            <View style={styles.hero}>
-              <View style={styles.decorBlob} pointerEvents="none" />
-              <View style={styles.decorRing} pointerEvents="none" />
-              <View style={styles.heroIconWrap} accessibilityElementsHidden>
-                <ModeIcon size={18} color={colors.primaryDark} strokeWidth={2.2} />
-              </View>
-              <Text style={styles.heading}>{wizardTitle}</Text>
-            </View>
+            showsVerticalScrollIndicator={false}>
+            <OccupancyWizardHeroBanner
+              title={wizardTitle}
+              Icon={ModeIcon}
+              stayTypeLabel={stayTypeBannerLabel}
+            />
 
             {showMemberContext && member ? (
               <View style={styles.memberContext}>
                 <Text style={styles.memberLabel}>{t('occupancyWizard.context.member')}</Text>
-                <Text style={styles.memberValue}>
-                  {member.fullName}
-                  {member.mobileNumber ? ` · ${member.mobileNumber}` : ''}
-                </Text>
+                <Text style={styles.memberValue}>{member.fullName}</Text>
+                {member.mobileNumber ? (
+                  <ContactNumberLine
+                    value={member.mobileNumber}
+                    name={member.fullName}
+                    textStyle={styles.memberMobile}
+                    showIcon={false}
+                  />
+                ) : null}
               </View>
             ) : null}
 
             {showStepHeader ? (
               <OccupancyWizardStepHeader
                 stepProgress={{ current: stepIndex + 1, total: steps.length }}
+                stepLabels={stepLabels}
                 stepTitle={stepTitle}
+                stepHint={
+                  currentStep === 'stay_type'
+                    ? t('occupancyWizard.hints.chooseStayType', {
+                        defaultValue:
+                          'Select how long the member will stay and the pricing basis.',
+                      })
+                    : undefined
+                }
                 Icon={StepIcon}
                 hierarchyContext={hierarchyContext}
+                compactInventory={currentStep !== 'review'}
+                hideStepTitle={currentStep === 'contract' || currentStep === 'review'}
+                showMemberSummary={
+                  Boolean(member) &&
+                  (currentStep === 'stay_details' ||
+                    currentStep === 'contract' ||
+                    currentStep === 'reserve_dates')
+                }
+                memberName={member?.fullName}
+                memberMobile={member?.mobileNumber}
               />
             ) : null}
 
-            {currentStep === 'reserve_dates' ? (
-              <ReserveDatesStep
-                moveInDate={moveInDate}
+            {currentStep === 'stay_type' && stayTypesAvailable ? (
+              <ShortStayChoice
+                section="type"
+                choice={stayChoice}
+                agreedTotal={agreedTotalText}
                 expectedExitDate={expectedExitDate}
-                remarks={remarks}
-                onMoveInDateChange={setMoveInDate}
-                onExpectedExitDateChange={setExpectedExitDate}
-                onRemarksChange={setRemarks}
+                checkInDate={moveInDate}
+                showCheckout={false}
+                catalogRent={catalogRent}
+                onChoiceChange={handleStayChoiceChange}
+                onAgreedTotalChange={value => {
+                  setAgreedTotalText(value);
+                  if (agreedTotalError) {
+                    setAgreedTotalError(null);
+                  }
+                }}
+                onExpectedExitDateChange={value => {
+                  setExpectedExitDate(value);
+                  if (expectedExitError) {
+                    setExpectedExitError(null);
+                  }
+                }}
               />
+            ) : null}
+
+            {currentStep === 'stay_details' ? (
+              <>
+                <View ref={moveInDateAnchorRef}>
+                  <DateField
+                    label={t('occupancy.section.moveInDate', { defaultValue: 'Move-in date' })}
+                    value={moveInDate}
+                    onChange={value => {
+                      setMoveInDate(value);
+                      setMoveInDateError(null);
+                      setFormError(null);
+                    }}
+                    allowPastDates
+                    error={moveInDateError ?? undefined}
+                  />
+                </View>
+                {stayTypesAvailable ? (
+                  <View ref={expectedExitAnchorRef}>
+                    <ShortStayChoice
+                      section="details"
+                      choice={stayChoice}
+                      agreedTotal={agreedTotalText}
+                      expectedExitDate={expectedExitDate}
+                      checkInDate={moveInDate}
+                      showCheckout
+                      catalogRent={catalogRent}
+                      expectedExitError={expectedExitError}
+                      onChoiceChange={handleStayChoiceChange}
+                      onAgreedTotalChange={setAgreedTotalText}
+                      onExpectedExitDateChange={value => {
+                        setExpectedExitDate(value);
+                        setExpectedExitError(null);
+                        setFormError(null);
+                      }}
+                    />
+                  </View>
+                ) : null}
+              </>
+            ) : null}
+
+            {currentStep === 'reserve_dates' ? (
+              stayTypesAvailable && stayChoice === 'SHORT' ? (
+                <View ref={moveInDateAnchorRef}>
+                  <ReserveDatesStep
+                    moveInDate={moveInDate}
+                    expectedExitDate={expectedExitDate}
+                    remarks={remarks}
+                    showExpectedExit={false}
+                    showTitle={false}
+                    afterMoveIn={
+                      <View ref={expectedExitAnchorRef}>
+                        <ShortStayChoice
+                          section="details"
+                          choice={stayChoice}
+                          agreedTotal={agreedTotalText}
+                          expectedExitDate={expectedExitDate}
+                          checkInDate={moveInDate}
+                          showCheckout
+                          catalogRent={catalogRent}
+                          expectedExitError={expectedExitError}
+                          onChoiceChange={handleStayChoiceChange}
+                          onAgreedTotalChange={setAgreedTotalText}
+                          onExpectedExitDateChange={value => {
+                            setExpectedExitDate(value);
+                            setExpectedExitError(null);
+                            setFormError(null);
+                          }}
+                        />
+                      </View>
+                    }
+                    onMoveInDateChange={value => {
+                      setMoveInDate(value);
+                      setMoveInDateError(null);
+                      setFormError(null);
+                    }}
+                    onExpectedExitDateChange={value => {
+                      setExpectedExitDate(value);
+                      setExpectedExitError(null);
+                      setFormError(null);
+                    }}
+                    onRemarksChange={setRemarks}
+                  />
+                </View>
+              ) : (
+                <>
+                  {stayTypesAvailable ? (
+                    <ShortStayChoice
+                      section="details"
+                      choice={stayChoice}
+                      agreedTotal={agreedTotalText}
+                      expectedExitDate={expectedExitDate}
+                      checkInDate={moveInDate}
+                      showCheckout={false}
+                      catalogRent={catalogRent}
+                      expectedExitError={expectedExitError}
+                      onChoiceChange={handleStayChoiceChange}
+                      onAgreedTotalChange={setAgreedTotalText}
+                      onExpectedExitDateChange={value => {
+                        setExpectedExitDate(value);
+                        setExpectedExitError(null);
+                        setFormError(null);
+                      }}
+                    />
+                  ) : null}
+                  <View ref={moveInDateAnchorRef}>
+                    <ReserveDatesStep
+                      moveInDate={moveInDate}
+                      expectedExitDate={expectedExitDate}
+                      remarks={remarks}
+                      onMoveInDateChange={value => {
+                        setMoveInDate(value);
+                        if (moveInDateError) {
+                          setMoveInDateError(null);
+                        }
+                      }}
+                      onExpectedExitDateChange={value => {
+                        setExpectedExitDate(value);
+                        setExpectedExitError(null);
+                        setFormError(null);
+                      }}
+                      onRemarksChange={setRemarks}
+                    />
+                  </View>
+                </>
+              )
             ) : null}
 
             {currentStep === 'transfer_current' && member && currentOccupancy ? (
@@ -1143,33 +1526,56 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
             ) : null}
 
             {currentStep === 'contract' ? (
-              <ContractTermsStep
-                spaceId={spaceId}
-                mode={mode === 'TRANSFER' ? 'TRANSFER' : mode === 'MOVE_IN' ? 'MOVE_IN' : 'ALLOCATE'}
-                values={contractValues}
-                rentError={contractRentError}
-                onChange={next => {
-                  setContractValues(next);
-                  if (parseContractAmount(next.rentSnapshot) != null) {
-                    setContractRentError(null);
+              <View ref={contractRentAnchorRef}>
+                <ContractTermsStep
+                  spaceId={spaceId}
+                  mode={
+                    mode === 'TRANSFER'
+                      ? 'TRANSFER'
+                      : mode === 'MOVE_IN'
+                        ? 'MOVE_IN'
+                        : mode === 'RESERVE'
+                          ? 'RESERVE'
+                          : 'ALLOCATE'
                   }
-                }}
-                catalogRent={catalogRent}
-                catalogDeposit={catalogDeposit}
-                rentPolicy={rentPolicy}
-                onRentPolicyChange={setRentPolicy}
-                currentOccupancy={currentOccupancy}
-                moveInDate={currentOccupancy?.moveInDate}
-                agreementSigned={agreementSigned}
-                onAgreementSignedChange={setAgreementSigned}
-                allowEarlyMoveIn={allowEarlyMoveIn}
-                onAllowEarlyMoveInChange={setAllowEarlyMoveIn}
-                spaceAmenities={spaceAmenities}
-                assignedAmenities={assignedAmenities}
-                onAssignedAmenitiesChange={setAssignedAmenities}
-                onAddonsLayout={onAddonsLayout}
-                addonsHighlighted={addonsHighlighted}
-              />
+                  values={contractValues}
+                  rentError={contractRentError ?? agreedTotalError}
+                  onChange={next => {
+                    setContractValues(next);
+                    if (stayChoice === 'SHORT') {
+                      setAgreedTotalText(next.rentSnapshot);
+                    }
+                    if (parseContractAmount(next.rentSnapshot) != null) {
+                      setContractRentError(null);
+                      setAgreedTotalError(null);
+                    }
+                  }}
+                  catalogRent={catalogRent}
+                  catalogDeposit={catalogDeposit}
+                  rentPolicy={rentPolicy}
+                  onRentPolicyChange={setRentPolicy}
+                  currentOccupancy={currentOccupancy}
+                  moveInDate={
+                    mode === 'ALLOCATE' || mode === 'MOVE_IN'
+                      ? moveInDate
+                      : currentOccupancy?.moveInDate
+                  }
+                  agreementSigned={agreementSigned}
+                  onAgreementSignedChange={setAgreementSigned}
+                  allowEarlyMoveIn={allowEarlyMoveIn}
+                  onAllowEarlyMoveInChange={setAllowEarlyMoveIn}
+                  spaceAmenities={spaceAmenities}
+                  assignedAmenities={assignedAmenities}
+                  onAssignedAmenitiesChange={setAssignedAmenities}
+                  stayKind={stayTypesAvailable ? stayChoice : 'MONTHLY'}
+                  shortStayNights={
+                    stayChoice === 'SHORT' && moveInDate && expectedExitDate
+                      ? shortStayNightCount(moveInDate, expectedExitDate)
+                      : null
+                  }
+                  showFoodToggle={mealsApplicableForSpace(spaceType)}
+                />
+              </View>
             ) : null}
 
             {currentStep === 'review' && mode !== 'VACATE' ? (
@@ -1177,11 +1583,21 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
                 mode={mode === 'MOVE_IN' ? 'MOVE_IN' : mode === 'TRANSFER' ? 'TRANSFER' : mode}
                 member={member}
                 hierarchyContext={hierarchyContext}
+                hideTitle
                 contractValues={contractValues}
-                foodPolicy={effectiveFoodPolicy}
+                foodPolicy={
+                  mealsApplicableForSpace(spaceType) ? effectiveFoodPolicy : undefined
+                }
                 rentPolicy={mode === 'TRANSFER' ? rentPolicy : undefined}
                 moveInDate={moveInDate}
                 expectedExitDate={expectedExitDate}
+                agreedTotalPreview={
+                  stayTypesAvailable && stayChoice === 'SHORT'
+                    ? contractValues.rentSnapshot
+                    : undefined
+                }
+                dailyRentMode={stayTypesAvailable && stayChoice === 'OPEN_ENDED'}
+                stayChoice={stayTypesAvailable ? stayChoice : undefined}
                 remarks={remarks}
               />
             ) : null}
@@ -1203,40 +1619,10 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
             ) : null}
           </ScrollView>
 
-          {isContractStep && contractProgressiveEnabled ? (
-            <ProgressiveWorkflowFooter
-              phase={contractFooterPhase}
-              stepLabel={t('progressiveWorkflow.stepOf', {
-                current: contractFooterPhase === 'continue' ? 1 : 2,
-                total: 2,
-              })}
-              stepCurrent={contractFooterPhase === 'continue' ? 1 : 2}
-              stepTotal={2}
-              progressLine={
-                contractFooterPhase === 'continue'
-                  ? t('progressiveWorkflow.occupancy.progressRentNext')
-                  : t('progressiveWorkflow.occupancy.progressReady')
-              }
-              continueEyebrow={t('progressiveWorkflow.nextStep')}
-              continueTitle={t('progressiveWorkflow.occupancy.reviewAddonsTitle')}
-              continueHint={t('progressiveWorkflow.occupancy.reviewAddonsHint')}
-              continueLabel={t('progressiveWorkflow.occupancy.continueToAddons')}
-              onContinue={() => continueToAddons(scrollRef)}
-              primaryAction={{
-                label: primaryLabel,
-                onPress: handlePrimary,
-                loading: submitting || creatingMember,
-                disabled: submitting || creatingMember,
-              }}
-              secondaryAction={{
-                label: t('common.back'),
-                onPress: goBack,
-                disabled: submitting || applyingTarget,
-              }}
-              minHeight={160}
-            />
-          ) : showPrimaryButton ? (
+          {showPrimaryButton ? (
             <StickyFormActions
+              layout="row"
+              style={styles.wizardFooter}
               primary={{
                 label: primaryLabel,
                 onPress: handlePrimary,
@@ -1252,6 +1638,26 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
           ) : null}
         </View>
       )}
+
+      <AllocationSuccessModal
+        visible={successPayload != null}
+        operation={successPayload?.operation ?? 'ALLOCATE'}
+        memberName={successPayload?.memberName ?? ''}
+        locationLabel={successPayload?.locationLabel ?? ''}
+        onViewDetails={() => {
+          const payload = successPayload;
+          setSuccessPayload(null);
+          if (payload) {
+            navigateToMemberDetailsAfterOccupancy(navigation, spaceId, payload.memberId);
+          } else {
+            navigation.goBack();
+          }
+        }}
+        onDone={() => {
+          setSuccessPayload(null);
+          navigation.goBack();
+        }}
+      />
     </Screen>
   );
 }
@@ -1274,6 +1680,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   formStepScrollContent: {
+    // Shared page gutter — stepper, inventory, fields, footer share these edges.
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.xl,
@@ -1287,20 +1694,24 @@ const styles = StyleSheet.create({
   },
   listStepScrollContent: {
     flexGrow: 1,
-    paddingBottom: spacing.md,
-  },
-  listScreenContent: {
-    flex: 1,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
-    paddingBottom: spacing.section,
+    paddingBottom: spacing.md,
+  },
+  // Screen-level padding must stay 0 — gutters live only in scroll content
+  // so list steps (member) match form steps (stay type / review).
+  listScreenContent: {
+    flex: 1,
+    padding: 0,
+    minHeight: 0,
   },
   targetScreenContent: {
     flex: 1,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.md,
+    padding: 0,
     minHeight: 0,
+  },
+  wizardFooter: {
+    paddingHorizontal: spacing.lg,
   },
   targetStepRoot: {
     flex: 1,
@@ -1308,82 +1719,46 @@ const styles = StyleSheet.create({
   },
   targetStepHeader: {
     marginBottom: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
   },
   targetStepBody: {
     flex: 1,
     minHeight: 0,
-  },
-  hero: {
-    marginBottom: spacing.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.section,
-    backgroundColor: colors.successTint,
-    borderWidth: 1,
-    borderColor: `${colors.primary}33`,
-    overflow: 'hidden',
-    position: 'relative',
-    ...shadows.sm,
-  },
-  decorBlob: {
-    position: 'absolute',
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: `${colors.primary}1F`,
-    top: -48,
-    right: -28,
-  },
-  decorRing: {
-    position: 'absolute',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 8,
-    borderColor: `${colors.primary}14`,
-    bottom: -16,
-    right: 40,
-  },
-  heroIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.sm,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: `${colors.primary}33`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
-    zIndex: 1,
-  },
-  heading: {
-    ...typography.h2,
-    fontSize: 22,
-    lineHeight: 28,
-    color: colors.primaryDark,
-    marginBottom: 0,
-    zIndex: 1,
+    paddingHorizontal: spacing.lg,
   },
   memberContext: {
     marginBottom: spacing.sm,
-    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.card,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   memberLabel: {
     ...typography.caption,
     color: colors.muted,
-    fontWeight: '600',
+    marginBottom: 2,
   },
   memberValue: {
     ...typography.bodyStrong,
-    color: colors.primaryDark,
+    color: colors.textPrimary,
+  },
+  memberMobile: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
   errorBanner: {
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FECACA',
     borderRadius: radius.button,
-    padding: spacing.md,
-    marginVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
   },
   errorBannerText: {
     ...typography.body,

@@ -40,7 +40,7 @@ describe('occupant payment summary', () => {
     expect(summary.rent?.outstanding).toBe(6000);
   });
 
-  it('shows the remaining balance for a partial payment', () => {
+  it('treats an unreachable PARTIALLY_PAID settlement as pending (D-18 whole rows)', () => {
     const summary = summarizeStayCharges(
       [
         row({
@@ -54,7 +54,7 @@ describe('occupant payment summary', () => {
       ],
       month,
     );
-    expect(summary.status).toBe('PARTIALLY_PAID');
+    expect(summary.status).toBe('PENDING');
     expect(summary.amountPaid).toBe(2000);
     expect(summary.outstanding).toBe(4000);
   });
@@ -102,7 +102,7 @@ describe('occupant payment summary', () => {
     expect(summary.rent?.status).toBe('PAID');
     expect(summary.deposit?.status).toBe('PENDING');
     expect(summary.deposit?.outstanding).toBe(3000);
-    expect(summary.status).toBe('PARTIALLY_PAID');
+    expect(summary.status).toBe('PENDING');
     expect(summary.outstanding).toBe(3000);
   });
 

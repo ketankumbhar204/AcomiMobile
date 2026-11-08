@@ -15,22 +15,20 @@ import { accommodationApi } from '../../api/accommodationApi';
 import type { UnitResponse } from '../../api/types';
 import {
   AccommodationContextTrail,
-  AccommodationDetailRow,
   AccommodationEntityHero,
+  AccommodationInventoryOverview,
   AccommodationLifecycleActions,
   AccommodationStatusBadge,
-  formatAccommodationDate,
+  AccommodationStayTypeCard,
 } from '../../components/accommodation';
 import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
 import { DashboardActionRow } from '../../components/dashboard/shared/DashboardActionRow';
 import {
-  Card,
   HeaderBackButton,
   RequireAccommodationAccess,
   Screen,
   SkeletonCard,
 } from '../../components/ui';
-import { ReferenceCode } from '../../components/ui/ReferenceCode';
 import {
   AccommodationOccupantSection,
   AccommodationOccupancyActions,
@@ -197,48 +195,16 @@ export function UnitDetailScreen() {
               badge={<AccommodationStatusBadge status={unit.status} />}
             />
 
-            <DashboardSectionTitle
-              title={t('accommodation.setup.propertyOverview')}
+            <AccommodationInventoryOverview
+              kind="unit"
+              referenceCode={unit.referenceCode}
+              status={unit.status}
+              inactive={unit.active === false}
+              rent={unit.defaultRent}
+              deposit={unit.defaultDeposit}
+              createdAt={unit.createdAt}
+              updatedAt={unit.updatedAt}
             />
-            <Card style={styles.infoCard}>
-              <AccommodationDetailRow
-                label={t('accommodation.fields.name')}
-                value={unit.name}
-              />
-              <ReferenceCode value={unit.referenceCode} />
-              <AccommodationDetailRow
-                label={t('accommodation.units.unitNumberLabel')}
-                value={unit.unitNumber}
-              />
-              <AccommodationDetailRow
-                label={t('accommodation.status.label')}
-                value={t(`accommodation.status.${unit.status}`)}
-              />
-              <AccommodationDetailRow
-                label={t('occupancy.contract.rent')}
-                value={
-                  unit.defaultRent != null
-                    ? `₹${unit.defaultRent.toLocaleString('en-IN')}`
-                    : t('occupancy.contract.notSet', { defaultValue: 'Not set' })
-                }
-              />
-              <AccommodationDetailRow
-                label={t('occupancy.contract.deposit')}
-                value={
-                  unit.defaultDeposit != null
-                    ? `₹${unit.defaultDeposit.toLocaleString('en-IN')}`
-                    : t('occupancy.contract.notSet', { defaultValue: 'Not set' })
-                }
-              />
-              <AccommodationDetailRow
-                label={t('accommodation.fields.created')}
-                value={formatAccommodationDate(unit.createdAt)}
-              />
-              <AccommodationDetailRow
-                label={t('accommodation.fields.updated')}
-                value={formatAccommodationDate(unit.updatedAt)}
-              />
-            </Card>
 
             {showsOccupant && canViewOccupant ? (
               <AccommodationOccupantSection
@@ -247,6 +213,10 @@ export function UnitDetailScreen() {
                 loading={occupancyLoading}
                 error={occupancyError}
               />
+            ) : null}
+
+            {showsOccupant && canViewOccupant ? (
+              <AccommodationStayTypeCard occupancy={occupancy} />
             ) : null}
 
             {unit &&
@@ -342,7 +312,6 @@ export function UnitDetailScreen() {
 
 const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: spacing.xxxl },
-  infoCard: { borderRadius: 18, marginBottom: spacing.xl },
   actionsSection: { marginBottom: spacing.xl },
   gap: { height: spacing.md },
   errorBanner: {

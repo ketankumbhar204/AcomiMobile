@@ -269,7 +269,11 @@ export function ImportExistingPeopleScreen() {
               label={t('membership.importPeople.createCta')}
               variant="ghost"
               onPress={() =>
-                navigation.navigate('AddMember', { spaceId, initialMode: 'new' })
+                navigation.navigate('AddMember', {
+                  spaceId,
+                  initialMode: 'new',
+                  returnToMembers: true,
+                })
               }
             />
           </View>

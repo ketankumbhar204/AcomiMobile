@@ -35,6 +35,8 @@ import {
 import { enquiryApi } from '../api/enquiryApi';
 import type { EnquiryInboxListing, ReceivedEnquiry, ReceivedEnquirySummary, SpaceEnquiryStatus } from '../api/types';
 import { DiscoverListingCover } from '../components/discovery/DiscoverListingCover';
+import { useOptionalContactOptions } from '../components/contact';
+import { ContactNumberLine } from '../components/member/ContactAndStayMeta';
 import { Button, EmptyState } from '../components/ui';
 import { ReferenceCode } from '../components/ui/ReferenceCode';
 import type { MainStackParamList } from '../navigation/types';
@@ -550,10 +552,11 @@ function SenderSummary({ item }: { item: ReceivedEnquiry }) {
   return (
     <View style={styles.contactRow}>
       {phone ? (
-        <View style={styles.contactItem}>
-          <Phone size={12} color={colors.muted} />
-          <Text style={styles.contactText} numberOfLines={1}>{phone}</Text>
-        </View>
+        <ContactNumberLine
+          value={item.requesterMobile}
+          name={item.requesterName}
+          textStyle={styles.contactText}
+        />
       ) : null}
       {email ? (
         <View style={styles.contactItem}>
@@ -567,13 +570,13 @@ function SenderSummary({ item }: { item: ReceivedEnquiry }) {
 
 function SenderDetails({ enquiry }: { enquiry: ReceivedEnquiry }) {
   const { t } = useTranslation();
+  const { openContactOptions } = useOptionalContactOptions();
   const unavailable = t('spaces.enquiries.senderUnavailable', { defaultValue: 'Not available' });
   const name = enquiry.requesterName?.trim();
   const mobile = displayPhone(enquiry.requesterMobile);
   const email = enquiry.requesterEmail?.trim() || '';
   const tel = telHref(enquiry.requesterMobile);
   const mail = mailtoHref(email);
-  const sms = tel ? tel.replace(/^tel:/, 'sms:') : null;
 
   return (
     <View style={styles.senderBox}>
@@ -585,11 +588,24 @@ function SenderDetails({ enquiry }: { enquiry: ReceivedEnquiry }) {
         label={t('spaces.enquiries.ownerName', { defaultValue: 'Name' })}
         value={name || unavailable}
       />
-      <SenderRow
-        icon={<Phone size={16} color={colors.tealDark} />}
-        label={t('spaces.enquiries.mobile', { defaultValue: 'Mobile' })}
-        value={mobile || unavailable}
-      />
+      <View style={styles.senderRow}>
+        <Phone size={16} color={colors.tealDark} />
+        <View style={styles.senderCopy}>
+          <Text style={styles.senderLabel}>
+            {t('spaces.enquiries.mobile', { defaultValue: 'Mobile' })}
+          </Text>
+          {mobile ? (
+            <ContactNumberLine
+              value={enquiry.requesterMobile}
+              name={name}
+              showIcon={false}
+              textStyle={styles.senderValue}
+            />
+          ) : (
+            <Text style={styles.senderValue}>{unavailable}</Text>
+          )}
+        </View>
+      </View>
       <SenderRow
         icon={<Mail size={16} color={colors.tealDark} />}
         label={t('spaces.enquiries.ownerEmail', { defaultValue: 'Email' })}
@@ -609,15 +625,25 @@ function SenderDetails({ enquiry }: { enquiry: ReceivedEnquiry }) {
           {tel ? (
             <Button
               label={t('spaces.enquiries.callOwner', { defaultValue: 'Call' })}
-              onPress={() => void Linking.openURL(tel)}
+              onPress={() =>
+                openContactOptions({
+                  phoneNumber: enquiry.requesterMobile ?? '',
+                  displayName: name,
+                })
+              }
               style={styles.miniBtn}
             />
           ) : null}
-          {sms ? (
+          {tel ? (
             <Button
               label={t('spaces.enquiries.messageOwner', { defaultValue: 'Message' })}
               variant="secondary"
-              onPress={() => void Linking.openURL(sms)}
+              onPress={() =>
+                openContactOptions({
+                  phoneNumber: enquiry.requesterMobile ?? '',
+                  displayName: name,
+                })
+              }
               style={styles.miniBtn}
             />
           ) : null}
@@ -956,7 +982,7 @@ const styles = StyleSheet.create({
   viewLinkText: { ...typography.caption, color: '#128C4A', fontWeight: '800', fontSize: 11 },
   emptyWrap: { padding: spacing.lg, gap: spacing.md },
   modalFill: { flex: 1, justifyContent: 'flex-end', backgroundColor: colors.overlayScrim },
-  backdrop: { ...StyleSheet.absoluteFillObject },
+  backdrop: { ...StyleSheet.absoluteFill },
   sheet: {
     ...shadows.raised,
     maxHeight: '70%',
@@ -976,7 +1002,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.overlayScrim,
   },
   detailBackdropTap: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 1,
   },
   detail: {

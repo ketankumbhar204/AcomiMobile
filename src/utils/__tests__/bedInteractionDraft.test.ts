@@ -21,13 +21,31 @@ describe('bedInteractionDraft', () => {
   });
 
   it('detects unchanged drafts so Save can stay disabled', () => {
-    const current = { bedNumber: 'C', rent: 6000, deposit: 3000 };
+    const current = { name: 'Bed C', bedNumber: 'C', rent: 6000, deposit: 3000 };
     expect(isBedDraftUnchanged(current, current)).toBe(true);
     expect(
-      isBedDraftUnchanged(current, { bedNumber: ' C ', rent: 6000, deposit: 3000 }),
+      isBedDraftUnchanged(current, {
+        name: ' Bed C ',
+        bedNumber: ' C ',
+        rent: 6000,
+        deposit: 3000,
+      }),
     ).toBe(true);
     expect(
-      isBedDraftUnchanged(current, { bedNumber: 'C', rent: 7000, deposit: 3000 }),
+      isBedDraftUnchanged(current, {
+        name: 'Bed C',
+        bedNumber: 'C',
+        rent: 7000,
+        deposit: 3000,
+      }),
+    ).toBe(false);
+    expect(
+      isBedDraftUnchanged(current, {
+        name: 'Corner Bed',
+        bedNumber: 'C',
+        rent: 6000,
+        deposit: 3000,
+      }),
     ).toBe(false);
   });
 
@@ -57,6 +75,7 @@ describe('bedInteractionDraft', () => {
       bedId: 'bed-b',
       roomId: 'room-b',
       bedNumber: 'B',
+      name: 'Bed B',
       label: 'Bed B',
       rent: 5000,
       deposit: 2000,
@@ -69,6 +88,7 @@ describe('bedInteractionDraft', () => {
     };
 
     const rentOnly = bedTargetAfterDetailsSave(target, {
+      name: 'Bed B',
       bedNumber: 'B',
       rent: 6000,
       deposit: 2000,
@@ -79,6 +99,7 @@ describe('bedInteractionDraft', () => {
     expect(rentOnly.locationLine).toBe(target.locationLine);
 
     const depositOnly = bedTargetAfterDetailsSave(target, {
+      name: 'Bed B',
       bedNumber: 'B',
       rent: 5000,
       deposit: 3000,
@@ -87,19 +108,21 @@ describe('bedInteractionDraft', () => {
     expect(depositOnly.deposit).toBe(3000);
 
     const both = bedTargetAfterDetailsSave(target, {
+      name: ' Corner Bed ',
       bedNumber: ' B ',
       rent: 6000,
       deposit: 3000,
     });
     expect(both.bedId).toBe('bed-b');
+    expect(both.name).toBe('Corner Bed');
     expect(both.bedNumber).toBe('B');
-    expect(both.label).toBe('B');
+    expect(both.label).toBe('Corner Bed');
     expect(both.rent).toBe(6000);
     expect(both.deposit).toBe(3000);
     expect(both.occupancyTarget).toEqual({
       bedId: 'bed-b',
       roomId: 'room-b',
-      bedName: 'B',
+      bedName: 'Corner Bed',
     });
   });
 });

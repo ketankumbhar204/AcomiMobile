@@ -23,7 +23,16 @@ function queueForPending(filter: PendingReviewFilter): PaymentsReviewQueueParam 
 }
 
 function queueForHistory(filter: HistoryReviewFilter): PaymentsReviewQueueParam {
-  return filter === 'REJECTED' ? 'REJECTED' : 'PAID';
+  if (filter === 'REJECTED') {
+    return 'REJECTED';
+  }
+  if (filter === 'REFUNDED') {
+    return 'REFUNDED';
+  }
+  if (filter === 'CANCELLED') {
+    return 'CANCELLED';
+  }
+  return 'PAID';
 }
 
 /**

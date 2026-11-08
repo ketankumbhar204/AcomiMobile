@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next';
-import type { BedListItemResponse } from '../../api/types';
+import type { BedListItemResponse } from '../api/types';
 import { isOccupancyTargetSupported } from './buildOccupancyTarget';
 import type { OccupancyFlowContext } from '../hooks/useAccommodationOccupancyFlow';
 import type { useAccommodationOccupancyFlow } from '../hooks/useAccommodationOccupancyFlow';
@@ -68,6 +68,10 @@ export function buildBedOccupancyMenuOptions(
       {
         label: t('occupancy.actions.transfer'),
         action: () => void flow.startTransfer(context),
+      },
+      {
+        label: t('occupancy.actions.extend', { defaultValue: 'Extend stay' }),
+        action: () => void flow.startExtend(context),
       },
       {
         label: t('occupancy.actions.vacate'),

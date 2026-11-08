@@ -220,7 +220,7 @@ export function ProfileScreen() {
 
   const saveProfileAsset = async (
     asset: 'profilePhoto' | 'identityProof' | 'addressProof',
-    overrides: Parameters<typeof buildCompleteProfilePayloadFromUser>[1]['overrides'],
+    overrides: NonNullable<Parameters<typeof buildCompleteProfilePayloadFromUser>[1]>['overrides'],
   ) => {
     if (!user) {
       return;
@@ -352,9 +352,7 @@ export function ProfileScreen() {
   const profileStatusTone =
     user?.profileStatus === 'VERIFIED' || user?.profileStatus === 'COMPLETED'
       ? ('active' as const)
-      : user?.profileStatus === 'REJECTED'
-        ? ('inactive' as const)
-        : ('neutral' as const);
+      : ('neutral' as const);
 
   if (!user) {
     return (

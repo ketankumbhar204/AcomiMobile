@@ -24,6 +24,10 @@ import { mealPollSaveErrorMessage } from '../utils/mealPollSaveError';
 import { publishPaymentsMonthChanged } from '../utils/paymentUpdates';
 import { platesForSingleSelectOption } from '../utils/mealSelectionSummary';
 
+type MealPollProofBody = SubmitPaymentProofRequest & {
+  localFile?: UniversalPaymentProofPayload['localFile'];
+};
+
 type SingleSelections = Partial<Record<MealType, UUID>>;
 type QuantitySelections = Partial<Record<MealType, Record<UUID, number>>>;
 type DeliverySelections = Partial<Record<MealType, UUID>>;
@@ -403,7 +407,7 @@ export function useMealPollDay(
         return false;
       }
 
-      const proofBody: SubmitPaymentProofRequest | undefined =
+      const proofBody: MealPollProofBody | undefined =
         typeof proof === 'string'
           ? { proofImageBase64: proof }
           : proof
@@ -489,7 +493,7 @@ export function useMealPollDay(
 
   const submitPaymentProof = useCallback(
     async (proof: string | UniversalPaymentProofPayload) => {
-      const proofBody: SubmitPaymentProofRequest =
+      const proofBody: MealPollProofBody =
         typeof proof === 'string'
           ? { proofImageBase64: proof }
           : {

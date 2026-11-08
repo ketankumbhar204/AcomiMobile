@@ -10,7 +10,7 @@ type PaymentsFilterBarProps = {
   counts: { all: number; pending: number; collected: number };
 };
 
-const FILTERS: PaymentLedgerFilter[] = ['all', 'pending', 'collected'];
+const FILTERS = ['all', 'pending', 'collected'] as const satisfies readonly PaymentLedgerFilter[];
 
 export function PaymentsFilterBar({ filter, onFilterChange, counts }: PaymentsFilterBarProps) {
   const { t } = useTranslation();

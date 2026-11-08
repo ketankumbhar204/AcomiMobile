@@ -26,7 +26,11 @@ describe('mapWithConcurrency', () => {
     const results = await mapWithConcurrency([0, 1, 2, 3, 4, 5], 2, async value => {
       active += 1;
       maxActive = Math.max(maxActive, active);
-      await new Promise(resolve => setTimeout(resolve, 15));
+      await new Promise<void>(resolve => {
+        setTimeout(() => {
+          resolve();
+        }, 15);
+      });
       active -= 1;
       return value * 2;
     });

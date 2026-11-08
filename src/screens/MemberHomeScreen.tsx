@@ -56,7 +56,6 @@ export function MemberHomeScreen() {
     navigation.setOptions({
       headerTitle,
       headerTitleAlign: 'left',
-      headerBackVisible: false,
       headerRight: undefined,
     });
   }, [headerTitle, navigation, t, i18n.language]);

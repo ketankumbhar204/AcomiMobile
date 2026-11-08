@@ -20,6 +20,35 @@ export function isPaymentActionable(status: UniversalPaymentStatus): boolean {
   return status === 'PENDING' || status === 'REJECTED' || status === 'UPDATE_REQUESTED';
 }
 
+export function canCancelUnpaidPayment(status: UniversalPaymentStatus | null | undefined): boolean {
+  return (
+    status === 'PENDING' ||
+    status === 'PROOF_UPLOADED' ||
+    status === 'UNDER_REVIEW' ||
+    status === 'UPDATE_REQUESTED' ||
+    status === 'REJECTED'
+  );
+}
+
+export function canSettleCollectedPayment(
+  status: UniversalPaymentStatus | null | undefined,
+): boolean {
+  return status === 'PAID';
+}
+
+/** Remaining cash that can still be refunded (collected − refunded − retained). */
+export function remainingRefundableAmount(payment: {
+  amount?: number | null;
+  paidAmount?: number | null;
+  refundedAmount?: number | null;
+  retainedAmount?: number | null;
+}): number {
+  const collected = Number(payment.paidAmount ?? payment.amount ?? 0);
+  const refunded = Number(payment.refundedAmount ?? 0);
+  const retained = Number(payment.retainedAmount ?? 0);
+  return Math.max(0, collected - refunded - retained);
+}
+
 export function isAwaitingOwnerReview(status: UniversalPaymentStatus): boolean {
   return status === 'UNDER_REVIEW' || status === 'PROOF_UPLOADED';
 }
@@ -42,6 +71,12 @@ export function isPaymentProofEditable(status: UniversalPaymentStatus): boolean 
  * A submitted proof is waiting on the owner. That status wins over a stale overdue flag,
  * which only describes customer-action dues.
  */
+const CLOSED_PAYMENT_STATUSES = new Set<UniversalPaymentStatus>([
+  'PAID',
+  'REFUNDED',
+  'CANCELLED',
+]);
+
 export function displayPaymentStatus(payment: {
   paymentStatus: UniversalPaymentStatus;
   isOverdue?: boolean | null;
@@ -49,7 +84,10 @@ export function displayPaymentStatus(payment: {
   if (isAwaitingOwnerReview(payment.paymentStatus)) {
     return payment.paymentStatus;
   }
-  if (payment.isOverdue && payment.paymentStatus !== 'PAID') {
+  if (CLOSED_PAYMENT_STATUSES.has(payment.paymentStatus)) {
+    return payment.paymentStatus;
+  }
+  if (payment.isOverdue) {
     return 'OVERDUE';
   }
   return payment.paymentStatus;
@@ -59,7 +97,10 @@ export function showsPaymentOverdueCue(payment: {
   paymentStatus: UniversalPaymentStatus;
   isOverdue?: boolean | null;
 }): boolean {
-  if (payment.paymentStatus === 'PAID' || isAwaitingOwnerReview(payment.paymentStatus)) {
+  if (
+    CLOSED_PAYMENT_STATUSES.has(payment.paymentStatus) ||
+    isAwaitingOwnerReview(payment.paymentStatus)
+  ) {
     return false;
   }
   return Boolean(payment.isOverdue);

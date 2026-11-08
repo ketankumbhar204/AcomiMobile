@@ -208,8 +208,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   splashOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.background,
+    ...StyleSheet.absoluteFill,
+    // Transparent so BrandSplash owns the mint canvas / waves.
+    backgroundColor: 'transparent',
     zIndex: 100,
   },
 });

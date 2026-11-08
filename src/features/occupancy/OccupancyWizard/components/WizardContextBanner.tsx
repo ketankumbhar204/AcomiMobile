@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { MemberResponse } from '../../../../api/types';
+import { ContactNumberLine } from '../../../../components/member/ContactAndStayMeta';
 import { colors, spacing, typography } from '../../../../theme';
 
 type WizardContextBannerProps = {
@@ -20,10 +21,19 @@ export function WizardContextBanner({
       {member ? (
         <View style={styles.row}>
           <Text style={styles.label}>{t('occupancyWizard.context.member')}</Text>
-          <Text style={styles.value} numberOfLines={2}>
-            {member.fullName}
-            {member.mobileNumber ? ` · ${member.mobileNumber}` : ''}
-          </Text>
+          <View style={styles.memberValue}>
+            <Text style={styles.value} numberOfLines={1}>
+              {member.fullName}
+            </Text>
+            {member.mobileNumber ? (
+              <ContactNumberLine
+                value={member.mobileNumber}
+                name={member.fullName}
+                textStyle={styles.mobile}
+                showIcon={false}
+              />
+            ) : null}
+          </View>
         </View>
       ) : null}
       {accommodationPath ? (
@@ -56,8 +66,15 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontWeight: '600',
   },
+  memberValue: {
+    gap: 2,
+  },
   value: {
     ...typography.bodyStrong,
+    color: colors.primaryDark,
+  },
+  mobile: {
+    ...typography.caption,
     color: colors.primaryDark,
   },
 });

@@ -6,13 +6,14 @@ import { colors, spacing, typography } from '../../theme';
 type AdminDetailFieldProps = {
   label: string;
   value: string;
+  valueNode?: React.ReactNode;
 };
 
-export function AdminDetailField({ label, value }: AdminDetailFieldProps) {
+export function AdminDetailField({ label, value, valueNode }: AdminDetailFieldProps) {
   return (
     <View style={styles.row}>
       <Text style={styles.label}>{label}</Text>
-      <Text style={styles.value}>{value}</Text>
+      {valueNode ?? <Text style={styles.value}>{value}</Text>}
     </View>
   );
 }

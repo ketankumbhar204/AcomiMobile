@@ -107,7 +107,7 @@ export function useOwnerPaymentsMonth(
 
       if (!options?.force) {
         const cached = ownerPaymentsMonthCache.get(cacheKey);
-        if (cached) {
+        if (cached && 'members' in cached) {
           commitSnapshot(cached);
           setLoading(false);
           setRefreshing(false);

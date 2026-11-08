@@ -578,7 +578,7 @@
         "occupiedBeds": "Occupied beds",
         "openPolls": "Open polls",
         "pending": "Pending",
-        "vacantBeds": "Vacant beds"
+        "vacantBeds": "Available beds"
       },
       "share": "Share",
       "statusActive": "Active",
@@ -1573,16 +1573,18 @@
       "selectedAccommodation": "Selected accommodation"
     },
     "steps": {
-      "member": "Select member",
-      "memberHint": "Search by name or mobile number",
-      "target": "Select accommodation",
-      "targetHint": "Browse units and rooms, then select a bed",
-      "contract": "Contract terms",
-      "reserveDates": "Reservation details",
-      "reserveDatesHint": "No charges are collected when reserving.",
-      "transferCurrent": "Current accommodation",
-      "vacate": "Confirm vacate",
-      "review": "Review & confirm"
+      "member": "ಸದಸ್ಯರನ್ನು ಆಯ್ಕೆಮಾಡಿ",
+      "memberHint": "ಹೆಸರು ಅಥವಾ ಮೊಬೈಲ್‌ನಿಂದ ಹುಡುಕಿ",
+      "target": "ವಸತಿ ಆಯ್ಕೆಮಾಡಿ",
+      "targetHint": "ಯೂನಿಟ್ ಮತ್ತು ಕೋಣೆಗಳನ್ನು ನೋಡಿ, ನಂತರ ಹಾಸಿಗೆ ಆಯ್ಕೆಮಾಡಿ",
+      "stayType": "ವಾಸ ಪ್ರಕಾರವನ್ನು ಆಯ್ಕೆಮಾಡಿ",
+      "stayDetails": "ವಾಸ ವಿವರಗಳನ್ನು ನಮೂದಿಸಿ",
+      "contract": "ಒಪ್ಪಂದದ ನಿಯಮಗಳು",
+      "reserveDates": "ಕಾಯ್ದಿರಿಸುವಿಕೆ ವಿವರಗಳು",
+      "reserveDatesHint": "ಕಾಯ್ದಿರಿಸುವಾಗ ಯಾವುದೇ ಶುಲ್ಕ ವಸೂಲಿ ಮಾಡಲಾಗುವುದಿಲ್ಲ.",
+      "transferCurrent": "ಪ್ರಸ್ತುತ ವಸತಿ",
+      "vacate": "ಖಾಲಿ ಮಾಡುವುದನ್ನು ದೃಢೀಕರಿಸಿ",
+      "review": "ಪರಿಶೀಲನೆ ಮತ್ತು ದೃಢೀಕರಣ"
     },
     "review": {
       "member": "Member",
@@ -1634,6 +1636,12 @@
       "occupiedDays_one": "{{count}} day",
       "occupiedDays_other": "{{count}} days",
       "expectedMoveOut": "Expected move-out",
+      "shortStayChoice": "ಶಾರ್ಟ್ ಸ್ಟೇ",
+      "monthlyStayChoice": "ಮಾಸಿಕ",
+      "openEndedStayChoice": "ನಾನು ಹೊರಡುವವರೆಗೆ",
+      "agreedTotal": "ಒಪ್ಪಿದ ಒಟ್ಟು ಮೊತ್ತ",
+      "shortStayPreview": "ಮುನ್ನೋಟ. ಈ ಮೊತ್ತವನ್ನು ಮುಗಿಸಿದಾಗ ಉಳಿಸಲಾಗುತ್ತದೆ.",
+      "shortStaySetting": "ಶಾರ್ಟ್ ಸ್ಟೇ ಆನ್ ಮಾಡಿ",
       "reservedOn": "Reserved on",
       "reservedOnShort": "Reserved",
       "timelineEmpty": "—",
@@ -1672,6 +1680,7 @@
       "cancelReservation": "Cancel reservation",
       "cancelShort": "Cancel",
       "transfer": "Transfer",
+      "extend": "ವಾಸವನ್ನು ವಿಸ್ತರಿಸಿ",
       "vacate": "Vacate",
       "viewHistory": "View occupancy history",
       "viewHistoryShort": "View History"
@@ -1889,7 +1898,19 @@
       "RESERVATION_CANCELLED": "Reservation cancelled"
     },
     "success": {
-      "updated": "Occupancy updated."
+      "updated": "ಆಕ್ಯುಪೆನ್ಸಿ ನವೀಕರಿಸಲಾಗಿದೆ.",
+      "title": "ಯಶಸ್ಸು",
+      "allocatedHeadline": "ಬಾಡಿಗೆದಾರರನ್ನು ಯಶಸ್ವಿಯಾಗಿ ನಿಯೋಜಿಸಲಾಗಿದೆ!",
+      "allocatedDetail": "{{name}} ಅವರನ್ನು {{location}} ಗೆ ನಿಯೋಜಿಸಲಾಗಿದೆ.",
+      "reservedHeadline": "ವಸತಿ ಯಶಸ್ವಿಯಾಗಿ ಕಾಯ್ದಿರಿಸಲಾಗಿದೆ!",
+      "reservedDetail": "{{name}} ಅವರ ಕಾಯ್ದಿರಿಸುವಿಕೆ {{location}} ನಲ್ಲಿದೆ.",
+      "transferredHeadline": "ಬಾಡಿಗೆದಾರರನ್ನು ಯಶಸ್ವಿಯಾಗಿ ವರ್ಗಾಯಿಸಲಾಗಿದೆ!",
+      "transferredDetail": "{{name}} ಅವರನ್ನು {{location}} ಗೆ ವರ್ಗಾಯಿಸಲಾಗಿದೆ.",
+      "movedInHeadline": "ಮೂವ್-ಇನ್ ಯಶಸ್ವಿಯಾಗಿ ಪೂರ್ಣಗೊಂಡಿದೆ!",
+      "movedInDetail": "{{name}} ಅವರು {{location}} ಗೆ ಪ್ರವೇಶಿಸಿದ್ದಾರೆ.",
+      "viewDetails": "ವಿವರಗಳನ್ನು ನೋಡಿ",
+      "viewStay": "ವಾಸವನ್ನು ನೋಡಿ",
+      "viewReservation": "ಕಾಯ್ದಿರಿಸುವಿಕೆಯನ್ನು ನೋಡಿ"
     },
     "errors": {
       "generic": "Occupancy action failed. Please try again.",
@@ -1917,6 +1938,8 @@
       "targetMaintenance": "This target is under maintenance and cannot be selected.",
       "targetBlocked": "This target is blocked and cannot be selected.",
       "targetUnavailable": "This target is not available.",
+      "stayOverlap": "This stay overlaps another stay on that bed, room, or unit.",
+      "plannedEndMismatch": "The planned end dates do not match. Send one date.",
       "invalidTargetType": "This allocation type is not allowed for this space.",
       "bedRequired": "Select a bed.",
       "roomRequired": "Select a room.",
@@ -1925,7 +1948,8 @@
       "codes": {
         "RENT_SNAPSHOT_REQUIRED": "Monthly rent is required when activating.",
         "FOOD_CHARGE_REQUIRED": "Food charge is required when food is enabled.",
-        "FOOD_CHARGE_NOT_ALLOWED": "Food charge cannot be set when food is included in rent."
+        "FOOD_CHARGE_NOT_ALLOWED": "Food charge cannot be set when food is included in rent.",
+        "STAY_OVERLAP": "This stay overlaps another stay on that bed, room, or unit."
       }
     },
     "occupancyStatus": {
@@ -2028,7 +2052,7 @@
       },
       "recommendedAction": "Recommended Action",
       "actions": {
-        "improveOccupancy": "Improve occupancy by allocating vacant beds"
+        "improveOccupancy": "Improve occupancy by allocating available beds"
       },
       "factors": {
         "setupComplete": "Required setup complete",
@@ -2284,7 +2308,7 @@
     "accommodationOperations": {
       "title": "Property operations",
       "occupiedBeds": "Occupied beds",
-      "vacantBeds": "Vacant beds",
+      "vacantBeds": "Available beds",
       "moveInsThisMonth": "Move-ins this month",
       "pendingPayments": "Pending payments"
     },
@@ -2301,7 +2325,7 @@
     "drilldown": {
       "occupiedBedsTitle": "Occupied beds",
       "occupiedBedsSubtitle": "Active residents and their bed assignments.",
-      "vacantBedsTitle": "Vacant beds",
+      "vacantBedsTitle": "Available beds",
       "vacantBedsSubtitle": "Available beds you can allocate or reserve.",
       "moveInsTitle": "Move-ins this month",
       "moveInsSubtitle": "Residents who moved in during the current month.",
@@ -2309,7 +2333,7 @@
       "searchResidents": "Search residents or location…",
       "moveInLine": "Move-in {{date}}",
       "emptyOccupiedBeds": "No occupied beds",
-      "emptyVacantBeds": "No vacant beds",
+      "emptyVacantBeds": "No available beds",
       "emptyMoveIns": "No move-ins this month",
       "emptyBedsDescription": "Counts update when beds are allocated, reserved, or vacated.",
       "emptyOccupancyDescription": "Active occupancies appear here after move-in.",
@@ -3703,7 +3727,7 @@
       "title": "Menu library",
       "subtitle": "Defaults are ready to use — edit anytime, or continue to plan menus.",
       "readyTipTitle": "Your menu library is ready",
-      "readyTipBody": "Sample items and combos are already here. You can edit the library now, or continue to menu planning and customize later.",
+      "readyTipBody": "Edit your items and combos anytime.",
       "readyTipContinue": "Continue to menu planning",
       "readyTipStay": "Stay and edit library",
       "setupSteps": "Build your catalog",

@@ -16,3 +16,13 @@ export type OwnerPaymentsMonthSnapshot = {
   payments: SpacePaymentResponse[];
   counts: OwnerPaymentsMonthCounts;
 };
+
+/** Payments summary screen cache. It does not include the member ledger. */
+export type OwnerPaymentsSummaryCacheEntry = {
+  financial: DashboardFinancialSummary;
+  counts: OwnerPaymentsMonthCounts;
+};
+
+export type OwnerPaymentsCacheValue =
+  | OwnerPaymentsMonthSnapshot
+  | OwnerPaymentsSummaryCacheEntry;

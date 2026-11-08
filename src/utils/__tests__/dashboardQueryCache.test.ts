@@ -1,4 +1,4 @@
-import type { DashboardSummaryResponse, SpaceType } from '../api/types';
+import type { DashboardSummaryResponse, SpaceType } from '../../api/types';
 import {
   fetchDashboardSummaryCached,
   invalidateDashboardQueries,

@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { AdminDetailField, AdminDetailSection } from '../../components/admin';
+import { ContactNumberLine } from '../../components/member/ContactAndStayMeta';
 import { Card } from '../../components/ui';
 import { ReferenceCode } from '../../components/ui/ReferenceCode';
 import type { AdminStackParamList } from '../../navigation/types';
@@ -32,11 +33,30 @@ export function AdminActiveSpaceDetailScreen({ route }: Props) {
       <AdminDetailSection>
         <AdminDetailField label={t('admin.common.type')} value={space.type} />
         <AdminDetailField label={t('admin.common.owner')} value={space.ownerName} />
-        <AdminDetailField label={t('admin.common.mobile')} value={space.ownerMobile} />
+        <AdminDetailField
+          label={t('admin.common.mobile')}
+          value={space.ownerMobile}
+          valueNode={
+            space.ownerMobile ? (
+              <ContactNumberLine
+                value={space.ownerMobile}
+                name={space.ownerName}
+                showIcon={false}
+              />
+            ) : undefined
+          }
+        />
         {space.contactNumber ? (
           <AdminDetailField
             label={t('admin.common.spaceContact', { defaultValue: 'Space contact' })}
             value={space.contactNumber}
+            valueNode={
+              <ContactNumberLine
+                value={space.contactNumber}
+                name={space.name}
+                showIcon={false}
+              />
+            }
           />
         ) : null}
         {space.address ? (

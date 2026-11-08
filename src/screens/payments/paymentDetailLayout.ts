@@ -1,11 +1,11 @@
-import { spacing } from '../../theme';
+import { pageContentGutter } from '../../theme';
 
 /**
- * Dashboard uses one horizontal gutter (`spacing.xxl`).
+ * Page content uses one horizontal gutter (`pageContentGutter`, Rooms reference).
  * The payment detail screen must not add the shared Screen padding on top of it.
  */
 export const paymentDetailScreenPadding = 0;
-export const paymentDetailContentGutter = spacing.xxl;
+export const paymentDetailContentGutter = pageContentGutter;
 
 export function paymentDetailHorizontalInset(): number {
   return paymentDetailScreenPadding + paymentDetailContentGutter;

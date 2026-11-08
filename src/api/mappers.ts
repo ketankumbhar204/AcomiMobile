@@ -52,6 +52,7 @@ export function spaceDetailsResponseToSpace(
     isActive: true,
     foodIncludedInRent: response.foodIncludedInRent,
     defaultFoodCharge: response.defaultFoodCharge ?? null,
+    shortStayEnabled: response.shortStayEnabled === true,
     mealBillingType: response.mealBillingType ?? 'PAY_PER_MEAL',
     prepaidBalanceUnit: response.prepaidBalanceUnit ?? null,
     prepaidFallbackToPayPerMeal: response.prepaidFallbackToPayPerMeal ?? true,

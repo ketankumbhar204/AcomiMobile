@@ -20,10 +20,15 @@ import {
   roomGroupPathCrumbs,
   type BedRoomGroup,
 } from '../../utils/groupBedsByRoom';
+import {
+  AVAILABILITY_DISPLAY_FALLBACK,
+  availabilityDisplayLabelKey,
+} from '../../utils/availabilityDisplayLabel';
 
 export type RoomsOpsFocus =
   | 'OCCUPIED'
   | 'VACANT'
+  | 'RESERVED'
   | 'MOVE_INS_THIS_MONTH'
   | 'PENDING_PAYMENTS';
 
@@ -47,6 +52,9 @@ function filterBedsByOpsFocus(
   if (opsFocus === 'VACANT') {
     return beds.filter(bed => bed.status === 'AVAILABLE');
   }
+  if (opsFocus === 'RESERVED') {
+    return beds.filter(bed => bed.status === 'RESERVED');
+  }
   return beds.filter(bed => focusedBedIds.has(bed.bedId));
 }
 
@@ -58,7 +66,14 @@ function opsFocusLabel(
     return t('dashboard.accommodationOperations.occupiedBeds');
   }
   if (opsFocus === 'VACANT') {
-    return t('dashboard.accommodationOperations.vacantBeds');
+    return t(availabilityDisplayLabelKey('beds'), {
+      defaultValue: AVAILABILITY_DISPLAY_FALLBACK.beds,
+    });
+  }
+  if (opsFocus === 'RESERVED') {
+    return t('dashboard.accommodationOperations.reservedBeds', {
+      defaultValue: 'Reserved beds',
+    });
   }
   if (opsFocus === 'PENDING_PAYMENTS') {
     return t('dashboard.accommodationOperations.pendingPayments');
@@ -84,7 +99,13 @@ export function AccommodationOpsFocusInventory({
     enabled: Boolean(spaceId),
     loadAll: true,
     status:
-      opsFocus === 'VACANT' ? 'AVAILABLE' : opsFocus === 'OCCUPIED' ? 'OCCUPIED' : undefined,
+      opsFocus === 'VACANT'
+        ? 'AVAILABLE'
+        : opsFocus === 'OCCUPIED'
+          ? 'OCCUPIED'
+          : opsFocus === 'RESERVED'
+            ? 'RESERVED'
+            : undefined,
   });
   const bedInteraction = usePersistedBedInteraction({
     spaceId,
@@ -186,7 +207,18 @@ export function AccommodationOpsFocusInventory({
               includeBuilding: true,
               includeUnit: includeUnits || Boolean(group.unitId),
             })}
-            showAddBed={false}
+            showAddBed={canManage}
+            onAddBed={
+              canManage
+                ? () =>
+                    navigation.navigate('BedForm', {
+                      spaceId,
+                      buildingId: group.buildingId,
+                      roomId: group.roomId,
+                      mode: 'create',
+                    })
+                : undefined
+            }
             onRoomPress={() => openRoom(group)}
             onBedPress={openBedDetail}
             onEditBed={canManage ? bed => bedInteraction.open(persistedTargetFromSpaceBed(bed)) : undefined}

@@ -11,7 +11,7 @@ import { Button, EmptyState, MonthlySummaryHeader, SkeletonCard } from '../ui';
 import type { MonthlySummaryCardItem } from '../ui/MonthlySummaryCards';
 import { useDayMealPaymentsMonth } from '../../hooks/useDayMealPayments';
 import type { MainStackParamList } from '../../navigation/types';
-import { colors, spacing, typography } from '../../theme';
+import { colors, pageContentGutter, spacing, typography } from '../../theme';
 import { formatPaymentAmount } from '../../utils/paymentAmount';
 import {
   countDayMealPaymentsInSection,
@@ -318,7 +318,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: spacing.xxl,
+    paddingHorizontal: pageContentGutter,
+    paddingTop: spacing.xxl,
     paddingBottom: spacing.section,
   },
   heading: {

@@ -24,6 +24,8 @@ import { enquiryApi } from '../api/enquiryApi';
 import { spaceDiscoverApi } from '../api/spaceDiscoverApi';
 import type { EnquiryInboxResponse, OwnerContactResponse, SpaceEnquiryResponse } from '../api/types';
 import { ReceivedEnquiriesScreen } from './ReceivedEnquiriesScreen';
+import { useOptionalContactOptions } from '../components/contact';
+import { ContactNumberLine } from '../components/member/ContactAndStayMeta';
 import { PhotoRequestAction } from '../components/discovery/PhotoRequestAction';
 import { Button, Card, EmptyState } from '../components/ui';
 import { ReferenceCode } from '../components/ui/ReferenceCode';
@@ -103,6 +105,7 @@ function ContactDetailsModal({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
+  const { openContactOptions } = useOptionalContactOptions();
   const [photoUrls, setPhotoUrls] = useState<string[] | null>(null);
 
   useEffect(() => {
@@ -132,6 +135,7 @@ function ContactDetailsModal({
   ]
     .map(v => v?.trim())
     .filter((v): v is string => Boolean(v));
+  const ownerName = contact.ownerName?.trim() || undefined;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -140,14 +144,14 @@ function ContactDetailsModal({
           <Text style={styles.modalTitle}>{t('spaces.enquiries.contactDetails')}</Text>
           <Text style={styles.modalSubtitle}>{enquiry.spaceName}</Text>
 
-          {contact.ownerName?.trim() ? (
+          {ownerName ? (
             <View style={styles.contactActionRow}>
               <View style={styles.contactIconWrap}>
                 <UserRound size={18} color={colors.tealDark} />
               </View>
               <View style={styles.contactActionBody}>
                 <Text style={styles.contactActionLabel}>{t('spaces.enquiries.ownerName')}</Text>
-                <Text style={styles.contactActionValue}>{contact.ownerName.trim()}</Text>
+                <Text style={styles.contactActionValue}>{ownerName}</Text>
               </View>
             </View>
           ) : null}
@@ -163,14 +167,22 @@ function ContactDetailsModal({
                     ? t('spaces.enquiries.mobile')
                     : t('spaces.enquiries.alternateMobile')}
                 </Text>
-                <Text style={styles.contactActionValue}>{mobile}</Text>
+                <ContactNumberLine
+                  value={mobile}
+                  name={ownerName}
+                  showIcon={false}
+                  textStyle={styles.contactActionValue}
+                />
               </View>
               <Button
                 label={t('spaces.enquiries.callOwner', { defaultValue: 'Call' })}
                 variant="primary"
-                onPress={() => {
-                  void Linking.openURL(`tel:${mobile}`);
-                }}
+                onPress={() =>
+                  openContactOptions({
+                    phoneNumber: mobile,
+                    displayName: ownerName,
+                  })
+                }
                 style={styles.miniBtn}
               />
             </View>
@@ -194,9 +206,12 @@ function ContactDetailsModal({
               <Button
                 label={t('spaces.enquiries.messageOwner', { defaultValue: 'Message' })}
                 variant="secondary"
-                onPress={() => {
-                  void Linking.openURL(`sms:${mobiles[0]}`);
-                }}
+                onPress={() =>
+                  openContactOptions({
+                    phoneNumber: mobiles[0],
+                    displayName: ownerName,
+                  })
+                }
                 style={styles.miniBtn}
               />
             </View>

@@ -9,6 +9,12 @@ type ReserveDatesStepProps = {
   expectedExitDate: string;
   remarks: string;
   displayPath?: string;
+  /** When false, omit the expected-exit field (e.g. SHORT checkout is rendered elsewhere). */
+  showExpectedExit?: boolean;
+  /** When false, omit the local step title (parent step header already names the step). */
+  showTitle?: boolean;
+  /** Optional content between move-in and exit/remarks (e.g. SHORT checkout). */
+  afterMoveIn?: React.ReactNode;
   onMoveInDateChange: (value: string) => void;
   onExpectedExitDateChange: (value: string) => void;
   onRemarksChange: (value: string) => void;
@@ -19,6 +25,9 @@ export function ReserveDatesStep({
   expectedExitDate,
   remarks,
   displayPath,
+  showExpectedExit = true,
+  showTitle = true,
+  afterMoveIn,
   onMoveInDateChange,
   onExpectedExitDateChange,
   onRemarksChange,
@@ -27,9 +36,13 @@ export function ReserveDatesStep({
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.title}>{t('occupancyWizard.steps.reserveDates')}</Text>
+      {showTitle ? (
+        <Text style={styles.title}>{t('occupancyWizard.steps.reserveDates')}</Text>
+      ) : null}
       {displayPath ? <Text style={styles.path}>{displayPath}</Text> : null}
-      <Text style={styles.hint}>{t('occupancyWizard.steps.reserveDatesHint')}</Text>
+      {showTitle ? (
+        <Text style={styles.hint}>{t('occupancyWizard.steps.reserveDatesHint')}</Text>
+      ) : null}
 
       <DateField
         label={t('occupancy.section.moveInDate')}
@@ -37,13 +50,16 @@ export function ReserveDatesStep({
         onChange={onMoveInDateChange}
         allowPastDates
       />
-      <DateField
-        label={t('occupancy.fields.expectedExit')}
-        value={expectedExitDate}
-        onChange={onExpectedExitDateChange}
-        optional
-        allowPastDates
-      />
+      {afterMoveIn}
+      {showExpectedExit ? (
+        <DateField
+          label={t('occupancy.fields.expectedExit')}
+          value={expectedExitDate}
+          onChange={onExpectedExitDateChange}
+          optional
+          allowPastDates
+        />
+      ) : null}
       <FormInput
         label={t('occupancy.fields.remarks')}
         value={remarks}
@@ -56,7 +72,13 @@ export function ReserveDatesStep({
 
 const styles = StyleSheet.create({
   wrap: { gap: spacing.xs },
-  title: { ...typography.h3, fontSize: 18, lineHeight: 22, fontWeight: '600', marginBottom: spacing.xs },
+  title: {
+    ...typography.h3,
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: '600',
+    marginBottom: spacing.xs,
+  },
   path: { ...typography.caption, color: colors.muted, marginBottom: spacing.sm },
   hint: { ...typography.caption, color: colors.muted, marginBottom: spacing.md },
 });

@@ -71,6 +71,8 @@ export type BedInventoryBrowserProps = {
   bedIdAllowList?: ReadonlySet<string> | null;
   /** Hold the list on a skeleton while the allow-list is still loading. */
   listPending?: boolean;
+  /** Seed hierarchy filters (e.g. OccupancyWizard opened from a floor/unit). */
+  initialFilters?: DashboardBedInventoryFilters;
 };
 
 export function BedInventoryBrowser({
@@ -96,15 +98,17 @@ export function BedInventoryBrowser({
   opsFocus = null,
   bedIdAllowList = null,
   listPending = false,
+  initialFilters,
 }: BedInventoryBrowserProps) {
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const canManageStructure = useSpacePermissions(spaceId).canManageAccommodation;
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLabels, setFilterLabels] = useState<DashboardBedInventoryFilterLabels>({});
-  const [filters, setFilters] = useState<DashboardBedInventoryFilters>(
-    defaultDashboardBedInventoryFilters(),
-  );
+  const [filters, setFilters] = useState<DashboardBedInventoryFilters>(() => ({
+    ...defaultDashboardBedInventoryFilters(),
+    ...(initialFilters ?? {}),
+  }));
   const [filterOverlayLayout, setFilterOverlayLayout] =
     useState<DashboardBedInventoryFilterOverlayLayout | null>(null);
   const overlayHostRef = useRef<View>(null);
@@ -176,6 +180,20 @@ export function BedInventoryBrowser({
       ? t('dashboard.drilldown.vacantBedsSubtitle')
       : t('dashboard.drilldown.occupiedBedsSubtitle'));
 
+  const openAddBed = useCallback(
+    (room: { buildingId: string; roomId: string }) => {
+      navigation.navigate('BedForm', {
+        spaceId,
+        buildingId: room.buildingId,
+        roomId: room.roomId,
+        mode: 'create',
+      });
+    },
+    [navigation, spaceId],
+  );
+
+  const showAddBed = canManageStructure && flowAction === 'dashboard';
+
   const renderInventoryGroup = useCallback(
     ({ item }: { item: BedInventoryListGroup }) => {
       const sharedProps = {
@@ -187,6 +205,7 @@ export function BedInventoryBrowser({
         onEditBed: flowAction === 'dashboard' ? onEditBed : undefined,
         onAllocate,
         onReserve,
+        showAddBed,
       };
 
       if (item.type === 'unit') {
@@ -194,6 +213,7 @@ export function BedInventoryBrowser({
           <DashboardBedUnitSectionCard
             group={item.group}
             {...sharedProps}
+            onAddBed={showAddBed ? openAddBed : undefined}
             onPathCrumbPress={
               canManageStructure
                 ? (room, crumb) =>
@@ -208,6 +228,7 @@ export function BedInventoryBrowser({
         <DashboardBedRoomSectionCard
           group={item.group}
           {...sharedProps}
+          onAddBed={showAddBed ? () => openAddBed(item.group) : undefined}
           onPathCrumbPress={
             canManageStructure
               ? crumb =>
@@ -227,6 +248,8 @@ export function BedInventoryBrowser({
       onEditBed,
       onFlowAction,
       onReserve,
+      openAddBed,
+      showAddBed,
       spaceId,
     ],
   );
@@ -264,38 +287,69 @@ export function BedInventoryBrowser({
       </View>
     ) : null;
 
+  const filtersBar = (
+    <DashboardBedInventoryFiltersBar
+      ref={filtersBarRef}
+      spaceId={spaceId}
+      spaceType={spaceType}
+      filters={filters}
+      onChange={setFilters}
+      onLabelsChange={setFilterLabels}
+      overlayHostRef={overlayHostRef}
+      onOverlayLayoutChange={setFilterOverlayLayout}
+    />
+  );
+
+  const searchBar = (
+    <ListSearchBar
+      value={searchQuery}
+      onChangeText={setSearchQuery}
+      placeholder={t('dashboard.drilldown.searchBeds')}
+    />
+  );
+
   const filtersAndSearch = (
     <>
-      <DashboardBedInventoryFiltersBar
-        ref={filtersBarRef}
-        spaceId={spaceId}
-        spaceType={spaceType}
-        filters={filters}
-        onChange={setFilters}
-        onLabelsChange={setFilterLabels}
-        overlayHostRef={overlayHostRef}
-        onOverlayLayoutChange={setFilterOverlayLayout}
-      />
-      <ListSearchBar
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-        placeholder={t('dashboard.drilldown.searchBeds')}
-      />
+      {filtersBar}
+      {searchBar}
     </>
   );
 
-  const scrollHeader = (
-    <>
-      {headerAccessory ? <View style={styles.headerAccessory}>{headerAccessory}</View> : null}
-      {showSubtitle ? (
-        <Text style={[styles.subtitle, compactPadding && styles.subtitleCompact]}>
-          {resolvedSubtitle}
-        </Text>
-      ) : null}
-      {filtersAndSearch}
-      {summaryBlock}
-    </>
-  );
+  type UnifiedListRow =
+    | { kind: 'accessory' }
+    | { kind: 'subtitle' }
+    | { kind: 'filters' }
+    | { kind: 'search' }
+    | { kind: 'summary' }
+    | { kind: 'group'; group: BedInventoryListGroup };
+
+  const showSummaryRow =
+    showSummary && !beds.loading && !listPending && summaryCount > 0;
+
+  /**
+   * All page chrome lives in `data` (no ListHeaderComponent) so stickyHeaderIndices
+   * can pin only the search row. RN treats sticky index 0 as ListHeaderComponent when
+   * that prop is set — which previously pinned the ops cards.
+   */
+  const { unifiedRows, stickySearchIndex } = useMemo(() => {
+    const rows: UnifiedListRow[] = [];
+    if (headerAccessory) {
+      rows.push({ kind: 'accessory' });
+    }
+    if (showSubtitle) {
+      rows.push({ kind: 'subtitle' });
+    }
+    rows.push({ kind: 'filters' });
+    rows.push({ kind: 'search' });
+    const searchIndex = rows.length - 1;
+    if (showSummaryRow) {
+      rows.push({ kind: 'summary' });
+    }
+    for (const group of inventoryGroups) {
+      rows.push({ kind: 'group', group });
+    }
+    return { unifiedRows: rows, stickySearchIndex: searchIndex };
+  }, [headerAccessory, inventoryGroups, showSubtitle, showSummaryRow]);
 
   const fixedHeader = (
     <>
@@ -333,15 +387,68 @@ export function BedInventoryBrowser({
     );
   }, [beds.error, beds.items.length, beds.loading, empty.description, empty.title, listPending, status, t]);
 
+  const renderUnifiedRow = useCallback(
+    ({ item }: { item: UnifiedListRow }) => {
+      if (item.kind === 'accessory') {
+        return <View style={styles.headerAccessory}>{headerAccessory}</View>;
+      }
+      if (item.kind === 'subtitle') {
+        return (
+          <Text style={[styles.subtitle, compactPadding && styles.subtitleCompact]}>
+            {resolvedSubtitle}
+          </Text>
+        );
+      }
+      if (item.kind === 'filters') {
+        return filtersBar;
+      }
+      if (item.kind === 'search') {
+        return (
+          <View style={styles.stickySearch}>
+            <ListSearchBar
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder={t('dashboard.drilldown.searchBeds')}
+            />
+          </View>
+        );
+      }
+      if (item.kind === 'summary') {
+        return summaryBlock;
+      }
+      return renderInventoryGroup({ item: item.group });
+    },
+    [
+      compactPadding,
+      filtersBar,
+      headerAccessory,
+      renderInventoryGroup,
+      resolvedSubtitle,
+      searchQuery,
+      summaryBlock,
+      t,
+    ],
+  );
+
+  const unifiedRowKey = useCallback(
+    (item: UnifiedListRow) => {
+      if (item.kind === 'group') {
+        return inventoryGroupKey(item.group);
+      }
+      return item.kind;
+    },
+    [inventoryGroupKey],
+  );
+
   if (unifiedScroll) {
+    const showEmptyFooter = inventoryGroups.length === 0;
     return (
       <View ref={overlayHostRef} style={[styles.body, contentStyle]}>
         <FlatList
-          data={inventoryGroups}
-          keyExtractor={inventoryGroupKey}
-          renderItem={renderInventoryGroup}
-          ListHeaderComponent={scrollHeader}
-          ListEmptyComponent={emptyComponent}
+          data={unifiedRows}
+          keyExtractor={unifiedRowKey}
+          renderItem={renderUnifiedRow}
+          stickyHeaderIndices={[stickySearchIndex]}
           refreshControl={
             <RefreshControl refreshing={beds.refreshing} onRefresh={() => void beds.refresh()} />
           }
@@ -350,15 +457,18 @@ export function BedInventoryBrowser({
             inventoryGroups.length === 0 && styles.listContentEmpty,
             listContentStyle,
           ]}
-          initialNumToRender={6}
+          initialNumToRender={8}
           maxToRenderPerBatch={4}
           windowSize={7}
           removeClippedSubviews={false}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
           style={styles.unifiedList}
           ListFooterComponent={
             beds.loadingMore ? (
               <ActivityIndicator color={colors.primary} style={styles.footerLoader} />
+            ) : showEmptyFooter ? (
+              emptyComponent
             ) : null
           }
         />
@@ -441,6 +551,10 @@ const styles = StyleSheet.create({
   },
   headerAccessory: {
     marginBottom: spacing.sm,
+  },
+  stickySearch: {
+    backgroundColor: colors.background,
+    zIndex: 2,
   },
   subtitle: {
     ...typography.body,

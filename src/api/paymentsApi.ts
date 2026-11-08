@@ -11,7 +11,10 @@ import type {
   PaymentsSummaryResponse,
   ReviewPaymentRequest,
   CreateSpacePaymentRequest,
+  CancelSpacePaymentRequest,
   MarkPaymentReceivedRequest,
+  PaymentSettlementResponse,
+  SettleSpacePaymentRequest,
   SpacePaymentListResponse,
   SpacePaymentResponse,
   SpaceType,
@@ -199,6 +202,53 @@ export const paymentsApi = {
     try {
       return await unwrapApiResponse(
         apiClient.post<ApiResponse<SpacePaymentResponse>>(path, body ?? {}),
+      );
+    } catch (error) {
+      rethrowUnlessUnavailable(error);
+    }
+  },
+
+  cancelPayment: async (
+    spaceId: UUID,
+    paymentId: UUID,
+    body?: CancelSpacePaymentRequest,
+  ): Promise<SpacePaymentResponse> => {
+    const path = `/spaces/${spaceId}/payments/${paymentId}/cancel`;
+    devLog(`${LOG_TAG} POST ${path}`, body);
+    try {
+      return await unwrapApiResponse(
+        apiClient.post<ApiResponse<SpacePaymentResponse>>(path, body ?? {}),
+      );
+    } catch (error) {
+      rethrowUnlessUnavailable(error);
+    }
+  },
+
+  settlePayment: async (
+    spaceId: UUID,
+    paymentId: UUID,
+    body: SettleSpacePaymentRequest,
+  ): Promise<SpacePaymentResponse> => {
+    const path = `/spaces/${spaceId}/payments/${paymentId}/settle`;
+    devLog(`${LOG_TAG} POST ${path}`, body);
+    try {
+      return await unwrapApiResponse(
+        apiClient.post<ApiResponse<SpacePaymentResponse>>(path, body),
+      );
+    } catch (error) {
+      rethrowUnlessUnavailable(error);
+    }
+  },
+
+  listSettlements: async (
+    spaceId: UUID,
+    paymentId: UUID,
+  ): Promise<PaymentSettlementResponse[]> => {
+    const path = `/spaces/${spaceId}/payments/${paymentId}/settlements`;
+    devLog(`${LOG_TAG} GET ${path}`);
+    try {
+      return await unwrapApiResponse(
+        apiClient.get<ApiResponse<PaymentSettlementResponse[]>>(path),
       );
     } catch (error) {
       rethrowUnlessUnavailable(error);

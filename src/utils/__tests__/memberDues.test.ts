@@ -62,6 +62,21 @@ describe('memberDuesCue', () => {
     });
   });
 
+  it('shows not-yet-billed (never clear) for an open OPEN_ENDED period with no rent row', () => {
+    const options = { openEndedUnbilled: true };
+    expect(memberDuesCue(null, options)).toEqual({ kind: 'notBilled' });
+    expect(memberDuesCue(row({ expectedCharges: 5000, pending: 0, underReview: 0 }), options)).toEqual({
+      kind: 'notBilled',
+    });
+    // Real unpaid/under-review rows still win over the not-billed cue.
+    expect(memberDuesCue(row({ expectedCharges: 6000, pending: 4000 }), options)).toEqual({
+      kind: 'due',
+      amount: 4000,
+    });
+    expect(matchesPaymentDuesFilter({ kind: 'notBilled' }, 'clear')).toBe(false);
+    expect(matchesPaymentDuesFilter({ kind: 'notBilled' }, 'pending')).toBe(false);
+  });
+
   it('does not treat a missing ledger or a zero-charge row as settled', () => {
     expect(memberDuesCue(undefined)).toBeNull();
     expect(memberDuesCue(null)).toBeNull();

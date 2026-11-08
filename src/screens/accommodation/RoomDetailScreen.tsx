@@ -14,11 +14,11 @@ import { BedDouble } from 'lucide-react-native';
 import { accommodationApi } from '../../api/accommodationApi';
 import type { RoomResponse } from '../../api/types';
 import {
-  AccommodationDetailRow,
   AccommodationEntityHero,
+  AccommodationInventoryOverview,
   AccommodationLifecycleActions,
   AccommodationStatusBadge,
-  formatAccommodationDate,
+  AccommodationStayTypeCard,
 } from '../../components/accommodation';
 import { DashboardSectionTitle } from '../../components/dashboard/DashboardSectionTitle';
 import { DashboardActionRow } from '../../components/dashboard/shared/DashboardActionRow';
@@ -29,7 +29,6 @@ import {
   Screen,
   SkeletonCard,
 } from '../../components/ui';
-import { ReferenceCode } from '../../components/ui/ReferenceCode';
 import {
   AccommodationOccupantSection,
   AccommodationOccupancyActions,
@@ -46,7 +45,7 @@ import { useAccommodationLifecycleConfirm } from '../../hooks/useAccommodationLi
 import { toAccommodationBedsParams } from '../../utils/accommodationNavigation';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
-import { spacing, typography } from '../../theme';
+import { colors, spacing, typography } from '../../theme';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
 import {
   buildRoomOccupancyTarget,
@@ -175,39 +174,29 @@ export function RoomDetailScreen() {
               badge={<AccommodationStatusBadge status={room.status} />}
             />
 
-            <DashboardSectionTitle
-              title={t('accommodation.setup.propertyOverview')}
+            <AccommodationInventoryOverview
+              kind="room"
+              referenceCode={room.referenceCode}
+              status={room.status}
+              inactive={room.active === false}
+              rent={room.defaultRent}
+              deposit={room.defaultDeposit}
+              createdAt={room.createdAt}
+              updatedAt={room.updatedAt}
+              showPricingBasis={false}
             />
-            <Card style={styles.infoCard}>
-              <AccommodationDetailRow
-                label={t('accommodation.fields.name')}
-                value={room.name}
-              />
-              <ReferenceCode value={room.referenceCode} />
-              <AccommodationDetailRow
-                label={t('accommodation.rooms.roomNumberLabel')}
-                value={room.roomNumber}
-              />
-              <AccommodationDetailRow
-                label={t('accommodation.roomType.label')}
-                value={t(`accommodation.roomType.${room.roomType}`)}
-              />
-              <AccommodationDetailRow
-                label={t('accommodation.rooms.capacity')}
-                value={String(room.capacity)}
-              />
-              <AccommodationDetailRow
-                label={t('accommodation.status.label')}
-                value={t(`accommodation.status.${room.status}`)}
-              />
-              <AccommodationDetailRow
-                label={t('accommodation.fields.created')}
-                value={formatAccommodationDate(room.createdAt)}
-              />
-              <AccommodationDetailRow
-                label={t('accommodation.fields.updated')}
-                value={formatAccommodationDate(room.updatedAt)}
-              />
+
+            <Card style={styles.metaCard}>
+              <Text style={styles.metaLabel}>
+                {t('accommodation.roomType.label')}
+              </Text>
+              <Text style={styles.metaValue}>
+                {t(`accommodation.roomType.${room.roomType}`)}
+              </Text>
+              <Text style={[styles.metaLabel, styles.metaLabelSpaced]}>
+                {t('accommodation.rooms.capacity')}
+              </Text>
+              <Text style={styles.metaValue}>{String(room.capacity)}</Text>
             </Card>
 
             {showsOccupant && canViewOccupant ? (
@@ -217,6 +206,10 @@ export function RoomDetailScreen() {
                 loading={occupancyLoading}
                 error={occupancyError}
               />
+            ) : null}
+
+            {showsOccupant && canViewOccupant ? (
+              <AccommodationStayTypeCard occupancy={occupancy} />
             ) : null}
 
             {room &&
@@ -317,7 +310,24 @@ export function RoomDetailScreen() {
 
 const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: spacing.xxxl },
-  infoCard: { borderRadius: 18, marginBottom: spacing.xl },
+  metaCard: {
+    borderRadius: 18,
+    marginBottom: spacing.xl,
+    padding: spacing.md,
+    gap: 4,
+  },
+  metaLabel: {
+    ...typography.caption,
+    color: colors.muted,
+    fontWeight: '600',
+  },
+  metaLabelSpaced: {
+    marginTop: spacing.sm,
+  },
+  metaValue: {
+    ...typography.bodyStrong,
+    color: colors.textPrimary,
+  },
   actionsSection: { marginBottom: spacing.xl },
   gap: { height: spacing.md },
   errorBanner: {

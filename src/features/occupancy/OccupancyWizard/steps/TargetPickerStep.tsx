@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { BedSpaceListItemResponse, SpaceType, UUID } from '../../../../api/types';
 import type { BedInventoryFlowAction } from '../../../../components/dashboard/DashboardBedInventoryBedRow';
 import { BedInventoryBrowser } from '../../../../components/dashboard/BedInventoryBrowser';
+import type { DashboardBedInventoryFilters } from '../../../../components/dashboard/DashboardBedInventoryFilterDrawer';
 import { colors, spacing, typography } from '../../../../theme';
 import type { OccupancyWizardMode } from '../types';
 
@@ -11,6 +12,8 @@ type TargetPickerStepProps = {
   spaceType: SpaceType;
   mode: OccupancyWizardMode;
   spaceContextLine?: string | null;
+  /** Scope filters from the initiating screen (building/floor/unit). */
+  scopeFilters?: DashboardBedInventoryFilters;
   onBedAction: (bed: BedSpaceListItemResponse) => void;
 };
 
@@ -31,6 +34,7 @@ export function TargetPickerStep({
   spaceType,
   mode,
   spaceContextLine,
+  scopeFilters,
   onBedAction,
 }: TargetPickerStepProps) {
   const headerAccessory = spaceContextLine ? (
@@ -52,6 +56,7 @@ export function TargetPickerStep({
         headerAccessory={headerAccessory}
         contentStyle={styles.browser}
         listContentStyle={styles.listContent}
+        initialFilters={scopeFilters}
       />
     </View>
   );

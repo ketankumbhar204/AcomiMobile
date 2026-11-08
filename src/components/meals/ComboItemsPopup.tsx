@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   backdropTap: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   sheet: {
     ...shadows.raised,

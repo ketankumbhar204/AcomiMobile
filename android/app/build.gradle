@@ -18,10 +18,10 @@ react {
     // cliFile = file("../../node_modules/react-native/cli.js")
 
     /* Variants */
-    //   The list of variants to that are debuggable. For those we're going to
-    //   skip the bundling of the JS bundle and the assets. Default is "debug", "debugOptimized".
-    //   If you add flavors like lite, prod, etc. you'll have to list your debuggableVariants.
-    // debuggableVariants = ["liteDebug", "liteDebugOptimized", "prodDebug", "prodDebugOptimized"]
+    // standardDebug keeps Metro for day-to-day development.
+    // walkDebug is intentionally omitted so Gradle embeds the JS bundle at build time
+    // (no Metro) while still pointing at the local walk backend via BuildConfig.
+    debuggableVariants = ["standardDebug"]
 
     /* Bundling */
     //   A list containing the node command and its flags. Default is just 'node'.
@@ -106,18 +106,54 @@ def loadAcomiVersionProperties = {
 }
 def acomiVersion = loadAcomiVersionProperties()
 
+// Local walkthrough API host/port (emulator default). Override for a physical device:
+//   .\gradlew.bat assembleWalkDebug -PacomiLocalApiHost=192.168.1.10 -PacomiLocalApiPort=8080
+def acomiLocalApiHost = (findProperty("acomiLocalApiHost") ?: "10.0.2.2").toString().replace("\"", "")
+def acomiLocalApiPort = (findProperty("acomiLocalApiPort") ?: "8080").toString().replace("\"", "")
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
     namespace "com.acomi"
+    buildFeatures {
+        buildConfig true
+    }
     defaultConfig {
         applicationId "com.acomi"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode acomiVersion.code
         versionName acomiVersion.name
+        // Placeholder required by AndroidManifest usesCleartextTraffic.
+        // Flavors/buildTypes override; release/standard stays false.
+        manifestPlaceholders = [usesCleartextTraffic: "false"]
+        buildConfigField "String", "ACOMI_API_MODE", "\"auto\""
+        buildConfigField "String", "ACOMI_LOCAL_API_HOST", "\"${acomiLocalApiHost}\""
+        buildConfigField "String", "ACOMI_LOCAL_API_PORT", "\"${acomiLocalApiPort}\""
+        buildConfigField "boolean", "ACOMI_ALLOW_CLEARTEXT", "false"
+    }
+    flavorDimensions "apiTarget"
+    productFlavors {
+        // Day-to-day and Play packaging path. Release keeps production API.
+        standard {
+            dimension "apiTarget"
+            buildConfigField "String", "ACOMI_API_MODE", "\"auto\""
+            buildConfigField "boolean", "ACOMI_ALLOW_CLEARTEXT", "false"
+            manifestPlaceholders = [usesCleartextTraffic: "false"]
+        }
+        // Dedicated stay-walkthrough variant: local HTTP API, separate applicationId.
+        // Never used for Play Store uploads.
+        walk {
+            dimension "apiTarget"
+            // Keep applicationId com.acomi so google-services.json / FCM client match.
+            // Uninstall any prior release/debug install before installing walkDebug.
+            versionNameSuffix "-walk"
+            buildConfigField "String", "ACOMI_API_MODE", "\"walk\""
+            buildConfigField "boolean", "ACOMI_ALLOW_CLEARTEXT", "true"
+            manifestPlaceholders = [usesCleartextTraffic: "true"]
+        }
     }
     signingConfigs {
         debug {
@@ -139,6 +175,10 @@ android {
         debug {
             signingConfig signingConfigs.debug
             debuggable true
+            // Local Metro/debug against host:8080 needs cleartext on standardDebug.
+            // walkDebug already forces cleartext via the walk flavor.
+            matchingFallbacks = ['debug']
+            manifestPlaceholders += [usesCleartextTraffic: "true"]
         }
         release {
             // Play / production artifacts must use the release keystore only.
@@ -152,6 +192,9 @@ android {
             minifyEnabled enableProguardInReleaseBuilds
             shrinkResources enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            // standardRelease keeps production HTTPS (no cleartext).
+            // walkRelease (if built) still inherits walk flavor cleartext=true.
+            manifestPlaceholders += [usesCleartextTraffic: "false"]
         }
     }
     // lintVitalAnalyzeRelease OOMs (Metaspace) on this host during AppLinksValidDetector.

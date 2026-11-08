@@ -5,7 +5,10 @@ import { useTranslation } from 'react-i18next';
 import type { OwnerContactResponse } from '../../api/types';
 import { colors, radius, spacing, typography } from '../../theme';
 import { formatMemberContactNumber } from '../../utils/indianMobile';
+import { canOpenContactOptions } from '../../utils/contactActions';
 import { openableMapsUrl } from '../../utils/mapsLink';
+import { ContactNumberLine } from '../member/ContactAndStayMeta';
+import { useOptionalContactOptions } from '../contact/ContactOptionsProvider';
 
 type OwnerContactCardProps = {
   contact: OwnerContactResponse | null | undefined;
@@ -15,12 +18,9 @@ type OwnerContactCardProps = {
   onRetry?: () => void;
 };
 
-function dialable(value: string | null | undefined): string {
-  return (value ?? '').replace(/[^\d+]/g, '');
-}
-
 export function OwnerContactCard({ contact, mapUrl, loading = false, error = false, onRetry }: OwnerContactCardProps) {
   const { t } = useTranslation();
+  const { openContactOptions } = useOptionalContactOptions();
   if (!contact && !loading && !error) return null;
   const phones = [contact?.mobileNumber, contact?.alternateMobileNumber, contact?.additionalMobileNumber]
     .map(value => value?.trim() ?? '')
@@ -69,26 +69,35 @@ export function OwnerContactCard({ contact, mapUrl, loading = false, error = fal
           ) : null}
           {phones.map(phone => {
             const shown = formatMemberContactNumber(phone) ?? phone;
-            const digits = dialable(shown);
+            const actionable = canOpenContactOptions(phone);
             return (
               <View key={phone} style={styles.actions}>
-                <Pressable
-                  accessibilityRole="link"
-                  onPress={() => {
-                    if (digits) void Linking.openURL(`tel:${digits}`);
-                  }}
-                  style={styles.row}>
-                  <Phone size={16} color="#0369A1" />
-                  <Text style={styles.value}>{shown}</Text>
-                </Pressable>
-                {digits.replace(/\D/g, '').length >= 10 ? (
+                {actionable ? (
+                  <ContactNumberLine
+                    value={phone}
+                    label={shown}
+                    name={name || t('spaces.findPlace.enquire.contactOwner', { defaultValue: 'Owner' })}
+                    roleLabel={t('spaces.findPlace.enquire.contactOwner', { defaultValue: 'Owner' })}
+                    textStyle={styles.value}
+                  />
+                ) : (
+                  <View style={styles.row}>
+                    <Phone size={16} color="#0369A1" />
+                    <Text style={styles.value}>{shown}</Text>
+                  </View>
+                )}
+                {actionable ? (
                   <Pressable
-                    accessibilityRole="link"
-                    onPress={() => {
-                      const numeric = digits.replace(/\D/g, '');
-                      const full = numeric.length === 10 ? `91${numeric}` : numeric;
-                      void Linking.openURL(`https://wa.me/${full}`);
-                    }}
+                    accessibilityRole="button"
+                    onPress={() =>
+                      openContactOptions({
+                        phoneNumber: phone,
+                        displayName: name || undefined,
+                        roleLabel: t('spaces.findPlace.enquire.contactOwner', {
+                          defaultValue: 'Owner',
+                        }),
+                      })
+                    }
                     style={styles.whatsapp}>
                     <Text style={styles.whatsappText}>
                       {t('spaces.findPlace.enquire.whatsapp', { defaultValue: 'WhatsApp' })}
@@ -120,16 +129,16 @@ export function OwnerContactCard({ contact, mapUrl, loading = false, error = fal
               onPress={() => void Linking.openURL(mapHref)}
               style={styles.row}>
               <MapPin size={16} color="#0369A1" />
-              <Text style={styles.map}>
-                {t('spaces.findPlace.enquire.openMap', { defaultValue: 'Open in Google Maps' })}
+              <Text style={styles.value}>
+                {t('spaces.findPlace.enquire.openMap', { defaultValue: 'Open in Maps' })}
               </Text>
             </Pressable>
           ) : null}
         </View>
       ) : (
         <Text style={styles.missing}>
-          {t('spaces.findPlace.enquire.contactMissing', {
-            defaultValue: 'Contact details are not available for this listing.',
+          {t('spaces.findPlace.enquire.contactEmpty', {
+            defaultValue: 'No contact details available yet.',
           })}
         </Text>
       )}
@@ -139,38 +148,27 @@ export function OwnerContactCard({ contact, mapUrl, loading = false, error = fal
 
 const styles = StyleSheet.create({
   card: {
-    marginTop: spacing.md,
     borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: '#BAE6FD',
-    backgroundColor: '#F3F8FF',
+    borderColor: colors.border,
+    backgroundColor: colors.white,
     padding: spacing.md,
+    gap: spacing.sm,
   },
   kicker: {
     ...typography.caption,
-    fontWeight: '800',
-    letterSpacing: 0.6,
+    color: colors.muted,
+    fontWeight: '700',
     textTransform: 'uppercase',
-    color: '#075985',
+    letterSpacing: 0.4,
   },
   list: {
-    marginTop: spacing.sm,
     gap: spacing.sm,
-  },
-  caption: {
-    ...typography.caption,
-    color: colors.textSecondary,
-  },
-  value: {
-    ...typography.body,
-    fontWeight: '700',
-    color: colors.textPrimary,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    flexShrink: 1,
   },
   actions: {
     flexDirection: 'row',
@@ -182,43 +180,43 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
+  caption: {
+    ...typography.caption,
+    color: colors.muted,
+  },
+  value: {
+    ...typography.bodyStrong,
+    color: '#0369A1',
+  },
   whatsapp: {
-    borderRadius: radius.full,
-    backgroundColor: '#DCFCE7',
     paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.button,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: `${colors.primary}55`,
   },
   whatsappText: {
     ...typography.caption,
-    fontWeight: '700',
-    color: '#166534',
-  },
-  map: {
-    ...typography.body,
-    fontWeight: '700',
     color: colors.primaryDark,
-    textDecorationLine: 'underline',
-  },
-  missing: {
-    ...typography.body,
-    marginTop: spacing.sm,
-    color: colors.textSecondary,
+    fontWeight: '700',
   },
   statusRow: {
-    marginTop: spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
   },
   status: {
     ...typography.body,
-    color: '#075985',
+    color: colors.textSecondary,
+  },
+  missing: {
+    ...typography.body,
+    color: colors.textSecondary,
   },
   retry: {
-    ...typography.body,
+    ...typography.bodyStrong,
+    color: '#0369A1',
     marginTop: spacing.xs,
-    fontWeight: '700',
-    color: colors.primaryDark,
-    textDecorationLine: 'underline',
   },
 });

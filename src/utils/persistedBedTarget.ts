@@ -15,6 +15,7 @@ export function persistedTargetFromSpaceBed(
     roomId: bed.roomId,
     bedId: bed.bedId,
     label: bed.label,
+    name: bed.label,
     bedNumber: bed.label,
     status: bed.status,
     rent: bed.defaultRent,
@@ -39,6 +40,8 @@ export function persistedTargetFromRoomBed(input: {
   bedId: string;
   roomId: string;
   label: string;
+  name?: string;
+  bedNumber?: string;
   status: AccommodationStatus;
   rent?: number | null;
   deposit?: number | null;
@@ -51,11 +54,14 @@ export function persistedTargetFromRoomBed(input: {
   parentName?: string;
   parentType?: 'floor' | 'unit';
 }): PersistedBedTarget {
+  const name = (input.name ?? input.label).trim() || input.label;
+  const bedNumber = (input.bedNumber ?? input.label).trim() || input.label;
   return {
     roomId: input.roomId,
     bedId: input.bedId,
-    label: input.label,
-    bedNumber: input.label,
+    label: name,
+    name,
+    bedNumber,
     status: input.status,
     rent: input.rent,
     deposit: input.deposit,
@@ -76,7 +82,7 @@ export function persistedTargetFromRoomBed(input: {
       roomId: input.roomId,
       roomName: input.roomName,
       bedId: input.bedId,
-      bedName: input.label,
+      bedName: name,
     }),
   };
 }

@@ -38,6 +38,8 @@ function asMoney(value: number | null | undefined): number | null {
   return Number(value);
 }
 
+const NON_DUE_STATUSES = new Set(['PAID', 'REFUNDED', 'CANCELLED']);
+
 /** A charge belongs on the card that includes its amount. */
 export function matchesPersonalSummaryFilter(
   payment: SpacePaymentResponse,
@@ -45,15 +47,18 @@ export function matchesPersonalSummaryFilter(
 ): boolean {
   switch (filter) {
     case 'due':
-      return payment.paymentStatus !== 'PAID';
+      return !NON_DUE_STATUSES.has(payment.paymentStatus);
     case 'paid': {
-      if (payment.paymentStatus === 'PAID') {
+      if (payment.paymentStatus === 'PAID' || payment.paymentStatus === 'REFUNDED') {
         return true;
       }
       const paid = asMoney(payment.paidAmount);
       return paid != null && paid > 0;
     }
     case 'outstanding': {
+      if (payment.paymentStatus === 'CANCELLED' || payment.paymentStatus === 'REFUNDED') {
+        return false;
+      }
       const outstanding = asMoney(payment.outstandingAmount);
       if (outstanding != null) {
         return outstanding > 0;
@@ -96,13 +101,17 @@ export function summarizePersonalPayments(
     const amount = asMoney(payment.amount);
     if (amount != null) {
       sawDue = true;
-      if (payment.paymentStatus !== 'PAID') {
+      if (!NON_DUE_STATUSES.has(payment.paymentStatus)) {
         totalDue += amount;
       }
     }
 
     const recordedPaid = asMoney(payment.paidAmount);
-    if (recordedPaid != null) {
+    const netCollected = asMoney(payment.netCollectedAmount);
+    if (netCollected != null && (payment.paymentStatus === 'PAID' || payment.paymentStatus === 'REFUNDED')) {
+      amountPaid += netCollected;
+      sawPaid = true;
+    } else if (recordedPaid != null) {
       amountPaid += recordedPaid;
       sawPaid = true;
     } else if (payment.paymentStatus === 'PAID' && amount != null) {
@@ -111,7 +120,9 @@ export function summarizePersonalPayments(
     }
 
     const recordedOutstanding = asMoney(payment.outstandingAmount);
-    if (recordedOutstanding != null) {
+    if (payment.paymentStatus === 'CANCELLED' || payment.paymentStatus === 'REFUNDED') {
+      sawOutstanding = true;
+    } else if (recordedOutstanding != null) {
       outstanding += recordedOutstanding;
       sawOutstanding = true;
     } else if (payment.paymentStatus === 'PAID') {

@@ -16,6 +16,7 @@ import {
   buildPaymentDetailPresentation,
   type PaymentDetailMoneyTone,
 } from '../../utils/paymentDetailPresentation';
+import { ContactNumberLine } from '../member/ContactAndStayMeta';
 import { PaymentStatusBadge } from './PaymentStatusBadge';
 
 type PaymentDetailSummaryProps = {
@@ -77,7 +78,13 @@ export function PaymentDetailSummary({
           </View>
           <View style={styles.identityText}>
             {model.tenantName ? <Text style={styles.name}>{model.tenantName}</Text> : null}
-            {model.tenantMobile ? <Text style={styles.meta}>{model.tenantMobile}</Text> : null}
+            {model.tenantMobile || payment.memberMobile ? (
+              <ContactNumberLine
+                value={payment.memberMobile || model.tenantMobile}
+                name={model.tenantName || memberName}
+                textStyle={styles.meta}
+              />
+            ) : null}
             {tenantPlace ? <Text style={styles.meta}>{tenantPlace}</Text> : null}
           </View>
         </View>
@@ -89,7 +96,21 @@ export function PaymentDetailSummary({
             <ObligationIcon size={18} color={colors.teal} strokeWidth={2.2} />
           </View>
           <Text style={styles.title}>{model.title}</Text>
-          <PaymentStatusBadge status={model.status} />
+          <View style={styles.statusStack}>
+            <PaymentStatusBadge
+              status={model.status}
+              label={
+                model.status === 'PARTIAL'
+                  ? t('payments.status.partiallyRefunded', {
+                      defaultValue: 'Partially refunded',
+                    })
+                  : model.status === 'REFUNDED'
+                    ? t('payments.status.refunded', { defaultValue: 'Refunded' })
+                    : undefined
+              }
+              showNeutral={model.status === 'CANCELLED' || model.status === 'REFUNDED'}
+            />
+          </View>
         </View>
 
         {model.amountLabel ? <Text style={styles.amount}>{model.amountLabel}</Text> : null}
@@ -231,6 +252,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+  },
+  statusStack: {
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    gap: spacing.xs,
+    flexShrink: 0,
+    maxWidth: '46%',
   },
   iconBox: {
     width: 36,

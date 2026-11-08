@@ -21,7 +21,7 @@ import { mealBillingApi } from '../api/mealBillingApi';
 import type { MemberMealBalance } from '../api/types';
 import { MemberSubscriptionSetupFields } from '../components/member/MemberSubscriptionSetupFields';
 import { StickyFormActions } from '../components/progressive';
-import { HeaderBackButton, SkeletonCard } from '../components/ui';
+import { CompactPageBanner, HeaderBackButton, SkeletonCard } from '../components/ui';
 import type { MainStackParamList } from '../navigation/types';
 import { useToastStore } from '../store/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../theme';
@@ -73,12 +73,6 @@ export function MemberSubscriptionScreen() {
     : isRenew
       ? 'meals.subscription.renewSubtitle'
       : 'meals.subscription.updateSubtitle';
-  const eyebrowKey = isCreate
-    ? 'meals.subscription.createAction'
-    : isRenew
-      ? 'meals.subscription.renewAction'
-      : 'meals.subscription.updateAction';
-
   useLayoutEffect(() => {
     navigation.setOptions({
       title: t(titleKey),
@@ -220,16 +214,11 @@ export function MemberSubscriptionScreen() {
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}>
-            <View style={styles.hero}>
-              <View style={styles.decorBlob} pointerEvents="none" />
-              <View style={styles.decorRing} pointerEvents="none" />
-              <View style={styles.heroIconWrap} accessibilityElementsHidden>
-                <Crown size={18} color={colors.primaryDark} strokeWidth={2.2} />
-              </View>
-              <Text style={styles.eyebrow}>{t(eyebrowKey)}</Text>
-              <Text style={styles.heading}>{t(titleKey)}</Text>
-              <Text style={styles.subheading}>{t(subtitleKey)}</Text>
-            </View>
+            <CompactPageBanner
+              icon={Crown}
+              title={t(titleKey)}
+              subtitle={t(subtitleKey)}
+            />
 
             {loading ? (
               <>
@@ -387,69 +376,6 @@ const styles = StyleSheet.create({
   },
   gap: {
     height: spacing.sm,
-  },
-  hero: {
-    marginBottom: spacing.sm,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.section,
-    backgroundColor: colors.successTint,
-    borderWidth: 1,
-    borderColor: `${colors.primary}33`,
-    overflow: 'hidden',
-    position: 'relative',
-    ...shadows.sm,
-  },
-  decorBlob: {
-    position: 'absolute',
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: `${colors.primary}1F`,
-    top: -48,
-    right: -28,
-  },
-  decorRing: {
-    position: 'absolute',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 8,
-    borderColor: `${colors.primary}14`,
-    bottom: -16,
-    right: 40,
-  },
-  heroIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.sm,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: `${colors.primary}33`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
-    zIndex: 1,
-  },
-  eyebrow: {
-    ...typography.eyebrow,
-    marginBottom: 2,
-    zIndex: 1,
-  },
-  heading: {
-    ...typography.h2,
-    fontSize: 22,
-    lineHeight: 28,
-    fontWeight: '600',
-    color: colors.primaryDark,
-    marginBottom: 2,
-    zIndex: 1,
-  },
-  subheading: {
-    ...typography.caption,
-    fontSize: 12,
-    color: colors.muted,
-    zIndex: 1,
   },
   currentCard: {
     backgroundColor: colors.white,

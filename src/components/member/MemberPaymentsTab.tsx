@@ -24,9 +24,11 @@ import { useOwnerPaymentCardActions } from '../../hooks/useOwnerPaymentCardActio
 import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
 import { useUniversalPayments } from '../../hooks/useUniversalPayments';
+import { useMemberOccupancies } from '../../hooks/useMemberOccupancies';
 import type { MainStackParamList } from '../../navigation/types';
 import { colors, spacing, typography } from '../../theme';
 import { canManagePayments, currentMonthKey } from '../../utils/dashboardFinancial';
+import { isOpenEndedDailyRate } from '../../utils/occupancyContract';
 import { paymentAfterReview } from '../../utils/paymentReviewRows';
 import { publishPaymentUpdated } from '../../utils/paymentUpdates';
 import { isAwaitingOwnerReview, isPaymentProofEditable } from '../../utils/paymentStatus';
@@ -45,11 +47,13 @@ function MemberDuesSummary({
   ledger,
   ledgerState,
   payments,
+  openEndedUnbilled,
   labelFor,
 }: {
   ledger: MemberDuesSnapshot | null;
   ledgerState: 'loading' | 'ready' | 'error';
   payments: SpacePaymentResponse[];
+  openEndedUnbilled: boolean;
   labelFor: (key: string, options?: Record<string, unknown>) => string;
 }) {
   if (ledgerState === 'loading') {
@@ -64,7 +68,7 @@ function MemberDuesSummary({
       </Text>
     );
   }
-  const cue = memberDuesCue(ledger);
+  const cue = memberDuesCue(ledger, { openEndedUnbilled });
   if (!cue) {
     return null;
   }
@@ -75,6 +79,8 @@ function MemberDuesSummary({
     }
     if (
       payment.paymentStatus === 'PAID' ||
+      payment.paymentStatus === 'REFUNDED' ||
+      payment.paymentStatus === 'CANCELLED' ||
       payment.paymentStatus === 'UNDER_REVIEW' ||
       payment.paymentStatus === 'PROOF_UPLOADED'
     ) {
@@ -87,6 +93,8 @@ function MemberDuesSummary({
       payment =>
         !isAwaitingOwnerReview(payment.paymentStatus) &&
         payment.paymentStatus !== 'PAID' &&
+        payment.paymentStatus !== 'REFUNDED' &&
+        payment.paymentStatus !== 'CANCELLED' &&
         (payment.outstandingAmount ?? 0) > 0 &&
         Boolean(payment.dueDate),
     )
@@ -103,7 +111,11 @@ function MemberDuesSummary({
             amount: formatDuesAmount(cue.amount, currency),
             defaultValue: 'Under review: {{amount}}',
           })
-        : labelFor('membership.dues.clear', { defaultValue: 'No pending dues' });
+        : cue.kind === 'notBilled'
+          ? labelFor('membership.dues.notYetBilled', {
+              defaultValue: 'Not yet billed (rent is billed after the period closes)',
+            })
+          : labelFor('membership.dues.clear', { defaultValue: 'No pending dues' });
 
   return (
     <View style={styles.duesBox}>
@@ -113,7 +125,9 @@ function MemberDuesSummary({
             ? styles.duesDue
             : cue.kind === 'clear'
               ? styles.duesClear
-              : styles.duesReview
+              : cue.kind === 'notBilled'
+                ? styles.duesMuted
+                : styles.duesReview
         }>
         {text}
       </Text>
@@ -270,6 +284,12 @@ export function MemberPaymentsTab({ spaceId, member }: MemberPaymentsTabProps) {
     };
   }, [canManage, member.fullName, member.memberId, month, spaceId]);
 
+  // OPEN_ENDED daily rent has no payable RENT row until the period closes (or on vacate).
+  const { data: occupancyData } = useMemberOccupancies(spaceId, member.memberId);
+  const openEndedUnbilled =
+    isOpenEndedDailyRate(occupancyData?.currentOccupancy) &&
+    !payments.some(payment => payment.paymentType === 'RENT');
+
   const reloadRef = useRef(reload);
   reloadRef.current = reload;
   const openPayment = detailsPayment
@@ -315,6 +335,7 @@ export function MemberPaymentsTab({ spaceId, member }: MemberPaymentsTabProps) {
           ledger={ledger}
           ledgerState={ledgerState}
           payments={payments}
+          openEndedUnbilled={openEndedUnbilled && !loading}
           labelFor={(key, options) => t(key, options)}
         />
       ) : null}
@@ -327,10 +348,20 @@ export function MemberPaymentsTab({ spaceId, member }: MemberPaymentsTabProps) {
         />
       ) : null}
       {!loading && !error && !serviceUnavailable && payments.length === 0 ? (
-        <EmptyState
-          title={t('paymentCollection.addRecord.historyEmptyTitle')}
-          description={t('paymentCollection.addRecord.historyEmptyDescription')}
-        />
+        openEndedUnbilled ? (
+          <EmptyState
+            title={t('paymentCollection.notYetBilled.title', { defaultValue: 'Not yet billed' })}
+            description={t('paymentCollection.notYetBilled.description', {
+              defaultValue:
+                'Rent for this open-ended stay is billed after the billing period closes or on move-out.',
+            })}
+          />
+        ) : (
+          <EmptyState
+            title={t('paymentCollection.addRecord.historyEmptyTitle')}
+            description={t('paymentCollection.addRecord.historyEmptyDescription')}
+          />
+        )
       ) : null}
       {!loading && !serviceUnavailable
         ? payments.map(payment => (

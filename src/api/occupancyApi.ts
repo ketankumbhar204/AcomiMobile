@@ -9,10 +9,13 @@ import type {
   OccupancyListFilters,
   OccupancyResponse,
   PagedResponse,
+  ReservationCancellationPreviewResponse,
   ReserveOccupancyRequest,
   TransferOccupancyRequest,
   UUID,
   VacateOccupancyRequest,
+  ExtendOccupancyRequest,
+  ExtendOccupancyResponse,
 } from './types';
 import { devLog } from '../utils/devLog';
 
@@ -98,6 +101,20 @@ export const occupancyApi = {
     );
   },
 
+  previewReservationCancellation: async (
+    spaceId: UUID,
+    occupancyId: UUID,
+  ): Promise<ReservationCancellationPreviewResponse> => {
+    devLog(
+      `${LOG_TAG} GET /spaces/${spaceId}/occupancies/${occupancyId}/cancellation-settlement`,
+    );
+    return unwrapApiResponse(
+      apiClient.get<ApiResponse<ReservationCancellationPreviewResponse>>(
+        `/spaces/${spaceId}/occupancies/${occupancyId}/cancellation-settlement`,
+      ),
+    );
+  },
+
   cancelReservation: async (
     spaceId: UUID,
     occupancyId: UUID,
@@ -139,6 +156,20 @@ export const occupancyApi = {
       apiClient.post<ApiResponse<OccupancyResponse>>(
         `/spaces/${spaceId}/occupancies/${occupancyId}/vacate`,
         body ?? {},
+      ),
+    );
+  },
+
+  extendOccupancy: async (
+    spaceId: UUID,
+    occupancyId: UUID,
+    body: ExtendOccupancyRequest,
+  ): Promise<ExtendOccupancyResponse> => {
+    devLog(`${LOG_TAG} POST /spaces/${spaceId}/occupancies/${occupancyId}/extend`, body);
+    return unwrapApiResponse(
+      apiClient.post<ApiResponse<ExtendOccupancyResponse>>(
+        `/spaces/${spaceId}/occupancies/${occupancyId}/extend`,
+        body,
       ),
     );
   },

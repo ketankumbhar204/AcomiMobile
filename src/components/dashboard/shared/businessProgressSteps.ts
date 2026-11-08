@@ -1,4 +1,5 @@
-import type { MilestoneId, MilestoneStatus, SpaceType } from '../../spaceLifecycle';
+import type { SpaceType } from '../../../api/types';
+import type { MilestoneId, MilestoneStatus } from '../../../spaceLifecycle';
 import type { BusinessProgressStep } from './BusinessProgressStepper';
 
 /** Map lifecycle milestone statuses to stepper steps. */

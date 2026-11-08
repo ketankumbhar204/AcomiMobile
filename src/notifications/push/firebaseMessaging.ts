@@ -26,7 +26,7 @@ export function getMessagingSafe(): MessagingLike | null {
     const messagingModule = require('@react-native-firebase/messaging');
     const factory = messagingModule.default ?? messagingModule;
     cached = (typeof factory === 'function' ? factory() : factory) ?? null;
-    return cached;
+    return cached ?? null;
   } catch (error) {
     console.warn('[Push] Firebase Messaging unavailable', error);
     cached = null;

@@ -1,15 +1,17 @@
 import React from 'react';
 import { Pressable, StyleSheet } from 'react-native';
-import {
-  NavigationProp,
-  ParamListBase,
-  useNavigation,
-} from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { colors, spacing } from '../../theme';
 import { ChevronLeftIcon } from './icons/ChevronLeftIcon';
 
-function canNavigateBack(navigation: NavigationProp<ParamListBase>): boolean {
+type AncestorNavigation = {
+  canGoBack(): boolean;
+  goBack(): void;
+  getParent(): AncestorNavigation | undefined;
+};
+
+function canNavigateBack(navigation: AncestorNavigation): boolean {
   if (navigation.canGoBack()) {
     return true;
   }
@@ -25,7 +27,7 @@ function canNavigateBack(navigation: NavigationProp<ParamListBase>): boolean {
   return false;
 }
 
-function goBack(navigation: NavigationProp<ParamListBase>) {
+function goBack(navigation: AncestorNavigation) {
   if (navigation.canGoBack()) {
     navigation.goBack();
     return;

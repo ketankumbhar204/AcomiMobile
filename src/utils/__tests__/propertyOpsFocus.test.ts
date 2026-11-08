@@ -9,13 +9,15 @@ describe('propertyOpsFocus', () => {
     expect(propertyOpsFocusFromInventory('AVAILABLE')).toBe('vacant');
     expect(propertyOpsFocusFromInventory('OCCUPIED')).toBe('occupied');
     expect(propertyOpsFocusFromInventory('OCCUPIED', 'moveIns')).toBe('moveIns');
-    expect(propertyOpsFocusFromInventory('RESERVED')).toBeNull();
+    expect(propertyOpsFocusFromInventory('RESERVED')).toBe('reserved');
+    expect(propertyOpsFocusFromInventory('AVAILABLE', 'reserved')).toBe('reserved');
   });
 
   it('loads occupied beds for move-ins and vacant beds for the vacant card', () => {
     expect(bedStatusForPropertyOpsFocus('vacant')).toBe('AVAILABLE');
     expect(bedStatusForPropertyOpsFocus('occupied')).toBe('OCCUPIED');
     expect(bedStatusForPropertyOpsFocus('moveIns')).toBe('OCCUPIED');
+    expect(bedStatusForPropertyOpsFocus('reserved')).toBe('RESERVED');
   });
 
   it('keeps only beds that moved in this month', () => {

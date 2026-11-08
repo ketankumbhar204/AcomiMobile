@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { FileText } from 'lucide-react-native';
 import type { OccupancyResponse, TransferRentPolicy, AmenityAssignment } from '../../../../api/types';
 import { ContractTermsForm } from '../../../../components/occupancy/ContractTermsForm';
 import { OccupancyAmenitiesSection } from '../../../../components/occupancy/OccupancyAmenitiesSection';
@@ -20,11 +21,12 @@ import {
   type ContractTermsFormValues,
 } from '../../../../utils/occupancyContract';
 import { isMoveInDateInFuture } from '../../../../utils/occupancyRules';
+import type { StayChoice } from '../../../../utils/shortStay';
 import { colors, radius, spacing, typography } from '../../../../theme';
 
 type ContractTermsStepProps = {
   spaceId: string;
-  mode: 'ALLOCATE' | 'TRANSFER' | 'MOVE_IN';
+  mode: 'ALLOCATE' | 'RESERVE' | 'TRANSFER' | 'MOVE_IN';
   values: ContractTermsFormValues;
   onChange: (values: ContractTermsFormValues) => void;
   rentError?: string | null;
@@ -45,6 +47,14 @@ type ContractTermsStepProps = {
   /** Progressive Guided Workflow — deposit/charges/amenities scroll target (ScrollView content Y). */
   onAddonsLayout?: (y: number, height: number) => void;
   addonsHighlighted?: boolean;
+  /** @deprecated Prefer stayKind === 'SHORT'. */
+  hideMonthlyRent?: boolean;
+  /** @deprecated Prefer stayKind === 'OPEN_ENDED'. */
+  dailyRentMode?: boolean;
+  stayKind?: StayChoice;
+  shortStayNights?: number | null;
+  /** Hide food toggle when meals are not applicable (e.g. Rental). */
+  showFoodToggle?: boolean;
 };
 
 export function ContractTermsStep({
@@ -68,6 +78,11 @@ export function ContractTermsStep({
   onAssignedAmenitiesChange,
   onAddonsLayout,
   addonsHighlighted = false,
+  hideMonthlyRent = false,
+  dailyRentMode = false,
+  stayKind,
+  shortStayNights = null,
+  showFoodToggle = true,
 }: ContractTermsStepProps) {
   const { t } = useTranslation();
   const needsEarlyMoveIn = mode === 'MOVE_IN' && isMoveInDateInFuture(moveInDate);
@@ -78,6 +93,10 @@ export function ContractTermsStep({
   const [loading, setLoading] = useState(true);
   const stepOffsetRef = useRef(0);
   const formOffsetRef = useRef(0);
+
+  const resolvedStayKind: StayChoice =
+    stayKind ??
+    (hideMonthlyRent ? 'SHORT' : dailyRentMode ? 'OPEN_ENDED' : 'MONTHLY');
 
   const effectiveFoodPolicy = resolveContractFoodPolicy(
     foodPolicy,
@@ -100,6 +119,19 @@ export function ContractTermsStep({
       />
     ) : null;
 
+  const stepSubtitle =
+    resolvedStayKind === 'SHORT'
+      ? t('occupancy.contract.stepHintDaily', {
+          defaultValue: 'Set daily rent, deposit and applicable charges for this stay.',
+        })
+      : resolvedStayKind === 'OPEN_ENDED'
+        ? t('occupancy.contract.stepHintOpenEnded', {
+            defaultValue: 'Set daily rent, deposit and applicable charges until vacate.',
+          })
+        : t('occupancy.contract.stepHintMonthly', {
+            defaultValue: 'Set rent, deposit and applicable charges for this stay.',
+          });
+
   useEffect(() => {
     setLoading(true);
     void fetchSpaceFoodPolicy(spaceId)
@@ -118,7 +150,15 @@ export function ContractTermsStep({
       onLayout={event => {
         stepOffsetRef.current = event.nativeEvent.layout.y;
       }}>
-      <Text style={styles.title}>{t('occupancyWizard.steps.contract')}</Text>
+      <View style={styles.pageHeader}>
+        <View style={styles.pageIcon}>
+          <FileText size={18} color={colors.primaryDark} strokeWidth={2.2} />
+        </View>
+        <View style={styles.pageHeaderText}>
+          <Text style={styles.title}>{t('occupancyWizard.steps.contract')}</Text>
+          <Text style={styles.subtitle}>{stepSubtitle}</Text>
+        </View>
+      </View>
 
       {mode === 'MOVE_IN' && needsEarlyMoveIn && onAllowEarlyMoveInChange ? (
         <View style={styles.switchRow}>
@@ -190,9 +230,17 @@ export function ContractTermsStep({
           values={values}
           onChange={onChange}
           showRentDeposit={showRentDeposit}
+          stayKind={resolvedStayKind}
+          shortStayNights={shortStayNights}
+          dailyRentMode={resolvedStayKind === 'OPEN_ENDED'}
+          hideMonthlyRent={false}
+          showFoodToggle={showFoodToggle}
+          showPricingHeading
+          showBookingAdvance={mode === 'RESERVE'}
           rentError={rentError}
           rentRequired={
             mode === 'ALLOCATE' ||
+            mode === 'RESERVE' ||
             mode === 'MOVE_IN' ||
             rentPolicy === 'CUSTOM' ||
             (mode === 'TRANSFER' && rentPolicy === 'APPLY_NEW')
@@ -207,7 +255,7 @@ export function ContractTermsStep({
               ? currentOccupancy?.depositSnapshot ?? 0
               : undefined
           }
-          catalogRentHint={catalogRent}
+          catalogRentHint={resolvedStayKind === 'MONTHLY' ? catalogRent : null}
           catalogDepositHint={catalogDeposit}
           foodPolicy={effectiveFoodPolicy}
           onAddonsLayout={showRentDeposit ? reportAddonsLayout : undefined}
@@ -233,11 +281,39 @@ export function ContractTermsStep({
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: spacing.xs },
-  title: { ...typography.h3, fontSize: 18, lineHeight: 22, fontWeight: '600', marginBottom: spacing.xs },
+  wrap: { gap: spacing.sm },
+  pageHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  pageIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.sm,
+    backgroundColor: colors.successTint,
+    borderWidth: 1,
+    borderColor: `${colors.primary}33`,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  pageHeaderText: { flex: 1, minWidth: 0, gap: 2 },
+  title: {
+    ...typography.h3,
+    fontSize: 20,
+    lineHeight: 26,
+    fontWeight: '700',
+  },
+  subtitle: {
+    ...typography.caption,
+    color: colors.muted,
+    lineHeight: 17,
+  },
   loader: { marginVertical: spacing.lg },
   policyLabel: { ...typography.bodyStrong, marginBottom: spacing.sm },
-  policyRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.md },
+  policyRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.sm },
   chip: {
     borderWidth: 1,
     borderColor: colors.border,
@@ -255,7 +331,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     gap: spacing.md,
   },
   switchCopy: { flex: 1 },

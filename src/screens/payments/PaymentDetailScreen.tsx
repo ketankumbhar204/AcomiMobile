@@ -23,6 +23,10 @@ import { PaymentProofPreviewModal } from '../../components/payments/PaymentProof
 import { PaymentReceivedConfirmModal } from '../../components/payments/PaymentReceivedConfirmModal';
 import { PaymentReminderComposer } from '../../components/payments/PaymentReminderComposer';
 import { PaymentRequestUpdateModal } from '../../components/payments/PaymentRequestUpdateModal';
+import {
+  PaymentCancelUnpaidModal,
+  PaymentSettlementModal,
+} from '../../components/payments/PaymentSettlementModal';
 import { UniversalPaymentProofModal } from '../../components/payments/UniversalPaymentProofModal';
 import { StickyFormActions } from '../../components/progressive';
 import { Button, EmptyState, HeaderBackButton, Screen, Skeleton, SkeletonCard } from '../../components/ui';
@@ -53,10 +57,13 @@ import {
 } from './paymentDetailLayout';
 import { resolvePaymentMealDetailDates } from '../../utils/paymentMealDayScope';
 import {
+  canCancelUnpaidPayment,
+  canSettleCollectedPayment,
   isAwaitingOwnerReview,
   isOwnerReviewActionable,
   isPaymentActionable,
   isPaymentProofEditable,
+  remainingRefundableAmount,
 } from '../../utils/paymentStatus';
 
 const REJECTION_REASONS: PaymentRejectionReason[] = [
@@ -105,6 +112,10 @@ export function PaymentDetailScreen() {
   const [selectedReason, setSelectedReason] = useState<PaymentRejectionReason | null>(null);
   const [receivedVisible, setReceivedVisible] = useState(false);
   const [markingReceived, setMarkingReceived] = useState(false);
+  const [settleVisible, setSettleVisible] = useState(false);
+  const [settling, setSettling] = useState(false);
+  const [cancelVisible, setCancelVisible] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const hasPaymentRef = React.useRef(false);
   const timelineCountRef = React.useRef(0);
 
@@ -462,6 +473,13 @@ export function PaymentDetailScreen() {
     isOwnerOperator && canOwnerSendPaymentReminder(payment) && !waitingReview;
   const canMarkReceived =
     isOwnerOperator && canOwnerMarkPaymentReceived(payment.paymentStatus) && !waitingReview;
+  const canCancelUnpaid =
+    isOwnerOperator && payment != null && canCancelUnpaidPayment(payment.paymentStatus);
+  const canSettleCollected =
+    isOwnerOperator &&
+    payment != null &&
+    canSettleCollectedPayment(payment.paymentStatus) &&
+    remainingRefundableAmount(payment) > 0;
   const canViewProof = Boolean(payment.proofUrl);
   const remarks = payment.remarks?.trim() || '';
   const ownerNotes =
@@ -473,7 +491,13 @@ export function PaymentDetailScreen() {
       : null;
 
   const hasStickyActions =
-    canOwnerReview || canPay || canEditProof || canSendReminder || canMarkReceived;
+    canOwnerReview ||
+    canPay ||
+    canEditProof ||
+    canSendReminder ||
+    canMarkReceived ||
+    canCancelUnpaid ||
+    canSettleCollected;
 
   return (
     <Screen scrollable={false} contentStyle={styles.screen}>
@@ -582,7 +606,11 @@ export function PaymentDetailScreen() {
         </Pressable>
 
         <Text style={styles.sectionTitle}>{t('paymentCollection.timeline.recent')}</Text>
-        <PaymentHistoryTimeline events={timeline} />
+        <PaymentHistoryTimeline
+          events={timeline}
+          paymentAmount={payment?.amount}
+          currencyCode={payment?.currencyCode}
+        />
       </ScrollView>
 
       {hasStickyActions ? (
@@ -607,6 +635,22 @@ export function PaymentDetailScreen() {
                 disabled={reviewing}
               />
             </View>
+          ) : null}
+          {canCancelUnpaid ? (
+            <Button
+              label={t('payments.settle.cancelUnpaid', { defaultValue: 'Cancel payment' })}
+              variant="secondary"
+              onPress={() => setCancelVisible(true)}
+              disabled={reviewing || markingReceived || settling || cancelling}
+            />
+          ) : null}
+          {canSettleCollected ? (
+            <Button
+              label={t('payments.settle.open', { defaultValue: 'Refund / retain' })}
+              variant="secondary"
+              onPress={() => setSettleVisible(true)}
+              disabled={reviewing || markingReceived || settling || cancelling}
+            />
           ) : null}
           {canMarkReceived ? (
             <Button
@@ -703,6 +747,56 @@ export function PaymentDetailScreen() {
         loading={markingReceived}
         onClose={() => setReceivedVisible(false)}
         onConfirm={() => void handleMarkReceived()}
+      />
+
+      <PaymentSettlementModal
+        visible={settleVisible}
+        payment={payment}
+        loading={settling}
+        onClose={() => setSettleVisible(false)}
+        onSubmit={body => {
+          void (async () => {
+            setSettling(true);
+            try {
+              const updated = await paymentsApi.settlePayment(spaceId, paymentId, body);
+              setPayment(updated);
+              publishPaymentUpdated(updated);
+              setSettleVisible(false);
+              showToast(
+                t('payments.settle.done', { defaultValue: 'Payment settled' }),
+              );
+            } catch {
+              showToast(t('common.errors.generic'));
+            } finally {
+              setSettling(false);
+            }
+          })();
+        }}
+      />
+
+      <PaymentCancelUnpaidModal
+        visible={cancelVisible}
+        payment={payment}
+        loading={cancelling}
+        onClose={() => setCancelVisible(false)}
+        onSubmit={reason => {
+          void (async () => {
+            setCancelling(true);
+            try {
+              const updated = await paymentsApi.cancelPayment(spaceId, paymentId, { reason });
+              setPayment(updated);
+              publishPaymentUpdated(updated);
+              setCancelVisible(false);
+              showToast(
+                t('payments.settle.cancelled', { defaultValue: 'Payment cancelled' }),
+              );
+            } catch {
+              showToast(t('common.errors.generic'));
+            } finally {
+              setCancelling(false);
+            }
+          })();
+        }}
       />
 
       <Modal visible={rejectVisible} transparent animationType="fade">

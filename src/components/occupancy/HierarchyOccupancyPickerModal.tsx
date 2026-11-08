@@ -22,8 +22,7 @@ import type {
   SpaceType,
   UnitListItemResponse,
 } from '../../api/types';
-import { Button } from '../ui';
-import { ProgressiveWorkflowFooter } from '../progressive';
+import { Button, DateField } from '../ui';
 import { AllocationSuccessModal } from './AllocationSuccessModal';
 import { OccupancyWizardStepHeader } from './OccupancyWizardStepHeader';
 import { OccupancyWizardTopBar } from './OccupancyWizardTopBar';
@@ -34,15 +33,21 @@ import {
   type MemberPickerMode,
 } from '../../features/occupancy/OccupancyWizard/steps/MemberPickerStep';
 import { ReserveDatesStep } from '../../features/occupancy/OccupancyWizard/steps/ReserveDatesStep';
+import { ShortStayChoice } from '../../features/occupancy/OccupancyWizard/ShortStayChoice';
 import { ReviewStep } from '../../features/occupancy/OccupancyWizard/steps/ReviewStep';
 import { useOccupancyWizardSubmit } from '../../features/occupancy/OccupancyWizard/useOccupancyWizardSubmit';
 import { navigateToMemberDetailsAfterOccupancyFromRef } from '../../features/occupancy/OccupancyWizard/navigation';
+import { stayTypesAvailableForSpace } from '../../utils/accommodationStaySupport';
+import { mealsApplicableForSpace } from '../../utils/mealAccess';
+import {
+  pricingDefaultsForStayChoice,
+  shortStayNightCount,
+  type StayChoice,
+} from '../../utils/shortStay';
 import {
   useResidentImportSearch,
   type ResidentPickerItem,
 } from '../../hooks/useResidentImportSearch';
-import { useProgressiveSectionReview } from '../../hooks/useProgressiveSectionReview';
-import { resolveProgressivePhase } from '../../utils/progressivePhase';
 import { colors, radius, spacing, typography } from '../../theme';
 import { getAccommodationErrorMessage } from '../../utils/accommodationErrors';
 import { getAccommodationUiProfile } from '../../utils/accommodationProfile';
@@ -54,6 +59,7 @@ import { getMembershipErrorMessage } from '../../utils/membershipErrors';
 import { getOccupancyErrorMessage } from '../../utils/occupancyErrors';
 import {
   emptyContractTermsFormValues,
+  parseContractAmount,
   resolveContractFoodPolicy,
   type ContractTermsFormValues,
 } from '../../utils/occupancyContract';
@@ -61,7 +67,6 @@ import { agentDebugLog } from '../../utils/agentDebugLog';
 import {
   getHierarchySteps,
   getPostHierarchyWizardSteps,
-  getTotalAllocationFlowSteps,
   hierarchyStepTitleKey,
   type HierarchyOccupancyScope,
   type HierarchyStep,
@@ -75,7 +80,10 @@ import {
   type OccupancyBrowseBedItem,
   type OccupancyBrowseRoomGroup,
 } from '../../utils/occupancyBrowse';
-import type { OccupancyTargetSelection } from '../../utils/occupancyRules';
+import {
+  formatTodayIsoDate,
+  type OccupancyTargetSelection,
+} from '../../utils/occupancyRules';
 import {
   hasFieldErrors,
   validateNewMemberFields,
@@ -92,7 +100,27 @@ type HierarchyOccupancyPickerModalProps = {
   onClose: () => void;
 };
 
-type FlowPhase = 'hierarchy' | 'member' | 'contract' | 'reserve_dates' | 'review';
+type FlowPhase =
+  | 'hierarchy'
+  | 'member'
+  | 'stay_type'
+  | 'contract'
+  | 'reserve_dates'
+  | 'review';
+
+function firstPostHierarchyPhase(stayTypesAvailable: boolean): FlowPhase {
+  return stayTypesAvailable ? 'stay_type' : 'member';
+}
+
+/** After stay type: select member. */
+function nextPhaseAfterStayType(): FlowPhase {
+  return 'member';
+}
+
+/** After member: dates/contract (stay type already chosen). */
+function nextPhaseAfterMember(mode: 'ALLOCATE' | 'RESERVE'): FlowPhase {
+  return mode === 'RESERVE' ? 'reserve_dates' : 'contract';
+}
 
 /** Occupancy browse only needs id, name, and layoutMode — not action/delete metadata. */
 function buildingContextFromSummary(summary: BuildingSummaryResponse): BuildingResponse {
@@ -228,11 +256,6 @@ export function HierarchyOccupancyPickerModal({
     () => getHierarchySteps(spaceType, effectiveLayoutMode, scope),
     [effectiveLayoutMode, scope, spaceType],
   );
-  const postSteps = useMemo(() => getPostHierarchyWizardSteps(wizardMode), [wizardMode]);
-  const totalSteps = useMemo(
-    () => getTotalAllocationFlowSteps(steps, wizardMode),
-    [steps, wizardMode],
-  );
 
   const [selectedFloor, setSelectedFloor] = useState<FloorListItemResponse | null>(null);
   const [selectedUnit, setSelectedUnit] = useState<UnitListItemResponse | null>(null);
@@ -256,6 +279,7 @@ export function HierarchyOccupancyPickerModal({
   const [newMemberErrors, setNewMemberErrors] = useState<NewMemberFieldErrors>({});
   const [creatingMember, setCreatingMember] = useState(false);
   const [successPayload, setSuccessPayload] = useState<{
+    operation: 'ALLOCATE' | 'RESERVE';
     memberId: string;
     memberName: string;
     locationLabel: string;
@@ -272,11 +296,49 @@ export function HierarchyOccupancyPickerModal({
   });
   const [spaceAmenities, setSpaceAmenities] = useState<AmenityAssignment[]>([]);
   const [assignedAmenities, setAssignedAmenities] = useState<AmenityAssignment[]>([]);
-  const [moveInDate, setMoveInDate] = useState('');
+  const [moveInDate, setMoveInDate] = useState(() => formatTodayIsoDate());
   const [expectedExitDate, setExpectedExitDate] = useState('');
+  const [stayChoice, setStayChoice] = useState<StayChoice>('MONTHLY');
+  const [agreedTotalText, setAgreedTotalText] = useState('');
+  const handleStayChoiceChange = useCallback(
+    (next: StayChoice) => {
+      setStayChoice(prev => {
+        if (prev === next) {
+          return prev;
+        }
+        const defaults = pricingDefaultsForStayChoice({
+          choice: next,
+          catalogRent,
+          catalogDeposit,
+        });
+        setAgreedTotalText(defaults.agreedTotal);
+        setContractValues(current => ({
+          ...current,
+          rentSnapshot: defaults.rentSnapshot,
+          depositSnapshot: defaults.depositSnapshot,
+        }));
+        if (defaults.clearExpectedExit) {
+          setExpectedExitDate('');
+        }
+        return next;
+      });
+    },
+    [catalogDeposit, catalogRent],
+  );
   const [remarks, setRemarks] = useState('');
   const [agreementSigned, setAgreementSigned] = useState(false);
-  const contractScrollRef = useRef<ScrollView>(null);
+
+  // Stay types are stay-level; available for all accommodation types (ignore space.shortStayEnabled).
+  const stayTypesAvailable = stayTypesAvailableForSpace(spaceType);
+
+  const postSteps = useMemo(() => {
+    const all = getPostHierarchyWizardSteps(wizardMode);
+    return stayTypesAvailable ? all : all.filter(step => step !== 'stay_type');
+  }, [stayTypesAvailable, wizardMode]);
+  const totalSteps = useMemo(
+    () => steps.length + postSteps.length,
+    [postSteps.length, steps.length],
+  );
 
   const currentHierarchyStep = steps[stepIndex] ?? null;
   const profile = getAccommodationUiProfile(spaceType, effectiveLayoutMode ?? 'CORRIDOR_PG');
@@ -354,6 +416,9 @@ export function HierarchyOccupancyPickerModal({
     }
     if (phase === 'member') {
       return t('occupancyWizard.steps.member');
+    }
+    if (phase === 'stay_type') {
+      return t('occupancyWizard.steps.stayType');
     }
     if (phase === 'contract') {
       return t('occupancy.contract.stepTitle');
@@ -437,8 +502,10 @@ export function HierarchyOccupancyPickerModal({
     setCatalogRent(null);
     setCatalogDeposit(null);
     setContractValues(emptyContractTermsFormValues());
-    setMoveInDate('');
+    setMoveInDate(formatTodayIsoDate());
     setExpectedExitDate('');
+    setStayChoice('MONTHLY');
+    setAgreedTotalText('');
     setRemarks('');
     setAgreementSigned(false);
   }, []);
@@ -500,7 +567,7 @@ export function HierarchyOccupancyPickerModal({
       setBedQueueIndex(0);
       setMember(null);
       setSelectedBeds(beds);
-      setPhase('member');
+      setPhase(firstPostHierarchyPhase(true));
       memberAutoSelectSuppressRef.current = false;
       memberAutoSelectKeyRef.current = null;
       void applyTargetDefaults(target).catch(() => {});
@@ -955,17 +1022,22 @@ export function HierarchyOccupancyPickerModal({
         setError(t('occupancyWizard.errors.memberRequired'));
         return;
       }
-      setPhase(
-        wizardMode === 'RESERVE'
-          ? 'reserve_dates'
-          : wizardMode === 'ALLOCATE'
-            ? 'contract'
-            : 'review',
-      );
+      setPhase(nextPhaseAfterMember(wizardMode));
+      return;
+    }
+
+    if (phase === 'stay_type') {
+      setPhase(nextPhaseAfterStayType());
       return;
     }
 
     if (phase === 'contract') {
+      if (stayTypesAvailable && stayChoice === 'SHORT') {
+        if (parseContractAmount(agreedTotalText) == null) {
+          setError(t('occupancy.section.agreedTotal', { defaultValue: 'Agreed total' }));
+          return;
+        }
+      }
       setPhase('review');
       return;
     }
@@ -975,7 +1047,21 @@ export function HierarchyOccupancyPickerModal({
         setError(t('occupancy.errors.moveInDateRequired'));
         return;
       }
-      setPhase('review');
+      if (stayTypesAvailable && stayChoice === 'SHORT' && !expectedExitDate.trim()) {
+        setError(
+          t('occupancy.section.expectedMoveOut', { defaultValue: 'Checkout date is required' }),
+        );
+        return;
+      }
+      if (
+        stayTypesAvailable &&
+        stayChoice === 'SHORT' &&
+        parseContractAmount(agreedTotalText) == null
+      ) {
+        setError(t('occupancy.section.agreedTotal', { defaultValue: 'Agreed total' }));
+        return;
+      }
+      setPhase('contract');
       return;
     }
 
@@ -1006,13 +1092,7 @@ export function HierarchyOccupancyPickerModal({
       }
 
       setMember(resolved);
-      setPhase(
-        wizardMode === 'RESERVE'
-          ? 'reserve_dates'
-          : wizardMode === 'ALLOCATE'
-            ? 'contract'
-            : 'review',
-      );
+      setPhase(nextPhaseAfterMember(wizardMode));
     },
     [spaceId, wizardMode],
   );
@@ -1056,13 +1136,7 @@ export function HierarchyOccupancyPickerModal({
       setMemberPickerMode('search');
       setNewMemberName('');
       setNewMemberMobile('');
-      setPhase(
-        wizardMode === 'RESERVE'
-          ? 'reserve_dates'
-          : wizardMode === 'ALLOCATE'
-            ? 'contract'
-            : 'review',
-      );
+      setPhase(nextPhaseAfterMember(wizardMode));
     } catch (err) {
       setError(getMembershipErrorMessage(err, 'membership.errors.add'));
     } finally {
@@ -1088,6 +1162,9 @@ export function HierarchyOccupancyPickerModal({
         foodPolicy: effectiveFoodPolicy,
         moveInDate,
         expectedExitDate,
+        stayChoice,
+        agreedTotal: parseContractAmount(agreedTotalText),
+        shortStayEnabled: stayTypesAvailable,
         remarks,
         agreementSigned,
         assignedAmenities,
@@ -1099,30 +1176,22 @@ export function HierarchyOccupancyPickerModal({
             setActiveTarget(nextBed.selection);
             setMember(null);
             setMemberQuery('');
-            setMoveInDate('');
+            setMoveInDate(formatTodayIsoDate());
             setExpectedExitDate('');
+            setStayChoice('MONTHLY');
+            setAgreedTotalText('');
             setRemarks('');
             await applyTargetDefaults(nextBed.selection);
-            setPhase('member');
+            setPhase(firstPostHierarchyPhase(stayTypesAvailable));
             return;
           }
-          if (wizardMode === 'ALLOCATE') {
-            const locationParts = [
-              activeTarget.roomName,
-              activeTarget.bedName,
-            ].filter(Boolean);
-            setSuccessPayload({
-              memberId: member.memberId,
-              memberName: member.fullName,
-              locationLabel: locationParts.join(' · ') || activeTarget.unitName || '',
-            });
-            return;
-          }
-          reset();
-          onClose();
-          if (wizardMode === 'RESERVE') {
-            navigateToMemberDetailsAfterOccupancyFromRef(spaceId, member.memberId);
-          }
+          const locationParts = [activeTarget.roomName, activeTarget.bedName].filter(Boolean);
+          setSuccessPayload({
+            operation: wizardMode,
+            memberId: member.memberId,
+            memberName: member.fullName,
+            locationLabel: locationParts.join(' · ') || activeTarget.unitName || '',
+          });
         },
       });
     } catch (err) {
@@ -1130,6 +1199,7 @@ export function HierarchyOccupancyPickerModal({
     }
   }, [
     activeTarget,
+    agreedTotalText,
     agreementSigned,
     applyTargetDefaults,
     assignedAmenities,
@@ -1146,6 +1216,8 @@ export function HierarchyOccupancyPickerModal({
     reset,
     spaceId,
     spaceType,
+    stayChoice,
+    stayTypesAvailable,
     submit,
     t,
     wizardMode,
@@ -1154,18 +1226,11 @@ export function HierarchyOccupancyPickerModal({
   function handleBack() {
     setError(null);
     if (phase === 'review') {
-      setPhase(
-        wizardMode === 'RESERVE'
-          ? 'reserve_dates'
-          : wizardMode === 'ALLOCATE'
-            ? 'contract'
-            : 'member',
-      );
+      setPhase('contract');
       return;
     }
     if (phase === 'contract') {
-      memberAutoSelectSuppressRef.current = true;
-      setPhase('member');
+      setPhase(wizardMode === 'RESERVE' ? 'reserve_dates' : 'member');
       return;
     }
     if (phase === 'reserve_dates') {
@@ -1174,6 +1239,20 @@ export function HierarchyOccupancyPickerModal({
       return;
     }
     if (phase === 'member') {
+      if (stayTypesAvailable) {
+        setPhase('stay_type');
+        return;
+      }
+      if (steps.length === 0) {
+        handleClose();
+        return;
+      }
+      suppressAutoSelectRef.current = true;
+      setPhase('hierarchy');
+      setStepIndex(Math.max(steps.length - 1, 0));
+      return;
+    }
+    if (phase === 'stay_type') {
       if (steps.length === 0) {
         handleClose();
         return;
@@ -1199,6 +1278,7 @@ export function HierarchyOccupancyPickerModal({
   const showContinueButton =
     (phase === 'hierarchy' && bulkMode && currentHierarchyStep === 'bed') ||
     (phase === 'member' && memberPickerMode === 'new') ||
+    phase === 'stay_type' ||
     phase === 'contract' ||
     phase === 'reserve_dates' ||
     phase === 'review';
@@ -1212,32 +1292,6 @@ export function HierarchyOccupancyPickerModal({
         ? t('occupancyWizard.memberMode.addNew')
         : t('common.continue');
 
-  const contractProgressiveEnabled = phase === 'contract';
-
-  const {
-    reviewed: addonsReviewed,
-    highlighted: addonsHighlighted,
-    onSectionLayout: onAddonsLayout,
-    onScroll: onAddonsScroll,
-    onScrollBeginDrag: onAddonsScrollBeginDrag,
-    continueToSection: continueToAddons,
-    clearReviewed: clearAddonsReviewed,
-  } = useProgressiveSectionReview({
-    enabled: contractProgressiveEnabled,
-  });
-
-  useEffect(() => {
-    if (phase === 'contract') {
-      clearAddonsReviewed();
-    }
-  }, [clearAddonsReviewed, phase]);
-
-  const contractFooterPhase = resolveProgressivePhase({
-    enabled: contractProgressiveEnabled,
-    prerequisiteMet: true,
-    sectionReviewed: addonsReviewed,
-  });
-
   const canContinue =
     phase === 'hierarchy'
       ? canContinueHierarchy()
@@ -1245,9 +1299,7 @@ export function HierarchyOccupancyPickerModal({
         ? memberPickerMode === 'new' || Boolean(member)
         : phase === 'reserve_dates'
           ? Boolean(moveInDate.trim())
-          : phase === 'contract' && contractProgressiveEnabled
-            ? addonsReviewed
-            : true;
+          : true;
 
   const bulkProgress =
     bedQueue.length > 1 ? `${bedQueueIndex + 1} / ${bedQueue.length}` : null;
@@ -1385,21 +1437,38 @@ export function HierarchyOccupancyPickerModal({
         ) : null}
 
         {phase === 'contract' ? (
-          <ScrollView
-            ref={contractScrollRef}
-            style={styles.list}
-            contentContainerStyle={styles.listContent}
-            scrollEventThrottle={16}
-            onScrollBeginDrag={onAddonsScrollBeginDrag}
-            onScroll={event => {
-              const { contentOffset, layoutMeasurement } = event.nativeEvent;
-              onAddonsScroll(contentOffset.y, layoutMeasurement.height);
-            }}>
+          <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
+            {wizardMode === 'ALLOCATE' ? (
+              <DateField
+                label={t('occupancy.section.moveInDate', { defaultValue: 'Move-in date' })}
+                value={moveInDate}
+                onChange={setMoveInDate}
+                allowPastDates
+              />
+            ) : null}
+            {stayTypesAvailable && wizardMode === 'ALLOCATE' ? (
+              <ShortStayChoice
+                section="details"
+                choice={stayChoice}
+                agreedTotal={agreedTotalText}
+                expectedExitDate={expectedExitDate}
+                checkInDate={moveInDate}
+                showCheckout={stayChoice === 'SHORT' || stayChoice === 'MONTHLY'}
+                onChoiceChange={handleStayChoiceChange}
+                onAgreedTotalChange={setAgreedTotalText}
+                onExpectedExitDateChange={setExpectedExitDate}
+              />
+            ) : null}
             <ContractTermsStep
               spaceId={spaceId}
-              mode="ALLOCATE"
+              mode={wizardMode === 'RESERVE' ? 'RESERVE' : 'ALLOCATE'}
               values={contractValues}
-              onChange={setContractValues}
+              onChange={next => {
+                setContractValues(next);
+                if (stayChoice === 'SHORT') {
+                  setAgreedTotalText(next.rentSnapshot);
+                }
+              }}
               catalogRent={catalogRent}
               catalogDeposit={catalogDeposit}
               agreementSigned={agreementSigned}
@@ -1407,14 +1476,64 @@ export function HierarchyOccupancyPickerModal({
               spaceAmenities={spaceAmenities}
               assignedAmenities={assignedAmenities}
               onAssignedAmenitiesChange={setAssignedAmenities}
-              onAddonsLayout={onAddonsLayout}
-              addonsHighlighted={addonsHighlighted}
+              moveInDate={moveInDate}
+              stayKind={stayTypesAvailable ? stayChoice : 'MONTHLY'}
+              shortStayNights={
+                stayChoice === 'SHORT' && moveInDate && expectedExitDate
+                  ? shortStayNightCount(moveInDate, expectedExitDate)
+                  : null
+              }
+              showFoodToggle={mealsApplicableForSpace(spaceType)}
+            />
+          </ScrollView>
+        ) : null}
+
+        {phase === 'stay_type' && stayTypesAvailable ? (
+          <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
+            <ShortStayChoice
+              section="type"
+              choice={stayChoice}
+              agreedTotal={agreedTotalText}
+              expectedExitDate={expectedExitDate}
+              checkInDate={moveInDate}
+              showCheckout={false}
+              onChoiceChange={handleStayChoiceChange}
+              onAgreedTotalChange={setAgreedTotalText}
+              onExpectedExitDateChange={setExpectedExitDate}
             />
           </ScrollView>
         ) : null}
 
         {phase === 'reserve_dates' ? (
           <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
+            {stayTypesAvailable ? (
+              <>
+                <ShortStayChoice
+                  section="details"
+                  choice={stayChoice}
+                  agreedTotal={agreedTotalText}
+                  expectedExitDate={expectedExitDate}
+                  checkInDate={moveInDate}
+                  showCheckout={stayChoice === 'SHORT'}
+                  onChoiceChange={handleStayChoiceChange}
+                  onAgreedTotalChange={setAgreedTotalText}
+                  onExpectedExitDateChange={setExpectedExitDate}
+                />
+                {stayChoice === 'SHORT' ? (
+                  <ShortStayChoice
+                    section="contract"
+                    choice={stayChoice}
+                    agreedTotal={agreedTotalText}
+                    expectedExitDate={expectedExitDate}
+                    checkInDate={moveInDate}
+                    showCheckout={false}
+                    onChoiceChange={handleStayChoiceChange}
+                    onAgreedTotalChange={setAgreedTotalText}
+                    onExpectedExitDateChange={setExpectedExitDate}
+                  />
+                ) : null}
+              </>
+            ) : null}
             <ReserveDatesStep
               moveInDate={moveInDate}
               expectedExitDate={expectedExitDate}
@@ -1433,10 +1552,15 @@ export function HierarchyOccupancyPickerModal({
               member={member}
               hierarchyContext={hierarchyContext}
               hideTitle
-              contractValues={wizardMode === 'ALLOCATE' ? contractValues : undefined}
+              contractValues={contractValues}
               foodPolicy={effectiveFoodPolicy}
               moveInDate={moveInDate}
               expectedExitDate={expectedExitDate}
+              agreedTotalPreview={
+                stayTypesAvailable && stayChoice === 'SHORT' ? agreedTotalText : undefined
+              }
+              dailyRentMode={stayTypesAvailable && stayChoice === 'OPEN_ENDED'}
+              stayChoice={stayTypesAvailable ? stayChoice : undefined}
               remarks={remarks}
               onEditAccommodation={
                 steps.length === 0
@@ -1453,63 +1577,29 @@ export function HierarchyOccupancyPickerModal({
         ) : null}
 
         <View style={styles.footer}>
-          {phase === 'contract' && contractProgressiveEnabled ? (
-            <ProgressiveWorkflowFooter
-              phase={contractFooterPhase}
-              stepLabel={t('progressiveWorkflow.stepOf', {
-                current: contractFooterPhase === 'continue' ? 1 : 2,
-                total: 2,
-              })}
-              stepCurrent={contractFooterPhase === 'continue' ? 1 : 2}
-              stepTotal={2}
-              progressLine={
-                contractFooterPhase === 'continue'
-                  ? t('progressiveWorkflow.occupancy.progressRentNext')
-                  : t('progressiveWorkflow.occupancy.progressReady')
-              }
-              continueEyebrow={t('progressiveWorkflow.nextStep')}
-              continueTitle={t('progressiveWorkflow.occupancy.reviewAddonsTitle')}
-              continueHint={t('progressiveWorkflow.occupancy.reviewAddonsHint')}
-              continueLabel={t('progressiveWorkflow.occupancy.continueToAddons')}
-              onContinue={() => continueToAddons(contractScrollRef)}
-              primaryAction={{
-                label: primaryLabel,
-                onPress: handleContinue,
-                disabled: !canContinue || loading || submitting || creatingMember,
-                loading: submitting || creatingMember,
-              }}
-              secondaryAction={{
-                label: t('common.back'),
-                onPress: handleBack,
-                disabled: submitting || creatingMember,
-              }}
-              style={styles.progressiveFooter}
-              minHeight={160}
+          <View style={styles.footerRow}>
+            <Button
+              label={t('common.back')}
+              variant="secondary"
+              onPress={handleBack}
+              disabled={submitting || creatingMember}
+              style={styles.footerBtn}
             />
-          ) : (
-            <View style={styles.footerRow}>
+            {showContinueButton ? (
               <Button
-                label={t('common.back')}
-                variant="secondary"
-                onPress={handleBack}
-                disabled={submitting || creatingMember}
+                label={primaryLabel}
+                onPress={handleContinue}
+                disabled={!canContinue || loading || submitting || creatingMember}
+                loading={submitting || creatingMember}
                 style={styles.footerBtn}
               />
-              {showContinueButton ? (
-                <Button
-                  label={primaryLabel}
-                  onPress={handleContinue}
-                  disabled={!canContinue || loading || submitting || creatingMember}
-                  loading={submitting || creatingMember}
-                  style={styles.footerBtn}
-                />
-              ) : null}
-            </View>
-          )}
+            ) : null}
+          </View>
         </View>
 
         <AllocationSuccessModal
           visible={successPayload != null}
+          operation={successPayload?.operation ?? wizardMode}
           memberName={successPayload?.memberName ?? ''}
           locationLabel={successPayload?.locationLabel ?? ''}
           onViewDetails={() => {

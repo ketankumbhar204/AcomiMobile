@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Phone, UtensilsCrossed } from 'lucide-react-native';
+import { UtensilsCrossed } from 'lucide-react-native';
 import type { MemberDetailsResponse, SpaceType } from '../../api/types';
 import { setMemberMealAccess } from '../../api/mealsApi';
 import {
@@ -10,6 +10,7 @@ import {
 } from '../dashboard/shared/DashboardPersonCard';
 import { useToastStore } from '../../store/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { useConfirmDialog } from '../ui';
 import { ReferenceCode } from '../ui/ReferenceCode';
 import { isReceivingMeals } from '../../utils/mealAccess';
 import { memberAcomiBadgeLabel } from '../../utils/memberAppStatus';
@@ -17,8 +18,8 @@ import {
   contextualMembershipRole,
   type DisplayMembershipRole,
 } from '../../utils/memberRoles';
-import { formatMemberContactNumber } from '../../utils/indianMobile';
 import { getMemberStatusColor, getMemberStatusLabelKey } from '../../utils/memberStatus';
+import { ContactNumberLine } from './ContactAndStayMeta';
 
 type MemberCompactHeaderProps = {
   member: MemberDetailsResponse;
@@ -55,6 +56,7 @@ export function MemberCompactHeader({
 }: MemberCompactHeaderProps) {
   const { t } = useTranslation();
   const showToast = useToastStore(state => state.showToast);
+  const { showConfirm } = useConfirmDialog();
   const [toggling, setToggling] = useState(false);
 
   const receiving = isReceivingMeals(member.mealParticipation);
@@ -65,8 +67,11 @@ export function MemberCompactHeader({
   const acomiLabel = memberAcomiBadgeLabel(member, t);
   const initial = member.fullName?.trim()?.charAt(0)?.toUpperCase();
 
-  const onToggleMeals = useCallback(
+  const persistMealToggle = useCallback(
     async (enabled: boolean) => {
+      if (toggling) {
+        return;
+      }
       setToggling(true);
       try {
         await setMemberMealAccess(spaceId, member.memberId, enabled, member.mealParticipation);
@@ -78,7 +83,52 @@ export function MemberCompactHeader({
         setToggling(false);
       }
     },
-    [member.mealParticipation, member.memberId, onRefreshMember, showToast, spaceId, t],
+    [
+      member.mealParticipation,
+      member.memberId,
+      onRefreshMember,
+      showToast,
+      spaceId,
+      t,
+      toggling,
+    ],
+  );
+
+  const requestMealToggle = useCallback(
+    (enabled: boolean) => {
+      if (toggling) {
+        return;
+      }
+      showConfirm({
+        title: enabled
+          ? t('meals.foodIncluded.confirmEnableTitle', {
+              defaultValue: 'Enable Food Included?',
+            })
+          : t('meals.foodIncluded.confirmDisableTitle', {
+              defaultValue: 'Disable Food Included?',
+            }),
+        message: enabled
+          ? t('meals.foodIncluded.confirmEnableMessage', {
+              defaultValue:
+                "Are you sure you want to include food for this tenant? This will update the tenant's food inclusion setting.",
+            })
+          : t('meals.foodIncluded.confirmDisableMessage', {
+              defaultValue:
+                "Are you sure you want to exclude food for this tenant? This will update the tenant's food inclusion setting.",
+            }),
+        confirmLabel: enabled
+          ? t('meals.foodIncluded.confirmEnableAction', {
+              defaultValue: 'Confirm & Enable',
+            })
+          : t('meals.foodIncluded.confirmDisableAction', {
+              defaultValue: 'Confirm & Disable',
+            }),
+        cancelLabel: t('common.cancel'),
+        destructive: !enabled,
+        onConfirm: () => persistMealToggle(enabled),
+      });
+    },
+    [persistMealToggle, showConfirm, t, toggling],
   );
 
   const mealAccessLabel =
@@ -119,10 +169,11 @@ export function MemberCompactHeader({
 
       <View style={styles.factRow}>
         <View style={styles.fact}>
-          <Phone size={13} color={colors.muted} strokeWidth={2.2} />
-          <Text style={styles.factText} numberOfLines={1}>
-            {formatMemberContactNumber(member.mobileNumber) ?? member.mobileNumber}
-          </Text>
+          <ContactNumberLine
+            value={member.mobileNumber}
+            name={member.fullName}
+            textStyle={styles.factText}
+          />
         </View>
         <View style={styles.factDivider} />
         <Text style={styles.factText} numberOfLines={1}>
@@ -141,7 +192,7 @@ export function MemberCompactHeader({
             ) : (
               <Pressable
                 style={styles.mealToggle}
-                onPress={() => onToggleMeals(!receiving).catch(() => undefined)}
+                onPress={() => requestMealToggle(!receiving)}
                 hitSlop={8}
                 accessibilityRole="switch"
                 accessibilityState={{ checked: receiving }}>
@@ -150,7 +201,7 @@ export function MemberCompactHeader({
                 </Text>
                 <Switch
                   value={receiving}
-                  onValueChange={value => onToggleMeals(value).catch(() => undefined)}
+                  onValueChange={value => requestMealToggle(value)}
                   trackColor={{ false: colors.border, true: colors.lightGreen }}
                   thumbColor={receiving ? colors.primary : colors.muted}
                   style={styles.switch}

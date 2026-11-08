@@ -3,20 +3,35 @@ import type {
   PaymentsReviewQueueParam,
   SpacePaymentResponse,
 } from '../api/types';
+import { isPurePaidPayment, isRefundRelatedPayment } from './paymentRefundDisplay';
 
 export function paymentMatchesReviewQueue(
-  status: SpacePaymentResponse['paymentStatus'],
+  paymentOrStatus:
+    | SpacePaymentResponse['paymentStatus']
+    | Pick<
+        SpacePaymentResponse,
+        'paymentStatus' | 'paymentCategory' | 'partiallyRefunded' | 'refundedAmount'
+      >,
   queue: PaymentsReviewQueueParam,
 ): boolean {
+  const payment =
+    typeof paymentOrStatus === 'string' || paymentOrStatus == null
+      ? { paymentStatus: paymentOrStatus ?? 'PENDING' }
+      : paymentOrStatus;
+  const status = payment.paymentStatus ?? 'PENDING';
   switch (queue) {
     case 'SUBMITTED':
       return status === 'UNDER_REVIEW' || status === 'PROOF_UPLOADED';
     case 'NEEDS_UPDATE':
       return status === 'UPDATE_REQUESTED';
     case 'PAID':
-      return status === 'PAID';
+      return isPurePaidPayment(payment);
     case 'REJECTED':
       return status === 'REJECTED';
+    case 'REFUNDED':
+      return isRefundRelatedPayment(payment);
+    case 'CANCELLED':
+      return status === 'CANCELLED';
     case 'PENDING_REVIEW':
       return (
         status === 'UNDER_REVIEW' ||
@@ -24,7 +39,12 @@ export function paymentMatchesReviewQueue(
         status === 'UPDATE_REQUESTED'
       );
     case 'HISTORY':
-      return status === 'PAID' || status === 'REJECTED';
+      return (
+        status === 'PAID' ||
+        status === 'REJECTED' ||
+        status === 'REFUNDED' ||
+        status === 'CANCELLED'
+      );
     default:
       return true;
   }
@@ -58,7 +78,7 @@ export function applyPaymentToReviewRows(
   updated: SpacePaymentResponse,
   queue: PaymentsReviewQueueParam,
 ): { rows: SpacePaymentResponse[]; removed: boolean } {
-  const belongs = paymentMatchesReviewQueue(updated.paymentStatus, queue);
+  const belongs = paymentMatchesReviewQueue(updated, queue);
   const index = rows.findIndex(row => row.paymentId === updated.paymentId);
   if (belongs) {
     if (index < 0) {

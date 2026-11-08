@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import type { AccommodationStatus, BedListItemResponse, UUID } from '../../../../api/types';
@@ -12,6 +12,8 @@ import { AccommodationInactiveBadge, accommodationInactiveCardStyle, accommodati
 import { AccommodationStatusBadge } from '../../AccommodationStatusBadge';
 import { BedPricingDisplay } from '../../BedPricingDisplay';
 import { OccupiedBedPaymentFace } from '../../OccupiedBedPaymentFace';
+import { StayTypeBadge } from '../../StayTypeBadge';
+import { useOccupiedBedStay } from '../../../../hooks/useOccupiedBedStay';
 import { getBedIllustration } from '../illustrations/illustrationAssets';
 import { LayoutCardShell } from './LayoutCardShell';
 import { LayoutEntityPhoto } from './LayoutEntityPhoto';
@@ -80,6 +82,9 @@ export function BedLayoutCard({
   const { t } = useTranslation();
   const inactive = !isAccommodationEntityActive(bed);
   const displayLabel = formatBedDisplayLabel(bed.label, t);
+  const showStayLookup =
+    !inactive && (bed.status === 'OCCUPIED' || bed.status === 'RESERVED');
+  const occupiedStay = useOccupiedBedStay(spaceId, bed.bedId, showStayLookup);
 
   return (
     <LayoutCardShell
@@ -136,22 +141,31 @@ export function BedLayoutCard({
             <ChevronRight size={16} color={colors.info} strokeWidth={2.4} />
           </Pressable>
         ) : null}
-        {inactive ? (
-          <AccommodationInactiveBadge />
-        ) : (
-          <AccommodationStatusBadge status={bed.status} />
-        )}
+        {inactive ? <AccommodationInactiveBadge /> : null}
       </View>
+      {!inactive && showStayLookup ? (
+        <>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            bounces={false}
+            contentContainerStyle={styles.badgeRow}>
+            <AccommodationStatusBadge status={bed.status} />
+            <StayTypeBadge stayKind={occupiedStay.occupancy?.stayKind} />
+          </ScrollView>
+          <View style={styles.divider} />
+        </>
+      ) : null}
       <BedOccupantLine
         spaceId={spaceId}
         bedId={bed.bedId}
         status={bed.status}
         inactive={inactive}
       />
-      {bed.status === 'OCCUPIED' ? (
+      {bed.status === 'OCCUPIED' || bed.status === 'RESERVED' ? (
         <OccupiedBedPaymentFace spaceId={spaceId} bedId={bed.bedId} />
       ) : (
-        <BedPricingDisplay rent={bed.defaultRent} deposit={bed.defaultDeposit} layout="stack" />
+        <BedPricingDisplay rent={bed.defaultRent} deposit={bed.defaultDeposit} layout="inline" />
       )}
     </LayoutCardShell>
   );
@@ -193,6 +207,20 @@ const styles = StyleSheet.create({
   titleWrap: {
     flex: 1,
     minWidth: 0,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
+    alignItems: 'center',
+    gap: 6,
+    paddingRight: 2,
+    marginBottom: spacing.xs,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+    width: '100%',
+    marginBottom: spacing.xs,
   },
   editBtn: {
     width: 28,

@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
     left: 0,
   },
   busy: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(17,24,39,0.35)',
     alignItems: 'center',
     justifyContent: 'center',

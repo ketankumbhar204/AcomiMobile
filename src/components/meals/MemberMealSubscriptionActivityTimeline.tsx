@@ -18,7 +18,7 @@ type MemberMealSubscriptionActivityTimelineProps = {
 
 function formatMeals(
   amount: number | null | undefined,
-  unit: PrepaidBalanceUnit,
+  unit: PrepaidBalanceUnit | null | undefined,
   currencyCode: string,
   t: (key: string, options?: Record<string, unknown>) => string,
 ): string {

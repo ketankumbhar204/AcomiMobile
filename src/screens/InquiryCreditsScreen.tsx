@@ -635,7 +635,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   qrBackdropTap: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   qrFull: {
     width: '100%',

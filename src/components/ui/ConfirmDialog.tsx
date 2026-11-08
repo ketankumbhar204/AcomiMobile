@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
   },
   backdropTap: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   card: {
     backgroundColor: colors.white,

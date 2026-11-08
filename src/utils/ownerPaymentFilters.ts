@@ -7,10 +7,11 @@ import {
   isChangesRequested,
   isSubmittedForReview,
 } from './paymentStatus';
+import { isPurePaidPayment, isRefundRelatedPayment } from './paymentRefundDisplay';
 
 export type PaymentReviewQueue = 'PENDING' | 'HISTORY';
 export type PendingReviewFilter = 'SUBMITTED' | 'NEEDS_UPDATE';
-export type HistoryReviewFilter = 'PAID' | 'REJECTED';
+export type HistoryReviewFilter = 'PAID' | 'REJECTED' | 'REFUNDED' | 'CANCELLED';
 
 export function matchesPendingFilter(
   payment: SpacePaymentResponse,
@@ -29,7 +30,13 @@ export function matchesHistoryFilter(
   if (filter === 'REJECTED') {
     return payment.paymentStatus === 'REJECTED';
   }
-  return payment.paymentStatus === 'PAID';
+  if (filter === 'REFUNDED') {
+    return isRefundRelatedPayment(payment);
+  }
+  if (filter === 'CANCELLED') {
+    return payment.paymentStatus === 'CANCELLED';
+  }
+  return isPurePaidPayment(payment);
 }
 
 export function computeOwnerPaymentCounts(
@@ -38,8 +45,10 @@ export function computeOwnerPaymentCounts(
 ): OwnerPaymentsMonthCounts {
   const submitted = payments.filter(p => isSubmittedForReview(p.paymentStatus)).length;
   const changesRequested = payments.filter(p => isChangesRequested(p.paymentStatus)).length;
-  const paid = payments.filter(p => p.paymentStatus === 'PAID').length;
+  const paid = payments.filter(p => isPurePaidPayment(p)).length;
   const rejected = payments.filter(p => p.paymentStatus === 'REJECTED').length;
+  const refunded = payments.filter(p => isRefundRelatedPayment(p)).length;
+  const cancelled = payments.filter(p => p.paymentStatus === 'CANCELLED').length;
   const pendingMembers = members.filter(
     row =>
       row.status === 'PENDING' ||
@@ -54,7 +63,9 @@ export function computeOwnerPaymentCounts(
     changesRequested,
     paid,
     rejected,
-    history: paid + rejected,
+    refunded,
+    cancelled,
+    history: paid + rejected + refunded + cancelled,
     pendingMembers,
   };
 }

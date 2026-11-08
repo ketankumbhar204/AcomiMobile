@@ -70,13 +70,6 @@ export function resolveMealSlotCardHint(
   return { status, hintKey: 'meals.planning.cardHintShared' };
 }
 
-export const MENU_PLANNING_STATUS_SYMBOLS: Record<MenuPlanningStatusFilter, string> = {
-  published: MEAL_STATUS_THEME.shared.icon,
-  modified: MEAL_STATUS_THEME.needs_reshare.icon,
-  draft: MEAL_STATUS_THEME.draft.icon,
-  not_planned: MEAL_STATUS_THEME.empty.icon,
-};
-
 export function menuPlanningStatusLabelKey(status: MenuPlanningStatusFilter): string {
   if (status === 'published') {
     return 'meals.planning.statusShared';

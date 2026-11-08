@@ -758,7 +758,7 @@
         "occupiedBeds": "भरलेल्या जागा",
         "openPolls": "उघडे सर्वेक्षण",
         "pending": "प्रलंबित",
-        "vacantBeds": "रिकाम्या जागा"
+        "vacantBeds": "उपलब्ध जागा"
       },
       "share": "शेअर करा",
       "statusActive": "सक्रिय",
@@ -1214,9 +1214,9 @@
       "updated": "अपडेट केले",
       "defaultRent": "डिफॉल्ट मासिक भाडे (फक्त प्रीफिल)",
       "defaultDeposit": "डिफॉल्ट डिपॉझिट (फक्त प्रीफिल)",
-      "rent": "भाडे",
+      "rent": "मासिक भाडे",
       "deposit": "डिपॉझिट",
-      "enterRent": "भाडे भरा",
+      "enterRent": "मासिक भाडे भरा",
       "enterDeposit": "डिपॉझिट भरा"
     },
     "pricingHints": {
@@ -1795,16 +1795,18 @@
       "selectedAccommodation": "Selected accommodation"
     },
     "steps": {
-      "member": "Select member",
-      "memberHint": "Search by name or mobile number",
+      "member": "सदस्य निवडा",
+      "memberHint": "नाव किंवा मोबाइलने शोधा",
       "target": "निवास निवडा",
-      "targetHint": "Browse units and rooms, then select a bed",
+      "targetHint": "युनिट आणि खोली पहा, नंतर बेड निवडा",
+      "stayType": "राहण्याचा प्रकार निवडा",
+      "stayDetails": "राहण्याचा तपशील भरा",
       "contract": "करार अटी",
-      "reserveDates": "बुकिंग तपशील",
-      "reserveDatesHint": "बुकिंग करताना कोणतेही शुल्क आकारले जात नाही.",
-      "transferCurrent": "Current accommodation",
-      "vacate": "Confirm vacate",
-      "review": "Review & confirm"
+      "reserveDates": "आरक्षण तपशील",
+      "reserveDatesHint": "आरक्षण करताना कोणतेही शुल्क आकारले जात नाही.",
+      "transferCurrent": "सध्याचे निवास",
+      "vacate": "रिकामे करण्याची पुष्टी",
+      "review": "पुनरावलोकन आणि पुष्टी"
     },
     "review": {
       "member": "सदस्य",
@@ -1856,6 +1858,13 @@
       "occupiedDays_one": "{{count}} day",
       "occupiedDays_other": "{{count}} days",
       "expectedMoveOut": "Expected move-out",
+      "shortStayChoice": "डेली",
+      "monthlyStayChoice": "मासिक",
+      "openEndedStayChoice": "निश्चित मूव्ह-आउट तारीख नाही",
+      "stayTypeSelected": "स्टे प्रकार: {{label}}",
+      "agreedTotal": "ठरलेली एकूण रक्कम",
+      "shortStayPreview": "पूर्वावलोकन. ही रक्कम पूर्ण केल्यावर जतन होते.",
+      "shortStaySetting": "शॉर्ट स्टे सुरू करा",
       "reservedOn": "Reserved on",
       "reservedOnShort": "राखीव",
       "timelineEmpty": "—",
@@ -1895,6 +1904,7 @@
       "cancelReservation": "Cancel reservation",
       "cancelShort": "रद्द करा",
       "transfer": "ट्रान्सफर",
+      "extend": "मुक्काम वाढवा",
       "vacate": "रिकामे करा",
       "viewHistory": "View occupancy history",
       "viewHistoryShort": "View History"
@@ -1977,6 +1987,13 @@
     "contract": {
       "title": "करार अटी",
       "hint": "Agreed monthly rent and charges at activation. Not billing or payments.",
+      "hintMonthly": "Agreed monthly rent and charges at activation. Not billing or payments.",
+      "hintDaily": "Daily rent and deposit for this stay. Not monthly billing.",
+      "hintOpenEnded": "Daily rent accumulates into one rent charge per calendar month until vacate.",
+      "stepHintMonthly": "Set rent, deposit and applicable charges for this stay.",
+      "stepHintDaily": "Set daily rent, deposit and applicable charges for this stay.",
+      "stepHintOpenEnded": "Set daily rent, deposit and applicable charges until vacate.",
+      "pricingDetails": "Pricing Details",
       "stepTitle": "करार अटी",
       "continueToTerms": "Continue to contract terms",
       "snapshotTitle": "करार",
@@ -1988,6 +2005,14 @@
       "depositDefaultHint": "Defaults to 0 if left empty",
       "catalogRentHint": "Catalog default: ₹{{amount}}",
       "catalogDepositHint": "Catalog default: ₹{{amount}}",
+      "dailyRentPerNight": "Daily rent (per night)",
+      "dailyRentPerNightHint": "Amount charged for each night of the stay.",
+      "dailyRentPlaceholder": "Enter rent per night, e.g. 500",
+      "stayRent": "Total stay rent",
+      "stayRentCalc": "{{daily}} × {{count}} nights",
+      "totalPayableAtMoveIn": "Total payable at move-in",
+      "totalPayableBreakdown": "Stay rent + Deposit",
+      "totalPayableCalc": "{{stayRent}} + {{deposit}}",
       "food": "जेवण",
       "foodIncluded": "जेवण समाविष्ट",
       "foodYes": "होय",
@@ -1999,6 +2024,8 @@
       "foodChargeDefaultHint": "Space default: ₹{{amount}} (used if left blank)",
       "foodBundledTitle": "Food included in rent",
       "foodBundledHint": "Food is included in the monthly rent amount above. There is no separate food line.",
+      "foodBundledHintShortStay": "Food is included in the stay rent. There is no separate food line.",
+      "foodBundledHintDaily": "Food is included in the daily rent amount above. There is no separate food line.",
       "monthlyTotal": "मासिक एकूण",
       "monthlyTotalWithFood": "Monthly total (rent + food)",
       "foodDisabled": "समाविष्ट नाही",
@@ -2112,7 +2139,19 @@
       "RESERVATION_CANCELLED": "बुकिंग रद्द"
     },
     "success": {
-      "updated": "Occupancy updated."
+      "updated": "अधिभोग अद्यतनित झाले.",
+      "title": "यशस्वी",
+      "allocatedHeadline": "भाडेकरू यशस्वीरित्या वाटप!",
+      "allocatedDetail": "{{name}} यांना {{location}} येथे वाटप केले आहे.",
+      "reservedHeadline": "निवास यशस्वीरित्या आरक्षित!",
+      "reservedDetail": "{{name}} यांचे आरक्षण {{location}} येथे आहे.",
+      "transferredHeadline": "भाडेकरू यशस्वीरित्या स्थानांतरित!",
+      "transferredDetail": "{{name}} यांना {{location}} येथे स्थानांतरित केले आहे.",
+      "movedInHeadline": "मूव्ह-इन यशस्वीरित्या पूर्ण!",
+      "movedInDetail": "{{name}} यांनी {{location}} मध्ये प्रवेश केला आहे.",
+      "viewDetails": "तपशील पहा",
+      "viewStay": "राहणे पहा",
+      "viewReservation": "आरक्षण पहा"
     },
     "errors": {
       "generic": "Occupancy action failed. Please try again.",
@@ -2140,6 +2179,8 @@
       "targetMaintenance": "This target is under maintenance and cannot be selected.",
       "targetBlocked": "This target is blocked and cannot be selected.",
       "targetUnavailable": "हा पर्याय उपलब्ध नाही।",
+      "stayOverlap": "हा मुक्काम त्याच बेड, खोली किंवा युनिटवरील दुसऱ्या मुक्कामाशी टकरातो.",
+      "plannedEndMismatch": "नियोजित समाप्तीच्या तारखा जुळत नाहीत. एकच तारीख पाठवा.",
       "invalidTargetType": "हा वाटप प्रकार या स्पेससाठी परवानगी नाही।",
       "bedRequired": "Select a bed.",
       "roomRequired": "Select a room.",
@@ -2148,7 +2189,8 @@
       "codes": {
         "RENT_SNAPSHOT_REQUIRED": "Monthly rent is required when activating.",
         "FOOD_CHARGE_REQUIRED": "Food charge is required when food is enabled.",
-        "FOOD_CHARGE_NOT_ALLOWED": "Food charge cannot be set when food is included in rent."
+        "FOOD_CHARGE_NOT_ALLOWED": "Food charge cannot be set when food is included in rent.",
+        "STAY_OVERLAP": "हा मुक्काम त्याच बेड, खोली किंवा युनिटवरील दुसऱ्या मुक्कामाशी टकरातो."
       }
     },
     "occupancyStatus": {
@@ -2251,7 +2293,7 @@
       },
       "recommendedAction": "शिफारस केलेली कृती",
       "actions": {
-        "improveOccupancy": "रिकाम्या जागा भरून अधिभोग सुधारा"
+        "improveOccupancy": "उपलब्ध जागा वाटप करून अधिभोग सुधारा"
       },
       "factors": {
         "setupComplete": "आवश्यक सेटअप पूर्ण",
@@ -2507,7 +2549,7 @@
     "accommodationOperations": {
       "title": "मालमत्ता परिचालन",
       "occupiedBeds": "भरलेल्या जागा",
-      "vacantBeds": "रिकाम्या जागा",
+      "vacantBeds": "उपलब्ध जागा",
       "moveInsThisMonth": "या महिन्यातील नवीन प्रवेश",
       "pendingPayments": "प्रलंबित पेमेंट"
     },
@@ -2524,7 +2566,7 @@
     "drilldown": {
       "occupiedBedsTitle": "भरलेल्या जागा",
       "occupiedBedsSubtitle": "Active residents and their bed assignments.",
-      "vacantBedsTitle": "रिकाम्या जागा",
+      "vacantBedsTitle": "उपलब्ध जागा",
       "vacantBedsSubtitle": "Available beds you can allocate or reserve.",
       "moveInsTitle": "या महिन्यातील नवीन प्रवेश",
       "moveInsSubtitle": "Residents who moved in during the current month.",
@@ -2532,7 +2574,7 @@
       "searchResidents": "Search residents or location…",
       "moveInLine": "Move-in {{date}}",
       "emptyOccupiedBeds": "No occupied beds",
-      "emptyVacantBeds": "No vacant beds",
+      "emptyVacantBeds": "उपलब्ध जागा नाहीत",
       "emptyMoveIns": "No move-ins this month",
       "emptyBedsDescription": "Counts update when beds are allocated, reserved, or vacated.",
       "emptyOccupancyDescription": "प्रवेशानंतर सक्रिय व्याप्ती येथे दिसतील.",
@@ -4022,7 +4064,7 @@
       "title": "मेनू लायब्ररी",
       "subtitle": "Defaults are ready to use — edit anytime, or continue to plan menus.",
       "readyTipTitle": "Your menu library is ready",
-      "readyTipBody": "Sample items and combos are already here. You can edit the library now, or continue to menu planning and customize later.",
+      "readyTipBody": "Edit your items and combos anytime.",
       "readyTipContinue": "Continue to menu planning",
       "readyTipStay": "Stay and edit library",
       "setupSteps": "तुमचा कॅटलॉग तयार करा",

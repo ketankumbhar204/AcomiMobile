@@ -13,6 +13,8 @@ describe('ownerOnlyNotifications', () => {
     expect(isOwnerOnlyNotificationType('PAYMENT_NEEDS_UPDATE')).toBe(true);
     expect(isOwnerOnlyNotificationType('COMPLAINT_PENDING')).toBe(true);
     expect(isOwnerOnlyNotificationType('COMPLAINT_OVERDUE')).toBe(true);
+    expect(isOwnerOnlyNotificationType('MOVE_OUT_SCHEDULED_TODAY')).toBe(true);
+    expect(isOwnerOnlyNotificationType('STAY_OVERDUE_ACTIVE')).toBe(true);
     expect(isOwnerOnlyNotificationType('PAYMENT_UPDATE_REQUESTED')).toBe(false);
   });
 

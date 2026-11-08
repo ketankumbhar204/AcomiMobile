@@ -45,11 +45,11 @@ export function InlineEditableTitle({
           placeholder={placeholder}
           placeholderTextColor={colors.muted}
         />
-        <Pressable onPress={save} style={styles.iconBtn} accessibilityRole="button">
-          <Check size={16} color={colors.primaryDark} strokeWidth={2.4} />
-        </Pressable>
         <Pressable onPress={cancel} style={styles.iconBtn} accessibilityRole="button">
           <X size={16} color={colors.muted} strokeWidth={2.4} />
+        </Pressable>
+        <Pressable onPress={save} style={[styles.iconBtn, styles.saveBtn]} accessibilityRole="button">
+          <Check size={16} color="#FFFFFF" strokeWidth={3} />
         </Pressable>
       </View>
     );
@@ -92,19 +92,19 @@ export function InlineEditableField({ label, value, onSave, keyboardType = 'defa
           />
           <Pressable
             onPress={() => {
-              onSave(draft.trim());
-              setEditing(false);
-            }}
-            style={styles.iconBtn}>
-            <Check size={16} color={colors.primaryDark} strokeWidth={2.4} />
-          </Pressable>
-          <Pressable
-            onPress={() => {
               setDraft(value);
               setEditing(false);
             }}
             style={styles.iconBtn}>
             <X size={16} color={colors.muted} strokeWidth={2.4} />
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              onSave(draft.trim());
+              setEditing(false);
+            }}
+            style={[styles.iconBtn, styles.saveBtn]}>
+            <Check size={16} color="#FFFFFF" strokeWidth={3} />
           </Pressable>
         </View>
       ) : (
@@ -156,8 +156,12 @@ const styles = StyleSheet.create({
   iconBtn: {
     width: 32,
     height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  saveBtn: {
+    backgroundColor: colors.primary,
   },
   fieldWrap: {
     gap: 4,

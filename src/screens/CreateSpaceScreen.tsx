@@ -17,7 +17,13 @@ import { useTranslation } from 'react-i18next';
 import { Building2, Phone } from 'lucide-react-native';
 import type { AmenityAssignment, GenderPolicy, SpaceType } from '../api/types';
 import { AddressLocationFields } from '../components/location/AddressLocationFields';
-import { Button, EmptyState, FormInput, SpaceTypePicker } from '../components/ui';
+import {
+  Button,
+  CompactPageBanner,
+  EmptyState,
+  FormInput,
+  SpaceTypePicker,
+} from '../components/ui';
 import {
   EMPTY_ADDRESS_CAPTURE,
   addressCaptureIssue,
@@ -50,7 +56,7 @@ import { useToastStore } from '../store/toastStore';
 import { resolveDefaultSpaceContact } from '../utils/defaultSpaceContact';
 import { isDuplicateSpaceName } from '../utils/suggestBuildingDefaults';
 import { canCreateSpace } from '../utils/spaceCreationAccess';
-import { colors, radius, shadows, spacing, typography } from '../theme';
+import { colors, radius, spacing, typography } from '../theme';
 
 type CreateSpaceNav = NativeStackNavigationProp<MainStackParamList, 'CreateSpace'>;
 
@@ -312,16 +318,11 @@ export function CreateSpaceScreen() {
               amenitiesProgressiveEnabled ? onAmenitiesScrollBeginDrag : undefined
             }
             onScroll={amenitiesProgressiveEnabled ? handleScroll : undefined}>
-            <View style={styles.hero} accessibilityRole="header">
-              <View style={styles.decorBlob} pointerEvents="none" />
-              <View style={styles.decorRing} pointerEvents="none" />
-              <View style={styles.heroIconWrap} accessibilityElementsHidden>
-                <Building2 size={18} color={colors.primaryDark} strokeWidth={2.2} />
-              </View>
-              <Text style={styles.eyebrow}>{t('spaces.createSpace.eyebrow')}</Text>
-              <Text style={styles.heading}>{t('spaces.createSpace.heading')}</Text>
-              <Text style={styles.subheading}>{t('spaces.createSpace.subheading')}</Text>
-            </View>
+            <CompactPageBanner
+              icon={Building2}
+              title={t('spaces.createSpace.heading')}
+              subtitle={t('spaces.createSpace.subheading')}
+            />
 
             {error ? (
               <View style={styles.errorBanner}>
@@ -501,67 +502,6 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.md,
     paddingBottom: spacing.xl,
-  },
-  hero: {
-    marginBottom: spacing.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.section,
-    backgroundColor: colors.successTint,
-    borderWidth: 1,
-    borderColor: `${colors.primary}33`,
-    overflow: 'hidden',
-    position: 'relative',
-    ...shadows.sm,
-  },
-  decorBlob: {
-    position: 'absolute',
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: `${colors.primary}1F`,
-    top: -48,
-    right: -28,
-  },
-  decorRing: {
-    position: 'absolute',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 8,
-    borderColor: `${colors.primary}14`,
-    bottom: -16,
-    right: 40,
-  },
-  heroIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.sm,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: `${colors.primary}33`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
-    zIndex: 1,
-  },
-  eyebrow: {
-    ...typography.eyebrow,
-    marginBottom: 2,
-    zIndex: 1,
-  },
-  heading: {
-    ...typography.h2,
-    fontSize: 22,
-    lineHeight: 28,
-    color: colors.primaryDark,
-    marginBottom: 2,
-    zIndex: 1,
-  },
-  subheading: {
-    ...typography.caption,
-    color: colors.muted,
-    zIndex: 1,
   },
   sectionTitle: {
     ...typography.h3,

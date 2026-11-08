@@ -23,6 +23,8 @@ type DashboardBedUnitSectionCardProps = BedSectionFlowProps & {
   onAllocate?: (bed: BedSpaceListItemResponse) => void;
   onReserve?: (bed: BedSpaceListItemResponse) => void;
   onPathCrumbPress?: (room: BedRoomGroup, crumb: RoomPathCrumb) => void;
+  showAddBed?: boolean;
+  onAddBed?: (room: BedRoomGroup) => void;
 };
 
 function DashboardBedUnitSectionCardComponent({
@@ -36,6 +38,8 @@ function DashboardBedUnitSectionCardComponent({
   flowAction = 'dashboard',
   onFlowAction,
   onPathCrumbPress,
+  showAddBed = false,
+  onAddBed,
 }: DashboardBedUnitSectionCardProps) {
   const { t } = useTranslation();
   const location = formatUnitGroupLocation(group);
@@ -64,6 +68,8 @@ function DashboardBedUnitSectionCardComponent({
           key={room.key}
           spaceId={spaceId}
           group={room}
+          showAddBed={showAddBed}
+          onAddBed={onAddBed ? () => onAddBed(room) : undefined}
           onPathCrumbPress={
             onPathCrumbPress ? crumb => onPathCrumbPress(room, crumb) : undefined
           }
