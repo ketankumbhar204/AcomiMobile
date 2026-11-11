@@ -18,6 +18,7 @@ import {
   type DayShareAction,
 } from '../../utils/dailyMenuDayStatus';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
+import { MEAL_STATUS_THEME } from '../../utils/mealStatusTheme';
 import { MealOperationSlotCard } from './MealOperationSlotCard';
 
 type MenuPlanningDayOverviewProps = {
@@ -130,7 +131,7 @@ export function MenuPlanningDayOverview({
         ]}
         accessibilityRole="text">
         {dayStatus === 'shared' ? (
-          <Share2 size={18} color={pastels.green.fg} strokeWidth={2.2} />
+          <Share2 size={18} color={MEAL_STATUS_THEME.shared.color} strokeWidth={2.2} />
         ) : (
           <AlertCircle
             size={18}
@@ -138,8 +139,8 @@ export function MenuPlanningDayOverview({
               dayStatus === 'failed'
                 ? '#B91C1C'
                 : dayStatus === 'updated'
-                  ? pastels.blue.fg
-                  : pastels.orange.fg
+                  ? MEAL_STATUS_THEME.needs_reshare.color
+                  : MEAL_STATUS_THEME.draft.color
             }
             strokeWidth={2.2}
           />
@@ -252,16 +253,16 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   bannerNotShared: {
-    backgroundColor: pastels.orange.bg,
-    borderColor: pastels.orange.border,
+    backgroundColor: MEAL_STATUS_THEME.draft.background,
+    borderColor: MEAL_STATUS_THEME.draft.border,
   },
   bannerShared: {
-    backgroundColor: pastels.green.bg,
-    borderColor: pastels.green.border,
+    backgroundColor: MEAL_STATUS_THEME.shared.background,
+    borderColor: MEAL_STATUS_THEME.shared.border,
   },
   bannerUpdated: {
-    backgroundColor: pastels.blue.bg,
-    borderColor: pastels.blue.border,
+    backgroundColor: MEAL_STATUS_THEME.needs_reshare.background,
+    borderColor: MEAL_STATUS_THEME.needs_reshare.border,
   },
   bannerFailed: {
     backgroundColor: '#FEF2F2',
@@ -277,9 +278,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
   },
-  bannerTitleNotShared: { color: pastels.orange.fg },
-  bannerTitleShared: { color: pastels.green.fg },
-  bannerTitleUpdated: { color: pastels.blue.fg },
+  bannerTitleNotShared: { color: MEAL_STATUS_THEME.draft.color },
+  bannerTitleShared: { color: MEAL_STATUS_THEME.shared.color },
+  bannerTitleUpdated: { color: MEAL_STATUS_THEME.needs_reshare.color },
   bannerTitleFailed: { color: '#B91C1C' },
   bannerHint: {
     ...typography.caption,

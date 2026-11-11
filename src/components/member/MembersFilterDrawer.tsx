@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SpaceType } from '../../api/types';
+import { isAccommodationApplicable } from '../../utils/accommodationProfile';
 import {
   FilterCheckboxRow,
   FilterDrawerDivider,
@@ -58,6 +59,8 @@ export function MembersFilterDrawer({
 
   const roleOptions = rolesForSpace(spaceType);
   const statusOptions = statusesForSpace(spaceType);
+  const stayStatusFilter =
+    spaceType != null && isAccommodationApplicable(spaceType);
 
   const sortOptions: { id: MemberSortOption; label: string }[] = [
     { id: 'name_asc', label: t('list.sort.nameAsc') },
@@ -82,6 +85,40 @@ export function MembersFilterDrawer({
         });
         onClose();
       }}>
+      {showStatusSection ? (
+        <FilterDrawerSection
+          title={
+            stayStatusFilter
+              ? t('list.filters.stayStatus', { defaultValue: 'Stay status' })
+              : t('list.filters.status')
+          }>
+          {statusOptions.map(status => (
+            <FilterCheckboxRow
+              key={status}
+              label={t(memberListStatusLabelKey(status, spaceType), {
+                defaultValue:
+                  status === 'RESERVED'
+                    ? 'Reserved'
+                    : status === 'ALLOCATED'
+                      ? 'Moved in'
+                      : status === 'VACATED'
+                        ? 'Vacated'
+                        : status,
+              })}
+              checked={draft.statuses.has(status)}
+              onToggle={() =>
+                setDraft(prev => ({
+                  ...prev,
+                  statuses: toggleSetValue(prev.statuses, status),
+                }))
+              }
+            />
+          ))}
+        </FilterDrawerSection>
+      ) : null}
+
+      {showStatusSection ? <FilterDrawerDivider /> : null}
+
       <FilterDrawerSection title={t('list.filters.role')}>
         {roleOptions.map(role => (
           <FilterCheckboxRow
@@ -97,27 +134,6 @@ export function MembersFilterDrawer({
           />
         ))}
       </FilterDrawerSection>
-
-      {showStatusSection ? (
-        <>
-          <FilterDrawerDivider />
-          <FilterDrawerSection title={t('list.filters.status')}>
-            {statusOptions.map(status => (
-              <FilterCheckboxRow
-                key={status}
-                label={t(memberListStatusLabelKey(status, spaceType))}
-                checked={draft.statuses.has(status)}
-                onToggle={() =>
-                  setDraft(prev => ({
-                    ...prev,
-                    statuses: toggleSetValue(prev.statuses, status),
-                  }))
-                }
-              />
-            ))}
-          </FilterDrawerSection>
-        </>
-      ) : null}
 
       {showPaymentFilter && showStatusSection ? (
         <>

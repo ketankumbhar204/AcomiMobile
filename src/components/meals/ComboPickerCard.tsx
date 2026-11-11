@@ -115,6 +115,7 @@ export function ComboPickerCard({
         styles.card,
         compact && styles.cardCompact,
         selectable && selected && styles.cardSelected,
+        priceInputError ? styles.cardError : null,
       ]}>
       <View style={styles.row}>
         <Pressable
@@ -191,6 +192,10 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     backgroundColor: colors.successTint,
   },
+  cardError: {
+    borderColor: colors.danger,
+    backgroundColor: colors.errorTint,
+  },
   cardPressed: {
     opacity: 0.92,
   },
@@ -216,8 +221,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   priceInputRowError: {
-    borderColor: '#F87171',
-    backgroundColor: '#FFF5F5',
+    borderColor: colors.danger,
+    borderWidth: 1.5,
+    backgroundColor: colors.errorTint,
   },
   currency: { ...typography.bodyStrong, marginRight: spacing.xs },
   priceInput: {
@@ -227,7 +233,7 @@ const styles = StyleSheet.create({
   },
   priceInputError: {
     ...typography.caption,
-    color: '#DC2626',
+    color: colors.danger,
     marginTop: spacing.xxs,
   },
   row: {
@@ -311,7 +317,7 @@ const styles = StyleSheet.create({
   },
   inlinePriceError: {
     ...typography.caption,
-    color: '#DC2626',
+    color: colors.danger,
     marginTop: 2,
     textAlign: 'right',
     alignSelf: 'stretch',

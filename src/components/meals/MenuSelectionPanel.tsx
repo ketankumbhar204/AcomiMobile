@@ -12,6 +12,7 @@ import {
   Keyboard,
   Pressable,
   StyleSheet,
+  ScrollView,
   Text,
   TextInput,
   View,
@@ -34,6 +35,7 @@ import { EntityPhoto } from '../files/EntityPhoto';
 import { FoodTypeIcon } from '../ui/FoodTypeIcon';
 import { colors, radius, spacing, typography } from '../../theme';
 import type { MenuAdHocPackage, MenuDraftOption, MenuSelectionItemPackage } from '../../utils/dailyMenuDraft';
+import { scrollFieldIntoViewWhenReady } from '../../utils/scrollFieldIntoView';
 import {
   getEffectivePriceDraft,
   hasComboPrice,
@@ -76,6 +78,8 @@ export type MenuSelectionSaveResult = {
 export type MenuSelectionPanelHandle = {
   /** Mess-only: validate selected price fields; highlights errors and focuses first invalid. */
   validatePrices: () => boolean;
+  /** Show save errors that were computed outside the panel and scroll to the first one. */
+  revealPriceErrors: (errors: ComboPriceDraftErrors) => void;
   hasSelection: () => boolean;
   getSelectionResult: () => MenuSelectionSaveResult;
   getDraftPrices: () => Record<string, string>;
@@ -88,6 +92,7 @@ type MenuSelectionPanelProps = {
   onChange: (result: MenuSelectionSaveResult) => void;
   requiresMealPrices?: boolean;
   onSelectionPresenceChange?: (hasSelection: boolean) => void;
+  scrollRef?: { current: ScrollView | null };
 };
 
 function adHocPackageChipId(label: string): string {
@@ -152,6 +157,7 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
       initialOptions,
       onChange,
       requiresMealPrices = true,
+      scrollRef,
       onSelectionPresenceChange,
     },
     ref,
@@ -180,6 +186,16 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
   const [adHocPackages, setAdHocPackages] = useState<MenuAdHocPackage[]>(seed.adHocPackages);
   const [draftPrices, setDraftPrices] = useState<Record<string, string>>(seed.draftPrices);
   const [priceErrors, setPriceErrors] = useState<ComboPriceDraftErrors>({});
+  const priceRowRefs = useRef<Record<string, View | null>>({});
+  const scrollToPriceRow = useCallback(
+    (id: string) => {
+      scrollFieldIntoViewWhenReady(scrollRef?.current ?? null, () => priceRowRefs.current[id] ?? null);
+    },
+    [scrollRef],
+  );
+  const registerPriceRow = useCallback((id: string, node: View | null) => {
+    priceRowRefs.current[id] = node;
+  }, []);
   const [focusPriceInputId, setFocusPriceInputId] = useState<string | null>(null);
   const [comboSearch, setComboSearch] = useState('');
   const [itemSearch, setItemSearch] = useState('');
@@ -463,7 +479,27 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
         }
         setActiveTab(target.tab);
         requestFocusPriceInput(target.id);
+        scrollToPriceRow(target.id);
         return false;
+      },
+      revealPriceErrors: errors => {
+        const relevant: ComboPriceDraftErrors = {};
+        for (const [id, error] of Object.entries(errors)) {
+          if (!id.startsWith('extra:')) {
+            relevant[id] = error;
+          }
+        }
+        if (Object.keys(relevant).length === 0) {
+          return;
+        }
+        setPriceErrors(current => ({ ...current, ...relevant }));
+        const target = firstPriceErrorTarget(relevant, selectedComboIds, selectedItemIds);
+        if (!target) {
+          return;
+        }
+        setActiveTab(target.tab);
+        requestFocusPriceInput(target.id);
+        scrollToPriceRow(target.id);
       },
       hasSelection: () => hasAnySelection,
       getSelectionResult: () => buildSelectionResult,
@@ -476,6 +512,7 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
       hasAnySelection,
       requestFocusPriceInput,
       requiresMealPrices,
+      scrollToPriceRow,
       selectedComboIds,
       selectedCombos,
       selectedItemIds,
@@ -1000,8 +1037,11 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
             const errorKey = priceErrors[combo.comboId];
             const priceDraft = getEffectivePriceDraft(combo.comboId, draftPrices, combo.price);
             return (
-              <ComboPickerCard
+              <View
                 key={combo.comboId}
+                collapsable={false}
+                ref={node => registerPriceRow(combo.comboId, node)}>
+              <ComboPickerCard
                 name={combo.name}
                 itemNames={
                   combo.items
@@ -1042,6 +1082,7 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
                   />
                 }
               />
+              </View>
             );
           })}
 
@@ -1081,6 +1122,7 @@ export const MenuSelectionPanel = forwardRef<MenuSelectionPanelHandle, MenuSelec
             onPriceBlur={(item, draft) => {
               void persistItemPriceOnBlur(item, draft);
             }}
+            onRegisterRow={registerPriceRow}
             showMealPrices={requiresMealPrices}
             canAddItem
             canAddCategory

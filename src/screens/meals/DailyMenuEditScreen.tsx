@@ -15,13 +15,21 @@ import { Pencil } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { mealsApi } from '../../api/mealsApi';
 import type { FoodItemResponse, MealType, MealComboResponse, UUID } from '../../api/types';
-import { CopyPreviousMenuSheet, MealFormHero } from '../../components/meals';
+import {
+  CopyPreviousMenuSheet,
+  MealFormHero,
+  MenuDateNavRow,
+  MenuDatePickerModal,
+} from '../../components/meals';
 import {
   MenuSelectionPanel,
   type MenuSelectionPanelHandle,
   type MenuSelectionSaveResult,
 } from '../../components/meals/MenuSelectionPanel';
-import { MealExtrasEnableSection } from '../../components/meals/MealExtrasEnableSection';
+import {
+  MealExtrasEnableSection,
+  type MealExtrasEnableSectionHandle,
+} from '../../components/meals/MealExtrasEnableSection';
 import { MealStatusBadge } from '../../components/meals/MealStatusBadge';
 import {
   ProgressiveMealPlanningFooter,
@@ -36,7 +44,7 @@ import { navigateMainStack } from '../../navigation/mainStackNavigation';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { colors, pageContentGutter, spacing, typography } from '../../theme';
-import { formatMenuDate, isPastMenuDate } from '../../utils/mealDates';
+import { formatMenuDate, isPastMenuDate, todayIsoDate } from '../../utils/mealDates';
 import { fetchSpaceMenuCatalog, patchSpaceMenuCatalogItem } from '../../utils/fetchSpaceMenuCatalog';
 import {
   loadMenuDraft,
@@ -103,13 +111,23 @@ function snapshotDraft(
   };
 }
 
-export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEditScreenProps) {
+export function DailyMenuEditScreen({
+  spaceId,
+  menuDate: initialMenuDate,
+  mealType,
+}: DailyMenuEditScreenProps) {
   const { t, i18n } = useTranslation();
   const navigation = useNavigation<Nav>();
   const permissions = useSpacePermissions(spaceId);
   const mealPricing = useMealPricingPolicy(spaceId);
   const showToast = useToastStore(state => state.showToast);
+  const [menuDate, setMenuDate] = useState(initialMenuDate);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const dateReadOnly = isPastMenuDate(menuDate);
+
+  useEffect(() => {
+    setMenuDate(initialMenuDate);
+  }, [initialMenuDate]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -128,6 +146,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
   const baselineRef = useRef<DraftSnapshot | null>(null);
   const allowLeaveRef = useRef(false);
   const panelRef = useRef<MenuSelectionPanelHandle>(null);
+  const extrasRef = useRef<MealExtrasEnableSectionHandle>(null);
   const scrollRef = useRef<ScrollView>(null);
   const loadHadMealsRef = useRef(false);
 
@@ -158,6 +177,27 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
       baseline.pricesKey !== current.pricesKey
     );
   }, [dateReadOnly, loading, notes, options, priceDrafts]);
+
+  const requestMenuDateChange = useCallback(
+    (nextDate: string) => {
+      if (nextDate === menuDate) {
+        return;
+      }
+      if (!isDirty) {
+        setMenuDate(nextDate);
+        return;
+      }
+      Alert.alert(t('meals.menu.unsavedTitle'), t('meals.menu.unsavedMessage'), [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('meals.menu.discardChanges'),
+          style: 'destructive',
+          onPress: () => setMenuDate(nextDate),
+        },
+      ]);
+    },
+    [isDirty, menuDate, t],
+  );
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -563,8 +603,11 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     const mergedErrors = { ...comboErrors, ...packageErrors };
     if (Object.keys(mergedErrors).length > 0) {
       setPriceErrors(mergedErrors);
-      panelRef.current?.validatePrices();
-      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      const panelHasError = Object.keys(mergedErrors).some(id => !id.startsWith('extra:'));
+      if (panelHasError) {
+        panelRef.current?.revealPriceErrors(mergedErrors);
+      }
+      extrasRef.current?.revealPriceErrors(mergedErrors, { scroll: !panelHasError });
       showToast(t(toastKey), undefined, 'error');
       return false;
     }
@@ -602,15 +645,20 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     const panelDrafts = panelRef.current?.getDraftPrices() ?? {};
 
     if (mealPricing.requiresMealPrices) {
-      if (!(panelRef.current?.validatePrices() ?? true)) {
-        scrollRef.current?.scrollTo({ y: 0, animated: true });
+      const panelOk = panelRef.current?.validatePrices() ?? true;
+      const extrasOk = extrasRef.current?.validateEnabledPrices({ scroll: panelOk }) ?? true;
+      if (!panelOk || !extrasOk) {
         showToast(t(toastKey), undefined, 'error');
         return null;
       }
       const selection = panelRef.current?.getSelectionResult();
       if (selection) {
         latestSelectionRef.current = selection;
-        const mergedDrafts = { ...priceDrafts, ...panelDrafts };
+        const mergedDrafts = {
+          ...priceDrafts,
+          ...panelDrafts,
+          ...(extrasRef.current?.getPriceDrafts() ?? {}),
+        };
         setPriceDrafts(mergedDrafts);
         const mergedOptions = mergeSelectionIntoOptions(
           options,
@@ -638,7 +686,8 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
     const optionsToSave = resolveOptionsForSave();
     if (optionsToSave.length === 0) {
       if (panelRef.current?.hasSelection()) {
-        scrollRef.current?.scrollTo({ y: 0, animated: true });
+        panelRef.current.validatePrices();
+        extrasRef.current?.validateEnabledPrices({ scroll: false });
         showToast(t(toastKey), undefined, 'error');
         return null;
       }
@@ -819,9 +868,17 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
           subheading={formatMenuDate(menuDate, i18n.language)}
           compact
         />
+        <View style={styles.dateNavWrap}>
+          <MenuDateNavRow
+            compact
+            menuDate={menuDate}
+            onMenuDateChange={requestMenuDateChange}
+            onOpenCalendar={() => setDatePickerOpen(true)}
+            onJumpToToday={() => requestMenuDateChange(todayIsoDate())}
+          />
+        </View>
         <View style={styles.metaRow}>
           <View style={styles.metaLeft}>
-            <Text style={styles.date}>{formatMenuDate(menuDate, i18n.language)}</Text>
             <Text style={styles.summary}>{summaryText}</Text>
           </View>
           <View style={styles.metaRight}>
@@ -869,6 +926,7 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
                 <MenuSelectionPanel
                   ref={panelRef}
                   key={`${menuDate}-${mealType}-${panelSeedKey}`}
+                  scrollRef={scrollRef}
                   spaceId={spaceId}
                   mealType={mealType}
                   initialOptions={options}
@@ -884,6 +942,8 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
                       onExtrasLayout(y, height);
                     }}>
                     <MealExtrasEnableSection
+                      ref={extrasRef}
+                      scrollRef={scrollRef}
                       spaceId={spaceId}
                       catalogItems={catalogItems}
                       selectedMealItemIds={selectedMealItemIds}
@@ -995,6 +1055,17 @@ export function DailyMenuEditScreen({ spaceId, menuDate, mealType }: DailyMenuEd
           navigation.goBack();
         }}
       />
+
+      <MenuDatePickerModal
+        visible={datePickerOpen}
+        value={menuDate}
+        allowPastDates
+        onClose={() => setDatePickerOpen(false)}
+        onConfirm={nextDate => {
+          setDatePickerOpen(false);
+          requestMenuDateChange(nextDate);
+        }}
+      />
     </View>
   );
 }
@@ -1005,6 +1076,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: pageContentGutter,
     paddingTop: spacing.xxl,
     paddingBottom: spacing.section,
+  },
+  dateNavWrap: {
+    marginBottom: spacing.md,
   },
   metaRow: {
     flexDirection: 'row',
@@ -1020,7 +1094,6 @@ const styles = StyleSheet.create({
   },
   metaLeft: { flex: 1, minWidth: 0 },
   metaRight: { alignItems: 'flex-end', flexShrink: 0 },
-  date: { ...typography.bodyStrong, marginBottom: spacing.xxs },
   summary: { ...typography.caption, color: colors.textSecondary },
   published: {
     ...typography.caption,

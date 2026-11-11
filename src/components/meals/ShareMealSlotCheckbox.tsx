@@ -6,8 +6,7 @@ import type { DailyMenuResponse, MealPollSlot, MealType } from '../../api/types'
 import { colors, radius, spacing, typography } from '../../theme';
 import type { SlotShareState } from '../../utils/shareMenuSelection';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
-import { mealTypeTheme } from '../../utils/mealTypeTheme';
-import { resolveMealStatusKind } from '../../utils/mealStatusTheme';
+import { mealStatusTheme, resolveMealStatusKind } from '../../utils/mealStatusTheme';
 import { MealStatusBadge } from './MealStatusBadge';
 import { MealTypeVisual } from './MealTypeVisual';
 
@@ -32,9 +31,9 @@ export function ShareMealSlotCheckbox({
 }: ShareMealSlotCheckboxProps) {
   const { t } = useTranslation();
   const mealLabel = t(mealTypeLabelKey(mealType));
-  const theme = mealTypeTheme(mealType);
   const shareable = state === 'shareable' && !disabled;
   const statusKind = resolveMealStatusKind(menu, poll);
+  const statusTheme = mealStatusTheme(statusKind);
 
   const disabledMessage =
     state === 'draft'
@@ -48,8 +47,8 @@ export function ShareMealSlotCheckbox({
       style={[
         styles.row,
         {
-          borderColor: shareable ? theme.border : colors.border,
-          backgroundColor: shareable ? theme.soft : colors.surface,
+          borderColor: statusTheme.border,
+          backgroundColor: statusTheme.background,
         },
         !shareable && styles.rowDisabled,
       ]}>
@@ -62,6 +61,7 @@ export function ShareMealSlotCheckbox({
         <MealTypeVisual
           mealType={mealType}
           size={20}
+          color={statusTheme.color}
           style={!shareable ? styles.visualDisabled : undefined}
         />
         <View style={styles.labelBlock}>
@@ -69,14 +69,12 @@ export function ShareMealSlotCheckbox({
             <Text
               style={[
                 styles.label,
-                { color: theme.accent },
+                { color: statusTheme.color },
                 !shareable && styles.labelDisabled,
               ]}>
               {mealLabel}
             </Text>
-            {shareable || statusKind === 'empty' ? (
-              <MealStatusBadge kind={statusKind} size="compact" />
-            ) : null}
+            <MealStatusBadge kind={statusKind} size="compact" />
           </View>
           {shareable && statusKind === 'needs_reshare' ? (
             <Text style={styles.needsReshareHint}>

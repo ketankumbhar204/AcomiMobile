@@ -195,13 +195,7 @@ export function ProgressiveWorkflowFooter({
                   ? [styles.actionRow, stackActions && styles.actionRowStacked]
                   : styles.footerActions
               }>
-              <Button
-                label={continueLabel}
-                onPress={onContinue}
-                tint={primaryOnGuidanceTint}
-                style={compact ? styles.rowButtonPrimary : styles.fullButton}
-              />
-              {secondaryAction ? (
+              {compact && secondaryAction ? (
                 <Button
                   label={secondaryAction.label}
                   variant="ghost"
@@ -209,7 +203,24 @@ export function ProgressiveWorkflowFooter({
                   disabled={secondaryAction.disabled}
                   onPress={secondaryAction.onPress}
                   tint={secondaryOnGuidanceTint}
-                  style={compact ? styles.rowButtonSecondary : styles.fullButton}
+                  style={styles.rowButtonSecondary}
+                />
+              ) : null}
+              <Button
+                label={continueLabel}
+                onPress={onContinue}
+                tint={primaryOnGuidanceTint}
+                style={compact ? styles.rowButtonPrimary : styles.fullButton}
+              />
+              {!compact && secondaryAction ? (
+                <Button
+                  label={secondaryAction.label}
+                  variant="ghost"
+                  loading={secondaryAction.loading}
+                  disabled={secondaryAction.disabled}
+                  onPress={secondaryAction.onPress}
+                  tint={secondaryOnGuidanceTint}
+                  style={styles.fullButton}
                 />
               ) : null}
             </View>
@@ -235,6 +246,17 @@ export function ProgressiveWorkflowFooter({
                   compact ? styles.actionRow : styles.footerActions,
                   compact && stackActions && styles.actionRowStacked,
                 ]}>
+                {compact && secondaryAction ? (
+                  <Button
+                    label={secondaryAction.label}
+                    variant="ghost"
+                    loading={secondaryAction.loading}
+                    disabled={secondaryAction.disabled}
+                    onPress={secondaryAction.onPress}
+                    tint={secondaryOnGuidanceTint}
+                    style={styles.rowButtonSecondary}
+                  />
+                ) : null}
                 {primaryAction ? (
                   <Button
                     label={primaryAction.label}
@@ -247,7 +269,7 @@ export function ProgressiveWorkflowFooter({
                     style={compact ? styles.rowButtonPrimary : styles.fullButton}
                   />
                 ) : null}
-                {secondaryAction ? (
+                {!compact && secondaryAction ? (
                   <Button
                     label={secondaryAction.label}
                     variant="ghost"
@@ -255,7 +277,7 @@ export function ProgressiveWorkflowFooter({
                     disabled={secondaryAction.disabled}
                     onPress={secondaryAction.onPress}
                     tint={secondaryOnGuidanceTint}
-                    style={compact ? styles.rowButtonSecondary : styles.fullButton}
+                    style={styles.fullButton}
                   />
                 ) : null}
               </View>
@@ -423,13 +445,13 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
   },
   rowButtonPrimary: {
-    flex: 1.6,
+    flex: 1,
     minHeight: 44,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
   rowButtonSecondary: {
-    flex: 0.9,
+    flex: 1,
     minWidth: 88,
     minHeight: 44,
     paddingHorizontal: spacing.md,

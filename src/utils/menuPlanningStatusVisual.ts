@@ -87,10 +87,8 @@ export function menuPlanningStatusFilterLabelKey(status: MenuPlanningStatusFilte
   if (status === 'published') {
     return 'meals.status.shared';
   }
-  if (status === 'modified') {
-    return 'meals.status.needsReshare';
-  }
-  if (status === 'draft') {
+  // draft + modified both present as READY TO SHARE
+  if (status === 'modified' || status === 'draft') {
     return 'meals.status.notShared';
   }
   return 'meals.status.empty';

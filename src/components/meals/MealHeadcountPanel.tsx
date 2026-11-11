@@ -99,6 +99,8 @@ function fallbackSlotRowsFromHeadcount(slots: MealHeadcountSlot[]): DashboardMea
         statusKind: 'empty' as const,
         statusLabelKey: 'meals.status.empty',
         captionKey: 'meals.planning.cardHintEmpty',
+        countPrimary: '—',
+        countUnitKey: 'meals.planning.cardHintEmpty',
         captionTone: 'muted' as const,
       };
     }

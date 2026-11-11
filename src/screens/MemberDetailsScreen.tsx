@@ -21,7 +21,7 @@ import { useSpacePermissions } from '../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../navigation/types';
 import { useMemberStore } from '../store/memberStore';
 import { useMemberMealActivityDaySheetStore } from '../store/memberMealActivityDaySheetStore';
-import { spacing, typography } from '../theme';
+import { pageContentGutter, spacing, typography } from '../theme';
 import { devLog } from '../utils/devLog';
 
 type MemberDetailsNav = NativeStackNavigationProp<
@@ -198,7 +198,7 @@ export function MemberDetailsScreen() {
 const styles = StyleSheet.create({
   contentCompact: {
     paddingTop: spacing.md,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: pageContentGutter,
     paddingBottom: spacing.lg,
   },
   gap: {

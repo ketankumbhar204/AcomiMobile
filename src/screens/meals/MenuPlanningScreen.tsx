@@ -688,12 +688,16 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
     borderRadius: radius.button,
     gap: spacing.xs,
+    backgroundColor: colors.lightGreen,
+    borderWidth: 1,
+    borderColor: colors.primary,
   },
   dateCenterPressed: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.mintSubtle,
   },
   dateLabelRow: {
     flexDirection: 'row',
@@ -703,8 +707,9 @@ const styles = StyleSheet.create({
   dateLabel: {
     ...typography.bodyStrong,
     color: colors.primaryDark,
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 16,
+    lineHeight: 20,
+    fontWeight: '800',
   },
   todayChip: {
     paddingHorizontal: spacing.sm,

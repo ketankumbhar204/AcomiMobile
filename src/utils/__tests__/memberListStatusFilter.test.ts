@@ -60,6 +60,18 @@ describe('member list status filter', () => {
     expect(result.map(item => item.memberId)).toEqual(['out']);
   });
 
+  it('filters reserved tenants by RESERVED stay', () => {
+    const result = filterAndSortMembers(rows, {
+      search: '',
+      spaceType: 'HOSTEL',
+      filters: {
+        ...defaultMemberListFilters(),
+        statuses: new Set(['RESERVED']),
+      },
+    });
+    expect(result.map(item => item.memberId)).toEqual(['reserved']);
+  });
+
   it('filters moved-in tenants by ALLOCATED stay', () => {
     const result = filterAndSortMembers(rows, {
       search: '',

@@ -10,7 +10,7 @@ export function OnboardingBrandHeader() {
   return (
     <View style={styles.row} accessibilityRole="header">
       <Image
-        source={require('../../assets/brand/icon-light.png')}
+        source={require('../../assets/brand/splash-mark.png')}
         style={styles.mark}
         resizeMode="contain"
         accessibilityIgnoresInvertColors
@@ -30,7 +30,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 10,
-    backgroundColor: '#000000',
+    backgroundColor: colors.white,
   },
   wordmark: {
     color: colors.teal,

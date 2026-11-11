@@ -1,0 +1,275 @@
+{
+  "kolkataDate" : "2026-11-07",
+  "currentMonth" : "2026-11",
+  "previousMonth" : "2026-10",
+  "beforeWindow" : "2026-09",
+  "zone" : "Asia/Kolkata",
+  "enabledFrom" : "2026-10-01",
+  "recoveryMonths" : 2,
+  "monthlyRentRowsBeforeScheduler" : 53,
+  "monthlyRentRowsAfterFirstRun" : 66,
+  "generatedPaymentIds" : [ "8520db05-46b2-462d-ad98-a920dbeccc08", "8d697dfc-1513-4923-b4e9-60c8b02492d5", "a337b46a-68a8-419f-8cb2-445daefe196e", "01f01746-1b5c-4aab-9b05-b41c95897658", "0c86344d-49c0-4015-85cd-8ddc37872caa", "152a4bdb-ee31-44ab-af27-63925a3ff0c5", "18512168-0c3b-4e20-a946-723d527ad903", "25a9c31e-cda4-409c-8837-03e78d8f5942", "2d6eda89-3e54-4896-a646-7573968fd939", "3548f13c-8a9e-4ba3-8e00-81420aba4c05", "45e504f3-315a-4906-ade4-4368c4ae23d5", "51d7b505-c5d1-469b-847b-722959b7ca90", "6f941ebd-3f09-4a86-9d56-8ef3b0cf83df" ],
+  "tenantA" : {
+    "paymentId" : "8520db05-46b2-462d-ad98-a920dbeccc08",
+    "memberId" : "b30e8c77-4c46-4b29-9145-c31e81580ed5",
+    "month" : "2026-11",
+    "amount" : "6000.00",
+    "dueDate" : "2026-11-01",
+    "status" : "PENDING",
+    "remarks" : "Automatic calendar-month rent"
+  },
+  "hostel" : {
+    "paymentId" : "45e504f3-315a-4906-ade4-4368c4ae23d5",
+    "memberId" : "d9cf0972-5160-4e80-b843-6e8f01157d96",
+    "month" : "2026-11",
+    "amount" : "6100.00",
+    "dueDate" : "2026-11-01",
+    "status" : "PENDING",
+    "remarks" : "Automatic calendar-month rent"
+  },
+  "coliving" : {
+    "paymentId" : "01f01746-1b5c-4aab-9b05-b41c95897658",
+    "memberId" : "72714233-c162-4503-9d8d-e0e778422ce5",
+    "month" : "2026-11",
+    "amount" : "6200.00",
+    "dueDate" : "2026-11-01",
+    "status" : "PENDING",
+    "remarks" : "Automatic calendar-month rent"
+  },
+  "rental" : {
+    "paymentId" : "3548f13c-8a9e-4ba3-8e00-81420aba4c05",
+    "memberId" : "b7b6a637-11ee-40f5-9dff-44feec231609",
+    "month" : "2026-11",
+    "amount" : "6300.00",
+    "dueDate" : "2026-11-01",
+    "status" : "PENDING",
+    "remarks" : "Automatic calendar-month rent"
+  },
+  "corporatePayerIsOccupant" : {
+    "paymentId" : "51d7b505-c5d1-469b-847b-722959b7ca90",
+    "memberId" : "a3966198-95da-46ce-b9a7-82599ee1c894",
+    "month" : "2026-11",
+    "amount" : "6400.00",
+    "dueDate" : "2026-11-01",
+    "status" : "PENDING",
+    "remarks" : "Automatic calendar-month rent"
+  },
+  "ledgerRun" : {
+    "id" : "a4c94fa7-32fb-49b8-b68e-5439dd77dae1",
+    "spaceId" : "20a9eac7-2d0e-44c2-805a-ff483250b288",
+    "billingMonth" : "2026-11-01",
+    "timezone" : "Asia/Kolkata",
+    "status" : "SUCCESS",
+    "eligibleAccommodation" : 6,
+    "eligibleMess" : 0,
+    "created" : 6,
+    "skipped" : 0,
+    "failed" : 0,
+    "notificationsQueued" : 6,
+    "skipSummary" : null
+  },
+  "messRun" : {
+    "id" : "e3dc6b85-438d-4a36-bdc9-557488b4a5cd",
+    "spaceId" : "e8c40d28-5aa3-48d4-abce-ff3cb7411796",
+    "billingMonth" : "2026-11-01",
+    "timezone" : "Asia/Kolkata",
+    "status" : "SUCCESS",
+    "eligibleAccommodation" : 0,
+    "eligibleMess" : 0,
+    "created" : 0,
+    "skipped" : 1,
+    "failed" : 0,
+    "notificationsQueued" : 0,
+    "skipSummary" : "MESS_NOT_CALENDAR_MONTH: No calendar-month Mess/Tiffin subscription charge exists. Prepaid plans bill when a pack is purchased and expire by validity days. Pay-per-meal, daily, and one-time orders stay on the existing meal billing. Paused, ended, and expired balances are not given a new monthly payment."
+  },
+  "guardPreviousRun" : {
+    "id" : "7baaa109-9c4a-4568-a0bc-f68a2b31cc20",
+    "spaceId" : "9b15f1f9-9c84-48d9-a736-cc65a2385cb9",
+    "billingMonth" : "2026-10-01",
+    "timezone" : "Asia/Kolkata",
+    "status" : "SUCCESS",
+    "eligibleAccommodation" : 2,
+    "eligibleMess" : 0,
+    "created" : 1,
+    "skipped" : 1,
+    "failed" : 0,
+    "notificationsQueued" : 1,
+    "skipSummary" : "ALREADY_PRESENT=1"
+  },
+  "guardCurrentRun" : {
+    "id" : "a8eddaa8-ecb2-4f55-a7df-49af0448157d",
+    "spaceId" : "9b15f1f9-9c84-48d9-a736-cc65a2385cb9",
+    "billingMonth" : "2026-11-01",
+    "timezone" : "Asia/Kolkata",
+    "status" : "SUCCESS",
+    "eligibleAccommodation" : 4,
+    "eligibleMess" : 0,
+    "created" : 2,
+    "skipped" : 6,
+    "failed" : 0,
+    "notificationsQueued" : 2,
+    "skipSummary" : "ALREADY_PRESENT=2; SHORT_STAY=1; OPEN_ENDED_MONTH_CLOSE=1; NOT_MOVED_IN=1; INACTIVE_MEMBER=1"
+  },
+  "ledgerAfterGeneration" : {
+    "expected" : "39500.00",
+    "collected" : null,
+    "pending" : "39500.00",
+    "underReview" : null,
+    "source" : "OCCUPANCY"
+  },
+  "membersAfterGeneration" : [ {
+    "member" : "Tenant E",
+    "expected" : "9000.00",
+    "collected" : null,
+    "pending" : "9000.00",
+    "underReview" : null
+  }, {
+    "member" : "Tenant D",
+    "expected" : "8000.00",
+    "collected" : null,
+    "pending" : "8000.00",
+    "underReview" : null
+  }, {
+    "member" : "Tenant B",
+    "expected" : "7000.00",
+    "collected" : null,
+    "pending" : "7000.00",
+    "underReview" : null
+  }, {
+    "member" : "Tenant A",
+    "expected" : "6000.00",
+    "collected" : null,
+    "pending" : "6000.00",
+    "underReview" : null
+  }, {
+    "member" : "Tenant C",
+    "expected" : "5000.00",
+    "collected" : null,
+    "pending" : "5000.00",
+    "underReview" : null
+  }, {
+    "member" : "Tenant F",
+    "expected" : "4500.00",
+    "collected" : null,
+    "pending" : "4500.00",
+    "underReview" : null
+  } ],
+  "ledgerAfterCollection" : {
+    "expected" : "39500.00",
+    "collected" : "7000.00",
+    "pending" : "32500.00",
+    "underReview" : null,
+    "source" : "OCCUPANCY"
+  },
+  "ledgerAfterUnpaidCancellation" : {
+    "expected" : "34500.00",
+    "collected" : "7000.00",
+    "pending" : "27500.00",
+    "underReview" : null,
+    "source" : "OCCUPANCY"
+  },
+  "ledgerAfterFullRefund" : {
+    "expected" : "34500.00",
+    "collected" : null,
+    "pending" : "27500.00",
+    "underReview" : null,
+    "source" : "OCCUPANCY"
+  },
+  "tenantBAfterFullRefund" : {
+    "member" : "Tenant B",
+    "expected" : "7000.00",
+    "collected" : null,
+    "pending" : null,
+    "underReview" : null
+  },
+  "ledgerAfterPartialRetainReview" : {
+    "expected" : "34500.00",
+    "collected" : "14000.00",
+    "pending" : "6000.00",
+    "underReview" : "4500.00",
+    "source" : "OCCUPANCY"
+  },
+  "membersAfterSettlement" : [ {
+    "member" : "Tenant A",
+    "expected" : "6000.00",
+    "collected" : null,
+    "pending" : "6000.00",
+    "underReview" : null
+  }, {
+    "member" : "Tenant B",
+    "expected" : "7000.00",
+    "collected" : null,
+    "pending" : null,
+    "underReview" : null
+  }, {
+    "member" : "Tenant C",
+    "expected" : null,
+    "collected" : null,
+    "pending" : null,
+    "underReview" : null
+  }, {
+    "member" : "Tenant D",
+    "expected" : "8000.00",
+    "collected" : "5000.00",
+    "pending" : null,
+    "underReview" : null
+  }, {
+    "member" : "Tenant E",
+    "expected" : "9000.00",
+    "collected" : "9000.00",
+    "pending" : null,
+    "underReview" : null
+  }, {
+    "member" : "Tenant F",
+    "expected" : "4500.00",
+    "collected" : null,
+    "pending" : null,
+    "underReview" : "4500.00"
+  } ],
+  "ownerExtraChargeId" : "d4a00591-8917-4afa-af21-6665f9cc23c8",
+  "ownerExtraCategory" : "EXTRA",
+  "ledgerAfterReissue" : {
+    "expected" : "41000.00",
+    "collected" : "14000.00",
+    "pending" : "12500.00",
+    "underReview" : "4500.00",
+    "source" : "OCCUPANCY"
+  },
+  "reissuedPaymentId" : "e196aef0-f228-4565-bd8e-8a7f915863b9",
+  "notificationWithoutToken" : {
+    "paymentId" : "8520db05-46b2-462d-ad98-a920dbeccc08",
+    "status" : "PENDING",
+    "id" : "d59c5a73-c338-4fd1-ac2d-cf258b26fe25",
+    "lastError" : "NO_ACTIVE_TOKEN",
+    "recipientUserId" : "c19dd628-ae49-4d04-b678-cfb02e48012c",
+    "attempts" : 1
+  },
+  "notificationWithTwoTokens" : {
+    "lastError" : "INVALID_ARGUMENT",
+    "fcmAcceptedAt" : "null",
+    "attempts" : 2,
+    "status" : "PENDING"
+  },
+  "fcmAcceptanceMeansDisplayed" : false,
+  "notificationAfterFailedRetry" : {
+    "attempts" : 1,
+    "pending" : 44,
+    "status" : "PENDING"
+  },
+  "reclaimedRun" : {
+    "id" : "a4c94fa7-32fb-49b8-b68e-5439dd77dae1",
+    "spaceId" : "20a9eac7-2d0e-44c2-805a-ff483250b288",
+    "billingMonth" : "2026-11-01",
+    "timezone" : "Asia/Kolkata",
+    "status" : "SUCCESS",
+    "eligibleAccommodation" : 6,
+    "eligibleMess" : 0,
+    "created" : 0,
+    "skipped" : 6,
+    "failed" : 0,
+    "notificationsQueued" : 0,
+    "skipSummary" : "ALREADY_PRESENT=5; CANCELLED_OR_REFUNDED=1"
+  },
+  "adminRerunLastSuccess" : "2026-11-07T19:14:44.661958",
+  "adminRunCount" : 40
+}
