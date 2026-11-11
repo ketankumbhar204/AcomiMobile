@@ -20,7 +20,7 @@ describe('password authentication', () => {
     expect(en.auth.login.submit).toBe('Sign In');
     expect(en.auth.register.submit).toBe('Create Account');
     expect(en.auth.login.modeOtp.toLowerCase()).toContain('otp');
-    expect(en.common.appName).toBe('ACOMI');
+    expect(en.common.appName).toBe('Acomi');
   });
 
   it('keeps password login and adds OTP login plus forgot-password screens', () => {

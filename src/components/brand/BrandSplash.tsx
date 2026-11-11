@@ -27,7 +27,7 @@ export function BrandSplash() {
   const waveHeight = Math.max(118, Math.round(height * 0.2));
 
   return (
-    <View style={styles.root} accessibilityRole="progressbar" accessibilityLabel="Loading ACOMI">
+    <View style={styles.root} accessibilityRole="progressbar" accessibilityLabel="Loading Acomi">
       <Svg
         width={width}
         height={height}
@@ -67,7 +67,7 @@ export function BrandSplash() {
             accessibilityIgnoresInvertColors
           />
         </View>
-        <Text style={styles.name}>ACOMI</Text>
+        <Text style={styles.name}>Acomi</Text>
         <View style={styles.taglineRow}>
           <Text style={styles.taglineWord}>Spaces</Text>
           <Text style={[styles.taglineDot, { color: pastels.green.fg }]}> · </Text>

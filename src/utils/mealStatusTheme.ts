@@ -1,16 +1,28 @@
 import type { DailyMenuResponse, MealPollSlot } from '../api/types';
-import { colors } from '../theme';
 import { slotPlanningStatus } from './menuPlanningFilter';
 
 /**
  * Primary meal-card status = menu publication only.
  * Poll open/closed is secondary metadata shown under the badge.
+ *
+ * Visual presentation folds into three operator-facing statuses:
+ * - EMPTY (orange)
+ * - READY TO SHARE (blue) — covers draft + needs_reshare
+ * - SHARED (green)
  */
 export type MealStatusKind = 'empty' | 'draft' | 'shared' | 'needs_reshare';
 
 export type MealStatusTheme = {
+  /** Primary text / meal-name colour */
   color: string;
+  /** Full card background */
   background: string;
+  /** Card border */
+  border: string;
+  /** Solid status-badge fill */
+  badgeBackground: string;
+  /** Status-badge label / icon colour */
+  badgeForeground: string;
   labelKey: string;
 };
 
@@ -19,24 +31,40 @@ export const MENU_PLANNING_POLL_OPEN_COLOR = '#2563EB';
 
 export const MEAL_STATUS_THEME: Record<MealStatusKind, MealStatusTheme> = {
   empty: {
-    color: '#C2410C',
-    background: colors.warningTint,
+    color: '#A96016',
+    background: '#FFF1E3',
+    border: '#F4C99B',
+    badgeBackground: '#D97706',
+    badgeForeground: '#FFFFFF',
     labelKey: 'meals.status.empty',
   },
   draft: {
-    color: '#D97706',
-    background: colors.warningTint,
+    color: '#285DA5',
+    background: '#E8F1FF',
+    border: '#A9C8F4',
+    badgeBackground: '#1769B0',
+    badgeForeground: '#FFFFFF',
     labelKey: 'meals.status.notShared',
   },
   shared: {
-    color: colors.success,
-    background: colors.successTint,
+    color: '#176B40',
+    background: '#E5F6EC',
+    border: '#9AD9B2',
+    badgeBackground: '#16834B',
+    badgeForeground: '#FFFFFF',
     labelKey: 'meals.status.shared',
   },
+  /**
+   * Edited after share → treat visually as READY TO SHARE (blue).
+   * Business kind stays `needs_reshare` so workflows can still branch.
+   */
   needs_reshare: {
-    color: '#B45309',
-    background: colors.warningTint,
-    labelKey: 'meals.status.needsReshare',
+    color: '#285DA5',
+    background: '#E8F1FF',
+    border: '#A9C8F4',
+    badgeBackground: '#1769B0',
+    badgeForeground: '#FFFFFF',
+    labelKey: 'meals.status.notShared',
   },
 };
 
@@ -63,4 +91,9 @@ export function resolveMealStatusKind(
 
 export function mealStatusTheme(kind: MealStatusKind): MealStatusTheme {
   return MEAL_STATUS_THEME[kind];
+}
+
+/** True when the visual presentation is the blue READY TO SHARE bucket. */
+export function isReadyToShareKind(kind: MealStatusKind): boolean {
+  return kind === 'draft' || kind === 'needs_reshare';
 }

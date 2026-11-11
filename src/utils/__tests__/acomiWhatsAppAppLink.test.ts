@@ -7,7 +7,7 @@ import {
 describe('withAcomiAppLink', () => {
   it('adds the open link once', () => {
     const message = withAcomiAppLink('Hello');
-    expect(message).toBe(`Hello\n\nYou can check in the ACOMI app: ${ACOMI_APP_OPEN_URL}`);
+    expect(message).toBe(`Hello\n\nYou can check in the Acomi app: ${ACOMI_APP_OPEN_URL}`);
     expect(withAcomiAppLink(message)).toBe(message);
   });
 

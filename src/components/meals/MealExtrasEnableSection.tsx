@@ -1,7 +1,16 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   ActivityIndicator,
   Pressable,
+  ScrollView,
   StyleSheet,
   Switch,
   Text,
@@ -22,8 +31,13 @@ import {
 import {
   comboPriceDraftErrorMessage,
   type ComboPriceDraftError,
+  type ComboPriceDraftErrors,
 } from '../../utils/comboSelectionPricing';
-import type { MenuSelectionItemPackage } from '../../utils/dailyMenuDraft';
+import {
+  extraItemDraftId,
+  type MenuSelectionItemPackage,
+} from '../../utils/dailyMenuDraft';
+import { scrollFieldIntoViewWhenReady } from '../../utils/scrollFieldIntoView';
 import { persistItemPriceDraft } from '../../utils/itemSelectionPricing';
 import {
   buildMealExtraSuggestionBuckets,
@@ -47,13 +61,25 @@ type MealExtrasEnableSectionProps = {
   /** Fired when the owner interacts with extras controls. */
   onInteract?: () => void;
   disabled?: boolean;
+  scrollRef?: { current: ScrollView | null };
+};
+
+export type MealExtrasEnableSectionHandle = {
+  /** Highlight enabled extras that are missing a valid price. Returns true when all are valid. */
+  validateEnabledPrices: (options?: { scroll?: boolean }) => boolean;
+  getPriceDrafts: () => Record<string, string>;
+  revealPriceErrors: (errors: ComboPriceDraftErrors, options?: { scroll?: boolean }) => void;
 };
 
 /**
  * Mess Menu Planning: context-aware extras with inline price edit
  * (same default-price API as Configure extras / meal pricing).
  */
-export function MealExtrasEnableSection({
+export const MealExtrasEnableSection = forwardRef<
+  MealExtrasEnableSectionHandle,
+  MealExtrasEnableSectionProps
+>(function MealExtrasEnableSection(
+  {
   spaceId,
   catalogItems,
   selectedMealItemIds,
@@ -65,7 +91,10 @@ export function MealExtrasEnableSection({
   highlighted = false,
   onInteract,
   disabled = false,
-}: MealExtrasEnableSectionProps) {
+  scrollRef,
+}: MealExtrasEnableSectionProps,
+  ref,
+) {
   const { t } = useTranslation();
   const showToast = useToastStore(state => state.showToast);
   const [browseOpen, setBrowseOpen] = useState(false);
@@ -78,11 +107,90 @@ export function MealExtrasEnableSection({
   const draftPricesRef = useRef(draftPrices);
   const enabledExtrasRef = useRef(enabledExtras);
   const priceSaveInFlight = useRef(new Set<string>());
+  const priceRowRefs = useRef<Record<string, View | null>>({});
   const optedOutRef = useRef(new Set<string>());
   const autoAttemptedRef = useRef(new Set<string>());
 
   draftPricesRef.current = draftPrices;
   enabledExtrasRef.current = enabledExtras;
+
+  const scrollToExtraRow = useCallback(
+    (itemId: string) => {
+      scrollFieldIntoViewWhenReady(
+        scrollRef?.current ?? null,
+        () => priceRowRefs.current[itemId] ?? null,
+      );
+    },
+    [scrollRef],
+  );
+
+  const collectEnabledPriceErrors = useCallback((): Record<string, ComboPriceDraftError> => {
+    const errors: Record<string, ComboPriceDraftError> = {};
+    for (const extra of enabledExtrasRef.current) {
+      const draft = getEffectivePriceDraft(
+        extra.itemId,
+        draftPricesRef.current,
+        extra.price ?? null,
+      );
+      const trimmed = draft.trim();
+      if (!trimmed) {
+        errors[extra.itemId] = 'required';
+        continue;
+      }
+      const validation = validatePriceInput(trimmed);
+      if (validation === 'invalid' || validation === 'nonPositive') {
+        errors[extra.itemId] = validation;
+      }
+    }
+    return errors;
+  }, []);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      validateEnabledPrices: (options) => {
+        const errors = collectEnabledPriceErrors();
+        setPriceErrors(errors);
+        const firstId = Object.keys(errors)[0];
+        if (!firstId) {
+          return true;
+        }
+        setBrowseOpen(true);
+        if (options?.scroll !== false) {
+          scrollToExtraRow(firstId);
+        }
+        return false;
+      },
+      getPriceDrafts: () => {
+        const drafts: Record<string, string> = {};
+        for (const extra of enabledExtrasRef.current) {
+          drafts[extraItemDraftId(extra.itemId)] = getEffectivePriceDraft(
+            extra.itemId,
+            draftPricesRef.current,
+            extra.price ?? null,
+          );
+        }
+        return drafts;
+      },
+      revealPriceErrors: (errors, options) => {
+        const next: Record<string, ComboPriceDraftError> = {};
+        for (const [key, error] of Object.entries(errors)) {
+          if (key.startsWith('extra:')) {
+            next[key.slice('extra:'.length)] = error;
+          }
+        }
+        if (Object.keys(next).length === 0) {
+          return;
+        }
+        setPriceErrors(current => ({ ...current, ...next }));
+        setBrowseOpen(true);
+        if (options?.scroll !== false) {
+          scrollToExtraRow(Object.keys(next)[0]);
+        }
+      },
+    }),
+    [collectEnabledPriceErrors, scrollToExtraRow],
+  );
 
   useEffect(() => {
     setDraftPrices(prev => {
@@ -489,11 +597,6 @@ export function MealExtrasEnableSection({
             accessibilityLabel={`${item.name} ${t('meals.pricing.enterPrice')}`}
           />
         </View>
-        {errorKey ? (
-          <Text style={styles.inlinePriceError} numberOfLines={1}>
-            {comboPriceDraftErrorMessage(errorKey, t)}
-          </Text>
-        ) : null}
       </View>
     );
   };
@@ -501,24 +604,35 @@ export function MealExtrasEnableSection({
   const renderExtraRow = (item: FoodItemResponse) => {
     const selected = enabledIdSet.has(item.itemId);
     const busy = busyId === item.itemId;
+    const errorKey = priceErrors[item.itemId];
     return (
-      <View key={item.itemId} style={[styles.row, selected && styles.rowSelected]}>
-        <Text style={styles.name} numberOfLines={1}>
-          {item.name}
-        </Text>
-        {renderPriceInput(item)}
-        {busy ? (
-          <ActivityIndicator color={colors.primary} />
-        ) : (
-          <Switch
-            value={selected}
-            disabled={disabled}
-            onValueChange={value => void setExtraEnabled(item, value)}
-            trackColor={{ true: colors.primary, false: colors.border }}
-            thumbColor={colors.white}
-            accessibilityLabel={item.name}
-          />
-        )}
+      <View
+        key={item.itemId}
+        collapsable={false}
+        ref={node => {
+          priceRowRefs.current[item.itemId] = node;
+        }}>
+        <View style={[styles.row, selected && styles.rowSelected, errorKey ? styles.rowError : null]}>
+          <Text style={styles.name} numberOfLines={1}>
+            {item.name}
+          </Text>
+          {renderPriceInput(item)}
+          {busy ? (
+            <ActivityIndicator color={colors.primary} />
+          ) : (
+            <Switch
+              value={selected}
+              disabled={disabled}
+              onValueChange={value => void setExtraEnabled(item, value)}
+              trackColor={{ true: colors.primary, false: colors.border }}
+              thumbColor={colors.white}
+              accessibilityLabel={item.name}
+            />
+          )}
+        </View>
+        {errorKey ? (
+          <Text style={styles.rowErrorText}>{comboPriceDraftErrorMessage(errorKey, t)}</Text>
+        ) : null}
       </View>
     );
   };
@@ -713,7 +827,7 @@ export function MealExtrasEnableSection({
       ) : null}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   wrap: {
@@ -776,6 +890,18 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     backgroundColor: colors.lightGreen,
   },
+  rowError: {
+    borderColor: colors.danger,
+    borderWidth: 1.5,
+    backgroundColor: colors.errorTint,
+  },
+  rowErrorText: {
+    ...typography.caption,
+    color: colors.danger,
+    marginTop: -4,
+    marginBottom: spacing.sm,
+    marginLeft: spacing.xs,
+  },
   name: { ...typography.bodyStrong, flex: 1, minWidth: 0 },
   inlinePriceBlock: {
     flexShrink: 0,
@@ -792,8 +918,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   priceInputRowError: {
-    borderColor: '#F87171',
-    backgroundColor: '#FFF5F5',
+    borderColor: colors.danger,
+    borderWidth: 1.5,
+    backgroundColor: colors.white,
   },
   inlineCurrency: {
     ...typography.caption,
@@ -809,7 +936,7 @@ const styles = StyleSheet.create({
   },
   inlinePriceError: {
     ...typography.caption,
-    color: '#DC2626',
+    color: colors.danger,
     marginTop: 2,
     textAlign: 'right',
   },

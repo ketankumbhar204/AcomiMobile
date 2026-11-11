@@ -87,7 +87,7 @@
     }
   },
   "common": {
-    "appName": "ACOMI",
+    "appName": "Acomi",
     "ok": "ठीक है",
     "yes": "हाँ",
     "no": "नहीं",
@@ -850,7 +850,7 @@
       "eyebrow": "सदस्य",
       "heading": "Add a Member",
       "headingMess": "Add a Customer",
-      "subheading": "Create a business record directly. They do not need the ACOMI app.",
+      "subheading": "Create a business record directly. They do not need the Acomi app.",
       "subheadingMess": "Choose people you've already added to another space. We'll add them to this mess without asking for their details again.",
       "fullNameLabel": "पूरा नाम",
       "fullNamePlaceholder": "जैसे राहुल शर्मा",
@@ -1034,7 +1034,7 @@
       "roleRequired": "Please select a role for this member.",
       "roleNotAllowed": "यह भूमिका इस स्पेस प्रकार के लिए उपलब्ध नहीं है।",
       "send": "निमंत्रण भेजें",
-      "hintNewToAcomi": "Ask them to install ACOMI and sign in with {{mobile}}. The invitation will appear after they log in.",
+      "hintNewToAcomi": "Ask them to install Acomi and sign in with {{mobile}}. The invitation will appear after they log in.",
       "hintAlreadyOnAcomi": "They already use ACOMI. The invitation will appear in their app — they just need to accept it.",
       "pending": "निमंत्रण भेजा गया",
       "prefillHeading": "Send invitation to {{name}}",
@@ -4237,9 +4237,9 @@
       "paused": "रुका हुआ",
       "stopped": "बंद",
       "empty": "खाली",
-      "notShared": "शेयर नहीं",
+      "notShared": "शेयर के लिए तैयार",
       "shared": "शेयर किया",
-      "needsReshare": "पुनः शेयर जरूरी",
+      "needsReshare": "शेयर के लिए तैयार",
       "pollOpen": "सर्वेक्षण खुला",
       "pollClosed": "सर्वेक्षण बंद"
     },

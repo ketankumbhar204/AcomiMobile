@@ -24,7 +24,9 @@ import {
   formatComboPrice,
 } from '../../utils/comboPrice';
 import { ComboItemsPopup } from './ComboItemsPopup';
+import { MealStatusBadge } from './MealStatusBadge';
 import { MealTypeVisual } from './MealTypeVisual';
+import { mealStatusTheme, resolveMealStatusKind } from '../../utils/mealStatusTheme';
 
 const MAX_VISIBLE = 3;
 const EMPTY_COMBO_MAP = new Map<string, MealComboResponse>();
@@ -94,22 +96,8 @@ export function DailyMenuSlotCard({
   );
   const hasPlan = options.length > 0;
   const canShare = hasPlan && onShare;
-  const cardStatus =
-    !hasPlan
-      ? 'empty'
-      : published
-        ? 'shared'
-        : modified
-          ? 'updated'
-          : 'planned';
-  const cardStatusLabel =
-    cardStatus === 'empty'
-      ? t('meals.planning.selector.notPlanned', { defaultValue: 'Not planned' })
-      : cardStatus === 'shared'
-        ? t('meals.planning.selector.shared', { defaultValue: 'Shared' })
-        : cardStatus === 'updated'
-          ? t('meals.planning.selector.updated', { defaultValue: 'Updated' })
-          : t('meals.planning.selector.planned', { defaultValue: 'Planned' });
+  const statusKind = resolveMealStatusKind(menu, pollStatus ? { status: pollStatus } : null);
+  const statusTheme = mealStatusTheme(statusKind);
 
   const hiddenCount = options.length - MAX_VISIBLE;
 
@@ -172,29 +160,31 @@ export function DailyMenuSlotCard({
 
   return (
     <>
-    <Card style={styles.card} padded={false}>
+    <Card
+      style={StyleSheet.flatten([
+        styles.card,
+        {
+          backgroundColor: statusTheme.background,
+          borderColor: statusTheme.border,
+          borderWidth: 1.5,
+        },
+      ])}
+      padded={false}>
       <View style={styles.cardInner}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <MealTypeVisual mealType={mealType} size={18} style={styles.headerIcon} />
-          <Text style={styles.slotTitle}>{t(mealTypeLabelKey(mealType))}</Text>
+          <MealTypeVisual
+            mealType={mealType}
+            size={18}
+            color={statusTheme.color}
+            style={styles.headerIcon}
+          />
+          <Text style={[styles.slotTitle, { color: statusTheme.color }]}>
+            {t(mealTypeLabelKey(mealType))}
+          </Text>
         </View>
         <View style={styles.headerRight}>
-          <View
-            style={[
-              styles.headerStatus,
-              cardStatus === 'empty' && styles.headerStatusEmpty,
-              cardStatus === 'updated' && styles.headerStatusUpdated,
-            ]}>
-            <Text
-              style={[
-                styles.headerStatusText,
-                cardStatus === 'empty' && styles.headerStatusTextEmpty,
-                cardStatus === 'updated' && styles.headerStatusTextUpdated,
-              ]}>
-              {cardStatusLabel}
-            </Text>
-          </View>
+          <MealStatusBadge kind={statusKind} />
           {!readOnly && onCopyMenu ? (
             <HeaderOverflowMenu
               accessibilityLabel={t('spaces.menu.open')}
@@ -531,33 +521,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
     flexShrink: 0,
-  },
-  headerStatus: {
-    minHeight: 26,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.full,
-    backgroundColor: colors.lightGreen,
-  },
-  headerStatusEmpty: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.white,
-  },
-  headerStatusUpdated: {
-    backgroundColor: '#DBEAFE',
-  },
-  headerStatusText: {
-    ...typography.caption,
-    color: colors.success,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  headerStatusTextEmpty: {
-    color: colors.muted,
-  },
-  headerStatusTextUpdated: {
-    color: '#2563EB',
   },
   emptyBlock: {
     gap: spacing.md,

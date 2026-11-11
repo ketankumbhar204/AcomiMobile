@@ -45,7 +45,7 @@ import {
 } from '../../../hooks/useResidentImportSearch';
 import type { MainStackParamList } from '../../../navigation/types';
 import { useSpaceStore } from '../../../store/spaceStore';
-import { colors, radius, spacing, typography } from '../../../theme';
+import { colors, pageContentGutter, radius, spacing, typography } from '../../../theme';
 import { buildBedOccupancyTarget } from '../../../utils/buildOccupancyTarget';
 import { fetchTargetCatalogDefaults } from '../../../utils/fetchTargetCatalogDefaults';
 import {
@@ -1664,12 +1664,21 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   listScreen: {
-    padding: 0,
+    // Explicit zeros — RN shorthand `padding: 0` can fail to clear Screen's
+    // paddingHorizontal from an earlier style entry.
+    paddingHorizontal: 0,
+    paddingVertical: 0,
   },
   content: { paddingBottom: spacing.section },
+  /**
+   * Single page gutter at Screen (Member Details / Rooms). Children must not
+   * add another horizontal inset. Sticky footer chrome is zeroed via wizardFooter.
+   */
   stickyScreenContent: {
     flex: 1,
-    padding: 0,
+    paddingHorizontal: pageContentGutter,
+    paddingTop: spacing.md,
+    paddingBottom: 0,
     minHeight: 0,
   },
   formStepRoot: {
@@ -1680,9 +1689,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   formStepScrollContent: {
-    // Shared page gutter — stepper, inventory, fields, footer share these edges.
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
+    paddingTop: 0,
     paddingBottom: spacing.xl,
   },
   listStepRoot: {
@@ -1694,24 +1701,26 @@ const styles = StyleSheet.create({
   },
   listStepScrollContent: {
     flexGrow: 1,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
+    paddingTop: 0,
     paddingBottom: spacing.md,
   },
-  // Screen-level padding must stay 0 — gutters live only in scroll content
-  // so list steps (member) match form steps (stay type / review).
   listScreenContent: {
     flex: 1,
-    padding: 0,
+    paddingHorizontal: pageContentGutter,
+    paddingTop: spacing.md,
+    paddingBottom: 0,
     minHeight: 0,
   },
   targetScreenContent: {
     flex: 1,
-    padding: 0,
+    paddingHorizontal: pageContentGutter,
+    paddingTop: spacing.md,
+    paddingBottom: 0,
     minHeight: 0,
   },
+  // Cancel stickyBarChrome horizontal — Screen already owns pageContentGutter.
   wizardFooter: {
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: 0,
   },
   targetStepRoot: {
     flex: 1,
@@ -1719,13 +1728,10 @@ const styles = StyleSheet.create({
   },
   targetStepHeader: {
     marginBottom: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
   },
   targetStepBody: {
     flex: 1,
     minHeight: 0,
-    paddingHorizontal: spacing.lg,
   },
   memberContext: {
     marginBottom: spacing.sm,

@@ -8,6 +8,8 @@ export type MealResponseMemberRow = {
   mobileNumber: string | null;
   /** Chosen menu option when this member has responded. */
   choice: string | null;
+  /** Menu option ids this member selected (supports multi-select). */
+  optionIds: string[];
   responded: boolean;
 };
 
@@ -15,6 +17,12 @@ export type MealResponseLists = {
   eligible: MealResponseMemberRow[];
   responded: MealResponseMemberRow[];
   notResponded: MealResponseMemberRow[];
+};
+
+export type MealResponseOptionChip = {
+  optionId: string;
+  label: string;
+  count: number;
 };
 
 function byName(a: MealResponseMemberRow, b: MealResponseMemberRow): number {
@@ -31,6 +39,7 @@ export function buildMealResponseLists(
   const respondedById = new Map<string, MealResponseMemberRow>();
   for (const option of detail?.options ?? []) {
     const choice = option.label?.trim() || null;
+    const optionId = option.optionId?.trim() || '';
     for (const member of option.members ?? []) {
       const existing = respondedById.get(member.memberId);
       if (!existing) {
@@ -39,9 +48,13 @@ export function buildMealResponseLists(
           memberName: member.memberName?.trim() || 'Member',
           mobileNumber: member.mobileNumber?.trim() || null,
           choice,
+          optionIds: optionId ? [optionId] : [],
           responded: true,
         });
         continue;
+      }
+      if (optionId && !existing.optionIds.includes(optionId)) {
+        existing.optionIds.push(optionId);
       }
       if (choice && existing.choice && !existing.choice.split(', ').includes(choice)) {
         existing.choice = `${existing.choice}, ${choice}`;
@@ -60,6 +73,7 @@ export function buildMealResponseLists(
       memberName: member.memberName?.trim() || 'Member',
       mobileNumber: member.mobileNumber?.trim() || null,
       choice: null,
+      optionIds: [] as string[],
       responded: false,
     }))
     .sort(byName);
@@ -76,6 +90,30 @@ export function buildMealResponseLists(
     responded,
     notResponded,
   };
+}
+
+/** Menu/combo chips for packaging filters. Prefers MENU_ENTRY; keeps others with counts. */
+export function buildMealResponseOptionChips(
+  detail: MealHeadcountDetailResponse | null | undefined,
+): MealResponseOptionChip[] {
+  return (detail?.options ?? [])
+    .filter(option => (option.members?.length ?? 0) > 0 || (option.count ?? 0) > 0)
+    .map(option => ({
+      optionId: option.optionId,
+      label: option.label?.trim() || 'Option',
+      count: option.members?.length ?? option.count ?? 0,
+    }))
+    .filter(chip => chip.optionId && chip.count > 0);
+}
+
+export function matchesMealResponseOption(
+  row: MealResponseMemberRow,
+  optionId: string | 'all' | null | undefined,
+): boolean {
+  if (!optionId || optionId === 'all') {
+    return true;
+  }
+  return row.optionIds.includes(optionId);
 }
 
 /** Client-side match against a name or mobile already on the row. */

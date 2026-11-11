@@ -76,7 +76,7 @@ async function ensureCameraPermission(): Promise<boolean> {
   const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CAMERA, {
     title: i18n.t('files.cameraPermissionTitle', { defaultValue: 'Camera permission' }),
     message: i18n.t('files.cameraPermissionMessage', {
-      defaultValue: 'ACOMI needs camera access to take a photo.',
+      defaultValue: 'Acomi needs camera access to take a photo.',
     }),
     buttonPositive: i18n.t('common.ok', { defaultValue: 'OK' }),
     buttonNegative: i18n.t('common.cancel', { defaultValue: 'Cancel' }),

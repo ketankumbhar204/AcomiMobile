@@ -26,6 +26,7 @@ type PlanningItemPickerListProps = {
   onToggle: (itemId: string) => void;
   onPriceChange: (itemId: string, text: string) => void;
   onPriceBlur?: (item: FoodItemResponse, draftValue: string) => void;
+  onRegisterRow?: (draftId: string, node: View | null) => void;
   showMealPrices?: boolean;
   canAddItem?: boolean;
   canAddCategory?: boolean;
@@ -47,6 +48,7 @@ export function PlanningItemPickerList({
   onToggle,
   onPriceChange,
   onPriceBlur,
+  onRegisterRow,
   showMealPrices = true,
   canAddItem = false,
   canAddCategory = false,
@@ -180,8 +182,11 @@ export function PlanningItemPickerList({
             item.defaultPrice ?? null,
           );
           return (
-            <ComboPickerCard
+            <View
               key={item.itemId}
+              collapsable={false}
+              ref={node => onRegisterRow?.(draftId, node)}>
+            <ComboPickerCard
               name={item.name}
               itemNames={[]}
               foodType={item.foodType ?? 'VEG'}
@@ -220,6 +225,7 @@ export function PlanningItemPickerList({
                 ) : undefined
               }
             />
+            </View>
           );
         })
       )}

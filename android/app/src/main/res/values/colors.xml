@@ -3,5 +3,5 @@
     <color name="app_background">#F5F7FA</color>
     <!-- Cold-start splash canvas only — not the global app surface. -->
     <color name="splash_canvas">#FBFEFC</color>
-    <color name="ic_launcher_background">#000000</color>
+    <color name="ic_launcher_background">#FFFFFF</color>
 </resources>

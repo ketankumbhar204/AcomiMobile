@@ -29,7 +29,7 @@ const HomeScreen = () => {
     <Screen scrollable contentStyle={styles.content}>
       <MealFormHero
         icon={LayoutDashboard}
-        eyebrow={t('home.eyebrow', { defaultValue: 'ACOMI' })}
+        eyebrow={t('home.eyebrow', { defaultValue: 'Acomi' })}
         heading={t('home.heading', {
           defaultValue: 'Smart PG & hostel operations',
         })}

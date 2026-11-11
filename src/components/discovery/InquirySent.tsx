@@ -22,9 +22,9 @@ export function InquirySent({ variant = 'chip', sentVia = null, email = null, st
   const where = address
     ? t('spaces.findPlace.inquirySentTo', { email: address, defaultValue: 'Sent to {{email}}' })
     : sentVia === 'APP'
-    ? t('spaces.findPlace.inquirySentInApp', { defaultValue: 'Sent in the ACOMI app' })
+    ? t('spaces.findPlace.inquirySentInApp', { defaultValue: 'Sent in the Acomi app' })
     : sentVia === 'BOTH'
-      ? t('spaces.findPlace.inquirySentEmailAndApp', { defaultValue: 'Sent to your email and the ACOMI app' })
+      ? t('spaces.findPlace.inquirySentEmailAndApp', { defaultValue: 'Sent to your email and the Acomi app' })
       : sentVia === 'EMAIL'
         ? t('spaces.findPlace.inquirySentByEmail', { defaultValue: 'Sent to your email' })
         : null;
@@ -148,7 +148,7 @@ export function InquirySentDetails({ listingId }: { listingId: string }) {
           <View style={styles.fixedMeta}>
             <Smartphone size={14} color="#5F7368" />
             <Text style={styles.metaText} numberOfLines={1}>
-              {t('spaces.findPlace.inquirySentInApp', { defaultValue: 'Sent in the ACOMI app' })}
+              {t('spaces.findPlace.inquirySentInApp', { defaultValue: 'Sent in the Acomi app' })}
             </Text>
           </View>
         </>

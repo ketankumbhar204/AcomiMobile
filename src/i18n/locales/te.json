@@ -87,7 +87,7 @@
     }
   },
   "common": {
-    "appName": "ACOMI",
+    "appName": "Acomi",
     "ok": "సరే",
     "yes": "Yes",
     "no": "No",
@@ -264,8 +264,8 @@
   "onboarding": {
     "choice": {
       "title": "ACOMI",
-      "eyebrow": "Welcome to ACOMI",
-      "heading": "How will you use ACOMI?",
+      "eyebrow": "Welcome to Acomi",
+      "heading": "How will you use Acomi?",
       "headingLead": "How will you use ",
       "headingHighlight": "ACOMI?",
       "subheading": "Choose whether you are an owner or joining as a member.",
@@ -657,7 +657,7 @@
       "eyebrow": "Members",
       "heading": "Add a Member",
       "headingMess": "Add a Customer",
-      "subheading": "Create a business record directly. They do not need the ACOMI app.",
+      "subheading": "Create a business record directly. They do not need the Acomi app.",
       "subheadingMess": "Choose people you've already added to another space. We'll add them to this mess without asking for their details again.",
       "fullNameLabel": "Full Name",
       "fullNamePlaceholder": "e.g. Rahul Sharma",
@@ -813,7 +813,7 @@
       "roleRequired": "Please select a role for this member.",
       "roleNotAllowed": "This role is not available for this space type.",
       "send": "Send invitation",
-      "hintNewToAcomi": "Ask them to install ACOMI and sign in with {{mobile}}. The invitation will appear after they log in.",
+      "hintNewToAcomi": "Ask them to install Acomi and sign in with {{mobile}}. The invitation will appear after they log in.",
       "hintAlreadyOnAcomi": "They already use ACOMI. The invitation will appear in their app — they just need to accept it.",
       "pending": "Invitation sent",
       "prefillHeading": "Send invitation to {{name}}",
@@ -4631,7 +4631,7 @@
     }
   },
   "admin": {
-    "brand": "Acomi Admin",
+    "brand": "ACOMI Admin",
     "dashboard": {
       "title": "Admin Dashboard",
       "welcome": "Admin",

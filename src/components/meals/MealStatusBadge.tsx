@@ -1,10 +1,11 @@
 import React from 'react';
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
-import { AlertTriangle, Check, Circle, CircleDot } from 'lucide-react-native';
+import { Check, Circle, Send } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import type { DailyMenuResponse, MealPollSlot } from '../../api/types';
 import { radius, spacing, typography } from '../../theme';
 import {
+  isReadyToShareKind,
   mealStatusTheme,
   resolveMealStatusKind,
   type MealStatusKind,
@@ -15,13 +16,14 @@ type MealStatusBadgeProps = {
   kind?: MealStatusKind;
   menu?: DailyMenuResponse | null;
   poll?: Pick<MealPollSlot, 'status'> | null;
-  /** compact = icon + short label; pill = filled chip */
+  /** compact = tighter chip for dense rows; default = dashboard-scale badge */
   size?: 'compact' | 'default';
   style?: StyleProp<ViewStyle>;
 };
 
 /**
  * Single meal-status badge used across Dashboard, Menu Planning, Share, etc.
+ * Solid filled chip: SHARED (green) / READY TO SHARE (blue) / EMPTY (orange).
  */
 export function MealStatusBadge({
   kind: kindProp,
@@ -35,14 +37,7 @@ export function MealStatusBadge({
   const theme = mealStatusTheme(kind);
   const label = t(theme.labelKey);
   const compact = size === 'compact';
-  const StatusIcon =
-    kind === 'shared'
-      ? Check
-      : kind === 'needs_reshare'
-        ? AlertTriangle
-        : kind === 'draft'
-          ? CircleDot
-          : Circle;
+  const StatusIcon = kind === 'shared' ? Check : isReadyToShareKind(kind) ? Send : Circle;
 
   return (
     <View
@@ -50,21 +45,26 @@ export function MealStatusBadge({
         styles.badge,
         compact && styles.badgeCompact,
         {
-          borderColor: theme.color,
-          backgroundColor: theme.background,
+          backgroundColor: theme.badgeBackground,
         },
         style,
       ]}
       accessibilityRole="text"
       accessibilityLabel={label}>
       <StatusIcon
-        size={compact ? 11 : 12}
-        color={theme.color}
-        strokeWidth={2.4}
+        size={compact ? 11 : 13}
+        color={theme.badgeForeground}
+        strokeWidth={2.6}
       />
       <Text
-        style={[styles.label, compact && styles.labelCompact, { color: theme.color }]}
-        numberOfLines={1}>
+        style={[
+          styles.label,
+          compact && styles.labelCompact,
+          { color: theme.badgeForeground },
+        ]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.85}>
         {label}
       </Text>
     </View>
@@ -75,28 +75,30 @@ const styles = StyleSheet.create({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    borderWidth: 1,
+    gap: 5,
     borderRadius: radius.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 5,
     alignSelf: 'flex-start',
     maxWidth: '100%',
   },
   badgeCompact: {
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-    gap: 3,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    gap: 4,
   },
   label: {
     ...typography.caption,
     fontWeight: '700',
-    fontSize: 11,
-    lineHeight: 14,
+    fontSize: 13,
+    lineHeight: 16,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
     flexShrink: 1,
   },
   labelCompact: {
-    fontSize: 10,
-    lineHeight: 12,
+    fontSize: 11,
+    lineHeight: 14,
+    letterSpacing: 0.2,
   },
 });
