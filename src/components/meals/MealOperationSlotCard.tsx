@@ -5,20 +5,7 @@ import { MealStatusBadge } from './MealStatusBadge';
 import { MealTypeVisual } from './MealTypeVisual';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 import type { DashboardMealSlotCaptionTone } from '../../utils/dashboardMealSlotDisplay';
-import { MENU_PLANNING_POLL_OPEN_COLOR } from '../../utils/menuPlanningStatusVisual';
 import { mealStatusTheme, type MealStatusKind } from '../../utils/mealStatusTheme';
-import { mealTypeTheme } from '../../utils/mealTypeTheme';
-
-function captionToneColor(tone: DashboardMealSlotCaptionTone): string {
-  switch (tone) {
-    case 'complete':
-      return colors.success;
-    case 'progress':
-      return MENU_PLANNING_POLL_OPEN_COLOR;
-    default:
-      return colors.textSecondary;
-  }
-}
 
 export type MealOperationSlotCardProps = {
   mealLabel: string;
@@ -38,13 +25,14 @@ export type MealOperationSlotCardProps = {
 
 /**
  * Shared meal-slot card used on Dashboard Meal Operations and the headcount drawer strip.
+ * Entire card surface follows SHARED / READY TO SHARE / EMPTY status colours.
  */
 export function MealOperationSlotCard({
   mealLabel,
   caption,
   countPrimary,
   countUnit,
-  captionTone,
+  captionTone: _captionTone,
   statusKind,
   onPress,
   mealType,
@@ -52,11 +40,8 @@ export function MealOperationSlotCard({
   compact = false,
 }: MealOperationSlotCardProps) {
   const statusTheme = mealStatusTheme(statusKind);
-  const typeTheme = mealType ? mealTypeTheme(mealType) : null;
-  const toneColor = captionToneColor(captionTone);
   const showMetric = countPrimary != null && countPrimary.length > 0;
-  const cardAccent = typeTheme?.accent ?? statusTheme.color;
-  const cardSoft = typeTheme?.soft ?? colors.white;
+  const accent = statusTheme.color;
 
   return (
     <Pressable
@@ -68,41 +53,42 @@ export function MealOperationSlotCard({
         styles.slotCard,
         compact && styles.slotCardCompact,
         {
-          backgroundColor: cardSoft,
-          borderColor: '#E5E7EB',
-          borderWidth: 1,
+          backgroundColor: statusTheme.background,
+          borderColor: statusTheme.border,
+          borderWidth: selected ? 2 : 1.5,
         },
         pressed && styles.slotCardPressed,
         !selected && compact && styles.slotCardUnselectedCompact,
         !selected && !compact && styles.slotCardDesignA,
       ]}>
       {selected ? (
-        <View style={[styles.selectedIndicator, { backgroundColor: cardAccent }]} />
+        <View style={[styles.selectedIndicator, { backgroundColor: accent }]} />
       ) : null}
       {/* TODO: pass imageSource on MealTypeVisual when meal photos are available */}
-      {mealType && !compact ? <MealTypeVisual mealType={mealType} size={18} /> : null}
-      <Text
-        style={[styles.slotMealLabel, typeTheme ? { color: typeTheme.accent } : null]}
-        numberOfLines={1}>
+      {mealType && !compact ? (
+        <MealTypeVisual mealType={mealType} size={18} color={accent} />
+      ) : null}
+      <Text style={[styles.slotMealLabel, { color: accent }]} numberOfLines={1}>
         {mealLabel}
       </Text>
-      <MealStatusBadge kind={statusKind} size="compact" style={styles.slotStatusBadge} />
+      <MealStatusBadge
+        kind={statusKind}
+        size={compact ? 'compact' : 'default'}
+        style={styles.slotStatusBadge}
+      />
       {showMetric ? (
         <View style={styles.slotMetricBlock}>
-          <View style={styles.slotCaptionRow}>
-            <View style={[styles.slotBadgeDot, { backgroundColor: toneColor }]} />
-            <Text style={[styles.slotCountPrimary, { color: toneColor }]} numberOfLines={1}>
-              {countPrimary}
-            </Text>
-          </View>
+          <Text style={[styles.slotCountPrimary, { color: accent }]} numberOfLines={1}>
+            {countPrimary}
+          </Text>
           {countUnit ? (
-            <Text style={[styles.slotCountUnit, { color: toneColor }]} numberOfLines={1}>
+            <Text style={[styles.slotCountUnit, { color: accent }]} numberOfLines={2}>
               {countUnit}
             </Text>
           ) : null}
         </View>
       ) : (
-        <Text style={styles.slotCaption} numberOfLines={2}>
+        <Text style={[styles.slotCaption, { color: accent }]} numberOfLines={2}>
           {caption}
         </Text>
       )}
@@ -115,7 +101,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 96,
     borderRadius: radius.card,
-    borderWidth: 1,
+    borderWidth: 1.5,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xs,
     alignItems: 'center',
@@ -124,7 +110,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   slotCardDesignA: {
-    minHeight: 104,
+    minHeight: 118,
     paddingVertical: spacing.sm,
     gap: spacing.xs,
     ...shadows.sm,
@@ -152,8 +138,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontWeight: '700',
     textAlign: 'center',
-    fontSize: 15,
-    lineHeight: 18,
+    fontSize: 16,
+    lineHeight: 20,
   },
   slotStatusBadge: {
     alignSelf: 'center',
@@ -164,39 +150,26 @@ const styles = StyleSheet.create({
     gap: 2,
     marginTop: 2,
   },
-  slotCaptionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    paddingHorizontal: 2,
-  },
-  slotBadgeDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    flexShrink: 0,
-  },
   slotCountPrimary: {
     ...typography.bodyStrong,
-    fontSize: 16,
-    lineHeight: 20,
+    fontSize: 18,
+    lineHeight: 22,
     textAlign: 'center',
     fontWeight: '800',
   },
   slotCountUnit: {
     ...typography.caption,
-    fontSize: 10,
-    lineHeight: 12,
+    fontSize: 12,
+    lineHeight: 15,
     textAlign: 'center',
     fontWeight: '600',
   },
   slotCaption: {
     ...typography.caption,
-    color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 14,
-    fontSize: 11,
+    lineHeight: 15,
+    fontSize: 12,
+    fontWeight: '600',
     flexShrink: 1,
   },
 });

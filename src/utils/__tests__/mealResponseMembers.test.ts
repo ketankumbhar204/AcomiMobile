@@ -72,6 +72,7 @@ describe('buildMealResponseLists', () => {
         memberName: 'Asha',
         mobileNumber: null,
         choice: 'Poha, Not available',
+        optionIds: ['opt-1', 'opt-2'],
         responded: true,
       },
       {
@@ -79,6 +80,7 @@ describe('buildMealResponseLists', () => {
         memberName: 'Ravi',
         mobileNumber: null,
         choice: 'Not available',
+        optionIds: ['opt-2'],
         responded: true,
       },
     ]);
@@ -93,6 +95,7 @@ describe('matchesMealResponseSearch', () => {
     memberName: 'Rahul Kumar',
     mobileNumber: '9999999991',
     choice: 'Chicken Thali',
+    optionIds: ['opt-chicken'],
     responded: true,
   };
 

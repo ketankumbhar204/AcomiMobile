@@ -32,7 +32,12 @@ export function resolveDashboardMealSlotCaption(
   'captionKey' | 'captionParams' | 'captionTone' | 'countPrimary' | 'countUnitKey'
 > {
   if (status === 'not_planned') {
-    return { captionKey: 'meals.planning.cardHintEmpty', captionTone: 'muted' };
+    return {
+      captionKey: 'meals.planning.cardHintEmpty',
+      countPrimary: '—',
+      countUnitKey: 'meals.planning.cardHintEmpty',
+      captionTone: 'muted',
+    };
   }
   if (status === 'modified') {
     return { captionKey: 'meals.planning.cardHintNeedsReshare', captionTone: 'muted' };
@@ -74,11 +79,9 @@ function mealStatusLabelKeyForKind(kind: MealStatusKind): string {
   if (kind === 'empty') {
     return 'meals.status.empty';
   }
-  if (kind === 'draft') {
+  // draft + needs_reshare both present as READY TO SHARE
+  if (kind === 'draft' || kind === 'needs_reshare') {
     return 'meals.status.notShared';
-  }
-  if (kind === 'needs_reshare') {
-    return 'meals.status.needsReshare';
   }
   return 'meals.status.shared';
 }

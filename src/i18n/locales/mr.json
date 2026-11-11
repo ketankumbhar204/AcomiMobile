@@ -87,7 +87,7 @@
     }
   },
   "common": {
-    "appName": "ACOMI",
+    "appName": "Acomi",
     "ok": "ठीक आहे",
     "yes": "हो",
     "no": "नाही",
@@ -850,7 +850,7 @@
       "eyebrow": "सदस्य",
       "heading": "Add a Member",
       "headingMess": "Add a Customer",
-      "subheading": "Create a business record directly. They do not need the ACOMI app.",
+      "subheading": "Create a business record directly. They do not need the Acomi app.",
       "subheadingMess": "Choose people you've already added to another space. We'll add them to this mess without asking for their details again.",
       "fullNameLabel": "पूर्ण नाव",
       "fullNamePlaceholder": "उदा. राहुल शर्मा",
@@ -1034,7 +1034,7 @@
       "roleRequired": "Please select a role for this member.",
       "roleNotAllowed": "ही भूमिका या स्पेस प्रकारासाठी उपलब्ध नाही।",
       "send": "आमंत्रण पाठवा",
-      "hintNewToAcomi": "Ask them to install ACOMI and sign in with {{mobile}}. The invitation will appear after they log in.",
+      "hintNewToAcomi": "Ask them to install Acomi and sign in with {{mobile}}. The invitation will appear after they log in.",
       "hintAlreadyOnAcomi": "They already use ACOMI. The invitation will appear in their app — they just need to accept it.",
       "pending": "आमंत्रण पाठवले",
       "prefillHeading": "Send invitation to {{name}}",

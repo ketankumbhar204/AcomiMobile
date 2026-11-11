@@ -128,31 +128,37 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
     borderRadius: radius.button,
+    backgroundColor: colors.lightGreen,
+    borderWidth: 1,
+    borderColor: colors.primary,
   },
   dateCenterCompact: {
-    paddingVertical: 0,
-    minHeight: 32,
+    paddingVertical: spacing.xs,
+    minHeight: 36,
   },
   dateCenterStatic: {
-    // non-pressable center still keeps layout
+    // non-pressable center still keeps selected-date highlight
   },
   dateCenterPressed: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.mintSubtle,
   },
   dateLabel: {
-    ...typography.caption,
+    ...typography.bodyStrong,
     color: colors.primaryDark,
-    fontWeight: '700',
+    fontSize: 16,
+    lineHeight: 20,
+    fontWeight: '800',
     textAlign: 'center',
   },
   dateLabelCompact: {
-    fontSize: 13,
-    lineHeight: 16,
-    fontWeight: '600',
+    fontSize: 15,
+    lineHeight: 18,
+    fontWeight: '800',
   },
   dateLabelLink: {
-    textDecorationLine: 'underline',
+    textDecorationLine: 'none',
   },
 });

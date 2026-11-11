@@ -277,7 +277,7 @@ export function InquiryCreditsScreen() {
                     'You get {{free}} free mobile enquiries per day, then paid credits apply.',
                 })
               : t('inquiryCredits.mobileFreeBody', {
-                  defaultValue: 'Unlimited enquiries are available in the ACOMI Android app.',
+                  defaultValue: 'Unlimited enquiries are available in the Acomi Android app.',
                 })}
           </Text>
         </View>
@@ -296,7 +296,7 @@ export function InquiryCreditsScreen() {
             })
           : t('inquiryCredits.howItWorksBodyMobile', {
               defaultValue:
-                'Get unlimited enquiries on ACOMI Android. Credits are used for email/web enquiries after the daily free allowance.',
+                'Get unlimited enquiries on Acomi Android. Credits are used for email/web enquiries after the daily free allowance.',
             })}
       </Text>
 

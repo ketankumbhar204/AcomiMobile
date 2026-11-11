@@ -37,10 +37,10 @@ class MainApplication : Application(), ReactApplication {
     val channel =
       NotificationChannel(
         "acomi_transactions",
-        "ACOMI",
+        "Acomi",
         NotificationManager.IMPORTANCE_HIGH,
       )
-    channel.description = "Transactional updates from ACOMI"
+    channel.description = "Transactional updates from Acomi"
     channel.lockscreenVisibility = Notification.VISIBILITY_PUBLIC
     channel.enableVibration(true)
     val manager = getSystemService(NotificationManager::class.java)

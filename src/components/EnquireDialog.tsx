@@ -467,7 +467,7 @@ function ChooseMethods({
               {t('spaces.findPlace.enquire.recommended', { defaultValue: 'Recommended' })}
             </Text>
             <Text style={styles.optionTitle}>
-              {t('spaces.findPlace.enquire.sendOnApp', { defaultValue: 'Send on ACOMI App' })}
+              {t('spaces.findPlace.enquire.sendOnApp', { defaultValue: 'Send on Acomi App' })}
             </Text>
             <Text style={styles.optionStrong}>
               {t('spaces.findPlace.enquire.unlimitedTitle', { defaultValue: 'Unlimited enquiries' })}

@@ -43,6 +43,7 @@ describe('buildDashboardMealSlotRows', () => {
     expect(rows.every(row => row.status === 'not_planned')).toBe(true);
     expect(rows.every(row => row.statusKind === 'empty')).toBe(true);
     expect(rows.every(row => row.captionKey === 'meals.planning.cardHintEmpty')).toBe(true);
+    expect(rows.every(row => row.countPrimary === '—')).toBe(true);
   });
 
   it('maps draft breakfast and lunch with dinner not planned', () => {
@@ -90,7 +91,7 @@ describe('buildDashboardMealSlotRows', () => {
     });
   });
 
-  it('maps modified meals to needs-reshare status', () => {
+  it('maps modified meals to needs-reshare status presented as READY TO SHARE', () => {
     const menuMap = {
       BREAKFAST: menu('BREAKFAST', 'MODIFIED', 2),
     };
@@ -99,6 +100,7 @@ describe('buildDashboardMealSlotRows', () => {
 
     expect(rows[0]).toMatchObject({
       statusKind: 'needs_reshare',
+      statusLabelKey: 'meals.status.notShared',
       captionKey: 'meals.planning.cardHintNeedsReshare',
     });
   });

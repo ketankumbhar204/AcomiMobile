@@ -17,6 +17,8 @@ import { formatMenuDate } from '../../utils/mealDates';
 import { mealTypeLabelKey } from '../../utils/mealLabels';
 import {
   buildMealResponseLists,
+  buildMealResponseOptionChips,
+  matchesMealResponseOption,
   matchesMealResponseSearch,
   mealResponseCardStatus,
   type MealResponseFilter,
@@ -67,6 +69,7 @@ export function MealResponseMembersScreen({
   const { t, i18n } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const [filter, setFilter] = useState<MealResponseFilter>('responded');
+  const [optionFilter, setOptionFilter] = useState<string>('all');
   const [query, setQuery] = useState('');
   const { loading, detail, error, reload } = useMealHeadcountDetail(
     spaceId,
@@ -75,6 +78,7 @@ export function MealResponseMembersScreen({
     true,
   );
   const lists = useMemo(() => buildMealResponseLists(detail), [detail]);
+  const optionChips = useMemo(() => buildMealResponseOptionChips(detail), [detail]);
   const rows =
     filter === 'eligible'
       ? lists.eligible
@@ -82,8 +86,13 @@ export function MealResponseMembersScreen({
         ? lists.notResponded
         : lists.responded;
   const visibleRows = useMemo(
-    () => rows.filter(row => matchesMealResponseSearch(row, query)),
-    [query, rows],
+    () =>
+      rows.filter(
+        row =>
+          matchesMealResponseSearch(row, query) &&
+          matchesMealResponseOption(row, optionFilter),
+      ),
+    [optionFilter, query, rows],
   );
   const mealLabel = t(mealTypeLabelKey(mealType));
   const searchPlaceholder = t('meals.responses.searchPlaceholder', {
@@ -143,7 +152,12 @@ export function MealResponseMembersScreen({
 
       <ListFilterChips
         value={filter}
-        onChange={setFilter}
+        onChange={next => {
+          setFilter(next);
+          if (next !== 'responded') {
+            setOptionFilter('all');
+          }
+        }}
         options={[
           {
             id: 'eligible',
@@ -165,6 +179,27 @@ export function MealResponseMembersScreen({
           },
         ]}
       />
+
+      {filter === 'responded' && optionChips.length > 0 ? (
+        <ListFilterChips
+          value={optionFilter}
+          onChange={setOptionFilter}
+          options={[
+            {
+              id: 'all',
+              label: t('meals.responses.filterAllMenus', { defaultValue: 'All menus' }),
+              badge: lists.responded.length,
+              tone: 'primary',
+            },
+            ...optionChips.map(chip => ({
+              id: chip.optionId,
+              label: chip.label,
+              badge: chip.count,
+              tone: 'info' as const,
+            })),
+          ]}
+        />
+      ) : null}
 
       {showList && !error ? (
         <View style={styles.searchWrap}>

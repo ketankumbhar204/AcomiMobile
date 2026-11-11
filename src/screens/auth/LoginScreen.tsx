@@ -161,7 +161,7 @@ export function LoginScreen() {
         collapsable={false}>
         <View style={styles.brandSection} collapsable={false}>
           <Image
-            source={require('../../assets/brand/icon-light.png')}
+            source={require('../../assets/brand/splash-mark.png')}
             style={styles.logo}
             resizeMode="contain"
             accessibilityIgnoresInvertColors
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
     height: 88,
     borderRadius: 22,
     marginBottom: spacing.md,
-    backgroundColor: '#000000',
+    backgroundColor: colors.white,
     overflow: 'hidden',
   },
   appName: {

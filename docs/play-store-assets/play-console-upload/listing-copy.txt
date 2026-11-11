@@ -4,9 +4,7 @@ Copy and paste. Do not invent extra claims.
 ============================================================
 APP NAME (max 30)
 ============================================================
-ACOMI
-
-(Change the current "Acomi" to "ACOMI".)
+Acomi
 
 ============================================================
 SHORT DESCRIPTION (max 80)
