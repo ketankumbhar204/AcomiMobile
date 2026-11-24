@@ -167,7 +167,7 @@ export function LoginScreen() {
             accessibilityIgnoresInvertColors
           />
           <Text style={styles.appName}>{t('common.appName')}</Text>
-          <Text style={styles.tagline}>Spaces · Meals · People belong</Text>
+          <Text style={styles.tagline}>{t('brand.tagline')}</Text>
         </View>
 
         <AuthHero

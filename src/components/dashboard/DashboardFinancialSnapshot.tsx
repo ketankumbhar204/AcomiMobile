@@ -32,6 +32,8 @@ type DashboardFinancialSnapshotProps = {
   onMonthChange?: (month: string) => void;
   error?: boolean;
   onRetry?: () => void;
+  /** Summary amounts are an illustrative preview, not live records. */
+  illustrative?: boolean;
 };
 
 const TILE = {
@@ -68,6 +70,7 @@ export function DashboardFinancialSnapshot({
   onMonthChange,
   error = false,
   onRetry,
+  illustrative = false,
 }: DashboardFinancialSnapshotProps) {
   const { t, i18n } = useTranslation();
   const currencyCode = financial?.currencyCode ?? 'INR';
@@ -157,6 +160,9 @@ export function DashboardFinancialSnapshot({
           </View>
         ) : null}
       </View>
+      {illustrative && !loading ? (
+        <Text style={styles.illustrative}>{t('dashboard.illustrativePreview')}</Text>
+      ) : null}
       {hint && !loading ? <Text style={styles.emptyHint}>{hint}</Text> : null}
       {error && !loading ? (
         <Pressable onPress={onRetry} accessibilityRole="button">
@@ -274,6 +280,12 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     fontWeight: '600',
     color: colors.textPrimary,
+  },
+  illustrative: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.sm,
   },
   monthRow: {
     flexDirection: 'row',

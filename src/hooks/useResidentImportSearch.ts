@@ -1,46 +1,29 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { memberApi } from '../api/memberApi';
-import type { MemberImportCandidateResponse, MemberResponse, UUID } from '../api/types';
+import type { UUID } from '../api/types';
 import { getMembershipErrorMessage } from '../utils/membershipErrors';
+import {
+  mapImportCandidatesToPickerItems,
+  type ResidentPickerItem,
+} from '../utils/residentImportCandidates';
+
+export type { ResidentPickerItem };
 
 const DEBOUNCE_MS = 300;
 
-export type ResidentPickerItem = MemberResponse & {
-  sourceSpaceId?: UUID;
-  sourceSpaceName?: string;
-  alreadyInTargetSpace?: boolean;
-  availableForMoveIn?: boolean;
-  needsImport?: boolean;
-};
-
-function candidateToPickerItem(candidate: MemberImportCandidateResponse): ResidentPickerItem {
-  return {
-    memberId: candidate.memberId,
-    fullName: candidate.fullName,
-    mobileNumber: candidate.mobileNumber,
-    role: candidate.role,
-    linkedUser: false,
-    status: candidate.status,
-    occupancyStatus: candidate.occupancyStatus,
-    gender: candidate.gender,
-    createdAt: candidate.createdAt,
-    sourceSpaceId: candidate.sourceSpaceId,
-    sourceSpaceName: candidate.sourceSpaceName,
-    alreadyInTargetSpace: candidate.alreadyInTargetSpace,
-    availableForMoveIn: candidate.availableForMoveIn,
-    needsImport: !candidate.alreadyInTargetSpace,
-  };
-}
-
 type UseResidentImportSearchOptions = {
   enabled?: boolean;
-  /** Import lists people already in the space. Move-in search hides them. */
+  /**
+   * When false (default for Mess Add Customer), hide busy lodging rows.
+   * Move In passes true so All My Spaces people remain discoverable, while
+   * MemberPickerStep disables rows with availableForMoveIn=false.
+   */
   includeUnavailable?: boolean;
 };
 
 /**
- * Cross-space eligible resident search for ALLOCATE / RESERVE member picker.
- * Uses GET /spaces/{id}/members/import-candidates.
+ * Cross-space eligible resident search for ALLOCATE / RESERVE member picker
+ * and Mess customer reuse. Uses GET /spaces/{id}/members/import-candidates.
  */
 export function useResidentImportSearch(
   spaceId: UUID,
@@ -63,11 +46,7 @@ export function useResidentImportSearch(
       if (seq !== requestSeq.current) {
         return;
       }
-      setMembers(
-        data
-          .filter(item => includeUnavailable || item.availableForMoveIn)
-          .map(candidateToPickerItem),
-      );
+      setMembers(mapImportCandidatesToPickerItems(data, { includeUnavailable }));
     } catch (err) {
       if (seq !== requestSeq.current) {
         return;

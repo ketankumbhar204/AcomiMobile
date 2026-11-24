@@ -2,6 +2,7 @@ import {
   addPersonNoun,
   countImportableCandidates,
   destinationForAddPersonChoice,
+  offersUseExistingChoice,
   shouldOfferImportChoice,
 } from '../addPersonChoice';
 
@@ -12,7 +13,7 @@ describe('add person choice', () => {
     expect(addPersonNoun(undefined)).toBe('member');
   });
 
-  it('opens the existing new form or the existing import flow', () => {
+  it('opens the new form, or the Mess use-existing search', () => {
     expect(destinationForAddPersonChoice('MESS', 'new')).toEqual({
       type: 'form',
       pickerMode: 'new',
@@ -25,9 +26,17 @@ describe('add person choice', () => {
       type: 'form',
       pickerMode: 'new',
     });
-    expect(destinationForAddPersonChoice('HOSTEL', 'import')).toEqual({
-      type: 'import-screen',
-    });
+  });
+
+  it('never routes lodging to the import screen; only Mess offers use-existing', () => {
+    for (const spaceType of ['PG', 'HOSTEL', 'CO_LIVING', 'RENTAL', 'CORPORATE_STAY', undefined]) {
+      expect(offersUseExistingChoice(spaceType)).toBe(false);
+      expect(destinationForAddPersonChoice(spaceType, 'import')).toEqual({
+        type: 'form',
+        pickerMode: 'new',
+      });
+    }
+    expect(offersUseExistingChoice('MESS')).toBe(true);
   });
 });
 

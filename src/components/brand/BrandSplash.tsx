@@ -6,8 +6,10 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
+import { i18n } from '../../i18n';
 import { colors, pastels, spacing } from '../../theme';
 
 /**
@@ -22,12 +24,23 @@ const TOP_MINT = pastels.mint.bg;
 
 /** Shown while the app boots. Visual layout matches the approved splash reference. */
 export function BrandSplash() {
+  const { t } = useTranslation();
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const waveHeight = Math.max(118, Math.round(height * 0.2));
+  // First paint can happen before initI18n finishes — keep English fallbacks.
+  const ready = i18n.isInitialized;
+  const appName = ready ? t('common.appName') : 'Acomi';
+  const loadingA11y = ready ? t('brand.loadingA11y') : 'Loading Acomi';
+  const spaces = ready ? t('brand.taglineSpaces') : 'Spaces';
+  const meals = ready ? t('brand.taglineMeals') : 'Meals';
+  const peopleBelong = ready ? t('brand.taglinePeopleBelong') : 'People belong';
 
   return (
-    <View style={styles.root} accessibilityRole="progressbar" accessibilityLabel="Loading Acomi">
+    <View
+      style={styles.root}
+      accessibilityRole="progressbar"
+      accessibilityLabel={loadingA11y}>
       <Svg
         width={width}
         height={height}
@@ -67,13 +80,13 @@ export function BrandSplash() {
             accessibilityIgnoresInvertColors
           />
         </View>
-        <Text style={styles.name}>Acomi</Text>
+        <Text style={styles.name}>{appName}</Text>
         <View style={styles.taglineRow}>
-          <Text style={styles.taglineWord}>Spaces</Text>
+          <Text style={styles.taglineWord}>{spaces}</Text>
           <Text style={[styles.taglineDot, { color: pastels.green.fg }]}> · </Text>
-          <Text style={styles.taglineWord}>Meals</Text>
+          <Text style={styles.taglineWord}>{meals}</Text>
           <Text style={[styles.taglineDot, { color: pastels.purple.fg }]}> · </Text>
-          <Text style={styles.taglineWord}>People belong</Text>
+          <Text style={styles.taglineWord}>{peopleBelong}</Text>
         </View>
         <ActivityIndicator style={styles.spinner} size="small" color={colors.primary} />
       </View>

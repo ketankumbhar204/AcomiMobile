@@ -30,6 +30,7 @@
     },
     "editSpace": {
       "tabGeneral": "General",
+      "tabRules": "Rules & Guidelines",
       "tabBilling": "Billing & tax",
       "tabMeals": "Meals & billing",
       "tabPolls": "Poll defaults"
@@ -159,7 +160,12 @@
       "am": "AM",
       "pm": "PM"
     },
-    "fabAction": "Action"
+    "fabAction": "Action",
+    "error": "Something went wrong",
+    "dismiss": "Dismiss",
+    "viewDetails": "View details",
+    "change": "Change",
+    "selectDate": "Select date"
   },
   "inquiryCredits": {
     "title": "Inquiry Credits",
@@ -170,7 +176,25 @@
     "buy": "Buy",
     "buyCta": "Buy inquiry credits",
     "purchaseSubmitted": "Purchase request submitted. Credits appear after admin approval.",
-    "purchaseFailed": "Could not submit purchase request. Please try again."
+    "purchaseFailed": "Could not submit purchase request. Please try again.",
+    "loadErrorTitle": "Could not load credits",
+    "mobileCreditsTitle": "Mobile enquiries use credits",
+    "mobileFreeTitle": "Mobile enquiries are free",
+    "mobileCreditsBody": "You get {{free}} free mobile enquiries per day, then paid credits apply.",
+    "mobileFreeBody": "Unlimited enquiries are available in the Acomi Android app.",
+    "howItWorksTitle": "How it works",
+    "howItWorksBodyMobileCredits": "After your daily free mobile enquiries, each new enquiry uses 1 credit. Buy a mobile credit package below after paying via UPI.",
+    "howItWorksBodyMobile": "Get unlimited enquiries on Acomi Android. Credits are used for email/web enquiries after the daily free allowance.",
+    "buyCreditsTitleMobile": "Buy mobile inquiry credits",
+    "buyCreditsTitleWeb": "Mobile credit packages",
+    "purchaseDisabledHint": "Purchases are not required while mobile enquiries are free.",
+    "noPackages": "No credit packages are available right now.",
+    "payThenUtr": "Pay via UPI, then enter your UTR / transaction reference.",
+    "openQr": "Open payment QR",
+    "whatsappCta": "Send payment screenshot on WhatsApp",
+    "utrPlaceholder": "UTR / transaction ID (optional)",
+    "submitPurchase": "Submit",
+    "profileSubtitle": "Mobile enquiries are free · Web credits"
   },
   "notifications": {
     "title": "Notifications",
@@ -489,7 +513,15 @@
       "attentionMoreUpdates_one": "+{{count}} more update",
       "attentionMoreUpdates_other": "+{{count}} more updates",
       "serviceContacts": "Service Contacts",
-      "serviceContactsSubtitle": "Save and manage your service providers"
+      "serviceContactsSubtitle": "Save and manage your service providers",
+      "pendingTitle": "Pending review",
+      "pendingHint": "Not public until ACOMI publishes the listing.",
+      "pendingNoInventory": "No rooms or beds until this listing is published.",
+      "listingName": "Name",
+      "listingAddress": "Address",
+      "pendingSaved": "Listing updated.",
+      "savingListing": "Saving…",
+      "saveListing": "Save listing"
     },
     "findPlace": {
       "eyebrow": "SEARCH FOR A PLACE",
@@ -681,7 +713,128 @@
         "emailBody": "Pick a saved address or enter a new one.",
         "savedEmails": "Saved emails",
         "useDifferentEmail": "Use a different email",
-        "privacyHint": "Owner contact details are shared in My Enquiries when available."
+        "privacyHint": "Owner contact details are shared in My Enquiries when available.",
+        "viewHereExhausted": "You have used all instant contact views for today.",
+        "viewHereDisabled": "Instant contact viewing is turned off. You can still request details.",
+        "sentToastTitle": "Enquiry sent!",
+        "sentToastBody": "Check your email inbox, we have sent owner contact details to {{email}}.",
+        "sentToastBodyNoEmail": "Check your email inbox. We have sent the owner contact details.",
+        "limitMapTitle": "Pay to continue to the map",
+        "limitPhotosTitle": "Pay to continue requesting photos",
+        "limitMapBody": "Today",
+        "limitPhotosBody": "Today",
+        "limitPaymentSubmitError": "Could not submit payment request. Please try again.",
+        "limitPayRejectedBody": "This payment was not confirmed, so the map and photo request stay closed.",
+        "limitMapPendingBody": "The map stays closed until an admin confirms this payment. It will open as soon as the payment is confirmed.",
+        "limitPhotosPendingBody": "Photo requests stay closed until an admin confirms this payment. You can continue as soon as the payment is confirmed.",
+        "limitPackageBodyMap": "Get {{count}} enquiry credits. After payment is confirmed, continue to the map.",
+        "limitPackageBodyPhotos": "Get {{count}} enquiry credits. After payment is confirmed, continue requesting photos.",
+        "limitUtrPlaceholder": "UTR / transaction reference",
+        "limitPaymentSubmit": "I",
+        "limitPaymentUnavailable": "Payment details are currently unavailable. Please try again later.",
+        "limitNotNow": "Not now",
+        "contactTitle": "Contact details",
+        "contactLoading": "Loading contact details…",
+        "contactFailed": "Contact details could not be loaded. Try again.",
+        "contactRetry": "Try again",
+        "contactOwner": "Owner",
+        "whatsapp": "WhatsApp",
+        "contactEmail": "Email",
+        "openMap": "Open in Maps",
+        "contactEmpty": "No contact details available yet.",
+        "emailCtaReady": "Get on email",
+        "emailCardHint": "We’ll send the owner’s contact details to your registered email.",
+        "sendDetails": "Send details",
+        "contactRevealed": "Contact details revealed",
+        "viewingShort": "Opening contact details...",
+        "viewingBody": "Please wait while we load the owner’s contact details.",
+        "sendingEmailBody": "Please wait while we send owner contact details to your email.",
+        "sendingAppBody": "Please wait while we send your enquiry to ACOMI.",
+        "chooseTitle": "Get owner contact details",
+        "chooseBody": "Choose one way to get the owner’s contact details.",
+        "recommended": "Recommended",
+        "sendOnApp": "Send on Acomi App",
+        "unlimitedTitle": "Unlimited enquiries",
+        "freeAndroid": "Free on Android!",
+        "benefitFast": "Fast & easy",
+        "benefitSecure": "Secure",
+        "optionOr": "OR",
+        "viewHereTitle": "View contact details here",
+        "viewHereRemaining": "{{remaining}} instant views remaining today (out of {{limit}})",
+        "emailRemaining": "{{remaining}} enquiries remaining out of {{limit}}",
+        "emailExhaustedHint": "Email limit reached. Buy inquiry credits to continue."
+      },
+      "contactDetailsViewed": "Contact details viewed",
+      "sortLabel": "Sort",
+      "filters": {
+        "gender": "Gender",
+        "sharing": "Sharing",
+        "mealType": "Meal type",
+        "foodType": "Food type",
+        "food": "Food",
+        "furnishing": "Furnishing",
+        "more": "More",
+        "contactAvailable": "Contact Available",
+        "servicedApartment": "Serviced / Corporate Apartment"
+      },
+      "sort": {
+        "recommended": "Recommended",
+        "newest": "Newest"
+      },
+      "viewed": "Viewed",
+      "inquirySentTo": "Sent to {{email}}",
+      "inquiryAlreadySent": "Inquiry already sent",
+      "sendInquiryAgain": "Resend inquiry",
+      "photoRequestUnavailableSaved": "This listing doesn’t have a WhatsApp number we can open. The photo request was saved in ACOMI.",
+      "photoRequestUnavailable": "This listing doesn’t have a WhatsApp number we can open.",
+      "photoRequestBlockedSaved": "WhatsApp didn’t open. The photo request was saved in ACOMI. You can try again.",
+      "photoRequestBlocked": "WhatsApp didn’t open. You can try again.",
+      "photoRequestFailed": "Couldn’t request photos. WhatsApp was not opened.",
+      "photoRequestHint": "You send this message yourself in WhatsApp. Opening WhatsApp does not send it.",
+      "photoRequestMessage": "Message",
+      "continueWhatsApp": "Continue to WhatsApp",
+      "amenity": {
+        "WIFI": "Wi-Fi",
+        "FOOD_INCLUDED": "Meals",
+        "WASHING_MACHINE": "Laundry / Washing machine",
+        "PARKING": "Parking",
+        "HOUSEKEEPING": "Housekeeping",
+        "POWER_BACKUP": "Power Backup",
+        "AC": "AC",
+        "KITCHEN": "Kitchen",
+        "CCTV": "CCTV / Security",
+        "RO_WATER": "RO water",
+        "HOT_WATER": "Hot water",
+        "REFRIGERATOR": "Refrigerator",
+        "WARDROBE": "Wardrobe"
+      },
+      "genderOptions": {
+        "MALE": "Gents",
+        "FEMALE": "Ladies",
+        "MIXED": "Gents & Ladies"
+      },
+      "sharingOptions": {
+        "SINGLE": "Single",
+        "TWO": "2 Sharing",
+        "THREE": "3 Sharing",
+        "FOUR": "4 Sharing",
+        "FIVE": "5 Sharing",
+        "SIX_PLUS": "6+ Sharing"
+      },
+      "foodOptions": {
+        "INCLUDED": "Food Included",
+        "AVAILABLE": "Food Available",
+        "NONE": "No Food"
+      },
+      "furnishingOptions": {
+        "FULL": "Fully Furnished",
+        "SEMI": "Semi Furnished",
+        "UNFURNISHED": "Unfurnished"
+      },
+      "foodTypeOptions": {
+        "VEG": "Vegetarian",
+        "NON_VEG": "Non-vegetarian",
+        "EGG": "Egg"
       }
     },
     "globalDashboard": {
@@ -791,6 +944,24 @@
         "ladies": "Female Co-living",
         "mixed": "Mixed Co-living"
       }
+    },
+    "rules": {
+      "title": "Rules & Guidelines",
+      "helper": "Select, edit or add rules for this space. These rules will be shown to residents.",
+      "readOnlyHelper": "Guidelines for residents in this space.",
+      "empty": "No rules configured for this space yet.",
+      "addCustom": "Add Custom Rule",
+      "add": "Add",
+      "customPlaceholder": "Enter a custom rule",
+      "editPlaceholder": "Edit rule text",
+      "editA11y": "Edit rule",
+      "deleteA11y": "Delete custom rule",
+      "maxReachedTitle": "Limit reached",
+      "maxReachedBody": "You can select up to {{count}} rules.",
+      "textRequiredTitle": "Rule text required",
+      "textRequiredBody": "Enter the rule wording before saving.",
+      "textTooLongTitle": "Too long",
+      "textTooLongBody": "Rule text must be at most {{count}} characters."
     },
     "amenities": {
       "title": "Amenities",
@@ -952,7 +1123,54 @@
         "REJECTED": "Unable to fulfil",
         "EXPIRED": "Expired",
         "CANCELLED": "Cancelled"
-      }
+      },
+      "receivedTitle": "Enquiries received",
+      "receivedError": "Enquiries could not be loaded.",
+      "receivedSubtitle": "Manage enquiries for your properties and mess services",
+      "summaryTotal": "Total enquiries",
+      "summaryShared": "Contact details shared",
+      "summaryClosed": "Closed",
+      "searchPlaceholder": "Search by name, property, or email...",
+      "filterListing": "Listing",
+      "filterAllListings": "All listings",
+      "filterStatus": "Status",
+      "filterAll": "All enquiries",
+      "resultCount": "{{count}} enquiries",
+      "sortLatest": "Latest first",
+      "clearFilters": "Clear filters",
+      "noMatchesTitle": "No matching enquiries",
+      "receivedEmptyTitle": "No enquiries received",
+      "noMatches": "Try another listing, status, or search.",
+      "receivedEmpty": "When a member enquires about one of your listings, it will show up here.",
+      "findListing": "Find a listing",
+      "member": "Member",
+      "listingUnavailable": "This listing is no longer available.",
+      "viewEnquiry": "View enquiry",
+      "openListing": "Open listing",
+      "senderUnavailable": "Not available",
+      "senderDetails": "Sender details",
+      "senderAccount": "Account",
+      "justNow": "Just now",
+      "minutesAgo": "{{count}} min ago",
+      "hoursAgo": "{{count}} hrs ago",
+      "daysAgo": "{{count}} days ago"
+    },
+    "favorites": {
+      "loadFailed": "Could not load favorites.",
+      "all": "All",
+      "unavailable": "This listing is no longer available.",
+      "removeSaved": "Remove from favorites",
+      "empty": "No favorites yet",
+      "emptyHint": "Tap the heart on a PG, hostel, co-living, rental, or mess listing to save it here.",
+      "openCount": "Favorites, {{count}} saved",
+      "profileSubtitle": "PG, hostel, co-living, rental, and mess listings you saved",
+      "remove": "Remove from favorites",
+      "add": "Add to favorites",
+      "failed": "Could not update favorites. Please try again.",
+      "signIn": "Sign in to save favorites."
+    },
+    "notifications": {
+      "title": "Notifications"
     }
   },
   "membership": {
@@ -978,6 +1196,14 @@
       "emptyTitle": "No members yet",
       "emptyDescription": "Add your first tenant, customer, or staff member to this space.",
       "listSubtitle": "People in this space",
+      "scopeThisSpace": "This Space",
+      "scopeAllMySpaces": "All My Spaces",
+      "directorySubtitle": "Everyone across the spaces you manage",
+      "directorySearchPlaceholder": "Search by name or mobile",
+      "directoryEmptyTitle": "No people yet",
+      "directoryEmptyDescription": "People you add to any of your spaces will appear here.",
+      "directoryLoadFailed": "Could not load people from your spaces. Pull down to try again.",
+      "directoryPickSpace": "Open {{name}} in…",
       "onAcomi": "On ACOMI",
       "notOnAcomiYet": "Not on ACOMI yet",
       "mobileNotAvailable": "Mobile not available",
@@ -1022,7 +1248,7 @@
       "reuseRequired": "Pick someone from another space, or create a new customer.",
       "selectedCustomer": "Selected",
       "memberMode": {
-        "search": "From another space",
+        "search": "Use existing…",
         "addNew": "New customer"
       },
       "choice": {
@@ -1032,8 +1258,8 @@
         "addNewCustomer": "Add new customer",
         "addNewMember": "Add new member",
         "addNewDescription": "Enter their details and add them to this space.",
-        "import": "Import from another space",
-        "importDescription": "Choose someone already added to another ACOMI space.",
+        "import": "Use existing…",
+        "importDescription": "Search people already added to your other spaces.",
         "importAvailable_one": "{{count}} member available",
         "importAvailable_other": "{{count}} members available",
         "importAvailableCustomer_one": "{{count}} customer available",
@@ -1049,7 +1275,8 @@
         "currentResident": "Lives in {{space}}",
         "typeCustomer": "Customer",
         "typeResident": "Resident",
-        "addAction": "+ Add"
+        "addAction": "+ Add",
+        "alreadyInSpace": "Already in this space"
       },
       "detailsHeading": "Member details"
     },
@@ -1061,9 +1288,9 @@
       "addCardBody": "Create a new customer record for this mess with name and mobile.",
       "addCardCta": "Add customers",
       "or": "OR",
-      "importCardTitle": "Import existing people",
+      "importCardTitle": "Use existing people",
       "importCardBody": "Choose people you've already added to another space. We'll add them here without asking for their details again.",
-      "importCardCta": "Import from other spaces",
+      "importCardCta": "Use existing…",
       "tip": "You can plan today's menu after adding customers. It cannot be shared until at least one customer is added.",
       "whyTitle": "Why add customers first?",
       "whyMenu": "Receive today's menu",
@@ -1283,7 +1510,8 @@
         "DRIVING_LICENSE": "Driving License",
         "STUDENT_ID": "Student ID",
         "OTHER": "Other"
-      }
+      },
+      "heading": "Documents"
     },
     "notes": {
       "add": "Add Note",
@@ -1295,7 +1523,8 @@
       "successToast": "Note added.",
       "meta": "{{name}} · {{date}}",
       "authorLabel": "Added by",
-      "dateLabel": "Date"
+      "dateLabel": "Date",
+      "heading": "Notes"
     },
     "profileCorrection": {
       "heading": "Profile correction",
@@ -1318,7 +1547,8 @@
         "statusChanged": "Status changed",
         "depositUpdated": "Deposit updated",
         "emergencyContactUpdated": "Emergency contact updated"
-      }
+      },
+      "profileChanges": "Profile changes"
     },
     "errors": {
       "generic": "Something went wrong. Please try again.",
@@ -1345,7 +1575,14 @@
       "cancel": "Failed to cancel invitation. Please try again.",
       "remove": "Failed to remove member. Please try again.",
       "accept": "Failed to accept invitation. Please try again."
-    }
+    },
+    "kpi": {
+      "total": "Total Members",
+      "active": "Active Members",
+      "pending": "Pending Invitations",
+      "joinedThisMonth": "Joined This Month"
+    },
+    "illustrativeSummary": "Illustrative summary. The list below is the actual roster."
   },
   "accommodation": {
     "search": {
@@ -1364,7 +1601,9 @@
       "enterRent": "Enter monthly rent",
       "enterDeposit": "Enter deposit",
       "rentRequired": "Monthly rent is required",
-      "depositRequired": "Deposit is required"
+      "depositRequired": "Deposit is required",
+      "securityDeposit": "Security Deposit",
+      "keyDates": "Key Dates"
     },
     "pricingConfirm": {
       "title": "Confirm Price Update",
@@ -1444,7 +1683,8 @@
           "available": "Available",
           "nearlyFull": "Nearly Full",
           "full": "Full"
-        }
+        },
+        "viewDetails": "View details"
       }
     },
     "inactive": {
@@ -1600,7 +1840,11 @@
         "bedsCount": "Beds: {{count}}",
         "roomsBeds": "Rooms: {{rooms}} · Beds: {{beds}}",
         "bedsOnly": "Beds: {{beds}}",
-        "capacityBeds": "Capacity: {{capacity}} · Beds: {{beds}}"
+        "capacityBeds": "Capacity: {{capacity}} · Beds: {{beds}}",
+        "duplicateFloor": "Duplicate floor",
+        "deleteFloor": "Delete floor",
+        "duplicateUnit": "Duplicate unit",
+        "deleteUnit": "Delete unit"
       },
       "floorCount": "Number of floors",
       "includeGroundFloor": "Include ground floor",
@@ -1666,7 +1910,8 @@
         "apartmentsPerFloor": "Apartments per floor must be at least 1."
       },
       "groundFloorName": "Ground Floor",
-      "floorNameNumber": "Floor {{number}}"
+      "floorNameNumber": "Floor {{number}}",
+      "unitOnlyLine": "Unit only — no rooms or beds"
     },
     "overview": {
       "title": "Building Overview",
@@ -1729,7 +1974,14 @@
       "editUnit": "Edit unit",
       "editRoom": "Edit room",
       "editBuilding": "Edit building",
-      "editBed": "Edit bed"
+      "editBed": "Edit bed",
+      "searchUnits": "Search units (e.g. 101, 102, ...)",
+      "editHierarchy": "Edit",
+      "inactive": "Inactive",
+      "unitsOverview": "Units Overview",
+      "unitOnlyOverviewSubtitle": "Units only — edit rent and deposit on each unit",
+      "totalUnits": "Total Units",
+      "unitsCount": "Units ({{count}})"
     },
     "duplicate": {
       "confirm": "Duplicate",
@@ -1857,7 +2109,8 @@
       "nameRequired": "Floor name is required.",
       "floorNumberRequired": "Enter a valid floor number.",
       "createSuccess": "Floor added successfully.",
-      "updateSuccess": "Floor updated successfully."
+      "updateSuccess": "Floor updated successfully.",
+      "untitled": "Floor"
     },
     "units": {
       "title": "Units",
@@ -1876,7 +2129,12 @@
       "nameRequired": "Unit name is required.",
       "unitNumberRequired": "Unit number is required.",
       "createSuccess": "Unit added successfully.",
-      "updateSuccess": "Unit updated successfully."
+      "updateSuccess": "Unit updated successfully.",
+      "idLabel": "Unit ID",
+      "namedTitle": "Unit {{number}}",
+      "detailsSection": "Unit details",
+      "emptyFiltered": "No units match this view.",
+      "validationError": "Enter a unit number."
     },
     "rooms": {
       "title": "Rooms",
@@ -1895,7 +2153,12 @@
       "formSubheadingEdit": "Update room details, status, or default pricing.",
       "validationError": "Please fill in all required room fields.",
       "createSuccess": "Room added successfully.",
-      "updateSuccess": "Room updated successfully."
+      "updateSuccess": "Room updated successfully.",
+      "emptyFilteredTitle": "No matching beds",
+      "emptyFilteredDescription": "Try another status filter or clear search.",
+      "idLabel": "Room ID",
+      "emptyOpsFocusTitle": "No matching beds",
+      "emptyOpsFocusDescription": "Try clearing the Property operations filter or adjusting search."
     },
     "beds": {
       "title": "Beds",
@@ -1917,7 +2180,10 @@
       "formSubheadingEdit": "Update bed details, status, or default pricing.",
       "validationError": "Please fill in all required bed fields.",
       "createSuccess": "Bed added successfully.",
-      "updateSuccess": "Bed updated successfully."
+      "updateSuccess": "Bed updated successfully.",
+      "idLabel": "Bed ID",
+      "previous": "Previous beds",
+      "next": "Next beds"
     },
     "lifecycle": {
       "menuTitle": "Actions",
@@ -1981,6 +2247,45 @@
     "form": {
       "rent": "Rent",
       "deposit": "Deposit"
+    },
+    "pricing": {
+      "notConfigured": "Not configured"
+    },
+    "workspace": {
+      "showingOpsFocus": "Showing: {{label}}",
+      "roomsBedsCount": "{{rooms}} Rooms • {{beds}} Beds"
+    },
+    "stayPayment": {
+      "noRecord": "No payment record",
+      "unavailable": "Payment status unavailable",
+      "underReview": "Under review",
+      "paid": "Payment status: Paid",
+      "paidAmount": "{{amount}} paid",
+      "remaining": "{{amount}} remaining",
+      "partial": "Partially paid",
+      "pending": "Pending payment",
+      "pendingAmount": "{{amount}} pending",
+      "noTenant": "No linked tenant",
+      "notYetBilled": "Not Yet Billed",
+      "balanceDue": "Balance Due",
+      "paidShort": "Paid",
+      "paidBadge": "Paid",
+      "bedNumber": "Bed number",
+      "unitOccupancySection": "Unit and occupancy",
+      "occupancySection": "Bed and occupancy",
+      "location": "Location",
+      "loadFailed": "Could not load tenant or payment details.",
+      "contact": "Contact",
+      "stayStatus": "Stay status",
+      "summary": "Payment summary",
+      "period": "Period",
+      "status": "Payment status",
+      "accruedNotBilled": "Accrued (not billed)",
+      "rentDue": "Rent due",
+      "depositDue": "Deposit due",
+      "totalDue": "Total due",
+      "amountPaid": "Amount paid",
+      "outstanding": "Outstanding"
     }
   },
   "occupancyWizard": {
@@ -2010,8 +2315,14 @@
     "residentCard": {
       "mobile": "Mobile {{mobile}}",
       "previouslyIn": "Previously stayed in {{space}}",
+      "messCustomerAt": "Mess customer at {{space}}",
+      "currentlyIn": "Currently staying in {{space}}",
+      "reservedIn": "Reserved in {{space}}",
       "inThisSpace": "Already in this space",
       "available": "Available for Move In",
+      "availableToAdd": "Available to add to another space.",
+      "alreadyActiveHere": "Already has an active stay in {{space}}.",
+      "alreadyReservedHere": "Already has a reservation in {{space}}.",
       "moveIn": "Move In"
     },
     "context": {
@@ -2056,6 +2367,7 @@
     "errors": {
       "searchMembers": "Failed to search members.",
       "importMember": "Failed to reuse this resident. Please try again.",
+      "memberBusyHere": "Already has an active stay in {{space}}.",
       "searchTargets": "Failed to search accommodation.",
       "memberRequired": "Select a tenant or add a new one to continue.",
       "targetRequired": "Select a bed to continue."
@@ -2117,7 +2429,9 @@
       "notSet": "Not set",
       "status": "Occupancy status",
       "location": "Current location",
-      "notAllocated": "Not allocated to any bed, room, or unit."
+      "notAllocated": "Not allocated to any bed, room, or unit.",
+      "stayDetails": "Stay Details",
+      "stayId": "Stay ID"
     },
     "memberStatus": {
       "ALLOCATED": "Moved in",
@@ -2155,7 +2469,10 @@
       "extend": "Extend stay",
       "vacate": "Vacate",
       "viewHistory": "View occupancy history",
-      "viewHistoryShort": "View History"
+      "viewHistoryShort": "View History",
+      "reviseOpenEnded": "Update Daily Rent",
+      "renewMonthly": "Monthly renewal",
+      "renewOpenEnded": "Open-ended renewal"
     },
     "accommodationActions": {
       "title": "Occupancy actions"
@@ -2168,7 +2485,11 @@
       "moveInHint": "Complete move-in for the reserved member",
       "cancelHint": "Release this reservation",
       "transferHint": "Move the resident to another bed",
-      "vacateHint": "End the current occupancy"
+      "vacateHint": "End the current occupancy",
+      "reviseOpenEndedHint": "Change the daily rate from a chosen effective date",
+      "extendHint": "Change the planned end date",
+      "renewHint": "Extend one month on the same stay; optional new rent",
+      "checkoutHint": "Record checkout now. Inventory is released; no automatic refund (D-17)."
     },
     "quickActions": {
       "occupiedBy": "Occupied by {{name}}",
@@ -2230,7 +2551,14 @@
     },
     "cancelReservation": {
       "title": "Cancel reservation",
-      "message": "Release this reserved accommodation and return the bed to available?"
+      "message": "Release this reserved accommodation and return the bed to available?",
+      "reasonRequired": "Enter a reason for each collected payment settlement.",
+      "refundAmountRequired": "Enter a valid refund amount.",
+      "settlementHint": "Unpaid obligations are cancelled automatically. Collected amounts need refund or retain.",
+      "alreadySettled": "Already settled.",
+      "willCancelUnpaid": "Will be cancelled (unpaid).",
+      "remarks": "Cancellation remarks (optional)",
+      "collectedCount": "{{count}} collected payment(s) require settlement."
     },
     "allocate": {
       "title": "Allocate member"
@@ -2340,7 +2668,11 @@
         "WIFI": "Wi-Fi",
         "MAINTENANCE": "Maintenance",
         "OTHER": "Other"
-      }
+      },
+      "pricingBasis": "Pricing Basis",
+      "dailyRent": "Daily rent",
+      "dailyRentRequired": "Daily rent (required)",
+      "dailyRentHint": "Owner-entered ₹/day. Not derived from monthly catalog rent."
     },
     "fields": {
       "expectedCheckout": "Expected checkout (optional)",
@@ -2481,6 +2813,44 @@
       "ACTIVE": "Occupied",
       "RESERVED": "Reserved",
       "VACATED": "Vacated"
+    },
+    "bookingAdvance": {
+      "label": "Booking advance",
+      "hint": "Part of the first-period rent, not an extra charge. Leave 0 to keep existing reservation behaviour.",
+      "remaining": "Remaining rent: ₹{{amount}}",
+      "collected": "Advance already collected"
+    },
+    "extend": {
+      "invalid": "Enter a planned end date and an amount that is zero or greater.",
+      "renewalHintOpenEnded": "Extend the open-ended stay on the same occupancy. Optional new daily rent applies from the month you choose. Rent is billed after the billing period closes.",
+      "renewalHint": "Extend for one month on the same occupancy. Optional new rent applies from the month you choose (D-15).",
+      "newBillingEnd": "New planned end / billing date",
+      "newEnd": "New planned end",
+      "amount": "Additional amount",
+      "amountHelp": "Leave empty for a date-only change. A short stay uses this as one extension charge.",
+      "rentDaily": "New daily rent",
+      "rent": "New monthly rent",
+      "rentOptionalHelp": "Optional. Leave empty to keep the current rent.",
+      "effectiveMonth": "Rent starts in",
+      "renewalNotForShort": "Short stays use Extend stay, not monthly renewal."
+    },
+    "reviseRent": {
+      "currentMissing": "Current daily rent is missing for this stay. Refresh and try again.",
+      "unchanged": "Enter a new daily rent that differs from the current rate.",
+      "invalid": "Enter a valid new daily rent and effective date.",
+      "subtitle": "Revise the daily rate for this No Fixed Move-Out Date stay. Stay type does not change.",
+      "currentDaily": "Current Daily Rent",
+      "newDaily": "New Daily Rent",
+      "effectiveFrom": "Effective From",
+      "reason": "Reason for Change (optional)",
+      "reasonOther": "Short explanation",
+      "previewTitle": "Confirmation summary",
+      "previewCurrent": "Current daily rent: {{amount}}",
+      "previewNew": "New daily rent: {{amount}}",
+      "previewEffective": "Effective from: {{date}}",
+      "previewPreviousThrough": "Previous rate applies through: {{date}}",
+      "previewNote": "Already generated or paid bills are not changed. Future days are not charged in advance.",
+      "onlyOpenEnded": "Daily rent revision is only for No Fixed Move-Out Date stays."
     }
   },
   "dashboard": {
@@ -3041,7 +3411,9 @@
       "subtitleBeds": "Current bed status across all buildings",
       "subtitleUnits": "Current unit status across all buildings",
       "title": "Property Operations"
-    }
+    },
+    "illustrative": "Illustrative",
+    "illustrativePreview": "Illustrative preview"
   },
   "paymentCollection": {
     "payNow": "Pay Now",
@@ -3157,7 +3529,9 @@
       "memberNotOnAcomi": "This member is not on ACOMI yet, so no in-app reminder was created.",
       "notificationFailed": "The in-app reminder could not be saved. You can try again.",
       "copied": "WhatsApp did not open. The reminder message is ready to share.",
-      "whatsAppFailed": "WhatsApp could not be opened. The in-app reminder was not removed."
+      "whatsAppFailed": "WhatsApp could not be opened. The in-app reminder was not removed.",
+      "whatsAppUnavailable": "This number can’t be opened in WhatsApp. You can still save the in-app reminder.",
+      "composeTitle": "Send reminder"
     },
     "billingPeriodRange": "{{start}} → {{end}}",
     "dueDate": "Due: {{date}}",
@@ -3320,7 +3694,8 @@
         "paid": "Paid",
         "outstanding": "Outstanding",
         "underReview": "Under review"
-      }
+      },
+      "emptyOutstanding": "No outstanding payments for this month."
     },
     "tenantFilters": {
       "all": "All ({{count}})",
@@ -3528,7 +3903,16 @@
       "loadTimeline": "Failed to load payment timeline.",
       "submitProof": "Failed to submit payment proof.",
       "review": "Failed to review payment."
-    }
+    },
+    "notYetBilled": {
+      "title": "Not yet billed",
+      "description": "Rent for this open-ended stay is billed after the billing period closes or on move-out."
+    },
+    "fields": {
+      "dueDate": "Due date",
+      "outstanding": "Outstanding"
+    },
+    "billedDays": "{{start}} – {{end}} · {{days}} billable days"
   },
   "payments": {
     "title": "Payments",
@@ -3725,7 +4109,12 @@
       "emptyEligibleBody": "No members are eligible for this meal.",
       "loadErrorTitle": "Could not load responses",
       "loadErrorBody": "Pull to refresh, or try again.",
-      "editMenu": "Edit menu"
+      "editMenu": "Edit menu",
+      "searchPlaceholder": "Search by name or mobile",
+      "filterByMenu": "Filter by menu",
+      "filterAllMenus": "All menus",
+      "searchEmptyTitle": "No matching members",
+      "searchEmptyBody": "Try a different name or mobile number."
     },
     "planning": {
       "title": "Menu planning",
@@ -4076,6 +4465,8 @@
       "stickyPlatesAndTotal": "{{plates}} plates · {{total}}",
       "yourCurrentSelection": "Your current selection",
       "pastDateReadOnly": "This date has passed. Your choices can no longer be changed.",
+      "pollClosedReadOnly": "This poll is closed. Your choices can no longer be changed.",
+      "pollOpenStatus": "Poll open",
       "totalPlates": "Total plates: {{count}}",
       "selectAtLeastOnePlate": "Select at least one plate across your combos",
       "submit": "Save choices",
@@ -5520,7 +5911,8 @@
       "createSuccess": "Item created",
       "updateSuccess": "Item updated",
       "currentStock": "Current Stock",
-      "reasonOptional": "Optional note"
+      "reasonOptional": "Optional note",
+      "supplierPlaceholder": "Select or type a supplier"
     },
     "categories": {
       "title": "Categories",
@@ -5605,7 +5997,8 @@
         "adminProperty": "Admin property",
         "adminMess": "Admin mess",
         "activeProperties": "Active properties",
-        "activeMesses": "Active messes"
+        "activeMesses": "Active messes",
+        "creditPayments": "Credit payments"
       },
       "nav": {
         "enquiriesTitle": "Enquiries",
@@ -5717,7 +6110,10 @@
       "all": "All",
       "rejectedFilter": "Rejected",
       "empty": "No purchase requests found.",
-      "approve": "Approve"
+      "approve": "Approve",
+      "qrMissing": "No payment QR is saved.",
+      "qrEmptyShort": "No QR",
+      "filterByStatus": "Show {{status}} requests, {{count}}"
     },
     "labels": {
       "addedByAdmin": "Added by Admin",
@@ -5734,7 +6130,8 @@
       "testYes": "Test: Yes",
       "testNo": "Test: No",
       "testBadge": "TEST",
-      "testUser": "Test user"
+      "testUser": "Test user",
+      "deletedAccount": "Deleted account"
     },
     "filters": {
       "activeSpaces": "Active spaces",
@@ -5841,7 +6238,8 @@
       "resetPasswordConfirmTitle": "Reset this password?",
       "resetPasswordConfirmBody": "This sets a new password for {{name}} ({{mobile}}). Their current sessions will stop working. The existing password is not shown.",
       "resetPasswordSuccess": "Password updated. The user can sign in with the new password.",
-      "resetPasswordFailed": "Could not reset the password."
+      "resetPasswordFailed": "Could not reset the password.",
+      "openExistingUser": "Open existing user"
     },
     "list": {
       "empty": "No records found."
@@ -5909,7 +6307,8 @@
         "alternateDifferent": "Alternate mobile number must be different from the primary mobile number.",
         "pincode": "Enter a valid pincode, or leave it blank.",
         "mapUrl": "Map link must start with http:// or https://",
-        "startingPrice": "Enter a valid starting price, or leave it blank."
+        "startingPrice": "Enter a valid starting price, or leave it blank.",
+        "capacity": "Enter a valid capacity estimate, or leave it blank."
       }
     },
     "mess": {
@@ -5937,7 +6336,8 @@
         "pincode": "Enter a valid pincode, or leave it blank.",
         "mapUrl": "Map link must start with http:// or https://",
         "monthlyPrice": "Enter a valid monthly price, or leave it blank.",
-        "mealPrice": "Enter a valid meal price, or leave it blank."
+        "mealPrice": "Enter a valid meal price, or leave it blank.",
+        "capacity": "Enter a valid capacity estimate, or leave it blank."
       }
     },
     "addresses": {
@@ -6028,7 +6428,41 @@
       "notFound": "This enquiry or its listing could not be found.",
       "shareForbidden": "You do not have permission to share this enquiry.",
       "rejectSuccess": "Enquiry rejected.",
-      "rejectFailed": "Could not reject this enquiry."
+      "rejectFailed": "Could not reject this enquiry.",
+      "sharedAt": "Shared at",
+      "reviewedAt": "Reviewed at",
+      "contactAvailable": "Contact available",
+      "review": "Review"
+    },
+    "activeSpace": {
+      "footnote": "Active space details come from the admin active-spaces API. Lead registration records remain under the Leads tab."
+    },
+    "notificationTesting": {
+      "title": "Notification Testing",
+      "pushStatus": "Push configuration status",
+      "refreshStatus": "Refresh status",
+      "browserNotImplemented": "Browser push is not implemented yet.",
+      "reset": "Reset",
+      "fieldTitle": "Title",
+      "fieldBody": "Body",
+      "sendHint": "Sends only to this account's registered devices.",
+      "browserPushTitle": "Browser push — not implemented",
+      "recent": "Recent test notifications",
+      "empty": "No test notifications yet.",
+      "delete": "Delete",
+      "pushEnabled": "Push enabled",
+      "firebaseCredentials": "Firebase credentials",
+      "project": "Project",
+      "firebaseInitialized": "Firebase initialized",
+      "registeredDevices": "Registered devices (this admin)",
+      "fcmSendPossible": "FCM send possible",
+      "aboutA11y": "About notification testing",
+      "helpCopy": "A test sends a fixture to this admin account. Firebase acceptance means the request was taken, not that the phone showed a system notification. Browser push is not implemented.",
+      "infoCopy": "Send a test notification to your admin account only. This does not change payments, members, enquiries, or other business records.",
+      "sent": "Test notification sent",
+      "resultCounts": "Targeted {{targeted}}, accepted {{accepted}}, failed {{failed}}.",
+      "verified": "Verified",
+      "notVerified": "Not verified"
     }
   },
   "home": {
@@ -6081,7 +6515,7 @@
   },
   "serviceContacts": {
     "title": "Service Contacts",
-    "subtitle": "Save and manage your service providers",
+    "subtitle": "Common service providers for your spaces",
     "add": "Add Contact",
     "save": "Save",
     "cancel": "Cancel",
@@ -6090,7 +6524,7 @@
     "call": "Call",
     "whatsapp": "WhatsApp",
     "email": "Email",
-    "searchPlaceholder": "Search contacts, category or phone...",
+    "searchPlaceholder": "Search by name, service or person",
     "category": "Category",
     "categoryAll": "All",
     "spaceAll": "All spaces",
@@ -6143,5 +6577,36 @@
     "formTitleEdit": "Edit Contact",
     "previous": "Previous",
     "next": "Next"
+  },
+  "locationCapture": {
+    "selectionRequired": "Select a location from the suggestions.",
+    "pincodeRequired": "Enter a valid 6-digit pincode.",
+    "buildingRequired": "Enter the apartment or building name.",
+    "buildingName": "Apartment / Building name",
+    "buildingPlaceholder": "e.g. Sunrise Residency",
+    "searchLabel": "Search location",
+    "searchPlaceholder": "Search building, road, area, locality or landmark",
+    "useTyped": "Use “{{query}}”",
+    "useTypedHint": "Continue with this text. A suggestion is optional.",
+    "searching": "Searching locations...",
+    "emptyManual": "No matching places. You can continue with the location you typed.",
+    "empty": "No locations found. Try a road, area, locality or city.",
+    "failed": "Unable to search locations. Please try again.",
+    "manualTitle": "Location details",
+    "manualHint": "Optional. Add city, district and the other details for “{{query}}”.",
+    "locality": "Locality",
+    "city": "City",
+    "state": "State",
+    "district": "District",
+    "pincode": "Pincode",
+    "selected": "Location selected",
+    "change": "Change location"
+  },
+  "brand": {
+    "tagline": "Spaces · Meals · People belong",
+    "taglineSpaces": "Spaces",
+    "taglineMeals": "Meals",
+    "taglinePeopleBelong": "People belong",
+    "loadingA11y": "Loading Acomi"
   }
 }

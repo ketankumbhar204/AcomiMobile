@@ -9,9 +9,15 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { FileText } from 'lucide-react-native';
-import type { OccupancyResponse, TransferRentPolicy, AmenityAssignment } from '../../../../api/types';
+import type {
+  OccupancyResponse,
+  TransferRentPolicy,
+  AmenityAssignment,
+  RuleAssignment,
+} from '../../../../api/types';
 import { ContractTermsForm } from '../../../../components/occupancy/ContractTermsForm';
 import { OccupancyAmenitiesSection } from '../../../../components/occupancy/OccupancyAmenitiesSection';
+import { SpaceRulesReadOnly } from '../../../../components/spaces/SpaceRulesReadOnly';
 import { progressiveSectionHighlightStyle } from '../../../../components/progressive';
 import { fetchSpaceFoodPolicy, type SpaceFoodPolicy } from '../../../../utils/fetchSpaceFoodPolicy';
 import {
@@ -42,6 +48,8 @@ type ContractTermsStepProps = {
   allowEarlyMoveIn?: boolean;
   onAllowEarlyMoveInChange?: (value: boolean) => void;
   spaceAmenities?: AmenityAssignment[];
+  /** Read-only space house rules for Contract Terms (not editable during Move In). */
+  spaceRules?: RuleAssignment[];
   assignedAmenities?: AmenityAssignment[];
   onAssignedAmenitiesChange?: (value: AmenityAssignment[]) => void;
   /** Progressive Guided Workflow — deposit/charges/amenities scroll target (ScrollView content Y). */
@@ -74,6 +82,7 @@ export function ContractTermsStep({
   allowEarlyMoveIn = false,
   onAllowEarlyMoveInChange,
   spaceAmenities = [],
+  spaceRules = [],
   assignedAmenities = [],
   onAssignedAmenitiesChange,
   onAddonsLayout,
@@ -275,6 +284,10 @@ export function ContractTermsStep({
           }}>
           {amenitiesSection}
         </View>
+      ) : null}
+
+      {spaceRules.length > 0 ? (
+        <SpaceRulesReadOnly rules={spaceRules} hideWhenEmpty accent={colors.primary} />
       ) : null}
     </View>
   );

@@ -50,4 +50,5 @@ export { useOccupancyTargetSearch } from './useOccupancyTargetSearch';
 export { useAllocationTargetSearch } from './useAllocationTargetSearch';
 export { useMemberSearch } from './useMemberSearch';
 export { useResidentImportSearch } from './useResidentImportSearch';
+export { useMemberDirectory } from './useMemberDirectory';
 export { useTargetOccupancy } from './useTargetOccupancy';

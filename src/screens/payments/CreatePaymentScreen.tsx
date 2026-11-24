@@ -522,7 +522,8 @@ export function CreatePaymentScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    padding: paymentDetailScreenPadding,
+    paddingHorizontal: paymentDetailScreenPadding,
+    paddingVertical: paymentDetailScreenPadding,
   },
   flex: { flex: 1 },
   content: {

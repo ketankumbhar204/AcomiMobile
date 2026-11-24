@@ -150,6 +150,23 @@ export function MealResponseMembersScreen({
         })}
       </Text>
 
+      {detail?.pollStatus === 'CLOSED' ? (
+        <View style={styles.pollClosedBanner} accessibilityRole="text">
+          <Text style={styles.pollClosedBannerTitle}>{t('meals.poll.pollClosed')}</Text>
+          <Text style={styles.pollClosedBannerBody}>
+            {t('meals.planning.dayShare.pollClosedHint', {
+              defaultValue: 'Members can no longer submit or change their selections',
+            })}
+          </Text>
+        </View>
+      ) : detail?.pollStatus === 'OPEN' ? (
+        <View style={styles.pollOpenBanner} accessibilityRole="text">
+          <Text style={styles.pollOpenBannerTitle}>
+            {t('meals.poll.pollOpenStatus', { defaultValue: 'Poll open' })}
+          </Text>
+        </View>
+      ) : null}
+
       <ListFilterChips
         value={filter}
         onChange={next => {
@@ -180,25 +197,35 @@ export function MealResponseMembersScreen({
         ]}
       />
 
-      {filter === 'responded' && optionChips.length > 0 ? (
-        <ListFilterChips
-          value={optionFilter}
-          onChange={setOptionFilter}
-          options={[
-            {
-              id: 'all',
-              label: t('meals.responses.filterAllMenus', { defaultValue: 'All menus' }),
-              badge: lists.responded.length,
-              tone: 'primary',
-            },
-            ...optionChips.map(chip => ({
-              id: chip.optionId,
-              label: chip.label,
-              badge: chip.count,
-              tone: 'info' as const,
-            })),
-          ]}
-        />
+      {optionChips.length > 0 ? (
+        <View>
+          <Text style={styles.menuFilterLabel}>
+            {t('meals.responses.filterByMenu', { defaultValue: 'Filter by menu' })}
+          </Text>
+          <ListFilterChips
+            value={optionFilter}
+            onChange={next => {
+              setOptionFilter(next);
+              if (next !== 'all') {
+                setFilter('responded');
+              }
+            }}
+            options={[
+              {
+                id: 'all',
+                label: t('meals.responses.filterAllMenus', { defaultValue: 'All menus' }),
+                badge: lists.responded.length,
+                tone: 'primary',
+              },
+              ...optionChips.map(chip => ({
+                id: chip.optionId,
+                label: chip.label,
+                badge: chip.count,
+                tone: 'info' as const,
+              })),
+            ]}
+          />
+        </View>
       ) : null}
 
       {showList && !error ? (
@@ -363,6 +390,40 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginBottom: spacing.md,
   },
+  pollClosedBanner: {
+    borderWidth: 1,
+    borderColor: '#FDBA74',
+    backgroundColor: '#FFF7ED',
+    borderRadius: radius.button,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.md,
+    gap: 2,
+  },
+  pollClosedBannerTitle: {
+    ...typography.bodyStrong,
+    color: '#9A3412',
+    fontSize: 14,
+  },
+  pollClosedBannerBody: {
+    ...typography.caption,
+    color: '#9A3412',
+    lineHeight: 16,
+  },
+  pollOpenBanner: {
+    borderWidth: 1,
+    borderColor: `${colors.primaryDark}33`,
+    backgroundColor: colors.lightGreen,
+    borderRadius: radius.button,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  pollOpenBannerTitle: {
+    ...typography.bodyStrong,
+    color: colors.primaryDark,
+    fontSize: 14,
+  },
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -381,6 +442,12 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     paddingVertical: spacing.xs,
     minWidth: 0,
+  },
+  menuFilterLabel: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontWeight: '600',
+    marginBottom: spacing.xs,
   },
   list: {
     marginTop: spacing.xs,

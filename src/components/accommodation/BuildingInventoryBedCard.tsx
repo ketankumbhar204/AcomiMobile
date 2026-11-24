@@ -91,9 +91,8 @@ function BuildingInventoryBedCardComponent({
   const { t } = useTranslation();
   const displayLabel = formatBedDisplayLabel(bed.label, t);
   const moveIn = useMoveInBedFace(bed.bedId);
-  const showStayBadges =
-    Boolean(moveIn) || bed.status === 'OCCUPIED' || bed.status === 'RESERVED';
-  const showStayLookup = Boolean(spaceId) && showStayBadges;
+  const showStayLookup =
+    Boolean(spaceId) && (Boolean(moveIn) || bed.status === 'OCCUPIED' || bed.status === 'RESERVED');
   const occupiedStay = useOccupiedBedStay(spaceId, bed.bedId, showStayLookup);
   const stayKind: StayChoice | null | undefined =
     moveIn?.stayKind ?? occupiedStay.occupancy?.stayKind ?? null;
@@ -156,32 +155,30 @@ function BuildingInventoryBedCardComponent({
           ) : null}
         </View>
 
-        {showStayBadges ? (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            bounces={false}
-            contentContainerStyle={styles.badgeRow}>
-            <View
-              style={[
-                styles.statusPill,
-                {
-                  backgroundColor: `${surface.accent}18`,
-                  borderColor: `${surface.accent}44`,
-                },
-              ]}>
-              <View style={[styles.statusDot, { backgroundColor: surface.accent }]} />
-              <Text style={[styles.statusText, { color: surface.accent }]} numberOfLines={1}>
-                {moveIn
-                  ? t('dashboard.drilldown.movedIn', { defaultValue: 'Moved in' })
-                  : t(`accommodation.status.${bed.status}`, { defaultValue: bed.status })}
-              </Text>
-            </View>
-            <StayTypeBadge stayKind={stayKind} />
-          </ScrollView>
-        ) : null}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          bounces={false}
+          contentContainerStyle={styles.badgeRow}>
+          <View
+            style={[
+              styles.statusPill,
+              {
+                backgroundColor: `${surface.accent}18`,
+                borderColor: `${surface.accent}44`,
+              },
+            ]}>
+            <View style={[styles.statusDot, { backgroundColor: surface.accent }]} />
+            <Text style={[styles.statusText, { color: surface.accent }]} numberOfLines={1}>
+              {moveIn
+                ? t('dashboard.drilldown.movedIn', { defaultValue: 'Moved in' })
+                : t(`accommodation.status.${bed.status}`, { defaultValue: bed.status })}
+            </Text>
+          </View>
+          {showStayLookup ? <StayTypeBadge stayKind={stayKind} /> : null}
+        </ScrollView>
 
-        {showStayBadges ? <View style={styles.divider} /> : null}
+        <View style={styles.divider} />
 
         <View style={styles.pricing}>
           {moveIn ? (

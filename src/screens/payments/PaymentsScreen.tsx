@@ -10,7 +10,7 @@ import {
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, ChevronRight, Info, Plus, Users } from 'lucide-react-native';
+import { AlertTriangle, ChevronRight, Info, Plus, Users, WalletCards } from 'lucide-react-native';
 import type { SpacePaymentResponse } from '../../api/types';
 import { OwnerPaymentCardActions } from '../../components/payments/OwnerPaymentCardActions';
 import { PaymentDetailsSheet } from '../../components/payments/PaymentDetailsSheet';
@@ -20,7 +20,7 @@ import { PaymentReminderComposer } from '../../components/payments/PaymentRemind
 import { PaymentsFilterDrawer } from '../../components/payments/PaymentsFilterDrawer';
 import { PaymentsSummaryFilters } from '../../components/payments/PaymentsSummaryFilters';
 import {
-  Button,
+  CompactPageBanner,
   EmptyState,
   ListSearchFilterBar,
   MonthlySummaryHeader,
@@ -373,17 +373,29 @@ export function PaymentsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} />
         }>
         <View style={styles.scrollTop}>
-          <View style={styles.headingRow}>
-            <Text style={styles.heading}>{t('payments.title')}</Text>
-            <Button
-              label={t('paymentCollection.addRecord.createAction')}
-              icon={Plus}
-              onPress={() =>
-                navigation.navigate('CreatePayment', { spaceId, month: summary.month })
-              }
-              style={styles.createButton}
-            />
-          </View>
+          <CompactPageBanner
+            icon={WalletCards}
+            title={t('payments.title')}
+            subtitle={t('payments.subtitle')}
+            testID="payments-page-banner"
+            right={
+              <Pressable
+                onPress={() =>
+                  navigation.navigate('CreatePayment', { spaceId, month: summary.month })
+                }
+                style={({ pressed }) => [
+                  styles.createButton,
+                  pressed && styles.createButtonPressed,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={t('paymentCollection.addRecord.createAction')}>
+                <Plus size={14} color={colors.white} strokeWidth={2.6} />
+                <Text style={styles.createButtonLabel} numberOfLines={1}>
+                  {t('paymentCollection.addRecord.createAction')}
+                </Text>
+              </Pressable>
+            }
+          />
 
           {showPaymentsSoftTip && paymentsAccess?.reasonKey ? (
             <View style={styles.softTip}>
@@ -599,26 +611,28 @@ const styles = StyleSheet.create({
   scrollList: {
     gap: spacing.sm,
   },
-  headingRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  heading: {
-    ...typography.h2,
-    flexGrow: 1,
-    flexShrink: 1,
-    minWidth: '52%',
-  },
   createButton: {
-    flexGrow: 0,
-    flexShrink: 0,
-    minHeight: 40,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    minHeight: 34,
+    maxWidth: '100%',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    borderRadius: radius.button,
+    backgroundColor: colors.primary,
+  },
+  createButtonPressed: {
+    opacity: 0.92,
+  },
+  createButtonLabel: {
+    ...typography.caption,
+    fontSize: 12,
+    lineHeight: 15,
+    fontWeight: '700',
+    color: colors.white,
+    flexShrink: 1,
   },
   softTip: {
     marginBottom: spacing.sm,

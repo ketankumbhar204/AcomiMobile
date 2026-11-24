@@ -1,5 +1,6 @@
 import {
   buildMealResponseLists,
+  buildMealResponseOptionChips,
   matchesMealResponseSearch,
   mealResponseCardStatus,
   type MealResponseMemberRow,
@@ -116,12 +117,67 @@ describe('matchesMealResponseSearch', () => {
   });
 });
 
+describe('buildMealResponseOptionChips', () => {
+  it('builds chips when optionId is missing by falling back to label', () => {
+    const chips = buildMealResponseOptionChips(
+      detail({
+        options: [
+          {
+            optionId: '' as never,
+            optionType: 'MENU_ENTRY',
+            sortOrder: 0,
+            label: 'Poha',
+            count: 2,
+            members: [
+              { memberId: 'm1', memberName: 'Asha' },
+              { memberId: 'm2', memberName: 'Ravi' },
+            ],
+          },
+        ],
+      }),
+    );
+
+    expect(chips).toEqual([{ optionId: 'label:Poha', label: 'Poha', count: 2 }]);
+  });
+
+  it('keeps menu chips with response count 0', () => {
+    const chips = buildMealResponseOptionChips(
+      detail({
+        options: [
+          {
+            optionId: 'opt-1',
+            optionType: 'MENU_ENTRY',
+            sortOrder: 0,
+            label: 'Poha',
+            count: 0,
+            members: [],
+          },
+          {
+            optionId: 'opt-2',
+            optionType: 'MENU_ENTRY',
+            sortOrder: 1,
+            label: 'Upma',
+            count: 0,
+            members: [],
+          },
+        ],
+      }),
+    );
+
+    expect(chips).toEqual([
+      { optionId: 'opt-1', label: 'Poha', count: 0 },
+      { optionId: 'opt-2', label: 'Upma', count: 0 },
+    ]);
+  });
+});
+
 describe('mealResponseCardStatus', () => {
   const responded: MealResponseMemberRow = {
     memberId: 'm1',
     memberName: 'Rahul',
     mobileNumber: null,
     choice: 'Chicken Thali',
+    optionIds: ['opt-chicken'],
     responded: true,
   };
   const waiting: MealResponseMemberRow = {
@@ -129,6 +185,7 @@ describe('mealResponseCardStatus', () => {
     memberName: 'Amit',
     mobileNumber: null,
     choice: null,
+    optionIds: [],
     responded: false,
   };
 

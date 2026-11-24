@@ -40,10 +40,20 @@ export function resolveDashboardMealSlotCaption(
     };
   }
   if (status === 'modified') {
-    return { captionKey: 'meals.planning.cardHintNeedsReshare', captionTone: 'muted' };
+    return {
+      captionKey: 'meals.planning.cardHintNeedsReshare',
+      countPrimary: '—',
+      countUnitKey: 'meals.planning.cardHintNeedsReshare',
+      captionTone: 'muted',
+    };
   }
   if (status === 'draft') {
-    return { captionKey: 'meals.planning.cardHintDraft', captionTone: 'muted' };
+    return {
+      captionKey: 'meals.planning.cardHintDraft',
+      countPrimary: '—',
+      countUnitKey: 'meals.planning.cardHintDraft',
+      captionTone: 'muted',
+    };
   }
 
   const responded = poll?.responseCount ?? 0;
@@ -53,6 +63,8 @@ export function resolveDashboardMealSlotCaption(
     return {
       captionKey: 'meals.planning.cardHintPollClosed',
       captionParams: { responded, eligible },
+      countPrimary: `${responded} / ${eligible}`,
+      countUnitKey: 'meals.planning.cardHintPollClosed',
       captionTone: 'muted',
     };
   }
@@ -72,7 +84,12 @@ export function resolveDashboardMealSlotCaption(
     };
   }
 
-  return { captionKey: 'meals.planning.cardHintShared', captionTone: 'muted' };
+  return {
+    captionKey: 'meals.planning.cardHintShared',
+    countPrimary: '—',
+    countUnitKey: 'meals.planning.cardHintShared',
+    captionTone: 'muted',
+  };
 }
 
 function mealStatusLabelKeyForKind(kind: MealStatusKind): string {

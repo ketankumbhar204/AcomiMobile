@@ -1,5 +1,8 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -19,8 +22,19 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { Mail, UserPlus, Users, X, CalendarDays, UserCheck, IndianRupee } from 'lucide-react-native';
+import {
+  Mail,
+  UserPlus,
+  Users,
+  X,
+  CalendarDays,
+  UserCheck,
+  IndianRupee,
+  Building2,
+} from 'lucide-react-native';
 import type {
+  MemberDirectoryAssociationResponse,
+  MemberDirectoryPersonResponse,
   MemberResponse,
   MembershipRole,
   OccupancyResponse,
@@ -35,6 +49,7 @@ import { paymentsApi } from '../api/paymentsApi';
 import { formatMemberContactNumber } from '../utils/indianMobile';
 import { ContactNumberLine } from '../components/member/ContactAndStayMeta';
 import { MemberListCard } from '../components/member/MemberListCard';
+import { MemberDirectoryCard } from '../components/member/MemberDirectoryCard';
 import { MemberOccupancyStatusBadge, MemberStatusBadge } from '../components/member';
 import { StayTypeBadge } from '../components/accommodation/StayTypeBadge';
 import type { StayChoice } from '../utils/shortStay';
@@ -56,12 +71,16 @@ import {
 } from '../components/dashboard/shared/DashboardPersonCard';
 import { useActiveSpaceId } from '../hooks/useActiveSpaceId';
 import { useMealParticipationMap } from '../hooks/useMealParticipationMap';
+import { useMemberDirectory } from '../hooks/useMemberDirectory';
 import { useSpacePermissions } from '../hooks/useSpacePermissions';
 import { useSpaceTabHeader } from '../hooks/useSpaceTabHeader';
 import type { MainStackParamList, SpaceTabParamList } from '../navigation/types';
 import { useAccommodationActionSheetStore } from '../store/accommodationActionSheetStore';
 import { useMemberStore } from '../store/memberStore';
 import { colors, pageContentGutter, radius, shadows, spacing, typography } from '../theme';
+import { getMarketingDemoMetrics } from '../marketing/marketingDemoDataset';
+import { isMarketingDemoModeEnabled } from '../marketing/marketingDemoMode';
+import { formatPaymentAmount } from '../utils/paymentAmount';
 import { memberAcomiBadgeLabel } from '../utils/memberAppStatus';
 import {
   getMemberListFoodLabel,
@@ -112,6 +131,10 @@ type MembersRoute = NativeStackScreenProps<
 >['route'];
 
 type MembersTab = 'members' | 'pending';
+type MembersScope = 'space' | 'directory';
+
+/** Distance from the bottom of the list at which the next directory page loads. */
+const DIRECTORY_LOAD_MORE_THRESHOLD = 480;
 type MembersKpiFocus = 'total' | 'active' | 'pending' | 'joinedThisMonth' | 'pendingPayments';
 
 function formatRoleLabel(
@@ -224,6 +247,18 @@ export function MembersScreen() {
   >(() => new Map());
 
   const permissions = useSpacePermissions(spaceId);
+
+  const [scope, setScope] = useState<MembersScope>('space');
+  const canUseDirectory = permissions.canManageMembers === true;
+  const directoryActive = canUseDirectory && scope === 'directory';
+  const directory = useMemberDirectory(searchQuery, { enabled: directoryActive });
+
+  useEffect(() => {
+    if (!canUseDirectory && scope !== 'space') {
+      setScope('space');
+    }
+  }, [canUseDirectory, scope]);
+
   const showMealAccess =
     permissions.canViewMeals === true && mealsApplicableForSpace(permissions.spaceType);
   const canManageMeals = permissions.canManageMeals === true;
@@ -473,11 +508,66 @@ export function MembersScreen() {
 
   const onRefresh = useCallback(async () => {
     devLog('[MembersScreen] pull to refresh');
+    if (directoryActive) {
+      await directory.refetch();
+      return;
+    }
     await refresh();
     await reloadParticipations();
     await loadDues();
     await loadStays();
-  }, [loadDues, loadStays, refresh, reloadParticipations]);
+  }, [directory, directoryActive, loadDues, loadStays, refresh, reloadParticipations]);
+
+  const openDirectoryAssociation = useCallback(
+    (association: MemberDirectoryAssociationResponse) => {
+      devLog('[MembersScreen] open directory member', association.spaceId, association.memberId);
+      navigation.navigate('MemberDetails', {
+        spaceId: association.spaceId,
+        memberId: association.memberId,
+      });
+    },
+    [navigation],
+  );
+
+  const openDirectoryPerson = useCallback(
+    (person: MemberDirectoryPersonResponse) => {
+      const { associations } = person;
+      if (associations.length === 0) {
+        return;
+      }
+      if (associations.length === 1) {
+        openDirectoryAssociation(associations[0]);
+        return;
+      }
+      openActionSheet(
+        t('membership.members.directoryPickSpace', { name: person.displayName }),
+        associations.map(association => ({
+          label: `${association.spaceName} · ${t(
+            membershipRoleLabelKey(association.role, association.spaceType),
+          )}`,
+          subtitle: t(getMemberStatusLabelKey(association.membershipStatus)),
+          action: () => openDirectoryAssociation(association),
+        })),
+      );
+    },
+    [openActionSheet, openDirectoryAssociation, t],
+  );
+
+  const onScrollList = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (!directoryActive) {
+        return;
+      }
+      const { contentOffset, layoutMeasurement, contentSize } = event.nativeEvent;
+      if (
+        contentOffset.y + layoutMeasurement.height >=
+        contentSize.height - DIRECTORY_LOAD_MORE_THRESHOLD
+      ) {
+        void directory.loadMore();
+      }
+    },
+    [directory, directoryActive],
+  );
 
   const openMemberDetails = (member: MemberResponse, initialTab?: 'payments') => {
     devLog('[MembersScreen] open member details', member.memberId);
@@ -529,6 +619,16 @@ export function MembersScreen() {
         ? '…'
         : '—';
 
+  const demoMetrics =
+    isMarketingDemoModeEnabled() && permissions.spaceType
+      ? getMarketingDemoMetrics(spaceId, permissions.spaceType)
+      : null;
+  const totalMembersValue = demoMetrics ? String(demoMetrics.members) : String(kpi.total);
+  const activeMembersValue = demoMetrics ? String(demoMetrics.activeMembers) : String(kpi.active);
+  const pendingPaymentsDisplay = demoMetrics
+    ? formatPaymentAmount(demoMetrics.pending) ?? pendingPaymentsValue
+    : pendingPaymentsValue;
+
   const confirmCancelInvitation = (invitation: PendingInvitationResponse) => {
     showConfirm({
       title: t('membership.cancel.title'),
@@ -547,15 +647,36 @@ export function MembersScreen() {
 
   return (
     <View style={styles.root}>
-      <SegmentedTabs
-        style={styles.tabs}
-        value={activeTab}
-        onChange={handleTabChange}
-        items={[
-          { key: 'members', label: t('membership.tabs.members'), icon: Users },
-          { key: 'pending', label: t('membership.tabs.pending'), icon: Mail },
-        ]}
-      />
+      {canUseDirectory ? (
+        <SegmentedTabs
+          style={styles.tabs}
+          value={scope}
+          onChange={(value: MembersScope) => {
+            setScope(value);
+            setSearchQuery('');
+          }}
+          items={[
+            { key: 'space', label: t('membership.members.scopeThisSpace'), icon: Users },
+            {
+              key: 'directory',
+              label: t('membership.members.scopeAllMySpaces'),
+              icon: Building2,
+            },
+          ]}
+        />
+      ) : null}
+
+      {!directoryActive ? (
+        <SegmentedTabs
+          style={styles.tabs}
+          value={activeTab}
+          onChange={handleTabChange}
+          items={[
+            { key: 'members', label: t('membership.tabs.members'), icon: Users },
+            { key: 'pending', label: t('membership.tabs.pending'), icon: Mail },
+          ]}
+        />
+      ) : null}
 
       <ScrollView
         style={styles.scroll}
@@ -563,26 +684,42 @@ export function MembersScreen() {
         stickyHeaderIndices={[1]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        scrollEventThrottle={directoryActive ? 200 : undefined}
+        onScroll={directoryActive ? onScrollList : undefined}
         refreshControl={
           <RefreshControl
-            refreshing={refreshing}
+            refreshing={directoryActive ? directory.loading && directory.people.length > 0 : refreshing}
             onRefresh={onRefresh}
             tintColor={colors.primary}
             colors={[colors.primary]}
           />
         }>
         <View style={styles.scrollTop}>
+          {directoryActive ? (
+            <>
+              <DashboardSectionTitle
+                title={t('membership.members.scopeAllMySpaces')}
+                subtitle={t('membership.members.directorySubtitle')}
+              />
+            </>
+          ) : (
+          <>
           {error ? (
             <View style={styles.errorBanner}>
               <Text style={styles.errorBannerText}>{error}</Text>
             </View>
           ) : null}
 
+          {demoMetrics ? (
+            <Text style={styles.illustrativeNote}>
+              {t('membership.illustrativeSummary')}
+            </Text>
+          ) : null}
           <View style={styles.kpiGrid}>
             <DashboardStatCard
               horizontal
               label={t('membership.kpi.total', { defaultValue: 'Total Members' })}
-              value={String(kpi.total)}
+              value={totalMembersValue}
               icon={Users}
               accent={colors.primaryDark}
               style={styles.kpiCard}
@@ -592,7 +729,7 @@ export function MembersScreen() {
             <DashboardStatCard
               horizontal
               label={t('membership.kpi.active', { defaultValue: 'Active Members' })}
-              value={String(kpi.active)}
+              value={activeMembersValue}
               icon={UserCheck}
               accent="#2563EB"
               style={styles.kpiCard}
@@ -623,7 +760,7 @@ export function MembersScreen() {
               <DashboardStatCard
                 horizontal
                 label={t('membership.dues.summary', { defaultValue: 'Pending Payments' })}
-                value={pendingPaymentsValue}
+                value={pendingPaymentsDisplay}
                 icon={IndianRupee}
                 accent="#D97706"
                 style={styles.kpiCardWide}
@@ -646,6 +783,8 @@ export function MembersScreen() {
             }
             trailing={inviteSectionAction}
           />
+          </>
+          )}
         </View>
 
         <View style={styles.stickySearch}>
@@ -653,18 +792,65 @@ export function MembersScreen() {
             searchValue={searchQuery}
             onSearchChange={setSearchQuery}
             searchPlaceholder={
-              activeTab === 'members'
-                ? t('list.search.members')
-                : t('list.search.pendingInvitations')
+              directoryActive
+                ? t('membership.members.directorySearchPlaceholder')
+                : activeTab === 'members'
+                  ? t('list.search.members')
+                  : t('list.search.pendingInvitations')
             }
             onFilterPress={() => setFilterDrawerOpen(true)}
-            activeFilterCount={activeFilterCount}
-            showFilterButton={useMembersFilterDrawer}
+            activeFilterCount={directoryActive ? 0 : activeFilterCount}
+            showFilterButton={!directoryActive && useMembersFilterDrawer}
           />
         </View>
 
         <View style={styles.scrollList}>
-        {activeTab === 'members' ? (
+        {directoryActive ? (
+          directory.loading && directory.people.length === 0 ? (
+            <>
+              <SkeletonCard />
+              <View style={styles.gap} />
+              <SkeletonCard />
+              <View style={styles.gap} />
+              <SkeletonCard />
+            </>
+          ) : directory.error && directory.people.length === 0 ? (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorBannerText}>{directory.error}</Text>
+            </View>
+          ) : directory.people.length === 0 ? (
+            <EmptyState
+              title={
+                searchQuery.trim()
+                  ? t('list.emptyFiltered')
+                  : t('membership.members.directoryEmptyTitle')
+              }
+              description={
+                searchQuery.trim() ? undefined : t('membership.members.directoryEmptyDescription')
+              }
+              Icon={Users}
+            />
+          ) : (
+            <View style={styles.list}>
+              {directory.error ? (
+                <View style={styles.errorBanner}>
+                  <Text style={styles.errorBannerText}>{directory.error}</Text>
+                </View>
+              ) : null}
+              {directory.people.map(person => (
+                <MemberDirectoryCard
+                  key={person.directoryId}
+                  person={person}
+                  onPress={openDirectoryPerson}
+                  onPressAssociation={openDirectoryAssociation}
+                />
+              ))}
+              {directory.loadingMore ? (
+                <ActivityIndicator style={styles.loadMore} color={colors.primary} />
+              ) : null}
+            </View>
+          )
+        ) : activeTab === 'members' ? (
           showLoading ? (
             <>
               <SkeletonCard />
@@ -850,7 +1036,7 @@ export function MembersScreen() {
         </View>
       </ScrollView>
 
-      {showAddFab ? (
+      {showAddFab && !directoryActive ? (
         <FAB
           onPress={
             showInviteAction ? openMemberFabMenu : () => navigation.navigate('AddMember', { spaceId })
@@ -911,6 +1097,11 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.sm,
   },
+  illustrativeNote: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    marginBottom: spacing.sm,
+  },
   kpiCard: {
     width: '48%',
     flexGrow: 0,
@@ -938,6 +1129,9 @@ const styles = StyleSheet.create({
   },
   gap: {
     height: spacing.md,
+  },
+  loadMore: {
+    paddingVertical: spacing.md,
   },
   inviteCard: {
     backgroundColor: colors.white,

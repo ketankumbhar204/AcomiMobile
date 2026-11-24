@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import {
   adminNotificationTestApi,
   type AdminNotificationTestAttempt,
@@ -33,6 +34,7 @@ function requestId(): string {
 }
 
 export function AdminNotificationTestingScreen() {
+  const { t } = useTranslation();
   const [page, setPage] = useState<AdminNotificationTestPage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -198,28 +200,48 @@ export function AdminNotificationTestingScreen() {
   return (
     <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.headerRow}>
-        <Text style={styles.title}>Notification Testing</Text>
-        <Pressable accessibilityLabel="About notification testing" onPress={() => setHelpOpen(open => !open)}>
+        <Text style={styles.title}>{t('admin.notificationTesting.title')}</Text>
+        <Pressable
+          accessibilityLabel={t('admin.notificationTesting.aboutA11y', {
+            defaultValue: 'About notification testing',
+          })}
+          onPress={() => setHelpOpen(open => !open)}>
           <Text style={styles.help}>?</Text>
         </Pressable>
       </View>
       {helpOpen ? (
         <Text style={styles.infoCopy}>
-          A test sends a fixture to this admin account. Firebase acceptance means the request was taken, not that the phone showed a system notification. Browser push is not implemented.
+          {t('admin.notificationTesting.helpCopy', {
+            defaultValue:
+              'A test sends a fixture to this admin account. Firebase acceptance means the request was taken, not that the phone showed a system notification. Browser push is not implemented.',
+          })}
         </Text>
       ) : null}
 
       <View style={styles.infoCard}>
         <Text style={styles.infoCopy}>
-          Send a test notification to your admin account only. This does not change payments, members, enquiries, or other business records.
+          {t('admin.notificationTesting.infoCopy', {
+            defaultValue:
+              'Send a test notification to your admin account only. This does not change payments, members, enquiries, or other business records.',
+          })}
         </Text>
       </View>
 
       {result ? (
         <View style={styles.resultCard}>
-          <Text style={styles.typeName}>{result.status === 'FCM_ACCEPTED' ? 'Test notification sent' : result.status}</Text>
+          <Text style={styles.typeName}>
+            {result.status === 'FCM_ACCEPTED'
+              ? t('admin.notificationTesting.sent', { defaultValue: 'Test notification sent' })
+              : result.status}
+          </Text>
           <Text style={styles.typeMeta}>
-            {resultCopy(result)} Targeted {result.targetedCount}, accepted {result.acceptedCount}, failed {result.failedCount}.
+            {resultCopy(result)}{' '}
+            {t('admin.notificationTesting.resultCounts', {
+              targeted: result.targetedCount,
+              accepted: result.acceptedCount,
+              failed: result.failedCount,
+              defaultValue: 'Targeted {{targeted}}, accepted {{accepted}}, failed {{failed}}.',
+            })}
           </Text>
         </View>
       ) : null}
@@ -227,17 +249,31 @@ export function AdminNotificationTestingScreen() {
       {actionMessage ? <Text style={styles.success}>{actionMessage}</Text> : null}
 
       <View style={styles.card}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Push configuration status" onPress={() => setStatusOpen(open => !open)} style={styles.rowBetween}>
-          <Text style={styles.section}>Push configuration status</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('admin.notificationTesting.pushStatus')}
+          onPress={() => setStatusOpen(open => !open)}
+          style={styles.rowBetween}>
+          <Text style={styles.section}>{t('admin.notificationTesting.pushStatus')}</Text>
           <Text style={styles.ready}>{statusHeading(page)}</Text>
         </Pressable>
-        <Pressable accessibilityLabel="Refresh status" onPress={() => void load()}>
-          <Text style={styles.link}>Refresh status</Text>
+        <Pressable
+          accessibilityLabel={t('admin.notificationTesting.refreshStatus')}
+          onPress={() => void load()}>
+          <Text style={styles.link}>{t('admin.notificationTesting.refreshStatus')}</Text>
         </Pressable>
         {statusOpen && page
           ? statusChecks(page).map(row => (
               <View key={row.label} style={styles.rowBetween}>
-                <Text style={styles.typeMeta} accessibilityLabel={row.ok ? 'Verified' : 'Not verified'}>{row.ok ? '●' : '○'} {row.label}</Text>
+                <Text
+                  style={styles.typeMeta}
+                  accessibilityLabel={
+                    row.ok
+                      ? t('admin.notificationTesting.verified', { defaultValue: 'Verified' })
+                      : t('admin.notificationTesting.notVerified', { defaultValue: 'Not verified' })
+                  }>
+                  {row.ok ? '●' : '○'} {row.label}
+                </Text>
                 <Text style={styles.typeMeta}>{row.value}</Text>
               </View>
             ))
@@ -246,7 +282,7 @@ export function AdminNotificationTestingScreen() {
 
       {page && !page.browserPushImplemented ? (
         <View style={styles.warnCard}>
-          <Text style={styles.warnCopy}>Browser push is not implemented yet.</Text>
+          <Text style={styles.warnCopy}>{t('admin.notificationTesting.browserNotImplemented')}</Text>
         </View>
       ) : null}
 

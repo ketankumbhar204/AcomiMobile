@@ -60,11 +60,14 @@ describe('buildDashboardMealSlotRows', () => {
       statusKind: 'draft',
       statusLabelKey: 'meals.status.notShared',
       captionKey: 'meals.planning.cardHintDraft',
+      countPrimary: '—',
+      countUnitKey: 'meals.planning.cardHintDraft',
     });
     expect(rows[2]).toMatchObject({
       mealType: 'DINNER',
       status: 'not_planned',
       statusKind: 'empty',
+      countPrimary: '—',
     });
   });
 
@@ -102,6 +105,8 @@ describe('buildDashboardMealSlotRows', () => {
       statusKind: 'needs_reshare',
       statusLabelKey: 'meals.status.notShared',
       captionKey: 'meals.planning.cardHintNeedsReshare',
+      countPrimary: '—',
+      countUnitKey: 'meals.planning.cardHintNeedsReshare',
     });
   });
 
@@ -124,6 +129,8 @@ describe('buildDashboardMealSlotRows', () => {
       statusKind: 'shared',
       statusLabelKey: 'meals.status.shared',
       captionKey: 'meals.planning.cardHintPollClosed',
+      countPrimary: '3 / 4',
+      countUnitKey: 'meals.planning.cardHintPollClosed',
       captionTone: 'muted',
     });
   });

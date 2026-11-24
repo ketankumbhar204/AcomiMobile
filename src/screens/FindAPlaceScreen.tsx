@@ -63,44 +63,25 @@ const PLACE_TYPES: Array<Exclude<SpaceType, 'MESS'>> = [
   'RENTAL',
   'CORPORATE_STAY',
 ];
-const DISCOVER_AMENITY_FILTERS: { code: string; label: string }[] = [
-  { code: 'WIFI', label: 'Wi-Fi' },
-  { code: 'FOOD_INCLUDED', label: 'Meals' },
-  { code: 'WASHING_MACHINE', label: 'Laundry / Washing machine' },
-  { code: 'PARKING', label: 'Parking' },
-  { code: 'HOUSEKEEPING', label: 'Housekeeping' },
-  { code: 'POWER_BACKUP', label: 'Power Backup' },
-  { code: 'AC', label: 'AC' },
-  { code: 'KITCHEN', label: 'Kitchen' },
-  { code: 'CCTV', label: 'CCTV / Security' },
-  { code: 'RO_WATER', label: 'RO water' },
-  { code: 'HOT_WATER', label: 'Hot water' },
-  { code: 'REFRIGERATOR', label: 'Refrigerator' },
-  { code: 'WARDROBE', label: 'Wardrobe' },
-];
-const GENDER_FILTERS = [
-  { id: 'MALE', label: 'Gents' },
-  { id: 'FEMALE', label: 'Ladies' },
-  { id: 'MIXED', label: 'Gents & Ladies' },
+const DISCOVER_AMENITY_CODES = [
+  'WIFI',
+  'FOOD_INCLUDED',
+  'WASHING_MACHINE',
+  'PARKING',
+  'HOUSEKEEPING',
+  'POWER_BACKUP',
+  'AC',
+  'KITCHEN',
+  'CCTV',
+  'RO_WATER',
+  'HOT_WATER',
+  'REFRIGERATOR',
+  'WARDROBE',
 ] as const;
-const SHARING_FILTERS = [
-  { id: 'SINGLE', label: 'Single' },
-  { id: 'TWO', label: '2 Sharing' },
-  { id: 'THREE', label: '3 Sharing' },
-  { id: 'FOUR', label: '4 Sharing' },
-  { id: 'FIVE', label: '5 Sharing' },
-  { id: 'SIX_PLUS', label: '6+ Sharing' },
-] as const;
-const FOOD_FILTERS = [
-  { id: 'INCLUDED', label: 'Food Included' },
-  { id: 'AVAILABLE', label: 'Food Available' },
-  { id: 'NONE', label: 'No Food' },
-] as const;
-const FURNISHING_FILTERS = [
-  { id: 'FULL', label: 'Fully Furnished' },
-  { id: 'SEMI', label: 'Semi Furnished' },
-  { id: 'UNFURNISHED', label: 'Unfurnished' },
-] as const;
+const GENDER_FILTER_IDS = ['MALE', 'FEMALE', 'MIXED'] as const;
+const SHARING_FILTER_IDS = ['SINGLE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX_PLUS'] as const;
+const FOOD_FILTER_IDS = ['INCLUDED', 'AVAILABLE', 'NONE'] as const;
+const FURNISHING_FILTER_IDS = ['FULL', 'SEMI', 'UNFURNISHED'] as const;
 
 function toggleValue<T>(list: T[], value: T): T[] {
   return list.includes(value) ? list.filter(item => item !== value) : [...list, value];
@@ -838,22 +819,22 @@ export function FindAPlaceScreen() {
         {!isMess ? (
           <>
             <FilterDrawerSection title={t('spaces.findPlace.filters.gender', { defaultValue: 'Gender' })}>
-              {GENDER_FILTERS.map(option => (
+              {GENDER_FILTER_IDS.map(id => (
                 <FilterCheckboxRow
-                  key={option.id}
-                  label={option.label}
-                  checked={draftGenders.includes(option.id)}
-                  onToggle={() => setDraftGenders(current => toggleValue(current, option.id))}
+                  key={id}
+                  label={t(`spaces.findPlace.genderOptions.${id}`)}
+                  checked={draftGenders.includes(id)}
+                  onToggle={() => setDraftGenders(current => toggleValue(current, id))}
                 />
               ))}
             </FilterDrawerSection>
             <FilterDrawerSection title={t('spaces.findPlace.filters.sharing', { defaultValue: 'Sharing' })}>
-              {SHARING_FILTERS.map(option => (
+              {SHARING_FILTER_IDS.map(id => (
                 <FilterCheckboxRow
-                  key={option.id}
-                  label={option.label}
-                  checked={draftSharings.includes(option.id)}
-                  onToggle={() => setDraftSharings(current => toggleValue(current, option.id))}
+                  key={id}
+                  label={t(`spaces.findPlace.sharingOptions.${id}`)}
+                  checked={draftSharings.includes(id)}
+                  onToggle={() => setDraftSharings(current => toggleValue(current, id))}
                 />
               ))}
             </FilterDrawerSection>
@@ -871,16 +852,10 @@ export function FindAPlaceScreen() {
         </FilterDrawerSection>
         {isMess ? (
           <FilterDrawerSection title={t('spaces.findPlace.filters.mealType', { defaultValue: 'Meal type' })}>
-            {(
-              [
-                ['BREAKFAST', 'Breakfast'],
-                ['LUNCH', 'Lunch'],
-                ['DINNER', 'Dinner'],
-              ] as const
-            ).map(([id, label]) => (
+            {(['BREAKFAST', 'LUNCH', 'DINNER'] as const).map(id => (
               <FilterCheckboxRow
                 key={id}
-                label={label}
+                label={t(`meals.mealType.${id.toLowerCase()}`)}
                 checked={draftMealTypes.includes(id)}
                 onToggle={() => setDraftMealTypes(current => toggleValue(current, id))}
               />
@@ -891,14 +866,14 @@ export function FindAPlaceScreen() {
           <FilterDrawerSection title={t('spaces.findPlace.filters.foodType', { defaultValue: 'Food type' })}>
             {(
               [
-                ['VEG', 'Vegetarian'],
-                ['NON_VEG', 'Non-vegetarian'],
-                ['EGG', 'Egg'],
+                ['VEG', 'spaces.findPlace.foodTypeOptions.VEG'],
+                ['NON_VEG', 'spaces.findPlace.foodTypeOptions.NON_VEG'],
+                ['EGG', 'spaces.findPlace.foodTypeOptions.EGG'],
               ] as const
-            ).map(([id, label]) => (
+            ).map(([id, key]) => (
               <FilterCheckboxRow
                 key={id}
-                label={label}
+                label={t(key)}
                 checked={draftFoodTypes.includes(id)}
                 onToggle={() => setDraftFoodTypes(current => toggleValue(current, id))}
               />
@@ -907,36 +882,36 @@ export function FindAPlaceScreen() {
         ) : null}
         {!isMess ? (
         <FilterDrawerSection title={t('spaces.findPlace.filters.food', { defaultValue: 'Food' })}>
-          {FOOD_FILTERS.map(option => (
+          {FOOD_FILTER_IDS.map(id => (
             <FilterCheckboxRow
-              key={option.id}
-              label={option.label}
-              checked={draftFoods.includes(option.id)}
-              onToggle={() => setDraftFoods(current => toggleValue(current, option.id))}
+              key={id}
+              label={t(`spaces.findPlace.foodOptions.${id}`)}
+              checked={draftFoods.includes(id)}
+              onToggle={() => setDraftFoods(current => toggleValue(current, id))}
             />
           ))}
         </FilterDrawerSection>
         ) : null}
         {!isMess ? (
         <FilterDrawerSection title={t('spaces.amenities.title')}>
-          {DISCOVER_AMENITY_FILTERS.map(option => (
+          {DISCOVER_AMENITY_CODES.map(code => (
             <FilterCheckboxRow
-              key={option.code}
-              label={option.label}
-              checked={draftAmenities.includes(option.code)}
-              onToggle={() => setDraftAmenities(current => toggleValue(current, option.code))}
+              key={code}
+              label={t(`spaces.findPlace.amenity.${code}`)}
+              checked={draftAmenities.includes(code)}
+              onToggle={() => setDraftAmenities(current => toggleValue(current, code))}
             />
           ))}
         </FilterDrawerSection>
         ) : null}
         {!isMess ? (
         <FilterDrawerSection title={t('spaces.findPlace.filters.furnishing', { defaultValue: 'Furnishing' })}>
-          {FURNISHING_FILTERS.map(option => (
+          {FURNISHING_FILTER_IDS.map(id => (
             <FilterCheckboxRow
-              key={option.id}
-              label={option.label}
-              checked={draftFurnishings.includes(option.id)}
-              onToggle={() => setDraftFurnishings(current => toggleValue(current, option.id))}
+              key={id}
+              label={t(`spaces.findPlace.furnishingOptions.${id}`)}
+              checked={draftFurnishings.includes(id)}
+              onToggle={() => setDraftFurnishings(current => toggleValue(current, id))}
             />
           ))}
         </FilterDrawerSection>

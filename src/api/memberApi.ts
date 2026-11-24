@@ -11,12 +11,15 @@ import {
   InvitationResponse,
   MemberDetailsResponse,
   MemberDocumentResponse,
+  MemberDirectoryPersonResponse,
+  MemberDirectorySearchParams,
   MemberHistoryResponse,
   MemberImportCandidateResponse,
   MemberNoteResponse,
   MemberResponse,
   MemberSearchParams,
   MyInvitationResponse,
+  PagedResponse,
   PendingInvitationResponse,
   SpaceMembershipResponse,
   UpdateDepositRequest,
@@ -89,6 +92,36 @@ export const memberApi = {
     );
 
     devLog(`${LOG_TAG} searchImportCandidates response`, response.length);
+    return response;
+  },
+
+  /** Owner-level directory: unique people across every space the caller manages. */
+  getDirectory: async (
+    params: MemberDirectorySearchParams = {},
+  ): Promise<PagedResponse<MemberDirectoryPersonResponse>> => {
+    const q = new URLSearchParams();
+    if (params.search?.trim()) {
+      q.set('search', params.search.trim());
+    }
+    q.set('page', String(params.page ?? 0));
+    q.set('size', String(params.size ?? 20));
+    if (params.spaceId) {
+      q.set('spaceId', params.spaceId);
+    }
+    if (params.spaceType) {
+      q.set('spaceType', params.spaceType);
+    }
+    if (params.status) {
+      q.set('status', params.status);
+    }
+    const path = `/members/directory?${q.toString()}`;
+    devLog(`${LOG_TAG} GET ${path}`);
+
+    const response = await unwrapApiResponse(
+      apiClient.get<ApiResponse<PagedResponse<MemberDirectoryPersonResponse>>>(path),
+    );
+
+    devLog(`${LOG_TAG} getDirectory response`, response.content?.length);
     return response;
   },
 

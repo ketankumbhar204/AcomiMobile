@@ -184,9 +184,10 @@ export function DashboardCustomerMealsSection({
 
   const poll = useMealPollDay(spaceId, menuDate, permissions.spaceType);
   const isPastDate = isPastMenuDate(menuDate);
-  /** Today with only closed polls — still show menus, but as view-only. */
-  const reviewOnly =
-    isPastDate || (!poll.loading && poll.openPolls.length === 0 && poll.displayPolls.length > 0);
+  const pollsClosed =
+    !poll.loading && poll.openPolls.length === 0 && poll.displayPolls.length > 0;
+  /** Past dates or fully closed polls — still show menus, but as view-only. */
+  const reviewOnly = isPastDate || pollsClosed;
 
   const orderSummary = useMemo(
     () => buildMealSummaryFromPolls(poll.displayPolls, poll.multiQuantity),
@@ -466,7 +467,8 @@ export function DashboardCustomerMealsSection({
         openPolls={poll.displayPolls}
         multiQuantity={poll.multiQuantity}
         cardState={cardState}
-        isPastDate={reviewOnly}
+        isPastDate={isPastDate}
+        pollsClosed={pollsClosed}
         paymentStatus={poll.myPaymentStatus}
         rejectionReason={poll.myRejectionReason}
         prepaidOverflowAmount={poll.myPrepaidOverflowAmount}

@@ -40,6 +40,8 @@ function moreItemLabel(
       return t('navigation.moreMenu.mealSubscriptionPlans', {
         defaultValue: 'Meal Subscription Plans',
       });
+    case 'inventory':
+      return t('navigation.inventory', { defaultValue: 'Inventory' });
     default:
       return id;
   }
@@ -62,8 +64,9 @@ export function SpaceHeaderMenu({ spaceId }: SpaceHeaderMenuProps) {
     () =>
       spaceMoreItemsForPermissions({
         canManageMeals: permissions.canManageMeals === true,
+        canViewInventory: permissions.canViewInventory === true,
       }),
-    [permissions.canManageMeals],
+    [permissions.canManageMeals, permissions.canViewInventory],
   );
 
   const items = useMemo<HeaderOverflowMenuItem[]>(() => {
@@ -80,6 +83,9 @@ export function SpaceHeaderMenu({ spaceId }: SpaceHeaderMenuProps) {
             break;
           case 'mealSubscriptionPlans':
             navigateMainStack('SubscriptionPlans', { spaceId });
+            break;
+          case 'inventory':
+            navigateMainStack('InventoryDashboard', { spaceId });
             break;
           default:
             break;

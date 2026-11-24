@@ -50,7 +50,6 @@ export interface SaveServiceContactBody {
   description?: string | null;
   address?: string | null;
   notes?: string | null;
-  spaceIds?: UUID[] | null;
   acknowledgeDuplicate?: boolean;
   version?: number | null;
 }
@@ -66,7 +65,6 @@ export interface ServiceContactDuplicateMatch {
 export interface ServiceContactListParams {
   q?: string;
   category?: string;
-  spaceId?: UUID;
   sort?: ServiceContactSort;
   page?: number;
   size?: number;
