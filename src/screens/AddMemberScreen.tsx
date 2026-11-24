@@ -55,6 +55,7 @@ import {
   addPersonNoun,
   countImportableCandidates,
   destinationForAddPersonChoice,
+  offersUseExistingChoice,
   shouldOfferImportChoice,
 } from '../features/membership/addPersonChoice';
 import {
@@ -113,9 +114,11 @@ export function AddMemberScreen() {
   const showToast = useToastStore(state => state.showToast);
 
   const isMess = spaceType === 'MESS';
-  const skipImportChoice = initialMode != null;
+  // Only Mess offers "Use existing…" here. Lodging goes straight to the new-person form.
+  // Wait for mySpaces so Mess is not misclassified as lodging while spaceType is still unknown.
   const chosenMode = useRef<MemberPickerMode>(initialMode === 'search' ? 'search' : 'new');
-  const [entryResolved, setEntryResolved] = useState(skipImportChoice);
+  const roleSeeded = useRef(spaceType != null);
+  const [entryResolved, setEntryResolved] = useState(initialMode != null);
   const [choiceVisible, setChoiceVisible] = useState(false);
   const [importableCount, setImportableCount] = useState(0);
   const [pickerMode, setPickerMode] = useState<MemberPickerMode>(
@@ -128,7 +131,7 @@ export function AddMemberScreen() {
   const [fullName, setFullName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
   const [role, setRole] = useState<MembershipRole | null>(() =>
-    defaultRoleForSpaceType(spaceType),
+    spaceType != null ? defaultRoleForSpaceType(spaceType) : null,
   );
   const [gender, setGender] = useState<MemberGender | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -209,7 +212,24 @@ export function AddMemberScreen() {
   }, [isMess, navigation, t, i18n.language]);
 
   useEffect(() => {
-    if (skipImportChoice) {
+    if (spaceType == null || roleSeeded.current) {
+      return;
+    }
+    setRole(defaultRoleForSpaceType(spaceType));
+    roleSeeded.current = true;
+  }, [spaceType]);
+
+  useEffect(() => {
+    if (initialMode != null) {
+      setEntryResolved(true);
+      return;
+    }
+    if (spaceType == null) {
+      return;
+    }
+    if (!offersUseExistingChoice(spaceType)) {
+      setChoiceVisible(false);
+      setEntryResolved(true);
       return;
     }
     let active = true;
@@ -235,7 +255,7 @@ export function AddMemberScreen() {
     return () => {
       active = false;
     };
-  }, [skipImportChoice, spaceId]);
+  }, [initialMode, spaceType, spaceId]);
 
   useEffect(() => {
     if (!showCustomerReuse) {
@@ -414,10 +434,6 @@ export function AddMemberScreen() {
 
   const chooseImport = () => {
     const destination = destinationForAddPersonChoice(spaceType, 'import');
-    if (destination.type === 'import-screen') {
-      navigation.replace('ImportExistingPeople', { spaceId });
-      return;
-    }
     applyChosenMode(destination.pickerMode);
   };
 

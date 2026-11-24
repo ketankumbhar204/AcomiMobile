@@ -66,8 +66,8 @@ export function MemberDetailsScreen() {
   const isMealsTab = activeTab === 'meals';
 
   const refreshMember = useCallback(() => {
-    void loadMemberDetails(memberId);
-  }, [loadMemberDetails, memberId]);
+    void loadMemberDetails(memberId, spaceId);
+  }, [loadMemberDetails, memberId, spaceId]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -79,9 +79,10 @@ export function MemberDetailsScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      // Always pass route spaceId — All My Spaces may open a member from another space.
       devLog('[MemberDetails] screen focused', { spaceId, memberId });
-      void loadMemberDetails(memberId);
-      void loadPendingInvitations();
+      void loadMemberDetails(memberId, spaceId);
+      void loadPendingInvitations(spaceId);
       return () => {
         closeActivityDaySheet();
       };

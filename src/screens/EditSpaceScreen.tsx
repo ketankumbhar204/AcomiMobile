@@ -65,10 +65,12 @@ import {
   type PollClosingDefaultsFormValues,
 } from '../components/settings/PollClosingDefaultsSection';
 import { SpaceAmenitiesField } from '../components/spaces/SpaceAmenitiesField';
+import { SpaceRulesField } from '../components/spaces/SpaceRulesField';
 import { SpacePropertyCategoryPicker } from '../components/spaces/SpacePropertyCategoryPicker';
 import { useDeactivateSpace } from '../hooks/useDeactivateSpace';
-import type { AmenityAssignment } from '../api/types';
+import type { AmenityAssignment, RuleAssignment } from '../api/types';
 import { normalizeAmenityAssignments, supportsSpaceAmenities } from '../utils/amenities';
+import { normalizeRuleAssignments, supportsSpaceRules } from '../utils/spaceRules';
 import { supportsSpacePropertyCategory } from '../utils/spacePropertyCategory';
 import { isDuplicateSpaceName } from '../utils/suggestBuildingDefaults';
 import { useAuthenticatedUserId } from '../hooks/useAuth';
@@ -215,22 +217,32 @@ export function EditSpaceScreen() {
     useState<PollClosingDefaultsFormValues>(DEFAULT_POLL_CLOSING);
   const [spaceType, setSpaceType] = useState<string | null>(null);
   const [amenities, setAmenities] = useState<AmenityAssignment[]>([]);
+  const [rules, setRules] = useState<RuleAssignment[]>([]);
   const [genderPolicy, setGenderPolicy] = useState<GenderPolicy | null>(null);
 
   const owner = isSpaceOwner(selectedSpace, currentUserId);
   const isMessSpace = spaceType === 'MESS';
   const showAmenities = supportsSpaceAmenities(spaceType as SpaceType | null);
+  const showRules = supportsSpaceRules(spaceType as SpaceType | null);
   const showPropertyCategory = supportsSpacePropertyCategory(spaceType as SpaceType | null);
   const showMealsTab = isMessSpace && owner;
   const showPollsTab = owner;
 
-  type EditSpaceTab = 'general' | 'billing' | 'meals' | 'polls';
+  type EditSpaceTab = 'general' | 'rules' | 'billing' | 'meals' | 'polls';
   const [activeTab, setActiveTab] = useState<EditSpaceTab>('general');
 
   const tabOptions = useMemo((): ListFilterChipOption<EditSpaceTab>[] => {
     const options: ListFilterChipOption<EditSpaceTab>[] = [
       { id: 'general', label: t('progressiveWorkflow.editSpace.tabGeneral') },
     ];
+    if (showRules) {
+      options.push({
+        id: 'rules',
+        label: t('progressiveWorkflow.editSpace.tabRules', {
+          defaultValue: 'Rules & Guidelines',
+        }),
+      });
+    }
     if (owner) {
       options.push({ id: 'billing', label: t('progressiveWorkflow.editSpace.tabBilling') });
     }
@@ -241,9 +253,12 @@ export function EditSpaceScreen() {
       options.push({ id: 'polls', label: t('progressiveWorkflow.editSpace.tabPolls') });
     }
     return options;
-  }, [owner, showMealsTab, showPollsTab, t]);
+  }, [owner, showMealsTab, showPollsTab, showRules, t]);
 
   useEffect(() => {
+    if (activeTab === 'rules' && !showRules) {
+      setActiveTab('general');
+    }
     if (activeTab === 'billing' && !owner) {
       setActiveTab('general');
     }
@@ -253,7 +268,7 @@ export function EditSpaceScreen() {
     if (activeTab === 'polls' && !showPollsTab) {
       setActiveTab('general');
     }
-  }, [activeTab, owner, showMealsTab, showPollsTab]);
+  }, [activeTab, owner, showMealsTab, showPollsTab, showRules]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -279,6 +294,7 @@ export function EditSpaceScreen() {
           setSpaceType(loaded.type);
           // shortStayEnabled may still be present on the API response; stay type is per-occupancy now.
           setAmenities(normalizeAmenityAssignments(loaded.amenities ?? []));
+          setRules(normalizeRuleAssignments(loaded.rules ?? []));
           setGenderPolicy(loaded.genderPolicy ?? null);
 
           if (loaded.type === 'MESS') {
@@ -377,6 +393,7 @@ export function EditSpaceScreen() {
         : {}),
       contactNumber: contactNumber.trim() || undefined,
       amenities: showAmenities ? normalizeAmenityAssignments(amenities) : undefined,
+      rules: showRules ? normalizeRuleAssignments(rules) : undefined,
       genderPolicy: showPropertyCategory ? genderPolicy : undefined,
       // Omit shortStayEnabled: stay type is chosen per occupancy; do not flip the space flag.
     });
@@ -592,6 +609,23 @@ export function EditSpaceScreen() {
                   </EditSectionCard>
                 ) : null}
               </>
+            ) : null}
+
+            {activeTab === 'rules' && showRules ? (
+              <EditSectionCard
+                icon={ShieldCheck}
+                title={t('spaces.rules.title', { defaultValue: 'Rules & Guidelines' })}
+                helper={t('spaces.rules.helper', {
+                  defaultValue:
+                    'Select, edit or add rules for this space. These rules will be shown to residents.',
+                })}>
+                <SpaceRulesField
+                  spaceType={spaceType as SpaceType | null}
+                  value={rules}
+                  onChange={setRules}
+                  disabled={isSubmitting || isLoading}
+                />
+              </EditSectionCard>
             ) : null}
 
             {activeTab === 'billing' && owner ? (

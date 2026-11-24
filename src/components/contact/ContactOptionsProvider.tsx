@@ -29,6 +29,8 @@ export function ContactOptionsProvider({ children }: { children: React.ReactNode
       displayName: next.displayName ?? null,
       roleLabel: next.roleLabel ?? null,
       avatarInitial: next.avatarInitial ?? null,
+      organizationName: next.organizationName ?? null,
+      presentation: next.presentation ?? 'member',
     });
   }, []);
 

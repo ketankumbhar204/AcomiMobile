@@ -46,12 +46,22 @@ export function BedPricingDisplay({
         style={styles.inlineWrap}
         accessibilityRole="text"
         accessibilityLabel={`${rentLabel} ${rentValue}, ${depositLabel} ${depositValue}`}>
-        <Text style={styles.inlineLine} numberOfLines={1}>
-          {`${rentLabel}: ${rentValue}`}
-        </Text>
-        <Text style={styles.inlineLine} numberOfLines={1}>
-          {`${depositLabel}: ${depositValue}`}
-        </Text>
+        <View style={styles.inlineChip}>
+          <Text style={styles.inlineLabel} numberOfLines={1}>
+            {rentLabel}
+          </Text>
+          <Text style={styles.inlineValue} numberOfLines={1}>
+            {rentValue}
+          </Text>
+        </View>
+        <View style={styles.inlineChip}>
+          <Text style={styles.inlineLabel} numberOfLines={1}>
+            {depositLabel}
+          </Text>
+          <Text style={styles.inlineValue} numberOfLines={1}>
+            {depositValue}
+          </Text>
+        </View>
       </View>
     );
   }
@@ -111,13 +121,36 @@ const styles = StyleSheet.create({
   },
   inlineWrap: {
     width: '100%',
-    gap: 2,
+    gap: 4,
   },
-  inlineLine: {
+  inlineChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.xs,
+    backgroundColor: 'rgba(255,255,255,0.72)',
+    borderWidth: 1,
+    borderColor: 'rgba(148,163,184,0.35)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  inlineLabel: {
     ...typography.caption,
     color: colors.textSecondary,
-    fontWeight: '500',
+    fontWeight: '600',
+    fontSize: 10,
+    lineHeight: 13,
+    flexShrink: 0,
+  },
+  inlineValue: {
+    ...typography.caption,
+    color: colors.textPrimary,
+    fontWeight: '700',
     fontSize: 11,
-    lineHeight: 15,
+    lineHeight: 14,
+    fontVariant: ['tabular-nums'],
+    flexShrink: 1,
+    textAlign: 'right',
   },
 });

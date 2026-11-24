@@ -30,6 +30,18 @@ function getCurrentSpaceId(): UUID | null {
   return useSpaceStore.getState().currentSpace?.spaceId ?? null;
 }
 
+/**
+ * Space used for Member Details APIs.
+ * Prefer an explicit override (route param), then the space bound when details were opened
+ * (All My Spaces may open a member from another space), then the active space.
+ */
+function resolveDetailsSpaceId(
+  get: () => MemberState,
+  override?: UUID | null,
+): UUID | null {
+  return override ?? get().selectedMemberSpaceId ?? getCurrentSpaceId();
+}
+
 function mapDetailsToListItem(details: MemberDetailsResponse): MemberResponse {
   return {
     memberId: details.memberId,
@@ -75,6 +87,8 @@ async function invalidateHistoryAfterUpdate(
 interface MemberState {
   members: MemberResponse[];
   selectedMember: MemberDetailsResponse | null;
+  /** Space that owns `selectedMember` — may differ from the active tab space. */
+  selectedMemberSpaceId: UUID | null;
   pendingInvitations: PendingInvitationResponse[];
   documents: MemberDocumentResponse[];
   notes: MemberNoteResponse[];
@@ -92,8 +106,14 @@ interface MemberState {
   historyNeedsReload: boolean;
 
   loadMembers: () => Promise<void>;
-  loadMemberDetails: (memberId: UUID) => Promise<MemberDetailsResponse | null>;
-  refreshMember: (memberId: UUID) => Promise<MemberDetailsResponse | null>;
+  loadMemberDetails: (
+    memberId: UUID,
+    spaceId?: UUID | null,
+  ) => Promise<MemberDetailsResponse | null>;
+  refreshMember: (
+    memberId: UUID,
+    spaceId?: UUID | null,
+  ) => Promise<MemberDetailsResponse | null>;
   addMember: (payload: CreateMemberRequest) => Promise<MemberResponse | null>;
   updateMember: (
     memberId: UUID,
@@ -125,7 +145,7 @@ interface MemberState {
   loadNotes: (memberId: UUID, force?: boolean) => Promise<void>;
   addNote: (memberId: UUID, payload: CreateMemberNoteRequest) => Promise<MemberNoteResponse | null>;
   loadHistory: (memberId: UUID, force?: boolean) => Promise<void>;
-  loadPendingInvitations: () => Promise<void>;
+  loadPendingInvitations: (spaceId?: UUID | null) => Promise<void>;
   inviteMember: (
     payload: Omit<CreateInvitationRequest, 'invitedByUserId' | 'spaceId'>,
   ) => Promise<InvitationResponse | null>;
@@ -137,6 +157,7 @@ interface MemberState {
 export const useMemberStore = create<MemberState>((set, get) => ({
   members: [],
   selectedMember: null,
+  selectedMemberSpaceId: null,
   pendingInvitations: [],
   documents: [],
   notes: [],
@@ -173,48 +194,60 @@ export const useMemberStore = create<MemberState>((set, get) => ({
     }
   },
 
-  loadMemberDetails: async memberId => {
-    const spaceId = getCurrentSpaceId();
-    if (!spaceId) {
+  loadMemberDetails: async (memberId, spaceId) => {
+    const resolvedSpaceId = resolveDetailsSpaceId(get, spaceId);
+    if (!resolvedSpaceId) {
       return null;
     }
 
-    devLog(`${LOG_TAG} loadMemberDetails`, { spaceId, memberId });
+    devLog(`${LOG_TAG} loadMemberDetails`, { spaceId: resolvedSpaceId, memberId });
 
     const previousMemberId = get().selectedMember?.memberId ?? null;
-    const isNewMember = previousMemberId !== memberId;
+    const previousSpaceId = get().selectedMemberSpaceId;
+    const isNewMember =
+      previousMemberId !== memberId || previousSpaceId !== resolvedSpaceId;
 
     set({
       memberLoading: true,
       error: null,
-      ...(isNewMember ? clearTabCache() : {}),
+      selectedMemberSpaceId: resolvedSpaceId,
+      ...(isNewMember ? { selectedMember: null, ...clearTabCache() } : {}),
     });
 
     try {
-      const selectedMember = await memberApi.getMember(spaceId, memberId);
+      const selectedMember = await memberApi.getMember(resolvedSpaceId, memberId);
       devLog(`${LOG_TAG} loadMemberDetails success`, selectedMember.memberId);
-      set({ selectedMember, memberLoading: false });
+      set({
+        selectedMember,
+        selectedMemberSpaceId: resolvedSpaceId,
+        memberLoading: false,
+      });
       return selectedMember;
     } catch (err) {
       const message = getMembershipErrorMessage(err, 'membership.errors.loadDetails');
       console.error(`${LOG_TAG} loadMemberDetails failed`, err);
-      set({ memberLoading: false, error: message });
+      set({
+        selectedMember: isNewMember ? null : get().selectedMember,
+        memberLoading: false,
+        error: message,
+      });
       return null;
     }
   },
 
-  refreshMember: async memberId => {
-    const spaceId = getCurrentSpaceId();
-    if (!spaceId) {
+  refreshMember: async (memberId, spaceId) => {
+    const resolvedSpaceId = resolveDetailsSpaceId(get, spaceId);
+    if (!resolvedSpaceId) {
       return null;
     }
 
-    devLog(`${LOG_TAG} refreshMember`, memberId);
+    devLog(`${LOG_TAG} refreshMember`, { spaceId: resolvedSpaceId, memberId });
 
     try {
-      const selectedMember = await memberApi.getMember(spaceId, memberId);
+      const selectedMember = await memberApi.getMember(resolvedSpaceId, memberId);
       set(state => ({
         selectedMember,
+        selectedMemberSpaceId: resolvedSpaceId,
         members: state.members.map(item =>
           item.memberId === memberId ? mapDetailsToListItem(selectedMember) : item,
         ),
@@ -250,12 +283,12 @@ export const useMemberStore = create<MemberState>((set, get) => ({
   },
 
   updateMember: async (memberId, payload) => {
-    const spaceId = getCurrentSpaceId();
+    const spaceId = resolveDetailsSpaceId(get);
     if (!spaceId) {
       return null;
     }
 
-    devLog(`${LOG_TAG} updateMember`, { memberId, payload });
+    devLog(`${LOG_TAG} updateMember`, { spaceId, memberId, payload });
     set({ loading: true, error: null });
 
     try {
@@ -296,12 +329,12 @@ export const useMemberStore = create<MemberState>((set, get) => ({
   },
 
   updateStatus: async (memberId, payload) => {
-    const spaceId = getCurrentSpaceId();
+    const spaceId = resolveDetailsSpaceId(get);
     if (!spaceId) {
       return null;
     }
 
-    devLog(`${LOG_TAG} updateStatus`, { memberId, payload });
+    devLog(`${LOG_TAG} updateStatus`, { spaceId, memberId, payload });
     set({ loading: true, error: null });
 
     try {
@@ -328,12 +361,12 @@ export const useMemberStore = create<MemberState>((set, get) => ({
   },
 
   updateEmergencyContact: async (memberId, payload) => {
-    const spaceId = getCurrentSpaceId();
+    const spaceId = resolveDetailsSpaceId(get);
     if (!spaceId) {
       return null;
     }
 
-    devLog(`${LOG_TAG} updateEmergencyContact`, { memberId });
+    devLog(`${LOG_TAG} updateEmergencyContact`, { spaceId, memberId });
     set({ loading: true, error: null });
 
     try {
@@ -364,12 +397,12 @@ export const useMemberStore = create<MemberState>((set, get) => ({
   },
 
   updateDeposit: async (memberId, payload) => {
-    const spaceId = getCurrentSpaceId();
+    const spaceId = resolveDetailsSpaceId(get);
     if (!spaceId) {
       return null;
     }
 
-    devLog(`${LOG_TAG} updateDeposit`, { memberId, payload });
+    devLog(`${LOG_TAG} updateDeposit`, { spaceId, memberId, payload });
     set({ loading: true, error: null });
 
     try {
@@ -393,24 +426,27 @@ export const useMemberStore = create<MemberState>((set, get) => ({
   },
 
   removeMember: async memberId => {
-    const spaceId = getCurrentSpaceId();
+    const spaceId = resolveDetailsSpaceId(get);
     if (!spaceId) {
       return false;
     }
 
-    devLog(`${LOG_TAG} removeMember`, memberId);
+    devLog(`${LOG_TAG} removeMember`, { spaceId, memberId });
     set({ loading: true, error: null });
 
     try {
       await memberApi.removeMember(spaceId, memberId);
       devLog(`${LOG_TAG} removeMember success`);
-      set(state => ({
-        members: state.members.filter(item => item.memberId !== memberId),
-        selectedMember:
-          state.selectedMember?.memberId === memberId ? null : state.selectedMember,
-        loading: false,
-        ...(state.selectedMember?.memberId === memberId ? clearTabCache() : {}),
-      }));
+      set(state => {
+        const clearingSelected = state.selectedMember?.memberId === memberId;
+        return {
+          members: state.members.filter(item => item.memberId !== memberId),
+          selectedMember: clearingSelected ? null : state.selectedMember,
+          selectedMemberSpaceId: clearingSelected ? null : state.selectedMemberSpaceId,
+          loading: false,
+          ...(clearingSelected ? clearTabCache() : {}),
+        };
+      });
       return true;
     } catch (err) {
       const message = getMembershipErrorMessage(err, 'membership.errors.remove');
@@ -421,7 +457,7 @@ export const useMemberStore = create<MemberState>((set, get) => ({
   },
 
   loadDocuments: async (memberId, force = false) => {
-    const spaceId = getCurrentSpaceId();
+    const spaceId = resolveDetailsSpaceId(get);
     if (!spaceId) {
       return;
     }
@@ -432,7 +468,7 @@ export const useMemberStore = create<MemberState>((set, get) => ({
       return;
     }
 
-    devLog(`${LOG_TAG} loadDocuments`, memberId);
+    devLog(`${LOG_TAG} loadDocuments`, { spaceId, memberId });
     set({ documentsLoading: true, error: null });
 
     try {
@@ -451,12 +487,12 @@ export const useMemberStore = create<MemberState>((set, get) => ({
   },
 
   addDocument: async (memberId, payload) => {
-    const spaceId = getCurrentSpaceId();
+    const spaceId = resolveDetailsSpaceId(get);
     if (!spaceId) {
       return null;
     }
 
-    devLog(`${LOG_TAG} addDocument`, memberId);
+    devLog(`${LOG_TAG} addDocument`, { spaceId, memberId });
     set({ loading: true, error: null });
 
     try {
@@ -479,12 +515,12 @@ export const useMemberStore = create<MemberState>((set, get) => ({
   },
 
   deleteDocument: async (memberId, documentId) => {
-    const spaceId = getCurrentSpaceId();
+    const spaceId = resolveDetailsSpaceId(get);
     if (!spaceId) {
       return false;
     }
 
-    devLog(`${LOG_TAG} deleteDocument`, { memberId, documentId });
+    devLog(`${LOG_TAG} deleteDocument`, { spaceId, memberId, documentId });
     set({ loading: true, error: null });
 
     try {
@@ -502,7 +538,7 @@ export const useMemberStore = create<MemberState>((set, get) => ({
   },
 
   loadNotes: async (memberId, force = false) => {
-    const spaceId = getCurrentSpaceId();
+    const spaceId = resolveDetailsSpaceId(get);
     if (!spaceId) {
       return;
     }
@@ -513,7 +549,7 @@ export const useMemberStore = create<MemberState>((set, get) => ({
       return;
     }
 
-    devLog(`${LOG_TAG} loadNotes`, memberId);
+    devLog(`${LOG_TAG} loadNotes`, { spaceId, memberId });
     set({ notesLoading: true, error: null });
 
     try {
@@ -532,12 +568,12 @@ export const useMemberStore = create<MemberState>((set, get) => ({
   },
 
   addNote: async (memberId, payload) => {
-    const spaceId = getCurrentSpaceId();
+    const spaceId = resolveDetailsSpaceId(get);
     if (!spaceId) {
       return null;
     }
 
-    devLog(`${LOG_TAG} addNote`, memberId);
+    devLog(`${LOG_TAG} addNote`, { spaceId, memberId });
     set({ loading: true, error: null });
 
     try {
@@ -555,7 +591,7 @@ export const useMemberStore = create<MemberState>((set, get) => ({
   },
 
   loadHistory: async (memberId, force = false) => {
-    const spaceId = getCurrentSpaceId();
+    const spaceId = resolveDetailsSpaceId(get);
     if (!spaceId) {
       return;
     }
@@ -566,7 +602,7 @@ export const useMemberStore = create<MemberState>((set, get) => ({
       return;
     }
 
-    devLog(`${LOG_TAG} loadHistory`, { memberId, force });
+    devLog(`${LOG_TAG} loadHistory`, { spaceId, memberId, force });
     set({ historyLoading: true, error: null });
 
     try {
@@ -585,17 +621,18 @@ export const useMemberStore = create<MemberState>((set, get) => ({
     }
   },
 
-  loadPendingInvitations: async () => {
-    const spaceId = getCurrentSpaceId();
-    if (!spaceId) {
+  loadPendingInvitations: async spaceId => {
+    // List screen uses the active space; Member Details may pass the association space.
+    const resolvedSpaceId = spaceId ?? getCurrentSpaceId();
+    if (!resolvedSpaceId) {
       return;
     }
 
-    devLog(`${LOG_TAG} loadPendingInvitations`, spaceId);
+    devLog(`${LOG_TAG} loadPendingInvitations`, resolvedSpaceId);
     set({ loading: true, error: null });
 
     try {
-      const pendingInvitations = await memberApi.getPendingInvitations(spaceId);
+      const pendingInvitations = await memberApi.getPendingInvitations(resolvedSpaceId);
       devLog(`${LOG_TAG} loadPendingInvitations success`, pendingInvitations.length);
       set({ pendingInvitations, loading: false });
     } catch (err) {
@@ -684,6 +721,7 @@ export const useMemberStore = create<MemberState>((set, get) => ({
     set({
       members: [],
       selectedMember: null,
+      selectedMemberSpaceId: null,
       pendingInvitations: [],
       documents: [],
       notes: [],

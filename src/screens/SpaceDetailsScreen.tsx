@@ -49,11 +49,12 @@ import { canEditEntityPhoto } from '../files/entityPhoto';
 import { EntityPhoto } from '../components/files/EntityPhoto';
 import type { MainStackParamList } from '../navigation/types';
 import { useSpaceStore } from '../store/spaceStore';
-import { colors, radius, shadows, spacing, typography } from '../theme';
+import { colors, pageContentGutter, radius, shadows, spacing, typography } from '../theme';
 import { isSpaceOwner } from '../utils/spaceOwnership';
 import { formatCurrency } from '../utils/memberDeposit';
 import { peekDashboardSummary } from '../utils/dashboardQueryCache';
-import { getSpaceTypeAccent, getSpaceTypeIcon } from '../utils/spaceVisuals';
+import { getSpaceTypeIcon } from '../utils/spaceVisuals';
+import { SpaceRulesReadOnly } from '../components/spaces/SpaceRulesReadOnly';
 
 type SpaceDetailsNav = NativeStackNavigationProp<
   MainStackParamList,
@@ -193,7 +194,8 @@ export function SpaceDetailsScreen() {
   const owner = isSpaceOwner(space, currentUserId);
   const permissions = useSpacePermissions(spaceId);
   const canEditPhoto = canEditEntityPhoto(permissions.membershipRole);
-  const accent = space ? getSpaceTypeAccent(space.type) : colors.primaryDark;
+  /** Space Details uses ACOMI emerald primary — not per-type teal accents. */
+  const accent = colors.primary;
   const TypeIcon = space ? getSpaceTypeIcon(space.type) : Settings2;
 
   const summary = useMemo(
@@ -457,6 +459,8 @@ export function SpaceDetailsScreen() {
           </SectionCard>
         ) : null}
 
+        <SpaceRulesReadOnly rules={space.rules ?? []} hideWhenEmpty accent={accent} />
+
         {/* Contact information */}
         <SectionCard
           icon={Phone}
@@ -536,15 +540,20 @@ export function SpaceDetailsScreen() {
 
 const styles = StyleSheet.create({
   content: {
+    paddingHorizontal: pageContentGutter,
+    paddingTop: spacing.md,
     paddingBottom: spacing.section,
     gap: spacing.md,
   },
+  // Single page gutter at Screen (Member Details / Rooms). Do not re-pad scroll.
   flexContent: {
     flex: 1,
-    padding: 0,
+    paddingHorizontal: pageContentGutter,
+    paddingTop: spacing.md,
+    paddingBottom: 0,
+    minHeight: 0,
   },
   scrollContent: {
-    padding: spacing.lg,
     paddingBottom: spacing.section,
     gap: spacing.md,
   },

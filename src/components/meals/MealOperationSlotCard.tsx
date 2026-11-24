@@ -23,9 +23,14 @@ export type MealOperationSlotCardProps = {
   compact?: boolean;
 };
 
+const COUNT_PLACEHOLDER = '—';
+
 /**
  * Shared meal-slot card used on Dashboard Meal Operations and the headcount drawer strip.
  * Entire card surface follows SHARED / READY TO SHARE / EMPTY status colours.
+ *
+ * Layout is a fixed vertical stack so sibling cards stay row-aligned:
+ * icon → title → status → count → message.
  */
 export function MealOperationSlotCard({
   mealLabel,
@@ -40,14 +45,17 @@ export function MealOperationSlotCard({
   compact = false,
 }: MealOperationSlotCardProps) {
   const statusTheme = mealStatusTheme(statusKind);
-  const showMetric = countPrimary != null && countPrimary.length > 0;
   const accent = statusTheme.color;
+  const metricValue =
+    countPrimary != null && countPrimary.length > 0 ? countPrimary : COUNT_PLACEHOLDER;
+  const message = countUnit && countUnit.length > 0 ? countUnit : caption;
+  const showIcon = Boolean(mealType) && !compact;
 
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected }}
-      accessibilityLabel={`${mealLabel}, ${caption}`}
+      accessibilityLabel={`${mealLabel}, ${metricValue}, ${message}`}
       onPress={onPress}
       style={({ pressed }) => [
         styles.slotCard,
@@ -65,33 +73,29 @@ export function MealOperationSlotCard({
         <View style={[styles.selectedIndicator, { backgroundColor: accent }]} />
       ) : null}
       {/* TODO: pass imageSource on MealTypeVisual when meal photos are available */}
-      {mealType && !compact ? (
-        <MealTypeVisual mealType={mealType} size={18} color={accent} />
+      {showIcon ? (
+        <View style={styles.iconSlot}>
+          <MealTypeVisual mealType={mealType!} size={18} color={accent} />
+        </View>
       ) : null}
       <Text style={[styles.slotMealLabel, { color: accent }]} numberOfLines={1}>
         {mealLabel}
       </Text>
-      <MealStatusBadge
-        kind={statusKind}
-        size={compact ? 'compact' : 'default'}
-        style={styles.slotStatusBadge}
-      />
-      {showMetric ? (
-        <View style={styles.slotMetricBlock}>
-          <Text style={[styles.slotCountPrimary, { color: accent }]} numberOfLines={1}>
-            {countPrimary}
-          </Text>
-          {countUnit ? (
-            <Text style={[styles.slotCountUnit, { color: accent }]} numberOfLines={2}>
-              {countUnit}
-            </Text>
-          ) : null}
-        </View>
-      ) : (
-        <Text style={[styles.slotCaption, { color: accent }]} numberOfLines={2}>
-          {caption}
+      <View style={[styles.badgeSlot, compact && styles.badgeSlotCompact]}>
+        <MealStatusBadge
+          kind={statusKind}
+          size={compact ? 'compact' : 'default'}
+          style={styles.slotStatusBadge}
+        />
+      </View>
+      <View style={styles.slotMetricBlock}>
+        <Text style={[styles.slotCountPrimary, { color: accent }]} numberOfLines={1}>
+          {metricValue}
         </Text>
-      )}
+        <Text style={[styles.slotCountUnit, { color: accent }]} numberOfLines={2}>
+          {message}
+        </Text>
+      </View>
     </Pressable>
   );
 }
@@ -105,22 +109,22 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xs,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     gap: spacing.xxs,
     overflow: 'hidden',
   },
   slotCardDesignA: {
-    minHeight: 118,
+    minHeight: 132,
     paddingVertical: spacing.sm,
     gap: spacing.xs,
     ...shadows.sm,
   },
   slotCardCompact: {
-    minHeight: 88,
+    minHeight: 96,
     paddingVertical: spacing.xs,
   },
   slotCardUnselectedCompact: {
-    minHeight: 80,
+    minHeight: 88,
     opacity: 0.92,
   },
   selectedIndicator: {
@@ -133,6 +137,11 @@ const styles = StyleSheet.create({
   slotCardPressed: {
     opacity: 0.92,
   },
+  iconSlot: {
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   slotMealLabel: {
     ...typography.bodyStrong,
     color: colors.textPrimary,
@@ -140,6 +149,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 16,
     lineHeight: 20,
+    minHeight: 20,
+  },
+  badgeSlot: {
+    minHeight: 28,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeSlotCompact: {
+    minHeight: 22,
   },
   slotStatusBadge: {
     alignSelf: 'center',
@@ -149,11 +168,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 2,
     marginTop: 2,
+    width: '100%',
   },
   slotCountPrimary: {
     ...typography.bodyStrong,
     fontSize: 18,
     lineHeight: 22,
+    minHeight: 22,
     textAlign: 'center',
     fontWeight: '800',
   },
@@ -161,15 +182,8 @@ const styles = StyleSheet.create({
     ...typography.caption,
     fontSize: 12,
     lineHeight: 15,
+    minHeight: 15,
     textAlign: 'center',
     fontWeight: '600',
-  },
-  slotCaption: {
-    ...typography.caption,
-    textAlign: 'center',
-    lineHeight: 15,
-    fontSize: 12,
-    fontWeight: '600',
-    flexShrink: 1,
   },
 });

@@ -25,12 +25,15 @@ type DashboardMealOperationsProps = {
   enabled?: boolean;
   /** Mess guided setup: stronger empty copy when no menu is planned. */
   guidedEmpty?: boolean;
+  /** Labeled illustrative meal-response summary. Does not replace today's menu slots. */
+  illustrativeSummary?: string | null;
 };
 
 export function DashboardMealOperations({
   spaceId,
   enabled = true,
   guidedEmpty = false,
+  illustrativeSummary = null,
 }: DashboardMealOperationsProps) {
   const { t } = useTranslation();
   const navigation = useNavigation<BottomTabNavigationProp<SpaceTabParamList>>();
@@ -141,6 +144,9 @@ export function DashboardMealOperations({
   return (
     <View style={styles.wrap}>
       <DashboardSectionTitle title={t('dashboard.operations.title')} />
+      {illustrativeSummary ? (
+        <Text style={styles.illustrative}>{illustrativeSummary}</Text>
+      ) : null}
 
       <View style={styles.body}>
         {loading ? (
@@ -259,6 +265,12 @@ export function DashboardMealOperations({
 const styles = StyleSheet.create({
   wrap: {
     marginBottom: spacing.lg,
+  },
+  illustrative: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    marginTop: -spacing.xs,
+    marginBottom: spacing.sm,
   },
   body: {
     gap: spacing.sm,

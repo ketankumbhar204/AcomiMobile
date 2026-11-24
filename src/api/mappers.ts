@@ -58,6 +58,7 @@ export function spaceDetailsResponseToSpace(
     prepaidFallbackToPayPerMeal: response.prepaidFallbackToPayPerMeal ?? true,
     genderPolicy: response.genderPolicy ?? null,
     amenities: response.amenities ?? [],
+    rules: response.rules ?? [],
     createdAt: response.createdAt,
     updatedAt: response.updatedAt,
   };

@@ -17,7 +17,6 @@ export interface ServiceContactDraft {
   description: string;
   address: string;
   notes: string;
-  spaceIds: string[];
   version: number | null;
 }
 
@@ -34,7 +33,6 @@ export function emptyDraft(): ServiceContactDraft {
     description: '',
     address: '',
     notes: '',
-    spaceIds: [],
     version: null,
   };
 }
@@ -52,7 +50,6 @@ export function draftFromContact(contact: ServiceContact): ServiceContactDraft {
     description: contact.description ?? '',
     address: contact.address ?? '',
     notes: contact.notes ?? '',
-    spaceIds: contact.spaces.map(space => space.spaceId),
     version: contact.version,
   };
 }
@@ -119,7 +116,6 @@ export function toSaveBody(
     description: draft.description.trim() || null,
     address: draft.address.trim() || null,
     notes: draft.notes.trim() || null,
-    spaceIds: draft.spaceIds,
     acknowledgeDuplicate,
     version: draft.version,
   };

@@ -1,9 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,12 +13,11 @@ import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { serviceContactsApi } from '../../api/serviceContactsApi';
+import { CategorySelectField } from '../../components/serviceContacts/CategorySelectField';
 import { Button, FormInput } from '../../components/ui';
 import type { MainStackParamList } from '../../navigation/types';
-import { useSpaceStore } from '../../store/spaceStore';
 import { useToastStore } from '../../store/toastStore';
-import { colors, radius, spacing, typography } from '../../theme';
-import { associableSpaces } from '../../utils/serviceContactAccess';
+import { colors, spacing, typography } from '../../theme';
 import { readDuplicate } from '../../utils/serviceContactErrors';
 import {
   draftFromContact,
@@ -47,8 +45,6 @@ export function ServiceContactFormScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const contactId = route.params?.contactId;
-  const spaces = useSpaceStore(state => state.mySpaces);
-  const choices = useMemo(() => associableSpaces(spaces), [spaces]);
   const showToast = useToastStore(state => state.showToast);
   const [draft, setDraft] = useState<ServiceContactDraft>(emptyDraft());
   const [baseline, setBaseline] = useState('');
@@ -175,23 +171,13 @@ export function ServiceContactFormScreen() {
           error={fieldError('businessName')}
           onChangeText={value => setField('businessName', value)}
         />
-        <Text style={styles.label}>{t('serviceContacts.category')}</Text>
-        <View style={styles.chips}>
-          {categories.map(category => {
-            const selected = draft.category === category.code;
-            return (
-              <Pressable
-                key={category.code}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                onPress={() => setField('category', category.code)}
-                style={[styles.chip, selected && styles.chipSelected]}>
-                <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{category.label}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-        {fieldError('category') ? <Text style={styles.error}>{fieldError('category')}</Text> : null}
+        <CategorySelectField
+          label={t('serviceContacts.category')}
+          value={draft.category}
+          options={categories}
+          error={fieldError('category')}
+          onChange={code => setField('category', code)}
+        />
         {draft.category === 'OTHER' ? (
           <FormInput
             label={t('serviceContacts.customCategory')}
@@ -253,29 +239,6 @@ export function ServiceContactFormScreen() {
           multiline
           onChangeText={value => setField('notes', value)}
         />
-        <Text style={styles.label}>{t('serviceContacts.spacesLabel')}</Text>
-        <Text style={styles.hint}>{t('serviceContacts.reuseHint')}</Text>
-        {choices.map(space => {
-          const selected = draft.spaceIds.includes(space.spaceId);
-          return (
-            <Pressable
-              key={space.spaceId}
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: selected }}
-              onPress={() =>
-                setField(
-                  'spaceIds',
-                  selected
-                    ? draft.spaceIds.filter(id => id !== space.spaceId)
-                    : [...draft.spaceIds, space.spaceId],
-                )
-              }
-              style={styles.spaceRow}>
-              <View style={[styles.box, selected && styles.boxSelected]} />
-              <Text style={styles.rowText}>{space.spaceName}</Text>
-            </Pressable>
-          );
-        })}
       </ScrollView>
       <View style={styles.footer}>
         <Button
@@ -299,32 +262,13 @@ export function ServiceContactFormScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md },
-  hint: { ...typography.body, color: colors.textSecondary },
-  label: { ...typography.caption, color: colors.textPrimary, fontWeight: '700' },
-  error: { ...typography.caption, color: colors.danger },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    backgroundColor: colors.surface,
+  content: { padding: spacing.lg, paddingBottom: spacing.xl, gap: spacing.xs },
+  hint: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    lineHeight: 18,
+    marginBottom: spacing.sm,
   },
-  chipSelected: { borderColor: colors.primary, backgroundColor: colors.lightGreen },
-  chipText: { ...typography.caption, color: colors.textSecondary },
-  chipTextSelected: { color: colors.primaryDark, fontWeight: '700' },
-  spaceRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 44 },
-  box: {
-    width: 18,
-    height: 18,
-    borderRadius: 4,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-  },
-  boxSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
-  rowText: { ...typography.body, color: colors.textPrimary, flex: 1 },
   footer: {
     flexDirection: 'row',
     gap: spacing.sm,

@@ -20,7 +20,8 @@ export type SpaceTabRouteName = SpacePrimaryTabName | 'Complaints';
 export type SpaceMoreItemId =
   | 'complaints'
   | 'menuLibrary'
-  | 'mealSubscriptionPlans';
+  | 'mealSubscriptionPlans'
+  | 'inventory';
 
 export type SpaceMoreItem = {
   id: SpaceMoreItemId;
@@ -56,14 +57,19 @@ export function spacePrimaryTabRouteNamesForPermissions(input: {
  * Secondary destinations for the header overflow (⋮) menu.
  * Complaints stays available to everyone who previously had the Complaints tab.
  * Library / subscription plans only when the user can manage meals.
+ * Inventory is listed immediately after Meal Subscription Plans.
  */
 export function spaceMoreItemsForPermissions(input: {
   canManageMeals: boolean;
+  canViewInventory?: boolean;
 }): SpaceMoreItem[] {
   const items: SpaceMoreItem[] = [{ id: 'complaints' }];
 
   if (input.canManageMeals) {
     items.push({ id: 'menuLibrary' }, { id: 'mealSubscriptionPlans' });
+  }
+  if (input.canViewInventory) {
+    items.push({ id: 'inventory' });
   }
 
   return items;
@@ -101,6 +107,7 @@ export function spaceTabRouteNamesFromStore(
 export const SPACE_MORE_STACK_ROUTE_NAMES = [
   'MenuLibrary',
   'SubscriptionPlans',
+  'InventoryDashboard',
   'ComplaintDetail',
   'RaiseComplaint',
 ] as const;

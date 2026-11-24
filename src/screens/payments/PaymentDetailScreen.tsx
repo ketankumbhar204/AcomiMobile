@@ -851,15 +851,17 @@ export function PaymentDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  // Explicit zeros clear Screen defaults; gutter lives only on scroll + sticky bar.
   screen: {
     flex: 1,
-    padding: paymentDetailScreenPadding,
+    paddingHorizontal: paymentDetailScreenPadding,
+    paddingVertical: paymentDetailScreenPadding,
   },
   loadingPad: {
     flex: 1,
-    padding: paymentDetailScreenPadding,
-    paddingTop: spacing.md,
     paddingHorizontal: paymentDetailContentGutter,
+    paddingTop: spacing.md,
+    paddingBottom: paymentDetailScreenPadding,
   },
   skeletonWrap: {
     gap: spacing.md,

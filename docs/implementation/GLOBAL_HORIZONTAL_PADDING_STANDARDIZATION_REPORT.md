@@ -149,6 +149,24 @@ These still use local `spacing.lg` (same **value** as the standard) without the 
 
 ---
 
+## 11. Follow-up: Pending Review + Payment detail (2026-11-11)
+
+**Symptom:** Wide side gutters; Pending Review also had a large gap under the nav bar.
+
+**Cause:** Same RN `padding: 0` vs Screen default stacking (`paddingHorizontal` + `paddingVertical: xxl`).
+
+**Fix:**
+- `PaymentReviewScreen`: one `pageContentGutter` + `paddingTop: spacing.md` on Screen; remove child horizontal re-padding.
+- `PaymentDetailScreen`: explicit Screen `paddingHorizontal/Vertical: 0`; keep single gutter on scroll + sticky bar.
+
+---
+
+## 12. Follow-up: Space Details (2026-11-11)
+
+**Fix (`SpaceDetailsScreen`):** one `pageContentGutter` + `paddingTop: spacing.md` on Screen; scroll content no longer re-applies horizontal padding. Loading/error states use the same gutter.
+
+---
+
 ## Summary
 
 - **Standard:** `pageContentGutter` = **16** (Rooms).
