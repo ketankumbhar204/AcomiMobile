@@ -13,6 +13,7 @@ import type { SpaceType } from '../../api/types';
 import { EntityPhoto } from '../files/EntityPhoto';
 import { canEditEntityPhoto } from '../../files/entityPhoto';
 import { resolveListingCover } from '../../utils/representativeImage';
+import { marketingDemoCoverSource } from '../../marketing/marketingDemoImages';
 import {
   computeAvailabilityPercent,
   resolveInventoryTotal,
@@ -39,6 +40,8 @@ export type DashboardPropertyOverviewCardProps = {
   reserved: number;
   onEditPress?: () => void;
   onPress?: () => void;
+  /** Occupancy ring uses illustrative summary figures. */
+  illustrative?: boolean;
 };
 
 export const DashboardPropertyOverviewCard = memo(function DashboardPropertyOverviewCard({
@@ -59,6 +62,7 @@ export const DashboardPropertyOverviewCard = memo(function DashboardPropertyOver
   reserved,
   onEditPress,
   onPress,
+  illustrative = false,
 }: DashboardPropertyOverviewCardProps) {
   const { t } = useTranslation();
   const unitLevel = occupancyEntity === 'units';
@@ -71,14 +75,17 @@ export const DashboardPropertyOverviewCard = memo(function DashboardPropertyOver
   });
   const availabilityPct = computeAvailabilityPercent(available, total);
   const canEditPhoto = canEditEntityPhoto(membershipRole);
-  const cover = useMemo(
-    () =>
-      resolveListingCover({
-        listingId: spaceId,
-        spaceType: spaceType ?? undefined,
-      }),
-    [spaceId, spaceType],
-  );
+  const cover = useMemo(() => {
+    const resolved = resolveListingCover({
+      listingId: spaceId,
+      spaceType: spaceType ?? undefined,
+    });
+    const demoCover = photoFileId ? null : marketingDemoCoverSource(spaceId);
+    if (!demoCover) {
+      return resolved;
+    }
+    return { ...resolved, source: demoCover };
+  }, [photoFileId, spaceId, spaceType]);
 
   const metricItems = unitLevel
     ? [
@@ -218,6 +225,11 @@ export const DashboardPropertyOverviewCard = memo(function DashboardPropertyOver
             defaultValue: '{{available}} / {{total}} Available',
           })}
         </Text>
+        {illustrative ? (
+          <Text style={styles.illustrative} numberOfLines={1}>
+            {t('dashboard.illustrative')}
+          </Text>
+        ) : null}
       </View>
     </>
   );
@@ -356,6 +368,14 @@ const styles = StyleSheet.create({
     lineHeight: 12,
     color: colors.muted,
     fontWeight: '600',
+    textAlign: 'center',
+  },
+  illustrative: {
+    ...typography.caption,
+    fontSize: 10,
+    lineHeight: 12,
+    color: colors.primaryDark,
+    fontWeight: '700',
     textAlign: 'center',
   },
 });

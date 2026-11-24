@@ -7,6 +7,12 @@ export interface AmenityAssignment {
   label: string;
 }
 
+/** Space-specific house rule. `label` is the saved/edited text for this space only. */
+export interface RuleAssignment {
+  code: string;
+  label: string;
+}
+
 export type MembershipRole =
   | 'OWNER'
   | 'MANAGER'
@@ -71,6 +77,8 @@ export interface SpaceDetailsResponse {
   prepaidFallbackToPayPerMeal?: boolean;
   genderPolicy?: GenderPolicy | null;
   amenities?: AmenityAssignment[];
+  /** Selected house rules saved for this space only. */
+  rules?: RuleAssignment[];
   createdAt: string;
   updatedAt: string;
   photoFileId?: UUID | null;
@@ -1041,6 +1049,8 @@ export interface UpdateSpaceRequest {
   defaultFoodCharge?: number | null;
   genderPolicy?: GenderPolicy | null;
   amenities?: AmenityAssignment[];
+  /** When provided, replaces saved space rules. Omit to leave rules unchanged. */
+  rules?: RuleAssignment[];
   shortStayEnabled?: boolean;
 }
 
@@ -1164,6 +1174,37 @@ export interface MemberImportCandidateResponse {
   availableForMoveIn: boolean;
 }
 
+/** One space membership for a person in the owner-level member directory. */
+export interface MemberDirectoryAssociationResponse {
+  memberId: UUID;
+  spaceId: UUID;
+  spaceName: string;
+  spaceType: SpaceType;
+  role: MembershipRole;
+  membershipStatus: MemberStatus;
+  occupancyStatus?: MemberOccupancyStatus | null;
+}
+
+/** Unique person across every space the caller manages. */
+export interface MemberDirectoryPersonResponse {
+  /** `u:{userId}` or `m:{mobile}` */
+  directoryId: string;
+  userId?: UUID | null;
+  displayName: string;
+  mobileNumber: string;
+  profilePhotoUrl?: string | null;
+  associations: MemberDirectoryAssociationResponse[];
+}
+
+export interface MemberDirectorySearchParams {
+  search?: string;
+  page?: number;
+  size?: number;
+  spaceId?: UUID;
+  spaceType?: SpaceType;
+  status?: MemberStatus;
+}
+
 export interface ImportMemberRequest {
   sourceMemberId: UUID;
 }
@@ -1270,6 +1311,7 @@ export interface Space {
   prepaidFallbackToPayPerMeal?: boolean;
   genderPolicy?: GenderPolicy | null;
   amenities?: AmenityAssignment[];
+  rules?: RuleAssignment[];
   createdAt: string;
   updatedAt: string;
   role?: MembershipRole;
@@ -1288,6 +1330,7 @@ export interface CreateSpaceRequest {
   ownerId: UUID;
   genderPolicy?: GenderPolicy | null;
   amenities?: AmenityAssignment[];
+  rules?: RuleAssignment[];
 }
 
 export interface CreateInvitationRequest {

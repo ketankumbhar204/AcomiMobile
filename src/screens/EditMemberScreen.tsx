@@ -142,7 +142,7 @@ export function EditMemberScreen() {
         });
       }
 
-      loadMemberDetails(memberId).then(loaded => {
+      loadMemberDetails(memberId, spaceId).then(loaded => {
         if (loaded && loaded.role !== 'OWNER') {
           setFullName(loaded.fullName);
           setMobileNumber(loaded.mobileNumber);

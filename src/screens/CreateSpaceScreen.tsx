@@ -15,7 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { Building2, Phone } from 'lucide-react-native';
-import type { AmenityAssignment, GenderPolicy, SpaceType } from '../api/types';
+import type { AmenityAssignment, GenderPolicy, RuleAssignment, SpaceType } from '../api/types';
 import { AddressLocationFields } from '../components/location/AddressLocationFields';
 import {
   Button,
@@ -45,7 +45,9 @@ import {
   resolvePresetAmenityLabel,
   supportsSpaceAmenities,
 } from '../utils/amenities';
+import { normalizeRuleAssignments, supportsSpaceRules } from '../utils/spaceRules';
 import { supportsSpacePropertyCategory } from '../utils/spacePropertyCategory';
+import { SpaceRulesField } from '../components/spaces/SpaceRulesField';
 import { isAccommodationApplicable } from '../utils/accommodationProfile';
 import { markAutoOpenedAccommodation } from '../utils/spaceSetupStorage';
 import { resolveProgressivePhase } from '../utils/progressivePhase';
@@ -106,6 +108,7 @@ export function CreateSpaceScreen() {
     }),
   );
   const [amenities, setAmenities] = useState<AmenityAssignment[]>([]);
+  const [rules, setRules] = useState<RuleAssignment[]>([]);
   const [genderPolicy, setGenderPolicy] = useState<GenderPolicy | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isFinishing, setIsFinishing] = useState(false);
@@ -147,6 +150,11 @@ export function CreateSpaceScreen() {
     }
     clearAmenitiesReviewed();
   }, [amenitiesProgressiveEnabled, clearAmenitiesReviewed, type]);
+
+  React.useEffect(() => {
+    // Type change on create: reload suggestion catalog without carrying prior selections.
+    setRules([]);
+  }, [type]);
 
   const progressivePhase = resolveProgressivePhase({
     enabled: amenitiesProgressiveEnabled,
@@ -218,6 +226,7 @@ export function CreateSpaceScreen() {
         amenities: supportsSpaceAmenities(type)
           ? normalizeAmenityAssignments(amenities)
           : undefined,
+        rules: supportsSpaceRules(type) ? normalizeRuleAssignments(rules) : undefined,
         genderPolicy: supportsSpacePropertyCategory(type) ? genderPolicy : undefined,
       });
 
@@ -426,6 +435,17 @@ export function CreateSpaceScreen() {
                   value={amenities}
                   onChange={setAmenities}
                   selectAllByDefault
+                />
+              </View>
+            ) : null}
+
+            {supportsSpaceRules(type) ? (
+              <View style={styles.amenitiesSection}>
+                <SpaceRulesField
+                  spaceType={type}
+                  value={rules}
+                  onChange={setRules}
+                  disabled={isBusy}
                 />
               </View>
             ) : null}

@@ -31,7 +31,8 @@
     "editSpace": {
       "tabGeneral": "सामान्य",
       "tabMeals": "जेवण आणि बिलिंग",
-      "tabPolls": "पोल डिफॉल्ट"
+      "tabPolls": "पोल डिफॉल्ट",
+      "tabBilling": "बिलिंग आणि कर"
     },
     "quickSetup": {
       "reviewPreviewHint": "इमारत तयार करण्यापूर्वी रचना तपासा आणि संपादित करा."
@@ -126,7 +127,9 @@
       "invalidCredentials": "अवैध मोबाईल नंबर किंवा पासवर्ड.",
       "mobileAlreadyRegistered": "हा मोबाईल नंबर आधीच नोंदणीकृत आहे.",
       "accountNotFound": "या मोबाईल नंबरसह कोणतेही ACOMI खाते आढळले नाही.",
-      "accountDisabled": "तुमचे खाते निष्क्रिय केले आहे. कृपया सहाय्याशी संपर्क साधा."
+      "accountDisabled": "तुमचे खाते निष्क्रिय केले आहे. कृपया सहाय्याशी संपर्क साधा.",
+      "startupOfflineTitle": "ACOMI पर्यंत पोहोचता आले नाही",
+      "startupOfflineMessage": "सर्व्हर आता उपलब्ध नाही. तुमचे कनेक्शन तपासा आणि पुन्हा प्रयत्न करा."
     },
     "loading": "लोड होत आहे…",
     "loadMore": "अधिक लोड करा",
@@ -137,7 +140,13 @@
       "am": "पूर्वाह्न",
       "pm": "अपराह्न"
     },
-    "fabAction": "क्रिया"
+    "fabAction": "क्रिया",
+    "discard": "रद्द करा",
+    "error": "काहीतरी चुकले",
+    "dismiss": "डिसमिस करा",
+    "viewDetails": "तपशील पहा",
+    "change": "बदला",
+    "selectDate": "तारीख निवडा"
   },
   "notifications": {
     "title": "सूचना",
@@ -159,7 +168,10 @@
     },
     "noMatchTitle": "जुळणारी सूचना नाही",
     "searchPlaceholder": "Search notifications",
-    "unreadSummary": "{{count}} unread updates"
+    "unreadSummary": "{{count}} unread updates",
+    "pushPermissionDenied": "सूचना बंद आहेत. तुम्ही त्या नंतर सिस्टम सेटिंग्जमध्ये चालू करू शकता.",
+    "unavailable": "हे अपडेट आता उपलब्ध नाही.",
+    "rentalMealHidden": "या स्पेससाठी जेवणाचे अपडेट्स उपलब्ध नाहीत."
   },
   "list": {
     "search": {
@@ -182,7 +194,8 @@
       "role": "भूमिका",
       "status": "स्थिती",
       "sort": "क्रमवारी लावा",
-      "category": "श्रेणी"
+      "category": "श्रेणी",
+      "stayStatus": "वास्तव्य स्थिती"
     },
     "sort": {
       "nameAsc": "नाव अ–ज्ञ",
@@ -260,7 +273,13 @@
     "increaseQuantity": "प्रमाण वाढवा",
     "closeFilterDropdown": "फिल्टर ड्रॉपडाउन बंद करा",
     "loadingDashboard": "डॅशबोर्ड लोड होत आहे",
-    "serviceContacts": "सेवा संपर्क"
+    "serviceContacts": "सेवा संपर्क",
+    "home": "होम",
+    "findAPlace": "जागा शोधा",
+    "findAPlaceDetail": "जागेचा तपशील",
+    "enquiries": "चौकशी",
+    "favorites": "आवडते",
+    "myEnquiries": "माझ्या चौकशी"
   },
   "onboarding": {
     "choice": {
@@ -296,7 +315,23 @@
       "emptyTitle": "आता कोणतेही आमंत्रण नाही",
       "emptyDescription": "When an owner invites your mobile number, it will show up here. Tap Refresh to check again.",
       "notNow": "आत्ता नाही",
-      "accept": "स्वीकार करा"
+      "accept": "स्वीकार करा",
+      "discoverTitle": "जागा शोधायची आहे?",
+      "discoverDescription": "उपलब्ध PG, हॉस्टेल, भाड्याच्या आणि को-लिव्हिंग स्पेस ब्राउझ करा."
+    },
+    "memberHome": {
+      "title": "तुम्ही काय शोधत आहात?",
+      "eyebrow": "Acomi मध्ये आपले स्वागत आहे",
+      "heading": "तुम्ही काय शोधत आहात?",
+      "subtitle": "PG · हॉस्टेल · भाड्याने · को-लिव्हिंग",
+      "findCta": "जागा शोधा",
+      "inviteSection": "तुमच्याकडे आमंत्रण आहे का?",
+      "inviteHint": "तुम्हाला या स्पेसमध्ये सामील होण्यासाठी आमंत्रित केले आहे.",
+      "emptyTitle": "आता कोणतेही आमंत्रण नाही",
+      "emptyDescription": "जेव्हा मालक किंवा व्यवस्थापक तुम्हाला आमंत्रित करतील, तेव्हा तुमचे आमंत्रण इथे दिसेल.",
+      "pendingBadge": "प्रलंबित",
+      "pendingCount": "तुमच्याकडे {{count}} प्रलंबित आमंत्रणे आहेत",
+      "ownerSwitch": "मी त्याऐवजी मालक आहे"
     }
   },
   "auth": {
@@ -379,7 +414,12 @@
       "expiredHint": "हा OTP संपला आहे. नवीन OTP मागवा.",
       "devHint": "तुमचा OTP बॅकएंड डेव्हलपमेंट लॉगमध्ये पहा.",
       "wrongNumber": "चुकीचा नंबर?",
-      "changeIt": "बदला"
+      "changeIt": "बदला",
+      "smsSampleTitle": "हे SMS पहा",
+      "smsSampleSender": "ACOMI कडून SMS",
+      "smsSampleBody": "[Hello] Your OTP for Phone Verification is XXXXXX. Valid for 5 mins - [Southern Express]",
+      "smsSampleCaption": "“Southern Express” हे फक्त आमच्या SMS प्रदात्याचे टेम्पलेट नाव आहे — हा कोड ACOMI साठी आहे.",
+      "smsSampleA11y": "ACOMI OTP SMS संदेशाचा नमुना"
     },
     "forgotPassword": {
       "eyebrow": "संकेतशब्द रीसेट",
@@ -420,7 +460,20 @@
       "findPlace": "जागा शोधा",
       "findPlaceSubtitle": "PG · हॉस्टेल · भाडे · को-लिव्हिंग",
       "serviceContacts": "सेवा संपर्क",
-      "serviceContactsSubtitle": "तुमचे सेवा पुरवठादार जतन करा आणि व्यवस्थापित करा"
+      "serviceContactsSubtitle": "तुमचे सेवा पुरवठादार जतन करा आणि व्यवस्थापित करा",
+      "setDefault": "डीफॉल्ट म्हणून सेट करा",
+      "setDefaultSuccess": "डीफॉल्ट स्पेस अपडेट झाली.",
+      "settingDefault": "अपडेट होत आहे…",
+      "defaultHint": "तुम्ही अ‍ॅप लाँच करता तेव्हा तुमची डीफॉल्ट स्पेस आधी उघडते.",
+      "defaultOpensOnLaunch": "लाँचवर आधी उघडते",
+      "pendingTitle": "पुनरावलोकन प्रलंबित",
+      "pendingHint": "जोपर्यंत ACOMI लिस्टिंग प्रकाशित करत नाही, तोपर्यंत ती सार्वजनिक नसेल.",
+      "pendingNoInventory": "ही लिस्टिंग प्रकाशित होईपर्यंत कोणतीही रूम किंवा बेड नसतील.",
+      "listingName": "नाव",
+      "listingAddress": "पत्ता",
+      "pendingSaved": "लिस्टिंग अपडेट झाली.",
+      "savingListing": "सेव्ह होत आहे…",
+      "saveListing": "लिस्टिंग सेव्ह करा"
     },
     "findPlace": {
       "eyebrow": "जागा शोधा",
@@ -590,7 +643,150 @@
         "emailBody": "जतन केलेला पत्ता निवडा किंवा नवीन टाका.",
         "savedEmails": "जतन केलेले ईमेल",
         "useDifferentEmail": "वेगळा ईमेल वापरा",
-        "privacyHint": "मालकाचा संपर्क उपलब्ध झाल्यावर माझ्या चौकशीत दिसतो."
+        "privacyHint": "मालकाचा संपर्क उपलब्ध झाल्यावर माझ्या चौकशीत दिसतो.",
+        "creditsRequiredTitle": "तुमच्या मोफत चौकशी वापरल्या गेल्या आहेत",
+        "creditsRequiredBody": "इन्क्वायरी क्रेडिट्स खरेदी करा किंवा मोफत चौकशी रीसेट होईपर्यंत उद्यापर्यंत थांबा.",
+        "viewHereExhausted": "तुम्ही आजसाठीचे सर्व इन्स्टंट कॉन्टॅक्ट व्ह्यूज वापरले आहेत.",
+        "viewHereDisabled": "इन्स्टंट कॉन्टॅक्ट व्ह्यूइंग बंद आहे. तुम्ही अजूनही तपशील विनंती करू शकता.",
+        "sentToastTitle": "चौकशी पाठवली!",
+        "sentToastBody": "तुमचा ईमेल इनबॉक्स तपासा, आम्ही मालकाचे संपर्क तपशील {{email}} वर पाठवले आहेत.",
+        "sentToastBodyNoEmail": "तुमचा ईमेल इनबॉक्स तपासा. आम्ही मालकाचे संपर्क तपशील पाठवले आहेत.",
+        "limitMapTitle": "मॅपवर जाण्यासाठी पेमेंट करा",
+        "limitPhotosTitle": "फोटो विनंती करण्यासाठी पेमेंट करा",
+        "limitMapBody": "आज",
+        "limitPhotosBody": "आज",
+        "limitPaymentSubmitError": "पेमेंट विनंती सबमिट होऊ शकली नाही. कृपया पुन्हा प्रयत्न करा.",
+        "limitPayRejectedBody": "हे पेमेंट कन्फर्म झाले नाही, त्यामुळे मॅप आणि फोटो विनंती बंद राहतील.",
+        "limitMapPendingBody": "अ‍ॅडमिन या पेमेंटची पुष्टी करत नाही तोपर्यंत मॅप बंद राहील. पेमेंट कन्फर्म होताच ते उघडेल.",
+        "limitPhotosPendingBody": "अ‍ॅडमिन या पेमेंटची पुष्टी करत नाही तोपर्यंत फोटो विनंती बंद राहतील. पेमेंट कन्फर्म होताच तुम्ही पुढे जाऊ शकता.",
+        "limitPackageBodyMap": "{{count}} चौकशी क्रेडिट्स मिळवा. पेमेंट कन्फर्म झाल्यानंतर मॅपवर पुढे जा.",
+        "limitPackageBodyPhotos": "{{count}} चौकशी क्रेडिट्स मिळवा. पेमेंट कन्फर्म झाल्यानंतर फोटो विनंती पुढे सुरू ठेवा.",
+        "limitUtrPlaceholder": "UTR / ट्रान्झॅक्शन रेफरन्स",
+        "limitPaymentSubmit": "मी",
+        "limitPaymentUnavailable": "पेमेंट तपशील सध्या उपलब्ध नाहीत. कृपया नंतर पुन्हा प्रयत्न करा.",
+        "limitNotNow": "आता नाही",
+        "contactTitle": "संपर्क तपशील",
+        "contactLoading": "संपर्क तपशील लोड होत आहेत…",
+        "contactFailed": "संपर्क तपशील लोड होऊ शकले नाहीत. पुन्हा प्रयत्न करा.",
+        "contactRetry": "पुन्हा प्रयत्न करा",
+        "contactOwner": "मालक",
+        "whatsapp": "WhatsApp",
+        "contactEmail": "ईमेल",
+        "openMap": "मॅप्समध्ये उघडा",
+        "contactEmpty": "अजून कोणतेही संपर्क तपशील उपलब्ध नाहीत.",
+        "emailCtaReady": "ईमेलवर मिळवा",
+        "emailCardHint": "आम्ही मालकाचे संपर्क तपशील तुमच्या नोंदणीकृत ईमेलवर पाठवू.",
+        "sendDetails": "तपशील पाठवा",
+        "contactRevealed": "संपर्क तपशील उघड केले",
+        "viewingShort": "संपर्क तपशील उघडत आहेत...",
+        "viewingBody": "कृपया थांबा, आम्ही मालकाचे संपर्क तपशील लोड करत आहोत.",
+        "sendingEmailBody": "कृपया थांबा, आम्ही मालकाचे संपर्क तपशील तुमच्या ईमेलवर पाठवत आहोत.",
+        "sendingAppBody": "कृपया थांबा, आम्ही तुमची चौकशी ACOMI ला पाठवत आहोत.",
+        "chooseTitle": "मालकाचे संपर्क तपशील मिळवा",
+        "chooseBody": "मालकाचे संपर्क तपशील मिळवण्यासाठी एक मार्ग निवडा.",
+        "recommended": "शिफारस केलेले",
+        "sendOnApp": "Acomi अ‍ॅपवर पाठवा",
+        "unlimitedTitle": "अनलिमिटेड चौकशी",
+        "freeAndroid": "Android वर मोफत!",
+        "benefitFast": "जलद आणि सोपे",
+        "benefitSecure": "सुरक्षित",
+        "optionOr": "किंवा",
+        "viewHereTitle": "संपर्क तपशील इथे पहा",
+        "viewHereRemaining": "आज {{remaining}} इन्स्टंट व्ह्यूज उरले आहेत (एकूण {{limit}} पैकी)",
+        "emailRemaining": "{{limit}} पैकी {{remaining}} चौकशी उरल्या आहेत",
+        "emailExhaustedHint": "ईमेल मर्यादा पूर्ण झाली. पुढे जाण्यासाठी इन्क्वायरी क्रेडिट्स खरेदी करा."
+      },
+      "view": "पहा",
+      "inquirySent": "चौकशी पाठवली",
+      "inquirySentByEmail": "तुमच्या ईमेलवर पाठवले",
+      "inquirySentInApp": "Acomi अ‍ॅपमध्ये पाठवले",
+      "inquirySentEmailAndApp": "तुमच्या ईमेल आणि Acomi अ‍ॅपवर पाठवले",
+      "reviewsRatings": "रिव्ह्यू आणि रेटिंग",
+      "photos": "फोटो",
+      "notAvailable": "उपलब्ध नाही",
+      "infoPrice": "किंमत",
+      "infoMenu": "मेन्यू",
+      "infoMealTiming": "जेवणाची वेळ",
+      "infoFoodType": "जेवणाचा प्रकार",
+      "infoSubscription": "सबस्क्रिप्शन",
+      "perMeal": "/ जेवण",
+      "priceBasis": {
+        "PER_BED": "प्रति बेड / महिना",
+        "PER_ROOM": "प्रति खोली / महिना",
+        "PER_UNIT": "प्रति महिना"
+      },
+      "pricingUnit": "किंमत युनिट",
+      "contactDetailsViewed": "संपर्क तपशील पाहिले",
+      "sortLabel": "क्रमवारी",
+      "filters": {
+        "gender": "लिंग",
+        "sharing": "शेअरिंग",
+        "mealType": "जेवणाचा प्रकार",
+        "foodType": "अन्नाचा प्रकार",
+        "food": "जेवण",
+        "furnishing": "फर्निशिंग",
+        "more": "अधिक",
+        "contactAvailable": "संपर्क उपलब्ध",
+        "servicedApartment": "सर्व्हिस्ड / कॉर्पोरेट अपार्टमेंट"
+      },
+      "sort": {
+        "recommended": "शिफारस केलेले",
+        "newest": "सर्वात नवीन"
+      },
+      "viewed": "पाहिले",
+      "inquirySentTo": "{{email}} वर पाठवले",
+      "inquiryAlreadySent": "चौकशी आधीच पाठवली आहे",
+      "sendInquiryAgain": "चौकशी पुन्हा पाठवा",
+      "photoRequestUnavailableSaved": "या लिस्टिंगचा आम्ही उघडू शकू असा कोणताही WhatsApp नंबर नाही. फोटो विनंती ACOMI मध्ये सेव्ह केली आहे.",
+      "photoRequestUnavailable": "या लिस्टिंगचा आम्ही उघडू शकू असा कोणताही WhatsApp नंबर नाही.",
+      "photoRequestBlockedSaved": "WhatsApp उघडले नाही. फोटो विनंती ACOMI मध्ये सेव्ह केली आहे. तुम्ही पुन्हा प्रयत्न करू शकता.",
+      "photoRequestBlocked": "WhatsApp उघडले नाही. तुम्ही पुन्हा प्रयत्न करू शकता.",
+      "photoRequestFailed": "फोटो विनंती करता आली नाही. WhatsApp उघडले नाही.",
+      "photoRequestHint": "हा मेसेज तुम्हाला स्वतः WhatsApp मध्ये पाठवावा लागेल. WhatsApp उघडल्याने तो पाठवला जात नाही.",
+      "photoRequestMessage": "मेसेज",
+      "continueWhatsApp": "WhatsApp वर पुढे जा",
+      "amenity": {
+        "WIFI": "वाई-फाई",
+        "FOOD_INCLUDED": "जेवण",
+        "WASHING_MACHINE": "लॉन्ड्री / वॉशिंग मशीन",
+        "PARKING": "पार्किंग",
+        "HOUSEKEEPING": "हाउसकीपिंग",
+        "POWER_BACKUP": "पावर बैकअप",
+        "AC": "एसी",
+        "KITCHEN": "स्वयंपाकघर",
+        "CCTV": "सीसीटीवी / सुरक्षा",
+        "RO_WATER": "आरओ पानी",
+        "HOT_WATER": "गरम पाणी",
+        "REFRIGERATOR": "फ्रिज",
+        "WARDROBE": "कपाट"
+      },
+      "genderOptions": {
+        "MALE": "पुरुष",
+        "FEMALE": "स्त्रिया",
+        "MIXED": "पुरुष आणि स्त्रिया"
+      },
+      "sharingOptions": {
+        "SINGLE": "सिंगल",
+        "TWO": "2 शेयरिंग",
+        "THREE": "3 शेयरिंग",
+        "FOUR": "4 शेयरिंग",
+        "FIVE": "5 शेयरिंग",
+        "SIX_PLUS": "6+ शेयरिंग"
+      },
+      "foodOptions": {
+        "INCLUDED": "जेवण समाविष्ट",
+        "AVAILABLE": "जेवण उपलब्ध",
+        "NONE": "जेवण नाही"
+      },
+      "furnishingOptions": {
+        "FULL": "पूर्ण सुसज्जित",
+        "SEMI": "अर्ध सुसज्जित",
+        "UNFURNISHED": "बिना फर्नीचर"
+      },
+      "foodTypeOptions": {
+        "VEG": "शाकाहारी",
+        "NON_VEG": "मांसाहारी",
+        "EGG": "अंडे"
       }
     },
     "globalDashboard": {
@@ -626,7 +822,8 @@
     },
     "switcher": {
       "open": "स्पेस बदला",
-      "dismiss": "स्पेस स्विचर बंद करा"
+      "dismiss": "स्पेस स्विचर बंद करा",
+      "defaultHint": "स्पेस उघडण्यासाठी टॅप करा. तुमची डीफॉल्ट स्पेस लाँचवर आधी उघडते — ती होमवरून बदला."
     },
     "createSpace": {
       "eyebrow": "नवीन मालमत्ता",
@@ -652,7 +849,8 @@
       "successTitle": "स्पेस तयार झाला",
       "successMessage": "\"{{name}}\" was created successfully.",
       "notAllowedTitle": "स्पेस तयार करता येत नाही",
-      "notAllowed": "स्पेस फक्त मालक तयार करू शकतो. भाडेकरू किंवा ग्राहक प्रवेशात हे नाही."
+      "notAllowed": "स्पेस फक्त मालक तयार करू शकतो. भाडेकरू किंवा ग्राहक प्रवेशात हे नाही.",
+      "nameTaken": "तुमच्याकडे आधीच या नावाची स्पेस आहे."
     },
     "types": {
       "label": "स्पेस प्रकार",
@@ -675,6 +873,10 @@
       "rental": {
         "label": "भाडे",
         "description": "फ्लॅट / खोल्या"
+      },
+      "corporateStay": {
+        "label": "कॉर्पोरेट स्टे",
+        "description": "कंपनी निवास"
       }
     },
     "propertyCategory": {
@@ -810,6 +1012,99 @@
       "loadDetails": "Failed to load space details.",
       "update": "Failed to update space.",
       "deactivate": "Failed to deactivate space."
+    },
+    "billingSettings": {
+      "title": "बिलिंग आणि कर",
+      "subtitle": "हे नवीन तयार झालेल्या मासिक देय रकमांना लागू होते. भरलेली बिले अपरिवर्तित राहतात.",
+      "taxEnabled": "GST / कर लागू करा",
+      "taxRate": "कर दर (%)",
+      "pricingMode": "किंमत कोट",
+      "exclusive": "कर वेगळा (कर जोडला जाईल)",
+      "inclusive": "कर समावेशित (किंमतीत कर समाविष्ट आहे)",
+      "gstin": "GSTIN (ऐच्छिक)",
+      "dueDay": "मासिक देय दिवस"
+    },
+    "enquiries": {
+      "title": "माझ्या चौकशी",
+      "subtitle": "तुम्ही ACOMI ला पाठवलेल्या संपर्क विनंत्या. मालकाचा तपशील शेअर करता येईल तेव्हा ईमेलने शेअर केला जातो.",
+      "profileSubtitle": "तुमच्या संपर्क विनंत्या पहा",
+      "empty": "सुरू करण्यासाठी PG, हॉस्टेल, भाड्याची किंवा को-लिव्हिंग स्पेस शोधा आणि चौकशी पाठवा.",
+      "emptyTitle": "अजून कोणतीही चौकशी नाही",
+      "requestedOn": "{{date}} रोजी विनंती केली",
+      "requestedDot": "विनंती केली · {{date}}",
+      "sharedHint": "ACOMI ने तुमच्याशी संपर्क तपशील शेअर केला आहे. कृपया तुमचा ईमेल तपासा.",
+      "sharedInAppHint": "संपर्क तपशील खाली तयार आहेत. तुम्ही येथून मालकाला कॉल किंवा मेसेज करू शकता.",
+      "ownerContactReady": "मालकाचे संपर्क तपशील उपलब्ध आहेत",
+      "viewContactDetails": "संपर्क तपशील पहा",
+      "callOwner": "कॉल करा",
+      "messageOwner": "मेसेज",
+      "messageOwnerHint": "तुमचे मेसेजिंग अ‍ॅप उघडा",
+      "emailOwner": "ईमेल",
+      "newBadge": "नवीन",
+      "contactDetails": "मालकाचा संपर्क",
+      "ownerName": "नाव",
+      "mobile": "मोबाइल",
+      "alternateMobile": "पर्यायी मोबाइल",
+      "additionalMobile": "अतिरिक्त मोबाइल",
+      "ownerEmail": "ईमेल",
+      "pendingHint": "तुमच्या चौकशीचे ACOMI द्वारे पुनरावलोकन केले जात आहे.",
+      "rejectedHint": "तुमच्या चौकशीचे ACOMI ने पुनरावलोकन केले पण ती पूर्ण करता आली नाही.",
+      "expiredHint": "ही चौकशी कालबाह्य झाली आहे.",
+      "notificationsEmpty": "अजून कोणतीही चौकशी सूचना नाही.",
+      "status": {
+        "PENDING": "प्रलंबित",
+        "SHARED": "संपर्क तपशील शेअर केला",
+        "REJECTED": "पूर्ण करता आले नाही",
+        "EXPIRED": "कालबाह्य",
+        "CANCELLED": "रद्द"
+      },
+      "receivedTitle": "आलेल्या चौकशी",
+      "receivedError": "चौकशी लोड होऊ शकल्या नाहीत.",
+      "receivedSubtitle": "तुमच्या प्रॉपर्टी आणि मेस सेवांच्या चौकशी व्यवस्थापित करा",
+      "summaryTotal": "एकूण चौकशी",
+      "summaryShared": "संपर्क तपशील शेअर केले",
+      "summaryClosed": "बंद",
+      "searchPlaceholder": "नाव, प्रॉपर्टी किंवा ईमेलने शोधा...",
+      "filterListing": "लिस्टिंग",
+      "filterAllListings": "सर्व लिस्टिंग",
+      "filterStatus": "स्टेटस",
+      "filterAll": "सर्व चौकशी",
+      "resultCount": "{{count}} चौकशी",
+      "sortLatest": "सर्वात अलीकडील प्रथम",
+      "clearFilters": "फिल्टर साफ करा",
+      "noMatchesTitle": "जुळणाऱ्या चौकशी नाहीत",
+      "receivedEmptyTitle": "कोणतीही चौकशी आलेली नाही",
+      "noMatches": "दुसरी लिस्टिंग, स्टेटस किंवा शोध वापरून पहा.",
+      "receivedEmpty": "जेव्हा एखादा सदस्य तुमच्या कोणत्याही लिस्टिंगबद्दल चौकशी करेल, तेव्हा ती इथे दिसेल.",
+      "findListing": "लिस्टिंग शोधा",
+      "member": "सदस्य",
+      "listingUnavailable": "ही लिस्टिंग आता उपलब्ध नाही.",
+      "viewEnquiry": "चौकशी पहा",
+      "openListing": "लिस्टिंग उघडा",
+      "senderUnavailable": "उपलब्ध नाही",
+      "senderDetails": "पाठवणाऱ्याचे तपशील",
+      "senderAccount": "खाते",
+      "justNow": "आता",
+      "minutesAgo": "{{count}} मिनिटांपूर्वी",
+      "hoursAgo": "{{count}} तासांपूर्वी",
+      "daysAgo": "{{count}} दिवसांपूर्वी"
+    },
+    "favorites": {
+      "loadFailed": "आवडते लोड होऊ शकले नाहीत.",
+      "all": "सर्व",
+      "unavailable": "ही लिस्टिंग आता उपलब्ध नाही.",
+      "removeSaved": "आवडत्यांमधून काढा",
+      "empty": "अजून कोणतेही आवडते नाहीत",
+      "emptyHint": "PG, हॉस्टेल, को-लिव्हिंग, भाडे, किंवा मेस लिस्टिंगवर हृदयाच्या चिन्हावर टॅप करून ते इथे सेव्ह करा.",
+      "openCount": "आवडते, {{count}} सेव्ह केले",
+      "profileSubtitle": "तुम्ही सेव्ह केलेल्या PG, हॉस्टेल, को-लिव्हिंग, भाडे आणि मेस लिस्टिंग",
+      "remove": "आवडत्यांमधून काढा",
+      "add": "आवडत्यांमध्ये जोडा",
+      "failed": "आवडते अपडेट होऊ शकले नाहीत. कृपया पुन्हा प्रयत्न करा.",
+      "signIn": "आवडते सेव्ह करण्यासाठी साइन इन करा."
+    },
+    "notifications": {
+      "title": "नोटिफिकेशन्स"
     }
   },
   "membership": {
@@ -828,17 +1123,27 @@
       "filterAll": "सर्व सदस्य",
       "filterPending": "प्रलंबित पेमेंट",
       "filterClear": "थकबाकी नाही",
-      "loadFailed": "पेमेंट एकूण लोड होऊ शकले नाही."
+      "loadFailed": "पेमेंट एकूण लोड होऊ शकले नाही.",
+      "summaryHint": "या महिन्यातील थकबाकी"
     },
     "members": {
       "emptyTitle": "अद्याप सदस्य नाहीत",
       "emptyDescription": "Add your first tenant, customer, or staff member to this space.",
       "listSubtitle": "या स्पेसमधील लोक",
+      "scopeThisSpace": "हा स्पेस",
+      "scopeAllMySpaces": "माझे सर्व स्पेस",
+      "directorySubtitle": "तुम्ही व्यवस्थापित करत असलेल्या सर्व स्पेसमधील लोक",
+      "directorySearchPlaceholder": "नाव किंवा मोबाइलने शोधा",
+      "directoryEmptyTitle": "अद्याप कोणीही नाही",
+      "directoryEmptyDescription": "तुम्ही जोडलेले लोक येथे दिसतील.",
+      "directoryLoadFailed": "स्पेसमधील लोक लोड झाले नाहीत. पुन्हा प्रयत्न करा.",
+      "directoryPickSpace": "{{name}} उघडा…",
       "onAcomi": "ACOMI वर",
       "notOnAcomiYet": "अद्याप ACOMI वर नाही",
       "mobile": "मोबाइल: {{value}}",
       "created": "जोडले: {{date}}",
-      "remove": "Remove Member"
+      "remove": "Remove Member",
+      "mobileNotAvailable": "मोबाइल उपलब्ध नाही"
     },
     "add": {
       "fab": "Add member",
@@ -887,7 +1192,7 @@
         "addNewCustomer": "नवा ग्राहक जोडा",
         "addNewMember": "नवा सदस्य जोडा",
         "addNewDescription": "त्यांचे तपशील भरा आणि त्यांना या स्पेसमध्ये जोडा.",
-        "import": "दुसऱ्या स्पेसमधून आयात करा",
+        "import": "विद्यमान निवडा…",
         "importDescription": "अशी व्यक्ती निवडा जी आधीच दुसऱ्या ACOMI स्पेसमध्ये जोडलेली आहे.",
         "importAvailable_one": "{{count}} सदस्य उपलब्ध",
         "importAvailable_other": "{{count}} सदस्य उपलब्ध",
@@ -904,7 +1209,8 @@
         "currentResident": "{{space}} मध्ये राहतो",
         "typeCustomer": "ग्राहक",
         "typeResident": "रहिवासी",
-        "addAction": "+ जोडा"
+        "addAction": "+ जोडा",
+        "alreadyInSpace": "आधीपासून या स्पेसमध्ये आहे"
       },
       "detailsHeading": "सदस्य तपशील"
     },
@@ -1138,7 +1444,8 @@
         "DRIVING_LICENSE": "ड्रायव्हिंग लायसन्स",
         "STUDENT_ID": "विद्यार्थी ओळखपत्र",
         "OTHER": "इतर"
-      }
+      },
+      "heading": "कागदपत्रे"
     },
     "notes": {
       "add": "Add Note",
@@ -1150,7 +1457,8 @@
       "successToast": "नोट जोडला गेला।",
       "meta": "{{name}} · {{date}}",
       "authorLabel": "याने जोडले",
-      "dateLabel": "तारीख"
+      "dateLabel": "तारीख",
+      "heading": "नोट्स"
     },
     "profileCorrection": {
       "heading": "Profile correction",
@@ -1173,7 +1481,8 @@
         "statusChanged": "Status changed",
         "depositUpdated": "Deposit updated",
         "emergencyContactUpdated": "Emergency contact updated"
-      }
+      },
+      "profileChanges": "प्रोफाइल बदल"
     },
     "errors": {
       "generic": "काहीतरी चुकले. कृपया पुन्हा प्रयत्न करा.",
@@ -1200,7 +1509,14 @@
       "cancel": "Failed to cancel invitation. Please try again.",
       "remove": "Failed to remove member. Please try again.",
       "accept": "Failed to accept invitation. Please try again."
-    }
+    },
+    "kpi": {
+      "total": "एकूण सदस्य",
+      "active": "सक्रिय सदस्य",
+      "pending": "प्रलंबित आमंत्रणे",
+      "joinedThisMonth": "या महिन्यात सामील झाले"
+    },
+    "illustrativeSummary": "उदाहरण सारांश. खालील यादी खरा रजिस्टर आहे."
   },
   "accommodation": {
     "search": {
@@ -1217,7 +1533,11 @@
       "rent": "मासिक भाडे",
       "deposit": "डिपॉझिट",
       "enterRent": "मासिक भाडे भरा",
-      "enterDeposit": "डिपॉझिट भरा"
+      "enterDeposit": "डिपॉझिट भरा",
+      "rentRequired": "मासिक भाडे आवश्यक आहे",
+      "depositRequired": "डिपॉझिट आवश्यक आहे",
+      "securityDeposit": "सिक्युरिटी डिपॉझिट",
+      "keyDates": "मुख्य तारखा"
     },
     "pricingHints": {
       "title": "सेव्ह केल्यानंतर भाडे सेट करा",
@@ -1278,7 +1598,8 @@
           "available": "उपलब्ध",
           "nearlyFull": "जवळजवळ पूर्ण",
           "full": "पूर्ण"
-        }
+        },
+        "viewDetails": "तपशील पहा"
       }
     },
     "inactive": {
@@ -1349,7 +1670,9 @@
       "eyebrow": "प्रॉपर्टी",
       "quickActions": "जलद क्रिया",
       "subtitle": "इमारती, मजले, खोल्या आणि बेड एकाच ठिकाणी",
-      "title": "खोल्या"
+      "title": "खोल्या",
+      "pageSubtitleUnits": "एकाच ठिकाणी इमारती आणि युनिट्स",
+      "buildingsSubtitleUnits": "युनिट्स व्यवस्थापित करण्यासाठी इमारत उघडा"
     },
     "setup": {
       "title": "जलद सेटअप",
@@ -1426,7 +1749,11 @@
         "bedsCount": "Beds: {{count}}",
         "roomsBeds": "Rooms: {{rooms}} · Beds: {{beds}}",
         "bedsOnly": "Beds: {{beds}}",
-        "capacityBeds": "Capacity: {{capacity}} · Beds: {{beds}}"
+        "capacityBeds": "Capacity: {{capacity}} · Beds: {{beds}}",
+        "duplicateFloor": "मजला डुप्लिकेट करा",
+        "deleteFloor": "मजला डिलीट करा",
+        "duplicateUnit": "युनिट डुप्लिकेट करा",
+        "deleteUnit": "युनिट डिलीट करा"
       },
       "floorCount": "मजल्यांची संख्या",
       "includeGroundFloor": "Include ground floor",
@@ -1474,7 +1801,32 @@
         "apartmentsPerFloor": "Apartments per floor must be at least 1."
       },
       "groundFloorName": "तळमजला",
-      "floorNameNumber": "Floor {{number}}"
+      "floorNameNumber": "Floor {{number}}",
+      "reviewUnitsBeforeCreate": "इमारत तयार करण्यापूर्वी तुमच्या युनिट्सचे पुनरावलोकन करा आणि संपादित करा.",
+      "unitPricingTitle": "भाडे आणि डिपॉझिट",
+      "unitPricingOptionalHint": "ऐच्छिक. भाडे किंवा डिपॉझिटशिवाय इमारत तयार करण्यासाठी हे रिकामे ठेवा. येथे दिलेले मूल्य प्रत्येक युनिटला लागू होईल.",
+      "unitPricingMixedHint": "युनिट्समध्ये सध्या वेगवेगळ्या रकमा आहेत. येथे मूल्य टाकल्यास प्रत्येक युनिट अपडेट होईल.",
+      "unitPricingLine": "भाडे ₹{{rent}} · डिपॉझिट ₹{{deposit}}",
+      "unitPricingNotSet": "भाडे आणि डिपॉझिट ऐच्छिक",
+      "createConfirm": {
+        "title": "इमारत निर्मितीची पुष्टी करा",
+        "building": "इमारत",
+        "structure": "संरचना",
+        "pricing": "किंमत",
+        "noPricing": "भाडे किंवा डिपॉझिट सेट केलेले नाही.",
+        "pattern": "पॅटर्न {{index}} · {{count}} बेड्स",
+        "unitPattern": "पॅटर्न {{index}} · {{count}} युनिट्स",
+        "appliesToBeds": "{{count}} बेड्सला लागू होते",
+        "appliesToUnits": "{{count}} युनिट्सला लागू होते",
+        "footnote": "हे वरील भाडे आणि डिपॉझिटसह {{count}} बेड्स तयार करेल.",
+        "bedsWithoutPricing": "हे {{count}} बेड्स तयार करेल. कोणतेही भाडे किंवा डिपॉझिट सेव्ह होणार नाही.",
+        "unitsWithPricing": "हे वरील भाडे आणि डिपॉझिटसह {{count}} युनिट्स तयार करेल.",
+        "unitsWithoutPricing": "हे {{count}} युनिट्स तयार करेल. कोणतेही भाडे किंवा डिपॉझिट सेव्ह होणार नाही.",
+        "continue": "तुम्हाला खात्री आहे की तुम्ही ही इमारत तयार करायची आहे?",
+        "confirm": "इमारत तयार करा",
+        "creating": "इमारत तयार होत आहे..."
+      },
+      "unitOnlyLine": "फक्त युनिट — रूम किंवा बेड नाहीत"
     },
     "overview": {
       "title": "Building Overview",
@@ -1508,7 +1860,43 @@
       "addRoom": "जोडा खोल्या",
       "addBed": "जोडा बेड",
       "loadMore": "अधिक लोड करा",
-      "listSubtitle": "उघडण्यासाठी टॅप · तपशीलासाठी दीर्घ दाबा"
+      "listSubtitle": "उघडण्यासाठी टॅप · तपशीलासाठी दीर्घ दाबा",
+      "inventorySubtitle": "बेड्ससह खोल्या — भाडे आणि डिपॉझिट थेट इथे संपादित करा",
+      "allRooms": "सर्व खोल्या",
+      "searchRooms": "खोल्या शोधा...",
+      "summaryCounts": "{{floors}} मजले · {{rooms}} खोल्या · {{beds}} बेड्स",
+      "availableOfTotal": "{{available}}/{{total}} उपलब्ध",
+      "floorMeta": "{{rooms}} खोल्या · {{beds}} बेड्स",
+      "roomAvailability": "{{available}}/{{total}} उपलब्ध",
+      "bedsAvailable": "{{available}}/{{total}} बेड्स उपलब्ध",
+      "roomOccupiedSummary": "{{occupied}} / {{total}} व्यापलेले",
+      "roomAvailableSummary": "{{available}} / {{total}} उपलब्ध",
+      "roomReservedSummary": "{{reserved}} / {{total}} आरक्षित",
+      "roomMixedSummary": "{{occupied}} / {{total}} व्यापलेले",
+      "noBeds": "कोणतेही बेड नाही",
+      "occupiedSinceUnknown": "व्यापलेले",
+      "notYetBilled": "अजून बिल तयार झाले नाही",
+      "readyToAllocate": "वाटपासाठी तयार",
+      "statusFilter": {
+        "all": "सर्व",
+        "available": "उपलब्ध",
+        "occupied": "व्यापलेले",
+        "reserved": "आरक्षित"
+      },
+      "roomTypeLabel": "{{type}} खोली",
+      "roomBedsMeta": "{{count}} बेड्स{{typeSuffix}}",
+      "editFloor": "मजला संपादित करा",
+      "editUnit": "युनिट संपादित करा",
+      "editRoom": "खोली संपादित करा",
+      "editBuilding": "इमारत संपादित करा",
+      "editBed": "बेड संपादित करा",
+      "searchUnits": "युनिट्स शोधा (उदा. 101, 102, ...)",
+      "editHierarchy": "एडिट करा",
+      "inactive": "निष्क्रिय",
+      "unitsOverview": "युनिट्स ओव्हरव्ह्यू",
+      "unitOnlyOverviewSubtitle": "फक्त युनिट्स — प्रत्येक युनिटवर भाडे आणि डिपॉझिट एडिट करा",
+      "totalUnits": "एकूण युनिट्स",
+      "unitsCount": "युनिट्स ({{count}})"
     },
     "duplicate": {
       "confirm": "डुप्लिकेट",
@@ -1601,7 +1989,9 @@
       "codePlaceholder": "e.g. BLD-A",
       "nameRequired": "Building name is required.",
       "createSuccess": "Building added successfully.",
-      "updateSuccess": "Building updated successfully."
+      "updateSuccess": "Building updated successfully.",
+      "namePlaceholderSpace": "डीफॉल्टनुसार तुमच्या स्पेसचे नाव वापरते",
+      "codePlaceholderBld": "उदा. BLD 1"
     },
     "inlineEdit": {
       "editName": "Edit name",
@@ -1634,7 +2024,8 @@
       "nameRequired": "Floor name is required.",
       "floorNumberRequired": "Enter a valid floor number.",
       "createSuccess": "Floor added successfully.",
-      "updateSuccess": "Floor updated successfully."
+      "updateSuccess": "Floor updated successfully.",
+      "untitled": "मजला"
     },
     "units": {
       "title": "युनिट",
@@ -1653,7 +2044,12 @@
       "nameRequired": "Unit name is required.",
       "unitNumberRequired": "Unit number is required.",
       "createSuccess": "Unit added successfully.",
-      "updateSuccess": "Unit updated successfully."
+      "updateSuccess": "Unit updated successfully.",
+      "idLabel": "युनिट ID",
+      "namedTitle": "युनिट {{number}}",
+      "detailsSection": "युनिटचे तपशील",
+      "emptyFiltered": "या व्ह्यूमध्ये कोणतेही युनिट जुळत नाही.",
+      "validationError": "युनिट नंबर टाका."
     },
     "rooms": {
       "title": "खोल्या",
@@ -1672,7 +2068,12 @@
       "formSubheadingEdit": "Update room details, status, or default pricing.",
       "validationError": "Please fill in all required room fields.",
       "createSuccess": "Room added successfully.",
-      "updateSuccess": "Room updated successfully."
+      "updateSuccess": "Room updated successfully.",
+      "emptyFilteredTitle": "जुळणारे बेड नाहीत",
+      "emptyFilteredDescription": "दुसरा स्टेटस फिल्टर वापरून पहा किंवा शोध साफ करा.",
+      "idLabel": "रूम ID",
+      "emptyOpsFocusTitle": "जुळणारे बेड नाहीत",
+      "emptyOpsFocusDescription": "प्रॉपर्टी ऑपरेशन्स फिल्टर साफ करा किंवा शोध बदला."
     },
     "beds": {
       "title": "बेड",
@@ -1690,7 +2091,14 @@
       "formSubheadingEdit": "Update bed details, status, or default pricing.",
       "validationError": "Please fill in all required bed fields.",
       "createSuccess": "Bed added successfully.",
-      "updateSuccess": "Bed updated successfully."
+      "updateSuccess": "Bed updated successfully.",
+      "detailsSection": "बेडचा तपशील",
+      "updateAction": "अपडेट करा",
+      "unsavedTitle": "बदल रद्द करायचे?",
+      "unsavedMessage": "तुमचा बेड तपशील सेव्ह झालेला नाही.",
+      "idLabel": "बेड ID",
+      "previous": "मागील बेड",
+      "next": "पुढील बेड"
     },
     "lifecycle": {
       "menuTitle": "क्रिया",
@@ -1754,6 +2162,64 @@
     "form": {
       "rent": "भाडे",
       "deposit": "डिपॉझिट"
+    },
+    "pricingConfirm": {
+      "title": "किंमत अपडेट निश्चित करा",
+      "titleRent": "भाडे अपडेट निश्चित करा",
+      "titleDeposit": "डिपॉझिट अपडेट निश्चित करा",
+      "price": "किंमत",
+      "changingFor": "तुम्ही यासाठी {{field}} बदलत आहात:",
+      "current": "सध्याचे",
+      "next": "नवीन",
+      "notSet": "सेट केलेले नाही",
+      "affectedCount": "हा बदल {{count}} जुळणाऱ्या बेड्सवर लागू होईल.",
+      "affectedLocations": "प्रभावित स्थळे:",
+      "propagation": "हे हे बेड अपडेट करेल आणि इमारतीत जुळणारे रिकामे बेड्स भरेल. सध्याच्या किंमती बदलल्या जाणार नाहीत.",
+      "continue": "तुम्ही सुरू ठेवायचे का?",
+      "confirm": "अपडेट निश्चित करा",
+      "confirming": "अपडेट होत आहे...",
+      "success": "बेड किंमत अपडेट झाली.",
+      "successCount": "{{count}} बेड्ससाठी {{field}} अपडेट केले.",
+      "updateFailed": "किंमत अपडेट करता आली नाही. कोणतेही बदल लागू केले गेले नाहीत."
+    },
+    "pricing": {
+      "notConfigured": "कॉन्फिगर केलेले नाही"
+    },
+    "workspace": {
+      "showingOpsFocus": "दाखवत आहे: {{label}}",
+      "roomsBedsCount": "{{rooms}} रूम • {{beds}} बेड"
+    },
+    "stayPayment": {
+      "noRecord": "पेमेंट रेकॉर्ड नाही",
+      "unavailable": "पेमेंट स्टेटस उपलब्ध नाही",
+      "underReview": "पुनरावलोकनाखाली",
+      "paid": "पेमेंट स्टेटस: पैसे भरले",
+      "paidAmount": "{{amount}} भरले",
+      "remaining": "{{amount}} उर्वरित",
+      "partial": "अंशतः पैसे भरले",
+      "pending": "पेमेंट प्रलंबित",
+      "pendingAmount": "{{amount}} प्रलंबित",
+      "noTenant": "कोणताही लिंक्ड भाडेकरू नाही",
+      "notYetBilled": "अजून बिल झालेले नाही",
+      "balanceDue": "देय शिल्लक",
+      "paidShort": "भरले",
+      "paidBadge": "भरले",
+      "bedNumber": "बेड नंबर",
+      "unitOccupancySection": "युनिट आणि ऑक्युपन्सी",
+      "occupancySection": "बेड आणि ऑक्युपन्सी",
+      "location": "स्थान",
+      "loadFailed": "भाडेकरू किंवा पेमेंट तपशील लोड होऊ शकले नाहीत.",
+      "contact": "संपर्क",
+      "stayStatus": "मुक्कामाचा स्टेटस",
+      "summary": "पेमेंट सारांश",
+      "period": "कालावधी",
+      "status": "पेमेंट स्टेटस",
+      "accruedNotBilled": "जमा झाले (बिल झालेले नाही)",
+      "rentDue": "देय भाडे",
+      "depositDue": "देय डिपॉझिट",
+      "totalDue": "एकूण देय",
+      "amountPaid": "भरलेली रक्कम",
+      "outstanding": "थकीत"
     }
   },
   "occupancyWizard": {
@@ -1806,7 +2272,8 @@
       "reserveDatesHint": "आरक्षण करताना कोणतेही शुल्क आकारले जात नाही.",
       "transferCurrent": "सध्याचे निवास",
       "vacate": "रिकामे करण्याची पुष्टी",
-      "review": "पुनरावलोकन आणि पुष्टी"
+      "review": "पुनरावलोकन आणि पुष्टी",
+      "reviewHint": "वाटपापूर्वी तपशील तपासा"
     },
     "review": {
       "member": "सदस्य",
@@ -1871,7 +2338,27 @@
       "notSet": "सेट नाही",
       "status": "अधिभोग स्थिती",
       "location": "Current location",
-      "notAllocated": "Not allocated to any bed, room, or unit."
+      "notAllocated": "Not allocated to any bed, room, or unit.",
+      "plannedMoveIn": "नियोजित मूव्ह-इन",
+      "noFixedDate": "निश्चित तारीख नाही",
+      "openEndedStayChoiceCompact": "निश्चित नाही",
+      "monthlyStayChoiceHint": "निश्चित मासिक भाडे.",
+      "shortStayChoiceHint": "ठराविक दिवसांसाठी (उदा. काही दिवस किंवा आठवडे) दररोजचे भाडे भरा.",
+      "openEndedStayChoiceHint": "निश्चित मूव्ह-आउट तारीख नाही. निवासी जागा सोडेपर्यंत दररोजचे भाडे भरा.",
+      "monthlyStayHint": "मासिक भाडे मूव्ह-इन तारखेपासून आकारले जाईल.",
+      "monthlyStayHintWithRent": "मासिक भाडे ({{amount}}) मूव्ह-इन तारखेपासून आकारले जाईल.",
+      "shortStayHint": "चेकआउट तारीख सेट करा. दररोजचे भाडे कराराच्या अटींमध्ये टाकले जाते — मासिक भाडे नाही.",
+      "shortStayHintWithNights": "दररोजच्या कॅलेंडर रात्री: {{count}}. दररोजचे भाडे पुढील पायरीवर टाका — मासिक भाडे नाही.",
+      "openEndedStayHint": "निश्चित मूव्ह-आउट तारीख नाही: चेकआउट तारखेची आवश्यकता नाही. निवासी जागा सोडेपर्यंत दररोजचे भाडे बिल केले जाते.",
+      "shortStayBanner": "दररोज | ठराविक दिवसांसाठी दररोजचे भाडे भरा.",
+      "openEndedStayBanner": "निश्चित मूव्ह-आउट तारीख नाही | निश्चित नियोजित चेकआउट तारीख नाही.",
+      "shortStayContractBanner": "दररोज · {{count}} रात्री",
+      "duration": "कालावधी",
+      "agreedTotalHelp": "मुक्कामासाठी एक निश्चित एकूण रक्कम (मान्यताप्राप्त शॉर्ट-स्टे किंमत).",
+      "stayDurationNights_one": "मुक्काम कालावधी: {{count}} रात्र",
+      "stayDurationNights_other": "मुक्काम कालावधी: {{count}} रात्री",
+      "stayDetails": "मुक्कामाचे तपशील",
+      "stayId": "मुक्काम ID"
     },
     "memberStatus": {
       "ALLOCATED": "चेक-इन झाले",
@@ -1907,7 +2394,12 @@
       "extend": "मुक्काम वाढवा",
       "vacate": "रिकामे करा",
       "viewHistory": "View occupancy history",
-      "viewHistoryShort": "View History"
+      "viewHistoryShort": "View History",
+      "openingAllocation": "वाटप उघडत आहे…",
+      "openingReservation": "आरक्षण उघडत आहे…",
+      "reviseOpenEnded": "दैनिक भाडे अपडेट करा",
+      "renewMonthly": "मासिक नूतनीकरण",
+      "renewOpenEnded": "ओपन-एंडेड नूतनीकरण"
     },
     "accommodationActions": {
       "title": "Occupancy actions"
@@ -1941,7 +2433,14 @@
         "bulkAllocate": "Bulk allocate",
         "bulkReserve": "Bulk reserve",
         "viewOccupancy": "पहा अधिभोग"
-      }
+      },
+      "selectFloorHint": "{{building}} मध्ये मजला निवडा",
+      "selectUnitHint": "सुरू ठेवण्यासाठी युनिट निवडा",
+      "selectRoomHint": "{{floor}} मध्ये खोली निवडा",
+      "selectBedHint": "{{room}} मध्ये बेड निवडा",
+      "buildingMeta": "{{floors}} मजले · {{rooms}} खोल्या",
+      "roomFull": "{{available}}/{{total}} बेड्स (पूर्ण)",
+      "bedAvailable": "उपलब्ध"
     },
     "bedMenu": {
       "title": "Bed {{bed}}"
@@ -1965,7 +2464,14 @@
     },
     "cancelReservation": {
       "title": "Cancel reservation",
-      "message": "Release this reserved accommodation and return the bed to available?"
+      "message": "Release this reserved accommodation and return the bed to available?",
+      "reasonRequired": "प्रत्येक गोळा केलेल्या पेमेंट सेटलमेंटसाठी कारण टाका.",
+      "refundAmountRequired": "वैध परतावा रक्कम टाका.",
+      "settlementHint": "न भरलेले दायित्व स्वयंचलितपणे रद्द होतात. गोळा केलेली रक्कम परत करावी किंवा ठेवावी लागेल.",
+      "alreadySettled": "आधीच सेटल झाले आहे.",
+      "willCancelUnpaid": "रद्द होईल (न भरलेले).",
+      "remarks": "रद्द करण्याची टिप्पणी (ऐच्छिक)",
+      "collectedCount": "{{count}} गोळा केलेल्या पेमेंट(ना) सेटलमेंटची गरज आहे."
     },
     "allocate": {
       "title": "वाटप सदस्य"
@@ -2066,7 +2572,20 @@
         "WIFI": "वाय-फाय",
         "MAINTENANCE": "देखभाल",
         "OTHER": "इतर"
-      }
+      },
+      "paymentSummary": {
+        "title": "पेमेंट सारांश",
+        "rent": "भाडे",
+        "rentWithFood": "भाडे (जेवण समाविष्ट)",
+        "deposit": "सुरक्षा ठेव",
+        "totalThisMonth": "या महिन्यात भरायची एकूण रक्कम",
+        "totalOnAllocation": "वाटपावर एकूण रक्कम",
+        "shortStayNote": "वाटपावर जमा केलेली मान्य रक्कम आणि डिपॉझिट दर्शवते. हे मासिक भाड्याची एकूण रक्कम नाही."
+      },
+      "pricingBasis": "प्राइसिंग बेसिस",
+      "dailyRent": "दैनिक भाडे",
+      "dailyRentRequired": "दैनिक भाडे (आवश्यक)",
+      "dailyRentHint": "मालकाने टाकलेले ₹/दिवस. मासिक कॅटलॉग भाड्यावरून घेतलेले नाही."
     },
     "fields": {
       "expectedCheckout": "Expected checkout (optional)",
@@ -2190,13 +2709,75 @@
         "RENT_SNAPSHOT_REQUIRED": "Monthly rent is required when activating.",
         "FOOD_CHARGE_REQUIRED": "Food charge is required when food is enabled.",
         "FOOD_CHARGE_NOT_ALLOWED": "Food charge cannot be set when food is included in rent.",
-        "STAY_OVERLAP": "हा मुक्काम त्याच बेड, खोली किंवा युनिटवरील दुसऱ्या मुक्कामाशी टकरातो."
-      }
+        "STAY_OVERLAP": "हा मुक्काम त्याच बेड, खोली किंवा युनिटवरील दुसऱ्या मुक्कामाशी टकरातो.",
+        "SHORT_STAY_SAME_DAY": "शॉर्ट स्टे चेकआउट चेक-इन तारखेनंतर असणे आवश्यक आहे. तीच तारीख मुक्काम मानली जाणार नाही.",
+        "SHORT_STAY_CROSSES_MONTH": "शॉर्ट स्टे एकापेक्षा जास्त कॅलेंडर महिन्यांतील रात्री कव्हर करू शकत नाही.",
+        "SHORT_STAY_DISABLED": "या स्पेससाठी शॉर्ट स्टे चालू नाही.",
+        "SHORT_STAY_END_REQUIRED": "शॉर्ट स्टेसाठी नियोजित चेकआउट तारीख आवश्यक आहे.",
+        "AGREED_TOTAL_REQUIRED": "शॉर्ट स्टेसाठी मान्य एकूण रक्कम आवश्यक आहे.",
+        "EXTENSION_CROSSES_MONTH": "शॉर्ट-स्टे एक्सटेंशन एकापेक्षा जास्त कॅलेंडर महिन्यांतील रात्री कव्हर करू शकत नाही.",
+        "EXTENSION_AMOUNT_NOT_FOR_MONTHLY": "मासिक आणि ओपन-एंडेड मुक्कामांमध्ये एक्सटेंशन चार्ज लागत नाही. अतिरिक्त रक्कम रिकामी ठेवा.",
+        "EXTENSION_AMOUNT": "मासिक आणि ओपन-एंडेड मुक्कामांमध्ये एक्सटेंशन चार्ज लागत नाही. अतिरिक्त रक्कम रिकामी ठेवा."
+      },
+      "checkoutRequired": "शॉर्ट स्टेसाठी चेकआउट तारीख सेट करणे आवश्यक आहे.",
+      "agreedTotalRequired": "कृपया मान्य एकूण रक्कम टाका."
     },
     "occupancyStatus": {
       "ACTIVE": "भरलेले",
       "RESERVED": "राखीव",
       "VACATED": "रिकामे केले"
+    },
+    "bedQuickActions": {
+      "allocateTitle": "बेड वाटप करा",
+      "allocateHint": "या बेडसाठी सदस्य नियुक्त करा",
+      "reserveTitle": "बेड आरक्षित करा",
+      "reserveHint": "भविष्यातील वापरासाठी आरक्षित करा",
+      "moveInHint": "आरक्षित सदस्यासाठी मूव्ह-इन पूर्ण करा",
+      "cancelHint": "हे आरक्षण रिलीज करा",
+      "transferHint": "निवासीला दुसऱ्या बेडवर हलवा",
+      "vacateHint": "सध्याचे वास्तव्य समाप्त करा",
+      "reviseOpenEndedHint": "निवडलेल्या प्रभावी तारखेपासून दैनिक दर बदला",
+      "extendHint": "नियोजित शेवटची तारीख बदला",
+      "renewHint": "त्याच मुक्कामावर एक महिना वाढवा; नवीन भाडे ऐच्छिक आहे",
+      "checkoutHint": "आता चेकआउट रेकॉर्ड करा. इन्व्हेंटरी रिलीज होईल; स्वयंचलित परतावा नाही (D-17)."
+    },
+    "bookingAdvance": {
+      "label": "बुकिंग अ‍ॅडव्हान्स",
+      "hint": "हे पहिल्या कालावधीच्या भाड्याचा भाग आहे, अतिरिक्त शुल्क नाही. सध्याचे रिझर्वेशन वर्तन ठेवण्यासाठी 0 ठेवा.",
+      "remaining": "उर्वरित भाडे: ₹{{amount}}",
+      "collected": "अ‍ॅडव्हान्स आधीच गोळा केला आहे"
+    },
+    "extend": {
+      "invalid": "एक नियोजित शेवटची तारीख आणि शून्य किंवा त्यापेक्षा जास्त रक्कम टाका.",
+      "renewalHintOpenEnded": "त्याच ऑक्युपन्सीवर ओपन-एंडेड मुक्काम वाढवा. ऐच्छिक नवीन दैनिक भाडे तुम्ही निवडलेल्या महिन्यापासून लागू होईल. भाडे बिलिंग कालावधी संपल्यानंतर बिल केले जाते.",
+      "renewalHint": "त्याच ऑक्युपन्सीवर एक महिना वाढवा. ऐच्छिक नवीन भाडे तुम्ही निवडलेल्या महिन्यापासून लागू होईल (D-15).",
+      "newBillingEnd": "नवीन नियोजित शेवट / बिलिंग तारीख",
+      "newEnd": "नवीन नियोजित शेवट",
+      "amount": "अतिरिक्त रक्कम",
+      "amountHelp": "फक्त तारीख बदलण्यासाठी हे रिकामे ठेवा. शॉर्ट स्टेमध्ये हे एक एक्सटेंशन चार्ज म्हणून वापरले जाते.",
+      "rentDaily": "नवीन दैनिक भाडे",
+      "rent": "नवीन मासिक भाडे",
+      "rentOptionalHelp": "ऐच्छिक. सध्याचे भाडे ठेवण्यासाठी रिकामे ठेवा.",
+      "effectiveMonth": "भाडे सुरू होईल",
+      "renewalNotForShort": "शॉर्ट स्टेमध्ये Extend stay वापरले जाते, मासिक नूतनीकरण नाही."
+    },
+    "reviseRent": {
+      "currentMissing": "या मुक्कामासाठी सध्याचे दैनिक भाडे उपलब्ध नाही. रिफ्रेश करा आणि पुन्हा प्रयत्न करा.",
+      "unchanged": "सध्याच्या दरापेक्षा वेगळे नवीन दैनिक भाडे टाका.",
+      "invalid": "वैध नवीन दैनिक भाडे आणि प्रभावी तारीख टाका.",
+      "subtitle": "या No Fixed Move-Out Date मुक्कामासाठी दैनिक दर रिवाइज करा. मुक्कामाचा प्रकार बदलत नाही.",
+      "currentDaily": "सध्याचे दैनिक भाडे",
+      "newDaily": "नवीन दैनिक भाडे",
+      "effectiveFrom": "प्रभावी तारखेपासून",
+      "reason": "बदलाचे कारण (ऐच्छिक)",
+      "reasonOther": "थोडक्यात स्पष्टीकरण",
+      "previewTitle": "पुष्टी सारांश",
+      "previewCurrent": "सध्याचे दैनिक भाडे: {{amount}}",
+      "previewNew": "नवीन दैनिक भाडे: {{amount}}",
+      "previewEffective": "प्रभावी तारीख: {{date}}",
+      "previewPreviousThrough": "मागील दर इथपर्यंत लागू राहील: {{date}}",
+      "previewNote": "आधीच तयार झालेले किंवा भरलेले बिल बदलत नाही. पुढील दिवसांसाठी आधीच शुल्क घेतले जात नाही.",
+      "onlyOpenEnded": "दैनिक भाडे पुनरावलोकन फक्त No Fixed Move-Out Date मुक्कामांसाठी आहे."
     }
   },
   "dashboard": {
@@ -2307,7 +2888,8 @@
         "occupancy": "{{occupied}} of {{total}} beds occupied",
         "attentionClear": "कोणतेही प्रलंबित कार्य नाही",
         "pendingActions": "{{count}} pending actions",
-        "pendingPayments": "{{count}} payments under review"
+        "pendingPayments": "{{count}} payments under review",
+        "occupancyUnits": "{{total}} पैकी {{occupied}} युनिट्स व्यापलेली"
       },
       "suggestions": {
         "completeSetup": "Complete {{count}} remaining setup steps",
@@ -2544,14 +3126,26 @@
       "balanceSold": "विकलेले शिल्लक",
       "balanceConsumed": "वापरलेले शिल्लक",
       "balanceRemaining": "उरलेले शिल्लक",
-      "mealsCount": "{{count}} meals"
+      "mealsCount": "{{count}} meals",
+      "previousMonth": "मागील महिना",
+      "nextMonth": "पुढील महिना",
+      "monthEmpty": "या महिन्यासाठी कोणतेही शुल्क नोंदवले गेलेले नाही.",
+      "loadFailed": "या महिन्याचा सारांश लोड होऊ शकला नाही.",
+      "retry": "पुन्हा प्रयत्न करा"
     },
     "accommodationOperations": {
       "title": "मालमत्ता परिचालन",
       "occupiedBeds": "भरलेल्या जागा",
       "vacantBeds": "उपलब्ध जागा",
       "moveInsThisMonth": "या महिन्यातील नवीन प्रवेश",
-      "pendingPayments": "प्रलंबित पेमेंट"
+      "pendingPayments": "प्रलंबित पेमेंट",
+      "occupiedBedsShort": "व्यापलेले",
+      "vacantBedsShort": "उपलब्ध",
+      "reservedBeds": "आरक्षित",
+      "occupiedUnits": "व्यापलेली युनिट्स",
+      "availableUnits": "उपलब्ध युनिट्स",
+      "availableUnitsShort": "उपलब्ध",
+      "reservedUnits": "आरक्षित"
     },
     "messOperations": {
       "title": "मेस परिचालन",
@@ -2589,7 +3183,10 @@
       "roomAvailableCount": "{{available}} of {{count}} available",
       "foodIncluded": "जेवण समाविष्ट",
       "moveOutLine": "Move-out {{date}}",
-      "occupancyCount": "{{count}} residents"
+      "occupancyCount": "{{count}} residents",
+      "showingOccupiedBeds": "{{count}} व्यापलेले बेड्स दाखवले जात आहेत",
+      "showingMoveIns": "या महिन्यातील {{count}} मूव्ह-इन दाखवले जात आहेत",
+      "movedIn": "मूव्ह-इन झाले"
     },
     "operations": {
       "title": "जेवण परिचालन",
@@ -2666,7 +3263,13 @@
       "setupShareTodaysMenu": "आजचा मेनू शेअर करा",
       "setupShareTodaysMenuSubtitle": "Send today's menu so customers can confirm",
       "setupConfigurePayments": "Configure payments",
-      "setupConfigurePaymentsSubtitle": "Set how customers pay for meals"
+      "setupConfigurePaymentsSubtitle": "Set how customers pay for meals",
+      "allocateHint": "बेडसाठी नवीन निवासी वाटप करा",
+      "reserveHint": "भविष्यातील वापरासाठी बेड ब्लॉक करा",
+      "transferHint": "निवासीला दुसऱ्या खोली/बेडवर हलवा",
+      "vacateHint": "बेडवरून निवासी काढा",
+      "pendingActionsLoading": "लक्ष देण्याची गरज असलेल्या कृती तपासत आहे",
+      "pendingActionsError": "प्रलंबित कृती लोड होऊ शकल्या नाहीत. त्या उघडण्यासाठी टॅप करा."
     },
     "pendingActions": {
       "screenSubtitle": "Review and complete these items to keep operations running smoothly.",
@@ -2687,7 +3290,8 @@
         "MOVE_OUT_SCHEDULED_TODAY": "आजचे प्रयाण",
         "RESERVATION_STARTING_TODAY": "आजपासून सुरू होणारी आरक्षणे",
         "COMPLAINT_PENDING": "Complaints Pending",
-        "COMPLAINT_OVERDUE": "Complaints Overdue"
+        "COMPLAINT_OVERDUE": "Complaints Overdue",
+        "SPACE_INVITATION": "स्पेस आमंत्रण"
       },
       "emptyTitle": "सर्व ठीक आहे",
       "eyebrow": "डॅशबोर्ड",
@@ -2703,8 +3307,40 @@
     },
     "accommodationOps": {
       "subtitle": "अधिभोग एका दृष्टिक्षेपात",
-      "title": "मालमत्ता परिचालन"
-    }
+      "title": "मालमत्ता परिचालन",
+      "subtitleBeds": "सर्व इमारतींमधील सध्याची बेड स्थिती",
+      "subtitleUnits": "सर्व इमारतींमधील सध्याची युनिट स्थिती"
+    },
+    "pendingPayments": {
+      "subtitle": "भाडे, डिपॉझिट आणि इतर थकबाकी"
+    },
+    "propertyOverview": {
+      "active": "सक्रिय",
+      "inactive": "निष्क्रिय",
+      "floors": "{{count}} मजले",
+      "rooms": "{{count}} खोल्या",
+      "beds": "{{count}} बेड्स",
+      "units": "{{count}} युनिट्स",
+      "availableOfTotal": "{{available}} / {{total}} उपलब्ध"
+    },
+    "recentActivity": {
+      "title": "अलीकडील हालचाल",
+      "viewAll": "सर्व पहा",
+      "empty": "अजून कोणतीही अलीकडील वास्तव्य हालचाल नाही.",
+      "moveIns": "या महिन्यात {{count}} मूव्ह-इन",
+      "reservations": "{{count}} नवीन आरक्षण",
+      "moveOuts": "या महिन्यात {{count}} मूव्ह-आउट",
+      "moveOutsUnavailable": "या महिन्यात मूव्ह-आउट",
+      "lastMoveIn": "शेवटचे मूव्ह-इन: {{date}}",
+      "lastMoveOut": "शेवटचे मूव्ह-आउट: {{date}}",
+      "arriving": "आगमन: {{date}}",
+      "activeReservations": "सक्रिय आरक्षणे",
+      "noReservations": "कोणतेही सक्रिय आरक्षण नाही",
+      "thisMonth": "या कॅलेंडर महिन्यात",
+      "moveOutsApiGap": "API वरून गणना उपलब्ध नाही"
+    },
+    "illustrative": "उदाहरण",
+    "illustrativePreview": "उदाहरण पूर्वावलोकन"
   },
   "paymentCollection": {
     "payNow": "आत्ता पैसे द्या",
@@ -2737,7 +3373,15 @@
         "customType": "शुल्क प्रकार लिहा.",
         "amount": "वैध रक्कम टाका.",
         "failed": "हे पेमेंट रेकॉर्ड जोडता आले नाही."
-      }
+      },
+      "categoryDerived": "श्रेणी",
+      "searchChargeType": "शुल्क प्रकार शोधा...",
+      "recent": "अलीकडील",
+      "allChargeTypes": "सर्व शुल्क प्रकार",
+      "autoSelected": "शुल्क प्रकारावरून ऑटो-निवड",
+      "noChargeTypes": "कोणतेही शुल्क प्रकार सापडले नाहीत",
+      "tryAnotherSearch": "दुसरा शोध शब्द वापरून पहा.",
+      "clearChargeType": "शुल्क प्रकार साफ करा"
     },
     "chargeCatalog": {
       "categories": {
@@ -2850,7 +3494,11 @@
       "UNDER_REVIEW": "आढाव्याखाली",
       "PAID": "भरले",
       "REJECTED": "नाकारले",
-      "UPDATE_REQUESTED": "बदल मागितला"
+      "UPDATE_REQUESTED": "बदल मागितला",
+      "CANCELLED": "रद्द",
+      "REFUNDED": "परत केले",
+      "PARTIALLY_REFUNDED": "अंशतः परत केले",
+      "OVERDUE": "थकीत"
     },
     "type": {
       "MEAL": "जेवण",
@@ -2900,7 +3548,8 @@
         "paid": "भरलेले",
         "outstanding": "थकबाकी",
         "underReview": "आढाव्याखाली"
-      }
+      },
+      "emptyOutstanding": "या महिन्यासाठी कोणतेही थकीत पेमेंट नाही."
     },
     "tenantFilters": {
       "all": "सर्व ({{count}})",
@@ -2908,7 +3557,9 @@
       "underReview": "Under Review ({{count}})",
       "paid": "Paid ({{count}})",
       "rejected": "Rejected ({{count}})",
-      "pending": "Pending ({{count}})"
+      "pending": "Pending ({{count}})",
+      "refunded": "परत केले ({{count}})",
+      "cancelled": "रद्द ({{count}})"
     },
     "tenantSections": {
       "actionNeeded": "Action needed ({{count}})",
@@ -2935,14 +3586,25 @@
         "submitted": "जमा केले",
         "method": "Payment method",
         "paymentReference": "Payment reference",
-        "reference": "संदर्भ / UTR"
+        "reference": "संदर्भ / UTR",
+        "billingPeriodDates": "बिलिंग कालावधी",
+        "baseAmount": "मूळ रक्कम",
+        "taxAmount": "कर",
+        "overdue": "थकीत",
+        "overdueDays": "{{days}} दिवस थकीत",
+        "refunded": "परत केले",
+        "netCollected": "नेट जमा",
+        "retained": "राखून ठेवलेले",
+        "prorated": "प्रोरेटेड",
+        "proratedDays": "{{total}} पैकी {{days}} दिवस"
       },
       "mealDaysCount_one": "{{count}} day",
       "mealDaysCount_other": "{{count}} days",
       "openFromReview": "Open payment details",
       "loadingMemberPayment": "Opening payment…",
       "noPaymentsForMember": "No payments found for this member this month.",
-      "eyebrow": "पेमेंट"
+      "eyebrow": "पेमेंट",
+      "additionalDetails": "अतिरिक्त तपशील"
     },
     "proof": {
       "title": "Submit payment proof",
@@ -2997,7 +3659,9 @@
         "submittedLabel": "जमा केले",
         "needsUpdateLabel": "अपडेट आवश्यक",
         "paidLabel": "भरले",
-        "rejectedLabel": "नाकारले"
+        "rejectedLabel": "नाकारले",
+        "refundedLabel": "परत केले",
+        "cancelledLabel": "रद्द"
       },
       "tabSubmitted": "Submitted ({{count}})",
       "tabChangesRequested": "Changes Requested ({{count}})",
@@ -3015,7 +3679,9 @@
         "history": {
           "ALL": "No completed payment reviews yet.",
           "PAID": "No paid payments this month.",
-          "REJECTED": "No rejected payments this month."
+          "REJECTED": "No rejected payments this month.",
+          "REFUNDED": "या महिन्यात कोणतेही परत केलेले पेमेंट नाही.",
+          "CANCELLED": "या महिन्यात कोणतेही रद्द केलेले पेमेंट नाही."
         },
         "SUBMITTED": "No payments awaiting review.",
         "CHANGES_REQUESTED": "No payments awaiting tenant updates.",
@@ -3073,7 +3739,15 @@
       "UPDATE_REQUESTED": "बदल मागितला",
       "emptyHint": "Events will appear as this payment moves through review.",
       "eyebrow": "पेमेंट",
-      "subtitle": "Status changes and review events for this payment."
+      "subtitle": "Status changes and review events for this payment.",
+      "RETAINED": "राखून ठेवलेले",
+      "CANCELLED": "रद्द",
+      "REMINDER_SENT": "रिमाइंडर पाठवले",
+      "REMINDER_FAILED": "रिमाइंडर अयशस्वी झाले",
+      "whatsappDisabled": "WhatsApp रिमाइंडर सेट अप केलेले नाहीत, त्यामुळे हे रिमाइंडर पाठवले गेले नाही.",
+      "noDevice": "कोणतेही रजिस्टर्ड डिव्हाइस उपलब्ध नव्हते, त्यामुळे रिमाइंडर सूचना वितरित झाली नाही.",
+      "fcmUnavailable": "पुश सूचना उपलब्ध नव्हत्या, त्यामुळे हे रिमाइंडर वितरित झाले नाही.",
+      "fcmRejected": "रिमाइंडर सूचना पुश सेवेद्वारे स्वीकारली गेली नाही."
     },
     "errors": {
       "loadPayments": "Failed to load payments.",
@@ -3081,9 +3755,92 @@
       "loadReview": "Failed to load payments for review.",
       "loadTimeline": "Failed to load payment timeline.",
       "submitProof": "Failed to submit payment proof.",
-      "review": "Failed to review payment."
+      "review": "Failed to review payment.",
+      "loadPaymentRetry": "पेमेंट लोड होऊ शकले नाही. तुमचे कनेक्शन तपासा आणि पुन्हा प्रयत्न करा."
     },
-    "needsUpdateAction": "अपडेट आवश्यक"
+    "needsUpdateAction": "अपडेट आवश्यक",
+    "overdue": {
+      "badge": "थकीत",
+      "days": "{{days}} दिवस थकीत",
+      "compact_one": "{{count}} दिवस थकीत",
+      "compact_other": "{{count}} दिवस थकीत",
+      "outstanding": "{{amount}} थकीत"
+    },
+    "allocationDetails": "वाटप तपशील",
+    "reminder": {
+      "send": "रिमाइंडर पाठवा",
+      "sent": "रिमाइंडर नोंदवले",
+      "failed": "रिमाइंडर पाठवता आले नाही",
+      "noneActionable": "या सदस्यासाठी रिमाइंडर-योग्य कोणतेही पेमेंट नाही",
+      "alreadySentToday": "आजसाठी रिमाइंडर आधीच प्रक्रिया केले आहे",
+      "providerUnavailable": "WhatsApp डिलिव्हरी अजून कॉन्फिगर केलेली नाही",
+      "invalidRecipient": "सदस्याचा मोबाइल नंबर गायब आहे किंवा WhatsApp साठी अवैध आहे",
+      "sending": "रिमाइंडर पाठवत आहे…",
+      "openedWhatsApp": "इन-अ‍ॅप रिमाइंडर सेव्ह केले. WhatsApp उघडे आहे जिथे तुम्ही मेसेज पाहून पाठवू शकता.",
+      "whatsAppReady": "WhatsApp उघडे आहे. मेसेज पाहा आणि स्वतः पाठवा. पेमेंट प्राप्त म्हणून चिन्हांकित केले गेलेले नाही.",
+      "inAppSaved": "इन-अ‍ॅप रिमाइंडर सेव्ह केले. यामुळे पेमेंट प्राप्त म्हणून चिन्हांकित होत नाही.",
+      "memberNotOnAcomi": "हा सदस्य अजून ACOMI वर नाही, त्यामुळे कोणताही इन-अ‍ॅप रिमाइंडर तयार झाला नाही.",
+      "notificationFailed": "इन-अ‍ॅप रिमाइंडर सेव्ह होऊ शकले नाही. तुम्ही पुन्हा प्रयत्न करू शकता.",
+      "copied": "WhatsApp उघडले नाही. रिमाइंडर मेसेज शेअर करण्यासाठी तयार आहे.",
+      "whatsAppFailed": "WhatsApp उघडता आले नाही. इन-अ‍ॅप रिमाइंडर काढले गेले नाही.",
+      "whatsAppUnavailable": "हा नंबर WhatsApp मध्ये उघडता येत नाही. तुम्ही अजूनही इन-अ‍ॅप रिमाइंडर सेव्ह करू शकता.",
+      "composeTitle": "रिमाइंडर पाठवा"
+    },
+    "billingPeriodRange": "{{start}} → {{end}}",
+    "create": {
+      "title": "पेमेंट तयार करा",
+      "eyebrow": "मॅन्युअल शुल्क",
+      "heading": "पेमेंट तयार करा",
+      "subheading": "सदस्यासाठी अतिरिक्त देय रक्कम जोडा. हे भाड्याप्रमाणेच पेमेंट प्रक्रियेचे अनुसरण करते.",
+      "member": "सदस्य",
+      "selectMember": "सदस्य निवडा",
+      "type": "पेमेंट प्रकार",
+      "amount": "रक्कम",
+      "dueDate": "देय तारीख",
+      "note": "टीप (ऐच्छिक)",
+      "submit": "पेमेंट तयार करा",
+      "success": "पेमेंट तयार झाले",
+      "kinds": {
+        "DEPOSIT": "सुरक्षा ठेव",
+        "MAINTENANCE": "मेंटेनन्स",
+        "ELECTRICITY": "वीज",
+        "WATER": "पाणी",
+        "UTILITY": "युटिलिटी",
+        "EXTRA": "अतिरिक्त / दुरुस्ती",
+        "OTHER": "इतर"
+      },
+      "errors": {
+        "memberRequired": "एक सदस्य निवडा",
+        "amountRequired": "शून्यापेक्षा जास्त वैध रक्कम टाका",
+        "dueDateRequired": "देय तारीख निवडा",
+        "createFailed": "हे पेमेंट तयार करता आले नाही"
+      },
+      "duplicateDeposit": {
+        "title": "सुरक्षा ठेव आधीच अस्तित्वात आहे",
+        "body": "या सदस्याकडे आधीच एक सुरक्षा ठेव{{detail}} आहे. दुसरा शुल्क हवा असेल तरच दुसरी डिपॉझिट तयार करा.",
+        "detail": " ({{amount}}, {{month}}, {{status}})",
+        "confirm": "तरीही तयार करा"
+      }
+    },
+    "received": {
+      "action": "प्राप्त झाले",
+      "title": "पेमेंट प्राप्त म्हणून चिन्हांकित करायचे?",
+      "body": "हे पेमेंट भाडेकरूच्या पुराव्याशिवाय किंवा मान्यता पायरीशिवाय भरलेले म्हणून चिन्हांकित करते. तुम्हाला थेट कॅश, UPI किंवा बँक ट्रान्सफर मिळाले असेल तेव्हाच हे वापरा.",
+      "skipProof": "हे भाडेकरूच्या पेमेंट पुराव्याची आवश्यकता नसताना पेमेंट PAID म्हणून चिन्हांकित करेल.",
+      "confirm": "प्राप्त म्हणून चिन्हांकित करा",
+      "success": "पेमेंट प्राप्त म्हणून चिन्हांकित केले",
+      "failed": "हे पेमेंट प्राप्त म्हणून चिन्हांकित करता आले नाही",
+      "noneActionable": "{{name}} साठी प्राप्त म्हणून चिन्हांकित करण्यासाठी कोणतेही प्रलंबित पेमेंट नाही"
+    },
+    "notYetBilled": {
+      "title": "अजून बिल झालेले नाही",
+      "description": "या ओपन-एंडेड स्टेचे भाडे बिलिंग कालावधी संपल्यानंतर किंवा मूव्ह-आउटच्या वेळी बिल केले जाते."
+    },
+    "fields": {
+      "dueDate": "देय तारीख",
+      "outstanding": "थकीत"
+    },
+    "billedDays": "{{start}} – {{end}} · {{days}} बिल करण्यायोग्य दिवस"
   },
   "payments": {
     "title": "पेमेंट्स",
@@ -3129,7 +3886,9 @@
       "paid": "भरले",
       "pending": "प्रलंबित",
       "partial": "अंशतः",
-      "underReview": "आढाव्याखाली"
+      "underReview": "आढाव्याखाली",
+      "refunded": "परत केले",
+      "cancelled": "रद्द"
     },
     "filters": {
       "all": "सर्व ({{count}})",
@@ -3145,7 +3904,10 @@
       "needsUpdate": "अपडेट आवश्यक",
       "rejected": "नाकारले",
       "none": "कोणतेही शुल्क नाही",
-      "PENDING": "प्रलंबित"
+      "PENDING": "प्रलंबित",
+      "partiallyRefunded": "अंशतः परत केले",
+      "refunded": "परत केले",
+      "cancelled": "रद्द"
     },
     "row": {
       "expected": "Expected {{expected}}",
@@ -3154,7 +3916,54 @@
       "purchasedThisMonth": "Sold this month",
       "collectedThisMonth": "गोळा या महिन्यात"
     },
-    "mealPaymentTitle": "जेवण पेमेंट"
+    "mealPaymentTitle": "जेवण पेमेंट",
+    "summaryHints": {
+      "expected": "एकूण अपेक्षित थकबाकी",
+      "collected": "मंजूर पेमेंट्स",
+      "underReview": "पडताळणीची प्रतीक्षा",
+      "pending": "अजून जमा करणे बाकी आहे"
+    },
+    "attention": {
+      "title_one": "{{count}} पेमेंटला तुमच्या पुनरावलोकनाची गरज आहे",
+      "title_other": "{{count}} पेमेंट्सला तुमच्या पुनरावलोकनाची गरज आहे",
+      "subtitle": "सबमिट केलेल्या पेमेंट पुराव्यांचे पुनरावलोकन करा",
+      "a11y": "{{count}} पेमेंट्सचे पुनरावलोकन आवश्यक आहे. पुनरावलोकन यादी उघडा."
+    },
+    "membersCount_one": "{{count}} सदस्य",
+    "membersCount_other": "{{count}} सदस्य",
+    "emptyMismatch": {
+      "title": "पेमेंट यादी अपूर्ण आहे",
+      "description": "या महिन्यात अजूनही थकबाकी आहे, पण कोणतेही जुळणारे पेमेंट रेकॉर्ड परत आले नाहीत. ते लोड करण्यासाठी पेमेंट्स रिफ्रेश करा."
+    },
+    "settle": {
+      "cancelUnpaid": "पेमेंट रद्द करा",
+      "open": "रिफंड / राखून ठेवा",
+      "title": "जमा केलेले पेमेंट सेटल करा",
+      "action": "कृती",
+      "fullRefund": "पूर्ण परतावा",
+      "partialRefund": "अंशतः परतावा",
+      "retain": "रक्कम राखून ठेवा",
+      "refundAmount": "परतावा रक्कम",
+      "retainedAmount": "राखून ठेवलेली रक्कम",
+      "reason": "कारण",
+      "reasonRequired": "कारण आवश्यक आहे",
+      "confirm": "सेटलमेंट नोंदवा",
+      "confirmCancel": "रद्द करण्याची पुष्टी करा",
+      "cancelReason": "रद्द करण्याचे कारण",
+      "cancelRemarks": "टिप्पणी (ऐच्छिक)",
+      "cancelled": "पेमेंट रद्द झाले",
+      "done": "पेमेंट सेटल झाले",
+      "collected": "जमा केले: ₹{{amount}}",
+      "alreadyRefunded": "आधीच परत केलेले: ₹{{amount}}",
+      "remainingRefundable": "शिल्लक परतावायोग्य: ₹{{amount}}",
+      "refundNow": "आता परतावा द्या: ₹{{amount}}",
+      "retainedNow": "आता राखून ठेवलेले: ₹{{amount}}",
+      "retainedHint": "राखून ठेवलेली रक्कम म्हणजे तुम्ही ठेवलेले पैसे (परत न केलेले). अंशतः परताव्यासाठी ती स्वयंचलितपणे मोजली जाते.",
+      "invalidRefundAmount": "परतावा रक्कम 0 पेक्षा जास्त आणि शिल्लक परतावायोग्य रकमेच्या आत असणे आवश्यक आहे",
+      "invalidRetainAmount": "राखून ठेवलेली रक्कम 0 पेक्षा जास्त आणि शिल्लक रकमेच्या आत असणे आवश्यक आहे",
+      "cancelConfirm": "हे न भरलेले दायित्व रद्द करायचे? इतिहास ठेवला जाईल.",
+      "recordNotice": "पैसे परत केले किंवा ठेवले याची पुष्टी केल्यानंतर हे ACOMI मध्ये पूर्ण झालेला परतावा किंवा रिटेन्शन नोंदवते. हे बँक/UPI पेआउट पाठवत नाही."
+    }
   },
   "members": {
     "mealBilling": {
@@ -3275,7 +4084,20 @@
         "action": "आजचा मेनू शेअर करा",
         "subtitle": "नाश्ता, दुपार आणि रात्रीचे जेवण एकत्र शेअर करा",
         "reshare": "आजचा मेनू पुन्हा शेअर करा",
-        "emptyHint": "शेअर करण्यापूर्वी किमान एक जेवण नियोजित करा."
+        "emptyHint": "शेअर करण्यापूर्वी किमान एक जेवण नियोजित करा.",
+        "notSharedHint": "आजचा मेन्यू अजून शेअर केलेला नाही",
+        "sharedHint": "आजचा मेन्यू शेअर केला आहे",
+        "updatedHint": "सदस्यांना नवीनतम मेन्यू दिसण्यासाठी पुन्हा शेअर करा",
+        "failed": "शेअर करणे अयशस्वी झाले",
+        "failedHint": "मेन्यू शेअर झाला नाही. पुन्हा प्रयत्न करा.",
+        "closePoll": "पोल बंद करा",
+        "closePollTitle": "आजचा जेवण पोल बंद करायचा?",
+        "closePollMessage": "सदस्य आता या पोलसाठी त्यांची जेवण निवड सबमिट किंवा बदलू शकणार नाहीत.",
+        "closePollConfirm": "पोल बंद करा",
+        "pollClosed": "पोल बंद झाला",
+        "pollClosedHint": "सदस्य आता त्यांची निवड सबमिट किंवा बदलू शकत नाहीत",
+        "closePollSuccess": "जेवण पोल यशस्वीपणे बंद झाला.",
+        "closePollFailed": "जेवण पोल बंद होऊ शकला नाही. पुन्हा प्रयत्न करा."
       },
       "selector": {
         "notPlanned": "प्लान नाही",
@@ -3396,7 +4218,9 @@
         "continueToExtras": "Continue to Extras ↓",
         "continueToExtrasHint": "या पानावर अतिरिक्त विभागात जा",
         "emptyExtrasTitle": "कोणतेही अतिरिक्त उपलब्ध नाही.",
-        "emptyExtrasBody": "Create extras later if needed. Continue to save your menu."
+        "emptyExtrasBody": "Create extras later if needed. Continue to save your menu.",
+        "selectedMealsNextExtras_one": "✓ {{count}} जेवण निवडले · पुढे: एक्स्ट्रा पहा",
+        "selectedMealsNextExtras_other": "✓ {{count}} जेवणं निवडली · पुढे: एक्स्ट्रा पहा"
       },
       "manageExtrasCta": "Manage available extras >",
       "manageExtrasConfigureFirst": "Configure extras in Menu Library >",
@@ -3506,7 +4330,19 @@
       "addComboToMeal": "Add to meal",
       "comboSavedToLibrary": "\"{{name}}\" saved to library and added to meal",
       "saveToLibraryLabel": "Save to Combo Library",
-      "saveToLibraryHint": "Make this combo reusable for future meals"
+      "saveToLibraryHint": "Make this combo reusable for future meals",
+      "shareToOtherCount_one": "{{count}} इतर स्पेस निवडली",
+      "shareToOtherCount_other": "{{count}} इतर स्पेसेस निवडल्या",
+      "shareToOtherNone": "कोणतीही अतिरिक्त स्पेस निवडलेली नाही",
+      "shareToSelectAll": "सर्व स्पेस निवडा ({{count}})",
+      "shareToSearch": "स्पेस शोधा",
+      "shareCrossOwner": "{{space}} वेगळ्या मालकाची आहे. मेन्यू फक्त एकाच मालकाच्या स्पेसेस दरम्यान शेअर करता येतो.",
+      "shareComboHidden": "{{space}} मध्ये लपलेले आहे: {{items}}. त्या स्पेसच्या मेन्यू लायब्ररीमध्ये कॉम्बो चालू करा, नंतर पुन्हा प्रयत्न करा.",
+      "shareExtrasOmitted": "जेवण एक्स्ट्रा {{count}} नॉन-मेस स्पेसमध्ये कॉपी झाले नाहीत. मेस स्पेसेसला ते अजूनही मिळतात.",
+      "savingMenu": "मेन्यू सेव्ह होत आहे…",
+      "sharingToSpaces": "इतर स्पेसेसमध्ये शेअर होत आहे…",
+      "checkingSpacesProgress": "{{total}} पैकी {{completed}} तपासत आहे",
+      "sharingToSpacesProgress": "{{total}} पैकी {{completed}} शेअर होत आहे"
     },
     "poll": {
       "responseTitle": "Choose your meals",
@@ -3532,6 +4368,8 @@
       "stickyPlatesAndTotal": "{{plates}} plates · {{total}}",
       "yourCurrentSelection": "तुमची सध्याची निवड",
       "pastDateReadOnly": "ही तारीख निघून गेली आहे. तुमचे पर्याय आता बदलले जाऊ शकत नाहीत.",
+      "pollClosedReadOnly": "हा पोल बंद आहे. तुमचे पर्याय आता बदलले जाऊ शकत नाहीत.",
+      "pollOpenStatus": "पोल उघडे",
       "totalPlates": "Total plates: {{count}}",
       "selectAtLeastOnePlate": "Select at least one plate across your combos",
       "submit": "Save choices",
@@ -3625,7 +4463,16 @@
       "lastUsedDelivery": "मागील वेळी वापरले",
       "changeDelivery": "बदला",
       "doneChoosingDelivery": "झाले",
-      "totalPlatesAll": "Total plates: {{count}}"
+      "totalPlatesAll": "Total plates: {{count}}",
+      "cannotChooseTitle": "जेवण उपलब्ध नाहीत",
+      "pollClosesIn": "पोल इतक्यात बंद होईल",
+      "remainingHoursMinutes": "{{hours}}ता {{minutes}}मि",
+      "remainingMinutes": "{{count}}मि",
+      "remainingDays": "{{count}}दि",
+      "closesInHoursMinutes": "{{hours}}ता {{minutes}}मि मध्ये बंद होईल",
+      "closesInMinutes": "{{count}}मि मध्ये बंद होईल",
+      "closesInDays": "{{count}}दि मध्ये बंद होईल",
+      "closingSoon": "लवकरच बंद होईल"
     },
     "balance": {
       "title": "Meal balance",
@@ -3927,7 +4774,13 @@
       "label": "जेवण समाविष्ट",
       "notIncluded": "जेवण समाविष्ट नाही",
       "noActiveStay": "No active stay. Food is set when the tenant moves in.",
-      "activeStayHint": "Also set during move-in. Turning off stops menu sharing."
+      "activeStayHint": "Also set during move-in. Turning off stops menu sharing.",
+      "confirmEnableTitle": "जेवण समाविष्ट करायचे?",
+      "confirmEnableMessage": "तुम्हाला खात्री आहे की या भाडेकरूसाठी जेवण समाविष्ट करायचे आहे? हे भाडेकरूच्या जेवण समावेशन सेटिंगला अपडेट करेल.",
+      "confirmEnableAction": "पुष्टी करा आणि सक्षम करा",
+      "confirmDisableTitle": "जेवण समावेशन बंद करायचे?",
+      "confirmDisableMessage": "तुम्हाला खात्री आहे की या भाडेकरूसाठी जेवण वगळायचे आहे? हे भाडेकरूच्या जेवण समावेशन सेटिंगला अपडेट करेल.",
+      "confirmDisableAction": "पुष्टी करा आणि बंद करा"
     },
     "accessStatus": {
       "label": "स्थिती",
@@ -4197,7 +5050,23 @@
       "seedHint": "स्पेस तयार करताना डीफॉल्ट कॅटलॉग",
       "seedHintBody": "New Mess spaces get Breads, Rice, Dal, Breakfast items pre-loaded so you can build combos immediately — no typing Chapati every day.",
       "dailyMenuLater": "Daily menu planning — Phase 5.2",
-      "dailyMenuLaterHint": "After your library is ready: plan each meal, then Share menu."
+      "dailyMenuLaterHint": "After your library is ready: plan each meal, then Share menu.",
+      "categoryFilterAllCount": "सर्व ({{count}})",
+      "chipWithCount": "{{name}} ({{count}})",
+      "manageCategories": "श्रेणी व्यवस्थापित करा",
+      "addCategoryAction": "श्रेणी जोडा",
+      "allMenuItems": "सर्व मेन्यू आयटम ({{count}})",
+      "allCombos": "सर्व कॉम्बो ({{count}})",
+      "addItemAction": "आयटम जोडा",
+      "addComboAction": "कॉम्बो जोडा",
+      "itemActions": "{{name}} साठी कृती",
+      "comboActions": "{{name}} साठी कृती",
+      "extrasHeading": "एक्स्ट्रा ({{count}})",
+      "categoryUpdateSuccess": "श्रेणी अपडेट झाली.",
+      "searchCombos": "कॉम्बो शोधा…",
+      "hideComboInSpace": "या स्पेसमध्ये लपवा",
+      "showComboInSpace": "या स्पेसमध्ये दाखवा",
+      "comboHiddenInSpace": "या स्पेसमध्ये लपलेले आहे"
     },
     "foodType": {
       "label": "जेवण प्रकार",
@@ -4315,7 +5184,10 @@
       "searchInCategory": "Search in {{category}}",
       "moreItemsInLibrary": "Browse Menu Library for more items",
       "notes": "स्वयंपाकघर नोट्स",
-      "notesPlaceholder": "Optional note for staff"
+      "notesPlaceholder": "Optional note for staff",
+      "discardChanges": "रद्द करा",
+      "unavailable": "हा मेन्यू आता उपलब्ध नाही.",
+      "respond": "प्रतिसाद द्या"
     },
     "actions": {
       "pause": "थांबवा",
@@ -4353,6 +5225,30 @@
       "foodRequiresMoveIn": "Move the tenant into a bed before enabling food.",
       "optionsRequired": "Add at least one menu option.",
       "pastDateReadOnly": "भूतकालीन तारखा फक्त पाहण्यासाठी आहेत."
+    },
+    "responses": {
+      "screenTitle": "प्रतिसाद",
+      "title": "{{meal}} प्रतिसाद",
+      "subtitle": "{{meal}} · {{date}}",
+      "filterEligible": "पात्र",
+      "filterResponded": "प्रतिसाद दिला",
+      "filterNotResponded": "प्रतिसाद दिलेला नाही",
+      "respondedChoice": "प्रतिसाद दिला",
+      "notRespondedChoice": "प्रतिसाद दिलेला नाही",
+      "emptyRespondedTitle": "अजून कोणताही प्रतिसाद नाही",
+      "emptyRespondedBody": "या जेवणाला प्रतिसाद देणारे सदस्य इथे दिसतील.",
+      "emptyNotRespondedTitle": "सर्वांनी प्रतिसाद दिला आहे",
+      "emptyNotRespondedBody": "प्रतिसादाची वाट पाहत असलेले कोणतेही पात्र सदस्य नाहीत.",
+      "emptyEligibleTitle": "कोणतेही पात्र सदस्य नाहीत",
+      "emptyEligibleBody": "या जेवणासाठी कोणताही सदस्य पात्र नाही.",
+      "loadErrorTitle": "प्रतिसाद लोड होऊ शकले नाहीत",
+      "loadErrorBody": "रिफ्रेश करण्यासाठी खाली खेचा, किंवा पुन्हा प्रयत्न करा.",
+      "editMenu": "मेन्यू संपादित करा",
+      "searchPlaceholder": "नाव किंवा मोबाईलने शोधा",
+      "filterByMenu": "मेनूनुसार फिल्टर करा",
+      "filterAllMenus": "सर्व मेनू",
+      "searchEmptyTitle": "जुळणारे सदस्य नाहीत",
+      "searchEmptyBody": "दुसरे नाव किंवा मोबाईल नंबर वापरून पहा."
     }
   },
   "permissions": {
@@ -4535,7 +5431,8 @@
       "spacesJoined": "{{count}} spaces",
       "switchSpace": "स्पेस बदला",
       "switchSpaceSubtitle": "माझे स्पेस उघडा",
-      "versionLabel": "ॲप आवृत्ती"
+      "versionLabel": "ॲप आवृत्ती",
+      "myEnquiries": "माझ्या चौकशी"
     },
     "language": {
       "title": "भाषा",
@@ -4791,6 +5688,41 @@
           "cta": "डॅशबोर्डवर जा"
         }
       }
+    },
+    "capabilities": {
+      "genericLocked": "ही सुविधा अनलॉक करण्यासाठी मागील सेटअप पायरी पूर्ण करा.",
+      "members": {
+        "lockedProperty": "प्रथम तुमचे निवासस्थान जोडा जेणेकरून तुम्ही निवासींना आमंत्रित करू शकता आणि बेड वाटप करू शकता.",
+        "ctaProperty": "निवासस्थान सेट करा"
+      },
+      "mealConfig": {
+        "lockedProperty": "तुमची मेन्यू लायब्ररी कॉन्फिगर करण्यापूर्वी निवासस्थान सेटअप पूर्ण करा.",
+        "ctaProperty": "निवासस्थान सेट करा"
+      },
+      "mealOps": {
+        "lockedLibrary": "निवासींच्या जेवणाचे नियोजन करण्यापूर्वी तुमच्या मेन्यू लायब्ररीत आयटम किंवा कॉम्बो जोडा.",
+        "lockedLibraryMess": "आजच्या जेवणाचे नियोजन करण्यापूर्वी तुमच्या मेन्यू लायब्ररीत आयटम किंवा कॉम्बो जोडा.",
+        "ctaLibrary": "मेन्यू लायब्ररी उघडा",
+        "lockedAllocation": "जेवण कामकाज चालवण्यापूर्वी किमान एक निवासी मूव्ह-इन करा.",
+        "ctaAllocation": "सदस्यांकडे जा"
+      },
+      "allocation": {
+        "lockedProperty": "निवासींना वाटप करण्यापूर्वी निवासस्थान जोडा.",
+        "ctaProperty": "निवासस्थान सेट करा",
+        "lockedMembers": "वाटप किंवा मूव्ह-इन करण्यापूर्वी एक निवासी जोडा.",
+        "ctaMembers": "सदस्य जोडा"
+      },
+      "payments": {
+        "soft": "जेव्हा निवासी किंवा जेवण शुल्क बिल करण्यायोग्य होईल, तेव्हा पेमेंट्स इथे हालचाल दाखवतील."
+      },
+      "complaints": {
+        "soft": "या स्पेसमध्ये लोक जोडल्यानंतर तक्रारी उपयुक्त होतात.",
+        "ctaMembers": "सदस्य जोडा"
+      },
+      "delivery": {
+        "soft": "ऐच्छिक — डिलिव्हरी ठिकाणे जोडा जेणेकरून ग्राहकांना विश्वासाने जेवण मिळेल.",
+        "cta": "डिलिव्हरी ठिकाणे जोडा"
+      }
     }
   },
   "inventory": {
@@ -4907,7 +5839,8 @@
       "createSuccess": "वस्तू तयार केली",
       "updateSuccess": "वस्तू अपडेट केली",
       "currentStock": "Current Stock",
-      "reasonOptional": "Optional note"
+      "reasonOptional": "Optional note",
+      "supplierPlaceholder": "सप्लायर निवडा किंवा टाइप करा"
     },
     "categories": {
       "title": "वर्ग",
@@ -4984,7 +5917,9 @@
         "adminProperty": "अॅडमिन प्रॉपर्टी",
         "adminMess": "अॅडमिन मेस",
         "activeProperties": "सक्रिय प्रॉपर्टी",
-        "activeMesses": "सक्रिय मेस"
+        "activeMesses": "सक्रिय मेस",
+        "websiteLeads": "वेबसाइट लीड्स",
+        "creditPayments": "क्रेडिट पेमेंट्स"
       },
       "nav": {
         "registeredUsersTitle": "नोंदणीकृत वापरकर्ते",
@@ -4994,8 +5929,23 @@
         "propertiesTitle": "प्रॉपर्टी",
         "propertiesHint": "लीड्स, सक्रिय स्पेस, प्रॉपर्टी जोडा",
         "messTitle": "मेस",
-        "messHint": "लीड्स, सक्रिय मेस, मेस जोडा"
-      }
+        "messHint": "लीड्स, सक्रिय मेस, मेस जोडा",
+        "enquiriesTitle": "चौकशी",
+        "enquiriesHint": "संपर्क विनंत्यांचे पुनरावलोकन करा आणि मालकाचा तपशील शेअर करा",
+        "creditsConfigTitle": "क्रेडिट कॉन्फिग",
+        "creditsConfigHint": "UPI, QR, WhatsApp, मर्यादा, आणि पॅकेजेस",
+        "creditPaymentsTitle": "क्रेडिट पेमेंट्स",
+        "creditPaymentsHint": "UPI स्क्रीनशॉट्सचे पुनरावलोकन करा आणि चौकशी क्रेडिट्स जोडा",
+        "notificationTestingTitle": "सूचना चाचणी",
+        "notificationTestingHint": "या अ‍ॅडमिन अकाउंटला टेस्ट सूचना पाठवा"
+      },
+      "brand": "ACOMI अ‍ॅडमिन",
+      "needsAttention": "लक्ष देणे आवश्यक",
+      "paymentRequests": "पेमेंट विनंत्या",
+      "viewEnquiries": "चौकशी पहा",
+      "unreadCount": "{{count}} न वाचलेले",
+      "overview": "आढावा",
+      "manage": "व्यवस्थापित करा"
     },
     "nav": {
       "dashboard": "अॅडमिन",
@@ -5005,7 +5955,14 @@
       "addProperty": "प्रॉपर्टी जोडा",
       "mess": "मेस",
       "addMess": "मेस जोडा",
-      "addresses": "जतन केलेले पते"
+      "addresses": "जतन केलेले पते",
+      "createTestUser": "टेस्ट युजर तयार करा",
+      "userDetail": "युजर",
+      "activeSpace": "सक्रिय स्पेस",
+      "enquiries": "चौकशी",
+      "creditsConfig": "क्रेडिट कॉन्फिग",
+      "creditPayments": "क्रेडिट पेमेंट्स",
+      "notificationTesting": "सूचना चाचणी"
     },
     "labels": {
       "addedByAdmin": "अॅडमिनने जोडले",
@@ -5020,7 +5977,10 @@
       "notVerified": "असत्यापित",
       "emDash": "—",
       "testYes": "टेस्ट: होय",
-      "testNo": "टेस्ट: नाही"
+      "testNo": "टेस्ट: नाही",
+      "testBadge": "टेस्ट",
+      "testUser": "टेस्ट युजर",
+      "deletedAccount": "डिलीट केलेले खाते"
     },
     "filters": {
       "activeSpaces": "सक्रिय स्पेस",
@@ -5046,7 +6006,89 @@
       "activityJustNow": "आत्ता",
       "activityMinutesAgo": "{{count}} मिनिटांपूर्वी",
       "activityHoursAgo": "{{count}} तासांपूर्वी",
-      "activityDaysAgo": "{{count}} दिवसांपूर्वी"
+      "activityDaysAgo": "{{count}} दिवसांपूर्वी",
+      "loadFailed": "नोंदणीकृत वापरकर्ते लोड करता आले नाहीत.",
+      "searchPlaceholder": "नाव, फोन नंबरने शोधा...",
+      "createTestUser": "टेस्ट युजर तयार करा",
+      "createTestUserTitle": "टेस्ट युजर तयार करा",
+      "createTestUserHint": "हे एक खरा ACOMI टेस्ट युजर तयार करते (सिस्टम रोल USER). सदस्यता खऱ्या वापरकर्त्याशी जुळण्यासाठी स्पेस रोल निवडा. कोणत्याही OTP ची आवश्यकता नाही — तुम्ही सेट केलेल्या मोबाइल नंबर आणि पासवर्डने लॉगिन करा.",
+      "createTestUserSuccess": "टेस्ट युजर तयार झाला. ते तुम्ही टाकलेल्या मोबाइल नंबर आणि पासवर्डने लॉगिन करू शकतात.",
+      "createTestUserFailed": "टेस्ट युजर तयार करता आला नाही.",
+      "createTestUserEmptySpaces": "कोणतेही सक्रिय स्पेस सापडले नाही. प्रथम Owner टेस्ट युजर तयार करा, किंवा प्रॉपर्टी जोडा.",
+      "createTestUserSections": {
+        "account": "खाते",
+        "password": "पासवर्ड",
+        "membership": "स्पेस सदस्यत्व"
+      },
+      "createTestUserFields": {
+        "fullName": "पूर्ण नाव",
+        "mobile": "मोबाइल नंबर",
+        "email": "ईमेल (ऐच्छिक)",
+        "password": "पासवर्ड",
+        "confirmPassword": "पासवर्डची पुष्टी करा",
+        "spaceRole": "स्पेस रोल",
+        "spaceRoleHint": "Owner नवीन स्पेस तयार करतो. इतर रोल पर्यायाने अस्तित्वात असलेल्या स्पेसमध्ये सामील होऊ शकतात, किंवा स्पेस रिकामी ठेवू शकतात.",
+        "space": "स्पेस (ऐच्छिक)",
+        "spaceHint": "ऐच्छिक — स्पेस सदस्यत्वाशिवाय वापरकर्ता तयार करण्यासाठी रिकामे ठेवा.",
+        "spacePickRoleFirst": "प्रथम स्पेस रोल निवडा (Manager, Member, Customer, किंवा Staff).",
+        "spaceName": "स्पेसचे नाव (ऐच्छिक)",
+        "spaceNameHint": "रिकामे ठेवल्यास हे डीफॉल्टनुसार \"QA - {full name}\" होते."
+      },
+      "createTestUserRoles": {
+        "OWNER": "मालक",
+        "MANAGER": "मॅनेजर",
+        "TENANT": "सदस्य",
+        "CUSTOMER": "ग्राहक",
+        "STAFF": "स्टाफ"
+      },
+      "createTestUserErrors": {
+        "fullName": "पूर्ण नाव टाका.",
+        "mobile": "वैध 10-अंकी भारतीय मोबाइल नंबर टाका.",
+        "email": "वैध ईमेल पत्ता टाका, किंवा रिकामा ठेवा.",
+        "spaceRole": "स्पेस रोल निवडा.",
+        "space": "या रोलसाठी स्पेस निवडा.",
+        "spaceType": "मालकासाठी स्पेस प्रकार निवडा."
+      },
+      "stats": {
+        "total": "एकूण वापरकर्ते",
+        "verified": "सत्यापित",
+        "new30": "नवीन (30 दिवस)",
+        "withSpace": "स्पेससह"
+      },
+      "filters": {
+        "clear": "फिल्टर साफ करा"
+      },
+      "profileSection": "प्रोफाइल",
+      "verificationSection": "सत्यापन",
+      "roleSection": "रोल",
+      "spacesSection": "संबंधित स्पेस",
+      "fullName": "पूर्ण नाव",
+      "registeredAt": "नोंदणीकृत",
+      "verifiedAt": "सत्यापित केले",
+      "onboarding": "ऑनबोर्डिंग",
+      "profileCompleted": "प्रोफाइल पूर्ण",
+      "selectedRole": "निवडलेला रोल",
+      "noSpaces": "कोणतेही संबंधित स्पेस नाही.",
+      "detailFootnote": "अ‍ॅडमिन युजर तपशील नोंदणीकृत-युजर्स API ने परत केलेली फील्ड्स दाखवतो. ईमेल, कागदपत्रे, आणि KYC या एंडपॉइंटवर उघड केलेले नाहीत.",
+      "securitySection": "सुरक्षा",
+      "resetPasswordTitle": "पासवर्ड रीसेट करा",
+      "resetPasswordHint": "तात्पुरता पासवर्ड तयार करा किंवा मॅन्युअली एक टाका.",
+      "resetPasswordSelf": "तुमचा स्वतःचा पासवर्ड बदलण्यासाठी अकाउंट रिकव्हरी वापरा.",
+      "resetPasswordNew": "नवीन पासवर्ड",
+      "resetPasswordConfirm": "पासवर्डची पुष्टी करा",
+      "resetPasswordPolicy": "8 ते 72 वर्ण वापरा.",
+      "generatePassword": "ऑटो-जनरेट करा",
+      "generatePasswordFailed": "पासवर्ड तयार करता आला नाही. मॅन्युअली एक टाका.",
+      "copyPassword": "कॉपी करा",
+      "resetPassword": "पासवर्ड रीसेट करा",
+      "passwordCopied": "पासवर्ड कॉपी केला",
+      "passwordCopyFailed": "पासवर्ड कॉपी करता आला नाही.",
+      "generatedNotApplied": "हा तयार केलेला पासवर्ड अद्याप लागू केलेला नाही.",
+      "resetPasswordConfirmTitle": "हा पासवर्ड रीसेट करायचा?",
+      "resetPasswordConfirmBody": "हे {{name}} ({{mobile}}) साठी नवीन पासवर्ड सेट करते. त्यांचे सध्याचे सेशन काम करणे थांबवतील. सध्याचा पासवर्ड दाखवला जात नाही.",
+      "resetPasswordSuccess": "पासवर्ड अपडेट झाला. वापरकर्ता नवीन पासवर्डने साइन इन करू शकतो.",
+      "resetPasswordFailed": "पासवर्ड रीसेट करता आला नाही.",
+      "openExistingUser": "अस्तित्वात असलेला युजर उघडा"
     },
     "list": {
       "empty": "कोणतेही रेकॉर्ड सापडले नाहीत."
@@ -5078,7 +6120,15 @@
       "ownerContactHint": "पर्यायी — मालक क्लेम करताना भरता येईल.",
       "location": "स्थान",
       "locationHint": "अलीकडील पत्ता पुन्हा वापरा किंवा नवीन प्रविष्ट करा.",
-      "pricingOptions": "किंमत आणि पर्याय"
+      "pricingOptions": "किंमत आणि पर्याय",
+      "description": "वर्णन",
+      "capacityEstimate": "क्षमता अंदाज",
+      "optionalHint": "ऐच्छिक",
+      "created": "तयार केले",
+      "updated": "अपडेट केले",
+      "claimedVia": "याद्वारे क्लेम केले",
+      "convertedSpace": "रूपांतरित स्पेस",
+      "spaceContact": "स्पेस संपर्क"
     },
     "property": {
       "deleteTitle": "ही प्रॉपर्टी लीड हटवायची?",
@@ -5103,8 +6153,12 @@
         "alternateDifferent": "पर्यायी मोबाइल नंबर प्राथमिक मोबाइलपेक्षा वेगळा असावा.",
         "pincode": "वैध पिनकोड प्रविष्ट करा, किंवा रिकामे सोडा.",
         "mapUrl": "Map link must start with http:// or https://",
-        "startingPrice": "वैध सुरुवातीची किंमत प्रविष्ट करा, किंवा रिकामे सोडा."
-      }
+        "startingPrice": "वैध सुरुवातीची किंमत प्रविष्ट करा, किंवा रिकामे सोडा.",
+        "capacity": "वैध क्षमतेचा अंदाज टाका, किंवा रिकामे ठेवा."
+      },
+      "amenities": "सुविधा",
+      "amenitiesHint": "ऐच्छिक — स्वल्पविरामाने विभक्त (उदा. WiFi, Parking)",
+      "priceBasis": "किंमत आधार"
     },
     "mess": {
       "deleteTitle": "ही मेस लीड हटवायची?",
@@ -5131,7 +6185,8 @@
         "pincode": "वैध पिनकोड प्रविष्ट करा, किंवा रिकामे सोडा.",
         "mapUrl": "Map link must start with http:// or https://",
         "monthlyPrice": "वैध मासिक किंमत प्रविष्ट करा, किंवा रिकामे सोडा.",
-        "mealPrice": "वैध जेवणाची किंमत प्रविष्ट करा, किंवा रिकामे सोडा."
+        "mealPrice": "वैध जेवणाची किंमत प्रविष्ट करा, किंवा रिकामे सोडा.",
+        "capacity": "वैध क्षमतेचा अंदाज टाका, किंवा रिकामे ठेवा."
       }
     },
     "addresses": {
@@ -5177,6 +6232,165 @@
     "testLead": {
       "title": "टेस्ट लीड",
       "description": "टेस्ट डेटा म्हणून चिन्हांकित करा. फक्त यादीत दिसते — डिलीट किंवा क्लेम प्रवाहावर परिणाम नाही."
+    },
+    "credits": {
+      "configTitle": "इन्क्वायरी क्रेडिट्स — पेमेंट कॉन्फिग",
+      "configSubtitle": "ईमेल/वेब वि. मोबाइल अ‍ॅप चौकशीसाठी पेमेंट तपशील आणि वेगळे क्रेडिट पॅकेजेस कॉन्फिगर करा.",
+      "loadFailed": "पेमेंट कॉन्फिगरेशन लोड होऊ शकले नाही.",
+      "retry": "पुन्हा प्रयत्न करा",
+      "enablePurchases": "क्रेडिट खरेदी सक्षम करा",
+      "enableHint": "चालू: मोफत दैनिक मर्यादा नंतर ₹9 / 30 UPI + WhatsApp स्क्रीनशॉट प्रक्रिया. बंद: वेब किंवा मोबाइलवर कोणतीही दैनिक मर्यादा आणि पेवॉल नाही.",
+      "howItWorksTitle": "हे कसे कार्य करते",
+      "howItWorksBody": "खाली UPI, QR, आणि WhatsApp जोडा. वापरकर्ते त्यांची मोफत दैनिक मर्यादा वापरल्यानंतर क्रेडिट्स खरेदी करू शकतात. अ‍ॅडमिन विनंती मान्य करतो.",
+      "enabledOn": "खरेदी चालू",
+      "enabledOff": "खरेदी बंद",
+      "paymentDetails": "पेमेंट तपशील",
+      "paymentDetailsHint": "क्रेडिट खरेदीसाठी UPI आणि पेमेंट सूचना कॉन्फिगर करा.",
+      "upi": "UPI आयडी",
+      "upiHint": "वापरकर्ते पेमेंट करण्यासाठी हा UPI आयडी पाहतील.",
+      "whatsapp": "पेमेंट स्क्रीनशॉटसाठी WhatsApp नंबर",
+      "whatsappHint": "वापरकर्ते या नंबरवर पेमेंट स्क्रीनशॉट पाठवतील. देश कोड समाविष्ट करा, उदा. 9198XXXXXXXX.",
+      "instructions": "पेमेंट सूचना (शोधकांना दाखवली जाते)",
+      "instructionsPlaceholder": "वरील UPI आयडीवर रक्कम ट्रान्सफर करा, नंतर खाली तुमचा UTR टाका.",
+      "instructionsHint": "ही सूचना वापरकर्त्यांना पेमेंट स्क्रीनवर दिसेल.",
+      "qr": "पेमेंट QR कोड",
+      "uploadQr": "QR अपलोड करा",
+      "uploadingQr": "अपलोड होत आहे…",
+      "replaceQr": "QR बदला",
+      "removeQr": "काढा",
+      "qrHint": "समर्थित फॉरमॅट: PNG किंवा JPG. कमाल आकार: 5 MB.",
+      "qrEmptyHint": "अजून कोणताही पेमेंट QR अपलोड केलेला नाही. समर्थित फॉरमॅट: PNG किंवा JPG. कमाल आकार: 5 MB.",
+      "viewQr": "QR पहा",
+      "qrShownHint": "हा QR कोड वापरकर्त्यांना पेमेंट स्क्रीनवर दाखवला जाईल.",
+      "qrLoadFailed": "पेमेंट QR लोड करता आले नाही.",
+      "openQr": "पेमेंट QR उघडा",
+      "webAccess": "ईमेल / वेबसाइट / वेब अ‍ॅप",
+      "webAccessHint": "इन्स्टंट कॉन्टॅक्ट व्ह्यूज आणि ईमेल चौकशी वेगळ्या दैनिक मर्यादा वापरतात. इन्स्टंट व्ह्यूज ईमेल चौकशी क्रेडिट्स वापरत नाहीत.",
+      "freeContactViewing": "मोफत कॉन्टॅक्ट व्ह्यू",
+      "freeContactViewingHint": "लिस्टिंगवरच मालक किंवा विक्रेत्याचा कॉन्टॅक्ट दाखवतो. हे चौकशी आणि पेड क्रेडिट्सपेक्षा वेगळे आहे.",
+      "instantViewsPerDay": "दर दिवशी मोफत इन्स्टंट कॉन्टॅक्ट व्ह्यूज",
+      "instantViewsHint": "लिस्टिंगवर दाखवलेले इन्स्टंट व्ह्यूज. 0 हा पर्याय लपवतो. खालील चौकशी डिलिव्हरी आणि क्रेडिट पॅकेजेस अपरिवर्तित आहेत.",
+      "webFree": "दर दिवशी मोफत ईमेल चौकशी",
+      "webFreeHint": "मोफत मर्यादेनंतर, वापरकर्त्यांना खालील पॅकेज वापरून चौकशी क्रेडिट्स खरेदी करावे लागतील.",
+      "webPackages": "क्रेडिट पॅकेज — ईमेल / वेब",
+      "webPackagesHint": "वेबसाइटवरून चौकशी करताना वापरले जाते (ईमेल डिलिव्हरी). वॉलेट क्रेडिट्स शेअर केली जातात.",
+      "webPackageFooter": "हे पॅकेज वापरकर्त्यांना वेबवर दाखवले जाईल.",
+      "androidAccess": "मोबाइल अ‍ॅप",
+      "androidAccessHint": "इन्स्टंट कॉन्टॅक्ट व्ह्यूज आणि मोबाइल चौकशी वेगळ्या दैनिक मर्यादा वापरतात. इन्स्टंट व्ह्यूज मोबाइल चौकशी क्रेडिट्स वापरत नाहीत.",
+      "androidMode": "बिलिंग मोड",
+      "modeFree": "मोफत (फक्त रेट मर्यादा)",
+      "modeCredits": "क्रेडिट्स (मोफत कोटा नंतर)",
+      "androidFree": "दर दिवशी मोफत मोबाइल चौकशी",
+      "androidFreeHint": "मोफत चौकशी गणना फक्त बिलिंग मोड क्रेडिट्स असताना वापरली जाते. प्रति तास रेट मर्यादा अजूनही लागू होते.",
+      "hourly": "प्रति तास रेट मर्यादा",
+      "mobilePackages": "क्रेडिट पॅकेज — मोबाइल अ‍ॅप",
+      "mobilePackagesHint": "बिलिंग मोड क्रेडिट्स असताना आणि खरेदी सक्षम असताना Android वर दाखवले जाते. नवीन पॅकेजेस तयार करणे अद्याप समर्थित नाही.",
+      "mobilePackageFooter": "हे पॅकेज मोबाइल अ‍ॅपमध्ये वापरकर्त्यांना दाखवले जाईल.",
+      "noPackageSeeded": "या चॅनेलसाठी अद्याप कोणतेही पॅकेज सीड केलेले नाही. नवीनतम बॅकएंड मायग्रेशन चालवा.",
+      "packageName": "पॅकेजचे नाव",
+      "packageCredits": "क्रेडिट्स",
+      "packagePrice": "किंमत (₹)",
+      "packageEnabled": "सक्षम",
+      "packages": "पॅकेजेस",
+      "saved": "पेमेंट कॉन्फिगरेशन सेव्ह केले.",
+      "paymentsSubtitle": "शोधकांच्या पेमेंट विनंत्यांचे पुनरावलोकन करा आणि मान्य किंवा नाकारा.",
+      "searchPlaceholder": "नाव, मोबाइल, UTR नुसार फिल्टर करा…",
+      "approveTitle": "खरेदी मान्य करा — {{name}}?",
+      "approveBody": "हे वापरकर्त्याच्या खात्यात {{credits}} क्रेडिट्स जोडेल. UTR: {{utr}}",
+      "approved": "खरेदी मान्य — क्रेडिट्स जोडली.",
+      "rejectTitle": "खरेदी नाकारा — {{name}}?",
+      "rejectBody": "₹{{amount}} साठी खरेदी विनंती नाकारली जाईल. क्रेडिट्स जोडली जाणार नाहीत.",
+      "reject": "नाकारा",
+      "rejected": "खरेदी नाकारली.",
+      "pending": "प्रलंबित",
+      "approvedFilter": "मान्य",
+      "all": "सर्व",
+      "rejectedFilter": "नाकारले",
+      "empty": "कोणतीही खरेदी विनंती सापडली नाही.",
+      "approve": "मान्य करा",
+      "qrMissing": "कोणताही पेमेंट QR सेव्ह केलेला नाही.",
+      "qrEmptyShort": "QR नाही",
+      "filterByStatus": "{{status}} विनंत्या दाखवा, {{count}}"
+    },
+    "notifications": {
+      "title": "सूचना",
+      "empty": "अजून कोणतीही चौकशी सूचना नाही.",
+      "open": "सूचना उघडा"
+    },
+    "enquiries": {
+      "title": "चौकशी",
+      "empty": "अजून कोणतीही संपर्क चौकशी नाही.",
+      "columns": {
+        "listing": "लिस्टिंग",
+        "requestedBy": "विनंती करणारा",
+        "type": "प्रकार",
+        "requested": "विनंती केली",
+        "status": "स्थिती",
+        "action": "कृती"
+      },
+      "status": {
+        "PENDING": "प्रलंबित",
+        "SHARED": "शेअर केले",
+        "REJECTED": "नाकारले",
+        "EXPIRED": "कालबाह्य",
+        "CANCELLED": "रद्द"
+      },
+      "view": "पहा",
+      "detailTitle": "चौकशी तपशील",
+      "email": "विनंती करणाऱ्याचा ईमेल",
+      "requesterMobile": "विनंती करणाऱ्याचा मोबाइल",
+      "expires": "कालबाह्य होईल",
+      "ownerContact": "मालकाची संपर्क माहिती",
+      "ownerName": "मालक",
+      "mobile": "मोबाइल",
+      "alternateMobile": "पर्यायी मोबाइल",
+      "additionalContact": "अतिरिक्त संपर्क",
+      "ownerEmail": "ईमेल",
+      "share": "संपर्क तपशील शेअर करा",
+      "reject": "चौकशी नाकारा",
+      "rejectReason": "नाकारण्याचे कारण (ऐच्छिक)",
+      "shareSuccess": "संपर्क तपशील विनंती करणाऱ्याला ईमेल केले होते.",
+      "shareFailed": "ही चौकशी शेअर करता आली नाही.",
+      "alreadyShared": "या चौकशीसाठी संपर्क तपशील आधीच शेअर केले आहेत.",
+      "notPending": "फक्त प्रलंबित चौकशी जी कालबाह्य झालेली नाही ती शेअर केली जाऊ शकते.",
+      "notFound": "ही चौकशी किंवा तिची लिस्टिंग सापडली नाही.",
+      "shareForbidden": "या चौकशीला शेअर करण्याची तुम्हाला परवानगी नाही.",
+      "rejectSuccess": "चौकशी नाकारली.",
+      "rejectFailed": "ही चौकशी नाकारता आली नाही.",
+      "sharedAt": "शेअर केले",
+      "reviewedAt": "पुनरावलोकन केले",
+      "contactAvailable": "संपर्क उपलब्ध",
+      "review": "पुनरावलोकन करा"
+    },
+    "activeSpace": {
+      "footnote": "अ‍ॅक्टिव्ह स्पेसची माहिती अ‍ॅडमिन अ‍ॅक्टिव्ह-स्पेसेस API वरून येते. लीड नोंदणीच्या नोंदी लीड्स टॅबमध्येच राहतात."
+    },
+    "notificationTesting": {
+      "title": "नोटिफिकेशन परीक्षण",
+      "pushStatus": "पुश कॉन्फ़िगरेशन स्थिति",
+      "refreshStatus": "स्थिति रीफ़्रेश करें",
+      "browserNotImplemented": "ब्राउज़र पुश अभी लागू नहीं है।",
+      "reset": "रीसेट",
+      "fieldTitle": "शीर्षक",
+      "fieldBody": "संदेश",
+      "sendHint": "केवल इस खाते के पंजीकृत डिवाइस पर भेजा जाएगा।",
+      "browserPushTitle": "ब्राउज़र पुश — लागू नहीं",
+      "recent": "हाल के परीक्षण नोटिफिकेशन",
+      "empty": "अभी कोई परीक्षण नोटिफिकेशन नहीं।",
+      "delete": "हटवा",
+      "pushEnabled": "पुश चालू",
+      "firebaseCredentials": "Firebase क्रेडेंशियल",
+      "project": "प्रोजेक्ट",
+      "firebaseInitialized": "Firebase प्रारंभ",
+      "registeredDevices": "पंजीकृत डिवाइस (यह एडमिन)",
+      "fcmSendPossible": "FCM भेजना संभव",
+      "aboutA11y": "सूचना चाचणीबद्दल",
+      "helpCopy": "चाचणी या अॅडमिन खात्यावर एक फिक्स्चर पाठवते. Firebase स्वीकृती म्हणजे विनंती स्वीकारली, फोनवर सिस्टम सूचना दिसली असे नाही. ब्राउझर पुश लागू नाही.",
+      "infoCopy": "फक्त तुमच्या अॅडमिन खात्यावर चाचणी सूचना पाठवा. यामुळे पेमेंट, सदस्य, चौकशी किंवा इतर व्यवसाय रेकॉर्ड बदलत नाहीत.",
+      "sent": "चाचणी सूचना पाठवली",
+      "resultCounts": "लक्ष्यित {{targeted}}, स्वीकारले {{accepted}}, अयशस्वी {{failed}}.",
+      "verified": "सत्यापित",
+      "notVerified": "असत्यापित"
     }
   },
   "home": {
@@ -5222,11 +6436,14 @@
     "takePhoto": "Take photo",
     "chooseGallery": "Choose from gallery",
     "attached": "Attached",
-    "sizeHint": "JPEG, PNG, or WebP. Maximum {{maxMb}} MB after compression."
+    "sizeHint": "JPEG, PNG, or WebP. Maximum {{maxMb}} MB after compression.",
+    "pickerFailed": "फोटो निवडता आला नाही. कृपया पुन्हा प्रयत्न करा.",
+    "cameraPermissionTitle": "कॅमेरा परवानगी",
+    "cameraPermissionMessage": "फोटो घेण्यासाठी Acomi ला कॅमेरा अ‍ॅक्सेसची आवश्यकता आहे."
   },
   "serviceContacts": {
     "title": "सेवा संपर्क",
-    "subtitle": "तुमचे सेवा पुरवठादार जतन करा आणि व्यवस्थापित करा",
+    "subtitle": "तुमच्या जागांसाठी सामान्य सेवा पुरवठादार",
     "add": "संपर्क जोडा",
     "save": "जतन करा",
     "cancel": "रद्द करा",
@@ -5235,7 +6452,7 @@
     "call": "कॉल",
     "whatsapp": "व्हाट्सअॅप",
     "email": "ईमेल",
-    "searchPlaceholder": "संपर्क, वर्ग किंवा फोन शोधा...",
+    "searchPlaceholder": "नाव, सेवा किंवा व्यक्तीने शोधा",
     "category": "वर्ग",
     "categoryAll": "सर्व",
     "spaceAll": "सर्व जागा",
@@ -5288,5 +6505,83 @@
     "formTitleEdit": "संपर्क संपादित करा",
     "previous": "मागील",
     "next": "पुढील"
+  },
+  "contact": {
+    "sheet": {
+      "title": "सदस्याशी संपर्क करा",
+      "titleNamed": "{{name}} शी संपर्क करा",
+      "subtitle": "या व्यक्तीशी कसे संपर्क करायचे ते निवडा."
+    },
+    "call": "कॉल करा",
+    "callHint": "फोन डायलर उघडा",
+    "message": "मेसेज",
+    "messageHint": "मेसेजिंग अ‍ॅप निवडा",
+    "messagingOptions": "मेसेजिंग पर्याय",
+    "sms": "SMS",
+    "whatsapp": "WhatsApp",
+    "copy": "नंबर कॉपी करा",
+    "copied": "नंबर कॉपी झाला",
+    "unavailable": "ही क्रिया पूर्ण करण्यासाठी कोणतेही अ‍ॅप उपलब्ध नाही",
+    "invalid": "फोन नंबर उपलब्ध नाही"
+  },
+  "inquiryCredits": {
+    "title": "इन्क्वायरी क्रेडिट्स",
+    "availableLabel": "उपलब्ध क्रेडिट्स",
+    "usedOf": "{{total}} पैकी {{used}} वापरले",
+    "creditsCount": "{{count}} क्रेडिट्स",
+    "unavailableWhileFree": "आवश्यक नाही (मोबाइल मोफत आहे)",
+    "buy": "खरेदी करा",
+    "buyCta": "इन्क्वायरी क्रेडिट्स खरेदी करा",
+    "purchaseSubmitted": "खरेदी विनंती सबमिट झाली. अ‍ॅडमिनच्या मान्यतेनंतर क्रेडिट्स दिसतील.",
+    "purchaseFailed": "खरेदी विनंती सबमिट करता आली नाही. कृपया पुन्हा प्रयत्न करा.",
+    "loadErrorTitle": "क्रेडिट्स लोड होऊ शकले नाहीत",
+    "mobileCreditsTitle": "मोबाईल चौकशीसाठी क्रेडिट्स वापरले जातात",
+    "mobileFreeTitle": "मोबाईल चौकशी मोफत आहेत",
+    "mobileCreditsBody": "तुम्हाला दररोज {{free}} मोफत मोबाईल चौकशी मिळतात, त्यानंतर पेड क्रेडिट्स लागू होतात.",
+    "mobileFreeBody": "Acomi Android अ‍ॅपमध्ये अनलिमिटेड चौकशी उपलब्ध आहेत.",
+    "howItWorksTitle": "हे कसे कार्य करते",
+    "howItWorksBodyMobileCredits": "तुमच्या दैनिक मोफत मोबाईल चौकशीनंतर, प्रत्येक नवीन चौकशीसाठी 1 क्रेडिट वापरले जाते. UPI ने पेमेंट केल्यानंतर खाली मोबाईल क्रेडिट पॅकेज खरेदी करा.",
+    "howItWorksBodyMobile": "Acomi Android वर अनलिमिटेड चौकशी मिळवा. दैनिक मोफत कोट्यानंतर ईमेल/वेब चौकशीसाठी क्रेडिट्स वापरले जातात.",
+    "buyCreditsTitleMobile": "मोबाईल इन्क्वायरी क्रेडिट्स खरेदी करा",
+    "buyCreditsTitleWeb": "मोबाईल क्रेडिट पॅकेजेस",
+    "purchaseDisabledHint": "मोबाईल चौकशी मोफत असताना खरेदीची गरज नाही.",
+    "noPackages": "सध्या कोणतेही क्रेडिट पॅकेज उपलब्ध नाही.",
+    "payThenUtr": "UPI ने पेमेंट करा, नंतर तुमचा UTR / ट्रान्झॅक्शन रेफरन्स टाका.",
+    "openQr": "पेमेंट QR उघडा",
+    "whatsappCta": "WhatsApp वर पेमेंट स्क्रीनशॉट पाठवा",
+    "utrPlaceholder": "UTR / ट्रान्झॅक्शन ID (ऐच्छिक)",
+    "submitPurchase": "सबमिट करा",
+    "profileSubtitle": "मोबाईल चौकशी मोफत आहेत · वेब क्रेडिट्स"
+  },
+  "locationCapture": {
+    "selectionRequired": "सुचवलेल्या पर्यायांमधून एक स्थान निवडा.",
+    "pincodeRequired": "वैध 6-अंकी पिनकोड टाका.",
+    "buildingRequired": "अपार्टमेंट किंवा बिल्डिंगचे नाव टाका.",
+    "buildingName": "अपार्टमेंट / बिल्डिंगचे नाव",
+    "buildingPlaceholder": "उदा. Sunrise Residency",
+    "searchLabel": "स्थान शोधा",
+    "searchPlaceholder": "बिल्डिंग, रोड, परिसर, लोकॅलिटी किंवा लँडमार्क शोधा",
+    "useTyped": "\"{{query}}\" वापरा",
+    "useTypedHint": "या मजकुरासह पुढे जा. सूचना ऐच्छिक आहे.",
+    "searching": "स्थाने शोधत आहोत...",
+    "emptyManual": "जुळणारी ठिकाणे नाहीत. तुम्ही टाइप केलेल्या स्थानासह पुढे जाऊ शकता.",
+    "empty": "कोणतेही स्थान सापडले नाही. रोड, परिसर, लोकॅलिटी किंवा शहर वापरून पहा.",
+    "failed": "स्थाने शोधणे शक्य झाले नाही. कृपया पुन्हा प्रयत्न करा.",
+    "manualTitle": "स्थानाचे तपशील",
+    "manualHint": "ऐच्छिक. \"{{query}}\" साठी शहर, जिल्हा आणि इतर तपशील जोडा.",
+    "locality": "लोकॅलिटी",
+    "city": "शहर",
+    "state": "राज्य",
+    "district": "जिल्हा",
+    "pincode": "पिनकोड",
+    "selected": "स्थान निवडले",
+    "change": "स्थान बदला"
+  },
+  "brand": {
+    "tagline": "स्पेस · जेवण · लोक जोडले जातात",
+    "taglineSpaces": "स्पेस",
+    "taglineMeals": "जेवण",
+    "taglinePeopleBelong": "लोक जोडले जातात",
+    "loadingA11y": "Acomi लोड होत आहे"
   }
 }

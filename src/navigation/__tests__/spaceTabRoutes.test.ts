@@ -89,4 +89,27 @@ describe('spaceMoreItemsForPermissions', () => {
       { id: 'mealSubscriptionPlans' },
     ]);
   });
+
+  it('places Inventory under Meal Subscription Plans', () => {
+    expect(
+      spaceMoreItemsForPermissions({
+        canManageMeals: true,
+        canViewInventory: true,
+      }),
+    ).toEqual([
+      { id: 'complaints' },
+      { id: 'menuLibrary' },
+      { id: 'mealSubscriptionPlans' },
+      { id: 'inventory' },
+    ]);
+  });
+
+  it('adds Inventory when the user can view stock but not meals', () => {
+    expect(
+      spaceMoreItemsForPermissions({
+        canManageMeals: false,
+        canViewInventory: true,
+      }),
+    ).toEqual([{ id: 'complaints' }, { id: 'inventory' }]);
+  });
 });

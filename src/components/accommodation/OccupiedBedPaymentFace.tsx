@@ -3,7 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { OccupancyResponse } from '../../api/types';
 import { useOccupiedBedStay } from '../../hooks/useOccupiedBedStay';
-import { colors, typography } from '../../theme';
+import { colors, spacing, typography } from '../../theme';
 import {
   bedCardBalanceFace,
   type OccupantPaymentSummary,
@@ -156,29 +156,45 @@ function MetaLine({ text }: { text: string }) {
   );
 }
 
-function occupancyRentLine(
+function PricingChip({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.pricingChip}>
+      <Text style={styles.pricingChipLabel} numberOfLines={1}>
+        {label}
+      </Text>
+      <Text style={styles.pricingChipValue} numberOfLines={1}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+function occupancyRentChip(
   occupancy: OccupancyResponse,
   t: (key: string, options?: { defaultValue?: string }) => string,
-): string | null {
+): { label: string; value: string } | null {
   const notRecorded = t('accommodation.pricingConfirm.notSet', { defaultValue: 'Not set' });
   const rate = formatOccupancyRentRate(occupancy, notRecorded);
   if (!rate.value || rate.value === notRecorded) {
     return null;
   }
-  const label = t(rate.labelKey, { defaultValue: rate.labelDefault });
-  return `${label}: ${rate.value}`;
+  return {
+    label: t(rate.labelKey, { defaultValue: rate.labelDefault }),
+    value: rate.value,
+  };
 }
 
-function occupancyDepositLine(
+function occupancyDepositChip(
   occupancy: OccupancyResponse,
   t: (key: string, options?: { defaultValue?: string }) => string,
-): string | null {
+): { label: string; value: string } | null {
   if (occupancy.depositSnapshot == null) {
     return null;
   }
-  return `${t('accommodation.fields.deposit', { defaultValue: 'Deposit' })}: ${money(
-    occupancy.depositSnapshot,
-  )}`;
+  return {
+    label: t('accommodation.fields.deposit', { defaultValue: 'Deposit' }),
+    value: money(occupancy.depositSnapshot),
+  };
 }
 
 function BedBalanceSummary({
@@ -194,8 +210,14 @@ function BedBalanceSummary({
   const { t } = useTranslation();
   const face = bedCardBalanceFace(summary);
   const rentUnbilled = notYetBilled && summary.rent == null;
-  const rentLine = occupancyRentLine(occupancy, t);
-  const depositLine = occupancyDepositLine(occupancy, t);
+  const rentChip = occupancyRentChip(occupancy, t);
+  const depositChip = occupancyDepositChip(occupancy, t);
+  const pricingChips = (
+    <>
+      {rentChip ? <PricingChip label={rentChip.label} value={rentChip.value} /> : null}
+      {depositChip ? <PricingChip label={depositChip.label} value={depositChip.value} /> : null}
+    </>
+  );
 
   if (rentUnbilled) {
     const title = t('accommodation.stayPayment.notYetBilled', { defaultValue: 'Not Yet Billed' });
@@ -205,6 +227,7 @@ function BedBalanceSummary({
           label={t('accommodation.stayPayment.balanceDue', { defaultValue: 'Balance Due' })}
           value={title}
         />
+        {pricingChips}
       </View>
     );
   }
@@ -218,7 +241,12 @@ function BedBalanceSummary({
           : t('accommodation.stayPayment.unavailable', {
               defaultValue: 'Payment status unavailable',
             });
-    return <Text style={styles.note}>{title}</Text>;
+    return (
+      <View style={styles.balance}>
+        <Text style={styles.note}>{title}</Text>
+        {pricingChips}
+      </View>
+    );
   }
 
   if (face.kind === 'paid') {
@@ -237,6 +265,7 @@ function BedBalanceSummary({
         accessibilityLabel={[paidLabel, paidDetail].filter(Boolean).join(', ')}>
         <Text style={styles.paidLabel}>{paidLabel}</Text>
         {paidDetail ? <MetaLine text={paidDetail} /> : null}
+        {pricingChips}
       </View>
     );
   }
@@ -247,10 +276,16 @@ function BedBalanceSummary({
     <View
       style={styles.balance}
       accessibilityRole="text"
-      accessibilityLabel={[balanceLabel, amount, rentLine, depositLine].filter(Boolean).join(', ')}>
+      accessibilityLabel={[
+        balanceLabel,
+        amount,
+        rentChip ? `${rentChip.label} ${rentChip.value}` : null,
+        depositChip ? `${depositChip.label} ${depositChip.value}` : null,
+      ]
+        .filter(Boolean)
+        .join(', ')}>
       <BalanceDueLine label={balanceLabel} value={amount} />
-      {rentLine ? <MetaLine text={rentLine} /> : null}
-      {depositLine ? <MetaLine text={depositLine} /> : null}
+      {pricingChips}
     </View>
   );
 }
@@ -259,7 +294,7 @@ const styles = StyleSheet.create({
   loader: { marginVertical: 4 },
   note: { ...typography.caption, fontWeight: '700', color: colors.textPrimary },
   balance: {
-    gap: 2,
+    gap: 4,
     width: '100%',
     minWidth: 0,
   },
@@ -290,5 +325,35 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     fontSize: 11,
     lineHeight: 15,
+  },
+  pricingChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.xs,
+    backgroundColor: 'rgba(255,255,255,0.72)',
+    borderWidth: 1,
+    borderColor: 'rgba(148,163,184,0.35)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  pricingChipLabel: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontWeight: '600',
+    fontSize: 10,
+    lineHeight: 13,
+    flexShrink: 0,
+  },
+  pricingChipValue: {
+    ...typography.caption,
+    color: colors.textPrimary,
+    fontWeight: '700',
+    fontSize: 11,
+    lineHeight: 14,
+    fontVariant: ['tabular-nums'],
+    flexShrink: 1,
+    textAlign: 'right',
   },
 });

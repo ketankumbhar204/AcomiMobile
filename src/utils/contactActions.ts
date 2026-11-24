@@ -1,4 +1,4 @@
-import { Linking, Share } from 'react-native';
+import { Linking, Platform, Share } from 'react-native';
 import { copyTextToClipboard } from './copyTextToClipboard';
 import {
   formatMemberContactNumber,
@@ -40,13 +40,29 @@ async function openUrl(url: string): Promise<boolean> {
   }
 }
 
+async function openFirst(urls: string[]): Promise<boolean> {
+  for (const url of urls) {
+    if (await openUrl(url)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /** Prefill dialer only — never places a call. */
 export async function openContactDialer(phone: string | null | undefined): Promise<ContactActionResult> {
   const digits = contactTelDigits(phone);
   if (!digits) {
     return 'invalid';
   }
-  return (await openUrl(`tel:${digits}`)) ? 'opened' : 'unavailable';
+  const targets = [`tel:${digits}`];
+  if (Platform.OS === 'android') {
+    const national = digits.replace(/^\+/, '');
+    targets.push(
+      `intent://${national}#Intent;scheme=tel;action=android.intent.action.DIAL;end`,
+    );
+  }
+  return (await openFirst(targets)) ? 'opened' : 'unavailable';
 }
 
 /** Default SMS composer with recipient prefilled. */
@@ -82,23 +98,66 @@ export async function openContactMessageChooser(
   }
 }
 
+/** Canonical WhatsApp link. Digits are country code + national number, with no '+' or spaces. */
+export function whatsAppMeUrl(phone: string | null | undefined): string | null {
+  const digits = whatsAppPhoneDigits(phone);
+  return digits ? `https://wa.me/${digits}` : null;
+}
+
+/**
+ * Opens WhatsApp for a phone number.
+ * Android 11+ hides packages from canOpenURL unless they are declared, so a
+ * false result must not block the launch. Try Messenger and WhatsApp Business
+ * directly, then the https://wa.me link, then the system browser.
+ */
 export async function openContactWhatsApp(
   phone: string | null | undefined,
 ): Promise<ContactActionResult> {
   const digits = whatsAppPhoneDigits(phone);
+  const httpsUrl = digits ? `https://wa.me/${digits}` : null;
+  if (!httpsUrl || !digits) {
+    return 'invalid';
+  }
+  const targets = [httpsUrl];
+  if (Platform.OS === 'android') {
+    const messenger = `intent://wa.me/${digits}#Intent;scheme=https;package=com.whatsapp;end`;
+    const business = `intent://wa.me/${digits}#Intent;scheme=https;package=com.whatsapp.w4b;end`;
+    const browser =
+      `intent://wa.me/${digits}#Intent;scheme=https;action=android.intent.action.VIEW;` +
+      'category=android.intent.category.BROWSABLE;end';
+    targets.unshift(messenger, business);
+    targets.push(browser);
+  } else {
+    targets.unshift(`whatsapp://send?phone=${digits}`);
+  }
+  return (await openFirst(targets)) ? 'opened' : 'unavailable';
+}
+
+/** Opens the device contact editor with the name and number prefilled. */
+export async function openSaveContact(
+  phone: string | null | undefined,
+  name: string | null | undefined,
+): Promise<ContactActionResult> {
+  const digits = contactTelDigits(phone);
   if (!digits) {
     return 'invalid';
   }
-  const url = `https://wa.me/${digits}`;
-  try {
-    const supported = await Linking.canOpenURL(url);
-    if (!supported) {
-      return 'unavailable';
+  const displayName = name?.trim() || contactDisplayNumber(phone) || digits;
+  if (Platform.OS === 'android') {
+    const intent =
+      `intent:#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.dir/raw_contact;` +
+      `S.name=${encodeURIComponent(displayName)};S.phone=${encodeURIComponent(digits)};end`;
+    if (await openUrl(intent)) {
+      return 'opened';
     }
-  } catch {
-    // canOpenURL may fail on some Android builds; still try openURL.
   }
-  return (await openUrl(url)) ? 'opened' : 'unavailable';
+  const card = `BEGIN:VCARD\nVERSION:3.0\nFN:${displayName}\nTEL;TYPE=CELL:${digits}\nEND:VCARD`;
+  try {
+    await Share.share({ message: card, title: displayName });
+    return 'opened';
+  } catch {
+    return 'unavailable';
+  }
 }
 
 export function copyContactNumber(phone: string | null | undefined): ContactActionResult {

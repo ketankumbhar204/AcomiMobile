@@ -44,6 +44,8 @@ type DashboardCustomerPollCardProps = {
   cardState: DashboardPollCardState;
   /** When true, CTA becomes View Menus and copy is review-oriented. */
   isPastDate?: boolean;
+  /** True when the selected date still has menus but every poll is CLOSED. */
+  pollsClosed?: boolean;
   paymentStatus?: MealPollPaymentStatus | null;
   rejectionReason?: string | null;
   prepaidOverflowAmount?: number | null;
@@ -87,7 +89,11 @@ function cardStatusLabel(
   cardState: DashboardPollCardState,
   t: (key: string) => string,
   isPastDate: boolean,
+  pollsClosed: boolean,
 ): string | null {
+  if (pollsClosed && !isPastDate) {
+    return t('dashboard.pollCard.pollClosedStatus', { defaultValue: 'Poll closed' });
+  }
   if (isPastDate) {
     switch (cardState) {
       case 'complete':
@@ -116,8 +122,9 @@ function actionLabel(
   cardState: DashboardPollCardState,
   t: (key: string) => string,
   isPastDate: boolean,
+  pollsClosed: boolean,
 ): string {
-  if (isPastDate) {
+  if (isPastDate || pollsClosed) {
     return t('dashboard.pollCard.viewFullMenu');
   }
   switch (cardState) {
@@ -234,6 +241,7 @@ export function DashboardCustomerPollCard({
   multiQuantity,
   cardState,
   isPastDate = false,
+  pollsClosed = false,
   paymentStatus = null,
   rejectionReason = null,
   prepaidOverflowAmount = null,
@@ -255,8 +263,9 @@ export function DashboardCustomerPollCard({
   const { t, i18n } = useTranslation();
   const dateLabel = formatMenuDate(menuDate, i18n.language);
   const title = cardTitle(menuDate, cardState, i18n.language, t);
-  const statusLabel = cardStatusLabel(cardState, t, isPastDate);
-  const ctaLabel = actionLabel(cardState, t, isPastDate);
+  const statusLabel = cardStatusLabel(cardState, t, isPastDate, pollsClosed);
+  const ctaLabel = actionLabel(cardState, t, isPastDate, pollsClosed);
+  const reviewMode = isPastDate || pollsClosed;
   const sortedPolls = useMemo(() => sortPolls(openPolls), [openPolls]);
   const itemCounts = useMemo(() => countMenuItemsByMeal(sortedPolls), [sortedPolls]);
   const selectionSummary = useMemo(
@@ -308,10 +317,10 @@ export function DashboardCustomerPollCard({
     <View
       style={[
         styles.card,
-        !isPastDate && cardState === 'complete' && styles.cardComplete,
-        !isPastDate && cardState === 'partial' && styles.cardPartial,
-        !isPastDate && cardState === 'active' && styles.cardActive,
-        isPastDate && styles.cardPast,
+        !reviewMode && cardState === 'complete' && styles.cardComplete,
+        !reviewMode && cardState === 'partial' && styles.cardPartial,
+        !reviewMode && cardState === 'active' && styles.cardActive,
+        reviewMode && styles.cardPast,
       ]}>
       {justSaved && cardState === 'complete' ? (
         <View style={styles.successBanner}>
@@ -363,8 +372,12 @@ export function DashboardCustomerPollCard({
             />
           </TouchableOpacity>
         </View>
-        <PollClosesInHint polls={openPolls} />
-        {statusLabel && !(cardState === 'active' && !isPastDate) ? (
+        {!pollsClosed ? <PollClosesInHint polls={openPolls.filter(poll => poll.status === 'OPEN')} /> : null}
+        {pollsClosed && !isPastDate ? (
+          <Text style={[styles.statusBadge, styles.pollClosedBadge]}>
+            {t('dashboard.pollCard.pollClosedStatus', { defaultValue: 'Poll closed' })}
+          </Text>
+        ) : statusLabel && !(cardState === 'active' && !reviewMode) ? (
           <Text style={styles.statusBadge}>{statusLabel}</Text>
         ) : null}
       </View>
@@ -521,6 +534,18 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     fontWeight: '600',
     marginTop: spacing.xxs,
+  },
+  pollClosedBadge: {
+    alignSelf: 'flex-start',
+    color: '#9A3412',
+    backgroundColor: '#FFF7ED',
+    borderWidth: 1,
+    borderColor: '#FDBA74',
+    borderRadius: 999,
+    overflow: 'hidden',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    fontWeight: '700',
   },
   dateRow: {
     flexDirection: 'row',

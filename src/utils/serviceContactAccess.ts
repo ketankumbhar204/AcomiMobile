@@ -16,7 +16,3 @@ export function canManageServiceContacts(spaces: SpaceRole[]): boolean {
   }
   return spaces.length === 0;
 }
-
-export function associableSpaces<T extends SpaceRole>(spaces: T[]): T[] {
-  return spaces.filter(space => MANAGE.has(space.membershipRole ?? ''));
-}

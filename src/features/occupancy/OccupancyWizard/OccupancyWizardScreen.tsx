@@ -24,6 +24,7 @@ import { memberApi } from '../../../api/memberApi';
 import { occupancyApi } from '../../../api/occupancyApi';
 import type {
   AmenityAssignment,
+  RuleAssignment,
   BedSpaceListItemResponse,
   MemberResponse,
   OccupancyResponse,
@@ -325,6 +326,7 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
   const [creatingMember, setCreatingMember] = useState(false);
   const [applyingTarget, setApplyingTarget] = useState(false);
   const [spaceAmenities, setSpaceAmenities] = useState<AmenityAssignment[]>([]);
+  const [spaceRules, setSpaceRules] = useState<RuleAssignment[]>([]);
   const [assignedAmenities, setAssignedAmenities] = useState<AmenityAssignment[]>([]);
   const memberAutoSelectSuppressRef = useRef(false);
   const memberAutoSelectKeyRef = useRef<string | null>(null);
@@ -361,6 +363,8 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
 
   const importMemberSearch = useResidentImportSearch(spaceId, memberQuery, {
     enabled: currentStep === 'member' && allowAddNewMember && memberPickerMode === 'search',
+    // Show portfolio residents (directory-compatible discovery); busy stays stay disabled.
+    includeUnavailable: true,
   });
 
   const members: ResidentPickerItem[] = allowAddNewMember
@@ -468,6 +472,7 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
         const policy = occupancyContext.foodPolicy;
         setFoodPolicy(policy);
         setSpaceAmenities(occupancyContext.amenities);
+        setSpaceRules(occupancyContext.rules);
         setAssignedAmenities(current =>
           current.length > 0 ? current : defaultAssignedAmenities(occupancyContext.amenities),
         );
@@ -638,6 +643,16 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
       memberAutoSelectSuppressRef.current = false;
       setFormError(null);
 
+      if (allowAddNewMember && selected.availableForMoveIn === false) {
+        setFormError(
+          t('occupancyWizard.errors.memberBusyHere', {
+            space: selected.sourceSpaceName ?? '',
+            defaultValue: 'Already has an active stay in {{space}}.',
+          }),
+        );
+        return;
+      }
+
       let resolved: MemberResponse = selected;
       if (allowAddNewMember && selected.needsImport && selected.memberId) {
         setCreatingMember(true);
@@ -686,7 +701,7 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
     }
     const candidate = members[0];
     // Never auto-import across spaces — require an explicit tap.
-    if (candidate.needsImport) {
+    if (candidate.needsImport || candidate.availableForMoveIn === false) {
       return;
     }
     const autoKey = `${candidate.memberId}:${memberQuery}`;
@@ -1565,6 +1580,7 @@ export function OccupancyWizardScreen({ navigation, route }: Props) {
                   allowEarlyMoveIn={allowEarlyMoveIn}
                   onAllowEarlyMoveInChange={setAllowEarlyMoveIn}
                   spaceAmenities={spaceAmenities}
+                  spaceRules={spaceType === 'MESS' ? [] : spaceRules}
                   assignedAmenities={assignedAmenities}
                   onAssignedAmenitiesChange={setAssignedAmenities}
                   stayKind={stayTypesAvailable ? stayChoice : 'MONTHLY'}

@@ -36,7 +36,10 @@ type MealPollDayContentProps = {
   variant?: 'dashboard' | 'screen' | 'sheet';
   dateLabel?: string;
   hideSubmitButton?: boolean;
+  /** Global lock (past date / payment review). Closed polls are locked per meal. */
   readOnly?: boolean;
+  /** Why the screen is locked — used for the subtitle (not for closed individual meals). */
+  lockReason?: 'past' | 'poll_closed' | 'payment_lock' | null;
   showMealPrices?: boolean;
   initialMealType?: MealType | null;
 };
@@ -70,6 +73,7 @@ export function MealPollDayContent({
   dateLabel: dateLabelProp,
   hideSubmitButton = false,
   readOnly = false,
+  lockReason = null,
   showMealPrices = true,
   initialMealType = null,
 }: MealPollDayContentProps) {
@@ -80,6 +84,8 @@ export function MealPollDayContent({
   const showDeliveryForMeal =
     multiQuantity && deliveryLocations.length > 0 && !showSummary;
   const sortedPolls = useMemo(() => sortPolls(openPolls), [openPolls]);
+  const allPollsClosed =
+    sortedPolls.length > 0 && sortedPolls.every(poll => poll.status === 'CLOSED');
 
   const [selectedMealType, setSelectedMealType] = useState<MealType | null>(
     () => initialMealType ?? sortedPolls[0]?.mealType ?? null,
@@ -123,6 +129,7 @@ export function MealPollDayContent({
   const useTabs = !showSummary && sortedPolls.length > 1;
 
   const renderPollEditor = (poll: MealPollSlot) => {
+    const slotReadOnly = readOnly || poll.status === 'CLOSED';
     const menuEntries = poll.options.filter(option => option.optionType === 'MENU_ENTRY');
     const mainOptions = menuEntries.filter(option => option.isExtra !== true);
     const extraOptions = menuEntries.filter(option => option.isExtra === true);
@@ -151,7 +158,7 @@ export function MealPollDayContent({
           option={option}
           quantity={quantitySelections[poll.mealType]?.[option.id] ?? 0}
           onChange={qty => onQuantityChange?.(poll.mealType, option.id, qty)}
-          readOnly={readOnly}
+          readOnly={slotReadOnly}
           showPrice={showMealPrices}
           variant={rowVariant}
         />
@@ -160,7 +167,20 @@ export function MealPollDayContent({
     return (
       <View key={poll.id} style={styles.section}>
         {!useTabs ? (
-          <Text style={styles.sectionTitle}>{t(mealTypeLabelKey(poll.mealType))}</Text>
+          <View style={styles.sectionTitleRow}>
+            <Text style={styles.sectionTitle}>{t(mealTypeLabelKey(poll.mealType))}</Text>
+            {poll.status === 'CLOSED' ? (
+              <Text style={styles.closedMealBadge}>{t('meals.poll.pollClosed')}</Text>
+            ) : null}
+          </View>
+        ) : null}
+
+        {useTabs && poll.status === 'CLOSED' ? (
+          <Text style={styles.closedMealHint}>
+            {t('meals.poll.pollClosedReadOnly', {
+              defaultValue: 'This poll is closed. Your choices can no longer be changed.',
+            })}
+          </Text>
         ) : null}
 
         {showDeliveryForMeal ? (
@@ -170,7 +190,7 @@ export function MealPollDayContent({
               selectedId={deliverySelections[poll.mealType]}
               lastUsedLocationId={lastDeliveryLocations[poll.mealType]}
               onSelect={locationId => onDeliveryLocationChange?.(poll.mealType, locationId)}
-              readOnly={readOnly}
+              readOnly={slotReadOnly}
             />
           </View>
         ) : null}
@@ -224,7 +244,7 @@ export function MealPollDayContent({
               option={option}
               selected={selections[poll.mealType] === option.id}
               onSelect={() => onSelect(poll.mealType, option.id)}
-              readOnly={readOnly}
+              readOnly={slotReadOnly}
               showPrice={showMealPrices}
             />
           ))
@@ -232,6 +252,22 @@ export function MealPollDayContent({
       </View>
     );
   };
+
+  const subtitleText = (() => {
+    const reason = lockReason ?? (readOnly && allPollsClosed ? 'poll_closed' : readOnly ? 'past' : null);
+    if (reason === 'payment_lock') {
+      return t('meals.poll.paymentUnderReviewLock');
+    }
+    if (reason === 'poll_closed' || (!readOnly && allPollsClosed)) {
+      return t('meals.poll.pollClosedReadOnly', {
+        defaultValue: 'This poll is closed. Your choices can no longer be changed.',
+      });
+    }
+    if (reason === 'past' || readOnly) {
+      return t('meals.poll.pastDateReadOnly');
+    }
+    return multiQuantity ? t('meals.poll.responseHintMess') : t('meals.poll.responseHint');
+  })();
 
   return (
     <View>
@@ -242,16 +278,13 @@ export function MealPollDayContent({
         <Text style={styles.sheetDate}>{dateLabel}</Text>
       )}
       {isSheet || !isDashboard ? (
-        <Text style={styles.subtitle}>
-          {readOnly
-            ? t('meals.poll.pastDateReadOnly')
-            : multiQuantity
-              ? t('meals.poll.responseHintMess')
-              : t('meals.poll.responseHint')}
-        </Text>
+        <Text style={styles.subtitle}>{subtitleText}</Text>
       ) : null}
-      {isSheet && !readOnly ? (
-        <PollClosesInHint polls={sortedPolls} style={styles.pollCloseHint} />
+      {isSheet && !readOnly && !allPollsClosed ? (
+        <PollClosesInHint
+          polls={sortedPolls.filter(poll => poll.status === 'OPEN')}
+          style={styles.pollCloseHint}
+        />
       ) : null}
 
       {showSummary
@@ -370,7 +403,7 @@ export function MealPollDayContent({
         </View>
       ) : null}
 
-      {!hideSubmitButton && !readOnly ? (
+      {!hideSubmitButton && !readOnly && !allPollsClosed ? (
         <Button
           label={
             saving
@@ -398,6 +431,31 @@ const styles = StyleSheet.create({
   pollCloseHint: { marginTop: 0, marginBottom: spacing.md },
   section: { marginBottom: spacing.lg },
   sectionTitle: { ...typography.bodyStrong, fontSize: 18, marginBottom: spacing.sm },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  closedMealBadge: {
+    ...typography.caption,
+    fontWeight: '700',
+    color: '#9A3412',
+    backgroundColor: '#FFF7ED',
+    borderWidth: 1,
+    borderColor: '#FDBA74',
+    borderRadius: 999,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    overflow: 'hidden',
+  },
+  closedMealHint: {
+    ...typography.caption,
+    color: '#9A3412',
+    marginBottom: spacing.sm,
+    lineHeight: 18,
+  },
   mainItemsHeading: {
     ...typography.bodyStrong,
     color: colors.textPrimary,

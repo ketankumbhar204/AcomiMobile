@@ -45,6 +45,8 @@ import { DashboardCustomerMealsSection } from '../../components/meals/DashboardC
 import { ModuleActionCard, useQuickActionSheet } from '../../components/ui';
 import type { QuickActionSheetOption } from '../../components/ui';
 import { Screen } from '../../components/ui/Screen';
+import { getMarketingDemoMetrics } from '../../marketing/marketingDemoDataset';
+import { isMarketingDemoModeEnabled } from '../../marketing/marketingDemoMode';
 import { useDashboardAccommodationOperationsQuick } from '../../hooks/useDashboardAccommodationOperationsQuick';
 import { useUnitLevelOccupancyCounts } from '../../hooks/useUnitLevelOccupancyCounts';
 import { useLinkedMember } from '../../hooks/useLinkedMember';
@@ -211,6 +213,38 @@ export function DashboardScreen() {
     }
     return applyUnitOccupancyCounts(accommodationOperations, unitOccupancy.counts);
   }, [accommodationOperations, unitLevel, unitOccupancy.counts]);
+
+  const demoMetrics = isMarketingDemoModeEnabled()
+    ? getMarketingDemoMetrics(spaceId, spaceType)
+    : null;
+  const summaryOperations = useMemo(() => {
+    if (!displayAccommodationOperations || !demoMetrics || isMess) {
+      return displayAccommodationOperations;
+    }
+    return {
+      ...displayAccommodationOperations,
+      occupiedBeds: demoMetrics.occupied,
+      vacantBeds: demoMetrics.available,
+      reservedBeds: demoMetrics.reserved,
+      moveInsThisMonth: demoMetrics.moveInsThisMonth,
+      pendingPaymentsCount: demoMetrics.pendingCount,
+    };
+  }, [demoMetrics, displayAccommodationOperations, isMess]);
+  const summaryFinancial = useMemo(() => {
+    if (!paymentFinancial || !demoMetrics) {
+      return paymentFinancial;
+    }
+    return {
+      ...paymentFinancial,
+      expectedCharges: demoMetrics.expected,
+      collected: demoMetrics.collected,
+      pending: demoMetrics.pending,
+      underReview: demoMetrics.underReview,
+    };
+  }, [demoMetrics, paymentFinancial]);
+  const illustrativeMealSummary = demoMetrics
+    ? `Illustrative · Breakfast ${demoMetrics.breakfastResponses} · Lunch ${demoMetrics.lunchResponses} · Dinner ${demoMetrics.dinnerResponses} of ${demoMetrics.members}`
+    : null;
 
   const pendingActions =
     dashboard.pendingActions ??
@@ -954,6 +988,7 @@ export function DashboardScreen() {
       <DashboardSetupQuickActions
         onStartSetup={handleStartSetupPress}
         onAddBuilding={handleAddBuildingPress}
+        below={inventoryQuickAction}
       />
     ) : null;
 
@@ -1053,6 +1088,10 @@ export function DashboardScreen() {
     spaceEntry != null &&
     lifecycleContext != null;
   const showMessHero = showOwnerDashboardBody && isMess && spaceEntry != null;
+  const illustrativeRoomCount =
+    demoMetrics && !unitLevel && lifecycleContext
+      ? reconcileRoomCount(lifecycleContext.roomCount, demoMetrics.totalCapacity, spaceType)
+      : (lifecycleContext?.roomCount ?? 0);
 
   return (
     <Screen
@@ -1077,14 +1116,23 @@ export function DashboardScreen() {
           photoFileId={spaceEntry.photoFileId ?? selectedSpace?.photoFileId}
           membershipRole={permissions.membershipRole}
           isActive={selectedSpace?.isActive ?? true}
-          floors={lifecycleContext.floorCount}
-          rooms={lifecycleContext.roomCount}
-          beds={lifecycleContext.bedCount}
-          units={lifecycleContext.unitCount}
+          floors={
+            demoMetrics
+              ? illustrativeFloorCount(lifecycleContext.floorCount, illustrativeRoomCount, unitLevel, demoMetrics.totalCapacity)
+              : lifecycleContext.floorCount
+          }
+          rooms={illustrativeRoomCount}
+          beds={
+            demoMetrics && !unitLevel ? demoMetrics.totalCapacity : lifecycleContext.bedCount
+          }
+          units={
+            demoMetrics && unitLevel ? demoMetrics.totalCapacity : lifecycleContext.unitCount
+          }
           occupancyEntity={unitLevel ? 'units' : 'beds'}
-          occupied={displayAccommodationOperations?.occupiedBeds ?? 0}
-          available={displayAccommodationOperations?.vacantBeds ?? 0}
-          reserved={displayAccommodationOperations?.reservedBeds ?? 0}
+          occupied={summaryOperations?.occupiedBeds ?? 0}
+          available={summaryOperations?.vacantBeds ?? 0}
+          reserved={summaryOperations?.reservedBeds ?? 0}
+          illustrative={demoMetrics != null}
           onEditPress={
             canEditEntityPhoto(permissions.membershipRole) || permissions.canManageAccommodation
               ? handleEditSpacePress
@@ -1167,7 +1215,8 @@ export function DashboardScreen() {
                   <DashboardFinancialSnapshot
                     alwaysShow
                     loading={paymentFinancialLoading}
-                    financial={paymentFinancial}
+                    financial={summaryFinancial}
+                    illustrative={demoMetrics != null}
                     month={summaryMonth}
                     onMonthChange={setSummaryMonth}
                     error={paymentFinancialError}
@@ -1201,19 +1250,24 @@ export function DashboardScreen() {
                 </View>
               ) : null}
 
-              {visibility.showAccommodationOps && !isMess && displayAccommodationOperations ? (
+              {visibility.showAccommodationOps && !isMess && summaryOperations ? (
                 <>
                   <DashboardAccommodationOperations
                     occupancyEntity={unitLevel ? 'units' : 'beds'}
-                    operations={displayAccommodationOperations}
+                    operations={summaryOperations}
                     subtitle={
-                      unitLevel
-                        ? t('dashboard.accommodationOps.subtitleUnits', {
-                            defaultValue: 'Current unit status across all buildings',
-                          })
-                        : t('dashboard.accommodationOps.subtitleBeds', {
-                            defaultValue: 'Current bed status across all buildings',
-                          })
+                      [
+                        unitLevel
+                          ? t('dashboard.accommodationOps.subtitleUnits', {
+                              defaultValue: 'Current unit status across all buildings',
+                            })
+                          : t('dashboard.accommodationOps.subtitleBeds', {
+                              defaultValue: 'Current bed status across all buildings',
+                            }),
+                        demoMetrics ? 'Illustrative' : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')
                     }
                     onOccupiedPress={
                       showResidentsActions || permissions.canViewSpaceOccupancies
@@ -1232,7 +1286,7 @@ export function DashboardScreen() {
                     }
                   />
                   <DashboardPendingPaymentsBanner
-                    count={displayAccommodationOperations.pendingPaymentsCount}
+                    count={summaryOperations.pendingPaymentsCount}
                     onPress={
                       showPaymentsQuickAction
                         ? handlePendingPaymentsBannerPress
@@ -1247,13 +1301,14 @@ export function DashboardScreen() {
                   spaceId={spaceId}
                   enabled={showMealOperations}
                   guidedEmpty={isMess && Boolean(showSetupCard)}
+                  illustrativeSummary={illustrativeMealSummary}
                 />
               ) : null}
 
-              {visibility.showAccommodationOps && !isMess && displayAccommodationOperations ? (
+              {visibility.showAccommodationOps && !isMess && summaryOperations ? (
                 <DashboardRecentActivity
-                  moveInsThisMonth={displayAccommodationOperations.moveInsThisMonth}
-                  reservedCount={displayAccommodationOperations.reservedBeds ?? 0}
+                  moveInsThisMonth={summaryOperations.moveInsThisMonth}
+                  reservedCount={summaryOperations.reservedBeds ?? 0}
                   moveOutsThisMonth={null}
                   onMoveInsPress={
                     showResidentsActions || permissions.canViewSpaceOccupancies
@@ -1289,6 +1344,33 @@ export function DashboardScreen() {
       ) : null}
     </Screen>
   );
+}
+
+/** Keep the summary card's floors and rooms able to hold the illustrative bed count. */
+function reconcileRoomCount(
+  actualRooms: number,
+  capacity: number,
+  spaceType: string | null | undefined,
+): number {
+  const bedsPerRoom = spaceType === 'CO_LIVING' ? 2 : 4;
+  if (actualRooms > 0 && actualRooms * bedsPerRoom >= capacity) {
+    return actualRooms;
+  }
+  return Math.max(1, Math.ceil(capacity / bedsPerRoom));
+}
+
+function illustrativeFloorCount(
+  actualFloors: number,
+  rooms: number,
+  unitLevel: boolean,
+  capacity: number,
+): number {
+  const groups = unitLevel ? capacity : rooms;
+  const groupsPerFloor = unitLevel ? 12 : 16;
+  if (actualFloors > 0 && groups <= actualFloors * groupsPerFloor) {
+    return actualFloors;
+  }
+  return Math.max(1, Math.ceil(groups / 10));
 }
 
 const styles = StyleSheet.create({

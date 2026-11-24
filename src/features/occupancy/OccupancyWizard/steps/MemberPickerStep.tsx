@@ -146,12 +146,72 @@ export function MemberPickerStep({
     : t('occupancyWizard.addMemberHint');
 
   function renderMemberCard(item: ResidentPickerItem) {
-    const blocked =
-      preferredStatus === 'VACATED' &&
-      (item.occupancyStatus === 'ALLOCATED' || item.occupancyStatus === 'RESERVED');
+    const busyStay =
+      item.occupancyStatus === 'ALLOCATED' || item.occupancyStatus === 'RESERVED';
+    const blocked = crossSpaceReuse
+      ? item.availableForMoveIn === false
+      : preferredStatus === 'VACATED' && busyStay;
     const warn = preferredStatus === 'ALLOCATED' && item.occupancyStatus !== 'ALLOCATED';
     const selected = selectedMemberId === item.memberId;
     const customerMeta = isCustomer && crossSpaceReuse ? customerReuseMeta(item, t) : null;
+
+    const spaceLine = (() => {
+      if (!crossSpaceReuse || !item.sourceSpaceName) {
+        return null;
+      }
+      if (item.alreadyInTargetSpace && item.availableForMoveIn !== false) {
+        return t('occupancyWizard.residentCard.inThisSpace');
+      }
+      if (item.role === 'CUSTOMER') {
+        return t('occupancyWizard.residentCard.messCustomerAt', {
+          space: item.sourceSpaceName,
+          defaultValue: 'Mess customer at {{space}}',
+        });
+      }
+      if (item.occupancyStatus === 'RESERVED' && !item.alreadyInTargetSpace) {
+        return t('occupancyWizard.residentCard.reservedIn', {
+          space: item.sourceSpaceName,
+          defaultValue: 'Reserved in {{space}}',
+        });
+      }
+      if (item.occupancyStatus === 'ALLOCATED' && !item.alreadyInTargetSpace) {
+        return t('occupancyWizard.residentCard.currentlyIn', {
+          space: item.sourceSpaceName,
+          defaultValue: 'Currently staying in {{space}}',
+        });
+      }
+      if (!item.alreadyInTargetSpace) {
+        return t('occupancyWizard.residentCard.previouslyIn', {
+          space: item.sourceSpaceName,
+        });
+      }
+      return null;
+    })();
+
+    const eligibilityLine = (() => {
+      if (!crossSpaceReuse || isCustomer) {
+        return null;
+      }
+      const space = item.sourceSpaceName ?? '';
+      if (item.availableForMoveIn === false) {
+        if (item.occupancyStatus === 'RESERVED') {
+          return t('occupancyWizard.residentCard.alreadyReservedHere', {
+            space,
+            defaultValue: 'Already has a reservation in {{space}}.',
+          });
+        }
+        return t('occupancyWizard.residentCard.alreadyActiveHere', {
+          space,
+          defaultValue: 'Already has an active stay in {{space}}.',
+        });
+      }
+      if (busyStay && !item.alreadyInTargetSpace) {
+        return t('occupancyWizard.residentCard.availableToAdd', {
+          defaultValue: 'Available to add to another space.',
+        });
+      }
+      return availableLabel;
+    })();
 
     return (
       <Pressable
@@ -182,17 +242,11 @@ export function MemberPickerStep({
                 <Text style={styles.available}>{customerMeta.statusLine}</Text>
               ) : null}
             </>
-          ) : crossSpaceReuse && item.sourceSpaceName ? (
+          ) : crossSpaceReuse && (spaceLine || eligibilityLine) ? (
             <>
-              <Text style={styles.meta}>
-                {item.alreadyInTargetSpace
-                  ? t('occupancyWizard.residentCard.inThisSpace')
-                  : t('occupancyWizard.residentCard.previouslyIn', {
-                      space: item.sourceSpaceName,
-                    })}
-              </Text>
-              {item.availableForMoveIn !== false ? (
-                <Text style={styles.available}>{availableLabel}</Text>
+              {spaceLine ? <Text style={styles.meta}>{spaceLine}</Text> : null}
+              {eligibilityLine ? (
+                <Text style={blocked ? styles.warn : styles.available}>{eligibilityLine}</Text>
               ) : null}
             </>
           ) : (

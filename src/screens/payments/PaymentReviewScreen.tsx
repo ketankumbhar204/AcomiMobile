@@ -11,7 +11,7 @@ import { useActiveSpaceId } from '../../hooks/useActiveSpaceId';
 import { useSpacePermissions } from '../../hooks/useSpacePermissions';
 import type { MainStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
-import { colors, spacing, typography } from '../../theme';
+import { colors, pageContentGutter, spacing, typography } from '../../theme';
 import { canManagePayments, currentMonthKey } from '../../utils/dashboardFinancial';
 import { invalidateDashboardQueries } from '../../utils/dashboardQueryCache';
 import { invalidatePaymentsMonthCaches } from '../../utils/paymentsMonthCache';
@@ -260,14 +260,15 @@ export function PaymentReviewScreen() {
 }
 
 const styles = StyleSheet.create({
+  // Single page gutter at Screen (Member Details / Rooms). Do not re-pad children.
   screenContent: {
     flex: 1,
-    padding: 0,
+    paddingHorizontal: pageContentGutter,
+    paddingTop: spacing.md,
+    paddingBottom: 0,
     minHeight: 0,
   },
   header: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xs,
     paddingBottom: spacing.xs,
   },
   monthHint: {
@@ -278,7 +279,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    paddingHorizontal: spacing.lg,
     paddingBottom: spacing.section,
     gap: spacing.sm,
   },

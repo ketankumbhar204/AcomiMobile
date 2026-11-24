@@ -1,6 +1,12 @@
-import { associableSpaces, canManageServiceContacts, canOpenServiceContacts } from '../serviceContactAccess';
-import { emptyDraft, validateServiceContactDraft } from '../serviceContactForm';
-import { mailtoHref, telHref, whatsappHref } from '../serviceContactLinks';
+import { canManageServiceContacts, canOpenServiceContacts } from '../serviceContactAccess';
+import { emptyDraft, toSaveBody, validateServiceContactDraft } from '../serviceContactForm';
+import {
+  contactInitials,
+  mailtoHref,
+  serviceContactNumbers,
+  telHref,
+  whatsappHref,
+} from '../serviceContactLinks';
 
 describe('service contacts', () => {
   it('hides the directory from tenants and lets staff view without managing', () => {
@@ -9,10 +15,18 @@ describe('service contacts', () => {
     expect(canOpenServiceContacts([{ membershipRole: 'STAFF' }])).toBe(true);
     expect(canManageServiceContacts([{ membershipRole: 'STAFF' }])).toBe(false);
     expect(canManageServiceContacts([{ membershipRole: 'OWNER' }])).toBe(true);
-    expect(associableSpaces([
-      { membershipRole: 'STAFF' },
-      { membershipRole: 'MANAGER' },
-    ])).toHaveLength(1);
+    expect(canManageServiceContacts([{ membershipRole: 'MANAGER' }])).toBe(true);
+  });
+
+  it('keeps distinct numbers and builds two-letter initials', () => {
+    expect(
+      serviceContactNumbers({
+        primaryPhone: '9876543210',
+        alternatePhone: '+91 98765 43210',
+        whatsappPhone: '9123456789',
+      }),
+    ).toEqual(['9876543210', '9123456789']);
+    expect(contactInitials('Sairaj Patil')).toBe('SP');
   });
 
   it('builds call and WhatsApp links with +91 and rejects a bad email', () => {
@@ -36,5 +50,19 @@ describe('service contacts', () => {
       primaryPhone: '9876543210',
     });
     expect(custom.customCategoryName).toBe('custom_required');
+  });
+
+  it('saves a contact without a space association', () => {
+    const body = toSaveBody(
+      {
+        ...emptyDraft(),
+        businessName: 'Sai Plumbing Works',
+        category: 'PLUMBING',
+        primaryPhone: '9876543210',
+      },
+      false,
+    );
+    expect(body).not.toHaveProperty('spaceIds');
+    expect(body.businessName).toBe('Sai Plumbing Works');
   });
 });

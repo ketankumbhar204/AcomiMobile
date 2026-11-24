@@ -21,7 +21,7 @@ export function countImportableCandidates(
   );
 }
 
-/** Choice sheet only when import would not be an empty list. */
+/** Choice sheet only when "use existing" would not be an empty list. */
 export function shouldOfferImportChoice(importableCount: number): boolean {
   return importableCount > 0;
 }
@@ -30,9 +30,15 @@ export type AddPersonNoun = 'customer' | 'member';
 
 export type AddPersonEntry = 'new' | 'import';
 
-export type AddPersonDestination =
-  | { type: 'form'; pickerMode: 'new' | 'search' }
-  | { type: 'import-screen' };
+export type AddPersonDestination = { type: 'form'; pickerMode: 'new' | 'search' };
+
+/**
+ * Only Mess offers "Use existing…" (cross-space search inside Add Member).
+ * Lodging adds new people directly; existing residents come in through Move-in.
+ */
+export function offersUseExistingChoice(spaceType: string | undefined): boolean {
+  return spaceType === 'MESS';
+}
 
 /** Mess spaces speak about customers. Other spaces speak about members. */
 export function addPersonNoun(spaceType: string | undefined): AddPersonNoun {
@@ -40,9 +46,9 @@ export function addPersonNoun(spaceType: string | undefined): AddPersonNoun {
 }
 
 /**
- * Which existing screen to open after the choice sheet.
- * Mess import stays inside Add Member (the existing cross-space search).
- * Other spaces use the existing Import Existing People screen.
+ * Which Add Member form mode to open after the choice.
+ * Mess "use existing" opens the cross-space search picker inside Add Member.
+ * Lodging never navigates to Import Existing People: it always opens the new-person form.
  */
 export function destinationForAddPersonChoice(
   spaceType: string | undefined,
@@ -51,8 +57,8 @@ export function destinationForAddPersonChoice(
   if (entry === 'new') {
     return { type: 'form', pickerMode: 'new' };
   }
-  if (spaceType === 'MESS') {
+  if (offersUseExistingChoice(spaceType)) {
     return { type: 'form', pickerMode: 'search' };
   }
-  return { type: 'import-screen' };
+  return { type: 'form', pickerMode: 'new' };
 }

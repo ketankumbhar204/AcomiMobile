@@ -129,6 +129,7 @@ const styles = StyleSheet.create({
   right: {
     zIndex: 1,
     flexShrink: 0,
-    maxWidth: '34%',
+    maxWidth: '48%',
+    alignItems: 'flex-end',
   },
 });

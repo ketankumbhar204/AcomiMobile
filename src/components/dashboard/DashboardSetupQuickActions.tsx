@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { ChevronRight, Sparkles, Wrench } from 'lucide-react-native';
@@ -8,6 +8,8 @@ import { DashboardSectionTitle } from './DashboardSectionTitle';
 type DashboardSetupQuickActionsProps = {
   onStartSetup?: () => void;
   onAddBuilding?: () => void;
+  /** Extra action shown under the setup cards, still inside Quick Actions. */
+  below?: ReactNode;
 };
 
 function MiniActionCard({
@@ -52,9 +54,10 @@ function MiniActionCard({
 export const DashboardSetupQuickActions = memo(function DashboardSetupQuickActions({
   onStartSetup,
   onAddBuilding,
+  below,
 }: DashboardSetupQuickActionsProps) {
   const { t } = useTranslation();
-  if (!onStartSetup && !onAddBuilding) {
+  if (!onStartSetup && !onAddBuilding && !below) {
     return null;
   }
 
@@ -91,6 +94,7 @@ export const DashboardSetupQuickActions = memo(function DashboardSetupQuickActio
           />
         ) : null}
       </View>
+      {below ? <View style={styles.below}>{below}</View> : null}
     </View>
   );
 });
@@ -102,6 +106,9 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     gap: spacing.sm,
+  },
+  below: {
+    marginTop: spacing.sm,
   },
   card: {
     flex: 1,

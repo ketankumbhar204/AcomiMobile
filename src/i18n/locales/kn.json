@@ -31,7 +31,8 @@
     "editSpace": {
       "tabGeneral": "General",
       "tabMeals": "Meals & billing",
-      "tabPolls": "Poll defaults"
+      "tabPolls": "Poll defaults",
+      "tabBilling": "ಬಿಲ್ಲಿಂಗ್ ಮತ್ತು ತೆರಿಗೆ"
     },
     "quickSetup": {
       "reviewPreviewHint": "Review and edit the structure before creating the building."
@@ -126,7 +127,9 @@
       "invalidCredentials": "Invalid mobile number or password.",
       "mobileAlreadyRegistered": "This mobile number is already registered.",
       "accountNotFound": "No ACOMI account found with this mobile number.",
-      "accountDisabled": "ನಿಮ್ಮ ಖಾತೆಯನ್ನು ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಲಾಗಿದೆ. ದಯವಿಟ್ಟು ಬೆಂಬಲವನ್ನು ಸಂಪರ್ಕಿಸಿ."
+      "accountDisabled": "ನಿಮ್ಮ ಖಾತೆಯನ್ನು ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಲಾಗಿದೆ. ದಯವಿಟ್ಟು ಬೆಂಬಲವನ್ನು ಸಂಪರ್ಕಿಸಿ.",
+      "startupOfflineTitle": "ACOMI ಅನ್ನು ತಲುಪಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ",
+      "startupOfflineMessage": "ಸರ್ವರ್ ಈಗ ಲಭ್ಯವಿಲ್ಲ. ನಿಮ್ಮ ಸಂಪರ್ಕವನ್ನು ಪರಿಶೀಲಿಸಿ ಮತ್ತು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ."
     },
     "loading": "Loading…",
     "loadMore": "Load more",
@@ -137,7 +140,13 @@
       "am": "AM",
       "pm": "PM"
     },
-    "fabAction": "Action"
+    "fabAction": "Action",
+    "discard": "ತ್ಯಜಿಸಿ",
+    "error": "ಏನೋ ತಪ್ಪಾಗಿದೆ",
+    "dismiss": "ವಜಾಗೊಳಿಸಿ",
+    "viewDetails": "ವಿವರಗಳನ್ನು ವೀಕ್ಷಿಸಿ",
+    "change": "ಬದಲಿಸಿ",
+    "selectDate": "ದಿನಾಂಕ ಆಯ್ಕೆಮಾಡಿ"
   },
   "notifications": {
     "title": "Notifications",
@@ -159,7 +168,10 @@
     },
     "noMatchTitle": "No matching notifications",
     "searchPlaceholder": "Search notifications",
-    "unreadSummary": "{{count}} unread updates"
+    "unreadSummary": "{{count}} unread updates",
+    "pushPermissionDenied": "ಅಧಿಸೂಚನೆಗಳು ಆಫ್ ಆಗಿವೆ. ನೀವು ಅವುಗಳನ್ನು ನಂತರ ಸಿಸ್ಟಮ್ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಆನ್ ಮಾಡಬಹುದು.",
+    "unavailable": "ಈ ಅಪ್‌ಡೇಟ್ ಇನ್ನು ಲಭ್ಯವಿಲ್ಲ.",
+    "rentalMealHidden": "ಈ ಸ್ಪೇಸ್‌ಗೆ ಊಟದ ಅಪ್‌ಡೇಟ್‌ಗಳು ಲಭ್ಯವಿಲ್ಲ."
   },
   "list": {
     "search": {
@@ -182,7 +194,8 @@
       "role": "Role",
       "status": "Status",
       "sort": "Sort by",
-      "category": "Category"
+      "category": "Category",
+      "stayStatus": "ವಸತಿ ಸ್ಥಿತಿ"
     },
     "sort": {
       "nameAsc": "Name A–Z",
@@ -259,7 +272,14 @@
     "decreaseQuantity": "Decrease quantity",
     "increaseQuantity": "Increase quantity",
     "closeFilterDropdown": "Close filter dropdown",
-    "loadingDashboard": "Loading dashboard"
+    "loadingDashboard": "Loading dashboard",
+    "home": "ಹೋಮ್",
+    "findAPlace": "ಸ್ಥಳವನ್ನು ಹುಡುಕಿ",
+    "findAPlaceDetail": "ಸ್ಥಳದ ವಿವರಗಳು",
+    "enquiries": "ವಿಚಾರಣೆಗಳು",
+    "favorites": "ಮೆಚ್ಚಿನವು",
+    "myEnquiries": "ನನ್ನ ವಿಚಾರಣೆಗಳು",
+    "serviceContacts": "Service Contacts"
   },
   "onboarding": {
     "choice": {
@@ -295,7 +315,23 @@
       "emptyTitle": "No invitations right now",
       "emptyDescription": "When an owner invites your mobile number, it will show up here. Tap Refresh to check again.",
       "notNow": "Not now",
-      "accept": "Accept"
+      "accept": "Accept",
+      "discoverTitle": "ಸ್ಥಳವನ್ನು ಹುಡುಕಬೇಕೇ?",
+      "discoverDescription": "ಲಭ್ಯವಿರುವ PG, ಹಾಸ್ಟೆಲ್‌ಗಳು, ಬಾಡಿಗೆ ಮತ್ತು ಕೋ-ಲಿವಿಂಗ್ ಸ್ಪೇಸ್‌ಗಳನ್ನು ಬ್ರೌಸ್ ಮಾಡಿ."
+    },
+    "memberHome": {
+      "title": "ನೀವು ಏನನ್ನು ಹುಡುಕುತ್ತಿದ್ದೀರಿ?",
+      "eyebrow": "Acomi ಗೆ ಸುಸ್ವಾಗತ",
+      "heading": "ನೀವು ಏನನ್ನು ಹುಡುಕುತ್ತಿದ್ದೀರಿ?",
+      "subtitle": "PG · ಹಾಸ್ಟೆಲ್‌ · ಬಾಡಿಗೆ · ಕೋ-ಲಿವಿಂಗ್",
+      "findCta": "ಸ್ಥಳವನ್ನು ಹುಡುಕಿ",
+      "inviteSection": "ನಿಮಗೆ ಆಮಂತ್ರಣ ಇದೆಯೇ?",
+      "inviteHint": "ಈ ಸ್ಪೇಸ್‌ಗೆ ಸೇರಲು ನಿಮ್ಮನ್ನು ಆಹ್ವಾನಿಸಲಾಗಿದೆ.",
+      "emptyTitle": "ಈಗ ಯಾವುದೇ ಆಮಂತ್ರಣಗಳಿಲ್ಲ",
+      "emptyDescription": "ಮಾಲೀಕರು ಅಥವಾ ಮ್ಯಾನೇಜರ್ ನಿಮ್ಮನ್ನು ಆಹ್ವಾನಿಸಿದಾಗ, ನಿಮ್ಮ ಆಮಂತ್ರಣ ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತದೆ.",
+      "pendingBadge": "ಬಾಕಿ ಇದೆ",
+      "pendingCount": "ನಿಮಗೆ {{count}} ಬಾಕಿ ಇರುವ ಆಮಂತ್ರಣಗಳಿವೆ",
+      "ownerSwitch": "ನಾನು ಬದಲಿಗೆ ಮಾಲೀಕನಾಗಿದ್ದೇನೆ"
     }
   },
   "auth": {
@@ -378,7 +414,12 @@
       "expiredHint": "This OTP has expired. Request a new OTP.",
       "devHint": "ನಿಮ್ಮ OTP ಅನ್ನು ಬ್ಯಾಕೆಂಡ್ ಡೆವಲಪ್‌ಮೆಂಟ್ ಲಾಗ್‌ನಲ್ಲಿ ನೋಡಿ.",
       "wrongNumber": "ತಪ್ಪಾದ ಸಂಖ್ಯೆ?",
-      "changeIt": "ಬದಲಾಯಿಸಿ"
+      "changeIt": "ಬದಲಾಯಿಸಿ",
+      "smsSampleTitle": "ಈ SMS ಅನ್ನು ನೋಡಿ",
+      "smsSampleSender": "ACOMI ನಿಂದ SMS",
+      "smsSampleBody": "[Hello] Your OTP for Phone Verification is XXXXXX. Valid for 5 mins - [Southern Express]",
+      "smsSampleCaption": "“Southern Express” ಎಂಬುದು ನಮ್ಮ SMS ಪ್ರೊವೈಡರ್‌ನ ಟೆಂಪ್ಲೇಟ್ ಹೆಸರು ಮಾತ್ರ — ಈ ಕೋಡ್ ACOMI ಗಾಗಿ.",
+      "smsSampleA11y": "ACOMI OTP SMS ಸಂದೇಶದ ನಮೂನೆ"
     },
     "forgotPassword": {
       "eyebrow": "Reset password",
@@ -415,7 +456,24 @@
       "loading": "Loading spaces...",
       "attentionUpToDate": "✓ Up to date",
       "attentionMoreUpdates_one": "+{{count}} more update",
-      "attentionMoreUpdates_other": "+{{count}} more updates"
+      "attentionMoreUpdates_other": "+{{count}} more updates",
+      "setDefault": "ಡಿಫಾಲ್ಟ್ ಆಗಿ ಹೊಂದಿಸಿ",
+      "setDefaultSuccess": "ಡಿಫಾಲ್ಟ್ ಸ್ಪೇಸ್ ಅಪ್‌ಡೇಟ್ ಆಗಿದೆ.",
+      "settingDefault": "ಅಪ್‌ಡೇಟ್ ಆಗುತ್ತಿದೆ…",
+      "defaultHint": "ನೀವು ಆ್ಯಪ್ ಪ್ರಾರಂಭಿಸಿದಾಗ ನಿಮ್ಮ ಡಿಫಾಲ್ಟ್ ಸ್ಪೇಸ್ ಮೊದಲು ತೆರೆಯುತ್ತದೆ.",
+      "defaultOpensOnLaunch": "ಲಾಂಚ್‌ನಲ್ಲಿ ಮೊದಲು ತೆರೆಯುತ್ತದೆ",
+      "findPlace": "Search for a place",
+      "findPlaceSubtitle": "PGs · Hostels · Rentals · Co-living",
+      "serviceContacts": "Service Contacts",
+      "serviceContactsSubtitle": "Save and manage your service providers",
+      "pendingTitle": "ಪರಿಶೀಲನೆ ಬಾಕಿ",
+      "pendingHint": "ACOMI ಲಿಸ್ಟಿಂಗ್ ಅನ್ನು ಪ್ರಕಟಿಸುವವರೆಗೆ ಇದು ಸಾರ್ವಜನಿಕವಾಗಿರುವುದಿಲ್ಲ.",
+      "pendingNoInventory": "ಈ ಲಿಸ್ಟಿಂಗ್ ಪ್ರಕಟವಾಗುವವರೆಗೆ ಯಾವುದೇ ಕೊಠಡಿಗಳು ಅಥವಾ ಹಾಸಿಗೆಗಳಿಲ್ಲ.",
+      "listingName": "ಹೆಸರು",
+      "listingAddress": "ವಿಳಾಸ",
+      "pendingSaved": "ಲಿಸ್ಟಿಂಗ್ ಅಪ್‌ಡೇಟ್ ಆಗಿದೆ.",
+      "savingListing": "ಉಳಿಸಲಾಗುತ್ತಿದೆ…",
+      "saveListing": "ಲಿಸ್ಟಿಂಗ್ ಉಳಿಸಿ"
     },
     "globalDashboard": {
       "attentionTitle": "Attention required ({{count}})",
@@ -450,7 +508,8 @@
     },
     "switcher": {
       "open": "Switch space",
-      "dismiss": "Dismiss space switcher"
+      "dismiss": "Dismiss space switcher",
+      "defaultHint": "ಸ್ಪೇಸ್ ತೆರೆಯಲು ಟ್ಯಾಪ್ ಮಾಡಿ. ನಿಮ್ಮ ಡಿಫಾಲ್ಟ್ ಸ್ಪೇಸ್ ಲಾಂಚ್‌ನಲ್ಲಿ ಮೊದಲು ತೆರೆಯುತ್ತದೆ — ಇದನ್ನು ಹೋಮ್‌ನಿಂದ ಬದಲಾಯಿಸಿ."
     },
     "createSpace": {
       "eyebrow": "ಹೊಸ ಆಸ್ತಿ",
@@ -474,7 +533,10 @@
       "nameRequired": "ಸ್ಪೇಸ್ ಹೆಸರು ಅಗತ್ಯವಿದೆ.",
       "typeRequired": "ದಯವಿಟ್ಟು ಸ್ಪೇಸ್ ಪ್ರಕಾರವನ್ನು ಆಯ್ಕೆಮಾಡಿ.",
       "successTitle": "ಸ್ಪೇಸ್ ರಚಿಸಲಾಗಿದೆ",
-      "successMessage": "\"{{name}}\" ಯಶಸ್ವಿಯಾಗಿ ರಚಿಸಲಾಗಿದೆ."
+      "successMessage": "\"{{name}}\" ಯಶಸ್ವಿಯಾಗಿ ರಚಿಸಲಾಗಿದೆ.",
+      "nameTaken": "ಈ ಹೆಸರಿನ ಸ್ಪೇಸ್ ನಿಮ್ಮಲ್ಲಿ ಈಗಾಗಲೇ ಇದೆ.",
+      "notAllowedTitle": "Cannot create a space",
+      "notAllowed": "Only an owner can create a space. Tenant and customer access does not include this."
     },
     "types": {
       "label": "ಸ್ಪೇಸ್ ಪ್ರಕಾರ",
@@ -497,6 +559,10 @@
       "rental": {
         "label": "Rental",
         "description": "ಫ್ಲಾಟ್‌ಗಳು / ಕೊಠಡಿಗಳು"
+      },
+      "corporateStay": {
+        "label": "ಕಾರ್ಪೊರೇಟ್ ಸ್ಟೇ",
+        "description": "ಕಂಪನಿ ವಸತಿ"
       }
     },
     "propertyCategory": {
@@ -547,7 +613,9 @@
       "MANAGER": "Manager",
       "TENANT": "Tenant",
       "CUSTOMER": "Customer",
-      "STAFF": "Staff"
+      "STAFF": "Staff",
+      "MEMBER": "Member",
+      "ADMIN": "Admin"
     },
     "details": {
       "eyebrow": "Space",
@@ -630,6 +698,413 @@
       "loadDetails": "Failed to load space details.",
       "update": "Failed to update space.",
       "deactivate": "Failed to deactivate space."
+    },
+    "findPlace": {
+      "view": "ವೀಕ್ಷಿಸಿ",
+      "inquirySent": "ವಿಚಾರಣೆ ಕಳುಹಿಸಲಾಗಿದೆ",
+      "inquirySentByEmail": "ನಿಮ್ಮ ಇಮೇಲ್‌ಗೆ ಕಳುಹಿಸಲಾಗಿದೆ",
+      "inquirySentInApp": "Acomi ಆ್ಯಪ್‌ನಲ್ಲಿ ಕಳುಹಿಸಲಾಗಿದೆ",
+      "inquirySentEmailAndApp": "ನಿಮ್ಮ ಇಮೇಲ್ ಮತ್ತು Acomi ಆ್ಯಪ್‌ಗೆ ಕಳುಹಿಸಲಾಗಿದೆ",
+      "reviewsRatings": "ರಿವ್ಯೂ ಮತ್ತು ರೇಟಿಂಗ್",
+      "photos": "ಫೋಟೋಗಳು",
+      "notAvailable": "ಲಭ್ಯವಿಲ್ಲ",
+      "infoPrice": "ಬೆಲೆ",
+      "infoMenu": "ಮೆನು",
+      "infoMealTiming": "ಊಟದ ಸಮಯ",
+      "infoFoodType": "ಆಹಾರ ಪ್ರಕಾರ",
+      "infoSubscription": "ಸಬ್ಸ್ಕ್ರಿಪ್ಷನ್",
+      "perMeal": "/ ಊಟ",
+      "priceBasis": {
+        "PER_BED": "ಪ್ರತಿ ಬೆಡ್ / ಮಾಸ",
+        "PER_ROOM": "ಪ್ರತಿ ಕೋಣೆ / ಮಾಸ",
+        "PER_UNIT": "ಪ್ರತಿ ಮಾಸ"
+      },
+      "pricingUnit": "ಬೆಲೆ ಘಟಕ",
+      "enquire": {
+        "creditsRequiredTitle": "ನಿಮ್ಮ ಉಚಿತ ವಿಚಾರಣೆಗಳು ಬಳಕೆಯಾಗಿವೆ",
+        "creditsRequiredBody": "ವಿಚಾರಣೆ ಕ್ರೆಡಿಟ್‌ಗಳನ್ನು ಖರೀದಿಸಿ ಅಥವಾ ಉಚಿತ ವಿಚಾರಣೆಗಳು ಮರುಹೊಂದಿಸುವವರೆಗೆ ನಾಳೆಯ ತನಕ ಕಾಯಿರಿ.",
+        "cta": "Get Contact Details",
+        "ownCta": "This is your Space",
+        "ownTitle": "This is your Space",
+        "ownBody": "Contact enquiry isn't available for your own listing.",
+        "requestTitle": "Request contact details",
+        "requestBody": "Owner contact details are not displayed on ACOMI. Submit an enquiry and ACOMI will email the contact details when the listing is eligible.",
+        "send": "Send enquiry",
+        "sentTitle": "Enquiry sent",
+        "sentBody": "Your enquiry has been submitted. When details are shared, they will appear in My Enquiries.",
+        "sentSharedTitle": "Contact details ready",
+        "sentSharedBody": "Owner contact details are available in My Enquiries.",
+        "alreadySharedTitle": "Already in your inbox",
+        "alreadySharedBody": "Owner contact details for this place were emailed earlier.",
+        "alreadySharedInAppTitle": "Your enquiry is ready",
+        "alreadySharedInAppBody": "View the contact details for this place in My Enquiries.",
+        "alreadySharedBodyNoDate": "Owner contact details for this place were emailed earlier.",
+        "alreadyNoNewEmail": "A new email was not sent.",
+        "checkInboxHint": "Search your inbox for the ACOMI email from this date.",
+        "emailSentOn": "Email sent on",
+        "sentTo": "Sent to",
+        "alreadyPendingTitle": "Enquiry already open",
+        "alreadyPendingBody": "You already have an open enquiry for this place.",
+        "alreadyPendingHint": "A new email was not sent. We'll share the details when they can be viewed in My Enquiries.",
+        "done": "Done",
+        "submitting": "Sending your enquiry…",
+        "submittingShort": "Sending…",
+        "submittingHint": "Please wait…",
+        "submitError": "Could not send your enquiry. Please try again.",
+        "listingUnavailable": "We could not start an enquiry for this listing. Please try again or pick another listing.",
+        "sentTitleShort": "Enquiry sent!",
+        "sentBodyShort": "We'll notify you when details are available.",
+        "readyTitleShort": "Contact details available",
+        "readyBodyShort": "View your enquiry in ACOMI.",
+        "alreadyTitleShort": "You've already enquired",
+        "alreadyReadyBodyShort": "View your enquiry in ACOMI.",
+        "alreadyPendingBodyShort": "We'll notify you when details are available.",
+        "viewEnquiry": "View enquiry",
+        "viewMyEnquiries": "View My Enquiries",
+        "benefitUnlimited": "Unlimited enquiries",
+        "benefitInApp": "Contact details in the app",
+        "benefitNotify": "Get notified instantly",
+        "emailRequiredTitle": "Add an email",
+        "emailRequiredBody": "Add an email so we can keep your account connected.",
+        "emailLabel": "Email address",
+        "emailTitle": "Email for this enquiry",
+        "emailBody": "Pick a saved address or enter a new one.",
+        "savedEmails": "Saved emails",
+        "useDifferentEmail": "Use a different email",
+        "privacyHint": "Owner contact details are shared in My Enquiries when available.",
+        "viewHereExhausted": "ನೀವು ಇಂದಿನ ಎಲ್ಲಾ ಇನ್‌ಸ್ಟಂಟ್ ಕಾಂಟ್ಯಾಕ್ಟ್ ವೀಕ್ಷಣೆಗಳನ್ನು ಬಳಸಿದ್ದೀರಿ.",
+        "viewHereDisabled": "ಇನ್‌ಸ್ಟಂಟ್ ಕಾಂಟ್ಯಾಕ್ಟ್ ವೀಕ್ಷಣೆ ಆಫ್ ಆಗಿದೆ. ನೀವು ಇನ್ನೂ ವಿವರಗಳನ್ನು ವಿನಂತಿಸಬಹುದು.",
+        "sentToastTitle": "ವಿಚಾರಣೆ ಕಳುಹಿಸಲಾಗಿದೆ!",
+        "sentToastBody": "ನಿಮ್ಮ ಇಮೇಲ್ ಇನ್‌ಬಾಕ್ಸ್ ಪರಿಶೀಲಿಸಿ, ನಾವು ಮಾಲೀಕರ ಸಂಪರ್ಕ ವಿವರಗಳನ್ನು {{email}} ಗೆ ಕಳುಹಿಸಿದ್ದೇವೆ.",
+        "sentToastBodyNoEmail": "ನಿಮ್ಮ ಇಮೇಲ್ ಇನ್‌ಬಾಕ್ಸ್ ಪರಿಶೀಲಿಸಿ. ನಾವು ಮಾಲೀಕರ ಸಂಪರ್ಕ ವಿವರಗಳನ್ನು ಕಳುಹಿಸಿದ್ದೇವೆ.",
+        "limitMapTitle": "ಮ್ಯಾಪ್‌ಗೆ ಮುಂದುವರಿಯಲು ಪಾವತಿಸಿ",
+        "limitPhotosTitle": "ಫೋಟೋಗಳನ್ನು ವಿನಂತಿಸಲು ಮುಂದುವರಿಯಲು ಪಾವತಿಸಿ",
+        "limitMapBody": "ಇಂದು",
+        "limitPhotosBody": "ಇಂದು",
+        "limitPaymentSubmitError": "ಪಾವತಿ ವಿನಂತಿಯನ್ನು ಸಲ್ಲಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+        "limitPayRejectedBody": "ಈ ಪಾವತಿ ದೃಢೀಕರಿಸಲಾಗಿಲ್ಲ, ಆದ್ದರಿಂದ ಮ್ಯಾಪ್ ಮತ್ತು ಫೋಟೋ ವಿನಂತಿ ಮುಚ್ಚಿಯೇ ಇರುತ್ತದೆ.",
+        "limitMapPendingBody": "ಅಡ್ಮಿನ್ ಈ ಪಾವತಿಯನ್ನು ದೃಢೀಕರಿಸುವವರೆಗೆ ಮ್ಯಾಪ್ ಮುಚ್ಚಿಯೇ ಇರುತ್ತದೆ. ಪಾವತಿ ದೃಢೀಕರಿಸಿದ ತಕ್ಷಣ ಅದು ತೆರೆಯುತ್ತದೆ.",
+        "limitPhotosPendingBody": "ಅಡ್ಮಿನ್ ಈ ಪಾವತಿಯನ್ನು ದೃಢೀಕರಿಸುವವರೆಗೆ ಫೋಟೋ ವಿನಂತಿಗಳು ಮುಚ್ಚಿಯೇ ಇರುತ್ತವೆ. ಪಾವತಿ ದೃಢೀಕರಿಸಿದ ತಕ್ಷಣ ನೀವು ಮುಂದುವರಿಯಬಹುದು.",
+        "limitPackageBodyMap": "{{count}} ವಿಚಾರಣೆ ಕ್ರೆಡಿಟ್‌ಗಳನ್ನು ಪಡೆಯಿರಿ. ಪಾವತಿ ದೃಢೀಕರಿಸಿದ ನಂತರ ಮ್ಯಾಪ್‌ಗೆ ಮುಂದುವರಿಯಿರಿ.",
+        "limitPackageBodyPhotos": "{{count}} ವಿಚಾರಣೆ ಕ್ರೆಡಿಟ್‌ಗಳನ್ನು ಪಡೆಯಿರಿ. ಪಾವತಿ ದೃಢೀಕರಿಸಿದ ನಂತರ ಫೋಟೋ ವಿನಂತಿಯನ್ನು ಮುಂದುವರಿಸಿ.",
+        "limitUtrPlaceholder": "UTR / ವ್ಯವಹಾರ ಉಲ್ಲೇಖ",
+        "limitPaymentSubmit": "ನಾನು",
+        "limitPaymentUnavailable": "ಪಾವತಿ ವಿವರಗಳು ಈಗ ಲಭ್ಯವಿಲ್ಲ. ದಯವಿಟ್ಟು ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+        "limitNotNow": "ಈಗ ಬೇಡ",
+        "contactTitle": "ಸಂಪರ್ಕ ವಿವರಗಳು",
+        "contactLoading": "ಸಂಪರ್ಕ ವಿವರಗಳನ್ನು ಲೋಡ್ ಮಾಡಲಾಗುತ್ತಿದೆ…",
+        "contactFailed": "ಸಂಪರ್ಕ ವಿವರಗಳನ್ನು ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+        "contactRetry": "ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
+        "contactOwner": "ಮಾಲೀಕರು",
+        "whatsapp": "WhatsApp",
+        "contactEmail": "ಇಮೇಲ್",
+        "openMap": "ಮ್ಯಾಪ್ಸ್‌ನಲ್ಲಿ ತೆರೆಯಿರಿ",
+        "contactEmpty": "ಇನ್ನೂ ಯಾವುದೇ ಸಂಪರ್ಕ ವಿವರಗಳು ಲಭ್ಯವಿಲ್ಲ.",
+        "emailCtaReady": "ಇಮೇಲ್‌ನಲ್ಲಿ ಪಡೆಯಿರಿ",
+        "emailCardHint": "ನಾವು ಮಾಲೀಕರ ಸಂಪರ್ಕ ವಿವರಗಳನ್ನು ನಿಮ್ಮ ನೋಂದಾಯಿತ ಇಮೇಲ್‌ಗೆ ಕಳುಹಿಸುತ್ತೇವೆ.",
+        "sendDetails": "ವಿವರಗಳನ್ನು ಕಳುಹಿಸಿ",
+        "contactRevealed": "ಸಂಪರ್ಕ ವಿವರಗಳನ್ನು ಬಹಿರಂಗಪಡಿಸಲಾಗಿದೆ",
+        "viewingShort": "ಸಂಪರ್ಕ ವಿವರಗಳನ್ನು ತೆರೆಯಲಾಗುತ್ತಿದೆ...",
+        "viewingBody": "ದಯವಿಟ್ಟು ಕಾಯಿರಿ, ನಾವು ಮಾಲೀಕರ ಸಂಪರ್ಕ ವಿವರಗಳನ್ನು ಲೋಡ್ ಮಾಡುತ್ತಿದ್ದೇವೆ.",
+        "sendingEmailBody": "ದಯವಿಟ್ಟು ಕಾಯಿರಿ, ನಾವು ಮಾಲೀಕರ ಸಂಪರ್ಕ ವಿವರಗಳನ್ನು ನಿಮ್ಮ ಇಮೇಲ್‌ಗೆ ಕಳುಹಿಸುತ್ತಿದ್ದೇವೆ.",
+        "sendingAppBody": "ದಯವಿಟ್ಟು ಕಾಯಿರಿ, ನಾವು ನಿಮ್ಮ ವಿಚಾರಣೆಯನ್ನು ACOMI ಗೆ ಕಳುಹಿಸುತ್ತಿದ್ದೇವೆ.",
+        "chooseTitle": "ಮಾಲೀಕರ ಸಂಪರ್ಕ ವಿವರಗಳನ್ನು ಪಡೆಯಿರಿ",
+        "chooseBody": "ಮಾಲೀಕರ ಸಂಪರ್ಕ ವಿವರಗಳನ್ನು ಪಡೆಯಲು ಒಂದು ವಿಧಾನ ಆಯ್ಕೆಮಾಡಿ.",
+        "recommended": "ಶಿಫಾರಸು ಮಾಡಲಾಗಿದೆ",
+        "sendOnApp": "Acomi ಆಪ್‌ನಲ್ಲಿ ಕಳುಹಿಸಿ",
+        "unlimitedTitle": "ಅಪರಿಮಿತ ವಿಚಾರಣೆಗಳು",
+        "freeAndroid": "Android ನಲ್ಲಿ ಉಚಿತ!",
+        "benefitFast": "ವೇಗ ಮತ್ತು ಸುಲಭ",
+        "benefitSecure": "ಸುರಕ್ಷಿತ",
+        "optionOr": "ಅಥವಾ",
+        "viewHereTitle": "ಸಂಪರ್ಕ ವಿವರಗಳನ್ನು ಇಲ್ಲಿ ವೀಕ್ಷಿಸಿ",
+        "viewHereRemaining": "ಇಂದು {{remaining}} ಇನ್‌ಸ್ಟಂಟ್ ವೀಕ್ಷಣೆಗಳು ಉಳಿದಿವೆ ({{limit}} ರಲ್ಲಿ)",
+        "emailRemaining": "{{limit}} ರಲ್ಲಿ {{remaining}} ವಿಚಾರಣೆಗಳು ಉಳಿದಿವೆ",
+        "emailExhaustedHint": "ಇಮೇಲ್ ಮಿತಿ ತಲುಪಿದೆ. ಮುಂದುವರಿಯಲು ವಿಚಾರಣೆ ಕ್ರೆಡಿಟ್‌ಗಳನ್ನು ಖರೀದಿಸಿ."
+      },
+      "eyebrow": "SEARCH FOR A PLACE",
+      "heading": "Search for a place",
+      "subheading": "Search PGs, hostels, rentals and co-living spaces around you.",
+      "searchPlaceholder": "Search by city, area or property name",
+      "typeAll": "All",
+      "tabs": {
+        "places": "Places",
+        "mess": "Mess",
+        "messEyebrow": "SEARCH FOR A MEAL SERVICE",
+        "messTitle": "Search for a meal service",
+        "messSubtitle": "Messes · Meal services",
+        "messSearchPlaceholder": "Search by city, area or mess name",
+        "messResultCount_one": "{{count}} mess found",
+        "messResultCount_other": "{{count}} messes found",
+        "messEmptyTitle": "No meals found",
+        "messEmptyDescription": "Try another location or adjust your search.",
+        "messLocationEmptyTitle": "No meals found in {{location}}",
+        "messLocationEmptyDescription": "Try another location or adjust your filters."
+      },
+      "resultCount_one": "{{count}} place found",
+      "resultCount_other": "{{count}} places found",
+      "emptyTitle": "No places to show",
+      "emptyDescription": "Active spaces will appear here when available.",
+      "searchEmptyTitle": "No matches",
+      "searchEmptyDescription": "Try a different search or type filter.",
+      "errorTitle": "Could not load places",
+      "loadError": "Something went wrong while loading places.",
+      "retry": "Try again",
+      "viewDetails": "View Details",
+      "memberBadge": "Already a member",
+      "testBadge": "Test",
+      "foodIncluded": "Food included in rent",
+      "addressLabel": "Address",
+      "addressMissing": "Address not set",
+      "detailsLabel": "Details",
+      "inviteHint": "Joining requires an owner invitation. Ask the owner to invite you to this place.",
+      "joinCta": "Ask the owner to invite you",
+      "openSpaceCta": "Open My Space",
+      "selectLocation": "Select location",
+      "clearLocation": "Clear location",
+      "chooseLocation": "Choose a location",
+      "locationSearchPlaceholder": "Search area, city or pincode",
+      "locationSearching": "Searching…",
+      "locationSearchFailed": "Could not search locations.",
+      "locationNoResults": "No matching locations.",
+      "locationSearchingLocations": "Searching locations...",
+      "locationAutocompleteUnavailable": "Location search is temporarily unavailable.",
+      "locationSearchTab": "Search location",
+      "locationBrowseTab": "Browse by location",
+      "locationSearchIntro": "Search for an area, city or pincode",
+      "locationSelectAction": "Select location",
+      "locationApplyAction": "Apply location",
+      "locationClearSearch": "Clear search",
+      "locationStateLabel": "State",
+      "locationDistrictLabel": "District",
+      "locationTalukaLabel": "City / Taluka",
+      "locationAreaLabel": "Area",
+      "locationSelectState": "Select state",
+      "locationSelectDistrict": "Select district",
+      "locationSelectTaluka": "Select city or taluka",
+      "locationSelectArea": "Select area",
+      "locationAutocompleteEmpty": "No matching locations found. Try another area, city or pincode.",
+      "locationChooseBy": "Choose by location",
+      "locationOr": "or",
+      "locationRetry": "Try again",
+      "locationAttributionGeoapify": "Powered by Geoapify",
+      "locationAttributionOsm": "© OpenStreetMap contributors",
+      "locationBrowse": "Browse by area",
+      "locationBrowseHint": "Search an area, city or pincode, or browse by state.",
+      "browseStates": "Select a state",
+      "browseDistricts": "Select a district",
+      "browseTalukas": "Select a city / taluka",
+      "browseAreas": "Select a location",
+      "locationEmptyTitle": "No properties found in {{location}}",
+      "locationEmptyDescription": "Try another location or adjust your filters.",
+      "getContactDetails": "Get Contact Details",
+      "infoAvailable": "Information available",
+      "availableInformation": "Available Information",
+      "viewAllInfo": "View all",
+      "infoContact": "Contact",
+      "infoAddress": "Address",
+      "infoMap": "Map",
+      "infoRent": "Rent",
+      "infoAmenities": "Amenities",
+      "infoFood": "Food",
+      "infoAvailableState": "{{field}} information is on this listing",
+      "infoUnavailableState": "{{field}} information is not on this listing",
+      "representativeImage": "Representative image",
+      "representativeImageAria": "Representative image for {{category}} listing",
+      "representativeCategory": {
+        "PG": "PG",
+        "HOSTEL": "hostel",
+        "CO_LIVING": "co-living",
+        "RENTAL": "rental",
+        "SERVICED": "serviced apartment",
+        "MESS": "mess",
+        "GENERIC": "accommodation"
+      },
+      "priceOnRequest": "Price on request",
+      "priceSuffix": {
+        "PG": "/ month",
+        "HOSTEL": "/ month",
+        "RENTAL": "/ month",
+        "CO_LIVING": "/ month",
+        "MESS": "/ month"
+      },
+      "openMaps": "Open in Google Maps",
+      "locationSection": "Location",
+      "moreFilters": "More filters",
+      "rentRange": "Rent",
+      "rent": {
+        "any": "Any rent",
+        "under8k": "Under ₹8,000",
+        "mid": "₹5,000–₹15,000",
+        "over15k": "₹15,000+"
+      },
+      "loadMoreError": "Could not load more places.",
+      "loadMoreRetry": "Load more",
+      "contactDetailsViewed": "ಸಂಪರ್ಕ ವಿವರಗಳನ್ನು ವೀಕ್ಷಿಸಲಾಗಿದೆ",
+      "sortLabel": "ವಿಂಗಡಿಸಿ",
+      "filters": {
+        "gender": "ಲಿಂಗ",
+        "sharing": "ಹಂಚಿಕೆ",
+        "mealType": "ಊಟದ ಪ್ರಕಾರ",
+        "foodType": "ಆಹಾರದ ಪ್ರಕಾರ",
+        "food": "ಆಹಾರ",
+        "furnishing": "ಫರ್ನಿಶಿಂಗ್",
+        "more": "ಹೆಚ್ಚು",
+        "contactAvailable": "ಸಂಪರ್ಕ ಲಭ್ಯ",
+        "servicedApartment": "ಸರ್ವಿಸ್ಡ್ / ಕಾರ್ಪೊರೇಟ್ ಅಪಾರ್ಟ್‌ಮೆಂಟ್"
+      },
+      "sort": {
+        "recommended": "ಶಿಫಾರಸು ಮಾಡಲಾಗಿದೆ",
+        "newest": "ಇತ್ತೀಚಿನದು"
+      },
+      "viewed": "ವೀಕ್ಷಿಸಲಾಗಿದೆ",
+      "inquirySentTo": "{{email}} ಗೆ ಕಳುಹಿಸಲಾಗಿದೆ",
+      "inquiryAlreadySent": "ವಿಚಾರಣೆ ಈಗಾಗಲೇ ಕಳುಹಿಸಲಾಗಿದೆ",
+      "sendInquiryAgain": "ವಿಚಾರಣೆಯನ್ನು ಮತ್ತೆ ಕಳುಹಿಸಿ",
+      "photoRequestUnavailableSaved": "ಈ ಲಿಸ್ಟಿಂಗ್‌ಗೆ ನಾವು ತೆರೆಯಬಹುದಾದ WhatsApp ಸಂಖ್ಯೆ ಇಲ್ಲ. ಫೋಟೋ ವಿನಂತಿಯನ್ನು ACOMI ನಲ್ಲಿ ಉಳಿಸಲಾಗಿದೆ.",
+      "photoRequestUnavailable": "ಈ ಲಿಸ್ಟಿಂಗ್‌ಗೆ ನಾವು ತೆರೆಯಬಹುದಾದ WhatsApp ಸಂಖ್ಯೆ ಇಲ್ಲ.",
+      "photoRequestBlockedSaved": "WhatsApp ತೆರೆಯಲಿಲ್ಲ. ಫೋಟೋ ವಿನಂತಿಯನ್ನು ACOMI ನಲ್ಲಿ ಉಳಿಸಲಾಗಿದೆ. ನೀವು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಬಹುದು.",
+      "photoRequestBlocked": "WhatsApp ತೆರೆಯಲಿಲ್ಲ. ನೀವು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಬಹುದು.",
+      "photoRequestFailed": "ಫೋಟೋ ವಿನಂತಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. WhatsApp ತೆರೆಯಲಿಲ್ಲ.",
+      "photoRequestHint": "ಈ ಸಂದೇಶವನ್ನು ನೀವು ಸ್ವತಃ WhatsApp ನಲ್ಲಿ ಕಳುಹಿಸಬೇಕು. WhatsApp ತೆರೆಯುವುದರಿಂದ ಅದು ಕಳುಹಿಸಲ್ಪಡುವುದಿಲ್ಲ.",
+      "photoRequestMessage": "ಸಂದೇಶ",
+      "continueWhatsApp": "WhatsApp ಗೆ ಮುಂದುವರಿಯಿರಿ",
+      "amenity": {
+        "WIFI": "ವೈ-ಫೈ",
+        "FOOD_INCLUDED": "ಊಟ",
+        "WASHING_MACHINE": "ಲಾಂಡ್ರಿ / ವಾಷಿಂಗ್ ಮೆಷಿನ್",
+        "PARKING": "ಪಾರ್ಕಿಂಗ್",
+        "HOUSEKEEPING": "ಹೌಸ್‌ಕೀಪಿಂಗ್",
+        "POWER_BACKUP": "ಪವರ್ ಬ್ಯಾಕಪ್",
+        "AC": "ಎಸಿ",
+        "KITCHEN": "ಅಡುಗೆಮನೆ",
+        "CCTV": "ಸಿಸಿಟಿವಿ / ಭದ್ರತೆ",
+        "RO_WATER": "RO ನೀರು",
+        "HOT_WATER": "ಬಿಸಿ ನೀರು",
+        "REFRIGERATOR": "ಫ್ರಿಜ್",
+        "WARDROBE": "ಅಲಮಾರಿ"
+      },
+      "genderOptions": {
+        "MALE": "ಪುರುಷರು",
+        "FEMALE": "ಮಹಿಳೆಯರು",
+        "MIXED": "ಪುರುಷರು ಮತ್ತು ಮಹಿಳೆಯರು"
+      },
+      "sharingOptions": {
+        "SINGLE": "ಸಿಂಗಲ್",
+        "TWO": "2 ಶೇರಿಂಗ್",
+        "THREE": "3 ಶೇರಿಂಗ್",
+        "FOUR": "4 ಶೇರಿಂಗ್",
+        "FIVE": "5 ಶೇರಿಂಗ್",
+        "SIX_PLUS": "6+ ಶೇರಿಂಗ್"
+      },
+      "foodOptions": {
+        "INCLUDED": "ಊಟ ಸೇರಿದೆ",
+        "AVAILABLE": "ಊಟ ಲಭ್ಯ",
+        "NONE": "ಊಟ ಇಲ್ಲ"
+      },
+      "furnishingOptions": {
+        "FULL": "ಪೂರ್ಣ ಫರ್ನಿಷ್ಡ್",
+        "SEMI": "ಅರೆ ಫರ್ನಿಷ್ಡ್",
+        "UNFURNISHED": "ಫರ್ನಿಚರ್ ಇಲ್ಲ"
+      },
+      "foodTypeOptions": {
+        "VEG": "ಸಸ್ಯಾಹಾರಿ",
+        "NON_VEG": "ಮಾಂಸಾಹಾರಿ",
+        "EGG": "ಮೊಟ್ಟೆ"
+      }
+    },
+    "billingSettings": {
+      "title": "ಬಿಲ್ಲಿಂಗ್ ಮತ್ತು ತೆರಿಗೆ",
+      "subtitle": "ಇದು ಹೊಸದಾಗಿ ರಚಿಸಲಾದ ಮಾಸಿಕ ಬಾಧ್ಯತೆಗಳಿಗೆ ಅನ್ವಯಿಸುತ್ತದೆ. ಪಾವತಿಸಿದ ಬಿಲ್‌ಗಳು ಬದಲಾಗುವುದಿಲ್ಲ.",
+      "taxEnabled": "GST / ತೆರಿಗೆ ವಿಧಿಸಿ",
+      "taxRate": "ತೆರಿಗೆ ದರ (%)",
+      "pricingMode": "ಬೆಲೆ ಉಲ್ಲೇಖ",
+      "exclusive": "ತೆರಿಗೆ ಹೊರತುಪಡಿಸಿ (ತೆರಿಗೆ ಸೇರಿಸಲಾಗುತ್ತದೆ)",
+      "inclusive": "ತೆರಿಗೆ ಸೇರಿದೆ (ಬೆಲೆಯಲ್ಲಿ ತೆರಿಗೆ ಸೇರಿದೆ)",
+      "gstin": "GSTIN (ಐಚ್ಛಿಕ)",
+      "dueDay": "ಮಾಸಿಕ ಬಾಕಿ ದಿನ"
+    },
+    "enquiries": {
+      "title": "ನನ್ನ ವಿಚಾರಣೆಗಳು",
+      "subtitle": "ನೀವು ACOMI ಗೆ ಕಳುಹಿಸಿದ ಸಂಪರ್ಕ ವಿನಂತಿಗಳು. ಮಾಲೀಕರ ವಿವರಗಳನ್ನು ಹಂಚಿಕೊಳ್ಳಲು ಸಾಧ್ಯವಾದಾಗ ಇಮೇಲ್ ಮೂಲಕ ಹಂಚಲಾಗುತ್ತದೆ.",
+      "profileSubtitle": "ನಿಮ್ಮ ಸಂಪರ್ಕ ವಿನಂತಿಗಳನ್ನು ವೀಕ್ಷಿಸಿ",
+      "empty": "ಪ್ರಾರಂಭಿಸಲು PG, ಹಾಸ್ಟೆಲ್, ಬಾಡಿಗೆ ಅಥವಾ ಕೋ-ಲಿವಿಂಗ್ ಸ್ಪೇಸ್ ಹುಡುಕಿ ಮತ್ತು ವಿಚಾರಣೆ ಕಳುಹಿಸಿ.",
+      "emptyTitle": "ಇನ್ನೂ ಯಾವುದೇ ವಿಚಾರಣೆಗಳಿಲ್ಲ",
+      "requestedOn": "{{date}} ರಂದು ವಿನಂತಿಸಲಾಗಿದೆ",
+      "requestedDot": "ವಿನಂತಿಸಲಾಗಿದೆ · {{date}}",
+      "sharedHint": "ACOMI ನಿಮ್ಮೊಂದಿಗೆ ಸಂಪರ್ಕ ವಿವರಗಳನ್ನು ಹಂಚಿಕೊಂಡಿದೆ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಇಮೇಲ್ ಪರಿಶೀಲಿಸಿ.",
+      "sharedInAppHint": "ಸಂಪರ್ಕ ವಿವರಗಳು ಕೆಳಗೆ ಸಿದ್ಧವಾಗಿವೆ. ನೀವು ಇಲ್ಲಿಂದ ಮಾಲೀಕರಿಗೆ ಕರೆ ಮಾಡಬಹುದು ಅಥವಾ ಸಂದೇಶ ಕಳುಹಿಸಬಹುದು.",
+      "ownerContactReady": "ಮಾಲೀಕರ ಸಂಪರ್ಕ ವಿವರಗಳು ಲಭ್ಯವಿದೆ",
+      "viewContactDetails": "ಸಂಪರ್ಕ ವಿವರಗಳನ್ನು ವೀಕ್ಷಿಸಿ",
+      "callOwner": "ಕರೆ ಮಾಡಿ",
+      "messageOwner": "ಸಂದೇಶ",
+      "messageOwnerHint": "ನಿಮ್ಮ ಮೆಸೇಜಿಂಗ್ ಆ್ಯಪ್ ತೆರೆಯಿರಿ",
+      "emailOwner": "ಇಮೇಲ್",
+      "newBadge": "ಹೊಸದು",
+      "contactDetails": "ಮಾಲೀಕರ ಸಂಪರ್ಕ",
+      "ownerName": "ಹೆಸರು",
+      "mobile": "ಮೊಬೈಲ್",
+      "alternateMobile": "ಪರ್ಯಾಯ ಮೊಬೈಲ್",
+      "additionalMobile": "ಹೆಚ್ಚುವರಿ ಮೊಬೈಲ್",
+      "ownerEmail": "ಇಮೇಲ್",
+      "pendingHint": "ನಿಮ್ಮ ವಿಚಾರಣೆಯನ್ನು ACOMI ಪರಿಶೀಲಿಸುತ್ತಿದೆ.",
+      "rejectedHint": "ನಿಮ್ಮ ವಿಚಾರಣೆಯನ್ನು ACOMI ಪರಿಶೀಲಿಸಿದೆ ಆದರೆ ಪೂರ್ಣಗೊಳಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
+      "expiredHint": "ಈ ವಿಚಾರಣೆ ಅವಧಿ ಮುಗಿದಿದೆ.",
+      "notificationsEmpty": "ಇನ್ನೂ ಯಾವುದೇ ವಿಚಾರಣೆ ಅಧಿಸೂಚನೆಗಳಿಲ್ಲ.",
+      "status": {
+        "PENDING": "ಬಾಕಿ ಇದೆ",
+        "SHARED": "ಸಂಪರ್ಕ ವಿವರಗಳನ್ನು ಹಂಚಲಾಗಿದೆ",
+        "REJECTED": "ಪೂರ್ಣಗೊಳಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ",
+        "EXPIRED": "ಅವಧಿ ಮುಗಿದಿದೆ",
+        "CANCELLED": "ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ"
+      },
+      "receivedTitle": "ಸ್ವೀಕರಿಸಿದ ವಿಚಾರಣೆಗಳು",
+      "receivedError": "ವಿಚಾರಣೆಗಳನ್ನು ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
+      "receivedSubtitle": "ನಿಮ್ಮ ಪ್ರಾಪರ್ಟಿಗಳು ಮತ್ತು ಮೆಸ್ ಸೇವೆಗಳ ವಿಚಾರಣೆಗಳನ್ನು ನಿರ್ವಹಿಸಿ",
+      "summaryTotal": "ಒಟ್ಟು ವಿಚಾರಣೆಗಳು",
+      "summaryShared": "ಸಂಪರ್ಕ ವಿವರಗಳನ್ನು ಹಂಚಲಾಗಿದೆ",
+      "summaryClosed": "ಮುಚ್ಚಲಾಗಿದೆ",
+      "searchPlaceholder": "ಹೆಸರು, ಪ್ರಾಪರ್ಟಿ, ಅಥವಾ ಇಮೇಲ್ ಮೂಲಕ ಹುಡುಕಿ...",
+      "filterListing": "ಲಿಸ್ಟಿಂಗ್",
+      "filterAllListings": "ಎಲ್ಲಾ ಲಿಸ್ಟಿಂಗ್‌ಗಳು",
+      "filterStatus": "ಸ್ಥಿತಿ",
+      "filterAll": "ಎಲ್ಲಾ ವಿಚಾರಣೆಗಳು",
+      "resultCount": "{{count}} ವಿಚಾರಣೆಗಳು",
+      "sortLatest": "ಇತ್ತೀಚಿನದು ಮೊದಲು",
+      "clearFilters": "ಫಿಲ್ಟರ್‌ಗಳನ್ನು ತೆರವುಗೊಳಿಸಿ",
+      "noMatchesTitle": "ಹೊಂದಾಣಿಕೆಯ ವಿಚಾರಣೆಗಳಿಲ್ಲ",
+      "receivedEmptyTitle": "ಯಾವುದೇ ವಿಚಾರಣೆಗಳು ಬಂದಿಲ್ಲ",
+      "noMatches": "ಬೇರೊಂದು ಲಿಸ್ಟಿಂಗ್, ಸ್ಥಿತಿ ಅಥವಾ ಹುಡುಕಾಟ ಪ್ರಯತ್ನಿಸಿ.",
+      "receivedEmpty": "ಒಬ್ಬ ಸದಸ್ಯ ನಿಮ್ಮ ಯಾವುದೇ ಲಿಸ್ಟಿಂಗ್ ಬಗ್ಗೆ ವಿಚಾರಿಸಿದಾಗ, ಅದು ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತದೆ.",
+      "findListing": "ಲಿಸ್ಟಿಂಗ್ ಹುಡುಕಿ",
+      "member": "ಸದಸ್ಯ",
+      "listingUnavailable": "ಈ ಲಿಸ್ಟಿಂಗ್ ಇನ್ನು ಲಭ್ಯವಿಲ್ಲ.",
+      "viewEnquiry": "ವಿಚಾರಣೆಯನ್ನು ವೀಕ್ಷಿಸಿ",
+      "openListing": "ಲಿಸ್ಟಿಂಗ್ ತೆರೆಯಿರಿ",
+      "senderUnavailable": "ಲಭ್ಯವಿಲ್ಲ",
+      "senderDetails": "ಕಳುಹಿಸಿದವರ ವಿವರಗಳು",
+      "senderAccount": "ಖಾತೆ",
+      "justNow": "ಈಗಷ್ಟೇ",
+      "minutesAgo": "{{count}} ನಿಮಿಷಗಳ ಹಿಂದೆ",
+      "hoursAgo": "{{count}} ಗಂಟೆಗಳ ಹಿಂದೆ",
+      "daysAgo": "{{count}} ದಿನಗಳ ಹಿಂದೆ"
+    },
+    "favorites": {
+      "loadFailed": "ಮೆಚ್ಚಿನವುಗಳನ್ನು ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
+      "all": "ಎಲ್ಲಾ",
+      "unavailable": "ಈ ಲಿಸ್ಟಿಂಗ್ ಇನ್ನು ಲಭ್ಯವಿಲ್ಲ.",
+      "removeSaved": "ಮೆಚ್ಚಿನವುಗಳಿಂದ ತೆಗೆದುಹಾಕಿ",
+      "empty": "ಇನ್ನೂ ಯಾವುದೇ ಮೆಚ್ಚಿನವುಗಳಿಲ್ಲ",
+      "emptyHint": "ಇದನ್ನು ಇಲ್ಲಿ ಉಳಿಸಲು PG, ಹಾಸ್ಟೆಲ್, ಕೋ-ಲಿವಿಂಗ್, ಬಾಡಿಗೆ ಅಥವಾ ಮೆಸ್ ಲಿಸ್ಟಿಂಗ್‌ನಲ್ಲಿ ಹೃದಯದ ಚಿಹ್ನೆಯನ್ನು ಟ್ಯಾಪ್ ಮಾಡಿ.",
+      "openCount": "ಮೆಚ್ಚಿನವುಗಳು, {{count}} ಉಳಿಸಲಾಗಿದೆ",
+      "profileSubtitle": "ನೀವು ಉಳಿಸಿದ PG, ಹಾಸ್ಟೆಲ್, ಕೋ-ಲಿವಿಂಗ್, ಬಾಡಿಗೆ ಮತ್ತು ಮೆಸ್ ಲಿಸ್ಟಿಂಗ್‌ಗಳು",
+      "remove": "ಮೆಚ್ಚಿನವುಗಳಿಂದ ತೆಗೆದುಹಾಕಿ",
+      "add": "ಮೆಚ್ಚಿನವುಗಳಿಗೆ ಸೇರಿಸಿ",
+      "failed": "ಮೆಚ್ಚಿನವುಗಳನ್ನು ಅಪ್‌ಡೇಟ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+      "signIn": "ಮೆಚ್ಚಿನವುಗಳನ್ನು ಉಳಿಸಲು ಸೈನ್ ಇನ್ ಮಾಡಿ."
+    },
+    "notifications": {
+      "title": "ಅಧಿಸೂಚನೆಗಳು"
     }
   },
   "membership": {
@@ -641,11 +1116,20 @@
       "emptyTitle": "No members yet",
       "emptyDescription": "Add your first tenant, customer, or staff member to this space.",
       "listSubtitle": "People in this space",
+      "scopeThisSpace": "This Space",
+      "scopeAllMySpaces": "All My Spaces",
+      "directorySubtitle": "Everyone across the spaces you manage",
+      "directorySearchPlaceholder": "Search by name or mobile",
+      "directoryEmptyTitle": "No people yet",
+      "directoryEmptyDescription": "People you add to any of your spaces will appear here.",
+      "directoryLoadFailed": "Could not load people from your spaces. Pull down to try again.",
+      "directoryPickSpace": "Open {{name}} in…",
       "onAcomi": "On ACOMI",
       "notOnAcomiYet": "Not on ACOMI yet",
       "mobile": "Mobile: {{value}}",
       "created": "Added: {{date}}",
-      "remove": "Remove Member"
+      "remove": "Remove Member",
+      "mobileNotAvailable": "ಮೊಬೈಲ್ ಲಭ್ಯವಿಲ್ಲ"
     },
     "add": {
       "fab": "Add member",
@@ -671,7 +1155,7 @@
       "reuseRequired": "Pick someone from another space, or create a new customer.",
       "selectedCustomer": "Selected",
       "memberMode": {
-        "search": "From another space",
+        "search": "Use existing…",
         "addNew": "New customer"
       },
       "searchCustomerPlaceholder": "Search people from your other spaces",
@@ -684,9 +1168,37 @@
         "currentResident": "Lives in {{space}}",
         "typeCustomer": "Customer",
         "typeResident": "Resident",
-        "addAction": "+ Add"
+        "addAction": "+ Add",
+        "alreadyInSpace": "ಈಗಾಗಲೇ ಈ ಸ್ಪೇಸ್‌ನಲ್ಲಿದೆ"
       },
-      "detailsHeading": "Member details"
+      "detailsHeading": "Member details",
+      "importPerson": {
+        "customer": "Customer",
+        "member": "Member"
+      },
+      "importSpace": {
+        "space": "space",
+        "mess": "mess",
+        "pg": "PG",
+        "hostel": "hostel",
+        "coLiving": "co-living",
+        "rental": "rental",
+        "corporateStay": "corporate stay"
+      },
+      "choice": {
+        "titleCustomer": "Add a customer",
+        "titleMember": "Add a member",
+        "subtitle": "How would you like to add them?",
+        "addNewCustomer": "Add new customer",
+        "addNewMember": "Add new member",
+        "addNewDescription": "Enter their details and add them to this space.",
+        "import": "Use existing…",
+        "importDescription": "Choose someone already added to another ACOMI space.",
+        "importAvailable_one": "{{count}} member available",
+        "importAvailable_other": "{{count}} members available",
+        "importAvailableCustomer_one": "{{count}} customer available",
+        "importAvailableCustomer_other": "{{count}} customers available"
+      }
     },
     "addCustomersHub": {
       "navTitle": "Add Customers",
@@ -760,7 +1272,8 @@
       "mealBilling": "Meal billing",
       "editMealBilling": "Change meal billing",
       "actionsHeading": "Actions",
-      "editSubtitle": "Update name, role, and profile details"
+      "editSubtitle": "Update name, role, and profile details",
+      "notProvided": "Not provided"
     },
     "gender": {
       "label": "Gender",
@@ -835,7 +1348,8 @@
       "deposit": "Deposit",
       "documents": "Documents",
       "notes": "Notes",
-      "history": "History"
+      "history": "History",
+      "payments": "Payments"
     },
     "status": {
       "label": "Status",
@@ -916,7 +1430,8 @@
         "DRIVING_LICENSE": "Driving License",
         "STUDENT_ID": "Student ID",
         "OTHER": "Other"
-      }
+      },
+      "heading": "ದಾಖಲೆಗಳು"
     },
     "notes": {
       "add": "Add Note",
@@ -928,7 +1443,8 @@
       "successToast": "Note added.",
       "meta": "{{name}} · {{date}}",
       "authorLabel": "Added by",
-      "dateLabel": "Date"
+      "dateLabel": "Date",
+      "heading": "ಟಿಪ್ಪಣಿಗಳು"
     },
     "profileCorrection": {
       "heading": "Profile correction",
@@ -951,7 +1467,8 @@
         "statusChanged": "Status changed",
         "depositUpdated": "Deposit updated",
         "emergencyContactUpdated": "Emergency contact updated"
-      }
+      },
+      "profileChanges": "ಪ್ರೊಫೈಲ್ ಬದಲಾವಣೆಗಳು"
     },
     "errors": {
       "generic": "Something went wrong. Please try again.",
@@ -978,7 +1495,28 @@
       "cancel": "Failed to cancel invitation. Please try again.",
       "remove": "Failed to remove member. Please try again.",
       "accept": "Failed to accept invitation. Please try again."
-    }
+    },
+    "dues": {
+      "summaryHint": "ಈ ಮಾಸದ ಬಾಕಿ",
+      "summary": "Pending Payments",
+      "pending": "Pending: {{amount}}",
+      "review": "Under review: {{amount}}",
+      "clear": "No pending dues",
+      "overdue": "Overdue: {{amount}}",
+      "nextDue": "Next due: {{date}}",
+      "filterTitle": "Payments",
+      "filterAll": "All members",
+      "filterPending": "Pending payments",
+      "filterClear": "No pending dues",
+      "loadFailed": "Payment totals could not be loaded."
+    },
+    "kpi": {
+      "total": "ಒಟ್ಟು ಸದಸ್ಯರು",
+      "active": "ಸಕ್ರಿಯ ಸದಸ್ಯರು",
+      "pending": "ಬಾಕಿ ಇರುವ ಆಹ್ವಾನಗಳು",
+      "joinedThisMonth": "ಈ ಮಾಸದಲ್ಲಿ ಸೇರಿದವರು"
+    },
+    "illustrativeSummary": "ಉದಾಹರಣೆ ಸಾರಾಂಶ. ಕೆಳಗಿನ ಪಟ್ಟಿ ನಿಜವಾದ ಸದಸ್ಯರ ಪಟ್ಟಿ."
   },
   "accommodation": {
     "search": {
@@ -995,7 +1533,11 @@
       "rent": "Rent",
       "deposit": "Deposit",
       "enterRent": "Enter rent",
-      "enterDeposit": "Enter deposit"
+      "enterDeposit": "Enter deposit",
+      "rentRequired": "ಮಾಸಿಕ ಬಾಡಿಗೆ ಅಗತ್ಯ",
+      "depositRequired": "ಡಿಪಾಸಿಟ್ ಅಗತ್ಯ",
+      "securityDeposit": "ಸೆಕ್ಯುರಿಟಿ ಡಿಪಾಸಿಟ್",
+      "keyDates": "ಪ್ರಮುಖ ದಿನಾಂಕಗಳು"
     },
     "pricingHints": {
       "title": "Set rent after you save",
@@ -1056,7 +1598,8 @@
           "available": "Available",
           "nearlyFull": "Nearly Full",
           "full": "Full"
-        }
+        },
+        "viewDetails": "ವಿವರಗಳನ್ನು ವೀಕ್ಷಿಸಿ"
       }
     },
     "inactive": {
@@ -1127,7 +1670,9 @@
       "eyebrow": "Property",
       "quickActions": "Quick actions",
       "subtitle": "Buildings, floors, rooms, and beds in one place",
-      "title": "Rooms"
+      "title": "Rooms",
+      "pageSubtitleUnits": "ಒಂದೇ ಸ್ಥಳದಲ್ಲಿ ಕಟ್ಟಡಗಳು ಮತ್ತು ಯೂನಿಟ್‌ಗಳು",
+      "buildingsSubtitleUnits": "ಯೂನಿಟ್‌ಗಳನ್ನು ನಿರ್ವಹಿಸಲು ಕಟ್ಟಡವನ್ನು ತೆರೆಯಿರಿ"
     },
     "setup": {
       "title": "Quick Setup",
@@ -1204,7 +1749,11 @@
         "bedsCount": "Beds: {{count}}",
         "roomsBeds": "Rooms: {{rooms}} · Beds: {{beds}}",
         "bedsOnly": "Beds: {{beds}}",
-        "capacityBeds": "Capacity: {{capacity}} · Beds: {{beds}}"
+        "capacityBeds": "Capacity: {{capacity}} · Beds: {{beds}}",
+        "duplicateFloor": "ಮಹಡಿಯನ್ನು ನಕಲಿಸಿ",
+        "deleteFloor": "ಮಹಡಿಯನ್ನು ಅಳಿಸಿ",
+        "duplicateUnit": "ಯುನಿಟ್ ಅನ್ನು ನಕಲಿಸಿ",
+        "deleteUnit": "ಯುನಿಟ್ ಅನ್ನು ಅಳಿಸಿ"
       },
       "floorCount": "Number of floors",
       "includeGroundFloor": "Include ground floor",
@@ -1252,7 +1801,32 @@
         "apartmentsPerFloor": "Apartments per floor must be at least 1."
       },
       "groundFloorName": "Ground Floor",
-      "floorNameNumber": "Floor {{number}}"
+      "floorNameNumber": "Floor {{number}}",
+      "reviewUnitsBeforeCreate": "ಕಟ್ಟಡವನ್ನು ರಚಿಸುವ ಮೊದಲು ನಿಮ್ಮ ಯೂನಿಟ್‌ಗಳನ್ನು ಪರಿಶೀಲಿಸಿ ಮತ್ತು ಎಡಿಟ್ ಮಾಡಿ.",
+      "unitPricingTitle": "ಬಾಡಿಗೆ ಮತ್ತು ಡಿಪಾಸಿಟ್",
+      "unitPricingOptionalHint": "ಐಚ್ಛಿಕ. ಬಾಡಿಗೆ ಅಥವಾ ಡಿಪಾಸಿಟ್ ಇಲ್ಲದೆ ಕಟ್ಟಡವನ್ನು ರಚಿಸಲು ಇದನ್ನು ಖಾಲಿ ಬಿಡಿ. ಇಲ್ಲಿ ನೀಡಲಾದ ಮೌಲ್ಯ ಪ್ರತಿ ಯೂನಿಟ್‌ಗೆ ಅನ್ವಯಿಸುತ್ತದೆ.",
+      "unitPricingMixedHint": "ಯೂನಿಟ್‌ಗಳಲ್ಲಿ ಪ್ರಸ್ತುತ ಬೇರೆ ಬೇರೆ ಮೌಲ್ಯಗಳಿವೆ. ಇಲ್ಲಿ ಮೌಲ್ಯ ನಮೂದಿಸುವುದರಿಂದ ಪ್ರತಿ ಯೂನಿಟ್ ಅಪ್‌ಡೇಟ್ ಆಗುತ್ತದೆ.",
+      "unitPricingLine": "ಬಾಡಿಗೆ ₹{{rent}} · ಡಿಪಾಸಿಟ್ ₹{{deposit}}",
+      "unitPricingNotSet": "ಬಾಡಿಗೆ ಮತ್ತು ಡಿಪಾಸಿಟ್ ಐಚ್ಛಿಕ",
+      "createConfirm": {
+        "title": "ಕಟ್ಟಡ ರಚನೆಯನ್ನು ಖಚಿತಪಡಿಸಿ",
+        "building": "ಕಟ್ಟಡ",
+        "structure": "ರಚನೆ",
+        "pricing": "ಬೆಲೆ",
+        "noPricing": "ಯಾವುದೇ ಬಾಡಿಗೆ ಅಥವಾ ಡಿಪಾಸಿಟ್ ಹೊಂದಿಸಲಾಗಿಲ್ಲ.",
+        "pattern": "ಪ್ಯಾಟರ್ನ್ {{index}} · {{count}} ಹಾಸಿಗೆಗಳು",
+        "unitPattern": "ಪ್ಯಾಟರ್ನ್ {{index}} · {{count}} ಯೂನಿಟ್‌ಗಳು",
+        "appliesToBeds": "{{count}} ಹಾಸಿಗೆಗಳಿಗೆ ಅನ್ವಯಿಸುತ್ತದೆ",
+        "appliesToUnits": "{{count}} ಯೂನಿಟ್‌ಗಳಿಗೆ ಅನ್ವಯಿಸುತ್ತದೆ",
+        "footnote": "ಇದು ಮೇಲಿನ ಬಾಡಿಗೆ ಮತ್ತು ಡಿಪಾಸಿಟ್‌ನೊಂದಿಗೆ {{count}} ಹಾಸಿಗೆಗಳನ್ನು ರಚಿಸುತ್ತದೆ.",
+        "bedsWithoutPricing": "ಇದು {{count}} ಹಾಸಿಗೆಗಳನ್ನು ರಚಿಸುತ್ತದೆ. ಯಾವುದೇ ಬಾಡಿಗೆ ಅಥವಾ ಡಿಪಾಸಿಟ್ ಉಳಿಸಲಾಗುವುದಿಲ್ಲ.",
+        "unitsWithPricing": "ಇದು ಮೇಲಿನ ಬಾಡಿಗೆ ಮತ್ತು ಡಿಪಾಸಿಟ್‌ನೊಂದಿಗೆ {{count}} ಯೂನಿಟ್‌ಗಳನ್ನು ರಚಿಸುತ್ತದೆ.",
+        "unitsWithoutPricing": "ಇದು {{count}} ಯೂನಿಟ್‌ಗಳನ್ನು ರಚಿಸುತ್ತದೆ. ಯಾವುದೇ ಬಾಡಿಗೆ ಅಥವಾ ಡಿಪಾಸಿಟ್ ಉಳಿಸಲಾಗುವುದಿಲ್ಲ.",
+        "continue": "ಈ ಕಟ್ಟಡವನ್ನು ರಚಿಸಲು ನೀವು ಖಚಿತವಾಗಿ ಬಯಸುವಿರಾ?",
+        "confirm": "ಕಟ್ಟಡ ರಚಿಸಿ",
+        "creating": "ಕಟ್ಟಡ ರಚಿಸಲಾಗುತ್ತಿದೆ..."
+      },
+      "unitOnlyLine": "ಯುನಿಟ್ ಮಾತ್ರ — ಕೊಠಡಿಗಳು ಅಥವಾ ಹಾಸಿಗೆಗಳಿಲ್ಲ"
     },
     "overview": {
       "title": "Building Overview",
@@ -1286,7 +1860,43 @@
       "addRoom": "Add room",
       "addBed": "Add bed",
       "loadMore": "Load more",
-      "listSubtitle": "Tap to open · long-press for details"
+      "listSubtitle": "Tap to open · long-press for details",
+      "inventorySubtitle": "ಹಾಸಿಗೆಗಳಿರುವ ಕೋಣೆಗಳು — ಬಾಡಿಗೆ ಮತ್ತು ಡಿಪಾಸಿಟ್ ಇಲ್ಲಿಯೇ ಎಡಿಟ್ ಮಾಡಿ",
+      "allRooms": "ಎಲ್ಲಾ ಕೋಣೆಗಳು",
+      "searchRooms": "ಕೋಣೆಗಳನ್ನು ಹುಡುಕಿ...",
+      "summaryCounts": "{{floors}} ಮಹಡಿಗಳು · {{rooms}} ಕೋಣೆಗಳು · {{beds}} ಹಾಸಿಗೆಗಳು",
+      "availableOfTotal": "{{available}}/{{total}} ಲಭ್ಯ",
+      "floorMeta": "{{rooms}} ಕೋಣೆಗಳು · {{beds}} ಹಾಸಿಗೆಗಳು",
+      "roomAvailability": "{{available}}/{{total}} ಲಭ್ಯ",
+      "bedsAvailable": "{{available}}/{{total}} ಹಾಸಿಗೆಗಳು ಲಭ್ಯ",
+      "roomOccupiedSummary": "{{occupied}} / {{total}} ಆಕ್ರಮಿತ",
+      "roomAvailableSummary": "{{available}} / {{total}} ಲಭ್ಯ",
+      "roomReservedSummary": "{{reserved}} / {{total}} ಕಾಯ್ದಿರಿಸಲಾಗಿದೆ",
+      "roomMixedSummary": "{{occupied}} / {{total}} ಆಕ್ರಮಿತ",
+      "noBeds": "ಹಾಸಿಗೆಗಳಿಲ್ಲ",
+      "occupiedSinceUnknown": "ಆಕ್ರಮಿತ",
+      "notYetBilled": "ಇನ್ನೂ ಬಿಲ್ ಮಾಡಲಾಗಿಲ್ಲ",
+      "readyToAllocate": "ಹಂಚಿಕೆಗೆ ಸಿದ್ಧ",
+      "statusFilter": {
+        "all": "ಎಲ್ಲಾ",
+        "available": "ಲಭ್ಯ",
+        "occupied": "ಆಕ್ರಮಿತ",
+        "reserved": "ಕಾಯ್ದಿರಿಸಲಾಗಿದೆ"
+      },
+      "roomTypeLabel": "{{type}} ಕೋಣೆ",
+      "roomBedsMeta": "{{count}} ಹಾಸಿಗೆಗಳು{{typeSuffix}}",
+      "editFloor": "ಮಹಡಿ ಎಡಿಟ್ ಮಾಡಿ",
+      "editUnit": "ಯೂನಿಟ್ ಎಡಿಟ್ ಮಾಡಿ",
+      "editRoom": "ಕೋಣೆ ಎಡಿಟ್ ಮಾಡಿ",
+      "editBuilding": "ಕಟ್ಟಡ ಎಡಿಟ್ ಮಾಡಿ",
+      "editBed": "ಹಾಸಿಗೆ ಎಡಿಟ್ ಮಾಡಿ",
+      "searchUnits": "ಯುನಿಟ್‌ಗಳನ್ನು ಹುಡುಕಿ (ಉದಾ. 101, 102, ...)",
+      "editHierarchy": "ಸಂಪಾದಿಸಿ",
+      "inactive": "ನಿಷ್ಕ್ರಿಯ",
+      "unitsOverview": "ಯುನಿಟ್‌ಗಳ ಅವಲೋಕನ",
+      "unitOnlyOverviewSubtitle": "ಯುನಿಟ್‌ಗಳು ಮಾತ್ರ — ಪ್ರತಿ ಯುನಿಟ್‌ನಲ್ಲಿ ಬಾಡಿಗೆ ಮತ್ತು ಡಿಪಾಸಿಟ್ ಅನ್ನು ಸಂಪಾದಿಸಿ",
+      "totalUnits": "ಒಟ್ಟು ಯುನಿಟ್‌ಗಳು",
+      "unitsCount": "ಯುನಿಟ್‌ಗಳು ({{count}})"
     },
     "duplicate": {
       "confirm": "Duplicate",
@@ -1379,7 +1989,9 @@
       "codePlaceholder": "e.g. BLD-A",
       "nameRequired": "Building name is required.",
       "createSuccess": "Building added successfully.",
-      "updateSuccess": "Building updated successfully."
+      "updateSuccess": "Building updated successfully.",
+      "namePlaceholderSpace": "ಡಿಫಾಲ್ಟ್ ಆಗಿ ನಿಮ್ಮ ಸ್ಪೇಸ್ ಹೆಸರನ್ನು ಬಳಸುತ್ತದೆ",
+      "codePlaceholderBld": "ಉದಾ: BLD 1"
     },
     "inlineEdit": {
       "editName": "Edit name",
@@ -1412,7 +2024,8 @@
       "nameRequired": "Floor name is required.",
       "floorNumberRequired": "Enter a valid floor number.",
       "createSuccess": "Floor added successfully.",
-      "updateSuccess": "Floor updated successfully."
+      "updateSuccess": "Floor updated successfully.",
+      "untitled": "ಮಹಡಿ"
     },
     "units": {
       "title": "Units",
@@ -1431,7 +2044,12 @@
       "nameRequired": "Unit name is required.",
       "unitNumberRequired": "Unit number is required.",
       "createSuccess": "Unit added successfully.",
-      "updateSuccess": "Unit updated successfully."
+      "updateSuccess": "Unit updated successfully.",
+      "idLabel": "ಯುನಿಟ್ ID",
+      "namedTitle": "ಯುನಿಟ್ {{number}}",
+      "detailsSection": "ಯುನಿಟ್ ವಿವರಗಳು",
+      "emptyFiltered": "ಈ ವೀಕ್ಷಣೆಗೆ ಯಾವುದೇ ಯುನಿಟ್ ಹೊಂದಿಕೆಯಾಗುತ್ತಿಲ್ಲ.",
+      "validationError": "ಯುನಿಟ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ."
     },
     "rooms": {
       "title": "Rooms",
@@ -1450,7 +2068,12 @@
       "formSubheadingEdit": "Update room details, status, or default pricing.",
       "validationError": "Please fill in all required room fields.",
       "createSuccess": "Room added successfully.",
-      "updateSuccess": "Room updated successfully."
+      "updateSuccess": "Room updated successfully.",
+      "emptyFilteredTitle": "ಹೊಂದಾಣಿಕೆಯ ಹಾಸಿಗೆಗಳಿಲ್ಲ",
+      "emptyFilteredDescription": "ಬೇರೊಂದು ಸ್ಥಿತಿ ಫಿಲ್ಟರ್ ಪ್ರಯತ್ನಿಸಿ ಅಥವಾ ಹುಡುಕಾಟವನ್ನು ತೆರವುಗೊಳಿಸಿ.",
+      "idLabel": "ಕೊಠಡಿ ID",
+      "emptyOpsFocusTitle": "ಹೊಂದಾಣಿಕೆಯ ಹಾಸಿಗೆಗಳಿಲ್ಲ",
+      "emptyOpsFocusDescription": "ಪ್ರಾಪರ್ಟಿ ಆಪರೇಷನ್ಸ್ ಫಿಲ್ಟರ್ ಅನ್ನು ತೆರವುಗೊಳಿಸಿ ಅಥವಾ ಹುಡುಕಾಟವನ್ನು ಬದಲಿಸಿ."
     },
     "beds": {
       "title": "Beds",
@@ -1468,7 +2091,14 @@
       "formSubheadingEdit": "Update bed details, status, or default pricing.",
       "validationError": "Please fill in all required bed fields.",
       "createSuccess": "Bed added successfully.",
-      "updateSuccess": "Bed updated successfully."
+      "updateSuccess": "Bed updated successfully.",
+      "detailsSection": "ಹಾಸಿಗೆ ವಿವರಗಳು",
+      "updateAction": "ಅಪ್‌ಡೇಟ್ ಮಾಡಿ",
+      "unsavedTitle": "ಬದಲಾವಣೆಗಳನ್ನು ತ್ಯಜಿಸಬೇಕೇ?",
+      "unsavedMessage": "ನಿಮ್ಮ ಹಾಸಿಗೆ ವಿವರಗಳನ್ನು ಉಳಿಸಲಾಗಿಲ್ಲ.",
+      "idLabel": "ಹಾಸಿಗೆ ID",
+      "previous": "ಹಿಂದಿನ ಹಾಸಿಗೆಗಳು",
+      "next": "ಮುಂದಿನ ಹಾಸಿಗೆಗಳು"
     },
     "lifecycle": {
       "menuTitle": "Actions",
@@ -1532,6 +2162,64 @@
     "form": {
       "rent": "Rent",
       "deposit": "Deposit"
+    },
+    "pricingConfirm": {
+      "title": "ಬೆಲೆ ಅಪ್‌ಡೇಟ್ ಅನ್ನು ಖಚಿತಪಡಿಸಿ",
+      "titleRent": "ಬಾಡಿಗೆ ಅಪ್‌ಡೇಟ್ ಅನ್ನು ಖಚಿತಪಡಿಸಿ",
+      "titleDeposit": "ಡಿಪಾಸಿಟ್ ಅಪ್‌ಡೇಟ್ ಅನ್ನು ಖಚಿತಪಡಿಸಿ",
+      "price": "ಬೆಲೆ",
+      "changingFor": "ನೀವು ಇದಕ್ಕಾಗಿ {{field}} ಅನ್ನು ಬದಲಾಯಿಸುತ್ತಿದ್ದೀರಿ:",
+      "current": "ಪ್ರಸ್ತುತ",
+      "next": "ಹೊಸ",
+      "notSet": "ಹೊಂದಿಸಲಾಗಿಲ್ಲ",
+      "affectedCount": "ಈ ಬದಲಾವಣೆ {{count}} ಹೊಂದಾಣಿಕೆಯ ಹಾಸಿಗೆಗಳಿಗೆ ಅನ್ವಯಿಸುತ್ತದೆ.",
+      "affectedLocations": "ಪ್ರಭಾವಿತ ಸ್ಥಳಗಳು:",
+      "propagation": "ಇದು ಈ ಹಾಸಿಗೆಯನ್ನು ಅಪ್‌ಡೇಟ್ ಮಾಡುತ್ತದೆ ಮತ್ತು ಕಟ್ಟಡದಲ್ಲಿ ಹೊಂದಾಣಿಕೆಯ ಖಾಲಿ ಹಾಸಿಗೆಗಳನ್ನು ಭರ್ತಿ ಮಾಡುತ್ತದೆ. ಅಸ್ತಿತ್ವದಲ್ಲಿರುವ ಬೆಲೆಗಳನ್ನು ಬದಲಾಯಿಸಲಾಗುವುದಿಲ್ಲ.",
+      "continue": "ನೀವು ಮುಂದುವರಿಸಲು ಬಯಸುವಿರಾ?",
+      "confirm": "ಅಪ್‌ಡೇಟ್ ಅನ್ನು ಖಚಿತಪಡಿಸಿ",
+      "confirming": "ಅಪ್‌ಡೇಟ್ ಆಗುತ್ತಿದೆ...",
+      "success": "ಹಾಸಿಗೆಯ ಬೆಲೆ ಅಪ್‌ಡೇಟ್ ಆಗಿದೆ.",
+      "successCount": "{{count}} ಹಾಸಿಗೆಗಳಿಗೆ {{field}} ಅಪ್‌ಡೇಟ್ ಮಾಡಲಾಗಿದೆ.",
+      "updateFailed": "ಬೆಲೆ ಅಪ್‌ಡೇಟ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ಯಾವುದೇ ಬದಲಾವಣೆಗಳನ್ನು ಅನ್ವಯಿಸಲಾಗಿಲ್ಲ."
+    },
+    "pricing": {
+      "notConfigured": "ಕಾನ್ಫಿಗರ್ ಮಾಡಲಾಗಿಲ್ಲ"
+    },
+    "workspace": {
+      "showingOpsFocus": "ತೋರಿಸುತ್ತಿದೆ: {{label}}",
+      "roomsBedsCount": "{{rooms}} ಕೊಠಡಿಗಳು • {{beds}} ಹಾಸಿಗೆಗಳು"
+    },
+    "stayPayment": {
+      "noRecord": "ಪಾವತಿ ದಾಖಲೆ ಇಲ್ಲ",
+      "unavailable": "ಪಾವತಿ ಸ್ಥಿತಿ ಲಭ್ಯವಿಲ್ಲ",
+      "underReview": "ಪರಿಶೀಲನೆಯಲ್ಲಿದೆ",
+      "paid": "ಪಾವತಿ ಸ್ಥಿತಿ: ಪಾವತಿಸಲಾಗಿದೆ",
+      "paidAmount": "{{amount}} ಪಾವತಿಸಲಾಗಿದೆ",
+      "remaining": "{{amount}} ಉಳಿದಿದೆ",
+      "partial": "ಭಾಗಶಃ ಪಾವತಿಸಲಾಗಿದೆ",
+      "pending": "ಪಾವತಿ ಬಾಕಿ",
+      "pendingAmount": "{{amount}} ಬಾಕಿ",
+      "noTenant": "ಲಿಂಕ್ ಮಾಡಿದ ಬಾಡಿಗೆದಾರ ಇಲ್ಲ",
+      "notYetBilled": "ಇನ್ನೂ ಬಿಲ್ ಆಗಿಲ್ಲ",
+      "balanceDue": "ಪಾವತಿಸಬೇಕಾದ ಬಾಕಿ",
+      "paidShort": "ಪಾವತಿಸಲಾಗಿದೆ",
+      "paidBadge": "ಪಾವತಿಸಲಾಗಿದೆ",
+      "bedNumber": "ಹಾಸಿಗೆ ಸಂಖ್ಯೆ",
+      "unitOccupancySection": "ಯುನಿಟ್ ಮತ್ತು ಆಕ್ಯುಪೆನ್ಸಿ",
+      "occupancySection": "ಹಾಸಿಗೆ ಮತ್ತು ಆಕ್ಯುಪೆನ್ಸಿ",
+      "location": "ಸ್ಥಳ",
+      "loadFailed": "ಬಾಡಿಗೆದಾರ ಅಥವಾ ಪಾವತಿ ವಿವರಗಳನ್ನು ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
+      "contact": "ಸಂಪರ್ಕ",
+      "stayStatus": "ಸ್ಟೇ ಸ್ಥಿತಿ",
+      "summary": "ಪಾವತಿ ಸಾರಾಂಶ",
+      "period": "ಅವಧಿ",
+      "status": "ಪಾವತಿ ಸ್ಥಿತಿ",
+      "accruedNotBilled": "ಸಂಗ್ರಹವಾಗಿದೆ (ಬಿಲ್ ಆಗಿಲ್ಲ)",
+      "rentDue": "ಪಾವತಿಸಬೇಕಾದ ಬಾಡಿಗೆ",
+      "depositDue": "ಪಾವತಿಸಬೇಕಾದ ಡಿಪಾಸಿಟ್",
+      "totalDue": "ಒಟ್ಟು ಬಾಕಿ",
+      "amountPaid": "ಪಾವತಿಸಿದ ಮೊತ್ತ",
+      "outstanding": "ಬಾಕಿ"
     }
   },
   "occupancyWizard": {
@@ -1584,7 +2272,8 @@
       "reserveDatesHint": "ಕಾಯ್ದಿರಿಸುವಾಗ ಯಾವುದೇ ಶುಲ್ಕ ವಸೂಲಿ ಮಾಡಲಾಗುವುದಿಲ್ಲ.",
       "transferCurrent": "ಪ್ರಸ್ತುತ ವಸತಿ",
       "vacate": "ಖಾಲಿ ಮಾಡುವುದನ್ನು ದೃಢೀಕರಿಸಿ",
-      "review": "ಪರಿಶೀಲನೆ ಮತ್ತು ದೃಢೀಕರಣ"
+      "review": "ಪರಿಶೀಲನೆ ಮತ್ತು ದೃಢೀಕರಣ",
+      "reviewHint": "ಹಂಚಿಕೆಗೆ ಮೊದಲು ವಿವರಗಳನ್ನು ಪರಿಶೀಲಿಸಿ"
     },
     "review": {
       "member": "Member",
@@ -1647,7 +2336,29 @@
       "timelineEmpty": "—",
       "status": "Occupancy status",
       "location": "Current location",
-      "notAllocated": "Not allocated to any bed, room, or unit."
+      "notAllocated": "Not allocated to any bed, room, or unit.",
+      "plannedMoveIn": "ಯೋಜಿತ ಮೂವ್-ಇನ್",
+      "noFixedDate": "ನಿಗದಿತ ದಿನಾಂಕ ಇಲ್ಲ",
+      "openEndedStayChoiceCompact": "ನಿಗದಿತವಿಲ್ಲ",
+      "monthlyStayChoiceHint": "ನಿಗದಿತ ಮಾಸಿಕ ಬಾಡಿಗೆ.",
+      "shortStayChoiceHint": "ನಿಗದಿತ ಸಂಖ್ಯೆಯ ದಿನಗಳಿಗೆ (ಉದಾ: ಕೆಲವು ದಿನ ಅಥವಾ ವಾರಗಳು) ದಿನದ ಬಾಡಿಗೆ ಪಾವತಿಸಿ.",
+      "openEndedStayChoiceHint": "ಯಾವುದೇ ನಿಗದಿತ ಮೂವ್-ಔಟ್ ದಿನಾಂಕ ಇಲ್ಲ. ನಿವಾಸಿ ಖಾಲಿ ಮಾಡುವವರೆಗೆ ದಿನದ ಬಾಡಿಗೆ ಪಾವತಿಸಿ.",
+      "monthlyStayHint": "ಮೂವ್-ಇನ್ ದಿನಾಂಕದಿಂದ ಮಾಸಿಕ ಬಾಡಿಗೆ ವಿಧಿಸಲಾಗುತ್ತದೆ.",
+      "monthlyStayHintWithRent": "ಮೂವ್-ಇನ್ ದಿನಾಂಕದಿಂದ ಮಾಸಿಕ ಬಾಡಿಗೆ ({{amount}}) ವಿಧಿಸಲಾಗುತ್ತದೆ.",
+      "shortStayHint": "ಚೆಕ್‌ಔಟ್ ದಿನಾಂಕವನ್ನು ಹೊಂದಿಸಿ. ದಿನದ ಬಾಡಿಗೆಯನ್ನು ಒಪ್ಪಂದದ ನಿಯಮಗಳಲ್ಲಿ ನಮೂದಿಸಲಾಗುತ್ತದೆ — ಮಾಸಿಕ ಬಾಡಿಗೆ ಅಲ್ಲ.",
+      "shortStayHintWithNights": "ದಿನದ ಕ್ಯಾಲೆಂಡರ್ ರಾತ್ರಿಗಳು: {{count}}. ದಿನದ ಬಾಡಿಗೆಯನ್ನು ಮುಂದಿನ ಹಂತದಲ್ಲಿ ನಮೂದಿಸಿ — ಮಾಸಿಕ ಬಾಡಿಗೆ ಅಲ್ಲ.",
+      "openEndedStayHint": "ನಿಗದಿತ ಮೂವ್-ಔಟ್ ದಿನಾಂಕ ಇಲ್ಲ: ಚೆಕ್‌ಔಟ್ ದಿನಾಂಕ ಅಗತ್ಯವಿಲ್ಲ. ನಿವಾಸಿ ಖಾಲಿ ಮಾಡುವವರೆಗೆ ದಿನದ ಬಾಡಿಗೆಯನ್ನು ಬಿಲ್ ಮಾಡಲಾಗುತ್ತದೆ.",
+      "shortStayBanner": "ದಿನಂಪ್ರತಿ | ನಿಗದಿತ ಸಂಖ್ಯೆಯ ದಿನಗಳಿಗೆ ದಿನದ ಬಾಡಿಗೆ ಪಾವತಿಸಿ.",
+      "openEndedStayBanner": "ನಿಗದಿತ ಮೂವ್-ಔಟ್ ದಿನಾಂಕ ಇಲ್ಲ | ನಿಗದಿತ ಯೋಜಿತ ಚೆಕ್‌ಔಟ್ ದಿನಾಂಕ ಇಲ್ಲ.",
+      "shortStayContractBanner": "ದಿನಂಪ್ರತಿ · {{count}} ರಾತ್ರಿಗಳು",
+      "duration": "ಅವಧಿ",
+      "agreedTotalHelp": "ವಾಸ್ತವ್ಯಕ್ಕೆ ಒಂದು ನಿಗದಿತ ಒಟ್ಟು ಮೊತ್ತ (ಅನುಮೋದಿತ ಶಾರ್ಟ್-ಸ್ಟೇ ಬೆಲೆ).",
+      "stayDurationNights_one": "ವಾಸ್ತವ್ಯ ಅವಧಿ: {{count}} ರಾತ್ರಿ",
+      "stayDurationNights_other": "ವಾಸ್ತವ್ಯ ಅವಧಿ: {{count}} ರಾತ್ರಿಗಳು",
+      "stayTypeSelected": "Stay Type: {{label}}",
+      "notSet": "Not set",
+      "stayDetails": "ಸ್ಟೇ ವಿವರಗಳು",
+      "stayId": "ಸ್ಟೇ ID"
     },
     "memberStatus": {
       "ALLOCATED": "Moved in",
@@ -1683,7 +2394,12 @@
       "extend": "ವಾಸವನ್ನು ವಿಸ್ತರಿಸಿ",
       "vacate": "Vacate",
       "viewHistory": "View occupancy history",
-      "viewHistoryShort": "View History"
+      "viewHistoryShort": "View History",
+      "openingAllocation": "ಹಂಚಿಕೆಯನ್ನು ತೆರೆಯಲಾಗುತ್ತಿದೆ…",
+      "openingReservation": "ಕಾಯ್ದಿರಿಸುವಿಕೆಯನ್ನು ತೆರೆಯಲಾಗುತ್ತಿದೆ…",
+      "reviseOpenEnded": "ದಿನದ ಬಾಡಿಗೆಯನ್ನು ಅಪ್‌ಡೇಟ್ ಮಾಡಿ",
+      "renewMonthly": "ಮಾಸಿಕ ನವೀಕರಣ",
+      "renewOpenEnded": "ಓಪನ್-ಎಂಡೆಡ್ ನವೀಕರಣ"
     },
     "accommodationActions": {
       "title": "Occupancy actions"
@@ -1717,7 +2433,14 @@
         "bulkAllocate": "Bulk allocate",
         "bulkReserve": "Bulk reserve",
         "viewOccupancy": "View occupancy"
-      }
+      },
+      "selectFloorHint": "{{building}} ನಲ್ಲಿ ಮಹಡಿ ಆಯ್ಕೆಮಾಡಿ",
+      "selectUnitHint": "ಮುಂದುವರಿಸಲು ಯೂನಿಟ್ ಆಯ್ಕೆಮಾಡಿ",
+      "selectRoomHint": "{{floor}} ನಲ್ಲಿ ಕೋಣೆ ಆಯ್ಕೆಮಾಡಿ",
+      "selectBedHint": "{{room}} ನಲ್ಲಿ ಹಾಸಿಗೆ ಆಯ್ಕೆಮಾಡಿ",
+      "buildingMeta": "{{floors}} ಮಹಡಿಗಳು · {{rooms}} ಕೋಣೆಗಳು",
+      "roomFull": "{{available}}/{{total}} ಹಾಸಿಗೆಗಳು (ಪೂರ್ಣ)",
+      "bedAvailable": "ಲಭ್ಯ"
     },
     "bedMenu": {
       "title": "Bed {{bed}}"
@@ -1741,7 +2464,14 @@
     },
     "cancelReservation": {
       "title": "Cancel reservation",
-      "message": "Release this reserved accommodation and return the bed to available?"
+      "message": "Release this reserved accommodation and return the bed to available?",
+      "reasonRequired": "ಪ್ರತಿ ಸಂಗ್ರಹಿಸಿದ ಪಾವತಿ ಸೆಟಲ್‌ಮೆಂಟ್‌ಗೆ ಕಾರಣವನ್ನು ನಮೂದಿಸಿ.",
+      "refundAmountRequired": "ಮಾನ್ಯ ರಿಫಂಡ್ ಮೊತ್ತವನ್ನು ನಮೂದಿಸಿ.",
+      "settlementHint": "ಪಾವತಿಸದ ಬಾಧ್ಯತೆಗಳು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ರದ್ದಾಗುತ್ತವೆ. ಸಂಗ್ರಹಿಸಿದ ಮೊತ್ತಗಳನ್ನು ರಿಫಂಡ್ ಮಾಡಬೇಕು ಅಥವಾ ಉಳಿಸಿಕೊಳ್ಳಬೇಕು.",
+      "alreadySettled": "ಈಗಾಗಲೇ ಸೆಟಲ್ ಆಗಿದೆ.",
+      "willCancelUnpaid": "ರದ್ದಾಗುತ್ತದೆ (ಪಾವತಿಸಿಲ್ಲ).",
+      "remarks": "ರದ್ದತಿ ಟಿಪ್ಪಣಿಗಳು (ಆಯ್ಕಿಕ)",
+      "collectedCount": "{{count}} ಸಂಗ್ರಹಿಸಿದ ಪಾವತಿ(ಗಳು) ಸೆಟಲ್‌ಮೆಂಟ್ ಅಗತ್ಯವಿದೆ."
     },
     "allocate": {
       "title": "Allocate member"
@@ -1825,7 +2555,37 @@
         "WIFI": "Wi-Fi",
         "MAINTENANCE": "Maintenance",
         "OTHER": "Other"
-      }
+      },
+      "paymentSummary": {
+        "title": "ಪಾವತಿ ಸಾರಾಂಶ",
+        "rent": "ಬಾಡಿಗೆ",
+        "rentWithFood": "ಬಾಡಿಗೆ (ಊಟ ಸೇರಿದೆ)",
+        "deposit": "ಸುರಕ್ಷತಾ ಠೇವಣಿ",
+        "totalThisMonth": "ಈ ಮಾಸದಲ್ಲಿ ಪಾವತಿಸಬೇಕಾದ ಒಟ್ಟು ಮೊತ್ತ",
+        "totalOnAllocation": "ಹಂಚಿಕೆಯಲ್ಲಿ ಒಟ್ಟು ಮೊತ್ತ",
+        "shortStayNote": "ಹಂಚಿಕೆಯಲ್ಲಿ ಸಂಗ್ರಹಿಸಿದ ಒಪ್ಪಿಗೆ ಮೊತ್ತ ಮತ್ತು ಡಿಪಾಸಿಟ್ ಅನ್ನು ತೋರಿಸುತ್ತದೆ. ಇದು ಮಾಸಿಕ ಬಾಡಿಗೆ ಮೊತ್ತವಲ್ಲ."
+      },
+      "hintMonthly": "Agreed monthly rent and charges at activation. Not billing or payments.",
+      "hintDaily": "Daily rent and deposit for this stay. Not monthly billing.",
+      "hintOpenEnded": "Daily rent accumulates into one rent charge per calendar month until vacate.",
+      "stepHintMonthly": "Set rent, deposit and applicable charges for this stay.",
+      "stepHintDaily": "Set daily rent, deposit and applicable charges for this stay.",
+      "stepHintOpenEnded": "Set daily rent, deposit and applicable charges until vacate.",
+      "pricingDetails": "Pricing Details",
+      "dailyRentPerNight": "Daily rent (per night)",
+      "dailyRentPerNightHint": "Amount charged for each night of the stay.",
+      "dailyRentPlaceholder": "Enter rent per night, e.g. 500",
+      "stayRent": "Total stay rent",
+      "stayRentCalc": "{{daily}} × {{count}} nights",
+      "totalPayableAtMoveIn": "Total payable at move-in",
+      "totalPayableBreakdown": "Stay rent + Deposit",
+      "totalPayableCalc": "{{stayRent}} + {{deposit}}",
+      "foodBundledHintShortStay": "Food is included in the stay rent. There is no separate food line.",
+      "foodBundledHintDaily": "Food is included in the daily rent amount above. There is no separate food line.",
+      "pricingBasis": "ಬೆಲೆ ಆಧಾರ",
+      "dailyRent": "ದಿನದ ಬಾಡಿಗೆ",
+      "dailyRentRequired": "ದಿನದ ಬಾಡಿಗೆ (ಅಗತ್ಯ)",
+      "dailyRentHint": "ಮಾಲೀಕರು ನಮೂದಿಸಿದ ₹/ದಿನ. ಮಾಸಿಕ ಕ್ಯಾಟಲಾಗ್ ಬಾಡಿಗೆಯಿಂದ ಪಡೆಯಲಾಗಿಲ್ಲ."
     },
     "fields": {
       "expectedCheckout": "Expected checkout (optional)",
@@ -1949,13 +2709,75 @@
         "RENT_SNAPSHOT_REQUIRED": "Monthly rent is required when activating.",
         "FOOD_CHARGE_REQUIRED": "Food charge is required when food is enabled.",
         "FOOD_CHARGE_NOT_ALLOWED": "Food charge cannot be set when food is included in rent.",
-        "STAY_OVERLAP": "This stay overlaps another stay on that bed, room, or unit."
-      }
+        "STAY_OVERLAP": "This stay overlaps another stay on that bed, room, or unit.",
+        "SHORT_STAY_SAME_DAY": "ಶಾರ್ಟ್ ಸ್ಟೇ ಚೆಕ್‌ಔಟ್ ಚೆಕ್-ಇನ್ ದಿನಾಂಕದ ನಂತರ ಇರಬೇಕು. ಅದೇ ದಿನಾಂಕ ವಾಸ್ತವ್ಯವಲ್ಲ.",
+        "SHORT_STAY_CROSSES_MONTH": "ಶಾರ್ಟ್ ಸ್ಟೇ ಒಂದಕ್ಕಿಂತ ಹೆಚ್ಚು ಕ್ಯಾಲೆಂಡರ್ ಮಾಸದ ರಾತ್ರಿಗಳನ್ನು ಒಳಗೊಂಡಿರುವುದಿಲ್ಲ.",
+        "SHORT_STAY_DISABLED": "ಈ ಸ್ಪೇಸ್‌ಗೆ ಶಾರ್ಟ್ ಸ್ಟೇ ಆನ್ ಆಗಿಲ್ಲ.",
+        "SHORT_STAY_END_REQUIRED": "ಶಾರ್ಟ್ ಸ್ಟೇಗೆ ಯೋಜಿತ ಚೆಕ್‌ಔಟ್ ದಿನಾಂಕ ಅಗತ್ಯ.",
+        "AGREED_TOTAL_REQUIRED": "ಶಾರ್ಟ್ ಸ್ಟೇಗೆ ಒಪ್ಪಿಗೆಯ ಒಟ್ಟು ಮೊತ್ತ ಅಗತ್ಯ.",
+        "EXTENSION_CROSSES_MONTH": "ಶಾರ್ಟ್-ಸ್ಟೇ ವಿಸ್ತರಣೆ ಒಂದಕ್ಕಿಂತ ಹೆಚ್ಚು ಕ್ಯಾಲೆಂಡರ್ ಮಾಸದ ರಾತ್ರಿಗಳನ್ನು ಒಳಗೊಂಡಿರುವುದಿಲ್ಲ.",
+        "EXTENSION_AMOUNT_NOT_FOR_MONTHLY": "ಮಾಸಿಕ ಮತ್ತು ಓಪನ್-ಎಂಡೆಡ್ ವಾಸ್ತವ್ಯಗಳಿಗೆ ವಿಸ್ತರಣೆ ಶುಲ್ಕ ಇರುವುದಿಲ್ಲ. ಹೆಚ್ಚುವರಿ ಮೊತ್ತವನ್ನು ಖಾಲಿ ಬಿಡಿ.",
+        "EXTENSION_AMOUNT": "ಮಾಸಿಕ ಮತ್ತು ಓಪನ್-ಎಂಡೆಡ್ ವಾಸ್ತವ್ಯಗಳಿಗೆ ವಿಸ್ತರಣೆ ಶುಲ್ಕ ಇರುವುದಿಲ್ಲ. ಹೆಚ್ಚುವರಿ ಮೊತ್ತವನ್ನು ಖಾಲಿ ಬಿಡಿ."
+      },
+      "checkoutRequired": "ಶಾರ್ಟ್ ಸ್ಟೇಗೆ ಚೆಕ್‌ಔಟ್ ದಿನಾಂಕ ಹೊಂದಿಸುವುದು ಅಗತ್ಯ.",
+      "agreedTotalRequired": "ದಯವಿಟ್ಟು ಒಪ್ಪಿಗೆಯ ಒಟ್ಟು ಮೊತ್ತವನ್ನು ನಮೂದಿಸಿ."
     },
     "occupancyStatus": {
       "ACTIVE": "Occupied",
       "RESERVED": "Reserved",
       "VACATED": "Vacated"
+    },
+    "bedQuickActions": {
+      "allocateTitle": "ಹಾಸಿಗೆ ಹಂಚಿಕೆ ಮಾಡಿ",
+      "allocateHint": "ಈ ಹಾಸಿಗೆಗೆ ಸದಸ್ಯರನ್ನು ನಿಯೋಜಿಸಿ",
+      "reserveTitle": "ಹಾಸಿಗೆ ಕಾಯ್ದಿರಿಸಿ",
+      "reserveHint": "ಭವಿಷ್ಯದ ಬಳಕೆಗಾಗಿ ಕಾಯ್ದಿರಿಸಿ",
+      "moveInHint": "ಕಾಯ್ದಿರಿಸಿದ ಸದಸ್ಯರಿಗೆ ಮೂವ್-ಇನ್ ಪೂರ್ಣಗೊಳಿಸಿ",
+      "cancelHint": "ಈ ಕಾಯ್ದಿರಿಸುವಿಕೆಯನ್ನು ಬಿಡುಗಡೆ ಮಾಡಿ",
+      "transferHint": "ನಿವಾಸಿಯನ್ನು ಬೇರೆ ಹಾಸಿಗೆಗೆ ಸ್ಥಳಾಂತರಿಸಿ",
+      "vacateHint": "ಪ್ರಸ್ತುತ ಆಕ್ರಮಣವನ್ನು ಕೊನೆಗೊಳಿಸಿ",
+      "reviseOpenEndedHint": "ಆಯ್ಕೆಮಾಡಿದ ಪರಿಣಾಮಕಾರಿ ದಿನಾಂಕದಿಂದ ದಿನದ ದರವನ್ನು ಬದಲಿಸಿ",
+      "extendHint": "ಯೋಜಿತ ಅಂತ್ಯ ದಿನಾಂಕವನ್ನು ಬದಲಿಸಿ",
+      "renewHint": "ಇದೇ ಸ್ಟೇಯಲ್ಲಿ ಒಂದು ಮಾಸ ವಿಸ್ತರಿಸಿ; ಹೊಸ ಬಾಡಿಗೆ ಆಯ್ಕಿಕ",
+      "checkoutHint": "ಈಗ ಚೆಕ್‌ಔಟ್ ದಾಖಲಿಸಿ. ಇನ್ವೆಂಟರಿ ಬಿಡುಗಡೆಯಾಗುತ್ತದೆ; ಸ್ವಯಂಚಾಲಿತ ರಿಫಂಡ್ ಇಲ್ಲ (D-17)."
+    },
+    "bookingAdvance": {
+      "label": "ಬುಕಿಂಗ್ ಅಡ್ವಾನ್ಸ್",
+      "hint": "ಇದು ಮೊದಲ ಅವಧಿಯ ಬಾಡಿಗೆಯ ಭಾಗ, ಹೆಚ್ಚುವರಿ ಶುಲ್ಕವಲ್ಲ. ಅಸ್ತಿತ್ವದಲ್ಲಿರುವ ಕಾಯ್ದಿರಿಸುವಿಕೆ ವರ್ತನೆಯನ್ನು ಉಳಿಸಿಕೊಳ್ಳಲು 0 ಬಿಡಿ.",
+      "remaining": "ಉಳಿದ ಬಾಡಿಗೆ: ₹{{amount}}",
+      "collected": "ಅಡ್ವಾನ್ಸ್ ಈಗಾಗಲೇ ಸಂಗ್ರಹಿಸಲಾಗಿದೆ"
+    },
+    "extend": {
+      "invalid": "ಯೋಜಿತ ಅಂತ್ಯ ದಿನಾಂಕ ಮತ್ತು ಶೂನ್ಯ ಅಥವಾ ಹೆಚ್ಚಿನ ಮೊತ್ತವನ್ನು ನಮೂದಿಸಿ.",
+      "renewalHintOpenEnded": "ಇದೇ ಆಕ್ಯುಪೆನ್ಸಿಯಲ್ಲಿ ಓಪನ್-ಎಂಡೆಡ್ ಸ್ಟೇಯನ್ನು ವಿಸ್ತರಿಸಿ. ಆಯ್ಕಿಕ ಹೊಸ ದಿನದ ಬಾಡಿಗೆ ನೀವು ಆಯ್ಕೆ ಮಾಡಿದ ಮಾಸದಿಂದ ಅನ್ವಯವಾಗುತ್ತದೆ. ಬಿಲ್ಲಿಂಗ್ ಅವಧಿ ಮುಗಿದ ನಂತರ ಬಾಡಿಗೆ ಬಿಲ್ ಮಾಡಲಾಗುತ್ತದೆ.",
+      "renewalHint": "ಇದೇ ಆಕ್ಯುಪೆನ್ಸಿಯಲ್ಲಿ ಒಂದು ಮಾಸ ವಿಸ್ತರಿಸಿ. ಆಯ್ಕಿಕ ಹೊಸ ಬಾಡಿಗೆ ನೀವು ಆಯ್ಕೆ ಮಾಡಿದ ಮಾಸದಿಂದ ಅನ್ವಯವಾಗುತ್ತದೆ (D-15).",
+      "newBillingEnd": "ಹೊಸ ಯೋಜಿತ ಅಂತ್ಯ / ಬಿಲ್ಲಿಂಗ್ ದಿನಾಂಕ",
+      "newEnd": "ಹೊಸ ಯೋಜಿತ ಅಂತ್ಯ",
+      "amount": "ಹೆಚ್ಚುವರಿ ಮೊತ್ತ",
+      "amountHelp": "ದಿನಾಂಕ ಮಾತ್ರ ಬದಲಾವಣೆಗಾಗಿ ಇದನ್ನು ಖಾಲಿ ಬಿಡಿ. ಶಾರ್ಟ್ ಸ್ಟೇ ಇದನ್ನು ಒಂದು ವಿಸ್ತರಣೆ ಶುಲ್ಕವಾಗಿ ಬಳಸುತ್ತದೆ.",
+      "rentDaily": "ಹೊಸ ದಿನದ ಬಾಡಿಗೆ",
+      "rent": "ಹೊಸ ಮಾಸಿಕ ಬಾಡಿಗೆ",
+      "rentOptionalHelp": "ಆಯ್ಕಿಕ. ಪ್ರಸ್ತುತ ಬಾಡಿಗೆಯನ್ನು ಉಳಿಸಿಕೊಳ್ಳಲು ಖಾಲಿ ಬಿಡಿ.",
+      "effectiveMonth": "ಬಾಡಿಗೆ ಪ್ರಾರಂಭವಾಗುತ್ತದೆ",
+      "renewalNotForShort": "ಶಾರ್ಟ್ ಸ್ಟೇಗಳು Extend stay ಬಳಸುತ್ತವೆ, ಮಾಸಿಕ ನವೀಕರಣವನ್ನಲ್ಲ."
+    },
+    "reviseRent": {
+      "currentMissing": "ಈ ಸ್ಟೇಗೆ ಪ್ರಸ್ತುತ ದಿನದ ಬಾಡಿಗೆ ಲಭ್ಯವಿಲ್ಲ. ರಿಫ್ರೆಶ್ ಮಾಡಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+      "unchanged": "ಪ್ರಸ್ತುತ ದರಕ್ಕಿಂತ ಭಿನ್ನವಾಗಿರುವ ಹೊಸ ದಿನದ ಬಾಡಿಗೆಯನ್ನು ನಮೂದಿಸಿ.",
+      "invalid": "ಮಾನ್ಯ ಹೊಸ ದಿನದ ಬಾಡಿಗೆ ಮತ್ತು ಪರಿಣಾಮಕಾರಿ ದಿನಾಂಕವನ್ನು ನಮೂದಿಸಿ.",
+      "subtitle": "ಈ No Fixed Move-Out Date ಸ್ಟೇಗೆ ದಿನದ ದರವನ್ನು ಪರಿಷ್ಕರಿಸಿ. ಸ್ಟೇ ಪ್ರಕಾರ ಬದಲಾಗುವುದಿಲ್ಲ.",
+      "currentDaily": "ಪ್ರಸ್ತುತ ದಿನದ ಬಾಡಿಗೆ",
+      "newDaily": "ಹೊಸ ದಿನದ ಬಾಡಿಗೆ",
+      "effectiveFrom": "ಇಂದಿನಿಂದ ಪರಿಣಾಮಕಾರಿ",
+      "reason": "ಬದಲಾವಣೆಗೆ ಕಾರಣ (ಆಯ್ಕಿಕ)",
+      "reasonOther": "ಸಂಕ್ಷಿಪ್ತ ವಿವರಣೆ",
+      "previewTitle": "ದೃಢೀಕರಣ ಸಾರಾಂಶ",
+      "previewCurrent": "ಪ್ರಸ್ತುತ ದಿನದ ಬಾಡಿಗೆ: {{amount}}",
+      "previewNew": "ಹೊಸ ದಿನದ ಬಾಡಿಗೆ: {{amount}}",
+      "previewEffective": "ಇಂದಿನಿಂದ ಪರಿಣಾಮಕಾರಿ: {{date}}",
+      "previewPreviousThrough": "ಹಿಂದಿನ ದರ ಇಲ್ಲಿಯವರೆಗೆ ಅನ್ವಯವಾಗುತ್ತದೆ: {{date}}",
+      "previewNote": "ಈಗಾಗಲೇ ರಚಿಸಲಾದ ಅಥವಾ ಪಾವತಿಸಿದ ಬಿಲ್‌ಗಳು ಬದಲಾಗುವುದಿಲ್ಲ. ಭವಿಷ್ಯದ ದಿನಗಳಿಗೆ ಮುಂಚಿತವಾಗಿ ಶುಲ್ಕ ವಿಧಿಸಲಾಗುವುದಿಲ್ಲ.",
+      "onlyOpenEnded": "ದಿನದ ಬಾಡಿಗೆ ಪರಿಷ್ಕರಣೆ ಕೇವಲ No Fixed Move-Out Date ಸ್ಟೇಗಳಿಗೆ ಮಾತ್ರ."
     }
   },
   "dashboard": {
@@ -2066,7 +2888,8 @@
         "occupancy": "{{occupied}} of {{total}} beds occupied",
         "attentionClear": "No pending actions",
         "pendingActions": "{{count}} pending actions",
-        "pendingPayments": "{{count}} payments under review"
+        "pendingPayments": "{{count}} payments under review",
+        "occupancyUnits": "{{total}} ನಲ್ಲಿ {{occupied}} ಯೂನಿಟ್‌ಗಳು ಆಕ್ರಮಿತ"
       },
       "suggestions": {
         "completeSetup": "Complete {{count}} remaining setup steps",
@@ -2303,14 +3126,26 @@
       "balanceSold": "Balance sold",
       "balanceConsumed": "Balance used",
       "balanceRemaining": "Balance left",
-      "mealsCount": "{{count}} meals"
+      "mealsCount": "{{count}} meals",
+      "previousMonth": "ಹಿಂದಿನ ಮಾಸ",
+      "nextMonth": "ಮುಂದಿನ ಮಾಸ",
+      "monthEmpty": "ಈ ಮಾಸಕ್ಕೆ ಯಾವುದೇ ಶುಲ್ಕ ದಾಖಲಾಗಿಲ್ಲ.",
+      "loadFailed": "ಈ ಮಾಸದ ಸಾರಾಂಶ ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
+      "retry": "ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ"
     },
     "accommodationOperations": {
       "title": "Property operations",
       "occupiedBeds": "Occupied beds",
       "vacantBeds": "Available beds",
       "moveInsThisMonth": "Move-ins this month",
-      "pendingPayments": "Pending payments"
+      "pendingPayments": "Pending payments",
+      "occupiedBedsShort": "ಆಕ್ರಮಿತ",
+      "vacantBedsShort": "ಲಭ್ಯ",
+      "reservedBeds": "ಕಾಯ್ದಿರಿಸಲಾಗಿದೆ",
+      "occupiedUnits": "ಆಕ್ರಮಿತ ಯೂನಿಟ್‌ಗಳು",
+      "availableUnits": "ಲಭ್ಯವಿರುವ ಯೂನಿಟ್‌ಗಳು",
+      "availableUnitsShort": "ಲಭ್ಯ",
+      "reservedUnits": "ಕಾಯ್ದಿರಿಸಲಾಗಿದೆ"
     },
     "messOperations": {
       "title": "Mess operations",
@@ -2348,7 +3183,10 @@
       "roomAvailableCount": "{{available}} of {{count}} available",
       "foodIncluded": "Food included",
       "moveOutLine": "Move-out {{date}}",
-      "occupancyCount": "{{count}} residents"
+      "occupancyCount": "{{count}} residents",
+      "showingOccupiedBeds": "{{count}} ಆಕ್ರಮಿತ ಹಾಸಿಗೆಗಳನ್ನು ತೋರಿಸಲಾಗುತ್ತಿದೆ",
+      "showingMoveIns": "ಈ ಮಾಸದ {{count}} ಮೂವ್-ಇನ್‌ಗಳನ್ನು ತೋರಿಸಲಾಗುತ್ತಿದೆ",
+      "movedIn": "ಮೂವ್-ಇನ್ ಆಗಿದೆ"
     },
     "operations": {
       "title": "Meal operations",
@@ -2425,7 +3263,13 @@
       "setupShareTodaysMenu": "Share today's menu",
       "setupShareTodaysMenuSubtitle": "Send today's menu so customers can confirm",
       "setupConfigurePayments": "Configure payments",
-      "setupConfigurePaymentsSubtitle": "Set how customers pay for meals"
+      "setupConfigurePaymentsSubtitle": "Set how customers pay for meals",
+      "allocateHint": "ಹಾಸಿಗೆಗೆ ಹೊಸ ನಿವಾಸಿಯನ್ನು ಹಂಚಿಕೆ ಮಾಡಿ",
+      "reserveHint": "ಭವಿಷ್ಯದ ಬಳಕೆಗಾಗಿ ಹಾಸಿಗೆಯನ್ನು ಬ್ಲಾಕ್ ಮಾಡಿ",
+      "transferHint": "ನಿವಾಸಿಯನ್ನು ಬೇರೆ ಕೋಣೆ/ಹಾಸಿಗೆಗೆ ಸ್ಥಳಾಂತರಿಸಿ",
+      "vacateHint": "ಹಾಸಿಗೆಯಿಂದ ನಿವಾಸಿಯನ್ನು ತೆಗೆದುಹಾಕಿ",
+      "pendingActionsLoading": "ಗಮನ ಬೇಕಾದ ಕ್ರಿಯೆಗಳನ್ನು ಪರಿಶೀಲಿಸುತ್ತಿದೆ",
+      "pendingActionsError": "ಬಾಕಿ ಇರುವ ಕ್ರಿಯೆಗಳನ್ನು ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ಅವುಗಳನ್ನು ತೆರೆಯಲು ಟ್ಯಾಪ್ ಮಾಡಿ."
     },
     "pendingActions": {
       "screenSubtitle": "Review and complete these items to keep operations running smoothly.",
@@ -2446,7 +3290,8 @@
         "MOVE_OUT_SCHEDULED_TODAY": "Today's Move-outs",
         "RESERVATION_STARTING_TODAY": "Reservations Starting Today",
         "COMPLAINT_PENDING": "Complaints Pending",
-        "COMPLAINT_OVERDUE": "Complaints Overdue"
+        "COMPLAINT_OVERDUE": "Complaints Overdue",
+        "SPACE_INVITATION": "ಸ್ಪೇಸ್ ಆಮಂತ್ರಣ"
       },
       "emptyTitle": "All clear",
       "eyebrow": "Dashboard",
@@ -2462,8 +3307,40 @@
     },
     "accommodationOps": {
       "subtitle": "Occupancy at a glance",
-      "title": "Property operations"
-    }
+      "title": "Property operations",
+      "subtitleBeds": "ಎಲ್ಲಾ ಕಟ್ಟಡಗಳಲ್ಲಿ ಪ್ರಸ್ತುತ ಹಾಸಿಗೆ ಸ್ಥಿತಿ",
+      "subtitleUnits": "ಎಲ್ಲಾ ಕಟ್ಟಡಗಳಲ್ಲಿ ಪ್ರಸ್ತುತ ಯೂನಿಟ್ ಸ್ಥಿತಿ"
+    },
+    "pendingPayments": {
+      "subtitle": "ಬಾಡಿಗೆ, ಡಿಪಾಸಿಟ್ ಮತ್ತು ಇತರ ಬಾಕಿ"
+    },
+    "propertyOverview": {
+      "active": "ಸಕ್ರಿಯ",
+      "inactive": "ನಿಷ್ಕ್ರಿಯ",
+      "floors": "{{count}} ಮಹಡಿಗಳು",
+      "rooms": "{{count}} ಕೋಣೆಗಳು",
+      "beds": "{{count}} ಹಾಸಿಗೆಗಳು",
+      "units": "{{count}} ಯೂನಿಟ್‌ಗಳು",
+      "availableOfTotal": "{{available}} / {{total}} ಲಭ್ಯ"
+    },
+    "recentActivity": {
+      "title": "ಇತ್ತೀಚಿನ ಚಟುವಟಿಕೆ",
+      "viewAll": "ಎಲ್ಲಾ ವೀಕ್ಷಿಸಿ",
+      "empty": "ಇನ್ನೂ ಯಾವುದೇ ಇತ್ತೀಚಿನ ಆಕ್ರಮಣ ಚಟುವಟಿಕೆ ಇಲ್ಲ.",
+      "moveIns": "ಈ ಮಾಸದಲ್ಲಿ {{count}} ಮೂವ್-ಇನ್‌ಗಳು",
+      "reservations": "{{count}} ಹೊಸ ಕಾಯ್ದಿರಿಸುವಿಕೆ",
+      "moveOuts": "ಈ ಮಾಸದಲ್ಲಿ {{count}} ಮೂವ್-ಔಟ್‌ಗಳು",
+      "moveOutsUnavailable": "ಈ ಮಾಸದಲ್ಲಿ ಮೂವ್-ಔಟ್‌ಗಳು",
+      "lastMoveIn": "ಕೊನೆಯ ಮೂವ್-ಇನ್: {{date}}",
+      "lastMoveOut": "ಕೊನೆಯ ಮೂವ್-ಔಟ್: {{date}}",
+      "arriving": "ಆಗಮನ: {{date}}",
+      "activeReservations": "ಸಕ್ರಿಯ ಕಾಯ್ದಿರಿಸುವಿಕೆಗಳು",
+      "noReservations": "ಯಾವುದೇ ಸಕ್ರಿಯ ಕಾಯ್ದಿರಿಸುವಿಕೆ ಇಲ್ಲ",
+      "thisMonth": "ಈ ಕ್ಯಾಲೆಂಡರ್ ಮಾಸ",
+      "moveOutsApiGap": "API ಯಿಂದ ಎಣಿಕೆ ಲಭ್ಯವಿಲ್ಲ"
+    },
+    "illustrative": "ಉದಾಹರಣೆ",
+    "illustrativePreview": "ಉದಾಹರಣೆ ಪೂರ್ವವೀಕ್ಷಣೆ"
   },
   "paymentCollection": {
     "payNow": "Pay Now",
@@ -2530,14 +3407,21 @@
       "UNDER_REVIEW": "Under review",
       "PAID": "Paid",
       "REJECTED": "Rejected",
-      "UPDATE_REQUESTED": "Changes requested"
+      "UPDATE_REQUESTED": "Changes requested",
+      "CANCELLED": "ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ",
+      "REFUNDED": "ಮರುಪಾವತಿ ಮಾಡಲಾಗಿದೆ",
+      "PARTIALLY_REFUNDED": "ಭಾಗಶಃ ಮರುಪಾವತಿ ಮಾಡಲಾಗಿದೆ",
+      "OVERDUE": "ಬಾಕಿ"
     },
     "type": {
       "MEAL": "Meal",
       "RENT": "Rent",
       "DEPOSIT": "Deposit",
       "MAINTENANCE": "Maintenance",
-      "OTHER": "Other"
+      "OTHER": "Other",
+      "UTILITY": "Utility",
+      "SERVICE": "Service",
+      "PENALTY": "Penalty"
     },
     "category": {
       "MONTHLY": "Monthly",
@@ -2549,7 +3433,8 @@
       "ELECTRICITY": "Electricity",
       "WATER": "Water",
       "INTERNET": "Internet",
-      "OTHER": "Other"
+      "OTHER": "Other",
+      "GAS": "Gas"
     },
     "method": {
       "UPI": "UPI",
@@ -2570,7 +3455,14 @@
       "emptyTitle": "No payments available",
       "emptyDescription": "You have no pending or submitted payments for this month.",
       "noLinkedMember": "Your member profile is not linked yet. Contact the property manager if this persists.",
-      "eyebrow": "Billing"
+      "eyebrow": "Billing",
+      "summary": {
+        "due": "Amount due",
+        "paid": "Paid",
+        "outstanding": "Outstanding",
+        "underReview": "Under review"
+      },
+      "emptyOutstanding": "ಈ ಮಾಸಕ್ಕೆ ಯಾವುದೇ ಬಾಕಿ ಪಾವತಿಗಳಿಲ್ಲ."
     },
     "tenantFilters": {
       "all": "All ({{count}})",
@@ -2578,7 +3470,9 @@
       "underReview": "Under Review ({{count}})",
       "paid": "Paid ({{count}})",
       "rejected": "Rejected ({{count}})",
-      "pending": "Pending ({{count}})"
+      "pending": "Pending ({{count}})",
+      "refunded": "ಮರುಪಾವತಿ ಮಾಡಲಾಗಿದೆ ({{count}})",
+      "cancelled": "ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ ({{count}})"
     },
     "tenantSections": {
       "actionNeeded": "Action needed ({{count}})",
@@ -2605,14 +3499,25 @@
         "submitted": "Submitted",
         "method": "Payment method",
         "paymentReference": "Payment reference",
-        "reference": "Reference / UTR"
+        "reference": "Reference / UTR",
+        "billingPeriodDates": "ಬಿಲ್ಲಿಂಗ್ ಅವಧಿ",
+        "baseAmount": "ಮೂಲ ಮೊತ್ತ",
+        "taxAmount": "ತೆರಿಗೆ",
+        "overdue": "ಬಾಕಿ",
+        "overdueDays": "{{days}} ದಿನ(ಗಳು) ಬಾಕಿ",
+        "refunded": "ಮರುಪಾವತಿ ಮಾಡಲಾಗಿದೆ",
+        "netCollected": "ನೆಟ್ ಸಂಗ್ರಹ",
+        "retained": "ಉಳಿಸಿಕೊಳ್ಳಲಾಗಿದೆ",
+        "prorated": "ಪ್ರೊರೇಟೆಡ್",
+        "proratedDays": "{{total}} ನಲ್ಲಿ {{days}} ದಿನಗಳು"
       },
       "mealDaysCount_one": "{{count}} day",
       "mealDaysCount_other": "{{count}} days",
       "openFromReview": "Open payment details",
       "loadingMemberPayment": "Opening payment…",
       "noPaymentsForMember": "No payments found for this member this month.",
-      "eyebrow": "Payment"
+      "eyebrow": "Payment",
+      "additionalDetails": "ಹೆಚ್ಚುವರಿ ವಿವರಗಳು"
     },
     "proof": {
       "title": "Submit payment proof",
@@ -2667,7 +3572,9 @@
         "submittedLabel": "Submitted",
         "needsUpdateLabel": "Needs Update",
         "paidLabel": "Paid",
-        "rejectedLabel": "Rejected"
+        "rejectedLabel": "Rejected",
+        "refundedLabel": "ಮರುಪಾವತಿ ಮಾಡಲಾಗಿದೆ",
+        "cancelledLabel": "ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ"
       },
       "tabSubmitted": "Submitted ({{count}})",
       "tabChangesRequested": "Changes Requested ({{count}})",
@@ -2685,7 +3592,9 @@
         "history": {
           "ALL": "No completed payment reviews yet.",
           "PAID": "No paid payments this month.",
-          "REJECTED": "No rejected payments this month."
+          "REJECTED": "No rejected payments this month.",
+          "REFUNDED": "ಈ ಮಾಸದಲ್ಲಿ ಯಾವುದೇ ಮರುಪಾವತಿಸಲಾದ ಪಾವತಿಗಳಿಲ್ಲ.",
+          "CANCELLED": "ಈ ಮಾಸದಲ್ಲಿ ಯಾವುದೇ ರದ್ದುಗೊಳಿಸಿದ ಪಾವತಿಗಳಿಲ್ಲ."
         },
         "SUBMITTED": "No payments awaiting review.",
         "CHANGES_REQUESTED": "No payments awaiting tenant updates.",
@@ -2743,7 +3652,15 @@
       "UPDATE_REQUESTED": "Changes requested",
       "emptyHint": "Events will appear as this payment moves through review.",
       "eyebrow": "Payment",
-      "subtitle": "Status changes and review events for this payment."
+      "subtitle": "Status changes and review events for this payment.",
+      "RETAINED": "ಉಳಿಸಿಕೊಳ್ಳಲಾಗಿದೆ",
+      "CANCELLED": "ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ",
+      "REMINDER_SENT": "ಜ್ಞಾಪನೆ ಕಳುಹಿಸಲಾಗಿದೆ",
+      "REMINDER_FAILED": "ಜ್ಞಾಪನೆ ವಿಫಲವಾಗಿದೆ",
+      "whatsappDisabled": "WhatsApp ಜ್ಞಾಪನೆಗಳನ್ನು ಸೆಟಪ್ ಮಾಡಲಾಗಿಲ್ಲ, ಆದ್ದರಿಂದ ಈ ಜ್ಞಾಪನೆ ಕಳುಹಿಸಲಾಗಿಲ್ಲ.",
+      "noDevice": "ಯಾವುದೇ ನೋಂದಾಯಿತ ಡಿವೈಸ್ ಲಭ್ಯವಿರಲಿಲ್ಲ, ಆದ್ದರಿಂದ ಜ್ಞಾಪನೆ ಅಧಿಸೂಚನೆ ತಲುಪಲಿಲ್ಲ.",
+      "fcmUnavailable": "ಪುಷ್ ಅಧಿಸೂಚನೆಗಳು ಲಭ್ಯವಿರಲಿಲ್ಲ, ಆದ್ದರಿಂದ ಈ ಜ್ಞಾಪನೆ ತಲುಪಲಿಲ್ಲ.",
+      "fcmRejected": "ಜ್ಞಾಪನೆ ಅಧಿಸೂಚನೆಯನ್ನು ಪುಷ್ ಸೇವೆ ಸ್ವೀಕರಿಸಲಿಲ್ಲ."
     },
     "errors": {
       "loadPayments": "Failed to load payments.",
@@ -2751,8 +3668,178 @@
       "loadReview": "Failed to load payments for review.",
       "loadTimeline": "Failed to load payment timeline.",
       "submitProof": "Failed to submit payment proof.",
-      "review": "Failed to review payment."
-    }
+      "review": "Failed to review payment.",
+      "loadPaymentRetry": "ಪಾವತಿಯನ್ನು ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ನಿಮ್ಮ ಸಂಪರ್ಕವನ್ನು ಪರಿಶೀಲಿಸಿ ಮತ್ತು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ."
+    },
+    "addRecord": {
+      "categoryDerived": "ವಿಭಾಗ",
+      "searchChargeType": "ಶುಲ್ಕ ಪ್ರಕಾರವನ್ನು ಹುಡುಕಿ...",
+      "recent": "ಇತ್ತೀಚಿನ",
+      "allChargeTypes": "ಎಲ್ಲಾ ಶುಲ್ಕ ಪ್ರಕಾರಗಳು",
+      "autoSelected": "ಶುಲ್ಕ ಪ್ರಕಾರದಿಂದ ಸ್ವಯಂ-ಆಯ್ಕೆ",
+      "noChargeTypes": "ಯಾವುದೇ ಶುಲ್ಕ ಪ್ರಕಾರಗಳು ಕಂಡುಬಂದಿಲ್ಲ",
+      "tryAnotherSearch": "ಬೇರೆ ಹುಡುಕಾಟ ಪದವನ್ನು ಪ್ರಯತ್ನಿಸಿ.",
+      "clearChargeType": "ಶುಲ್ಕ ಪ್ರಕಾರವನ್ನು ತೆರವುಗೊಳಿಸಿ",
+      "action": "Add payment",
+      "createAction": "Create payment",
+      "createTitle": "Create payment record",
+      "createSubmit": "Create payment",
+      "searchPlaceholder": "Search by name, mobile, or member ID",
+      "title": "Add payment record",
+      "member": "Member",
+      "category": "Charge category",
+      "type": "Charge type",
+      "amount": "Amount",
+      "dueDate": "Due date",
+      "description": "Description",
+      "notes": "Notes",
+      "customType": "Custom charge type",
+      "cancel": "Cancel",
+      "submit": "Add payment",
+      "success": "Payment record added.",
+      "historyTitle": "Payment history",
+      "historyEmptyTitle": "No payments for this member.",
+      "historyEmptyDescription": "Payments linked to this member will appear here.",
+      "depositExists": "A security deposit already exists for this member. Add payment again to record another deposit.",
+      "errors": {
+        "member": "Select a member.",
+        "category": "Select a charge category.",
+        "type": "Select a charge type.",
+        "customType": "Enter a charge type.",
+        "amount": "Enter a valid amount.",
+        "failed": "Could not add this payment record."
+      }
+    },
+    "overdue": {
+      "badge": "ಬಾಕಿ",
+      "days": "{{days}} ದಿನ(ಗಳು) ಬಾಕಿ",
+      "compact_one": "{{count}} ದಿನ ಬಾಕಿ",
+      "compact_other": "{{count}} ದಿನಗಳು ಬಾಕಿ",
+      "outstanding": "{{amount}} ಬಾಕಿ"
+    },
+    "allocationDetails": "ಹಂಚಿಕೆ ವಿವರಗಳು",
+    "reminder": {
+      "send": "ಜ್ಞಾಪನೆ ಕಳುಹಿಸಿ",
+      "sent": "ಜ್ಞಾಪನೆ ದಾಖಲಾಗಿದೆ",
+      "failed": "ಜ್ಞಾಪನೆ ಕಳುಹಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ",
+      "noneActionable": "ಈ ಸದಸ್ಯರಿಗೆ ಜ್ಞಾಪನೆ-ಅರ್ಹ ಪಾವತಿಗಳಿಲ್ಲ",
+      "alreadySentToday": "ಇಂದಿಗೆ ಜ್ಞಾಪನೆ ಈಗಾಗಲೇ ಪ್ರಕ್ರಿಯೆಗೊಳಿಸಲಾಗಿದೆ",
+      "providerUnavailable": "WhatsApp ಡೆಲಿವರಿ ಇನ್ನೂ ಕಾನ್ಫಿಗರ್ ಆಗಿಲ್ಲ",
+      "invalidRecipient": "ಸದಸ್ಯರ ಮೊಬೈಲ್ ಸಂಖ್ಯೆ ಕಾಣೆಯಾಗಿದೆ ಅಥವಾ WhatsApp ಗೆ ಅಮಾನ್ಯವಾಗಿದೆ",
+      "sending": "ಜ್ಞಾಪನೆಯನ್ನು ಕಳುಹಿಸಲಾಗುತ್ತಿದೆ…",
+      "openedWhatsApp": "ಇನ್-ಆ್ಯಪ್ ಜ್ಞಾಪನೆ ಉಳಿಸಲಾಗಿದೆ. WhatsApp ತೆರೆದಿದೆ, ಅಲ್ಲಿ ನೀವು ಸಂದೇಶವನ್ನು ಪರಿಶೀಲಿಸಿ ಕಳುಹಿಸಬಹುದು.",
+      "whatsAppReady": "WhatsApp ತೆರೆದಿದೆ. ಸಂದೇಶವನ್ನು ಪರಿಶೀಲಿಸಿ ಮತ್ತು ನೀವೇ ಕಳುಹಿಸಿ. ಪಾವತಿಯನ್ನು ಸ್ವೀಕರಿಸಲಾಗಿದೆ ಎಂದು ಗುರುತಿಸಲಾಗಿಲ್ಲ.",
+      "inAppSaved": "ಇನ್-ಆ್ಯಪ್ ಜ್ಞಾಪನೆ ಉಳಿಸಲಾಗಿದೆ. ಇದು ಪಾವತಿಯನ್ನು ಸ್ವೀಕರಿಸಲಾಗಿದೆ ಎಂದು ಗುರುತಿಸುವುದಿಲ್ಲ.",
+      "memberNotOnAcomi": "ಈ ಸದಸ್ಯರು ಇನ್ನೂ ACOMI ನಲ್ಲಿ ಇಲ್ಲ, ಆದ್ದರಿಂದ ಯಾವುದೇ ಇನ್-ಆ್ಯಪ್ ಜ್ಞಾಪನೆ ರಚಿಸಲಾಗಿಲ್ಲ.",
+      "notificationFailed": "ಇನ್-ಆ್ಯಪ್ ಜ್ಞಾಪನೆಯನ್ನು ಉಳಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ನೀವು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಬಹುದು.",
+      "copied": "WhatsApp ತೆರೆಯಲಿಲ್ಲ. ಜ್ಞಾಪನೆ ಸಂದೇಶ ಹಂಚಿಕೊಳ್ಳಲು ಸಿದ್ಧವಾಗಿದೆ.",
+      "whatsAppFailed": "WhatsApp ತೆರೆಯಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ಇನ್-ಆ್ಯಪ್ ಜ್ಞಾಪನೆಯನ್ನು ತೆಗೆದುಹಾಕಲಾಗಿಲ್ಲ.",
+      "whatsAppUnavailable": "ಈ ಸಂಖ್ಯೆಯನ್ನು WhatsApp ನಲ್ಲಿ ತೆರೆಯಲು ಸಾಧ್ಯವಿಲ್ಲ. ನೀವು ಇನ್ನೂ ಆಪ್‌ನಲ್ಲಿಯೇ ರಿಮೈಂಡರ್ ಉಳಿಸಬಹುದು.",
+      "composeTitle": "ರಿಮೈಂಡರ್ ಕಳುಹಿಸಿ"
+    },
+    "billingPeriodRange": "{{start}} → {{end}}",
+    "create": {
+      "title": "ಪಾವತಿ ರಚಿಸಿ",
+      "eyebrow": "ಕೈಯಾರೆ ಶುಲ್ಕ",
+      "heading": "ಪಾವತಿ ರಚಿಸಿ",
+      "subheading": "ಸದಸ್ಯರಿಗೆ ಹೆಚ್ಚುವರಿ ಬಾಧ್ಯತೆ ಸೇರಿಸಿ. ಇದು ಬಾಡಿಗೆಯಂತೆಯೇ ಪಾವತಿ ಪ್ರಕ್ರಿಯೆಯನ್ನು ಅನುಸರಿಸುತ್ತದೆ.",
+      "member": "ಸದಸ್ಯ",
+      "selectMember": "ಸದಸ್ಯರನ್ನು ಆಯ್ಕೆಮಾಡಿ",
+      "type": "ಪಾವತಿ ಪ್ರಕಾರ",
+      "amount": "ಮೊತ್ತ",
+      "dueDate": "ಬಾಕಿ ದಿನಾಂಕ",
+      "note": "ಟಿಪ್ಪಣಿ (ಐಚ್ಛಿಕ)",
+      "submit": "ಪಾವತಿ ರಚಿಸಿ",
+      "success": "ಪಾವತಿ ರಚಿಸಲಾಗಿದೆ",
+      "kinds": {
+        "DEPOSIT": "ಸುರಕ್ಷತಾ ಠೇವಣಿ",
+        "MAINTENANCE": "ನಿರ್ವಹಣೆ",
+        "ELECTRICITY": "ವಿದ್ಯುತ್",
+        "WATER": "ನೀರು",
+        "UTILITY": "ಯುಟಿಲಿಟಿ",
+        "EXTRA": "ಹೆಚ್ಚುವರಿ / ರಿಪೇರಿ",
+        "OTHER": "ಇತರೆ"
+      },
+      "errors": {
+        "memberRequired": "ಒಬ್ಬ ಸದಸ್ಯರನ್ನು ಆಯ್ಕೆಮಾಡಿ",
+        "amountRequired": "ಶೂನ್ಯಕ್ಕಿಂತ ಹೆಚ್ಚಿನ ಮಾನ್ಯ ಮೊತ್ತವನ್ನು ನಮೂದಿಸಿ",
+        "dueDateRequired": "ಬಾಕಿ ದಿನಾಂಕವನ್ನು ಆಯ್ಕೆಮಾಡಿ",
+        "createFailed": "ಈ ಪಾವತಿಯನ್ನು ರಚಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ"
+      },
+      "duplicateDeposit": {
+        "title": "ಸುರಕ್ಷತಾ ಠೇವಣಿ ಈಗಾಗಲೇ ಅಸ್ತಿತ್ವದಲ್ಲಿದೆ",
+        "body": "ಈ ಸದಸ್ಯರಿಗೆ ಈಗಾಗಲೇ ಒಂದು ಸುರಕ್ಷತಾ ಠೇವಣಿ{{detail}} ಇದೆ. ಎರಡನೇ ಶುಲ್ಕ ಉದ್ದೇಶಿಸಿದರೆ ಮಾತ್ರ ಇನ್ನೊಂದು ಠೇವಣಿ ರಚಿಸಿ.",
+        "detail": " ({{amount}}, {{month}}, {{status}})",
+        "confirm": "ಹಾಗಿದ್ದರೂ ರಚಿಸಿ"
+      }
+    },
+    "received": {
+      "action": "ಸ್ವೀಕರಿಸಲಾಗಿದೆ",
+      "title": "ಪಾವತಿಯನ್ನು ಸ್ವೀಕರಿಸಲಾಗಿದೆ ಎಂದು ಗುರುತಿಸಬೇಕೇ?",
+      "body": "ಇದು ಪಾವತಿಯನ್ನು ಬಾಡಿಗೆದಾರರ ಪುರಾವೆ ಅಥವಾ ಅನುಮೋದನೆ ಹಂತವಿಲ್ಲದೆ ಪಾವತಿಸಿದಂತೆ ಗುರುತಿಸುತ್ತದೆ. ನೀವು ನೇರವಾಗಿ ಕ್ಯಾಶ್, UPI ಅಥವಾ ಬ್ಯಾಂಕ್ ಟ್ರಾನ್ಸ್‌ಫರ್ ಸ್ವೀಕರಿಸಿದಾಗ ಇದನ್ನು ಬಳಸಿ.",
+      "skipProof": "ಇದು ಬಾಡಿಗೆದಾರರ ಪಾವತಿ ಪುರಾವೆಯ ಅಗತ್ಯವಿಲ್ಲದೆ ಪಾವತಿಯನ್ನು PAID ಎಂದು ಗುರುತಿಸುತ್ತದೆ.",
+      "confirm": "ಸ್ವೀಕರಿಸಲಾಗಿದೆ ಎಂದು ಗುರುತಿಸಿ",
+      "success": "ಪಾವತಿಯನ್ನು ಸ್ವೀಕರಿಸಲಾಗಿದೆ ಎಂದು ಗುರುತಿಸಲಾಗಿದೆ",
+      "failed": "ಈ ಪಾವತಿಯನ್ನು ಸ್ವೀಕರಿಸಲಾಗಿದೆ ಎಂದು ಗುರುತಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ",
+      "noneActionable": "{{name}} ಗಾಗಿ ಗುರುತಿಸಲು ಯಾವುದೇ ಬಾಕಿ ಪಾವತಿಗಳಿಲ್ಲ"
+    },
+    "chargeCatalog": {
+      "categories": {
+        "RENT": "Rent",
+        "DEPOSIT": "Deposit",
+        "MAINTENANCE": "Maintenance",
+        "UTILITY": "Utility",
+        "MEALS": "Meals",
+        "SERVICE": "Service",
+        "PENALTY": "Penalty",
+        "OTHER": "Other"
+      },
+      "types": {
+        "RENT": "Rent",
+        "ADVANCE_RENT": "Advance rent",
+        "NOTICE_PERIOD": "Notice period charge",
+        "SECURITY_DEPOSIT": "Security deposit",
+        "DEPOSIT_ADJUSTMENT": "Deposit adjustment",
+        "MAINTENANCE": "Maintenance",
+        "REPAIR": "Repair",
+        "DAMAGE": "Damage",
+        "FURNITURE_DAMAGE": "Furniture damage",
+        "EQUIPMENT_DAMAGE": "Equipment damage",
+        "ELECTRICITY": "Electricity",
+        "WATER": "Water",
+        "GAS": "Gas",
+        "INTERNET": "Internet/Wi-Fi",
+        "OTHER_UTILITY": "Other utility",
+        "MEAL_PLAN": "Meal plan",
+        "EXTRA_MEALS": "Extra meals",
+        "MEAL_ADJUSTMENT": "Meal adjustment",
+        "OTHER_MEAL": "Other meal charge",
+        "LAUNDRY": "Laundry",
+        "CLEANING": "Cleaning",
+        "PARKING": "Parking",
+        "KEY_REPLACEMENT": "Key replacement",
+        "ACCESS_CARD": "Access card replacement",
+        "APPLIANCE": "Appliance usage",
+        "MOVE_IN": "Move-in charge",
+        "MOVE_OUT": "Move-out charge",
+        "ROOM_CHANGE": "Room/bed change charge",
+        "OTHER_SERVICE": "Other service",
+        "LATE_FEE": "Late payment fee",
+        "FINE": "Penalty/fine",
+        "OTHER_PENALTY": "Other penalty",
+        "MISCELLANEOUS": "Miscellaneous",
+        "OTHER": "Other"
+      }
+    },
+    "notYetBilled": {
+      "title": "ಇನ್ನೂ ಬಿಲ್ ಆಗಿಲ್ಲ",
+      "description": "ಈ ಓಪನ್-ಎಂಡೆಡ್ ಸ್ಟೇಯ ಬಾಡಿಗೆಯನ್ನು ಬಿಲ್ಲಿಂಗ್ ಅವಧಿ ಮುಗಿದ ನಂತರ ಅಥವಾ ಮೂವ್-ಔಟ್‌ನಲ್ಲಿ ಬಿಲ್ ಮಾಡಲಾಗುತ್ತದೆ."
+    },
+    "fields": {
+      "dueDate": "ಪಾವತಿ ದಿನಾಂಕ",
+      "outstanding": "ಬಾಕಿ"
+    },
+    "billedDays": "{{start}} – {{end}} · {{days}} ಬಿಲ್ ಮಾಡಬಹುದಾದ ದಿನಗಳು"
   },
   "payments": {
     "title": "Payments",
@@ -2792,7 +3879,9 @@
       "paid": "Paid",
       "pending": "Pending",
       "partial": "Partial",
-      "underReview": "Under Review"
+      "underReview": "Under Review",
+      "refunded": "ಮರುಪಾವತಿ ಮಾಡಲಾಗಿದೆ",
+      "cancelled": "ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ"
     },
     "filters": {
       "all": "All ({{count}})",
@@ -2808,7 +3897,10 @@
       "needsUpdate": "Needs update",
       "rejected": "Rejected",
       "none": "No charges",
-      "PENDING": "Pending"
+      "PENDING": "Pending",
+      "partiallyRefunded": "ಭಾಗಶಃ ಮರುಪಾವತಿ ಮಾಡಲಾಗಿದೆ",
+      "refunded": "ಮರುಪಾವತಿ ಮಾಡಲಾಗಿದೆ",
+      "cancelled": "ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ"
     },
     "row": {
       "expected": "Expected {{expected}}",
@@ -2817,7 +3909,60 @@
       "purchasedThisMonth": "Sold this month",
       "collectedThisMonth": "Collected this month"
     },
-    "mealPaymentTitle": "Meal Payment"
+    "mealPaymentTitle": "Meal Payment",
+    "summaryHints": {
+      "expected": "ಒಟ್ಟು ನಿರೀಕ್ಷಿತ ಬಾಕಿ",
+      "collected": "ಅನುಮೋದಿತ ಪಾವತಿಗಳು",
+      "underReview": "ಪರಿಶೀಲನೆಗಾಗಿ ಕಾಯುತ್ತಿದೆ",
+      "pending": "ಇನ್ನೂ ಸಂಗ್ರಹಿಸಬೇಕಾಗಿದೆ"
+    },
+    "attention": {
+      "title_one": "{{count}} ಪಾವತಿಗೆ ನಿಮ್ಮ ಪರಿಶೀಲನೆ ಅಗತ್ಯ",
+      "title_other": "{{count}} ಪಾವತಿಗಳಿಗೆ ನಿಮ್ಮ ಪರಿಶೀಲನೆ ಅಗತ್ಯ",
+      "subtitle": "ಸಲ್ಲಿಸಿದ ಪಾವತಿ ಪುರಾವೆಗಳನ್ನು ಪರಿಶೀಲಿಸಿ",
+      "a11y": "{{count}} ಪಾವತಿಗಳಿಗೆ ಪರಿಶೀಲನೆ ಅಗತ್ಯ. ಪರಿಶೀಲನಾ ಪಟ್ಟಿ ತೆರೆಯಿರಿ."
+    },
+    "membersCount_one": "{{count}} ಸದಸ್ಯ",
+    "membersCount_other": "{{count}} ಸದಸ್ಯರು",
+    "emptyMismatch": {
+      "title": "ಪಾವತಿ ಪಟ್ಟಿ ಅಪೂರ್ಣವಾಗಿದೆ",
+      "description": "ಈ ಮಾಸದಲ್ಲಿ ಇನ್ನೂ ಬಾಕಿ ಬಾಕಿ ಇದೆ, ಆದರೆ ಯಾವುದೇ ಹೊಂದಾಣಿಕೆಯ ಪಾವತಿ ದಾಖಲೆಗಳು ಹಿಂತಿರುಗಿಲ್ಲ. ಅವುಗಳನ್ನು ಲೋಡ್ ಮಾಡಲು ಪಾವತಿಗಳನ್ನು ರಿಫ್ರೆಶ್ ಮಾಡಿ."
+    },
+    "settle": {
+      "cancelUnpaid": "ಪಾವತಿಯನ್ನು ರದ್ದುಗೊಳಿಸಿ",
+      "open": "ಮರುಪಾವತಿ / ಉಳಿಸಿಕೊಳ್ಳಿ",
+      "title": "ಸಂಗ್ರಹಿಸಿದ ಪಾವತಿಯನ್ನು ಇತ್ಯರ್ಥಗೊಳಿಸಿ",
+      "action": "ಕ್ರಿಯೆ",
+      "fullRefund": "ಪೂರ್ಣ ಮರುಪಾವತಿ",
+      "partialRefund": "ಭಾಗಶಃ ಮರುಪಾವತಿ",
+      "retain": "ಮೊತ್ತವನ್ನು ಉಳಿಸಿಕೊಳ್ಳಿ",
+      "refundAmount": "ಮರುಪಾವತಿ ಮೊತ್ತ",
+      "retainedAmount": "ಉಳಿಸಿಕೊಂಡ ಮೊತ್ತ",
+      "reason": "ಕಾರಣ",
+      "reasonRequired": "ಕಾರಣ ಅಗತ್ಯ",
+      "confirm": "ಇತ್ಯರ್ಥವನ್ನು ದಾಖಲಿಸಿ",
+      "confirmCancel": "ರದ್ದತಿಯನ್ನು ಖಚಿತಪಡಿಸಿ",
+      "cancelReason": "ರದ್ದತಿ ಕಾರಣ",
+      "cancelRemarks": "ಟೀಕೆಗಳು (ಐಚ್ಛಿಕ)",
+      "cancelled": "ಪಾವತಿ ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ",
+      "done": "ಪಾವತಿ ಇತ್ಯರ್ಥಗೊಳಿಸಲಾಗಿದೆ",
+      "collected": "ಸಂಗ್ರಹಿಸಲಾಗಿದೆ: ₹{{amount}}",
+      "alreadyRefunded": "ಈಗಾಗಲೇ ಮರುಪಾವತಿ ಮಾಡಲಾಗಿದೆ: ₹{{amount}}",
+      "remainingRefundable": "ಉಳಿದ ಮರುಪಾವತಿಸಬಹುದಾದ ಮೊತ್ತ: ₹{{amount}}",
+      "refundNow": "ಈಗ ಮರುಪಾವತಿ ಮಾಡಿ: ₹{{amount}}",
+      "retainedNow": "ಈಗ ಉಳಿಸಿಕೊಂಡಿದ್ದು: ₹{{amount}}",
+      "retainedHint": "ಉಳಿಸಿಕೊಂಡ ಮೊತ್ತ ಎಂದರೆ ನೀವು ಉಳಿಸಿಕೊಳ್ಳುವ ಹಣ (ಮರಳಿಸಲಾಗಿಲ್ಲ). ಭಾಗಶಃ ಮರುಪಾವತಿಗೆ ಇದನ್ನು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಗಣಿಸಲಾಗುತ್ತದೆ.",
+      "invalidRefundAmount": "ಮರುಪಾವತಿ ಮೊತ್ತ 0 ಕ್ಕಿಂತ ಹೆಚ್ಚಿರಬೇಕು ಮತ್ತು ಉಳಿದ ಮರುಪಾವತಿಸಬಹುದಾದ ಮೊತ್ತದ ಒಳಗೆ ಇರಬೇಕು",
+      "invalidRetainAmount": "ಉಳಿಸಿಕೊಂಡ ಮೊತ್ತ 0 ಕ್ಕಿಂತ ಹೆಚ್ಚಿರಬೇಕು ಮತ್ತು ಉಳಿದ ಬಾಕಿಯ ಒಳಗೆ ಇರಬೇಕು",
+      "cancelConfirm": "ಈ ಪಾವತಿಸದ ಬಾಧ್ಯತೆಯನ್ನು ರದ್ದುಗೊಳಿಸಬೇಕೇ? ಇತಿಹಾಸ ಉಳಿಸಿಕೊಳ್ಳಲಾಗುತ್ತದೆ.",
+      "recordNotice": "ಹಣವನ್ನು ಮರಳಿಸಲಾಗಿದೆ ಅಥವಾ ಉಳಿಸಿಕೊಳ್ಳಲಾಗಿದೆ ಎಂದು ನೀವು ಖಚಿತಪಡಿಸಿದ ನಂತರ ಇದು ACOMI ನಲ್ಲಿ ಪೂರ್ಣಗೊಂಡ ಮರುಪಾವತಿ ಅಥವಾ ಧಾರಣೆಯನ್ನು ದಾಖಲಿಸುತ್ತದೆ. ಇದು ಬ್ಯಾಂಕ್/UPI ಪಾವತಿಯನ್ನು ಕಳುಹಿಸುವುದಿಲ್ಲ."
+    },
+    "records": {
+      "heading": "Payments",
+      "search": "Search member, mobile, title, or type",
+      "emptyTitle": "No payments found",
+      "emptyDescription": "No payment records match the selected month or filters."
+    }
   },
   "members": {
     "mealBilling": {
@@ -2938,7 +4083,20 @@
         "action": "Share today's menu",
         "subtitle": "Share Breakfast, Lunch and Dinner together",
         "reshare": "Reshare today's menu",
-        "emptyHint": "Plan at least one meal before sharing."
+        "emptyHint": "Plan at least one meal before sharing.",
+        "notSharedHint": "ಇಂದಿನ ಮೆನುವನ್ನು ಇನ್ನೂ ಹಂಚಿಕೊಂಡಿಲ್ಲ",
+        "sharedHint": "ಇಂದಿನ ಮೆನುವನ್ನು ಹಂಚಿಕೊಳ್ಳಲಾಗಿದೆ",
+        "updatedHint": "ಸದಸ್ಯರಿಗೆ ಇತ್ತೀಚಿನ ಮೆನು ಕಾಣಿಸಲು ಮತ್ತೆ ಹಂಚಿಕೊಳ್ಳಿ",
+        "failed": "ಹಂಚಿಕೆ ವಿಫಲವಾಗಿದೆ",
+        "failedHint": "ಮೆನುವನ್ನು ಹಂಚಿಕೊಂಡಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+        "closePoll": "ಪೋಲ್ ಮುಚ್ಚಿ",
+        "closePollTitle": "ಇಂದಿನ ಊಟದ ಪೋಲ್ ಮುಚ್ಚಬೇಕೇ?",
+        "closePollMessage": "ಈ ಪೋಲ್‌ಗಾಗಿ ಸದಸ್ಯರು ಇನ್ನು ಮುಂದೆ ತಮ್ಮ ಊಟದ ಆಯ್ಕೆಗಳನ್ನು ಸಲ್ಲಿಸಲು ಅಥವಾ ಬದಲಾಯಿಸಲು ಸಾಧ್ಯವಾಗುವುದಿಲ್ಲ.",
+        "closePollConfirm": "ಪೋಲ್ ಮುಚ್ಚಿ",
+        "pollClosed": "ಪೋಲ್ ಮುಚ್ಚಲಾಗಿದೆ",
+        "pollClosedHint": "ಸದಸ್ಯರು ಇನ್ನು ಮುಂದೆ ತಮ್ಮ ಆಯ್ಕೆಗಳನ್ನು ಸಲ್ಲಿಸಲು ಅಥವಾ ಬದಲಾಯಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ",
+        "closePollSuccess": "ಊಟದ ಪೋಲ್ ಯಶಸ್ವಿಯಾಗಿ ಮುಚ್ಚಲಾಗಿದೆ.",
+        "closePollFailed": "ಊಟದ ಪೋಲ್ ಮುಚ್ಚಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ."
       },
       "selector": {
         "notPlanned": "Not planned",
@@ -3059,7 +4217,9 @@
         "continueToExtras": "Continue to Extras ↓",
         "continueToExtrasHint": "Scrolls to the Extras section on this page",
         "emptyExtrasTitle": "No extras available.",
-        "emptyExtrasBody": "Create extras later if needed. Continue to save your menu."
+        "emptyExtrasBody": "Create extras later if needed. Continue to save your menu.",
+        "selectedMealsNextExtras_one": "✓ {{count}} ಊಟ ಆಯ್ಕೆಮಾಡಲಾಗಿದೆ · ಮುಂದೆ: ಎಕ್ಸ್‌ಟ್ರಾಗಳನ್ನು ಪರಿಶೀಲಿಸಿ",
+        "selectedMealsNextExtras_other": "✓ {{count}} ಊಟಗಳನ್ನು ಆಯ್ಕೆಮಾಡಲಾಗಿದೆ · ಮುಂದೆ: ಎಕ್ಸ್‌ಟ್ರಾಗಳನ್ನು ಪರಿಶೀಲಿಸಿ"
       },
       "manageExtrasCta": "Manage available extras >",
       "manageExtrasConfigureFirst": "Configure extras in Menu Library >",
@@ -3169,7 +4329,19 @@
       "addComboToMeal": "Add to meal",
       "comboSavedToLibrary": "\"{{name}}\" saved to library and added to meal",
       "saveToLibraryLabel": "Save to Combo Library",
-      "saveToLibraryHint": "Make this combo reusable for future meals"
+      "saveToLibraryHint": "Make this combo reusable for future meals",
+      "shareToOtherCount_one": "{{count}} ಇತರ ಸ್ಪೇಸ್ ಆಯ್ಕೆಮಾಡಲಾಗಿದೆ",
+      "shareToOtherCount_other": "{{count}} ಇತರ ಸ್ಪೇಸ್‌ಗಳನ್ನು ಆಯ್ಕೆಮಾಡಲಾಗಿದೆ",
+      "shareToOtherNone": "ಯಾವುದೇ ಹೆಚ್ಚುವರಿ ಸ್ಪೇಸ್ ಆಯ್ಕೆಮಾಡಿಲ್ಲ",
+      "shareToSelectAll": "ಎಲ್ಲಾ ಸ್ಪೇಸ್‌ಗಳನ್ನು ಆಯ್ಕೆಮಾಡಿ ({{count}})",
+      "shareToSearch": "ಸ್ಪೇಸ್‌ಗಳನ್ನು ಹುಡುಕಿ",
+      "shareCrossOwner": "{{space}} ಬೇರೊಬ್ಬ ಮಾಲೀಕರಿಗೆ ಸೇರಿದೆ. ಮೆನುಗಳನ್ನು ಒಂದೇ ಮಾಲೀಕರ ಸ್ಪೇಸ್‌ಗಳ ನಡುವೆ ಮಾತ್ರ ಹಂಚಿಕೊಳ್ಳಬಹುದು.",
+      "shareComboHidden": "{{space}} ನಲ್ಲಿ ಮರೆಮಾಡಲಾಗಿದೆ: {{items}}. ಆ ಸ್ಪೇಸ್‌ನ ಮೆನು ಲೈಬ್ರರಿಯಲ್ಲಿ ಕಾಂಬೋ ಆನ್ ಮಾಡಿ, ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+      "shareExtrasOmitted": "ಊಟದ ಎಕ್ಸ್‌ಟ್ರಾಗಳನ್ನು {{count}} ನಾನ್-ಮೆಸ್ ಸ್ಪೇಸ್‌(ಗಳಿ)ಗೆ ನಕಲಿಸಲಾಗಿಲ್ಲ. ಮೆಸ್ ಸ್ಪೇಸ್‌ಗಳಿಗೆ ಇನ್ನೂ ಸಿಗುತ್ತವೆ.",
+      "savingMenu": "ಮೆನುವನ್ನು ಉಳಿಸಲಾಗುತ್ತಿದೆ…",
+      "sharingToSpaces": "ಇತರ ಸ್ಪೇಸ್‌ಗಳಿಗೆ ಹಂಚಿಕೊಳ್ಳಲಾಗುತ್ತಿದೆ…",
+      "checkingSpacesProgress": "{{total}} ನಲ್ಲಿ {{completed}} ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ",
+      "sharingToSpacesProgress": "{{total}} ನಲ್ಲಿ {{completed}} ಹಂಚಿಕೊಳ್ಳಲಾಗುತ್ತಿದೆ"
     },
     "poll": {
       "responseTitle": "Choose your meals",
@@ -3195,6 +4367,8 @@
       "stickyPlatesAndTotal": "{{plates}} plates · {{total}}",
       "yourCurrentSelection": "Your current selection",
       "pastDateReadOnly": "This date has passed. Your choices can no longer be changed.",
+      "pollClosedReadOnly": "ಈ ಪೋಲ್ ಮುಚ್ಚಲಾಗಿದೆ. ನಿಮ್ಮ ಆಯ್ಕೆಗಳನ್ನು ಇನ್ನು ಮಾರ್ಪಡಿಸಲಾಗುವುದಿಲ್ಲ.",
+      "pollOpenStatus": "ಪೋಲ್ ತೆರೆದಿದೆ",
       "totalPlates": "Total plates: {{count}}",
       "selectAtLeastOnePlate": "Select at least one plate across your combos",
       "submit": "Save choices",
@@ -3288,7 +4462,16 @@
       "lastUsedDelivery": "Last used",
       "changeDelivery": "Change",
       "doneChoosingDelivery": "Done",
-      "totalPlatesAll": "Total plates: {{count}}"
+      "totalPlatesAll": "Total plates: {{count}}",
+      "cannotChooseTitle": "ಊಟಗಳು ಲಭ್ಯವಿಲ್ಲ",
+      "pollClosesIn": "ಪೋಲ್ ಮುಚ್ಚುವುದು",
+      "remainingHoursMinutes": "{{hours}}ಗಂ {{minutes}}ನಿ",
+      "remainingMinutes": "{{count}}ನಿ",
+      "remainingDays": "{{count}}ದಿ",
+      "closesInHoursMinutes": "{{hours}}ಗಂ {{minutes}}ನಿ ನಲ್ಲಿ ಮುಚ್ಚುತ್ತದೆ",
+      "closesInMinutes": "{{count}}ನಿ ನಲ್ಲಿ ಮುಚ್ಚುತ್ತದೆ",
+      "closesInDays": "{{count}}ದಿ ನಲ್ಲಿ ಮುಚ್ಚುತ್ತದೆ",
+      "closingSoon": "ಶೀಘ್ರದಲ್ಲೇ ಮುಚ್ಚುತ್ತದೆ"
     },
     "balance": {
       "title": "Meal balance",
@@ -3590,7 +4773,13 @@
       "label": "Food included",
       "notIncluded": "Food not included",
       "noActiveStay": "No active stay. Food is set when the tenant moves in.",
-      "activeStayHint": "Also set during move-in. Turning off stops menu sharing."
+      "activeStayHint": "Also set during move-in. Turning off stops menu sharing.",
+      "confirmEnableTitle": "ಊಟ ಸೇರಿಸಬೇಕೇ?",
+      "confirmEnableMessage": "ಈ ಬಾಡಿಗೆದಾರರಿಗೆ ಊಟ ಸೇರಿಸಲು ನೀವು ಖಚಿತವಾಗಿ ಬಯಸುವಿರಾ? ಇದು ಬಾಡಿಗೆದಾರರ ಊಟ ಸೇರ್ಪಡೆ ಸೆಟ್ಟಿಂಗ್ ಅನ್ನು ಅಪ್‌ಡೇಟ್ ಮಾಡುತ್ತದೆ.",
+      "confirmEnableAction": "ಖಚಿತಪಡಿಸಿ ಮತ್ತು ಸಕ್ರಿಯಗೊಳಿಸಿ",
+      "confirmDisableTitle": "ಊಟ ಸೇರ್ಪಡೆ ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಬೇಕೇ?",
+      "confirmDisableMessage": "ಈ ಬಾಡಿಗೆದಾರರಿಗೆ ಊಟವನ್ನು ಹೊರಗಿಡಲು ನೀವು ಖಚಿತವಾಗಿ ಬಯಸುವಿರಾ? ಇದು ಬಾಡಿಗೆದಾರರ ಊಟ ಸೇರ್ಪಡೆ ಸೆಟ್ಟಿಂಗ್ ಅನ್ನು ಅಪ್‌ಡೇಟ್ ಮಾಡುತ್ತದೆ.",
+      "confirmDisableAction": "ಖಚಿತಪಡಿಸಿ ಮತ್ತು ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಿ"
     },
     "accessStatus": {
       "label": "Status",
@@ -3860,7 +5049,23 @@
       "seedHint": "Default catalog on space create",
       "seedHintBody": "New Mess spaces get Breads, Rice, Dal, Breakfast items pre-loaded so you can build combos immediately — no typing Chapati every day.",
       "dailyMenuLater": "Daily menu planning — Phase 5.2",
-      "dailyMenuLaterHint": "After your library is ready: plan each meal, then Share menu."
+      "dailyMenuLaterHint": "After your library is ready: plan each meal, then Share menu.",
+      "categoryFilterAllCount": "ಎಲ್ಲಾ ({{count}})",
+      "chipWithCount": "{{name}} ({{count}})",
+      "manageCategories": "ವಿಭಾಗಗಳನ್ನು ನಿರ್ವಹಿಸಿ",
+      "addCategoryAction": "ವಿಭಾಗ ಸೇರಿಸಿ",
+      "allMenuItems": "ಎಲ್ಲಾ ಮೆನು ಐಟಂಗಳು ({{count}})",
+      "allCombos": "ಎಲ್ಲಾ ಕಾಂಬೋಗಳು ({{count}})",
+      "addItemAction": "ಐಟಂ ಸೇರಿಸಿ",
+      "addComboAction": "ಕಾಂಬೋ ಸೇರಿಸಿ",
+      "itemActions": "{{name}} ಗಾಗಿ ಕ್ರಿಯೆಗಳು",
+      "comboActions": "{{name}} ಗಾಗಿ ಕ್ರಿಯೆಗಳು",
+      "extrasHeading": "ಎಕ್ಸ್‌ಟ್ರಾಗಳು ({{count}})",
+      "categoryUpdateSuccess": "ವಿಭಾಗ ಅಪ್‌ಡೇಟ್ ಆಗಿದೆ.",
+      "searchCombos": "ಕಾಂಬೋಗಳನ್ನು ಹುಡುಕಿ…",
+      "hideComboInSpace": "ಈ ಸ್ಪೇಸ್‌ನಲ್ಲಿ ಮರೆಮಾಡಿ",
+      "showComboInSpace": "ಈ ಸ್ಪೇಸ್‌ನಲ್ಲಿ ತೋರಿಸಿ",
+      "comboHiddenInSpace": "ಈ ಸ್ಪೇಸ್‌ನಲ್ಲಿ ಮರೆಮಾಡಲಾಗಿದೆ"
     },
     "foodType": {
       "label": "Food type",
@@ -3978,7 +5183,10 @@
       "searchInCategory": "Search in {{category}}",
       "moreItemsInLibrary": "Browse Menu Library for more items",
       "notes": "Kitchen notes",
-      "notesPlaceholder": "Optional note for staff"
+      "notesPlaceholder": "Optional note for staff",
+      "discardChanges": "ತ್ಯಜಿಸಿ",
+      "unavailable": "ಈ ಮೆನು ಇನ್ನು ಲಭ್ಯವಿಲ್ಲ.",
+      "respond": "ಪ್ರತಿಕ್ರಿಯಿಸಿ"
     },
     "actions": {
       "pause": "Pause",
@@ -4016,6 +5224,30 @@
       "foodRequiresMoveIn": "Move the tenant into a bed before enabling food.",
       "optionsRequired": "Add at least one menu option.",
       "pastDateReadOnly": "Past dates are view-only."
+    },
+    "responses": {
+      "screenTitle": "ಪ್ರತಿಕ್ರಿಯೆಗಳು",
+      "title": "{{meal}} ಪ್ರತಿಕ್ರಿಯೆಗಳು",
+      "subtitle": "{{meal}} · {{date}}",
+      "filterEligible": "ಅರ್ಹ",
+      "filterResponded": "ಪ್ರತಿಕ್ರಿಯಿಸಿದ್ದಾರೆ",
+      "filterNotResponded": "ಪ್ರತಿಕ್ರಿಯಿಸಿಲ್ಲ",
+      "respondedChoice": "ಪ್ರತಿಕ್ರಿಯಿಸಿದ್ದಾರೆ",
+      "notRespondedChoice": "ಪ್ರತಿಕ್ರಿಯಿಸಿಲ್ಲ",
+      "emptyRespondedTitle": "ಇನ್ನೂ ಯಾವುದೇ ಪ್ರತಿಕ್ರಿಯೆ ಇಲ್ಲ",
+      "emptyRespondedBody": "ಈ ಊಟಕ್ಕೆ ಪ್ರತಿಕ್ರಿಯಿಸುವ ಸದಸ್ಯರು ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತಾರೆ.",
+      "emptyNotRespondedTitle": "ಎಲ್ಲರೂ ಪ್ರತಿಕ್ರಿಯಿಸಿದ್ದಾರೆ",
+      "emptyNotRespondedBody": "ಪ್ರತಿಕ್ರಿಯಿಸಲು ಕಾಯುತ್ತಿರುವ ಅರ್ಹ ಸದಸ್ಯರಿಲ್ಲ.",
+      "emptyEligibleTitle": "ಯಾವುದೇ ಅರ್ಹ ಸದಸ್ಯರಿಲ್ಲ",
+      "emptyEligibleBody": "ಈ ಊಟಕ್ಕೆ ಯಾವುದೇ ಸದಸ್ಯರು ಅರ್ಹರಿಲ್ಲ.",
+      "loadErrorTitle": "ಪ್ರತಿಕ್ರಿಯೆಗಳನ್ನು ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ",
+      "loadErrorBody": "ರಿಫ್ರೆಶ್ ಮಾಡಲು ಎಳೆಯಿರಿ, ಅಥವಾ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+      "editMenu": "ಮೆನು ಎಡಿಟ್ ಮಾಡಿ",
+      "searchPlaceholder": "ಹೆಸರು ಅಥವಾ ಮೊಬೈಲ್ ಮೂಲಕ ಹುಡುಕಿ",
+      "filterByMenu": "ಮೆನುವಿನ ಪ್ರಕಾರ ಫಿಲ್ಟರ್ ಮಾಡಿ",
+      "filterAllMenus": "ಎಲ್ಲಾ ಮೆನುಗಳು",
+      "searchEmptyTitle": "ಹೊಂದಾಣಿಕೆಯ ಸದಸ್ಯರಿಲ್ಲ",
+      "searchEmptyBody": "ಬೇರೊಂದು ಹೆಸರು ಅಥವಾ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ಪ್ರಯತ್ನಿಸಿ."
     }
   },
   "permissions": {
@@ -4198,7 +5430,8 @@
       "spacesJoined": "{{count}} spaces",
       "switchSpace": "Switch space",
       "switchSpaceSubtitle": "Open My Spaces",
-      "versionLabel": "App version"
+      "versionLabel": "App version",
+      "myEnquiries": "ನನ್ನ ವಿಚಾರಣೆಗಳು"
     },
     "language": {
       "title": "ಭಾಷೆ",
@@ -4454,6 +5687,41 @@
           "cta": "Go to Dashboard"
         }
       }
+    },
+    "capabilities": {
+      "genericLocked": "ಈ ವೈಶಿಷ್ಟ್ಯವನ್ನು ಅನ್‌ಲಾಕ್ ಮಾಡಲು ಹಿಂದಿನ ಸೆಟಪ್ ಹಂತವನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ.",
+      "members": {
+        "lockedProperty": "ಮೊದಲು ನಿಮ್ಮ ವಸತಿ ಸೇರಿಸಿ, ಆಗ ನೀವು ನಿವಾಸಿಗಳನ್ನು ಆಹ್ವಾನಿಸಬಹುದು ಮತ್ತು ಹಾಸಿಗೆಗಳನ್ನು ಹಂಚಿಕೆ ಮಾಡಬಹುದು.",
+        "ctaProperty": "ವಸತಿ ಸಜ್ಜುಗೊಳಿಸಿ"
+      },
+      "mealConfig": {
+        "lockedProperty": "ನಿಮ್ಮ ಮೆನು ಲೈಬ್ರರಿಯನ್ನು ಕಾನ್ಫಿಗರ್ ಮಾಡುವ ಮೊದಲು ವಸತಿ ಸೆಟಪ್ ಪೂರ್ಣಗೊಳಿಸಿ.",
+        "ctaProperty": "ವಸತಿ ಸಜ್ಜುಗೊಳಿಸಿ"
+      },
+      "mealOps": {
+        "lockedLibrary": "ನಿವಾಸಿಗಳ ಊಟವನ್ನು ಯೋಜಿಸುವ ಮೊದಲು ನಿಮ್ಮ ಮೆನು ಲೈಬ್ರರಿಗೆ ಐಟಂಗಳು ಅಥವಾ ಕಾಂಬೋಗಳನ್ನು ಸೇರಿಸಿ.",
+        "lockedLibraryMess": "ಇಂದಿನ ಊಟವನ್ನು ಯೋಜಿಸುವ ಮೊದಲು ನಿಮ್ಮ ಮೆನು ಲೈಬ್ರರಿಗೆ ಐಟಂಗಳು ಅಥವಾ ಕಾಂಬೋಗಳನ್ನು ಸೇರಿಸಿ.",
+        "ctaLibrary": "ಮೆನು ಲೈಬ್ರರಿ ತೆರೆಯಿರಿ",
+        "lockedAllocation": "ಊಟದ ಕಾರ್ಯಾಚರಣೆಗಳನ್ನು ಚಲಾಯಿಸುವ ಮೊದಲು ಕನಿಷ್ಠ ಒಬ್ಬ ನಿವಾಸಿಯನ್ನು ಮೂವ್-ಇನ್ ಮಾಡಿ.",
+        "ctaAllocation": "ಸದಸ್ಯರಿಗೆ ಹೋಗಿ"
+      },
+      "allocation": {
+        "lockedProperty": "ನಿವಾಸಿಗಳನ್ನು ಹಂಚಿಕೆ ಮಾಡುವ ಮೊದಲು ವಸತಿ ಸೇರಿಸಿ.",
+        "ctaProperty": "ವಸತಿ ಸಜ್ಜುಗೊಳಿಸಿ",
+        "lockedMembers": "ಹಂಚಿಕೆ ಮಾಡಲು ಅಥವಾ ಮೂವ್-ಇನ್ ಮಾಡುವ ಮೊದಲು ನಿವಾಸಿಯನ್ನು ಸೇರಿಸಿ.",
+        "ctaMembers": "ಸದಸ್ಯರನ್ನು ಸೇರಿಸಿ"
+      },
+      "payments": {
+        "soft": "ನಿವಾಸಿ ಅಥವಾ ಊಟದ ಶುಲ್ಕ ಬಿಲ್ ಮಾಡಬಹುದಾದಾಗ ಪಾವತಿಗಳು ಇಲ್ಲಿ ಚಟುವಟಿಕೆಯನ್ನು ತೋರಿಸುತ್ತವೆ."
+      },
+      "complaints": {
+        "soft": "ಈ ಸ್ಪೇಸ್‌ಗೆ ಜನರನ್ನು ಸೇರಿಸಿದ ನಂತರ ದೂರುಗಳು ಉಪಯುಕ್ತವಾಗುತ್ತವೆ.",
+        "ctaMembers": "ಸದಸ್ಯರನ್ನು ಸೇರಿಸಿ"
+      },
+      "delivery": {
+        "soft": "ಐಚ್ಛಿಕ — ಗ್ರಾಹಕರಿಗೆ ಭರವಸೆಯಿಂದ ಊಟ ತಲುಪಲು ಡೆಲಿವರಿ ಸ್ಥಳಗಳನ್ನು ಸೇರಿಸಿ.",
+        "cta": "ಡೆಲಿವರಿ ಸ್ಥಳಗಳನ್ನು ಸೇರಿಸಿ"
+      }
     }
   },
   "inventory": {
@@ -4570,7 +5838,8 @@
       "createSuccess": "Item created",
       "updateSuccess": "Item updated",
       "currentStock": "Current Stock",
-      "reasonOptional": "Optional note"
+      "reasonOptional": "Optional note",
+      "supplierPlaceholder": "ಪೂರೈಕೆದಾರರನ್ನು ಆಯ್ಕೆಮಾಡಿ ಅಥವಾ ಟೈಪ್ ಮಾಡಿ"
     },
     "categories": {
       "title": "Categories",
@@ -4647,7 +5916,9 @@
         "adminProperty": "Admin property",
         "adminMess": "Admin mess",
         "activeProperties": "Active properties",
-        "activeMesses": "Active messes"
+        "activeMesses": "Active messes",
+        "websiteLeads": "ವೆಬ್‌ಸೈಟ್ ಲೀಡ್‌ಗಳು",
+        "creditPayments": "ಕ್ರೆಡಿಟ್ ಪಾವತಿಗಳು"
       },
       "nav": {
         "registeredUsersTitle": "Registered Users",
@@ -4657,8 +5928,23 @@
         "propertiesTitle": "Properties",
         "propertiesHint": "Leads, active spaces, add property",
         "messTitle": "Mess",
-        "messHint": "Leads, active messes, add mess"
-      }
+        "messHint": "Leads, active messes, add mess",
+        "enquiriesTitle": "ವಿಚಾರಣೆಗಳು",
+        "enquiriesHint": "ಸಂಪರ್ಕ ವಿನಂತಿಗಳನ್ನು ಪರಿಶೀಲಿಸಿ ಮತ್ತು ಮಾಲೀಕರ ವಿವರಗಳನ್ನು ಹಂಚಿಕೊಳ್ಳಿ",
+        "creditsConfigTitle": "ಕ್ರೆಡಿಟ್ ಕಾನ್ಫಿಗ್",
+        "creditsConfigHint": "UPI, QR, WhatsApp, ಮಿತಿಗಳು, ಮತ್ತು ಪ್ಯಾಕೇಜ್‌ಗಳು",
+        "creditPaymentsTitle": "ಕ್ರೆಡಿಟ್ ಪಾವತಿಗಳು",
+        "creditPaymentsHint": "UPI ಸ್ಕ್ರೀನ್‌ಶಾಟ್‌ಗಳನ್ನು ಪರಿಶೀಲಿಸಿ ಮತ್ತು ವಿಚಾರಣೆ ಕ್ರೆಡಿಟ್‌ಗಳನ್ನು ಸೇರಿಸಿ",
+        "notificationTestingTitle": "ಅಧಿಸೂಚನೆ ಪರೀಕ್ಷೆ",
+        "notificationTestingHint": "ಈ ಅಡ್ಮಿನ್ ಖಾತೆಗೆ ಪರೀಕ್ಷಾ ಅಧಿಸೂಚನೆ ಕಳುಹಿಸಿ"
+      },
+      "brand": "ACOMI ಅಡ್ಮಿನ್",
+      "needsAttention": "ಗಮನ ಅಗತ್ಯ",
+      "paymentRequests": "ಪಾವತಿ ವಿನಂತಿಗಳು",
+      "viewEnquiries": "ವಿಚಾರಣೆಗಳನ್ನು ವೀಕ್ಷಿಸಿ",
+      "unreadCount": "{{count}} ಓದದ",
+      "overview": "ಅವಲೋಕನ",
+      "manage": "ನಿರ್ವಹಿಸಿ"
     },
     "nav": {
       "dashboard": "Admin",
@@ -4668,7 +5954,14 @@
       "addProperty": "Add Property",
       "mess": "Mess",
       "addMess": "Add Mess",
-      "addresses": "Saved Addresses"
+      "addresses": "Saved Addresses",
+      "createTestUser": "ಪರೀಕ್ಷಾ ಬಳಕೆದಾರರನ್ನು ರಚಿಸಿ",
+      "userDetail": "ಬಳಕೆದಾರ",
+      "activeSpace": "ಸಕ್ರಿಯ ಸ್ಪೇಸ್",
+      "enquiries": "ವಿಚಾರಣೆಗಳು",
+      "creditsConfig": "ಕ್ರೆಡಿಟ್ ಕಾನ್ಫಿಗ್",
+      "creditPayments": "ಕ್ರೆಡಿಟ್ ಪಾವತಿಗಳು",
+      "notificationTesting": "ಅಧಿಸೂಚನೆ ಪರೀಕ್ಷೆ"
     },
     "labels": {
       "addedByAdmin": "Added by Admin",
@@ -4683,7 +5976,10 @@
       "notVerified": "Not verified",
       "emDash": "—",
       "testYes": "Test: Yes",
-      "testNo": "Test: No"
+      "testNo": "Test: No",
+      "testBadge": "ಪರೀಕ್ಷೆ",
+      "testUser": "ಪರೀಕ್ಷಾ ಬಳಕೆದಾರ",
+      "deletedAccount": "ಅಳಿಸಲಾದ ಖಾತೆ"
     },
     "filters": {
       "activeSpaces": "Active spaces",
@@ -4709,7 +6005,89 @@
       "activityJustNow": "Just now",
       "activityMinutesAgo": "{{count}} min ago",
       "activityHoursAgo": "{{count}} hr ago",
-      "activityDaysAgo": "{{count}} days ago"
+      "activityDaysAgo": "{{count}} days ago",
+      "loadFailed": "ನೋಂದಾಯಿತ ಬಳಕೆದಾರರನ್ನು ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
+      "searchPlaceholder": "ಹೆಸರು, ಫೋನ್ ಸಂಖ್ಯೆಯಿಂದ ಹುಡುಕಿ...",
+      "createTestUser": "ಪರೀಕ್ಷಾ ಬಳಕೆದಾರರನ್ನು ರಚಿಸಿ",
+      "createTestUserTitle": "ಪರೀಕ್ಷಾ ಬಳಕೆದಾರರನ್ನು ರಚಿಸಿ",
+      "createTestUserHint": "ಇದು ನಿಜವಾದ ACOMI ಪರೀಕ್ಷಾ ಬಳಕೆದಾರರನ್ನು ರಚಿಸುತ್ತದೆ (ಸಿಸ್ಟಮ್ ಪಾತ್ರ USER). ಸದಸ್ಯತ್ವ ನಿಜವಾದ ಬಳಕೆದಾರರಿಗೆ ಹೊಂದಿಕೆಯಾಗಲು ಸ್ಪೇಸ್ ಪಾತ್ರವನ್ನು ಆಯ್ಕೆಮಾಡಿ. ಯಾವುದೇ OTP ಅಗತ್ಯವಿಲ್ಲ — ನೀವು ಹೊಂದಿಸಿದ ಮೊಬೈಲ್ ಸಂಖ್ಯೆ ಮತ್ತು ಪಾಸ್‌ವರ್ಡ್‌ನೊಂದಿಗೆ ಲಾಗಿನ್ ಮಾಡಿ.",
+      "createTestUserSuccess": "ಪರೀಕ್ಷಾ ಬಳಕೆದಾರರನ್ನು ರಚಿಸಲಾಗಿದೆ. ಅವರು ನೀವು ನಮೂದಿಸಿದ ಮೊಬೈಲ್ ಸಂಖ್ಯೆ ಮತ್ತು ಪಾಸ್‌ವರ್ಡ್‌ನೊಂದಿಗೆ ಲಾಗಿನ್ ಮಾಡಬಹುದು.",
+      "createTestUserFailed": "ಪರೀಕ್ಷಾ ಬಳಕೆದಾರರನ್ನು ರಚಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
+      "createTestUserEmptySpaces": "ಯಾವುದೇ ಸಕ್ರಿಯ ಸ್ಪೇಸ್‌ಗಳು ಕಂಡುಬಂದಿಲ್ಲ. ಮೊದಲು Owner ಪರೀಕ್ಷಾ ಬಳಕೆದಾರರನ್ನು ರಚಿಸಿ, ಅಥವಾ ಪ್ರಾಪರ್ಟಿ ಸೇರಿಸಿ.",
+      "createTestUserSections": {
+        "account": "ಖಾತೆ",
+        "password": "ಪಾಸ್‌ವರ್ಡ್",
+        "membership": "ಸ್ಪೇಸ್ ಸದಸ್ಯತ್ವ"
+      },
+      "createTestUserFields": {
+        "fullName": "ಪೂರ್ಣ ಹೆಸರು",
+        "mobile": "ಮೊಬೈಲ್ ಸಂಖ್ಯೆ",
+        "email": "ಇಮೇಲ್ (ಐಚ್ಛಿಕ)",
+        "password": "ಪಾಸ್‌ವರ್ಡ್",
+        "confirmPassword": "ಪಾಸ್‌ವರ್ಡ್ ಖಚಿತಪಡಿಸಿ",
+        "spaceRole": "ಸ್ಪೇಸ್ ಪಾತ್ರ",
+        "spaceRoleHint": "Owner ಹೊಸ ಸ್ಪೇಸ್ ಅನ್ನು ರಚಿಸುತ್ತಾರೆ. ಇತರ ಪಾತ್ರಗಳು ಇಚ್ಛಾನುಸಾರವಾಗಿ ಅಸ್ತಿತ್ವದಲ್ಲಿರುವ ಸ್ಪೇಸ್‌ಗೆ ಸೇರಬಹುದು, ಅಥವಾ ಸ್ಪೇಸ್ ಅನ್ನು ಖಾಲಿ ಬಿಡಬಹುದು.",
+        "space": "ಸ್ಪೇಸ್ (ಐಚ್ಛಿಕ)",
+        "spaceHint": "ಐಚ್ಛಿಕ — ಯಾವುದೇ ಸ್ಪೇಸ್ ಸದಸ್ಯತ್ವವಿಲ್ಲದ ಬಳಕೆದಾರರನ್ನು ರಚಿಸಲು ಖಾಲಿ ಬಿಡಿ.",
+        "spacePickRoleFirst": "ಮೊದಲು ಸ್ಪೇಸ್ ಪಾತ್ರವನ್ನು ಆಯ್ಕೆಮಾಡಿ (Manager, Member, Customer, ಅಥವಾ Staff).",
+        "spaceName": "ಸ್ಪೇಸ್ ಹೆಸರು (ಐಚ್ಛಿಕ)",
+        "spaceNameHint": "ಖಾಲಿ ಬಿಟ್ಟರೆ ಇದು ಡೀಫಾಲ್ಟ್ ಆಗಿ \"QA - {full name}\" ಆಗುತ್ತದೆ."
+      },
+      "createTestUserRoles": {
+        "OWNER": "ಮಾಲೀಕ",
+        "MANAGER": "ಮ್ಯಾನೇಜರ್",
+        "TENANT": "ಸದಸ್ಯ",
+        "CUSTOMER": "ಗ್ರಾಹಕ",
+        "STAFF": "ಸಿಬ್ಬಂದಿ"
+      },
+      "createTestUserErrors": {
+        "fullName": "ಪೂರ್ಣ ಹೆಸರು ನಮೂದಿಸಿ.",
+        "mobile": "ಮಾನ್ಯವಾದ 10-ಅಂಕಿಯ ಭಾರತೀಯ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ.",
+        "email": "ಮಾನ್ಯವಾದ ಇಮೇಲ್ ವಿಳಾಸವನ್ನು ನಮೂದಿಸಿ, ಅಥವಾ ಖಾಲಿ ಬಿಡಿ.",
+        "spaceRole": "ಸ್ಪೇಸ್ ಪಾತ್ರವನ್ನು ಆಯ್ಕೆಮಾಡಿ.",
+        "space": "ಈ ಪಾತ್ರಕ್ಕಾಗಿ ಸ್ಪೇಸ್ ಅನ್ನು ಆಯ್ಕೆಮಾಡಿ.",
+        "spaceType": "ಮಾಲೀಕರಿಗಾಗಿ ಸ್ಪೇಸ್ ಪ್ರಕಾರವನ್ನು ಆಯ್ಕೆಮಾಡಿ."
+      },
+      "stats": {
+        "total": "ಒಟ್ಟು ಬಳಕೆದಾರರು",
+        "verified": "ಪರಿಶೀಲಿಸಲಾಗಿದೆ",
+        "new30": "ಹೊಸದು (30 ದಿನಗಳು)",
+        "withSpace": "ಸ್ಪೇಸ್‌ನೊಂದಿಗೆ"
+      },
+      "filters": {
+        "clear": "ಫಿಲ್ಟರ್‌ಗಳನ್ನು ತೆರವುಗೊಳಿಸಿ"
+      },
+      "profileSection": "ಪ್ರೊಫೈಲ್",
+      "verificationSection": "ಪರಿಶೀಲನೆ",
+      "roleSection": "ಪಾತ್ರ",
+      "spacesSection": "ಸಂಬಂಧಿತ ಸ್ಪೇಸ್‌ಗಳು",
+      "fullName": "ಪೂರ್ಣ ಹೆಸರು",
+      "registeredAt": "ನೋಂದಾಯಿಸಲಾಗಿದೆ",
+      "verifiedAt": "ಪರಿಶೀಲಿಸಲಾದ ಸಮಯ",
+      "onboarding": "ಆನ್‌ಬೋರ್ಡಿಂಗ್",
+      "profileCompleted": "ಪ್ರೊಫೈಲ್ ಪೂರ್ಣಗೊಂಡಿದೆ",
+      "selectedRole": "ಆಯ್ಕೆಮಾಡಿದ ಪಾತ್ರ",
+      "noSpaces": "ಯಾವುದೇ ಸಂಬಂಧಿತ ಸ್ಪೇಸ್‌ಗಳಿಲ್ಲ.",
+      "detailFootnote": "ಅಡ್ಮಿನ್ ಬಳಕೆದಾರ ವಿವರಗಳು ನೋಂದಾಯಿತ-ಬಳಕೆದಾರ API ಹಿಂತಿರುಗಿಸಿದ ಫೀಲ್ಡ್‌ಗಳನ್ನು ತೋರಿಸುತ್ತದೆ. ಇಮೇಲ್, ದಾಖಲೆಗಳು, ಮತ್ತು KYC ಈ ಎಂಡ್‌ಪಾಯಿಂಟ್‌ನಲ್ಲಿ ಬಹಿರಂಗಗೊಳ್ಳುವುದಿಲ್ಲ.",
+      "securitySection": "ಸುರಕ್ಷತೆ",
+      "resetPasswordTitle": "ಪಾಸ್‌ವರ್ಡ್ ಮರುಹೊಂದಿಸಿ",
+      "resetPasswordHint": "ತಾತ್ಕಾಲಿಕ ಪಾಸ್‌ವರ್ಡ್ ಅನ್ನು ಜನರೇಟ್ ಮಾಡಿ ಅಥವಾ ಮ್ಯಾನುಅಲ್ ಆಗಿ ಒಂದನ್ನು ನಮೂದಿಸಿ.",
+      "resetPasswordSelf": "ನಿಮ್ಮ ಸ್ವಂತ ಪಾಸ್‌ವರ್ಡ್ ಬದಲಾಯಿಸಲು ಖಾತೆ ಮರುಪಡೆಯುವಿಕೆಯನ್ನು ಬಳಸಿ.",
+      "resetPasswordNew": "ಹೊಸ ಪಾಸ್‌ವರ್ಡ್",
+      "resetPasswordConfirm": "ಪಾಸ್‌ವರ್ಡ್ ಖಚಿತಪಡಿಸಿ",
+      "resetPasswordPolicy": "8 ರಿಂದ 72 ಅಕ್ಷರಗಳನ್ನು ಬಳಸಿ.",
+      "generatePassword": "ಆಟೋ-ಜನರೇಟ್ ಮಾಡಿ",
+      "generatePasswordFailed": "ಪಾಸ್‌ವರ್ಡ್ ಜನರೇಟ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ಮ್ಯಾನುಅಲ್ ಆಗಿ ಒಂದನ್ನು ನಮೂದಿಸಿ.",
+      "copyPassword": "ನಕಲಿಸಿ",
+      "resetPassword": "ಪಾಸ್‌ವರ್ಡ್ ಮರುಹೊಂದಿಸಿ",
+      "passwordCopied": "ಪಾಸ್‌ವರ್ಡ್ ನಕಲಿಸಲಾಗಿದೆ",
+      "passwordCopyFailed": "ಪಾಸ್‌ವರ್ಡ್ ನಕಲಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
+      "generatedNotApplied": "ಈ ಜನರೇಟ್ ಮಾಡಿದ ಪಾಸ್‌ವರ್ಡ್ ಅನ್ನು ಇನ್ನೂ ಅನ್ವಯಿಸಲಾಗಿಲ್ಲ.",
+      "resetPasswordConfirmTitle": "ಈ ಪಾಸ್‌ವರ್ಡ್ ಅನ್ನು ಮರುಹೊಂದಿಸಬೇಕೆ?",
+      "resetPasswordConfirmBody": "ಇದು {{name}} ({{mobile}}) ಗಾಗಿ ಹೊಸ ಪಾಸ್‌ವರ್ಡ್ ಅನ್ನು ಹೊಂದಿಸುತ್ತದೆ. ಅವರ ಪ್ರಸ್ತುತ ಸೆಶನ್‌ಗಳು ಕೆಲಸ ಮಾಡುವುದನ್ನು ನಿಲ್ಲಿಸುತ್ತವೆ. ಅಸ್ತಿತ್ವದಲ್ಲಿರುವ ಪಾಸ್‌ವರ್ಡ್ ತೋರಿಸಲಾಗುವುದಿಲ್ಲ.",
+      "resetPasswordSuccess": "ಪಾಸ್‌ವರ್ಡ್ ಅಪ್‌ಡೇಟ್ ಆಗಿದೆ. ಬಳಕೆದಾರ ಹೊಸ ಪಾಸ್‌ವರ್ಡ್‌ನೊಂದಿಗೆ ಸೈನ್ ಇನ್ ಮಾಡಬಹುದು.",
+      "resetPasswordFailed": "ಪಾಸ್‌ವರ್ಡ್ ಅನ್ನು ಮರುಹೊಂದಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
+      "openExistingUser": "ಅಸ್ತಿತ್ವದಲ್ಲಿರುವ ಬಳಕೆದಾರರನ್ನು ತೆರೆಯಿರಿ"
     },
     "list": {
       "empty": "No records found."
@@ -4741,7 +6119,15 @@
       "ownerContactHint": "Optional — can be filled when the owner claims.",
       "location": "Location",
       "locationHint": "Reuse a recent address or enter a new one.",
-      "pricingOptions": "Pricing & options"
+      "pricingOptions": "Pricing & options",
+      "description": "ವಿವರಣೆ",
+      "capacityEstimate": "ಸಾಮರ್ಥ್ಯ ಅಂದಾಜು",
+      "optionalHint": "ಐಚ್ಛಿಕ",
+      "created": "ರಚಿಸಲಾಗಿದೆ",
+      "updated": "ಅಪ್‌ಡೇಟ್ ಮಾಡಲಾಗಿದೆ",
+      "claimedVia": "ಇದರ ಮೂಲಕ ಕ್ಲೈಮ್ ಮಾಡಲಾಗಿದೆ",
+      "convertedSpace": "ಪರಿವರ್ತಿತ ಸ್ಪೇಸ್",
+      "spaceContact": "ಸ್ಪೇಸ್ ಸಂಪರ್ಕ"
     },
     "property": {
       "deleteTitle": "Delete this property lead?",
@@ -4766,8 +6152,12 @@
         "alternateDifferent": "Alternate mobile number must be different from the primary mobile number.",
         "pincode": "Enter a valid pincode, or leave it blank.",
         "mapUrl": "Map link must start with http:// or https://",
-        "startingPrice": "Enter a valid starting price, or leave it blank."
-      }
+        "startingPrice": "Enter a valid starting price, or leave it blank.",
+        "capacity": "ಮಾನ್ಯ ಸಾಮರ್ಥ್ಯ ಅಂದಾಜನ್ನು ನಮೂದಿಸಿ, ಅಥವಾ ಖಾಲಿ ಬಿಡಿ."
+      },
+      "amenities": "ಸೌಕರ್ಯಗಳು",
+      "amenitiesHint": "ಐಚ್ಛಿಕ — ಅಲ್ಪವಿರಾಮದಿಂದ ಬೇರ್ಪಡಿಸಲಾಗಿದೆ (ಉದಾ. WiFi, Parking)",
+      "priceBasis": "ಬೆಲೆ ಆಧಾರ"
     },
     "mess": {
       "deleteTitle": "Delete this mess lead?",
@@ -4794,7 +6184,8 @@
         "pincode": "Enter a valid pincode, or leave it blank.",
         "mapUrl": "Map link must start with http:// or https://",
         "monthlyPrice": "Enter a valid monthly price, or leave it blank.",
-        "mealPrice": "Enter a valid meal price, or leave it blank."
+        "mealPrice": "Enter a valid meal price, or leave it blank.",
+        "capacity": "ಮಾನ್ಯ ಸಾಮರ್ಥ್ಯ ಅಂದಾಜನ್ನು ನಮೂದಿಸಿ, ಅಥವಾ ಖಾಲಿ ಬಿಡಿ."
       }
     },
     "addresses": {
@@ -4840,6 +6231,165 @@
     "testLead": {
       "title": "Test lead",
       "description": "Mark as test data. Visible in lists only — does not affect delete or claim flows."
+    },
+    "credits": {
+      "configTitle": "ವಿಚಾರಣೆ ಕ್ರೆಡಿಟ್‌ಗಳು — ಪಾವತಿ ಕಾನ್ಫಿಗ್",
+      "configSubtitle": "ಇಮೇಲ್/ವೆಬ್ ವಿರುದ್ಧ ಮೊಬೈಲ್ ಆ್ಯಪ್ ವಿಚಾರಣೆಗಳಿಗೆ ಪಾವತಿ ವಿವರಗಳು ಮತ್ತು ಪ್ರತ್ಯೇಕ ಕ್ರೆಡಿಟ್ ಪ್ಯಾಕೇಜ್‌ಗಳನ್ನು ಕಾನ್ಫಿಗರ್ ಮಾಡಿ.",
+      "loadFailed": "ಪಾವತಿ ಕಾನ್ಫಿಗರೇಶನ್ ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
+      "retry": "ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
+      "enablePurchases": "ಕ್ರೆಡಿಟ್ ಖರೀದಿಯನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ",
+      "enableHint": "ಆನ್: ಉಚಿತ ದೈನಂದಿನ ಮಿತಿ ನಂತರ ₹9 / 30 UPI + WhatsApp ಸ್ಕ್ರೀನ್‌ಶಾಟ್ ಪ್ರಕ್ರಿಯೆ. ಆಫ್: ವೆಬ್ ಅಥವಾ ಮೊಬೈಲ್‌ನಲ್ಲಿ ಯಾವುದೇ ದೈನಂದಿನ ಮಿತಿ ಮತ್ತು ಪೇವಾಲ್ ಇಲ್ಲ.",
+      "howItWorksTitle": "ಇದು ಹೇಗೆ ಕೆಲಸ ಮಾಡುತ್ತದೆ",
+      "howItWorksBody": "ಕೆಳಗೆ UPI, QR, ಮತ್ತು WhatsApp ಸೇರಿಸಿ. ಬಳಕೆದಾರರು ತಮ್ಮ ಉಚಿತ ದೈನಂದಿನ ಮಿತಿ ಬಳಸಿದ ನಂತರ ಕ್ರೆಡಿಟ್‌ಗಳನ್ನು ಖರೀದಿಸಬಹುದು. ಅಡ್ಮಿನ್ ವಿನಂತಿಯನ್ನು ಅನುಮೋದಿಸುತ್ತಾರೆ.",
+      "enabledOn": "ಖರೀದಿ ಆನ್",
+      "enabledOff": "ಖರೀದಿ ಆಫ್",
+      "paymentDetails": "ಪಾವತಿ ವಿವರಗಳು",
+      "paymentDetailsHint": "ಕ್ರೆಡಿಟ್ ಖರೀದಿಗಾಗಿ UPI ಮತ್ತು ಪಾವತಿ ಸೂಚನೆಗಳನ್ನು ಕಾನ್ಫಿಗರ್ ಮಾಡಿ.",
+      "upi": "UPI ಐಡಿ",
+      "upiHint": "ಬಳಕೆದಾರರು ಪಾವತಿ ಮಾಡಲು ಈ UPI ಐಡಿಯನ್ನು ನೋಡುತ್ತಾರೆ.",
+      "whatsapp": "ಪಾವತಿ ಸ್ಕ್ರೀನ್‌ಶಾಟ್‌ಗಳಿಗಾಗಿ WhatsApp ಸಂಖ್ಯೆ",
+      "whatsappHint": "ಬಳಕೆದಾರರು ಈ ಸಂಖ್ಯೆಗೆ ಪಾವತಿ ಸ್ಕ್ರೀನ್‌ಶಾಟ್ ಕಳುಹಿಸುತ್ತಾರೆ. ದೇಶದ ಕೋಡ್ ಸೇರಿಸಿ, ಉದಾಹರಣೆಗೆ 9198XXXXXXXX.",
+      "instructions": "ಪಾವತಿ ಸೂಚನೆಗಳು (ಅನ್ವೇಷಕರಿಗೆ ತೋರಿಸಲಾಗುತ್ತದೆ)",
+      "instructionsPlaceholder": "ಮೇಲಿನ UPI ಐಡಿಗೆ ಮೊತ್ತವನ್ನು ವರ್ಗಾಯಿಸಿ, ನಂತರ ಕೆಳಗೆ ನಿಮ್ಮ UTR ಅನ್ನು ನಮೂದಿಸಿ.",
+      "instructionsHint": "ಈ ಸೂಚನೆಗಳು ಪಾವತಿ ಸ್ಕ್ರೀನ್‌ನಲ್ಲಿ ಬಳಕೆದಾರರಿಗೆ ಕಾಣಿಸುತ್ತವೆ.",
+      "qr": "ಪಾವತಿ QR ಕೋಡ್",
+      "uploadQr": "QR ಅಪ್‌ಲೋಡ್ ಮಾಡಿ",
+      "uploadingQr": "ಅಪ್‌ಲೋಡ್ ಆಗುತ್ತಿದೆ…",
+      "replaceQr": "QR ಬದಲಾಯಿಸಿ",
+      "removeQr": "ತೆಗೆದುಹಾಕಿ",
+      "qrHint": "ಬೆಂಬಲಿತ ಫಾರ್ಮ್ಯಾಟ್‌ಗಳು: PNG ಅಥವಾ JPG. ಗರಿಷ್ಠ ಗಾತ್ರ: 5 MB.",
+      "qrEmptyHint": "ಇನ್ನೂ ಯಾವುದೇ ಪಾವತಿ QR ಅಪ್‌ಲೋಡ್ ಮಾಡಲಾಗಿಲ್ಲ. ಬೆಂಬಲಿತ ಫಾರ್ಮ್ಯಾಟ್‌ಗಳು: PNG ಅಥವಾ JPG. ಗರಿಷ್ಠ ಗಾತ್ರ: 5 MB.",
+      "viewQr": "QR ವೀಕ್ಷಿಸಿ",
+      "qrShownHint": "ಈ QR ಕೋಡ್ ಅನ್ನು ಬಳಕೆದಾರರಿಗೆ ಪಾವತಿ ಸ್ಕ್ರೀನ್‌ನಲ್ಲಿ ತೋರಿಸಲಾಗುತ್ತದೆ.",
+      "qrLoadFailed": "ಪಾವತಿ QR ಅನ್ನು ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
+      "openQr": "ಪಾವತಿ QR ತೆರೆಯಿರಿ",
+      "webAccess": "ಇಮೇಲ್ / ವೆಬ್‌ಸೈಟ್ / ವೆಬ್ ಆ್ಯಪ್",
+      "webAccessHint": "ಇನ್ಸ್ಟಂಟ್ ಕಾಂಟ್ಯಾಕ್ಟ್ ವೀಕ್ಷಣೆಗಳು ಮತ್ತು ಇಮೇಲ್ ವಿಚಾರಣೆಗಳು ಪ್ರತ್ಯೇಕ ದೈನಂದಿನ ಮಿತಿಗಳನ್ನು ಬಳಸುತ್ತವೆ. ಇನ್ಸ್ಟಂಟ್ ವೀಕ್ಷಣೆಗಳು ಇಮೇಲ್ ವಿಚಾರಣೆ ಕ್ರೆಡಿಟ್‌ಗಳನ್ನು ಬಳಸುವುದಿಲ್ಲ.",
+      "freeContactViewing": "ಉಚಿತ ಕಾಂಟ್ಯಾಕ್ಟ್ ವೀಕ್ಷಣೆ",
+      "freeContactViewingHint": "ಪಟ್ಟಿಯಲ್ಲಿಯೇ ಮಾಲೀಕ ಅಥವಾ ಮಾರಾಟಗಾರರ ಕಾಂಟ್ಯಾಕ್ಟ್ ಅನ್ನು ತೋರಿಸುತ್ತದೆ. ಇದು ವಿಚಾರಣೆಗಳು ಮತ್ತು ಪೇಯ್ಡ್ ಕ್ರೆಡಿಟ್‌ಗಳಿಂದ ಪ್ರತ್ಯೇಕವಾಗಿದೆ.",
+      "instantViewsPerDay": "ದಿನಕ್ಕೆ ಉಚಿತ ಇನ್ಸ್ಟಂಟ್ ಕಾಂಟ್ಯಾಕ್ಟ್ ವೀಕ್ಷಣೆಗಳು",
+      "instantViewsHint": "ಪಟ್ಟಿಯಲ್ಲಿ ತೋರಿಸಲಾದ ಇನ್ಸ್ಟಂಟ್ ವೀಕ್ಷಣೆಗಳು. 0 ಆಯ್ಕೆಯನ್ನು ಮರೆಮಾಡುತ್ತದೆ. ಕೆಳಗಿನ ವಿಚಾರಣೆ ವಿತರಣೆ ಮತ್ತು ಕ್ರೆಡಿಟ್ ಪ್ಯಾಕೇಜ್‌ಗಳು ಬದಲಾಗಿಲ್ಲ.",
+      "webFree": "ದಿನಕ್ಕೆ ಉಚಿತ ಇಮೇಲ್ ವಿಚಾರಣೆಗಳು",
+      "webFreeHint": "ಉಚಿತ ಮಿತಿಯ ನಂತರ, ಬಳಕೆದಾರರು ಕೆಳಗಿನ ಪ್ಯಾಕೇಜ್ ಬಳಸಿ ವಿಚಾರಣೆ ಕ್ರೆಡಿಟ್‌ಗಳನ್ನು ಖರೀದಿಸಬೇಕು.",
+      "webPackages": "ಕ್ರೆಡಿಟ್ ಪ್ಯಾಕೇಜ್ — ಇಮೇಲ್ / ವೆಬ್",
+      "webPackagesHint": "ವೆಬ್‌ಸೈಟ್‌ನಿಂದ ವಿಚಾರಣೆ ಮಾಡಿದಾಗ ಬಳಸಲಾಗುತ್ತದೆ (ಇಮೇಲ್ ವಿತರಣೆ). ವಾಲೆಟ್ ಕ್ರೆಡಿಟ್‌ಗಳನ್ನು ಹಂಚಿಕೊಳ್ಳಲಾಗುತ್ತದೆ.",
+      "webPackageFooter": "ಈ ಪ್ಯಾಕೇಜ್ ಅನ್ನು ವೆಬ್‌ನಲ್ಲಿ ಬಳಕೆದಾರರಿಗೆ ತೋರಿಸಲಾಗುತ್ತದೆ.",
+      "androidAccess": "ಮೊಬೈಲ್ ಆ್ಯಪ್",
+      "androidAccessHint": "ಇನ್ಸ್ಟಂಟ್ ಕಾಂಟ್ಯಾಕ್ಟ್ ವೀಕ್ಷಣೆಗಳು ಮತ್ತು ಮೊಬೈಲ್ ವಿಚಾರಣೆಗಳು ಪ್ರತ್ಯೇಕ ದೈನಂದಿನ ಮಿತಿಗಳನ್ನು ಬಳಸುತ್ತವೆ. ಇನ್ಸ್ಟಂಟ್ ವೀಕ್ಷಣೆಗಳು ಮೊಬೈಲ್ ವಿಚಾರಣೆ ಕ್ರೆಡಿಟ್‌ಗಳನ್ನು ಬಳಸುವುದಿಲ್ಲ.",
+      "androidMode": "ಬಿಲ್ಲಿಂಗ್ ಮೋಡ್",
+      "modeFree": "ಉಚಿತ (ದರ ಮಿತಿ ಮಾತ್ರ)",
+      "modeCredits": "ಕ್ರೆಡಿಟ್‌ಗಳು (ಉಚಿತ ಕೋಟಾ ನಂತರ)",
+      "androidFree": "ದಿನಕ್ಕೆ ಉಚಿತ ಮೊಬೈಲ್ ವಿಚಾರಣೆಗಳು",
+      "androidFreeHint": "ಬಿಲ್ಲಿಂಗ್ ಮೋಡ್ ಕ್ರೆಡಿಟ್‌ಗಳಾಗಿದ್ದಾಗ ಮಾತ್ರ ಉಚಿತ ವಿಚಾರಣೆ ಎಣಿಕೆ ಬಳಸಲಾಗುತ್ತದೆ. ಗಂಟೆಗೆ ದರ ಮಿತಿ ಇನ್ನೂ ಅನ್ವಯಿಸುತ್ತದೆ.",
+      "hourly": "ಗಂಟೆಗೆ ದರ ಮಿತಿ",
+      "mobilePackages": "ಕ್ರೆಡಿಟ್ ಪ್ಯಾಕೇಜ್ — ಮೊಬೈಲ್ ಆ್ಯಪ್",
+      "mobilePackagesHint": "ಬಿಲ್ಲಿಂಗ್ ಮೋಡ್ ಕ್ರೆಡಿಟ್‌ಗಳಾಗಿದ್ದಾಗ ಮತ್ತು ಖರೀದಿಗಳನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿದಾಗ Android ನಲ್ಲಿ ತೋರಿಸಲಾಗುತ್ತದೆ. ಹೊಸ ಪ್ಯಾಕೇಜ್‌ಗಳನ್ನು ರಚಿಸುವುದು ಇನ್ನೂ ಬೆಂಬಲಿತವಾಗಿಲ್ಲ.",
+      "mobilePackageFooter": "ಈ ಪ್ಯಾಕೇಜ್ ಅನ್ನು ಮೊಬೈಲ್ ಆ್ಯಪ್‌ನಲ್ಲಿ ಬಳಕೆದಾರರಿಗೆ ತೋರಿಸಲಾಗುತ್ತದೆ.",
+      "noPackageSeeded": "ಈ ಚಾನಲ್‌ಗಾಗಿ ಇನ್ನೂ ಯಾವುದೇ ಪ್ಯಾಕೇಜ್ ಸೀಡ್ ಆಗಿಲ್ಲ. ಇತ್ತೀಚಿನ ಬ್ಯಾಕೆಂಡ್ ಮೈಗ್ರೇಶನ್ ಅನ್ನು ರನ್ ಮಾಡಿ.",
+      "packageName": "ಪ್ಯಾಕೇಜ್ ಹೆಸರು",
+      "packageCredits": "ಕ್ರೆಡಿಟ್‌ಗಳು",
+      "packagePrice": "ಬೆಲೆ (₹)",
+      "packageEnabled": "ಸಕ್ರಿಯ",
+      "packages": "ಪ್ಯಾಕೇಜ್‌ಗಳು",
+      "saved": "ಪಾವತಿ ಕಾನ್ಫಿಗರೇಶನ್ ಉಳಿಸಲಾಗಿದೆ.",
+      "paymentsSubtitle": "ಅನ್ವೇಷಕರ ಪಾವತಿ ವಿನಂತಿಗಳನ್ನು ಪರಿಶೀಲಿಸಿ ಮತ್ತು ಅನುಮೋದಿಸಿ ಅಥವಾ ತಿರಸ್ಕರಿಸಿ.",
+      "searchPlaceholder": "ಹೆಸರು, ಮೊಬೈಲ್, UTR ಮೂಲಕ ಫಿಲ್ಟರ್ ಮಾಡಿ…",
+      "approveTitle": "ಖರೀದಿಯನ್ನು ಅನುಮೋದಿಸಿ — {{name}}?",
+      "approveBody": "ಇದು ಬಳಕೆದಾರ ಖಾತೆಗೆ {{credits}} ಕ್ರೆಡಿಟ್‌ಗಳನ್ನು ಸೇರಿಸುತ್ತದೆ. UTR: {{utr}}",
+      "approved": "ಖರೀದಿ ಅನುಮೋದಿಸಲಾಗಿದೆ — ಕ್ರೆಡಿಟ್‌ಗಳನ್ನು ಸೇರಿಸಲಾಗಿದೆ.",
+      "rejectTitle": "ಖರೀದಿಯನ್ನು ತಿರಸ್ಕರಿಸಿ — {{name}}?",
+      "rejectBody": "₹{{amount}} ಗಾಗಿ ಖರೀದಿ ವಿನಂತಿಯನ್ನು ತಿರಸ್ಕರಿಸಲಾಗುತ್ತದೆ. ಕ್ರೆಡಿಟ್‌ಗಳನ್ನು ಸೇರಿಸಲಾಗುವುದಿಲ್ಲ.",
+      "reject": "ತಿರಸ್ಕರಿಸಿ",
+      "rejected": "ಖರೀದಿ ತಿರಸ್ಕರಿಸಲಾಗಿದೆ.",
+      "pending": "ಬಾಕಿ ಇದೆ",
+      "approvedFilter": "ಅನುಮೋದಿಸಲಾಗಿದೆ",
+      "all": "ಎಲ್ಲಾ",
+      "rejectedFilter": "ತಿರಸ್ಕರಿಸಲಾಗಿದೆ",
+      "empty": "ಯಾವುದೇ ಖರೀದಿ ವಿನಂತಿಗಳು ಕಂಡುಬಂದಿಲ್ಲ.",
+      "approve": "ಅನುಮೋದಿಸಿ",
+      "qrMissing": "ಯಾವುದೇ ಪಾವತಿ QR ಉಳಿಸಲಾಗಿಲ್ಲ.",
+      "qrEmptyShort": "QR ಇಲ್ಲ",
+      "filterByStatus": "{{status}} ವಿನಂತಿಗಳನ್ನು ತೋರಿಸಿ, {{count}}"
+    },
+    "notifications": {
+      "title": "ಅಧಿಸೂಚನೆಗಳು",
+      "empty": "ಇನ್ನೂ ಯಾವುದೇ ವಿಚಾರಣೆ ಅಧಿಸೂಚನೆಗಳಿಲ್ಲ.",
+      "open": "ಅಧಿಸೂಚನೆಗಳನ್ನು ತೆರೆಯಿರಿ"
+    },
+    "enquiries": {
+      "title": "ವಿಚಾರಣೆಗಳು",
+      "empty": "ಇನ್ನೂ ಯಾವುದೇ ಸಂಪರ್ಕ ವಿಚಾರಣೆಗಳಿಲ್ಲ.",
+      "columns": {
+        "listing": "ಪಟ್ಟಿ",
+        "requestedBy": "ವಿನಂತಿಸಿದವರು",
+        "type": "ಪ್ರಕಾರ",
+        "requested": "ವಿನಂತಿಸಲಾಗಿದೆ",
+        "status": "ಸ್ಥಿತಿ",
+        "action": "ಕ್ರಮ"
+      },
+      "status": {
+        "PENDING": "ಬಾಕಿ ಇದೆ",
+        "SHARED": "ಹಂಚಿಕೊಳ್ಳಲಾಗಿದೆ",
+        "REJECTED": "ತಿರಸ್ಕರಿಸಲಾಗಿದೆ",
+        "EXPIRED": "ಅವಧಿ ಮುಗಿದಿದೆ",
+        "CANCELLED": "ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ"
+      },
+      "view": "ವೀಕ್ಷಿಸಿ",
+      "detailTitle": "ವಿಚಾರಣೆ ವಿವರಗಳು",
+      "email": "ವಿನಂತಿಸಿದವರ ಇಮೇಲ್",
+      "requesterMobile": "ವಿನಂತಿಸಿದವರ ಮೊಬೈಲ್",
+      "expires": "ಅವಧಿ ಮುಗಿಯುತ್ತದೆ",
+      "ownerContact": "ಮಾಲೀಕರ ಸಂಪರ್ಕ ಮಾಹಿತಿ",
+      "ownerName": "ಮಾಲೀಕ",
+      "mobile": "ಮೊಬೈಲ್",
+      "alternateMobile": "ಪರ್ಯಾಯ ಮೊಬೈಲ್",
+      "additionalContact": "ಹೆಚ್ಚುವರಿ ಸಂಪರ್ಕ",
+      "ownerEmail": "ಇಮೇಲ್",
+      "share": "ಸಂಪರ್ಕ ವಿವರಗಳನ್ನು ಹಂಚಿಕೊಳ್ಳಿ",
+      "reject": "ವಿಚಾರಣೆಯನ್ನು ತಿರಸ್ಕರಿಸಿ",
+      "rejectReason": "ತಿರಸ್ಕರಿಸುವ ಕಾರಣ (ಐಚ್ಛಿಕ)",
+      "shareSuccess": "ಸಂಪರ್ಕ ವಿವರಗಳನ್ನು ವಿನಂತಿಸಿದವರಿಗೆ ಇಮೇಲ್ ಮಾಡಲಾಗಿದೆ.",
+      "shareFailed": "ಈ ವಿಚಾರಣೆಯನ್ನು ಹಂಚಿಕೊಳ್ಳಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
+      "alreadyShared": "ಈ ವಿಚಾರಣೆಗೆ ಸಂಪರ್ಕ ವಿವರಗಳನ್ನು ಈಗಾಗಲೇ ಹಂಚಿಕೊಳ್ಳಲಾಗಿದೆ.",
+      "notPending": "ಅವಧಿ ಮುಗಿಯದ ಬಾಕಿ ಇರುವ ವಿಚಾರಣೆಯನ್ನು ಮಾತ್ರ ಹಂಚಿಕೊಳ್ಳಬಹುದು.",
+      "notFound": "ಈ ವಿಚಾರಣೆ ಅಥವಾ ಅದರ ಪಟ್ಟಿ ಕಂಡುಬಂದಿಲ್ಲ.",
+      "shareForbidden": "ಈ ವಿಚಾರಣೆಯನ್ನು ಹಂಚಿಕೊಳ್ಳಲು ನಿಮಗೆ ಅನುಮತಿ ಇಲ್ಲ.",
+      "rejectSuccess": "ವಿಚಾರಣೆ ತಿರಸ್ಕರಿಸಲಾಗಿದೆ.",
+      "rejectFailed": "ಈ ವಿಚಾರಣೆಯನ್ನು ತಿರಸ್ಕರಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
+      "sharedAt": "ಹಂಚಿಕೊಂಡ ಸಮಯ",
+      "reviewedAt": "ಪರಿಶೀಲಿಸಿದ ಸಮಯ",
+      "contactAvailable": "ಸಂಪರ್ಕ ಲಭ್ಯ",
+      "review": "ಪರಿಶೀಲಿಸಿ"
+    },
+    "activeSpace": {
+      "footnote": "ಸಕ್ರಿಯ ಸ್ಪೇಸ್ ವಿವರಗಳು ಅಡ್ಮಿನ್ ಆಕ್ಟಿವ್-ಸ್ಪೇಸಸ್ API ನಿಂದ ಬರುತ್ತವೆ. ಲೀಡ್ ನೋಂದಣಿ ದಾಖಲೆಗಳು ಲೀಡ್ಸ್ ಟ್ಯಾಬ್‌ನಲ್ಲಿಯೇ ಇರುತ್ತವೆ."
+    },
+    "notificationTesting": {
+      "title": "ಅಧಿಸೂಚನೆ ಪರೀಕ್ಷೆ",
+      "pushStatus": "ಪುಷ್ ಸಂರಚನೆ ಸ್ಥಿತಿ",
+      "refreshStatus": "ಸ್ಥಿತಿ ರಿಫ್ರೆಶ್",
+      "browserNotImplemented": "ಬ್ರೌಸರ್ ಪುಷ್ ಇನ್ನೂ ಅನುಷ್ಠಾನಗೊಂಡಿಲ್ಲ.",
+      "reset": "ರೀಸೆಟ್",
+      "fieldTitle": "ಶೀರ್ಷಿಕೆ",
+      "fieldBody": "ಸಂದೇಶ",
+      "sendHint": "ಈ ಖಾತೆಯ ನೋಂದಾಯಿತ ಸಾಧನಗಳಿಗೆ ಮಾತ್ರ ಕಳುಹಿಸಲಾಗುತ್ತದೆ.",
+      "browserPushTitle": "ಬ್ರೌಸರ್ ಪುಷ್ — ಅನುಷ್ಠಾನವಿಲ್ಲ",
+      "recent": "ಇತ್ತೀಚಿನ ಪರೀಕ್ಷಾ ಅಧಿಸೂಚನೆಗಳು",
+      "empty": "ಇನ್ನೂ ಪರೀಕ್ಷಾ ಅಧಿಸೂಚನೆಗಳಿಲ್ಲ.",
+      "delete": "ಅಳಿಸಿ",
+      "pushEnabled": "ಪುಷ್ ಸಕ್ರಿಯ",
+      "firebaseCredentials": "Firebase ರುಜುವಾತುಗಳು",
+      "project": "ಪ್ರಾಜೆಕ್ಟ್",
+      "firebaseInitialized": "Firebase ಪ್ರಾರಂಭ",
+      "registeredDevices": "ನೋಂದಾಯಿತ ಸಾಧನಗಳು (ಈ ಅಡ್ಮಿನ್)",
+      "fcmSendPossible": "FCM ಕಳುಹಿಸುವುದು ಸಾಧ್ಯ",
+      "aboutA11y": "About notification testing",
+      "helpCopy": "A test sends a fixture to this admin account. Firebase acceptance means the request was taken, not that the phone showed a system notification. Browser push is not implemented.",
+      "infoCopy": "Send a test notification to your admin account only. This does not change payments, members, enquiries, or other business records.",
+      "sent": "Test notification sent",
+      "resultCounts": "Targeted {{targeted}}, accepted {{accepted}}, failed {{failed}}.",
+      "verified": "Verified",
+      "notVerified": "Not verified"
     }
   },
   "home": {
@@ -4885,6 +6435,152 @@
     "takePhoto": "Take photo",
     "chooseGallery": "Choose from gallery",
     "attached": "Attached",
-    "sizeHint": "JPEG, PNG, or WebP. Maximum {{maxMb}} MB after compression."
+    "sizeHint": "JPEG, PNG, or WebP. Maximum {{maxMb}} MB after compression.",
+    "pickerFailed": "ಫೋಟೋವನ್ನು ಆಯ್ಕೆ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+    "cameraPermissionTitle": "ಕ್ಯಾಮೆರಾ ಅನುಮತಿ",
+    "cameraPermissionMessage": "ಫೋಟೋ ತೆಗೆಯಲು Acomi ಗೆ ಕ್ಯಾಮೆರಾ ಪ್ರವೇಶ ಅಗತ್ಯವಿದೆ."
+  },
+  "contact": {
+    "sheet": {
+      "title": "ಸದಸ್ಯರನ್ನು ಸಂಪರ್ಕಿಸಿ",
+      "titleNamed": "{{name}} ಅನ್ನು ಸಂಪರ್ಕಿಸಿ",
+      "subtitle": "ಈ ವ್ಯಕ್ತಿಯನ್ನು ಹೇಗೆ ಸಂಪರ್ಕಿಸಬೇಕು ಎಂದು ಆಯ್ಕೆಮಾಡಿ."
+    },
+    "call": "ಕರೆ ಮಾಡಿ",
+    "callHint": "ಫೋನ್ ಡಯಲರ್ ತೆರೆಯಿರಿ",
+    "message": "ಸಂದೇಶ",
+    "messageHint": "ಮೆಸೇಜಿಂಗ್ ಆ್ಯಪ್ ಆಯ್ಕೆಮಾಡಿ",
+    "messagingOptions": "ಮೆಸೇಜಿಂಗ್ ಆಯ್ಕೆಗಳು",
+    "sms": "SMS",
+    "whatsapp": "WhatsApp",
+    "copy": "ಸಂಖ್ಯೆಯನ್ನು ನಕಲಿಸಿ",
+    "copied": "ಸಂಖ್ಯೆ ನಕಲಿಸಲಾಗಿದೆ",
+    "unavailable": "ಈ ಕ್ರಿಯೆಯನ್ನು ಪೂರ್ಣಗೊಳಿಸಲು ಯಾವುದೇ ಆ್ಯಪ್ ಲಭ್ಯವಿಲ್ಲ",
+    "invalid": "ಫೋನ್ ಸಂಖ್ಯೆ ಲಭ್ಯವಿಲ್ಲ"
+  },
+  "inquiryCredits": {
+    "title": "ವಿಚಾರಣೆ ಕ್ರೆಡಿಟ್‌ಗಳು",
+    "availableLabel": "ಲಭ್ಯವಿರುವ ಕ್ರೆಡಿಟ್‌ಗಳು",
+    "usedOf": "{{total}} ನೀಡಲಾದುದರಲ್ಲಿ {{used}} ಬಳಸಲಾಗಿದೆ",
+    "creditsCount": "{{count}} ಕ್ರೆಡಿಟ್‌ಗಳು",
+    "unavailableWhileFree": "ಅಗತ್ಯವಿಲ್ಲ (ಮೊಬೈಲ್ ಉಚಿತ)",
+    "buy": "ಖರೀದಿಸಿ",
+    "buyCta": "ವಿಚಾರಣೆ ಕ್ರೆಡಿಟ್‌ಗಳನ್ನು ಖರೀದಿಸಿ",
+    "purchaseSubmitted": "ಖರೀದಿ ವಿನಂತಿ ಸಲ್ಲಿಸಲಾಗಿದೆ. ಅಡ್ಮಿನ್ ಅನುಮೋದನೆಯ ನಂತರ ಕ್ರೆಡಿಟ್‌ಗಳು ಕಾಣಿಸುತ್ತವೆ.",
+    "purchaseFailed": "ಖರೀದಿ ವಿನಂತಿಯನ್ನು ಸಲ್ಲಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+    "loadErrorTitle": "ಕ್ರೆಡಿಟ್‌ಗಳನ್ನು ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ",
+    "mobileCreditsTitle": "ಮೊಬೈಲ್ ವಿಚಾರಣೆಗಳಿಗೆ ಕ್ರೆಡಿಟ್‌ಗಳು ಬೇಕಾಗುತ್ತವೆ",
+    "mobileFreeTitle": "ಮೊಬೈಲ್ ವಿಚಾರಣೆಗಳು ಉಚಿತ",
+    "mobileCreditsBody": "ನಿಮಗೆ ಪ್ರತಿದಿನ {{free}} ಉಚಿತ ಮೊಬೈಲ್ ವಿಚಾರಣೆಗಳು ಸಿಗುತ್ತವೆ, ನಂತರ ಪೇಯ್ಡ್ ಕ್ರೆಡಿಟ್‌ಗಳು ಅನ್ವಯವಾಗುತ್ತವೆ.",
+    "mobileFreeBody": "Acomi Android ಅಪ್ಲಿಕೇಶನ್‌ನಲ್ಲಿ ಅಪರಿಮಿತ ವಿಚಾರಣೆಗಳು ಲಭ್ಯವಿದೆ.",
+    "howItWorksTitle": "ಇದು ಹೇಗೆ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತದೆ",
+    "howItWorksBodyMobileCredits": "ನಿಮ್ಮ ದಿನದ ಉಚಿತ ಮೊಬೈಲ್ ವಿಚಾರಣೆಗಳ ನಂತರ, ಪ್ರತಿ ಹೊಸ ವಿಚಾರಣೆಗೆ 1 ಕ್ರೆಡಿಟ್ ಬಳಕೆಯಾಗುತ್ತದೆ. UPI ಮೂಲಕ ಪಾವತಿಸಿದ ನಂತರ ಕೆಳಗಿನ ಮೊಬೈಲ್ ಕ್ರೆಡಿಟ್ ಪ್ಯಾಕೇಜ್ ಖರೀದಿಸಿ.",
+    "howItWorksBodyMobile": "Acomi Android ನಲ್ಲಿ ಅಪರಿಮಿತ ವಿಚಾರಣೆಗಳನ್ನು ಪಡೆಯಿರಿ. ದಿನದ ಉಚಿತ ಮಿತಿಯ ನಂತರ ಇಮೇಲ್/ವೆಬ್ ವಿಚಾರಣೆಗಳಿಗೆ ಕ್ರೆಡಿಟ್‌ಗಳನ್ನು ಬಳಸಲಾಗುತ್ತದೆ.",
+    "buyCreditsTitleMobile": "ಮೊಬೈಲ್ ವಿಚಾರಣೆ ಕ್ರೆಡಿಟ್‌ಗಳನ್ನು ಖರೀದಿಸಿ",
+    "buyCreditsTitleWeb": "ಮೊಬೈಲ್ ಕ್ರೆಡಿಟ್ ಪ್ಯಾಕೇಜ್‌ಗಳು",
+    "purchaseDisabledHint": "ಮೊಬೈಲ್ ವಿಚಾರಣೆಗಳು ಉಚಿತವಾಗಿರುವಾಗ ಖರೀದಿ ಅಗತ್ಯವಿಲ್ಲ.",
+    "noPackages": "ಈಗ ಯಾವುದೇ ಕ್ರೆಡಿಟ್ ಪ್ಯಾಕೇಜ್‌ಗಳು ಲಭ್ಯವಿಲ್ಲ.",
+    "payThenUtr": "UPI ಮೂಲಕ ಪಾವತಿಸಿ, ನಂತರ ನಿಮ್ಮ UTR / ವ್ಯವಹಾರ ಉಲ್ಲೇಖವನ್ನು ನಮೂದಿಸಿ.",
+    "openQr": "ಪಾವತಿ QR ತೆರೆಯಿರಿ",
+    "whatsappCta": "WhatsApp ನಲ್ಲಿ ಪಾವತಿ ಸ್ಕ್ರೀನ್‌ಶಾಟ್ ಕಳುಹಿಸಿ",
+    "utrPlaceholder": "UTR / ವ್ಯವಹಾರ ID (ಆಯ್ಕಿಕ)",
+    "submitPurchase": "ಸಲ್ಲಿಸಿ",
+    "profileSubtitle": "ಮೊಬೈಲ್ ವಿಚಾರಣೆಗಳು ಉಚಿತ · ವೆಬ್ ಕ್ರೆಡಿಟ್‌ಗಳು"
+  },
+  "serviceContacts": {
+    "title": "Service Contacts",
+    "subtitle": "Common service providers for your spaces",
+    "add": "Add Contact",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "archive": "Archive",
+    "call": "Call",
+    "whatsapp": "WhatsApp",
+    "email": "Email",
+    "searchPlaceholder": "Search by name, service or person",
+    "category": "Category",
+    "categoryAll": "All",
+    "spaceAll": "All spaces",
+    "sortUpdated": "Recently updated",
+    "sortName": "Name",
+    "sortCategory": "Category",
+    "count": "{{count}} contacts",
+    "emptyTitle": "No service contacts yet",
+    "emptyDescription": "Save suppliers and technicians once, then reuse them across your spaces.",
+    "noResultsTitle": "No contacts found",
+    "noResultsDescription": "Try a different name, phone number, or filter.",
+    "loadError": "Could not load service contacts.",
+    "retry": "Retry",
+    "saved": "Service contact saved.",
+    "archived": "Service contact archived.",
+    "saveError": "Could not save this contact.",
+    "archiveConfirmTitle": "Archive this contact?",
+    "archiveConfirmBody": "Archived contacts are hidden from the directory. This does not delete a space or a member.",
+    "requiredName": "Contact name is required.",
+    "requiredCategory": "Category is required.",
+    "requiredCustom": "Enter a name for this category.",
+    "requiredMethod": "Add a phone number, WhatsApp number, or email.",
+    "invalidPhone": "Enter a valid mobile number.",
+    "invalidEmail": "Enter a valid email address.",
+    "duplicateTitle": "Possible duplicate",
+    "duplicateBody": "A contact in your directory already uses this phone number. You can go back or save it as a separate contact.",
+    "duplicateStrong": "The business name and phone number both match an existing contact.",
+    "saveAnyway": "Save anyway",
+    "reuseHint": "This contact is saved in your Service Contacts directory and can be reused across spaces.",
+    "spacesLabel": "Associated spaces",
+    "noSpaces": "No spaces associated",
+    "businessName": "Contact / business name",
+    "customCategory": "Custom category",
+    "contactPerson": "Primary contact person",
+    "primaryPhone": "Primary phone number",
+    "alternatePhone": "Alternate phone number",
+    "whatsappNumber": "WhatsApp number",
+    "emailLabel": "Email address",
+    "description": "Service description",
+    "address": "Address or service area",
+    "notes": "Notes",
+    "optional": "Optional",
+    "details": "Contact details",
+    "openFailed": "Could not open this action on this device.",
+    "unsavedTitle": "Discard unsaved changes?",
+    "unsavedBody": "Your changes have not been saved.",
+    "discard": "Discard",
+    "loading": "Loading service contacts...",
+    "formTitleAdd": "Add Contact",
+    "formTitleEdit": "Edit Contact",
+    "previous": "Previous",
+    "next": "Next"
+  },
+  "locationCapture": {
+    "selectionRequired": "ಸೂಚನೆಗಳಿಂದ ಒಂದು ಸ್ಥಳವನ್ನು ಆಯ್ಕೆಮಾಡಿ.",
+    "pincodeRequired": "ಮಾನ್ಯ 6-ಅಂಕಿಯ ಪಿನ್‌ಕೋಡ್ ನಮೂದಿಸಿ.",
+    "buildingRequired": "ಅಪಾರ್ಟ್‌ಮೆಂಟ್ ಅಥವಾ ಕಟ್ಟಡದ ಹೆಸರನ್ನು ನಮೂದಿಸಿ.",
+    "buildingName": "ಅಪಾರ್ಟ್‌ಮೆಂಟ್ / ಕಟ್ಟಡದ ಹೆಸರು",
+    "buildingPlaceholder": "ಉದಾ. Sunrise Residency",
+    "searchLabel": "ಸ್ಥಳ ಹುಡುಕಿ",
+    "searchPlaceholder": "ಕಟ್ಟಡ, ರಸ್ತೆ, ಪ್ರದೇಶ, ಲೊಕಾಲಿಟಿ ಅಥವಾ ಲ್ಯಾಂಡ್‌ಮಾರ್ಕ್ ಹುಡುಕಿ",
+    "useTyped": "\"{{query}}\" ಬಳಸಿ",
+    "useTypedHint": "ಈ ಪಠ್ಯದೊಂದಿಗೆ ಮುಂದುವರಿಯಿರಿ. ಸಲಹೆ ಆಯ್ಕಿಕ.",
+    "searching": "ಸ್ಥಳಗಳನ್ನು ಹುಡುಕಲಾಗುತ್ತಿದೆ...",
+    "emptyManual": "ಹೊಂದಾಣಿಕೆಯ ಸ್ಥಳಗಳಿಲ್ಲ. ನೀವು ಟೈಪ್ ಮಾಡಿದ ಸ್ಥಳದೊಂದಿಗೆ ಮುಂದುವರಿಯಬಹುದು.",
+    "empty": "ಯಾವುದೇ ಸ್ಥಳಗಳು ಕಂಡುಬಂದಿಲ್ಲ. ರಸ್ತೆ, ಪ್ರದೇಶ, ಲೊಕಾಲಿಟಿ ಅಥವಾ ನಗರವನ್ನು ಪ್ರಯತ್ನಿಸಿ.",
+    "failed": "ಸ್ಥಳಗಳನ್ನು ಹುಡುಕಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+    "manualTitle": "ಸ್ಥಳ ವಿವರಗಳು",
+    "manualHint": "ಆಯ್ಕಿಕ. \"{{query}}\" ಗಾಗಿ ನಗರ, ಜಿಲ್ಲೆ ಮತ್ತು ಇತರ ವಿವರಗಳನ್ನು ಸೇರಿಸಿ.",
+    "locality": "ಲೊಕಾಲಿಟಿ",
+    "city": "ನಗರ",
+    "state": "ರಾಜ್ಯ",
+    "district": "ಜಿಲ್ಲೆ",
+    "pincode": "ಪಿನ್‌ಕೋಡ್",
+    "selected": "ಸ್ಥಳ ಆಯ್ಕೆಯಾಗಿದೆ",
+    "change": "ಸ್ಥಳ ಬದಲಿಸಿ"
+  },
+  "brand": {
+    "tagline": "ಸ್ಪೇಸ್ · ಊಟ · ಜನರು ಸೇರುತ್ತಾರೆ",
+    "taglineSpaces": "ಸ್ಪೇಸ್",
+    "taglineMeals": "ಊಟ",
+    "taglinePeopleBelong": "ಜನರು ಸೇರುತ್ತಾರೆ",
+    "loadingA11y": "Acomi ಲೋಡ್ ಆಗುತ್ತಿದೆ"
   }
 }

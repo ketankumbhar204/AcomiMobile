@@ -80,7 +80,17 @@ export function MealPollResponseScreen({
   const pollsClosedOnly =
     !poll.loading && poll.openPolls.length === 0 && poll.displayPolls.length > 0;
   const chooseBlocked = !poll.loading && !!poll.chooseMealsBlockReason;
-  const viewOnly = dateReadOnly || mealEditsLocked || pollsClosedOnly || chooseBlocked;
+  /** Past / payment-lock / blocked — closed meals are locked per slot inside the editor. */
+  const viewOnly = dateReadOnly || mealEditsLocked || chooseBlocked;
+  const lockReason = dateReadOnly
+    ? 'past'
+    : mealEditsLocked
+      ? 'payment_lock'
+      : pollsClosedOnly
+        ? 'poll_closed'
+        : null;
+  const canSubmitChoices =
+    !viewOnly && !pollsClosedOnly && poll.openPolls.length > 0;
   const [paymentStep, setPaymentStep] = useState(false);
   const [proofModalOpen, setProofModalOpen] = useState(false);
   const showToast = useToastStore(state => state.showToast);
@@ -239,7 +249,7 @@ export function MealPollResponseScreen({
   };
 
   const showStickySave =
-    !paymentStep && !poll.loading && visiblePolls.length > 0 && !viewOnly;
+    !paymentStep && !poll.loading && visiblePolls.length > 0 && canSubmitChoices;
 
   const stickySaveLabel = poll.showSummary
     ? t('meals.poll.updateChoices')
@@ -303,7 +313,7 @@ export function MealPollResponseScreen({
             }
             subheading={formatMenuDate(menuDate, i18n.language)}
           />
-          {!dateReadOnly && !paymentStep && !chooseBlocked ? (
+          {!dateReadOnly && !paymentStep && !chooseBlocked && poll.openPolls.length > 0 ? (
             <PollClosesInHint polls={poll.openPolls} style={styles.pollCloseHint} />
           ) : null}
           {chooseBlocked ? (
@@ -393,6 +403,7 @@ export function MealPollResponseScreen({
                 variant="screen"
                 hideSubmitButton
                 readOnly={viewOnly}
+                lockReason={lockReason}
                 showMealPrices={mealPricing.showMealPrices}
               />
               {(dateReadOnly || mealEditsLocked) && poll.myPaymentStatus ? (

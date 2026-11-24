@@ -1,17 +1,20 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Linking,
+  Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { Mail, Phone, Plus, UserRound } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Plus, Search, SlidersHorizontal, X } from 'lucide-react-native';
 import {
   serviceContactsApi,
   type ServiceContact,
@@ -20,34 +23,43 @@ import {
 } from '../../api/serviceContactsApi';
 import { ApiError } from '../../api/types';
 import { useOptionalContactOptions } from '../../components/contact';
-import { ContactNumberLine } from '../../components/member/ContactAndStayMeta';
-import { Button, EmptyState, ListFilterChips, ListSearchBar } from '../../components/ui';
+import { ServiceProviderCard } from '../../components/serviceContacts/ServiceProviderCard';
+import { Button, EmptyState, HeaderBackButton } from '../../components/ui';
 import type { MainStackParamList } from '../../navigation/types';
 import { useAuthStore } from '../../store/authStore';
 import { useSpaceStore } from '../../store/spaceStore';
-import { colors, radius, spacing, typography } from '../../theme';
+import { useToastStore } from '../../store/toastStore';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 import { canManageServiceContacts } from '../../utils/serviceContactAccess';
-import { displayPhone, mailtoHref, telHref, whatsappHref } from '../../utils/serviceContactLinks';
+import { categoryVisual } from '../../utils/serviceContactCategoryVisual';
+import {
+  openContactDialer,
+  openContactWhatsApp,
+} from '../../utils/contactActions';
+import { serviceContactNumbers, whatsappHref } from '../../utils/serviceContactLinks';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'ServiceContacts'>;
 
 export function ServiceContactsScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
+  const insets = useSafeAreaInsets();
   const { openContactOptions } = useOptionalContactOptions();
+  const showToast = useToastStore(state => state.showToast);
   const userId = useAuthStore(state => state.userId);
   const spaces = useSpaceStore(state => state.mySpaces);
   const canManage = canManageServiceContacts(spaces);
   const [search, setSearch] = useState('');
   const [debounced, setDebounced] = useState('');
   const [category, setCategory] = useState('');
-  const [spaceId, setSpaceId] = useState('');
   const [sort, setSort] = useState<ServiceContactSort>('updated');
+  const [draftCategory, setDraftCategory] = useState('');
+  const [draftSort, setDraftSort] = useState<ServiceContactSort>('updated');
+  const [filterOpen, setFilterOpen] = useState(false);
   const [categories, setCategories] = useState<ServiceContactCategoryOption[]>([]);
   const [items, setItems] = useState<ServiceContact[]>([]);
   const [page, setPage] = useState(0);
   const [last, setLast] = useState(true);
-  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -78,7 +90,6 @@ export function ServiceContactsScreen() {
           serviceContactsApi.list({
             q: debounced || undefined,
             category: category || undefined,
-            spaceId: spaceId || undefined,
             sort,
             page: nextPage,
             size: 20,
@@ -88,7 +99,6 @@ export function ServiceContactsScreen() {
         setItems(current => (replace ? result.content : [...current, ...result.content]));
         setPage(result.page);
         setLast(result.last);
-        setTotal(result.totalElements);
       } catch (err) {
         setError(err instanceof ApiError ? err.message : t('serviceContacts.loadError'));
       } finally {
@@ -97,7 +107,7 @@ export function ServiceContactsScreen() {
         setLoadingMore(false);
       }
     },
-    [category, debounced, sort, spaceId, t, userId],
+    [category, debounced, sort, t, userId],
   );
 
   useFocusEffect(
@@ -106,33 +116,80 @@ export function ServiceContactsScreen() {
     }, [load]),
   );
 
-  const categoryChips = useMemo(
-    () => [
-      { id: '', label: t('serviceContacts.categoryAll') },
-      ...categories.map(item => ({ id: item.code, label: item.label })),
-    ],
-    [categories, t],
-  );
-  const spaceChips = useMemo(
-    () => [
-      { id: '', label: t('serviceContacts.spaceAll') },
-      ...spaces
-        .filter(space => ['OWNER', 'MANAGER', 'STAFF'].includes(space.membershipRole))
-        .map(space => ({ id: space.spaceId, label: space.spaceName })),
-    ],
-    [spaces, t],
-  );
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerTitleAlign: 'left',
+      headerBackVisible: false,
+      headerLeft: () => <HeaderBackButton />,
+      headerTitle: () => (
+        <View style={styles.navTitle}>
+          <Text style={styles.navHeading} numberOfLines={1}>
+            {t('serviceContacts.title')}
+          </Text>
+          <Text style={styles.navSubtitle} numberOfLines={1}>
+            {t('serviceContacts.subtitle')}
+          </Text>
+        </View>
+      ),
+      headerRight: () =>
+        canManage ? (
+          <Pressable
+            onPress={() => navigation.navigate('ServiceContactForm', {})}
+            style={styles.addBtn}
+            accessibilityRole="button"
+            accessibilityLabel={t('serviceContacts.add')}
+            hitSlop={8}>
+            <Plus size={20} color={colors.teal} strokeWidth={2.4} />
+          </Pressable>
+        ) : null,
+    });
+  }, [canManage, navigation, t]);
 
-  async function openUrl(url: string | null) {
-    if (!url) return;
-    try {
-      const supported = await Linking.canOpenURL(url);
-      if (!supported) {
-        return;
-      }
-      await Linking.openURL(url);
-    } catch {
-      setError(t('serviceContacts.openFailed'));
+  const filtersActive = Boolean(category) || sort !== 'updated';
+
+  function openSheet(contact: ServiceContact, phone: string) {
+    openContactOptions({
+      phoneNumber: phone,
+      displayName: contact.contactPersonName || contact.businessName,
+      organizationName: contact.businessName,
+      presentation: 'service',
+    });
+  }
+
+  function missingNumber() {
+    showToast(t('contact.invalid', { defaultValue: 'Phone number is not available' }));
+  }
+
+  async function callContact(contact: ServiceContact) {
+    const numbers = serviceContactNumbers(contact);
+    if (numbers.length === 0) {
+      missingNumber();
+      return;
+    }
+    if (numbers.length > 1) {
+      openSheet(contact, numbers[0]);
+      return;
+    }
+    const result = await openContactDialer(numbers[0]);
+    if (result !== 'opened') {
+      showToast(t('serviceContacts.openFailed'));
+    }
+  }
+
+  async function whatsappContact(contact: ServiceContact) {
+    const numbers = serviceContactNumbers(contact);
+    const preferred = contact.whatsappPhone || numbers[0];
+    if (!preferred || !whatsappHref(preferred)) {
+      missingNumber();
+      return;
+    }
+    if (numbers.length > 1) {
+      openSheet(contact, preferred);
+      return;
+    }
+    const result = await openContactWhatsApp(preferred);
+    if (result !== 'opened') {
+      showToast(t('serviceContacts.openFailed'));
     }
   }
 
@@ -145,6 +202,7 @@ export function ServiceContactsScreen() {
         onRefresh={() => {
           setRefreshing(true);
           void load(0, true);
+          void loadShared();
         }}
         onEndReached={() => {
           if (!loading && !loadingMore && !last && !error) {
@@ -152,35 +210,72 @@ export function ServiceContactsScreen() {
           }
         }}
         contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
           <View style={styles.header}>
-            <Text style={styles.subtitle}>{t('serviceContacts.subtitle')}</Text>
-            <ListSearchBar
-              value={search}
-              onChangeText={setSearch}
-              placeholder={t('serviceContacts.searchPlaceholder')}
-            />
-            <ListFilterChips options={categoryChips} value={category} onChange={setCategory} />
-            {spaceChips.length > 1 ? (
-              <ListFilterChips options={spaceChips} value={spaceId} onChange={setSpaceId} />
-            ) : null}
-            <ListFilterChips
-              options={[
-                { id: 'updated', label: t('serviceContacts.sortUpdated') },
-                { id: 'name', label: t('serviceContacts.sortName') },
-                { id: 'category', label: t('serviceContacts.sortCategory') },
-              ]}
-              value={sort}
-              onChange={value => setSort(value as ServiceContactSort)}
-            />
-            <Text style={styles.count}>{t('serviceContacts.count', { count: total })}</Text>
-            {canManage ? (
-              <Button
-                label={t('serviceContacts.add')}
-                icon={Plus}
-                onPress={() => navigation.navigate('ServiceContactForm', {})}
+            <View style={styles.searchRow}>
+              <View style={styles.searchWrap}>
+                <Search size={16} color={colors.muted} strokeWidth={2.2} />
+                <TextInput
+                  style={styles.searchInput}
+                  value={search}
+                  onChangeText={setSearch}
+                  placeholder={t('serviceContacts.searchPlaceholder')}
+                  placeholderTextColor={colors.muted}
+                  autoCorrect={false}
+                  returnKeyType="search"
+                  accessibilityLabel={t('serviceContacts.searchPlaceholder')}
+                />
+              </View>
+              <Pressable
+                onPress={() => {
+                  setDraftCategory(category);
+                  setDraftSort(sort);
+                  setFilterOpen(true);
+                }}
+                style={[styles.filterBtn, filtersActive && styles.filterBtnActive]}
+                accessibilityRole="button"
+                accessibilityLabel={t('serviceContacts.filter', { defaultValue: 'Filter' })}>
+                <SlidersHorizontal
+                  size={18}
+                  color={filtersActive ? colors.white : colors.textPrimary}
+                  strokeWidth={2.2}
+                />
+              </Pressable>
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.chips}>
+              <CategoryChip
+                label={t('serviceContacts.categoryAll')}
+                selected={category === ''}
+                onPress={() => setCategory('')}
               />
-            ) : null}
+              {categories.map(item => {
+                const visual = categoryVisual(item.code, item.label);
+                const ChipIcon = visual.icon;
+                const selected = category === item.code;
+                return (
+                  <Pressable
+                    key={item.code}
+                    onPress={() => setCategory(item.code)}
+                    style={[styles.chip, selected && styles.chipSelected]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}>
+                    <ChipIcon
+                      size={14}
+                      color={selected ? colors.white : visual.iconColor}
+                      strokeWidth={2.3}
+                    />
+                    <Text style={[styles.chipLabel, selected && styles.chipLabelSelected]}>
+                      {visual.shortLabel}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
           </View>
         }
         ListEmptyComponent={
@@ -193,9 +288,13 @@ export function ServiceContactsScreen() {
             </View>
           ) : (
             <EmptyState
-              title={debounced || category || spaceId ? t('serviceContacts.noResultsTitle') : t('serviceContacts.emptyTitle')}
+              title={
+                debounced || category
+                  ? t('serviceContacts.noResultsTitle')
+                  : t('serviceContacts.emptyTitle')
+              }
               description={
-                debounced || category || spaceId
+                debounced || category
                   ? t('serviceContacts.noResultsDescription')
                   : t('serviceContacts.emptyDescription')
               }
@@ -204,86 +303,304 @@ export function ServiceContactsScreen() {
         }
         ListFooterComponent={loadingMore ? <ActivityIndicator color={colors.primaryDark} /> : null}
         renderItem={({ item }) => (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => navigation.navigate('ServiceContactDetails', { contactId: item.id })}
-            style={styles.card}>
-            <Text style={styles.name}>{item.businessName}</Text>
-            <Text style={styles.meta}>{item.categoryLabel}</Text>
-            {item.contactPersonName ? (
-              <View style={styles.row}>
-                <UserRound size={15} color={colors.primaryDark} />
-                <Text style={styles.rowText}>{item.contactPersonName}</Text>
-              </View>
-            ) : null}
-            {displayPhone(item.primaryPhone) ? (
-              <ContactNumberLine
-                value={item.primaryPhone}
-                name={item.contactPersonName || item.businessName}
-                textStyle={styles.rowText}
-              />
-            ) : null}
-            {item.email ? (
-              <View style={styles.row}>
-                <Mail size={15} color={colors.primaryDark} />
-                <Text style={styles.rowText}>{item.email}</Text>
-              </View>
-            ) : null}
-            {item.spaces.length > 0 ? (
-              <Text style={styles.meta}>{item.spaces.map(space => space.name).join(', ')}</Text>
-            ) : null}
-            <View style={styles.actions}>
-              {telHref(item.primaryPhone) || whatsappHref(item.whatsappPhone || item.primaryPhone) ? (
-                <Button
-                  label={t('serviceContacts.call')}
-                  variant="secondary"
-                  onPress={() =>
-                    openContactOptions({
-                      phoneNumber: item.primaryPhone || item.whatsappPhone || '',
-                      displayName: item.contactPersonName || item.businessName,
-                    })
-                  }
-                />
-              ) : null}
-              {whatsappHref(item.whatsappPhone || item.primaryPhone) ? (
-                <Button
-                  label={t('serviceContacts.whatsapp')}
-                  variant="secondary"
-                  onPress={() =>
-                    openContactOptions({
-                      phoneNumber: item.whatsappPhone || item.primaryPhone || '',
-                      displayName: item.contactPersonName || item.businessName,
-                    })
-                  }
-                />
-              ) : null}
-            </View>
-          </Pressable>
+          <ServiceProviderCard
+            contact={item}
+            onOpen={() => navigation.navigate('ServiceContactDetails', { contactId: item.id })}
+            onCall={() => void callContact(item)}
+            onWhatsApp={() => void whatsappContact(item)}
+            onPhonePress={() => {
+              const numbers = serviceContactNumbers(item);
+              if (numbers.length === 0) {
+                missingNumber();
+                return;
+              }
+              openSheet(item, numbers[0]);
+            }}
+          />
         )}
       />
+
+      <Modal visible={filterOpen} transparent animationType="slide" onRequestClose={() => setFilterOpen(false)}>
+        <Pressable style={styles.backdrop} onPress={() => setFilterOpen(false)}>
+          <Pressable
+            style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}
+            onPress={event => event.stopPropagation()}>
+            <View style={styles.handle} />
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>{t('serviceContacts.filter', { defaultValue: 'Filter' })}</Text>
+              <Pressable onPress={() => setFilterOpen(false)} hitSlop={8} accessibilityRole="button">
+                <X size={18} color={colors.textSecondary} />
+              </Pressable>
+            </View>
+            <ScrollView style={styles.sheetBody} bounces={false} keyboardShouldPersistTaps="handled">
+              <Text style={styles.sheetLabel}>{t('serviceContacts.category')}</Text>
+              <View style={styles.wrapChips}>
+                <FilterChoice
+                  label={t('serviceContacts.categoryAll')}
+                  selected={draftCategory === ''}
+                  onPress={() => setDraftCategory('')}
+                />
+                {categories.map(item => (
+                  <FilterChoice
+                    key={item.code}
+                    label={item.label}
+                    selected={draftCategory === item.code}
+                    onPress={() => setDraftCategory(item.code)}
+                  />
+                ))}
+              </View>
+              <Text style={styles.sheetLabel}>{t('serviceContacts.sort', { defaultValue: 'Sort' })}</Text>
+              <View style={styles.wrapChips}>
+                {(
+                  [
+                    ['updated', t('serviceContacts.sortUpdated')],
+                    ['name', t('serviceContacts.sortName')],
+                    ['category', t('serviceContacts.sortCategory')],
+                  ] as const
+                ).map(([id, label]) => (
+                  <FilterChoice
+                    key={id}
+                    label={label}
+                    selected={draftSort === id}
+                    onPress={() => setDraftSort(id)}
+                  />
+                ))}
+              </View>
+            </ScrollView>
+            <View style={styles.sheetActions}>
+              <Button
+                label={t('serviceContacts.clear', { defaultValue: 'Clear' })}
+                variant="secondary"
+                onPress={() => {
+                  setDraftCategory('');
+                  setDraftSort('updated');
+                  setCategory('');
+                  setSort('updated');
+                  setFilterOpen(false);
+                }}
+                style={styles.sheetButton}
+              />
+              <Button
+                label={t('serviceContacts.apply', { defaultValue: 'Apply' })}
+                onPress={() => {
+                  setCategory(draftCategory);
+                  setSort(draftSort);
+                  setFilterOpen(false);
+                }}
+                style={styles.sheetButton}
+              />
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
+  );
+}
+
+function CategoryChip({
+  label,
+  selected,
+  onPress,
+}: {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[styles.chip, selected && styles.chipSelected]}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}>
+      <Text style={[styles.chipLabel, selected && styles.chipLabelSelected]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function FilterChoice({
+  label,
+  selected,
+  onPress,
+}: {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[styles.choice, selected && styles.choiceSelected]}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}>
+      <Text style={[styles.choiceLabel, selected && styles.choiceLabelSelected]}>{label}</Text>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md },
+  content: { padding: spacing.lg, paddingBottom: spacing.xxl },
   header: { gap: spacing.md, marginBottom: spacing.md },
-  subtitle: { ...typography.body, color: colors.textSecondary },
-  count: { ...typography.caption, color: colors.textSecondary },
-  loader: { marginTop: spacing.xl },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.card,
+  navTitle: { maxWidth: 240 },
+  navHeading: {
+    ...typography.h3,
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  navSubtitle: {
+    ...typography.caption,
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.textSecondary,
+  },
+  addBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.lightGreen,
+    marginRight: spacing.sm,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  searchWrap: {
+    flex: 1,
+    minHeight: 46,
+    borderRadius: radius.button,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.lg,
-    gap: spacing.xs,
+    backgroundColor: colors.white,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  searchInput: {
+    flex: 1,
+    ...typography.body,
+    color: colors.textPrimary,
+    paddingVertical: 0,
+    minHeight: 44,
+  },
+  filterBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: radius.button,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterBtnActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  chips: {
+    gap: spacing.sm,
+    paddingRight: spacing.lg,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minHeight: 36,
+    paddingHorizontal: 14,
+    borderRadius: radius.full,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  chipSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  chipLabel: {
+    ...typography.caption,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  chipLabelSelected: {
+    color: colors.white,
+  },
+  loader: { marginTop: spacing.xl },
+  backdrop: {
+    flex: 1,
+    backgroundColor: colors.overlayScrim,
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: colors.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    maxHeight: '80%',
+    ...shadows.raised,
+  },
+  handle: {
+    alignSelf: 'center',
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.border,
     marginBottom: spacing.md,
   },
-  name: { ...typography.h3, color: colors.textPrimary },
-  meta: { ...typography.body, color: colors.textSecondary },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  rowText: { ...typography.body, color: colors.textPrimary, flex: 1 },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  sheetBody: {
+    flexGrow: 0,
+  },
+  sheetTitle: {
+    ...typography.h3,
+    flex: 1,
+  },
+  sheetLabel: {
+    ...typography.bodyStrong,
+    fontWeight: '700',
+    marginBottom: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  wrapChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  choice: {
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  choiceSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  choiceLabel: {
+    ...typography.caption,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  choiceLabelSelected: {
+    color: colors.white,
+  },
+  sheetActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+  },
+  sheetButton: { flex: 1 },
 });

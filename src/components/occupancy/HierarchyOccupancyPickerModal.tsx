@@ -353,7 +353,10 @@ export function HierarchyOccupancyPickerModal({
   const { members, loading: membersLoading, error: membersError } = useResidentImportSearch(
     spaceId,
     memberQuery,
-    { enabled: visible && phase === 'member' && memberPickerMode === 'search' },
+    {
+      enabled: visible && phase === 'member' && memberPickerMode === 'search',
+      includeUnavailable: true,
+    },
   );
 
   const mySpaces = useSpaceStore(state => state.mySpaces);
@@ -1076,6 +1079,16 @@ export function HierarchyOccupancyPickerModal({
       memberAutoSelectSuppressRef.current = false;
       setError(null);
 
+      if (selected.availableForMoveIn === false) {
+        setError(
+          t('occupancyWizard.errors.memberBusyHere', {
+            space: selected.sourceSpaceName ?? '',
+            defaultValue: 'Already has an active stay in {{space}}.',
+          }),
+        );
+        return;
+      }
+
       let resolved: MemberResponse = selected;
       if (selected.needsImport && selected.memberId) {
         setCreatingMember(true);
@@ -1094,7 +1107,7 @@ export function HierarchyOccupancyPickerModal({
       setMember(resolved);
       setPhase(nextPhaseAfterMember(wizardMode));
     },
-    [spaceId, wizardMode],
+    [spaceId, t, wizardMode],
   );
 
   useEffect(() => {
@@ -1105,7 +1118,7 @@ export function HierarchyOccupancyPickerModal({
       return;
     }
     const candidate = members[0];
-    if (candidate.needsImport) {
+    if (candidate.needsImport || candidate.availableForMoveIn === false) {
       return;
     }
     const autoKey = `${candidate.memberId}:${memberQuery}`;

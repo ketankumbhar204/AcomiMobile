@@ -186,6 +186,7 @@ export function MemberAccommodationSection({
     variant: 'extend' | 'renewal' | 'reviseOpenEnded';
     initialExpectedExitDate: string;
   } | null>(null);
+  const [cancelSettlementOpen, setCancelSettlementOpen] = useState(false);
 
   if (!showSection || !spaceType) {
     return null;
@@ -265,8 +266,6 @@ export function MemberAccommodationSection({
     await refreshMember(member.memberId);
     showToast(t('occupancy.success.updated'));
   }
-
-  const [cancelSettlementOpen, setCancelSettlementOpen] = useState(false);
 
   function confirmCancelReservation() {
     if (!resolvedReservedOccupancyId) {
