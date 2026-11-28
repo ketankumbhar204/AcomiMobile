@@ -3194,6 +3194,117 @@ export interface AdminDashboardSummary {
   registeredUsersCount: number;
 }
 
+export type ListingMarketingStatus = 'NOT_SHARED' | 'SHARED';
+export type WhatsAppAvailability = 'UNKNOWN' | 'AVAILABLE' | 'UNAVAILABLE';
+export type ListingMarketingChannel = 'WHATSAPP' | 'CALL';
+export type ListingMarketingOutcome =
+  | 'WHATSAPP_OPENED'
+  | 'SHARED_CONFIRMED'
+  | 'WHATSAPP_UNAVAILABLE'
+  | 'CALL_ATTEMPTED'
+  | 'CONTACTED_BY_PHONE'
+  | 'SKIPPED'
+  | 'WHATSAPP_API_SUBMITTED'
+  | 'WHATSAPP_API_FAILED'
+  | 'WHATSAPP_API_BLOCKED';
+
+export type ListingMarketingDeliveryMode = 'MANUAL' | 'AUTOMATIC';
+
+export interface AdminListingMarketingActivity {
+  id: UUID;
+  listingKind: 'PROPERTY' | 'MESS';
+  propertyRegistrationId?: UUID | null;
+  messRegistrationId?: UUID | null;
+  spaceId?: UUID | null;
+  channel: ListingMarketingChannel;
+  outcome: ListingMarketingOutcome;
+  templateKey?: string | null;
+  note?: string | null;
+  deliveryMode?: ListingMarketingDeliveryMode | null;
+  providerMessageId?: string | null;
+  recipientPhoneMasked?: string | null;
+  actorUserId: UUID;
+  createdAt: string;
+}
+
+export interface AdminListingMarketingWhatsAppCapability {
+  available: boolean;
+  mode: string;
+  enabled: boolean;
+  senderReady: boolean;
+  businessNumberHint?: string | null;
+  reasons: string[];
+  explanation: string;
+}
+
+export interface AdminSendListingMarketingWhatsAppRequest {
+  recipientPhone: string;
+  templateKey?: string | null;
+  messageSnapshot?: string | null;
+  mediaFileNames?: string[];
+  clientRequestId?: string | null;
+}
+
+export interface AdminSendListingMarketingWhatsAppResponse {
+  accepted: boolean;
+  outcome: ListingMarketingOutcome;
+  activityId?: UUID | null;
+  providerMessageId?: string | null;
+  explanation?: string | null;
+  marketing?: AdminListingMarketingResponse | null;
+}
+
+export interface AdminListingMarketingResponse {
+  marketingStatus: ListingMarketingStatus;
+  whatsappAvailability: WhatsAppAvailability;
+  lastSharedAt?: string | null;
+  lastSharedBy?: UUID | null;
+  marketingNotes?: string | null;
+  propertyRegistrationId?: UUID | null;
+  messRegistrationId?: UUID | null;
+  spaceId?: UUID | null;
+  activities: AdminListingMarketingActivity[];
+}
+
+export interface AdminUpdateListingMarketingRequest {
+  marketingStatus?: ListingMarketingStatus;
+  whatsappAvailability?: WhatsAppAvailability;
+  marketingNotes?: string | null;
+  activity?: {
+    channel?: ListingMarketingChannel;
+    outcome: ListingMarketingOutcome;
+    templateKey?: string | null;
+    note?: string | null;
+    messageSnapshot?: string | null;
+  };
+}
+
+export type ListingMarketingTemplateApplicability = 'PROPERTY' | 'MESS' | 'BOTH';
+
+export interface AdminListingMarketingTemplate {
+  id: UUID;
+  name: string;
+  description?: string | null;
+  body: string;
+  applicability: ListingMarketingTemplateApplicability;
+  active: boolean;
+  displayOrder: number;
+  createdBy?: UUID | null;
+  updatedBy?: UUID | null;
+  createdAt: string;
+  updatedAt: string;
+  builtin: boolean;
+}
+
+export interface AdminUpsertListingMarketingTemplateRequest {
+  name: string;
+  description?: string | null;
+  body: string;
+  applicability: ListingMarketingTemplateApplicability;
+  active?: boolean;
+  displayOrder?: number;
+}
+
 export interface AdminActiveSpace {
   id: UUID;
   referenceCode?: string | null;
@@ -3205,8 +3316,13 @@ export interface AdminActiveSpace {
   ownerName: string;
   ownerMobile: string;
   createdAt: string;
+  /** ADMIN / PUBLIC_WEBSITE when linked to a registration; null for app-created spaces. */
+  source?: RegistrationSource | null;
   /** True when the converted registration is a test lead. */
   testLead?: boolean;
+  registrationId?: UUID | null;
+  marketingStatus?: ListingMarketingStatus | null;
+  whatsappAvailability?: WhatsAppAvailability | null;
 }
 
 export type AdminUserSelectedRole = 'NOT_SELECTED' | 'OWNER' | 'MEMBER' | 'OWNER_AND_MEMBER';
@@ -3305,6 +3421,8 @@ export interface PropertyRegistrationListItem {
   claimedAt?: string | null;
   createdAt: string;
   testLead: boolean;
+  marketingStatus?: ListingMarketingStatus | null;
+  whatsappAvailability?: WhatsAppAvailability | null;
 }
 
 export interface PropertyRegistrationDetail extends PropertyRegistrationListItem {
@@ -3316,8 +3434,14 @@ export interface PropertyRegistrationDetail extends PropertyRegistrationListItem
   priceBasis: string;
   capacityEstimate?: number | null;
   convertedSpaceId?: UUID | null;
+  additionalMobileNumber?: string | null;
+  linkedOwnerMobile?: string | null;
   claimedVia?: string | null;
   updatedAt: string;
+  lastSharedAt?: string | null;
+  lastSharedBy?: UUID | null;
+  marketingNotes?: string | null;
+  marketingActivities?: AdminListingMarketingActivity[] | null;
   amenities: Array<{ code: string; customLabel?: string | null; displayOrder: number }>;
 }
 
@@ -3336,6 +3460,8 @@ export interface MessRegistrationListItem {
   claimedAt?: string | null;
   createdAt: string;
   testLead: boolean;
+  marketingStatus?: ListingMarketingStatus | null;
+  whatsappAvailability?: WhatsAppAvailability | null;
 }
 
 export interface MessRegistrationDetail extends MessRegistrationListItem {
@@ -3348,8 +3474,14 @@ export interface MessRegistrationDetail extends MessRegistrationListItem {
   mealPrice: number;
   capacityEstimate?: number | null;
   convertedSpaceId?: UUID | null;
+  additionalMobileNumber?: string | null;
+  linkedOwnerMobile?: string | null;
   claimedVia?: string | null;
   updatedAt: string;
+  lastSharedAt?: string | null;
+  lastSharedBy?: UUID | null;
+  marketingNotes?: string | null;
+  marketingActivities?: AdminListingMarketingActivity[] | null;
 }
 
 export interface AdminCreatePropertyRegistrationRequest {

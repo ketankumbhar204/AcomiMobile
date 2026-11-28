@@ -7,6 +7,9 @@ import type { AdminUpdateRegistrationContactRequest, MessRegistrationDetail } fr
 import {
   AdminDetailField,
   AdminDetailSection,
+  AdminListingMarketingChips,
+  AdminListingMarketingHistory,
+  AdminListingMarketingShareDialog,
   AdminRegistrationContactEditor,
 } from '../../components/admin';
 import { ContactNumberLine } from '../../components/member/ContactAndStayMeta';
@@ -30,6 +33,12 @@ export function AdminMessDetailScreen({ navigation, route }: Props) {
   const [deleting, setDeleting] = useState(false);
   const [editingContact, setEditingContact] = useState(false);
   const [savingContact, setSavingContact] = useState(false);
+  const [marketingMode, setMarketingMode] = useState<'share' | 'call' | null>(null);
+
+  async function reload() {
+    const data = await adminApi.getMessRegistration(route.params.id);
+    setDetail(data);
+  }
 
   useEffect(() => {
     adminApi.getMessRegistration(route.params.id).then(setDetail).finally(() => setLoading(false));
@@ -89,6 +98,10 @@ export function AdminMessDetailScreen({ navigation, route }: Props) {
           {isMarkedTestLead(detail.testLead) ? (
             <Text style={styles.testBadge}>{t('admin.labels.testBadge')}</Text>
           ) : null}
+          <AdminListingMarketingChips
+            marketingStatus={detail.marketingStatus}
+            whatsappAvailability={detail.whatsappAvailability}
+          />
         </Card>
 
         <AdminDetailSection>
@@ -196,16 +209,60 @@ export function AdminMessDetailScreen({ navigation, route }: Props) {
             />
           ) : null}
         </AdminDetailSection>
+
+        <AdminDetailSection>
+          <AdminListingMarketingHistory activities={detail.marketingActivities} />
+        </AdminDetailSection>
       </ScrollView>
 
       <StickyFormActions>
+        <Button label={t('admin.marketing.share')} onPress={() => setMarketingMode('share')} />
+        <Button
+          label={t('admin.marketing.callOwner')}
+          variant="secondary"
+          onPress={() => setMarketingMode('call')}
+        />
         <Button
           label={t('admin.common.deleteLead')}
-          variant="secondary"
+          variant="ghost"
           loading={deleting}
           onPress={handleDeletePress}
         />
       </StickyFormActions>
+
+      <AdminListingMarketingShareDialog
+        open={marketingMode != null}
+        mode={marketingMode ?? 'share'}
+        onClose={() => setMarketingMode(null)}
+        onUpdated={() => void reload()}
+        target={{ kind: 'mess-registration', id: route.params.id }}
+        listingKind="MESS"
+        spaceType="MESS"
+        name={detail.messName}
+        ownerName={detail.ownerName}
+        location={[detail.city, detail.state, detail.pincode].filter(Boolean).join(', ')}
+        address={[detail.addressLine, detail.city, detail.state, detail.pincode]
+          .filter(Boolean)
+          .join(', ')}
+        rentOrPrice={
+          detail.monthlyPrice != null
+            ? `₹${detail.monthlyPrice}${
+                detail.monthlyPriceBasis && isPriceBasis(detail.monthlyPriceBasis)
+                  ? ` ${PRICE_BASIS_LABEL[detail.monthlyPriceBasis]}`
+                  : ''
+              }`
+            : detail.mealPrice != null
+              ? `₹${detail.mealPrice} / meal`
+              : null
+        }
+        phones={[
+          detail.mobileNumber,
+          detail.alternateMobileNumber,
+          detail.additionalMobileNumber,
+          detail.linkedOwnerMobile,
+        ]}
+        description={detail.description}
+      />
     </View>
   );
 }

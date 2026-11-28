@@ -58,6 +58,18 @@ describe('contactActions', () => {
     canOpenURL.mockRestore();
   });
 
+  it('prefills WhatsApp chat text when a message is provided', async () => {
+    const previous = Platform.OS;
+    Platform.OS = 'android';
+    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+    await expect(openContactWhatsApp('9876543210', 'Hello owner')).resolves.toBe('opened');
+    expect(openURL).toHaveBeenCalledWith(
+      'intent://wa.me/919876543210?text=Hello%20owner#Intent;scheme=https;package=com.whatsapp;end',
+    );
+    Platform.OS = previous;
+    openURL.mockRestore();
+  });
+
   it('tries WhatsApp Business and then the browser when Messenger is missing', async () => {
     const previous = Platform.OS;
     Platform.OS = 'android';
