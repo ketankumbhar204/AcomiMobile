@@ -20,6 +20,7 @@ import { AdminRegisteredUserDetailScreen } from '../screens/admin/AdminRegistere
 import { AdminRegisteredUsersScreen } from '../screens/admin/AdminRegisteredUsersScreen';
 import { AdminSavedAddressesScreen } from '../screens/admin/AdminSavedAddressesScreen';
 import { AdminInquiryCreditsConfigScreen } from '../screens/admin/AdminInquiryCreditsConfigScreen';
+import { AdminListingMarketingTemplatesScreen } from '../screens/admin/AdminListingMarketingTemplatesScreen';
 import { AdminInquiryPurchaseListScreen } from '../screens/admin/AdminInquiryPurchaseListScreen';
 import { AdminNotificationTestingScreen } from '../screens/admin/AdminNotificationTestingScreen';
 import { stackHeaderOptions } from '../theme';
@@ -130,6 +131,13 @@ export function AdminNavigator() {
         name="AdminInquiryCreditsConfig"
         component={AdminInquiryCreditsConfigScreen}
         options={{ title: t('admin.nav.creditsConfig', { defaultValue: 'Credits config' }) }}
+      />
+      <Stack.Screen
+        name="AdminListingMarketingTemplates"
+        component={AdminListingMarketingTemplatesScreen}
+        options={{
+          title: t('admin.nav.marketingTemplates', { defaultValue: 'Marketing templates' }),
+        }}
       />
       <Stack.Screen
         name="AdminNotificationTesting"

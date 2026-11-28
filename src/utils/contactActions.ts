@@ -5,7 +5,7 @@ import {
   isValidIndianMobile,
   normalizeIndianMobileDigits,
 } from './indianMobile';
-import { whatsAppPhoneDigits } from './photoRequest';
+import { whatsAppChatUrl, whatsAppPhoneDigits } from './photoRequest';
 
 export type ContactActionResult = 'opened' | 'copied' | 'unavailable' | 'invalid';
 
@@ -106,29 +106,42 @@ export function whatsAppMeUrl(phone: string | null | undefined): string | null {
 
 /**
  * Opens WhatsApp for a phone number.
+ * Optional `message` prefills chat text via wa.me `?text=` (never auto-sends).
  * Android 11+ hides packages from canOpenURL unless they are declared, so a
  * false result must not block the launch. Try Messenger and WhatsApp Business
  * directly, then the https://wa.me link, then the system browser.
  */
 export async function openContactWhatsApp(
   phone: string | null | undefined,
+  message?: string | null,
 ): Promise<ContactActionResult> {
   const digits = whatsAppPhoneDigits(phone);
-  const httpsUrl = digits ? `https://wa.me/${digits}` : null;
-  if (!httpsUrl || !digits) {
+  if (!digits) {
     return 'invalid';
   }
+  const text = message?.trim() ?? '';
+  const httpsUrl = text ? whatsAppChatUrl(phone, text) : `https://wa.me/${digits}`;
+  if (!httpsUrl) {
+    return 'invalid';
+  }
+  const waPath = text
+    ? `wa.me/${digits}?text=${encodeURIComponent(text)}`
+    : `wa.me/${digits}`;
   const targets = [httpsUrl];
   if (Platform.OS === 'android') {
-    const messenger = `intent://wa.me/${digits}#Intent;scheme=https;package=com.whatsapp;end`;
-    const business = `intent://wa.me/${digits}#Intent;scheme=https;package=com.whatsapp.w4b;end`;
+    const messenger = `intent://${waPath}#Intent;scheme=https;package=com.whatsapp;end`;
+    const business = `intent://${waPath}#Intent;scheme=https;package=com.whatsapp.w4b;end`;
     const browser =
-      `intent://wa.me/${digits}#Intent;scheme=https;action=android.intent.action.VIEW;` +
+      `intent://${waPath}#Intent;scheme=https;action=android.intent.action.VIEW;` +
       'category=android.intent.category.BROWSABLE;end';
     targets.unshift(messenger, business);
     targets.push(browser);
   } else {
-    targets.unshift(`whatsapp://send?phone=${digits}`);
+    const ios =
+      text.length > 0
+        ? `whatsapp://send?phone=${digits}&text=${encodeURIComponent(text)}`
+        : `whatsapp://send?phone=${digits}`;
+    targets.unshift(ios);
   }
   return (await openFirst(targets)) ? 'opened' : 'unavailable';
 }
