@@ -24,6 +24,7 @@ export function adminParentRoute(
     case 'AdminInquiryCreditRequests':
       return 'AdminInquiryCreditsConfig';
     case 'AdminNotificationTesting':
+    case 'AdminListingMarketingTemplates':
       return 'AdminDashboard';
     case 'AdminActiveSpaceDetail':
       return 'AdminDashboard';

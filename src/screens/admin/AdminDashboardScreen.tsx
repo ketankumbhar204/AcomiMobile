@@ -18,6 +18,7 @@ import {
   CreditCard,
   LogOut,
   MapPin,
+  Megaphone,
   MessageCircle,
   Users,
   Bell,
@@ -386,6 +387,16 @@ export function AdminDashboardScreen() {
             defaultValue: 'UPI, QR, WhatsApp, limits, and packages',
           })}
           onPress={() => navigation.navigate('AdminInquiryCreditsConfig')}
+        />
+        <ManageCard
+          icon={Megaphone}
+          title={t('admin.dashboard.nav.marketingTemplatesTitle', {
+            defaultValue: 'Marketing templates',
+          })}
+          hint={t('admin.dashboard.nav.marketingTemplatesHint', {
+            defaultValue: 'Editable WhatsApp promo templates with placeholders',
+          })}
+          onPress={() => navigation.navigate('AdminListingMarketingTemplates')}
         />
         <ManageCard
           icon={CreditCard}

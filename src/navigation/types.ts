@@ -398,6 +398,7 @@ export type AdminStackParamList = {
   AdminEnquiryDetail: { id: string };
   AdminInquiryCreditsConfig: undefined;
   AdminInquiryCreditRequests: undefined;
+  AdminListingMarketingTemplates: undefined;
   AdminNotificationTesting: { notificationType?: string } | undefined;
 };
 

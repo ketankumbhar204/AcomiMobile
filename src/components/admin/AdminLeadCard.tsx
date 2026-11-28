@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { ChevronRight } from 'lucide-react-native';
@@ -13,9 +13,12 @@ type AdminLeadCardProps = {
   sourceLabel?: string;
   testLead?: boolean;
   showDelete?: boolean;
+  showShare?: boolean;
   actionLabel?: string;
+  footer?: ReactNode;
   onPress?: () => void;
   onDelete?: () => void;
+  onShare?: () => void;
 };
 
 export function AdminLeadCard({
@@ -25,11 +28,15 @@ export function AdminLeadCard({
   sourceLabel,
   testLead,
   showDelete,
+  showShare,
   actionLabel,
+  footer,
   onPress,
   onDelete,
+  onShare,
 }: AdminLeadCardProps) {
   const { t } = useTranslation();
+  const hasActions = (showDelete && !!onDelete) || (showShare && !!onShare);
 
   return (
     <Card style={styles.card}>
@@ -60,13 +67,23 @@ export function AdminLeadCard({
             ) : null}
             {actionLabel ? <Text style={styles.actionBadge}>{actionLabel}</Text> : null}
           </View>
+          {footer}
         </View>
         {onPress ? <ChevronRight size={18} color={colors.muted} /> : null}
       </Pressable>
-      {showDelete && onDelete ? (
-        <Pressable style={styles.deleteBtn} onPress={onDelete} hitSlop={8}>
-          <Text style={styles.deleteText}>{t('admin.common.delete')}</Text>
-        </Pressable>
+      {hasActions ? (
+        <View style={styles.actionsRow}>
+          {showShare && onShare ? (
+            <Pressable style={styles.shareBtn} onPress={onShare} hitSlop={8}>
+              <Text style={styles.shareText}>{t('admin.marketing.share')}</Text>
+            </Pressable>
+          ) : null}
+          {showDelete && onDelete ? (
+            <Pressable style={styles.deleteBtn} onPress={onDelete} hitSlop={8}>
+              <Text style={styles.deleteText}>{t('admin.common.delete')}</Text>
+            </Pressable>
+          ) : null}
+        </View>
       ) : null}
     </Card>
   );
@@ -116,7 +133,20 @@ const styles = StyleSheet.create({
     color: colors.tealDark,
     fontWeight: '700',
   },
-  deleteBtn: { marginTop: spacing.sm, alignSelf: 'flex-start' },
+  actionsRow: {
+    marginTop: spacing.sm,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    alignItems: 'center',
+  },
+  shareBtn: { alignSelf: 'flex-start' },
+  shareText: {
+    ...typography.caption,
+    color: colors.tealDark,
+    fontWeight: '700',
+  },
+  deleteBtn: { alignSelf: 'flex-start' },
   deleteText: {
     ...typography.caption,
     color: colors.danger,

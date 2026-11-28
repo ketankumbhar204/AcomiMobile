@@ -1,5 +1,13 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -8,15 +16,22 @@ import type { TFunction } from 'i18next';
 import { adminApi } from '../../api/adminApi';
 import type {
   AdminActiveSpace,
+  ListingMarketingStatus,
   PropertyRegistrationListItem,
   RegistrationSource,
+  WhatsAppAvailability,
 } from '../../api/types';
-import { AdminLeadCard, adminList } from '../../components/admin';
+import {
+  AdminLeadCard,
+  AdminListingMarketingChips,
+  AdminListingMarketingShareDialog,
+  adminList,
+} from '../../components/admin';
 import { useConfirmDialog } from '../../components/ui';
 import type { AdminStackParamList } from '../../navigation/types';
 import { useToastStore } from '../../store/toastStore';
 import { formatAdminDate, formatRegistrationSource } from '../../utils/adminLabels';
-import { colors, spacing, typography } from '../../theme';
+import { colors, radius, spacing, typography } from '../../theme';
 
 type Nav = NativeStackNavigationProp<AdminStackParamList, 'AdminPropertyList'>;
 type Route = NativeStackScreenProps<AdminStackParamList, 'AdminPropertyList'>['route'];
@@ -56,6 +71,15 @@ export function AdminPropertyListScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const loadingMoreRef = useRef(false);
   const [tab, setTab] = useState<'leads' | 'active'>(route.params?.tab ?? 'leads');
+  const [marketingStatusFilter, setMarketingStatusFilter] = useState<ListingMarketingStatus | ''>(
+    '',
+  );
+  const [whatsappAvailabilityFilter, setWhatsappAvailabilityFilter] = useState<
+    WhatsAppAvailability | ''
+  >('');
+  const [spaceShareId, setSpaceShareId] = useState<string | null>(null);
+  const [listRefreshKey, setListRefreshKey] = useState(0);
+  const reloadToken = useRef(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -68,6 +92,7 @@ export function AdminPropertyListScreen() {
       let cancelled = false;
       const activeTab = route.params?.tab ?? 'leads';
       const source = route.params?.source;
+      const token = ++reloadToken.current;
       async function load() {
         setLoading(true);
         setLeadPage(0);
@@ -77,29 +102,54 @@ export function AdminPropertyListScreen() {
             const page = await adminApi.listPropertyRegistrations({
               leadsOnly: source ? undefined : true,
               source,
+              marketingStatus: marketingStatusFilter || undefined,
+              whatsappAvailability: whatsappAvailabilityFilter || undefined,
               page: 0,
               size: PAGE_SIZE,
             });
-            if (!cancelled) {
+            if (!cancelled && token === reloadToken.current) {
               setLeads(page.content);
               setHasMoreLeads(!page.last && page.content.length > 0);
             }
           } else {
             const spaces = await adminApi.listActiveSpaces();
-            if (!cancelled) {
-              setActiveAll(spaces.filter(s => s.type !== 'MESS'));
+            if (!cancelled && token === reloadToken.current) {
+              setActiveAll(
+                spaces
+                  .filter(s => s.type !== 'MESS')
+                  .filter(
+                    s =>
+                      !marketingStatusFilter ||
+                      (s.marketingStatus ?? 'NOT_SHARED') === marketingStatusFilter,
+                  )
+                  .filter(
+                    s =>
+                      !whatsappAvailabilityFilter ||
+                      (s.whatsappAvailability ?? 'UNKNOWN') === whatsappAvailabilityFilter,
+                  ),
+              );
             }
           }
         } finally {
-          if (!cancelled) setLoading(false);
+          if (!cancelled && token === reloadToken.current) setLoading(false);
         }
       }
       void load();
       return () => {
         cancelled = true;
       };
-    }, [route.params?.source, route.params?.tab]),
+    }, [
+      route.params?.source,
+      route.params?.tab,
+      marketingStatusFilter,
+      whatsappAvailabilityFilter,
+      listRefreshKey,
+    ]),
   );
+
+  const spaceShareTarget = spaceShareId
+    ? activeAll.find(space => space.id === spaceShareId) ?? null
+    : null;
 
   const activeFilterLabel = filterLabel(t, tab, sourceFilter);
   const dash = t('admin.labels.emDash');
@@ -114,6 +164,8 @@ export function AdminPropertyListScreen() {
       const page = await adminApi.listPropertyRegistrations({
         leadsOnly: sourceFilter ? undefined : true,
         source: sourceFilter,
+        marketingStatus: marketingStatusFilter || undefined,
+        whatsappAvailability: whatsappAvailabilityFilter || undefined,
         page: nextPage,
         size: PAGE_SIZE,
       });
@@ -155,6 +207,60 @@ export function AdminPropertyListScreen() {
     });
   }
 
+  function renderMarketingFilters() {
+    return (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterRow}>
+        {(
+          [
+            ['', t('admin.marketing.filters.allMarketing')],
+            ['NOT_SHARED', t('admin.marketing.status.notShared')],
+            ['SHARED', t('admin.marketing.status.shared')],
+          ] as const
+        ).map(([value, label]) => (
+          <Pressable
+            key={`m-${value || 'all'}`}
+            style={[styles.filterChip, marketingStatusFilter === value && styles.filterChipActive]}
+            onPress={() => setMarketingStatusFilter(value)}>
+            <Text
+              style={[
+                styles.filterChipText,
+                marketingStatusFilter === value && styles.filterChipTextActive,
+              ]}>
+              {label}
+            </Text>
+          </Pressable>
+        ))}
+        {(
+          [
+            ['', t('admin.marketing.filters.allWhatsapp')],
+            ['UNKNOWN', t('admin.marketing.whatsapp.unknown')],
+            ['AVAILABLE', t('admin.marketing.whatsapp.available')],
+            ['UNAVAILABLE', t('admin.marketing.whatsapp.unavailable')],
+          ] as const
+        ).map(([value, label]) => (
+          <Pressable
+            key={`w-${value || 'all'}`}
+            style={[
+              styles.filterChip,
+              whatsappAvailabilityFilter === value && styles.filterChipActive,
+            ]}
+            onPress={() => setWhatsappAvailabilityFilter(value)}>
+            <Text
+              style={[
+                styles.filterChipText,
+                whatsappAvailabilityFilter === value && styles.filterChipTextActive,
+              ]}>
+              {label}
+            </Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+    );
+  }
+
   return (
     <View style={styles.root}>
       <View style={adminList.tabs}>
@@ -178,6 +284,7 @@ export function AdminPropertyListScreen() {
       {activeFilterLabel && tab === 'leads' ? (
         <Text style={adminList.filterBadge}>{activeFilterLabel}</Text>
       ) : null}
+      {renderMarketingFilters()}
       {loading ? (
         <ActivityIndicator style={styles.loader} color={colors.primary} />
       ) : tab === 'leads' ? (
@@ -198,6 +305,12 @@ export function AdminPropertyListScreen() {
               sourceLabel={formatRegistrationSource(item.source)}
               testLead={item.testLead}
               showDelete
+              footer={
+                <AdminListingMarketingChips
+                  marketingStatus={item.marketingStatus}
+                  whatsappAvailability={item.whatsappAvailability}
+                />
+              }
               onPress={() => navigation.navigate('AdminPropertyDetail', { id: item.id })}
               onDelete={() => handleDelete(item)}
             />
@@ -217,12 +330,45 @@ export function AdminPropertyListScreen() {
               subtitle={`${item.type} · ${item.ownerName}`}
               meta={`${item.ownerMobile} · ${item.address?.trim() || dash}`}
               testLead={item.testLead}
+              showShare
+              footer={
+                <AdminListingMarketingChips
+                  marketingStatus={item.marketingStatus}
+                  whatsappAvailability={item.whatsappAvailability}
+                />
+              }
               onPress={() => navigation.navigate('AdminActiveSpaceDetail', { space: item })}
+              onShare={() => setSpaceShareId(item.id)}
             />
           )}
           ListEmptyComponent={<Text style={styles.empty}>{t('admin.list.empty')}</Text>}
         />
       )}
+
+      {spaceShareTarget ? (
+        <AdminListingMarketingShareDialog
+          open
+          mode="share"
+          onClose={() => setSpaceShareId(null)}
+          onUpdated={() => {
+            setSpaceShareId(null);
+            setLoading(true);
+            setListRefreshKey(key => key + 1);
+          }}
+          target={
+            spaceShareTarget.registrationId
+              ? { kind: 'property-registration', id: spaceShareTarget.registrationId }
+              : { kind: 'space', id: spaceShareTarget.id }
+          }
+          listingKind="PROPERTY"
+          spaceType={spaceShareTarget.type}
+          name={spaceShareTarget.name}
+          ownerName={spaceShareTarget.ownerName}
+          location={spaceShareTarget.address}
+          address={spaceShareTarget.address}
+          phones={[spaceShareTarget.contactNumber, spaceShareTarget.ownerMobile]}
+        />
+      ) : null}
     </View>
   );
 }
@@ -238,4 +384,24 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: spacing.xl,
   },
+  filterRow: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
+    gap: spacing.sm,
+    alignItems: 'center',
+  },
+  filterChip: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    backgroundColor: colors.surface,
+  },
+  filterChipActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.selected,
+  },
+  filterChipText: { ...typography.caption, color: colors.textSecondary, fontWeight: '600' },
+  filterChipTextActive: { color: colors.tealDark },
 });
